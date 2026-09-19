@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gfx90c_common.py — Shared constants for gfx90c Tensile port (attempt2)
+gfx90c_common.py — Shared constants for gfx90c Tensile port
 
 Single source of truth for all peak GFLOPS figures in the ecosystem.
 This file is the authoritative PEAK_GFLOPS reference; all other

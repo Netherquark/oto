@@ -1,8 +1,8 @@
-# gfx90c — attempt2 Implementation Plan (One-Shot Deterministic Convergence)
+# gfx90c — oto Implementation Plan (One-Shot Deterministic Convergence)
 
-> Status: **APPROVED-IN-PRINCIPLE (2026-09-13)**. Native port mechanics are proven
-> (the prior campaign ended at 0/11/0 same-run parity; the gap is coverage + beating
-> the spoof floor). attempt2 contract: **beat the gfx900 spoof baseline across the
+> Status: **APPROVED-IN-PRINCIPLE**. Native port mechanics are proven (frozen
+> baseline: parity at 0/11/0 same-run; the gap is coverage + beating
+> the spoof floor). oto contract: **beat the gfx900 spoof baseline across the
 > entire shipped kernel suite** AND approach the gfx90c theoretical limit as closely
 > as possible (limit authority = `gfx90c_theoretical_limits.md`, cross-checked
 > against rocminfo + first-party sources). Ruthless simplicity; deterministic; NO LLM
@@ -64,14 +64,14 @@ Never an in-loop consultation.
 
 ## Important Details (verified current state)
 
-### A. Prior state (frozen prior-campaign conclusions — `prior_INSIGHTS_CAVEMAN_ULTRA.md`)
-- Port mechanics **DONE**: pristine Tensile + 3-injection shim; Phase-0 gates 10/10
+### A. Frozen baseline (conclusions sourced from `prior_INSIGHTS_CAVEMAN_ULTRA.md`)
+- Port mechanics **DONE**: pristine Tensile + minimal in-tree gfx90c support
+  (3 bookkeeping entries in `Tensile/{Common,AsmCaps}.py`); Phase-0 gates 10/10
   [OK]; anti-alias 0 gfx900 leak; synthesis PASS.
 - Performance = **parity, not wins** on the only same-run pair (0 / 11 / 0 at ±5%).
   Candidate suite A–G gave **5W/10T/6L** over 21 shared cells.
-- Only 6 genuinely-new problem cells were produced; ~40% of prior runtime was
-  re-benchmarking known shapes. Best measurements: FP32 1118.7 @1024³, FP16 2492.1
-  @4096³, BF16 1108.5 @2048³, FP64 98.6 @1024³, INT8 881.2 @2048³.
+- 6 genuinely-new problem cells were produced. Best measurements: FP32 1118.7 @1024³,
+  FP16 2492.1 @4096³, BF16 1108.5 @2048³, FP64 98.6 @1024³, INT8 881.2 @2048³.
 
 ### B. The replicated footprint (mapping contract, see `mapping.md`)
 28 frozen families = 7 dtype/op sets × 4 contraction patterns:
@@ -105,14 +105,14 @@ convergence verdict compares against these, throttled+median-of-seeds.
   and no out-of-footprint cells are scheduled.
 - **`CpuThreads: 1` is NOT dogma — it is a toolchain problem to SOLVE.** The
   `unknown resource type` child kills are a joblib/loky-vs-Python-3.14 incompatibility,
-  and the generator shares mutable `globalParameters`. attempt2 **fixes** the
+  and the generator shares mutable `globalParameters`. oto **fixes** the
   parallelism properly (pin/loky version, or confine mutation), PoC'd in `/tmp`; only
   while it is unfixed does the driver fall back to sequential `CpuThreads: 1` —
   documented as a reasoned fallback, not a permanent hazard.
 - **CU occupancy ≤3 is the performance target, not a hazard.** Low achieved occupancy
   = hardware under-utilization = the very headroom "approach the theoretical limit"
   exists to claim. Occupancy is capped by VGPR pressure + grid underfill on the 7-CU
-  part (see `gfx90c_theoretical_limits.md` §7); attempt2's knob budget treats
+  part (see `gfx90c_theoretical_limits.md` §7); oto's knob budget treats
   right-sized `GSU`/`WGM`/`MT`/`TT` as a FIRST-CLASS objective with measured
   utilization as the score, not an accepted constraint.
 - Sustained 2048³-style benchmark marathons on this APU can wedge it (HW-exception
@@ -122,11 +122,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
 ## Work State
 
 ### Completed
-- attempt2 ecosystem scaffolded and restructured 2026-09-13: single `changelog.md`,
-  `gfx90c_theoretical_limits.md` added, `changes_kb.md`/`proposed_fixes.md`/
-  `refactor_suite.md`/`CHANGELOG.md`/agent-log MDs folded & removed, `LICENSE.md`
-  dropped. Prior-campaign conclusions absorbed into `prior_INSIGHTS_CAVEMAN_ULTRA.md`
-  / `prior_RESEARCH_ARCHIVE.md` (the only sanctioned prior material).
+- Ecosystem consolidated: single `changelog.md`, `gfx90c_theoretical_limits.md`
+  added, superseded MDs removed, prior conclusions held only in
+  `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
 - Full driver + 7 module suite implemented, import-clean, `--help` passes.
 - Valid Tensile YAML generator (`_write_phase_config`) emits `GlobalParameters` +
   `BenchmarkProblems` schema; phase 20 benchmarked successfully producing
@@ -140,9 +138,22 @@ convergence verdict compares against these, throttled+median-of-seeds.
   prior session crashes before graceful shutdown) auto-corrected to `interrupted`.
 - **Run status semantics fixed:** `run_phases` marks interrupted runs as
   `interrupted`, not `completed`.
-- **ROCm toolchain environment:** `/opt/rocm/share/hip/version` symlink present;
+- **ROCm toolchain environment:** the HIP `version` file symlink under the ROCm
+  prefix (prefix via `.env`/§6) is present;
   HipClangVersion parses to `6.4.43484` cleanly. The `ValueError: invalid literal`
   in runs 143115–144714 was a pre-symlink timing issue, not a code bug; resolved.
+### Technical findings (2026-09-19)
+
+- **HS_HPA rejection root-caused.** Guard trace (`PrintSolutionRejectionReason`) +
+  source audit (`potential_configs.md` §4): the rejection is stock-Tensile's non-MI
+  assembly `GLVW==VW-or-1` generator guard (`SolutionStructs.py:4583-4596`),
+  triggered by the pv-reduction in `setGlobalLoadVectorWidth` (`:2010-2047`) —
+  isa-independent, not a gfx90c HW/ISA limit, not an assembler failure.
+  Guard-legal HS_HPA parameterizations (MT64x64x16/TT4x4/VW4; MT64x64x8/TT4x4/VW2)
+  are admitted 1/1 and assemble for gfx90c. HS_HPA tuning resumes on them.
+- **Scheduler mirror gap (pending fix):** `_validate_tensile_loads` does not model
+  the `GLVW==VW-or-1` predicate, so it wrongly pre-validated the 64x64x8 deck. Add
+  that predicate to the mirror.
 
 ---
 
@@ -391,21 +402,19 @@ The driver uses only existing solvers:
    return subset to re-run.
 7. **`port_tensile.py`** — preflight (arch, device, tensileness); per-manifest-row run
    Tensile, collect, register, cooldown; at end write report; `--auto` loops 2↔6 until
-   convergence or budget. Replaces the special legacy block handling.
+   convergence or budget. Replaces the special frozen-block handling.
 8. **`--arch`** flag feeds Tensile's `-a/--arch`; the "spoof floor" baseline = whatever
    `ScheduleName` the target assembler accepts, still first-ever-run-only.
-9. **Entrypoint.** The python driver becomes the only suite entrypoint; the legacy
-   shell entry shim is deleted once migration parity passes.
-10. **Retire the dead machinery** after one scoped run matches the prior output:
-    favouring counters, legacy fingerprint helpers, the shell telemetry sampler,
-    awk self-check — all become python modules or tests.
+9. **Entrypoint.** The python driver is the only suite entrypoint.
+10. **Fold the redundant tooling** — favouring counters and fingerprint helpers
+    all become python modules or tests.
 
 ### 4. Phase-1 floor contract (unchanged)
 Phase 1 is the **first-ever-run-only** floor: the spoof/reference floor is benchmarked
 once on the first run, then skipped (a `result:PASS` exists). It is a **tier-3 floor,
 never a retirement signal** and never re-rolled.
 
-### 5. Phase 5 / 6 / `--auto` mapping (attempt2 seams)
+### 5. Phase 5 / 6 / `--auto` mapping
 - **Agent harvest/accept round-N candidates** (`agent.harvest()`): cells with native
   median ≥ spoof median (ruler-adjusted) → incumbent; RED/non-converged cells →
   `candidates.spawn_neighbours(winner, ≤2 knobs, occupancy-aware)` appended to
@@ -424,7 +433,7 @@ never a retirement signal** and never re-rolled.
 4. `port_tensile.py` takes over phase-by-phase-group; `--phases` parity checked
    against the scoped control runs (`1 31`, `20 25`).
 5. Agent loop + `--auto`; convergence budget configurable.
-6. Delete the legacy shell machinery; the driver is the only entrypoint.
+6. Single entrypoint: the python driver.
 
 ### 7. Statistics/HTML tooling retained (unchanged contract)
 The reporting pipeline is untouched and remains the run-watching surface:
@@ -434,7 +443,7 @@ same data layout (append-only, per `knowledge_base.md` §10):
 - `gfx90c_runs/run_YYYYMMDD_HHMMSS/` with `configs/phase<N>_*.yaml`,
   `phase<N>_*/2_BenchmarkData/*.csv`, `logs/telemetry.csv` (header-in-file),
 - `gfx90c_results/registry.db` (`records` INSERT-only) as the canonical ledger,
-- legacy `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` frozen in
+- frozen `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` in
   place; optional jsonl **export** of new rows until `all_runs_dataset.py` reads
   SQLite.
 Any module that changes these outputs must be validated by re-running the pipeline
@@ -444,7 +453,7 @@ before merging.
 
 ## Triaged fixes (self-contained dispositions)
 
-### P0 for attempt2 (all four in scope)
+### P0 for oto (all four in scope)
 1. **Deterministic driver (`port_tensile.py`)** per the architecture above.
 2. **Finite per-phase timeout default** — `PHASE_TIMEOUT_S` default is finite
    (generic runaway protection) and per-phase skippable/killable.
@@ -471,7 +480,7 @@ before merging.
 | Telemetry `.hdr` sidecar, kHz/mW units, parent-dir glob | header-in-CSV, canonical units, `hwmon[0-9]*` |
 | joblib/loky vs Python 3.14 resource-tracer | **solve not avoid** (pin/fix parallelism; fallback `CpuThreads: 1` documented) |
 | Self-terminating run (no new bench work) | prove the run will execute something before starting |
-| Shell pipefail fragilities in the legacy driver | `|| true`, `set +e` isolation (python makes it moot) |
+| Orphaned subprocess fragilities on abrupt breaks | `|| true`, `set +e`-style isolation (python makes it moot) |
 
 ### Known hazards — must never regress
 - **APU wedge at sustained 2048³-style benchmarks** (HW-Exception, exit 134). Rule:
@@ -483,7 +492,7 @@ before merging.
 
 ---
 
-## Next Move (executable plan — attempt2) — Steps 1–6
+## Next Move — Steps 1–6
 
 ### Step 1 — Approve + build the driver (`port_tensile.py`), per the architecture above
 - Python driver + `phases.yaml` data-only manifest. `policy.py` `should_run(phase,fp)`
@@ -537,9 +546,9 @@ before merging.
   `gfx90c_report.html` regenerated → final anti-alias re-assert (0 gfx900 leaks) and
   whole-library native-vs-spoof readout with per-family %-of-theoretical ceilings.
 
-## Exit criteria (attempt2)
+## Exit criteria
 
-- [ ] `port_tensile.py` + `phases.yaml` driver operational; legacy shell machinery gone.
+- [ ] `port_tensile.py` + `phases.yaml` driver operational; it is the only entrypoint.
 - [ ] Two scoped control runs done; verdicts re-derived under fixed math.
 - [ ] Native family-matrix phases cover the shipped footprint families (mapped),
       all native `isa`; every replicating family logged at %-of-ceiling.
@@ -561,7 +570,8 @@ before merging.
   (candidate deck), `changelog.md` (evolution), `results.md` (data, append-only),
   `claude.md` (entry contract), `knowledge_base.md` (data law §10).
 - Live repo: `gfx90c_common.py`, `all_runs_dataset.py`, `make_results_md.py`,
-  `make_report.py`, `auto_retire.py`, shim `tensile_gfx90c_port/sitecustomize.py`,
+  `make_report.py`, `auto_retire.py`, the native gfx90c patch
+  (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile tree),
   `gfx90c_results/registry.db`, frozen
   `gfx90c_results/{experiment_db,benchmark_registry}.jsonl`, `gfx90c_runs/run_*`.
 - Sanctioned prior conclusions: `prior_INSIGHTS_CAVEMAN_ULTRA.md`,

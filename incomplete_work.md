@@ -1,4 +1,4 @@
-# Incomplete Work register (attempt2 — re-verified 2026-09-13)
+# Incomplete Work register (re-verified 2026-09-13)
 
 Status key: RESOLVED (mechanism landed + proven) / PENDING (real gap, still open) /
 PARTIAL (mechanism landed; execution/validation outstanding).
@@ -36,7 +36,7 @@ only path to a locked verdict. Blocking input to §4.2.
 
 ## 4.5 auto-retire trust gate (RESOLVED — 2026-09-13)
 
-**Mechanism:** Implemented in `policy.py` (`check_retirement_eligibility` and `classify_retirement_tier`). Auto-retire gating requires ≥2 independent runs/cell before emitting retirement decisions. `apply_d2_4_protection` preserves 3 legacy records.
+**Mechanism:** Implemented in `policy.py` (`check_retirement_eligibility` and `classify_retirement_tier`). Auto-retire gating requires ≥2 independent runs/cell before emitting retirement decisions. `apply_d2_4_protection` preserves 3 frozen records.
 
 ## 4.6 Peak-table prose drift (RESOLVED — 2026-09-13)
 
@@ -78,7 +78,8 @@ only path to a locked verdict. Blocking input to §4.2.
 ## 4.12 Complete 7-Stage Driver Transition (RESOLVED — 2026-09-13)
 
 **Mechanism:**
-- Abolished reliance on legacy arbitrary numeric phase IDs (0–31).
+- Abolished reliance on arbitrary numeric phase IDs (0–31); phase identity uses
+  semantic filters.
 - Replaced CLI execution with semantic filters: `--family` (SS, HH, HH_HPA, HS_HPA, DD, ZZ, CC), `--pattern` (Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk), `--shape`, `--stage`, and `--auto`.
 - `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets).
 - Added `--dry-run` to inspect matched candidate targets before hardware execution.

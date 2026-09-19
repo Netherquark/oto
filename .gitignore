@@ -79,3 +79,4 @@ gfx90c_runs/
 # TensileLibrary.dat
 # source/
 # cache.yaml
+.env

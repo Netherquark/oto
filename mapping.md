@@ -1,8 +1,8 @@
 # mapping.md — Shipped gfx900 footprint → native gfx90c replication contract
 
-Status: **ground truth extracted + replication contract; attempt2 uses this to emit native family phases.**
+Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
 Date: 2026-09-13
-Sources: `/usr/lib64/rocblas/library/TensileLibrary_*_gfx900.dat` (decoded), `gfx90c_common.py`, measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1).
+Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `gfx90c_common.py`, measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1).
 
 ## 1. What the shipped gfx900 library actually is
 
@@ -27,9 +27,9 @@ Each family = 4 contraction patterns: `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bl
 `MT64x64x16/MT128x64x16`; HPA heads `MT64x64x16/MT64x64x8`; HS heads `MT64x64x8/MT64x64x16`.
 
 gfx900 kernels are **not loadable on gfx90c** (arch-mismatch; ISA900 spoof-builds
-mislabel every metric). Native `--arch gfx90c` is mandatory (shim).
+mislabel every metric). Native `--arch gfx90c` is supported.
 
-## 2. Replication contract (what attempt2 must produce)
+## 2. Replication contract (what oto must produce)
 
 **Reproduce the family matrix natively; let Tensile pick native tiles per family/cell.**
 Do NOT chase the 1,980-key size tables — those document the defensive mesh. Anchor the
@@ -38,10 +38,10 @@ emit per-family tile decks from:
 
 1. the mapped gfx900 top-tiles above (translated, never copied: `_ISA900_` kernels are
    not runnable), and
-2. the measured prior-campaign winner configurations (below) — the only datapoints
+2. the measured frozen prior winners (below) — the only datapoints
    already gfx90c-native (frozen prior conclusions, per `prior_INSIGHTS_CAVEMAN_ULTRA.md`).
 
-## 3. Native kernel levers that moved the needle (measured prior campaign)
+## 3. Native kernel levers that moved the needle (measured, frozen prior)
 
 | Regime | Winner config (native, verified) |
 |---|---|

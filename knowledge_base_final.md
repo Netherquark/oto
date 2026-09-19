@@ -1,4 +1,4 @@
-# Knowledge Base Final — attempt2 gfx90c Tensile Port
+# Knowledge Base Final — oto gfx90c Tensile Port
 
 > Comprehensive, self-contained reference for the one-shot deterministic convergence
 > campaign porting AMD Tensile BLAS library to native gfx90c (Cezanne APU iGPU).
@@ -20,7 +20,7 @@
 | Memory | DDR4-3200 dual-channel (UMA with system RAM) |
 | Spoof Baseline | gfx900 (vega10 schedule) — must be beaten |
 | Strategy | One-shot deterministic convergence (no LLM in loop) |
-| Codebase | attempt2/ (53KB driver + 7 supporting modules) |
+| Codebase | oto/ (53KB driver + 7 supporting modules) |
 | Target Coverage | 28 families × 4 patterns = 3,066 kernels |
 | Manifest | phases.yaml (304 entries as of latest run) |
 
@@ -115,7 +115,7 @@ Stage 7: Acceptance A/B & Final Report  ← report.py (AcceptanceReporter)
 
 ## 4. Run History
 
-### 4.1 Current Campaign (attempt2)
+### 4.1 Current Campaign (oto)
 
 | Metric | Value |
 |--------|-------|
@@ -235,7 +235,7 @@ All auto phases target SS dtype with a single tile configuration:
 - **WorkGroupMapping**: {1, 4, 8}
 
 These represent the first iteration of the convergence loop exploring the neighbourhood
-of Candidate C (the best SS config from the prior campaign).
+of Candidate C (the best SS config in the frozen conclusions).
 
 ### 6.2 Auto-Run Performance Distribution
 
@@ -330,7 +330,7 @@ gfx90c_runs/ ←─────────────── port_tensile.py (c
 |------|---------|
 | `archive/gfx90c_results1/` | 10 runs, 1 completed — initial test |
 | `archive/gfx90c_results2/` | 35 runs, 3 completed — extended campaign |
-| `archive/phases_20260914_*.yaml` | Historical phase manifests (4 snapshots) |
+| `archive/phases_20260914_*.yaml` | Phase-manifest snapshots (4) |
 
 ---
 
@@ -461,7 +461,7 @@ Shapes: 256³ (CC) + SS 512³, 768³, 1000³, 1024³, 1365³, 2048³, 4096³. Al
 | 4096³ | var#9 | 868.5 | 667.6 | +30.1% | auto |
 
 **Deep-dive findings:**
-- **Best absolute numbers**: 4096³ var#9 = 868.5 med / 990.7 max; 2048³ var#43 = 801.0 / 940.6; 512³ var#8 = 680.7 / 692.3. These top the whole attempt2 corpus (cf. §5.1 family-carried SS best ≈ 671 GFlops @ 4096³; auto run 868.5 @ 4096³ → +29%).
+- **Best absolute numbers**: 4096³ var#9 = 868.5 med / 990.7 max; 2048³ var#43 = 801.0 / 940.6; 512³ var#8 = 680.7 / 692.3. These top the whole oto corpus (cf. §5.1 family-carried SS best ≈ 671 GFlops @ 4096³; auto run 868.5 @ 4096³ → +29%).
 - **No single dominant knob combo** — the winner varies by shape (var#9 at 256/4096, var#8 at 512/768, var#4 at 1024, var#43 at 2048, var#38 at 1000, var#47 at 1365). Strong shape-size effect.
 - **VW=2 dominates VW=1** at every size (var#42/#43/#44-ish cluster beats var#46/#47); WGM matters most at mid sizes; NLCA=3 slightly preferred at large tiles.
 - **Auto beats family best at 6/8 shapes** (all except 1000³, 1365³). Family superiority there comes from wider MT/TT exploration (MT128/64 splits) that the fixed MT96x96x16/TT6x6 auto space cannot reach.
@@ -483,6 +483,8 @@ Simulation over the 72 cells: harvest → 8 winners → 84 valid mutants, **52/8
 ### 11.6 Persistent Blocker: HS_HPA (12 phases, "0 valid solutions")
 
 Phases `phase_hs_hpa_{Ailk,Alik}_{Bjlk,Bljk}_{256,512,1024,2048}` fail with Tensile `Your parameters resulted in 0 valid solutions` on **every** pass (48 failed records = 12 × 4 completed passes, 4th attempt in pass 5 truncated). HPA = High-Precision Accumulate formulation (prefers `_BHS`/`_BHHB` split kernels); the chosen MS=8/MR=8/MT64 variant is not assemblable on gfx90c ISA (9,0,12). Family phases for the same problems exist and pass — only the HPA path is broken.
+
+**Correction (2026-09-19, see `potential_configs.md` §4):** `PrintSolutionRejectionReason` traced the "0 valid solutions" to stock-Tensile's non-MI assembly `GLVW==VW-or-1` generator guard (`SolutionStructs.py:4583-4596`), triggered by pv-reduction of GLVW 4→2 in `setGlobalLoadVectorWidth` (`:2010-2047`) — isa-independent, i.e. a parameterization/generator restriction, not a gfx90c HW/ISA limit. Guard-legal HS_HPA parameterizations (MT64x64x16/TT4x4/VW4/DU16; MT64x64x8/TT4x4/VW2/DU8) are admitted 1/1 and assemble for gfx90c; HS_HPA tuning resumes on them.
 
 ### 11.7 Root Causes Summary (for the port write-up)
 

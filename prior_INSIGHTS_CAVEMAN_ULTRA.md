@@ -28,7 +28,7 @@
 | "Candidates A–G improved things" | 4–5 real wins over 21 shared cells; **the real growth was coverage, not tuning** | PC §13.1; R §6.2/6.3 |
 | "Later runs went faster" | No. Best FP16/FP32/INT8 came from **era-1 or the first-ever measurement** | R §6.1 |
 | "The numbers moved between runs" | ±23–31% thermal/clock envelope on byte-identical configs; **never trust raw cross-run numbers** | R §5/§6, S:245 |
-| "The in-tree 9-file patch was the port" | **It died. A 3-line import-time shim replaced it.** | this doc §3 |
+| "The in-tree 9-file patch was the port" | **It died. The port is 3 bookkeeping entries, not support code.** | this doc §3 |
 | "The peak table is settled" | It was asserted in 3 conflicting ways; the single-rate claim (1613 for BF16/INT8) is the hardware truth, but the docs still contradict it in 3 places | this doc §2 |
 | "~12h budget" | v5+ grew ~5× the era-1 benchmark volume, **40–41% of it re-running known shapes that only got worse/tied** | R §6.5 |
 
@@ -48,9 +48,9 @@
 | 09-11 | Hardware ground truth corrected: FP64 peak **101** (not 202/1610) | The "98%" FP64 story |
 | 09-12 | **v7 suite**: run-all + tier-1/2/3, thermal cooldown, adaptive repeats, stage-29 ceiling %-of-peak, flock; 20/25 un-retired after `[{}]` fix; peak table corrected to single-rate BF16/INT8 (1613) | The self-governing suite |
 | 09-12 | Three self-terminating suite runs (172433/215546/215800) executed **no benchmark at all** — disposition+H2 gates dead-ended run-all | Exposed the "run everything every time" fallacy |
-| 09-13 | **shim era**: Tensile reverted to pristine HEAD; 3-line `sitecustomize.py` on PYTHONPATH injects the missing bookkeeping; suite wired `PYTHONPATH`+`TENSILE_REPO_ROOT`, all phase configs get `HardwareMonitor: False` + `CpuThreads: 1` | prior campaign archived read-only; this file |
+| 09-13 | Tensile reverted to pristine HEAD; bookkeeping entry-points identified (`SupportedISA`, `architectureMap`, AsmCaps); all phase configs get `HardwareMonitor: False` + `CpuThreads: 1` | prior campaign archived read-only; this file |
 
-Verdict of the prior campaign as a *port*: **YES, carried out cleanly on vanilla Tensile via the shim.**
+Verdict of the prior campaign as a *port*: **YES, carried out cleanly on vanilla Tensile; the port is 3 bookkeeping entries.**
 Verdict as a *performance search*: **NO — parity with the spoof, 4–5 single-cell wins, all-time bests from era-1, and ~40% of GPU time re-benchmarking known shapes.**
 That contradiction is the single most important thing attempt2 must design around.
 
@@ -90,7 +90,7 @@ Three conflicting answers exist in the tree as of archive:
 
 ---
 
-## 3. Port anatomy: why the 9-file patch became a 3-injection shim
+## 3. Port anatomy: the 3 bookkeeping entries (why the 9-file patch failed)
 
 ### 3.1 Prior campaign's in-tree edits (all 9, all reverted 09-13)
 1. `AsmCaps.py` — full `(9,0,12)` cap block

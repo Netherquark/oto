@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-port_tensile.py — Main driver for attempt2 (Stage 1-7 orchestration)
+port_tensile.py — Main driver for oto (Stage 1-7 orchestration)
 
-The attempt2 driver orchestrates all 7 stages:
+The oto driver orchestrates all 7 stages:
 - Stage 1: Manifest & Phase Execution
 - Stage 2: Candidate Generation (via scheduler.py)
 - Stage 3: Benchmark Execution (Tensile CLI)
@@ -33,9 +33,12 @@ import threading
 import select
 import termios
 import tty
+import shutil
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
+
+from dotenv import load_dotenv
 
 from registry import SQLiteRegistry, fingerprint_config
 from scheduler import CandidateGenerator
@@ -45,8 +48,88 @@ from agent import ConvergenceAgent
 from report import AcceptanceReporter
 from gfx90c_common import PEAK_GFLOPS
 
+# Industry-standard .env loader (python-dotenv); never overrides live env vars.
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
-DEFAULT_TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
+DEFAULT_TENSILE_ROOT = Path(os.environ["TENSILE_ROOT"]) if os.environ.get("TENSILE_ROOT") else None
+
+
+def _require_tensile_root(explicit: Optional[Path], default: Optional[Path]) -> Path:
+    """Resolve the Tensile checkout root from an explicit arg, live env, or .env."""
+    candidate = explicit or default
+    if candidate is None:
+        raise ValueError(
+            "TENSILE_ROOT is not set. Configure it in the repo-root `.env` "
+            "(TENSILE_ROOT=<path to Tensile checkout>) or pass --tensile-root."
+        )
+    resolved = Path(candidate).resolve()
+    if not (resolved / "Tensile" / "bin" / "Tensile").exists():
+        raise ValueError(f"TENSILE_ROOT {resolved} has no Tensile bin/Tensile; check `.env`.")
+    return resolved
+
+
+def _hipconfig() -> Dict[str, str]:
+    """Query the native ROCm discovery tool (`hipconfig`) for install paths.
+
+    `hipconfig` is the ROCm-shipped authority for toolchain locations
+    (ROCM_PATH, HIP_PATH, HIP_CLANG_PATH). Returns parsed KEY: value pairs.
+    """
+    hipconfig = shutil.which("hipconfig")
+    if not hipconfig:
+        return {}
+    try:
+        out = subprocess.run([hipconfig], capture_output=True, text=True, timeout=30).stdout or ""
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    info: Dict[str, str] = {}
+    for line in out.splitlines():
+        m = re.match(r"([A-Z][A-Z0-9_]*)\s*:\s*(.*)", line.strip())
+        if m and m.group(2).strip():
+            info[m.group(1)] = m.group(2).strip()
+    return info
+
+
+def _resolve_rocm_paths() -> Dict[str, str]:
+    """Resolve the ROCm toolchain using native discovery only.
+
+    Order per key: explicit env value (shell or .env) that exists, then native
+    discovery (`hipconfig` for roots, `shutil.which` for binaries on PATH).
+    No hand-rolled candidate chains.
+    """
+    hc = _hipconfig()
+
+    prefix = os.environ.get("ROCM_PATH", "").strip()
+    if not prefix or not os.path.isdir(prefix):
+        prefix = hc.get("ROCM_PATH", "")
+
+    bin_dir = os.environ.get("ROCM_BIN", "").strip()
+    if not bin_dir or not os.path.isdir(bin_dir):
+        cand = str(Path(prefix) / "bin") if prefix else ""
+        hipcc = shutil.which("hipcc")
+        bin_dir = cand if os.path.isdir(cand) else (os.path.dirname(hipcc) if hipcc else "")
+
+    llvm_bin = os.environ.get("ROCM_LLVM_BIN", "").strip()
+    if not llvm_bin or not os.path.isdir(llvm_bin):
+        cand = hc.get("HIP_CLANG_PATH", "") or (str(Path(prefix) / "llvm" / "bin") if prefix else "")
+        llvm_bin = cand if os.path.isdir(cand) else ""
+
+    assembler = os.environ.get("TENSILE_ASSEMBLER", "").strip()
+    if not assembler or not os.path.isfile(assembler):
+        cand = str(Path(llvm_bin) / "clang++") if llvm_bin else ""
+        assembler = cand if os.path.isfile(cand) else (shutil.which("clang++") or "")
+
+    fallback = os.environ.get("TENSILE_ASSEMBLER_FALLBACK", "").strip()
+    if not fallback or not os.path.isfile(fallback):
+        fallback = shutil.which("clang++") or ""
+
+    return {
+        "ROCM_PATH": prefix,
+        "HIP_PATH": hc.get("HIP_PATH", prefix),
+        "ROCM_BIN": bin_dir,
+        "ROCM_LLVM_BIN": llvm_bin,
+        "TENSILE_ASSEMBLER": assembler,
+        "TENSILE_ASSEMBLER_FALLBACK": fallback,
+    }
 
 
 class TelemetrySampler:
@@ -136,7 +219,7 @@ class TelemetrySampler:
 
 
 class TensileDriver:
-    """Main driver for attempt2 Tensile port."""
+    """Main driver for oto Tensile port."""
 
     def __init__(
         self,
@@ -148,7 +231,7 @@ class TensileDriver:
     ):
         self.base_dir = Path(base_dir).resolve()
         self.phase_timeout_s = phase_timeout_s
-        self.tensile_root = Path(tensile_root or os.environ.get("TENSILE_ROOT", DEFAULT_TENSILE_ROOT)).resolve()
+        self.tensile_root = _require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)
         self.cooldown_s = cooldown_s
         self.create_run = create_run
 
@@ -187,6 +270,7 @@ class TensileDriver:
 
         # State
         self._stop_requested = False
+        self._finish_after_iteration = False
         self._gpu_phases_run = 0
         self._current_proc = None
         self._setup_signal_handlers()
@@ -221,22 +305,20 @@ class TensileDriver:
         sys.exit(130)
 
     def _get_tensile_env(self) -> Dict[str, str]:
-        """Construct environment with 3-injection shim on PYTHONPATH and ROCm toolchain on PATH (matching attempt1)."""
+        """Construct environment with Tensile on PYTHONPATH and ROCm toolchain on PATH."""
         env = os.environ.copy()
-        shim_dir = str(self.tensile_root / "tensile_gfx90c_port")
         tensile_pkg = str(self.tensile_root)
         current_pp = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = f"{shim_dir}:{tensile_pkg}:{current_pp}".strip(":")
+        env["PYTHONPATH"] = f"{tensile_pkg}:{current_pp}".strip(":")
 
-        # Export exact ROCm toolchain variables from attempt1
-        env["ROCM_PATH"] = env.get("ROCM_PATH", "/opt/rocm")
-        env["HIP_PATH"] = env.get("HIP_PATH", env["ROCM_PATH"])
-        env["TENSILE_REPO_ROOT"] = str(self.tensile_root)
+        # Export exact ROCm toolchain variables
+        rocm = _resolve_rocm_paths()
+        env["ROCM_PATH"] = rocm["ROCM_PATH"]
+        env["HIP_PATH"] = rocm["HIP_PATH"]
 
-        rocm_llvm_bin = "/usr/lib64/rocm/llvm/bin"
-        rocm_bin = "/opt/rocm/bin"
         current_path = env.get("PATH", "")
-        paths_to_add = [p for p in [rocm_llvm_bin, rocm_bin] if os.path.isdir(p) and p not in current_path]
+        paths_to_add = [p for p in [rocm["ROCM_LLVM_BIN"], rocm["ROCM_BIN"]]
+                        if os.path.isdir(p) and p not in current_path]
         if paths_to_add:
             env["PATH"] = f"{':'.join(paths_to_add)}:{current_path}"
         return env
@@ -244,16 +326,14 @@ class TensileDriver:
     def run_preflight(self) -> bool:
         """
         Phase-0 Preflight validation:
-        Check Tensile binary, shim, device info, and registry.
+        Check Tensile binary, device info, and registry.
         """
         print("Running Phase-0 Preflight checks...")
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
-        shim_file = self.tensile_root / "tensile_gfx90c_port" / "sitecustomize.py"
 
         checks = [
             ("Tensile root exists", self.tensile_root.is_dir()),
             ("Tensile CLI exists", tensile_bin.is_file()),
-            ("Shim sitecustomize.py exists", shim_file.is_file()),
             ("Registry DB accessible", self.registry.db_path.exists() or self.registry.results_dir.is_dir()),
             ("phases.yaml accessible", (self.base_dir / "phases.yaml").exists()),
         ]
@@ -283,11 +363,12 @@ class TensileDriver:
     def _apply_cooldown(self) -> bool:
         """
         Apply interruptible thermal cooldown latch between GPU benchmark phases.
-        Listens for 's' (skip cooldown) and 'q' (quit run) keys in real-time.
+        Listens for 's' (skip cooldown), 'e' (end run after current phase) and
+        'q' (quit run) keys in real-time.
         Returns True if cooldown completed or skipped, False if quit requested.
         """
-        if self._gpu_phases_run > 0 and self.cooldown_s > 0 and not self._stop_requested:
-            print(f"Thermal cooldown: waiting {self.cooldown_s}s ('s' to skip sleep, 'q' to quit)...")
+        if self._gpu_phases_run > 0 and self.cooldown_s > 0 and not self._stop_requested and not self._finish_after_iteration:
+            print(f"Thermal cooldown: waiting {self.cooldown_s}s ('s' to skip sleep, 'e' to end run after current phase, 'q' to quit)...")
             start = time.time()
             while time.time() - start < self.cooldown_s:
                 if self._stop_requested:
@@ -298,6 +379,10 @@ class TensileDriver:
                         key = sys.stdin.read(1).lower()
                         if key == 's':
                             print("\n[USER ACTION] 's' pressed: Skipping thermal cooldown...")
+                            break
+                        elif key == 'e':
+                            print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+                            self._finish_after_iteration = True
                             break
                         elif key == 'q':
                             print("\n[USER ACTION] 'q' pressed: Quitting run during cooldown...")
@@ -432,7 +517,7 @@ class TensileDriver:
         """
         Write valid Tensile Top-Level Config YAML (GlobalParameters + BenchmarkProblems).
 
-        Contraction pattern → TransposeA/B (verified vs Tensile source + attempt1 results):
+        Contraction pattern → TransposeA/B (verified vs Tensile source):
             Ailk_Bljk → TA=False TB=False  (NN)
             Ailk_Bjlk → TA=False TB=True   (NT)
             Alik_Bljk → TA=True  TB=False  (TN)
@@ -451,7 +536,7 @@ class TensileDriver:
 
         # --- Contraction pattern → TransposeA/B ---
         # Prefer explicit field; fall back to label parse.
-        # Verified mapping (Tensile index notation + attempt1 LibraryLogic cross-check):
+        # Verified mapping (Tensile index notation cross-check):
         #   Ailk_Bljk → TA=False TB=False (NN)
         #   Ailk_Bjlk → TA=False TB=True  (NT)  [CSV: Cijk_Ailk_Bjlk_SB]
         #   Alik_Bljk → TA=True  TB=False (TN)  [CSV: Cijk_Alik_Bljk_SB]
@@ -656,6 +741,25 @@ class TensileDriver:
         with open(path, "w") as f:
             yaml.safe_dump(tensile_yaml, f, default_flow_style=False, sort_keys=False)
 
+    def _tee_stream(self, stream, file, console, prefix: str) -> threading.Thread:
+        """Pump a subprocess stream to its log file and the console, line by line."""
+        def _pump():
+            try:
+                for line in iter(stream.readline, ""):
+                    if not line:
+                        break
+                    file.write(line)
+                    file.flush()
+                    print(f"{prefix}{line.rstrip()}")
+            finally:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+        t = threading.Thread(target=_pump, daemon=True)
+        t.start()
+        return t
+
     def _run_tensile_benchmark(
         self,
         config_path: Path,
@@ -663,14 +767,15 @@ class TensileDriver:
         timeout: int
     ) -> Dict[str, Any]:
         """
-        Run Tensile benchmark via CLI in detached process group with interactive 's'/'q' key listener.
+        Run Tensile benchmark via CLI in detached process group with interactive 's'/'e'/'q' key listener.
         """
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
         phase_out_dir.mkdir(parents=True, exist_ok=True)
 
-        assembler = "/usr/lib64/rocm/llvm/bin/clang++"
+        rocm = _resolve_rocm_paths()
+        assembler = rocm["TENSILE_ASSEMBLER"]
         if not os.path.isfile(assembler):
-            assembler = "/usr/lib64/ccache/clang++"
+            assembler = rocm["TENSILE_ASSEMBLER_FALLBACK"]
 
         cmd = [
             sys.executable,
@@ -678,13 +783,18 @@ class TensileDriver:
             "--arch", "gfx90c",
             "--cxx-compiler", "hipcc",
             "--c-compiler", "hipcc",
-            "--assembler", assembler,
+        ]
+        if os.path.isfile(assembler):
+            cmd += ["--assembler", assembler]
+        cmd += [
             "--client-build-path", str(self.client_build_dir),
             "--client-lock", str(self.client_build_dir / "client.lock"),
             "-d", "0",
             str(config_path),
             str(phase_out_dir)
         ]
+        if os.environ.get("TENSILE_VERBOSE") in ("1", "true", "True"):
+            cmd.append("--verbose")
 
         env = self._get_tensile_env()
 
@@ -692,17 +802,24 @@ class TensileDriver:
         if tensile_bin.exists():
             log_out = open(phase_out_dir / "stdout.log", "w")
             log_err = open(phase_out_dir / "stderr.log", "w")
-            
+
             proc = subprocess.Popen(
                 cmd,
                 env=env,
                 cwd=str(self.tensile_root),
-                stdout=log_out,
-                stderr=log_err,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
                 preexec_fn=os.setsid
             )
             self._current_proc = proc
-            
+
+            tee_workers = [
+                self._tee_stream(proc.stdout, log_out, sys.stdout, f"[tensile] "),
+                self._tee_stream(proc.stderr, log_err, sys.stderr, f"[tensile:err] "),
+            ]
+
             start_t = time.time()
             skipped = False
             
@@ -723,6 +840,9 @@ class TensileDriver:
                                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                                 skipped = True
                                 break
+                            elif key == 'e':
+                                print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
+                                self._finish_after_iteration = True
                             elif key == 'q':
                                 print("\n[USER ACTION] 'q' pressed: Quitting run...")
                                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
@@ -740,6 +860,9 @@ class TensileDriver:
                 rc = proc.poll() if not skipped else -1
             finally:
                 self._current_proc = None
+                proc.wait()
+                for w in tee_workers:
+                    w.join(timeout=5)
                 log_out.close()
                 log_err.close()
 
@@ -790,7 +913,7 @@ class TensileDriver:
 
         results = []
         for phase in phases:
-            if self._stop_requested:
+            if self._stop_requested or self._finish_after_iteration:
                 print("Stop requested, halting phase execution")
                 break
 
@@ -822,9 +945,16 @@ class TensileDriver:
             result = self.execute_phase(phase, self.run_dir)
             results.append(result)
 
+            if self._finish_after_iteration:
+                print("End-after-iteration requested, halting phase execution")
+                break
+
         # Mark run final status in registry
         final_status = "interrupted" if self._stop_requested else "completed"
-        self.registry.update_run_status(self.run_dir.name, final_status, {"phases_executed": len(results)})
+        run_meta: Dict[str, Any] = {"phases_executed": len(results)}
+        if self._finish_after_iteration:
+            run_meta["end_after_iteration"] = True
+        self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
         return results
 
     def run_auto(
@@ -838,7 +968,7 @@ class TensileDriver:
         print(f"Starting auto-convergence loop (budget={budget}, mutation_budget={mutation_budget})")
 
         iteration = 0
-        while iteration < budget and not self._stop_requested:
+        while iteration < budget and not self._stop_requested and not self._finish_after_iteration:
             print(f"\n=== Iteration {iteration + 1}/{budget} ===")
 
             phases = self.load_phases_manifest()
@@ -847,6 +977,10 @@ class TensileDriver:
                 self.scheduler.generate_family_phases("SS", ["Ailk_Bljk"], ["1024x1024x1024"])
 
             results = self.run_phases()
+
+            if self._finish_after_iteration:
+                print("End-after-iteration requested, halting auto loop")
+                break
 
             # Retire stable cells before re-running policy gates
             self._retire_stable_candidates()
@@ -919,6 +1053,46 @@ class TensileDriver:
 
         return all_analytics
 
+    def _compute_family_timing(self, run_id: str) -> Dict[str, Dict[str, Any]]:
+        """Per-family throughput timing from registry started -> ended pairs."""
+        from analytics import extract_family_from_phase_id
+
+        started: Dict[str, datetime] = {}
+        ended: Dict[str, datetime] = {}
+        try:
+            records = self.registry.read_records(run_id=run_id)
+        except Exception:
+            return {}
+        for rec in records:
+            pid = rec.get("phase_id") or ""
+            status = str(rec.get("status", "")).lower()
+            ts = rec.get("timestamp")
+            if not pid or not ts:
+                continue
+            try:
+                t = datetime.fromisoformat(str(ts))
+            except ValueError:
+                continue
+            if status in ("started", "running"):
+                started.setdefault(pid, t)
+            elif status in ("completed", "success", "failed", "timeout", "interrupted", "aborted"):
+                ended.setdefault(pid, t)
+        per_fam: Dict[str, List[float]] = {}
+        for pid, start in started.items():
+            end = ended.get(pid)
+            if not end or end <= start:
+                continue
+            fam = (extract_family_from_phase_id(pid) or "unknown").upper()
+            per_fam.setdefault(fam, []).append((end - start).total_seconds())
+        return {
+            fam: {
+                "cells": len(durs),
+                "mean_sec": round(sum(durs) / len(durs), 1),
+                "total_min": round(sum(durs) / 60.0, 1),
+            }
+            for fam, durs in per_fam.items()
+        }
+
     def generate_acceptance_report(self, run_dir: Optional[Path] = None) -> Optional[Dict[str, Any]]:
         """
         Generate the acceptance report (JSON + HTML) from run data.
@@ -930,11 +1104,13 @@ class TensileDriver:
                 run_dir = self.run_dir
             all_analytics = self._load_analytics_from_run()
             red_list = self.analytics.generate_red_list(all_analytics)
+            family_timing = self._compute_family_timing(run_dir.name)
             report = self.reporter.generate_acceptance_report(
                 run_id=run_dir.name,
                 ab_verdicts=[],
                 all_analytics=all_analytics,
-                red_list=red_list
+                red_list=red_list,
+                family_timing=family_timing
             )
             report_out = run_dir / "acceptance_report.json"
             self.reporter.write_report(report, report_out)
@@ -1139,7 +1315,7 @@ class TensileDriver:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="port_tensile.py — attempt2 driver for gfx90c Tensile port"
+        description="port_tensile.py — oto driver for gfx90c Tensile port"
     )
     parser.add_argument(
         "--base-dir",
@@ -1263,7 +1439,7 @@ def main():
         print(f"Stage 6 Synthesis complete: {result}")
         return 0 if result.get("status") != "failed" else 1
 
-    # Semantic target execution (or legacy --phases)
+    # Semantic target execution
     if args.targets or args.phases or args.family or args.pattern or args.shape:
         manifest = driver.load_phases_manifest()
         matched = []
@@ -1323,13 +1499,19 @@ def main():
         print(f"Executing {len(matched)} matched targets across Stage 3 benchmark...")
         results = []
         for target in matched:
-            if driver._stop_requested:
+            if driver._stop_requested or driver._finish_after_iteration:
                 break
             res = driver.execute_phase(target, driver.run_dir)
             results.append(res)
+            if driver._finish_after_iteration:
+                print("End-after-iteration requested, halting target execution")
+                break
 
         final_status = "interrupted" if driver._stop_requested else "completed"
-        driver.registry.update_run_status(driver.run_dir.name, final_status, {"targets_executed": len(results)})
+        run_meta: Dict[str, Any] = {"targets_executed": len(results)}
+        if driver._finish_after_iteration:
+            run_meta["end_after_iteration"] = True
+        driver.registry.update_run_status(driver.run_dir.name, final_status, run_meta)
         print(f"Completed {len(results)} targets (run status: {final_status})")
 
         # Generate acceptance report (JSON & HTML) based on available execution data

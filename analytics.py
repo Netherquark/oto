@@ -44,7 +44,7 @@ REALISTIC_CEILINGS = {
 # Family-to-dtype mapping for phase_id parsing
 FAMILY_TO_DTYPE = {
     'ss': 'S', 'dd': 'D', 'hh': 'H', 'zz': 'Z',
-    'cc': 'C', 'hh_hpa': 'H', 'hs_hpa': 'H'
+    'cc': 'C', 'hh_hpa': 'H', 'hs_hpa': 'H', 'auto': 'S'
 }
 
 # Known family prefixes (longest first for greedy matching)
@@ -132,13 +132,14 @@ class AnalyticsEngine:
                 if dtype:
                     return dtype
 
-        # Fallback: parse from phase_id naming convention
-        family_match = re.match(r'phase_([a-z_]+)_', norm_id)
-        if family_match:
-            family = family_match.group(1).lower()
-            dtype = FAMILY_TO_DTYPE.get(family)
-            if dtype:
-                return dtype
+        # Fallback: parse from phase_id via family prefix. Token-based parse
+        # (unlike a raw [a-z_]+ regex) survives digit-bearing suffixes such as
+        # 'phase_ss_spoof_baseline_vega10' where the regex silently produced
+        # 'unknown' dtypes.
+        family = extract_family_from_phase_id(norm_id)
+        dtype = FAMILY_TO_DTYPE.get(family)
+        if dtype:
+            return dtype
 
         return 'unknown'
 

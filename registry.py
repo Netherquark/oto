@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-registry_sqlite.py — SQLite-based registry for attempt2
+registry_sqlite.py — SQLite-based registry for oto
 
 Replaces fcntl.flock with proper ACID database for concurrent safety.
 All records append-only; database schema supports evolution.

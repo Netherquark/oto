@@ -1,17 +1,17 @@
-# gfx90c Tensile Port — Knowledge Base (attempt2)
+# gfx90c Tensile Port — Knowledge Base (oto)
 
 > Status: **APPROVED (2026-09-13)**.
 
 **Target:** gfx90c — Cezanne APU iGPU, Ryzen 5 PRO 5650U
 **ISA:** (9,0,12) — GFX9/GCN5 "Vega 7", NOT RDNA
-**Tensile:** v4.44.0 — **only** this tree:
-`/home/netherquark/Soham/Large_code/sources/GPU/Tensile`
-(pristine upstream + 3-injection shim `tensile_gfx90c_port/sitecustomize.py` in
-**that** tree; no fork, no in-tree ISA patch, no `/tmp` clone)
-**Date:** 2026-09-13
+**Tensile:** v4.44.0 — **only** the tree named by the repo-root `.env` key
+`TENSILE_ROOT`:
+(pristine upstream + **minimal in-tree gfx90c support**: 3 bookkeeping entries in
+`Common.py` + `AsmCaps.py`, landed 2026-09-19)
+**Date:** 2026-09-13 (mechanism updated 2026-09-19)
 **Numeric source:** `gfx90c_common.PEAK_GFLOPS` — the single source for every peak figure in this ecosystem
 
-This file is the **WHAT** layer of the attempt2 ecosystem: the baseline repository and
+This file is the **WHAT** layer of the oto ecosystem: the baseline repository and
 code architecture — what Tensile is, what the gfx90c port path is, and what a library
 build produces. It deliberately contains no history, no plans, and no measurements.
 History lives in `changelog.md`; measurements live in the results pipelines.
@@ -19,7 +19,7 @@ History lives in `changelog.md`; measurements live in the results pipelines.
 Scope of this file (gates satisfied at approval):
 
 - [x] Tensile pipeline and repository topology
-- [x] The gfx90c port mechanism (the 3-injection shim)
+- [x] The gfx90c port mechanism (3 minimal in-tree bookkeeping entries)
 - [x] Parameter / problem-shape semantics
 - [x] Solution-space vocabulary (kernel token glossary)
 - [x] Shipped gfx900 footprint (replication target)
@@ -66,23 +66,21 @@ Key properties:
 
 ## 2. Repository Topology
 
-**Canonical Tensile root (non-negotiable):**
-`/home/netherquark/Soham/Large_code/sources/GPU/Tensile`
+**Canonical Tensile root (one path; location from the repo-root `.env` key
+`TENSILE_ROOT`):**
 
-That tree is pristine upstream HEAD plus the gfx90c shim directory. The attempt2
-folder (`porting_tensile/attempt2`) is docs + the new python **driver**. It does
-not contain Tensile. It does not invoke `/tmp/opencode/peak_probe`.
+That tree is pristine upstream HEAD plus the gfx90c support delta (2 files:
+`Tensile/Common.py`, `Tensile/AsmCaps.py` — section 3). The `oto` ecosystem
+folder is docs + the new python **driver**. It does not contain Tensile. 
 
 ```
-/home/netherquark/Soham/Large_code/sources/GPU/Tensile/
+<TENSILE_ROOT>/
 ├── Tensile/bin/Tensile              benchmark CLI  (TENSILE_BIN)
 ├── Tensile/bin/TensileCreateLibrary library CLI
 ├── Tensile/                         python package (import Tensile)
-├── tensile_gfx90c_port/             3-injection shim (sitecustomize.py)
 ├── gfx90c_common.py                 PEAK_GFLOPS authority
 ├── gfx90c_runs/                     live per-run artifacts
 ├── gfx90c_results/                  live ledgers (jsonl today; registry.db next)
-├── run_gfx90c_suite.sh              legacy shell driver (migration source)
 ├── configs/                         vendor YAML problem sets
 └── Source/                          host-side dispatch / emitted assembly
 ```
@@ -90,14 +88,16 @@ not contain Tensile. It does not invoke `/tmp/opencode/peak_probe`.
 Invocation (same as the proven suite):
 
 ```
-PYTHONPATH=<TENSILE_ROOT>/tensile_gfx90c_port:<TENSILE_ROOT>:$PYTHONPATH
+PYTHONPATH=<TENSILE_ROOT>:$PYTHONPATH
 python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
   --assembler … --cxx-compiler … -d 0 <config.yaml> <outdir>
 ```
 
+`PYTHONPATH` carries only the Tensile package itself.
+
 This project's driver source (outside that tree, still **calls into** it):
 
-- `port_tensile.py` — the attempt2 driver (phases from `phases.yaml`; specification in
+- `port_tensile.py` — the oto driver (phases from `phases.yaml`; specification in
   `implementation_plan.md` §The Driver Architecture); plus its modules `registry.py`,
   `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`.
 - `gfx90c_common.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
@@ -105,44 +105,49 @@ This project's driver source (outside that tree, still **calls into** it):
 - `all_runs_dataset.py` — aggregation of all run data → `all_runs_dataset.json`
 - `make_results_md.py` — DERIVED results blocks for markdown
 - `make_report.py` — `gfx90c_report.html` single-file report (inline SVG)
-- `auto_retire.py` — retirement automation (legacy; retirement logic moves into
+- `auto_retire.py` — retirement automation (retirement logic moves into
   `policy.py` / `agent.py` in the refactor)
 
-Port shim (the entire delta vs upstream — see section 3):
+The gfx90c delta (the entire change vs upstream — see section 3):
 
-- `tensile_gfx90c_port/sitecustomize.py` — import-time 3-injection hook on `PYTHONPATH`
+- A 2-file in-tree patch: `Tensile/Common.py` + `Tensile/AsmCaps.py`.
 
 ---
 
-## 3. The gfx90c Port Mechanism
+## 3. The gfx90c Support Mechanism
 
-The port is **pristine upstream Tensile plus one Python shim**. There is no fork and no
-in-tree patch. All gfx90c support is injected at interpreter import time by
-`tensile_gfx90c_port/sitecustomize.py` on `PYTHONPATH`.
+The port is **pristine upstream Tensile plus a minimal in-tree bookkeeping patch**,
+landed 2026-09-19 on latest `develop_deprecated` HEAD (verified against
+`origin/develop_deprecated`).
 
-Three injections, in order:
+Three entries, in order:
 
-1. Append `(9,0,12)` to `SupportedISA` — in **defaultGlobalParameters** AND in the live
-   `globalParameters`. Tensile calls `restoreDefaultGlobalParameters()` before config
-   parse, so both copies must carry the ISA or the restore wipes it.
-2. `architectureMap["gfx90c"]` — gfx90c must resolve to its ISA, feature capability set,
-   and architecture-family entry inside the generator.
-3. Seed `getCapabilitiesCache` for `(9,0,12)` **from `(9,0,10)`** — capability lookups
-   cache on first request; pre-seeding (9,0,10) data under the (9,0,12) key prevents a
-   capability probe that would treat gfx90c as unsupported.
+1. `(9,0,12)` registered in **`SupportedISA`** (`Tensile/Common.py`) — gfx90c now exists
+   in the toolchain's default ISA list; `restoreDefaultGlobalParameters()` keeps it.
+2. `architectureMap["gfx90c"]` (+ `:xnack+` / `:xnack-`) in `Tensile/Common.py` —
+   the arch name resolves to its ISA, feature-capability set, and architecture-family
+   entry inside the generator.
+3. A real **`(9,0,12)` capabilities entry** in `Tensile/AsmCaps.py` — written from
+   scratch from LLVM `FeatureISAVersion9_0_C` (`HasMadMixInsts`; no MFMA / dot /
+   dl-insts / VOP2-fmac / WMMA / kernarg-preload). Capability lookups cache on first
+   request; this entry is what makes gfx90c supported instead of probed-and-rejected
+   at `populateCapabilities` time.
 
-Ordering trap:
+Ordering requirement:
 
 > Config merge happens **after** `populateCapabilities`. Adding gfx90c support at
-> config-parse time is therefore too late; the capability seed must already exist at
-> import time. Import-time injection is the correct — and only — hook that works
-> without patching Tensile source.
+> config-parse time is therefore too late; the capability entry must already exist in
+> source before the config parses. The in-tree patch satisfies this by carrying the
+> entry in `AsmCaps` (the ISA list and arch map in `Common`), so every entry point —
+> CLI, library generation, benchmarking — sees gfx90c as supported from import.
 
 Consequence:
 
-- The tree stays byte-identical to upstream; the entire delta vs upstream is one shim
-  file, which is what makes the port re-verifiable and the "native isa build" claim
-  falsifiable.
+- `PYTHONPATH` = Tensile package only.
+- The entire delta vs upstream is 3 bookkeeping entries across 2 files — revertible
+  with `git checkout -- <files>`, and the real capabilities are still derived
+  **per-instruction from the assembler** at runtime and verified against the written
+  baseline (0 mismatches as of 2026-09-19).
 
 ---
 
@@ -266,7 +271,7 @@ Translation constraint:
 
 Operational ordering: **coverage first**. Lever selection is subordinate to covering
 every function of the 28-family footprint (section 6). The levers below are the
-measured truths (frozen prior-campaign conclusions in `prior_INSIGHTS_CAVEMAN_ULTRA.md`
+measured truths (frozen prior conclusions in `prior_INSIGHTS_CAVEMAN_ULTRA.md`
 §5.1) that make coverage cheap and correct on gfx90c.
 
 Rate card (peaks @ 1800 MHz; single source `gfx90c_common.PEAK_GFLOPS`; ceiling
@@ -344,7 +349,7 @@ Data invariants every consumer relies on:
 - `gfx90c_results/registry.db` — the shared append-only ledger (`records` INSERT-only).
 - Run-local artifacts under `gfx90c_runs/run_YYYYMMDD_HHMMSS/` — configs, CSVs, telemetry.
 - `logs/telemetry.csv` — header-in-file (self-describing, no sidecar).
-- Legacy `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` — **frozen, still protected**; never rewritten. New evidence goes to SQLite.
+- Frozen `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` — **frozen, still protected**; never rewritten. New evidence goes to SQLite.
 - `configs/phaseN_*.yaml` — fingerprints (`fp`); a changed fingerprint is a new attempt.
 - `run_YYYYMMDD_HHMMSS/` — era-named run directories.
 - `phases.yaml` — the data-only **manifest** (source of phase definitions). Not replaced by a DB table.
@@ -368,18 +373,18 @@ Every stream of benchmark evidence, past and future:
 - `gfx90c_results/registry.db` table `records` — the shared ledger (INSERT-only).
 - `gfx90c_runs/run_YYYYMMDD_HHMMSS/**` — per-run artifacts: `configs/phase*.yaml`,
   `phase*/2_BenchmarkData/*.csv`, `00_Final.csv`, `logs/telemetry.csv`.
-- Legacy `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` — historical
-  ledgers from the prior campaign / early attempt2. Remain **in place**; never
-  rewritten, never deleted, never "migrated in place". Readers may ingest them
-  into SQLite as **new** `records` rows (copy-forward), never truncate the jsonl.
+- Frozen `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` ledgers. Remain
+  **in place**; never rewritten, never deleted, never "migrated in place". Readers
+  may ingest them into SQLite as **new** `records` rows (copy-forward), never
+  truncate the jsonl.
 - `results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
 - `gfx90c_report.html` — regenerated from data, never hand-repaired.
-- Legacy/corrupt jsonl records remain **in place** (triage: readers must tolerate
-  and mark, never repair the file by deleting the row).
+- Corrupt jsonl records from the frozen set remain **in place** (triage: readers
+  must tolerate and mark, never repair the file by deleting the row).
 
-### 10.2 Append-only mechanics (SQLite — approved 2026-09-13)
+### 10.2 Append-only mechanics (SQLite)
 
-`fcntl.flock` + JSONL is **retired as the write path**. Persistence uses stdlib
+`fcntl.flock` + JSONL is **no longer a write path**. Persistence uses stdlib
 `sqlite3` (`gfx90c_results/registry.db`, WAL). The law is unchanged: never delete,
 overwrite, or rewrite **benchmark evidence**.
 
@@ -452,4 +457,4 @@ overwrite, or rewrite **benchmark evidence**.
 
 Related documents: `changelog.md` (the evolution narrative), `gfx90c_theoretical_limits.md`
 (ceiling authority), `mapping.md` (footprint contract), `prior_INSIGHTS_CAVEMAN_ULTRA.md`
-/ `prior_RESEARCH_ARCHIVE.md` (frozen prior-campaign conclusions).
+/ `prior_RESEARCH_ARCHIVE.md` (frozen prior conclusions).

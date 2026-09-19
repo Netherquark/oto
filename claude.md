@@ -1,4 +1,4 @@
-# Tensile gfx90c — attempt2 Entry Contract
+# Tensile gfx90c — oto Entry Contract
 
 /caveman ultra
 
@@ -6,9 +6,9 @@
 
 USE SUBAGENTS AS LIBERALLY AS POSSIBLE to ensure the main agent's context doesn't
 get overpopulated by tangential shit and to parallelise tasks.
-This file is the **entrypoint + operating contract** for attempt2.
+This file is the **entrypoint + operating contract** for oto.
 
-attempt2 is a **one-shot deterministic convergence** attempt: replicate the shipped
+oto is a **one-shot deterministic convergence** attempt: replicate the shipped
 gfx900 Tensile library footprint as NATIVE gfx90c libraries and converge per-cell by
 benchmarking — with NO LLM consultation in the loop. The driver decides next
 candidates deterministically (harvest wins → mutate the winner by ≤2 knobs → re-run).
@@ -28,14 +28,14 @@ For every substantive task:
 4. Read `mapping.md` for the shipped-footprint → native-gfx90c replication contract.
 5. Read `gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
 6. Read `knowledge_base.md` for the baseline repo/code architecture.
-7. Read `changelog.md` for what changed and why (attempt2 evolution).
+7. Read `changelog.md` for what changed and why (oto evolution).
 8. Read `potential_configs.md` for the candidate deck, decisions, and search rules.
-9. Read `results.md` for measured evidence (the attempt2 ledger).
+9. Read `results.md` for measured evidence (the oto ledger).
 10. Read `incomplete_work.md` / `scratch.md` / `adversarial_review.md` as task/audit registers.
 11. Read `prior_INSIGHTS_CAVEMAN_ULTRA.md` and `prior_RESEARCH_ARCHIVE.md` ONLY when
-    you need the prior campaign's measured conclusions (bests, verdicts, levers).
-    These are the sole sanctioned prior material; do not reference the prior
-    campaign's working docs.
+    you need the frozen prior measured conclusions (bests, verdicts, levers).
+    These are the sole sanctioned prior material; do not reference other prior
+    working docs.
 12. Check live repo/source/log/DB state before claiming current status.
 
 Read only the documents relevant to the task when scope is narrow; use the full
@@ -55,8 +55,8 @@ sequence when changing strategy, architecture, methodology, or the implementatio
 | `tensile_tuning_context.md` | Tuning/search philosophy (one-shot; AI as add-only), hardware truth |
 | `scratch.md` | Long-term goal, enumerated task registry, guardrails |
 | `incomplete_work.md` | Open-work register (status-keyed) |
-| `adversarial_review.md` | Audit baseline + checklist for the attempt2 driver |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md` | Frozen prior-campaign conclusions (read-only reference; results only) |
+| `adversarial_review.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
+| `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md` | Frozen prior conclusions (read-only reference; results only) |
 | `README.md` | General repository orientation |
 | `changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
 
@@ -85,13 +85,19 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 
 ## 5. Non-negotiable project guardrails
 
-- **Tensile tree is one path.** Live Tensile =
-  `/home/netherquark/Soham/Large_code/sources/GPU/Tensile`. Driver shells out to
-  `Tensile/bin/Tensile` and `Tensile/bin/TensileCreateLibrary` **in that tree**.
-  Shim = `tensile_gfx90c_port/` **in that tree**. Run ledgers = `gfx90c_runs/` +
-  `gfx90c_results/` **in that tree**. Peak table = that tree's `gfx90c_common.py`.
-  `PYTHONPATH` = `<TENSILE_ROOT>/tensile_gfx90c_port:<TENSILE_ROOT>:…`.
-  Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
+- **No re-inventing known-solved problems.** If the OS, the Python stdlib, or an
+  existing industry-standard library already solves it, use that. Never hand-roll
+  a substitute for a standard solution: `.env` → `python-dotenv`
+  (`load_dotenv`), toolchain/bin discovery → `hipconfig` + `shutil.which`,
+  locking/persistence → stdlib `sqlite3`/`json`, CLI → `argparse`. Do the same for any other standard problem-solution set you come across.
+- **Tensile tree is one path** (location from the repo-root `.env` key
+  `TENSILE_ROOT`, e.g. `${TENSILE_ROOT:-<checkout>}`). Driver shells out to
+   `Tensile/bin/Tensile` and `Tensile/bin/TensileCreateLibrary` **in that tree**.
+    Native gfx90c support = a 2-file minimal Tensile patch (`Tensile/Common.py` +
+    `Tensile/AsmCaps.py`) **in that tree**. Run ledgers = `gfx90c_runs/` +
+   `gfx90c_results/` **in that tree**. Peak table = that tree's `gfx90c_common.py`.
+   `PYTHONPATH` = `<TENSILE_ROOT>:…`.
+   Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
 
 - **One-shot, deterministic.** No LLM consultation in the loop. Candidate generation
   is deterministic (harvest → mutate ≤2 knobs). The ONLY exception is the user
@@ -147,9 +153,21 @@ checks are demonstrated and remaining gaps are stated.
 
 ## 8. Documentation hygiene
 
-One fact, one canonical home. Fix stale docs in the owner + dependent generated
-artifacts; do not create competing summaries. Do not inflate this file with project
-history that belongs elsewhere.
+### 8.1 Legacy silence & file boundaries
+
+- **Never reference removed machinery.** Anything that has been deleted from the
+  codebase — by any name or description — must never reappear in code, configs,
+  or docs. Zero occurrences, always.
+- **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
+  the frozen `prior_*` files. Live docs (this file, `implementation_plan.md`,
+  `potential_configs.md`, `knowledge_base*`, `results.md`, `mapping.md`,
+  `README.md`, `gfx90c_common.py` comments, etc.) state current fact only. They
+  may point at `prior_*` for conclusions, but must never re-narrate the past.
+- **`todo.txt` is a USER-ONLY file.** The agent never reads, writes, greps,
+  renames, or touches it — in any context, for any reason.
+- One fact, one canonical home. Fix stale docs in the owner + dependent generated
+  artifacts; do not create competing summaries. Do not inflate this file with project
+  history that belongs elsewhere.
 
 ## 9. Task routing
 
@@ -163,7 +181,7 @@ history that belongs elsewhere.
 - "What did runs prove?" → `results.md`
 - "How does the driver work?" → `implementation_plan.md` (The Driver Architecture)
 - "What is the search strategy?" → AI tuning context MD
-- "What did the prior campaign conclude?" → `prior_INSIGHTS_CAVEMAN_ULTRA.md` /
+- "What are the frozen prior conclusions?" → `prior_INSIGHTS_CAVEMAN_ULTRA.md` /
   `prior_RESEARCH_ARCHIVE.md` (measured results only), then verify against current sources.
 
 ## 10. Final response discipline

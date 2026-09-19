@@ -1,9 +1,9 @@
-# gfx90c — attempt2 Potential & Convergent-Candidate Configurations
+# gfx90c — oto Potential & Convergent-Candidate Configurations
 
 > Role: candidate deck + search rules for the deterministic loop. Not a store of
-> raw benchmark data (that's `results.md`). Prior-campaign verdicts are carried as
+> raw benchmark data (that's `results.md`). Frozen prior verdicts are carried as
 > the deck's seed knowledge (conclusions only — sanctioned source:
-> `prior_INSIGHTS_CAVEMAN_ULTRA.md`); attempt2 runs them through the deterministic
+> `prior_INSIGHTS_CAVEMAN_ULTRA.md`); the loop runs them through the deterministic
 > harvest → mutate pipeline.
 
 ## 1. What has already been tried (carried verdicts)
@@ -11,7 +11,7 @@
 Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median-of-seeds)
 → **5 W / 10 T / 6 L**.
 
-| Candidate | Result | Action for attempt2 |
+| Candidate | Result | Action for oto |
 |---|---|---|
 | A sgemm controller sweep (p16) | 0W/3T/0L (2048³ +0.3..+5.6) | keep 2048³ as deck seed; do NOT re-sweep |
 | A hgemm (p17) | 0W/0T/3L (−8..−9%) | drop |
@@ -25,7 +25,7 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
 | G schedule vars | label-only, no effect | ignore |
 
 **Other carried facts:**
-- Only 6 genuinely-new problem cells were ever produced. attempt2's main axis is
+- Only 6 genuinely-new problem cells were ever produced. oto's main axis is
   **coverage** of the 28-family footprint (see `mapping.md`).
 - FP64 at 98% of a 101 GFlops pipe → no headroom; do not spend GPU on it except to
   confirm port-level correctness.
@@ -39,7 +39,7 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
 - **N4/H7 (kept):** mutate the current per-cell winner by **≤2 knobs** (neighbours),
   never resweep a wide grid; drop any fingerprint already benchmarked.
 - **N8 (kept):** winner statistic = median-of-seeds; max is reference-only.
-- **NP (attempt2, no consultation):** knob pool is fixed and gfx90c-legal:
+- **NP (oto, no consultation):** knob pool is fixed and gfx90c-legal:
   `MacroTile`, `ThreadTile`, `WorkGroup`, `WorkGroupMapping`, `DepthU`,
   `GlobalSplitU`, `PrefetchGlobalRead`, `PrefetchLocalRead`, `VectorWidth`,
   `NLCA`, `EPS`, `Stages`. No matrix instructions, no `SIA>1`, no Fp16AltImpl.
@@ -64,11 +64,28 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
 - The manual-LLM contingency is add-only, user-invoked, ≤5 candidates dumped into
   `phases.yaml` — same pipeline, never in the loop.
 
-## 4. Decisions log (attempt2)
+## 4. Decisions log
 
-- 2026-09-13: attempt2 = deterministic convergence; no LLM in loop; manual-LLM
+- 2026-09-13: oto = deterministic convergence; no LLM in loop; manual-LLM
   add-only worst case. Driver per `implementation_plan.md` §The Driver Architecture.
   Coverage-first per Step 3.
+- 2026-09-19: **HS_HPA rejection root-caused; guard-legal configs found.** Exact
+  rejection (via `PrintSolutionRejectionReason`): non-MI assembly guard
+  `GlobalLoadVectorWidth{X} must be == VectorWidth or == 1`
+  (`SolutionStructs.py:4583-4596`; source comment: "so shift-ptr logic will
+  work"). It fires when `setGlobalLoadVectorWidth` (`:2010-2047`) pv-reduces
+  GLVW 4→2 for 64x64x8/TT4x4/VW4 tabs (totalElements 512 < NumThreads·GLVW =
+  1024). The predicate is **isa-independent** (rejects gfx900 identically) — a
+  stock-Tensile *generator/representation* restriction, not a gfx90c HW/ISA
+  limit, and not an assembler failure. **Same intent admitted on stock Tensile:**
+  MT64x64x16/TT4x4/VW4/DU16 → `1/1 after SolutionStructs`, gfx90c kernel
+  assembles (`Kernels.so-000-gfx90c.hsaco`, `TensileLibrary_gfx90c.co`) and
+  loads; MT64x64x8/TT4x4/VW2/DU8 → `1/1 after SolutionStructs` and `after
+  KernelWriter`. HS_HPA tuning/config search resumes on those two
+  parameterizations.
+- **Scheduler mirror gap (pending):** `_validate_tensile_loads` (scheduler.py
+  :211-362) does not model the `GLVW==VW or ==1` predicate (4583-4596), so it
+  wrongly pre-validated the rejected deck. Add that predicate to the mirror.
 - 2026-09-13: acceptance narrowed to TWO measures — (1) beat the gfx900-spoof floor
   across the whole shipped suite; (2) approach the per-family ceilings of
   `gfx90c_theoretical_limits.md` §5 (measured utilization logged per
@@ -89,7 +106,7 @@ Winner statistic per N8; ceilings per `gfx90c_theoretical_limits.md`. Data:
 
 > **ss/1024³ stale-CSV caveat:** the 1024³ CSV under
 > `phase_phase_ss_Ailk_Bljk_1024x1024x1024` was produced by a kernel
-> `Cijk_Ailk_Bljk_SB_MT96x96x16_SN_K1` (MT96) while the archived config in that
+> `Cijk_Ailk_Bljk_SB_MT96x96x16_SN_K1` (MT96) while the stored config in that
 > run dir is MT64/TT4/NLCA3 — the CSV is stale from an earlier overwritten config,
 > and the same dir logs `Actual Solutions: 0 / 1 after SolutionStructs`. The
 > 397.2 media for ss/1024³ therefore belongs to the **MT96** variant, not the MT64
@@ -193,7 +210,11 @@ Proposed candidates in priority order (spend rules §3: coverage first, then mut
 6. **hh 1024³ (34.4%) & 2048³ (34.7%)** — mutate MT64x64/TT4x4 seed: MT
    {64,128}×{64,128}/TT8x8, NLCA auto (1), WGM 4→8 — structural deck. hh_hpa 512³
    already 105.8% ceil.
-7. **hs_hpa 1024³/2048³ (45%)** — mutate GG group size / WGM; skip 512³ (69.8%).
+7. **hs_hpa — unblocked (guard-legal parameterizations, 2026-09-19).** The
+   rejection was root-caused to a stock-Tensile generator restriction
+   (`GLVW==VW-or-1`, non-MI assembly path), isa-independent, not a gfx90c HW/ISA
+   limit (see §4). Resume GPU spend on the admitted parameterizations
+   MT64x64x16/TT4x4/VW4/DU16 and MT64x64x8/TT4x4/VW2/DU8.
 8. **dd — closed**: 93.5% @2048³, pipe-saturated (E verdict); no GPU spend.
 
 **Convergence proposal (LLM-advisor, verified ceilings):**

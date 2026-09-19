@@ -7,6 +7,8 @@ Scoped same-run A/B (native vs spoof); per-family acceptance report.
 
 import json
 import math
+import csv
+import statistics
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
@@ -41,6 +43,7 @@ class AcceptanceReport:
     summary: str
     all_analytics: List[CellAnalytics] = field(default_factory=list)
     run_dir: Optional[str] = None
+    family_timing: Optional[Dict[str, Dict[str, Any]]] = None
 
 
 class AcceptanceReporter:
@@ -108,7 +111,8 @@ class AcceptanceReporter:
         ab_verdicts: List[ABVerdict],
         all_analytics: List[CellAnalytics],
         red_list: List[Dict[str, Any]],
-        red_threshold_pct: float = 50.0
+        red_threshold_pct: float = 50.0,
+        family_timing: Optional[Dict[str, Dict[str, Any]]] = None
     ) -> AcceptanceReport:
         """Generate final acceptance report."""
         per_family_coverage = self._compute_family_coverage(all_analytics)
@@ -124,7 +128,8 @@ class AcceptanceReporter:
             overall_pass=overall_pass,
             summary=summary,
             all_analytics=all_analytics,
-            run_dir=str(self.base_dir / "gfx90c_runs" / run_id) if self.base_dir else None
+            run_dir=str(self.base_dir / "gfx90c_runs" / run_id) if self.base_dir else None,
+            family_timing=family_timing
         )
 
     def _compute_family_coverage(
@@ -132,7 +137,7 @@ class AcceptanceReporter:
         all_analytics: List[CellAnalytics]
     ) -> Dict[str, Dict[str, Any]]:
         """
-        Compute per-family coverage vs mapping.md contract (28 families, 3,066 kernels).
+        Compute per-family coverage vs mapping.md contract (7 families).
         """
         expected_families = ["CC", "DD", "ZZ", "HH", "HH_HPA", "HS_HPA", "SS"]
         expected_kernels = {
@@ -322,123 +327,9 @@ class AcceptanceReporter:
 
         red_color = "var(--support-error)" if report.red_list else "var(--support-success)"
 
-        section_explore = """
-        <section class="section">
-            <h2 class="section-title">Problem space explored</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Family</th>
-                            <th>Active shapes</th>
-                            <th>Total explored cells</th>
-                            <th>Footprint coverage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="mono strong">SS / HH / DD / CC / ZZ / HPA</td>
-                            <td>256³, 512³, 1024³, 2048³, 4096³</td>
-                            <td class="num strong">101</td>
-                            <td class="num">7 families active</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        """
-
-        section_coverage_matrix = """
-        <section class="section">
-            <h2 class="section-title">Coverage matrix &amp; execution time</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Family</th>
-                            <th>Completed cells</th>
-                            <th>Mean time / cell (s)</th>
-                            <th>Total time (min)</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="mono strong">SS</td>
-                            <td class="num">8 / 1641</td>
-                            <td class="num">42.1</td>
-                            <td class="num">5.6</td>
-                            <td><span class="tag tag-pass">Active</span></td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">HH / HH_HPA / HS_HPA</td>
-                            <td class="num">36 / 1231</td>
-                            <td class="num">38.4</td>
-                            <td class="num">23.0</td>
-                            <td><span class="tag tag-pass">Active</span></td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">CC / DD / ZZ</td>
-                            <td class="num">36 / 194</td>
-                            <td class="num">35.0</td>
-                            <td class="num">21.0</td>
-                            <td><span class="tag tag-pass">Active</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        """
-
-        section_telemetry = """
-        <section class="section">
-            <h2 class="section-title">Telemetry insights (gfx90c APU)</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Metric</th>
-                            <th>Observed median</th>
-                            <th>Peak recorded</th>
-                            <th>Hardware limit</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="mono strong">Package Power</td>
-                            <td class="num">25.0 W</td>
-                            <td class="num">32.4 W</td>
-                            <td class="num">35.0 W (APU cap)</td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">Edge Temperature</td>
-                            <td class="num">54.2 °C</td>
-                            <td class="num">68.0 °C</td>
-                            <td class="num">95.0 °C (max)</td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">Shader Clock (SCLK)</td>
-                            <td class="num">1800 MHz</td>
-                            <td class="num">1800 MHz</td>
-                            <td class="num">1800 MHz</td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">Memory Clock (MCLK)</td>
-                            <td class="num">1200 MHz</td>
-                            <td class="num">1200 MHz</td>
-                            <td class="num">1200 MHz</td>
-                        </tr>
-                        <tr>
-                            <td class="mono strong">VRAM Usage (UMA)</td>
-                            <td class="num">3.9 GB</td>
-                            <td class="num">4.1 GB</td>
-                            <td class="num">4.0+ GB shared</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        """
+        section_explore = self._problem_space_section(report)
+        section_coverage_matrix = self._coverage_matrix_section(report)
+        section_telemetry = self._telemetry_section(report)
 
         css = """
         :root {
@@ -813,4 +704,209 @@ class AcceptanceReporter:
         with open(html_path, "w") as f:
             f.write(html)
         print(f"Acceptance dashboard HTML generated at: {html_path}")
+
+    def _problem_space_section(self, report) -> str:
+        """Problem-space table derived from the recorded cell analytics."""
+        cells = report.all_analytics or []
+        groups = {}
+        for c in cells:
+            label = (c.family or c.dtype or "unknown").upper()
+            groups.setdefault(label, []).append(c)
+
+        empty = ("<section class=\"section\"><h2 class=\"section-title\">Problem "
+                 "space explored</h2><div class=\"table-wrap\"><table><tbody>"
+                 "<tr><td class=\"empty\">No analytics recorded yet.</td></tr>"
+                 "</tbody></table></div></section>")
+        if not groups:
+            return empty
+
+        cov = report.per_family_coverage or {}
+        rows = ""
+        for label in sorted(groups):
+            cg = groups[label]
+            shapes = ", ".join(sorted({c.shape for c in cg}))
+            entry = cov.get(label)
+            if entry:
+                footprint = (f"{entry['coverage_pct']:.1f}% "
+                             f"({entry['measured_cells']}/{entry['expected_kernels']} kernels)")
+            else:
+                footprint = "—"
+            rows += f"""
+                <tr>
+                    <td class="mono strong">{label}</td>
+                    <td class="mono">{shapes}</td>
+                    <td class="num strong">{len(cg)}</td>
+                    <td class="num">{footprint}</td>
+                </tr>"""
+        return f"""
+        <section class="section">
+            <h2 class="section-title">Problem space explored</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Family</th>
+                            <th>Active shapes</th>
+                            <th>Total explored cells</th>
+                            <th>Footprint coverage</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        """
+
+    def _coverage_matrix_section(self, report) -> str:
+        """Coverage + execution-time table derived from coverage and registry timing."""
+        timing = report.family_timing or {}
+        fam_keys = set(report.per_family_coverage.keys())
+        fam_keys |= set(timing.keys())
+
+        empty = ("<section class=\"section\"><h2 class=\"section-title\">Coverage "
+                 "matrix &amp; execution time</h2><div class=\"table-wrap\"><table>"
+                 "<tbody><tr><td class=\"empty\">No measurement data recorded yet.</td>"
+                 "</tr></tbody></table></div></section>")
+        if not fam_keys:
+            return empty
+
+        rows = ""
+        for fam in sorted(fam_keys):
+            cov = report.per_family_coverage.get(fam)
+            t = timing.get(fam)
+            if cov is not None:
+                completed = f"{cov['measured_cells']} / {cov['expected_kernels']}"
+                measured = cov["measured_cells"] > 0
+            else:
+                completed = f"{t['cells'] if t else 0} / —"
+                measured = bool(t and t["cells"])
+            mean_sec = f"{t['mean_sec']:.1f}" if t else "—"
+            total_min = f"{t['total_min']:.1f}" if t else "—"
+            if measured:
+                tag = "tag tag-pass"
+                status = "Active"
+            else:
+                tag = "tag tag-info"
+                status = "No data"
+            rows += f"""
+                <tr>
+                    <td class="mono strong">{fam}</td>
+                    <td class="num">{completed}</td>
+                    <td class="num">{mean_sec}</td>
+                    <td class="num">{total_min}</td>
+                    <td><span class="{tag}">{status}</span></td>
+                </tr>"""
+        return f"""
+        <section class="section">
+            <h2 class="section-title">Coverage matrix &amp; execution time</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Family</th>
+                            <th>Completed cells</th>
+                            <th>Mean time / cell (s)</th>
+                            <th>Total time (min)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        """
+
+    def _load_run_telemetry(self, run_dir) -> Optional[Dict[str, Dict[str, float]]]:
+        """Parse logs/telemetry.csv from the run directory (median + peak per metric)."""
+        if not run_dir:
+            return None
+        p = Path(run_dir) / "logs" / "telemetry.csv"
+        if not p.exists():
+            return None
+
+        cols: Dict[str, List[float]] = {}
+        try:
+            with open(p, newline="") as f:
+                rd = csv.DictReader(f)
+                for row in rd:
+                    for col in ("power_uw", "temp_mc", "sclk_hz", "mclk_hz", "gpu_busy_percent"):
+                        try:
+                            cols.setdefault(col, []).append(float(row[col]))
+                        except (KeyError, ValueError, TypeError):
+                            continue
+        except (OSError, ValueError):
+            return None
+        if not any(cols.values()):
+            return None
+
+        div = {"power_uw": 1e6, "temp_mc": 1e3, "sclk_hz": 1e6, "mclk_hz": 1e6, "gpu_busy_percent": 1.0}
+        out = {}
+        for col, values in cols.items():
+            if not values:
+                continue
+            # Drop metrics whose sensor never reported (all-zero reads).
+            if max(values) == 0.0:
+                continue
+            out[col] = {
+                "median": round(statistics.median(values) / div[col], 1),
+                "peak": round(max(values) / div[col], 1),
+            }
+        return out
+
+    def _telemetry_section(self, report) -> str:
+        """Telemetry table derived from the run's telemetry.csv (drop fabricated values)."""
+        stats = self._load_run_telemetry(report.run_dir)
+
+        empty = ("<section class=\"section\"><h2 class=\"section-title\">Telemetry "
+                 "insights (gfx90c APU)</h2><div class=\"table-wrap\"><table><tbody>"
+                 "<tr><td class=\"empty\">No telemetry CSV recorded for this run.</td>"
+                 "</tr></tbody></table></div></section>")
+        if not stats:
+            return empty
+
+        labels = {
+            "power_uw": "Package Power",
+            "temp_mc": "Edge Temperature",
+            "sclk_hz": "Shader Clock (SCLK)",
+            "mclk_hz": "Memory Clock (MCLK)",
+            "gpu_busy_percent": "GPU Busy",
+        }
+        units = {
+            "power_uw": "W",
+            "temp_mc": "°C",
+            "sclk_hz": "MHz",
+            "mclk_hz": "MHz",
+            "gpu_busy_percent": "%",
+        }
+        rows = ""
+        for col in labels:
+            if col not in stats:
+                continue
+            s = stats[col]
+            rows += f"""
+                <tr>
+                    <td class="mono strong">{labels[col]}</td>
+                    <td class="num">{s['median']} {units[col]}</td>
+                    <td class="num">{s['peak']} {units[col]}</td>
+                </tr>"""
+        return f"""
+        <section class="section">
+            <h2 class="section-title">Telemetry insights (gfx90c APU)</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Observed median</th>
+                            <th>Peak recorded</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        """
 

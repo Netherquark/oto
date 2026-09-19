@@ -19,7 +19,7 @@
 - **v5** (09-10/11): candidate sweep wired as Phases 16–27; Phases 1 and 13 removed; originals kept byte-identical; first 4 full runs (~185m each). p20/p25 (candC) crash every run.
 - **v6**: (transitional) ruler/throttle work.
 - **v7** (09-12): run-all + tier-1/2/3 gates, thermal cooldown, adaptive repeats, 30 s cooldowns, Phase-29 100%-ceiling stage, flock, per-load telemetry, phase-order self-check, `convergence_gaps` with corrected peaks. Current shipping version as archived.
-- **shim era** (09-13): pristine Tensile HEAD + `sitecustomize.py` on PYTHONPATH; suite exports `TENSILE_REPO_ROOT`; all 25 phase configs get `HardwareMonitor: False` + `CpuThreads: 1`.
+- **(09-13):** pristine Tensile HEAD restored; all 25 phase configs get `HardwareMonitor: False` + `CpuThreads: 1`. Native in-tree gfx90c bookkeeping landed 09-19 (see `changelog.md`).
 
 ### A.2 Phase inventory
 - **0** sanity gates (10 `[OK]`); **1** baseline (removed at v5); **2** fp32; **3** fp16; **4** GEMV; **5–7** fp32/transpose variants; **9** bf16; **10** fp64; **11** int8; **12** aux; **13–15** (existed in 0–15 era, removed); **16** candA sgemm; **17** candA hgemm; **18** candB GEMV-deeper; **19** candD occupancy; **20** candC run; **21** candF batched/short-K; **22** candE bf16; **23** candE fp64; **24** candE int8; **25** candC re-run; **26** seed-repeat; **27** transpose-ext; **28** synthesis; **29** ceiling %-of-peak; **30** reserved; **31** prepend for synthesis harvest.
@@ -79,7 +79,7 @@ CV>15% across seeds, or top-2 median gap < 0.005, triggers one capped `_nb` supe
 ## D. Failed experiments catalog (each: symptom → root cause → outcome)
 
 1. **v3 toolchain crash** — exit 255 / empty isa → `hipconfig --version` writes stderr; paths absent. Fix: explicit toolchain env. Outcome: build stable.
-2. **9-file in-tree patch sacrificed** — worked, but forked-the-tree drift → replaced by 3-injection shim (port = bookkeeping, not support). Outcome: pristine HEAD restored.
+2. **9-file in-tree patch sacrificed** — worked, but forked-the-tree drift; the port is bookkeeping, not support. Outcome: pristine HEAD restored; the port is now 3 bookkeeping entries in `Common.py`/`AsmCaps.py` (09-19).
 3. **candC crash** — `AssertSizeMultiple: [1]` int vs dict every run → `[{}]` fix 09-12, scoped `H2_ALLOW="20 25"` re-test pending.
 4. **Act: GPU Hang (runtime evidence, 09-13 probe)** — FP32 2048³ benchmark: `HW Exception reason :GPU Hang`, client abort, exit 134 after ~483 s; FP16/gen: missing `00_Final.csv` → `shutil.copy` FileNotFoundError at BenchmarkProblems.py:409. Explains era-3 FAIL cluster (run 085712 p20-27,31). Outcome: sustained 2048³ = hang risk; always detached+killable.
 5. **HardwareMonitor stoi abort** — empty APU clocks/power/temp → fixed by `HardwareMonitor: False` config (C++ guards reverted).
@@ -97,7 +97,7 @@ CV>15% across seeds, or top-2 median gap < 0.005, triggers one capped `_nb` supe
 
 | Keep (proven) | Throw (dead end) |
 |---|---|
-| 3-injection shim as THE port | 9-file in-tree patch |
+| Native in-tree bookkeeping patch as THE port | 9-file in-tree patch |
 | `GC.PEAK_GFLOPS` as single peak authority | 3226-for-BF16/INT8 prose in R §6.4, S header, old convergence_gaps |
 | Ruler/throttle with per-class median-mean | max-anchor, geo-mean fallback, `adj_cells` no-op |
 | Tier gates + PROTECT + reversible retire | one-campaign auto-retire (needs ≥2 independent runs) |

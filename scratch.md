@@ -1,6 +1,6 @@
-# gfx90c — attempt2 Long-Term Goal & Task Registry (scratch)
+# gfx90c — oto Long-Term Goal & Task Registry (scratch)
 
-**Purpose:** survive session context compaction; enumerate the attempt2 task
+**Purpose:** survive session context compaction; enumerate the oto task
 registry one-by-one. Source-of-truth owner: `claude.md` MD table. Prior-attempt
 task history is NOT copied here — the sanctioned prior conclusions live in
 `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md` (measured results
@@ -28,7 +28,7 @@ consultation.
 
 ## Enumerated Task List (execute one-by-one)
 
-- [x] T1 attempt2 ecosystem: scratch.md, incomplete_work.md, adversarial_review.md, README.md, mapping.md, gfx90c_theoretical_limits.md.
+- [x] T1 oto ecosystem: scratch.md, incomplete_work.md, adversarial_review.md, README.md, mapping.md, gfx90c_theoretical_limits.md.
 - [x] T2 codify port_tensile.py per implementation_plan.md (§The Driver Architecture):
       registry.py / report.py / analytics.py / policy.py / scheduler.py / agent.py
       modules + data-only phases.yaml manifest; `json.dumps` + SQLite `records`
@@ -63,7 +63,7 @@ consultation.
 - JSON: `json.dumps` is the only serializer across all four writers; no printf-JSON
   (prior §5.1 corruption lesson).
 
-## Carryover OPEN items (try again in attempt2)
+## Carryover OPEN items
 
 - Two scoped control runs (`--phases 1 31`, `--phases 20 25`) — verdicts may move
   under fixed math.
@@ -73,17 +73,17 @@ consultation.
   toward the §5 ceilings with right-sized GSU/WGM/MT/TT — objective, not hazard.
 - `CpuThreads: 1`: joblib/loky-vs-3.14 root-cause to SOLVE (pin/version fix), fallback
   sequential documented until solved — not dogmatic "mandatory".
-- Interactive single-phase kill ('s'/'q') end-to-end in the attempt2 driver.
-- 3 prior auto-retire records need ≥2-independent-run gating before trust.
+- Interactive single-phase kill ('s'/'q') end-to-end in the oto driver.
+- 3 auto-retire records need ≥2-independent-run gating before trust.
 - Peak-table prose still cites 3226 for BF16/INT8 → T8.
 
-## Prior-attempt conclusions (frozen, pointer to the two sanctioned MDs)
+## Frozen prior conclusions (pointer to the two sanctioned MDs)
 
 - Port mechanics DONE; performance = parity (0/11/0, ±5%); candidate suite 5W/10T/6L
   over 21 shared cells; only 6 new problem cells. Bests: FP32 1118.7@1024³, FP16
   2492.1@4096³, BF16 1108.5@2048³, FP64 98.6@1024³, INT8 881.2@2048³. Full detail:
   `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`. OPEN items carried
-  via incomplete_work.md (attempt2).
+  via incomplete_work.md.
 
 ## Green light (already granted)
 

@@ -1,14 +1,14 @@
-# Tensile `gfx90c` --- AI Tuning Context (attempt2, one-shot)
+# Tensile `gfx90c` --- AI Tuning Context
 
-> Updated 2026-09-13 for attempt2. The architecture that used consultations is
-> RETIRED. attempt2 is deterministic and AI-free in the loop. Hardware facts are
-> ratified below and must NOT be re-derived from first principles.
+> oto is deterministic and AI-free in the loop. Consultation-based rollouts
+> are not used. Hardware facts are ratified below and must NOT be re-derived from
+> first principles.
 
 ## Scope
 
 - Port native `gfx90c` Tensile libraries replicating the shipped gfx900 footprint,
   performing better than the gfx900 spoof floor. No more, no less.
-- attempt2 constraint: **ONE-SHOT deterministic convergence**. No LLM consultations.
+- oto constraint: **ONE-SHOT deterministic convergence**. No LLM consultations.
   Deterministic harvest → mutate(≤2 knobs) → re-run until convergence or budget.
 - Manual-LLM contingency: **user-invoked, add-only, worst case only**. A single canned
   prompt producing ≤5 candidate recipe mutations, dumped into `phases.yaml`, flows
@@ -47,12 +47,12 @@ Independent benchmark + fresh inputs + correctness validation + repeat runs + gu
 checks + dtype-specific tolerance. Evaluator stays outside model control. No
 max-of-seeds; median-of-seeds is the statistic.
 
-## AI Rollout (attempt2)
+## AI Rollout
 
 - Levels 0–2 (traditional / advisor / mutation-generator-with-validation) are the
   ceiling. Levels 3–5 (local evolution, profile-guided, surrogate/Bayesian) are
   EXPLICITLY OUT unless a later attempt elects them after a good baseline + enough
-  data. attempt2 does not require them.
+  data. oto does not require them.
 
 ## Hardware Ground Truth --- Do NOT Re-Derive From First Principles
 
@@ -76,9 +76,9 @@ Deterministic loop, HW decides, DB remembers. If the user manually invokes an LL
 add candidates, the model proposes ≤5; Tensile generates; compiler validates; HW
 decides; DB remembers.
 
-## Current State (2026-09-13)
+## Current State
 
-Prior campaign: port mechanics done; parity not wins; candidate deck harvested; 2
-control runs pending (`--phases 1 31`, then `--phases 20 25`); attempt2 driver +
-ecosystem scaffolded. Consultations consumed in the prior campaign: 3/6 — the
-remaining ceremonies are retired by the one-shot contract.
+Port mechanics done; parity not wins (frozen baseline, `prior_*`); candidate deck
+harvested; 2 control runs pending (`--phases 1 31`, then `--phases 20 25`); the
+deterministic driver + ecosystem are the active workflow. No LLM consultations in
+the loop.

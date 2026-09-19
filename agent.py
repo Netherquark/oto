@@ -2,7 +2,7 @@
 """
 agent.py — Convergence Agent (harvest → mutate → loop)
 
-The deterministic convergence engine for attempt2:
+The deterministic convergence engine for oto:
 - Harvest winning configs from analytics results
 - Mutate candidates (≤2 knobs) for RED or non-converged cells (via scheduler)
 - Check convergence: no RED cells OR budget exhausted, with per-cell stability gates
@@ -30,7 +30,7 @@ class ConvergenceVerdict:
 
 
 class ConvergenceAgent:
-    """Deterministic convergence agent for attempt2."""
+    """Deterministic convergence agent for oto."""
 
     def __init__(
         self,

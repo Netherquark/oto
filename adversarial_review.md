@@ -1,19 +1,61 @@
-# Adversarial Review: attempt2 harness/pipeline baseline & audit plan
+# Adversarial Review: user-run expert audit of the oto repo
 
-**Purpose:** carry the prior-campaign audit findings INTO attempt2 so the new python
-driver (port_tensile.py per implementation_plan.md §The Driver Architecture)
-inherits the FIXED state, not the bugs. Conclusions below are the frozen prior
-verdicts (each PoC-verified) — the only sanctioned prior material is
-`prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`; this file is
-self-contained. Status: carried-in fixed-state must not regress; re-audit the
-driver before it is trusted for `--auto`.
+**Purpose:** this file owns the **user-run external expert-agent review** of the
+repository. It is NOT a driver-internal quality gate. When the user wants a
+correctness/hardware audit, the USER launches an expert agent (out-of-band,
+outside the deterministic convergence loop) to review the repo and records the
+findings here. The review targets **memory leaks, race conditions, logical bugs,
+data-integrity errors, deadlocks, resource leaks, error-path bugs, and other
+correctness defects** in the codebase. Findings are recorded back into this file
+(§0), triaged, and feed fixes in `implementation_plan.md` (Triaged fixes) and
+`changelog.md`.
+
+Hard lines (mirror `claude.md` guardrails):
+
+- **Out-of-band, add-only.** The expert audit never runs inside the benchmark
+  loop — the same role as the user-manual LLM candidate injection: a
+  user-invoked contingency, never an in-loop consultation.
+- **Evidence-based only.** Findings must cite live repo/source + logs + DB, under
+  the `live repo → owner MDs → agent logs → old summaries` precedence. No
+  model-memory claims.
+- **Record before fixing.** Findings are logged into §0 the moment they are
+  established and are only closed via triage; fixes land afterwards via the
+  owning MD (implementation_plan / changelog). Findings are append-only — never
+  rewritten in place, only annotated.
+
+Status: a user-run expert audit of the codebase (memory / races / logic) is the
+operating mode of this document. §1–§5 below are frozen prior verdicts (each
+PoC-verified, sourced `prior_*`) and must not regress.
+
+## 0. Findings register (user-run expert audits)
+
+| ID | Audit date | Finding (`file:line`) | Class | Severity | Status / Triage | Evidence |
+|---|---|---|---|---|---|---|
+| _open_ | | | | | | |
+
+Classes: `MEM` memory leak/lifetime · `RACE` race condition/deadlock ·
+`LOGIC` logical bug/wrong result · `DATA` data integrity/corruption ·
+`RESOURCE` fd/thread/process leak · `EDGE` boundary/error path ·
+`TELEMETRY` measurement trust.
+
+How to run an audit:
+
+1. User invokes an expert agent (or several in parallel) over the repo.
+2. Scope = the whole `oto` suite (`port_tensile.py` + `registry.py`,
+   `scheduler.py`, `policy.py`, `analytics.py`, `agent.py`, `telemetry.py`,
+   `report.py`, `gfx90c_common.py`) plus the docs/logs it reads and writes.
+3. Agent reports each finding as an exact `file:line` with repro/evidence; new
+   entries are appended to the register. Existing entries are never edited in
+   place — only their status cell is annotated.
+4. User triages: **Accepted** → fix specified in `implementation_plan.md`
+   Triaged fixes; **Rejected** → rationale recorded; **Pending** → left for the
+   next audit pass.
 
 ## 1. Sources
 
-Frozen prior-campaign audit verdicts (v1 2026-09-11 §1-4 + v2 2026-09-12 §5),
-absorbed into `prior_RESEARCH_ARCHIVE.md`.
+Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCHIVE.md`.
 
-| Finding | Prior status | attempt2 posture |
+| Finding | Prior status | oto posture |
 |---|---|---|
 | pipefail fragility in `$(...|...)` (SIGPIPE/141 on healthy zero-match) | FIXED (`|| true` / `set +e` isolation) | driver is python; must not reintroduce shell pipes where status matters |
 | unmanaged concurrency / joblib+shared-temp races | FIXED (isolated workdirs + advisory locking) | single-writer process; no fork-lock, no parallel temp writers |
@@ -22,10 +64,10 @@ absorbed into `prior_RESEARCH_ARCHIVE.md`.
 | conflated lifecycle states (retire vs dominate vs peak) with zero provenance | FIXED (3-tier, hardcoded list removed, registry lineage) | policy.should_run + auto_retire with ≥2-run gate |
 | blind-union synthesis merge with no per-cell regression filter | **STILL OPEN / deferred** | agent.harvest() admission gate (§4 below) |
 
-## 2. What the attempt2 driver must not reintroduce
+## 2. What the oto driver must not reintroduce
 
 - **No printf-JSON:** every record byte = `json.dumps(dict)` through the single
-  append path. Never `"…%s"` interpolation into JSONL (prior-campaign §5.1 — value
+  append path. Never `"…%s"` interpolation into JSONL (frozen §5.1 — value
   with `"`, `\`, or embedded newline corrupted live records; 2/1283 already
   broken).
 - **No fork-lock:** single-writer process; SQLite WAL mode; INSERT-only `records`
@@ -68,21 +110,24 @@ absorbed into `prior_RESEARCH_ARCHIVE.md`.
   phase-1-once disabled→RUN, phase-scope-exempt→RUN. New cases: tier-1
   fp-less record→SKIP; tier-2 (phase,fp)→SKIP.
 - [ ] **Detached + killable GPU phases.** `setsid` process groups; 's' kills the
-  CURRENT phase and continues, 'q' quits the run; Ctrl+C kills the in-flight
+  CURRENT phase and continues, 'e' ends the run after the current phase
+  completes, 'q' quits the run; Ctrl+C kills the in-flight
   benchmark group; EXIT trap stops telemetry idempotently.
 - [ ] **Finite per-phase timeout default.** `PHASE_TIMEOUT_S` default must be
       finite — generic runaway protection, never a size-specific special case.
 
-## 4. Known-open exposures for attempt2
+## 4. Known-open exposures for oto
 
 - **Synthesis blind union** (prior §2.6/§5.8): merged library is union of
   per-cell winners with no per-cell regression filter vs spoof. Carried;
-  admitted only via the agent admission gate (incomplete_work §4.8).
+  admitted only via the agent.harvest() admission gate (exposure table §2
+  row 2 — no dedicated incomplete_work section).
 - **Retire-evidence linkage:** zero trustworthy `retire` records yet; the 3
-  prior auto-retires are single-invocation (need ≥2 independent runs/cell —
-  incomplete_work §4.6). The RETIRED mirror stub still lacks its source run_id
-  (prior §5.3 promise: join by run_id + reason on the next real retirement).
-- **2 corrupt legacy JSONL records** (v2 §5.1) remain in place — append-only,
+  existing auto-retires are single-invocation (need ≥2 independent runs/cell —
+  incomplete_work §4.5, RESOLVED). The retired mirror stub still lacks its source
+  run_id (frozen §5.3 promise: join by run_id + reason on the next real
+  retirement).
+- **2 corrupt frozen JSONL records** (v2 §5.1) remain in place — append-only,
   changelog §0 rule. Readers must tolerate/triage, never rewrite in place.
 - **FPGA/APU wedge hazard at sustained 2048³+:** a wedge begins as idle-busy 0%
   at 400 MHz (run_20260912_085712 root cause). Always-on: cooldown between GPU
@@ -107,3 +152,11 @@ absorbed into `prior_RESEARCH_ARCHIVE.md`.
   ruler-adjusted (bound-class median), median-of-seeds; a tie is PARITY, not a
   regression, and not a win. Every metric must meet this or the acceptance is
   not claimed.
+
+## 6. Unapproved drifts
+
+Any change that lands without explicit approval (e.g. treating
+`/tmp/opencode/*_fixed.py` as the spec) is a drift and must be logged here
+before it is trusted. Drifts are addressed in order: log → user triage →
+approved fix/cherry-pick → `changelog.md` entry. Tracked jointly with
+`incomplete_work.md` §4.9.

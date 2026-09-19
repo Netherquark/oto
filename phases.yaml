@@ -3012,10 +3012,10 @@
     ContractionPattern: Ailk_Bjlk
     ProblemType: 256x256x256
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 25260fdfa84bd7e607dea3121104ebbd8c90850f80266a3015ff738b144f39ad
+  fp: 8b5c0439ef9f9f90c57d1e72424362288dd4d869f1f0f429adb50c6685efb039
   contraction_pattern: Ailk_Bjlk
 - phase_id: phase_hs_hpa_Ailk_Bjlk_512x512x512
   label: HS_HPA_Ailk_Bjlk_512x512x512
@@ -3030,10 +3030,10 @@
     ContractionPattern: Ailk_Bjlk
     ProblemType: 512x512x512
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 1adb744a2260d0701ea4992b61ade1409977257247d9a2a04081f78d9fba1add
+  fp: d1f50a37321e63608b46c8bdb45e15294457dd53c04378caae65c99fed3eebb8
   contraction_pattern: Ailk_Bjlk
 - phase_id: phase_hs_hpa_Ailk_Bjlk_1024x1024x1024
   label: HS_HPA_Ailk_Bjlk_1024x1024x1024
@@ -3048,10 +3048,10 @@
     ContractionPattern: Ailk_Bjlk
     ProblemType: 1024x1024x1024
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: bffde1a615cee1fd6cf23dc3834a1c1b6eaf95fc4810893d00934f86c4fb6104
+  fp: 92f2a7f8aa06d5f5120c8982fa0720fdb2d1d44040565c4fb8d4913c7ce92cd7
   contraction_pattern: Ailk_Bjlk
 - phase_id: phase_hs_hpa_Ailk_Bjlk_2048x2048x2048
   label: HS_HPA_Ailk_Bjlk_2048x2048x2048
@@ -3066,10 +3066,10 @@
     ContractionPattern: Ailk_Bjlk
     ProblemType: 2048x2048x2048
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: ed766920286d5e6c8a5411140a9f13a2e201dfabfb62e31c522910bd3b8afcb6
+  fp: 1cfa38434bcb54ac7d28b591552b6ddb4d81a293b50bb287b7e8e66e0e6daffa
   contraction_pattern: Ailk_Bjlk
 - phase_id: phase_hs_hpa_Ailk_Bljk_256x256x256
   label: HS_HPA_Ailk_Bljk_256x256x256
@@ -3084,10 +3084,10 @@
     ContractionPattern: Ailk_Bljk
     ProblemType: 256x256x256
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 90499eb629a47c077f143d060388783cd2b61fe4ccc6f53453503aebf3d943f6
+  fp: 5d6e3889aaae206822ee852dfbe6f10693e1d28600317b2a7be2432977ac90b9
   contraction_pattern: Ailk_Bljk
 - phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512
   label: HS_HPA_Ailk_Bljk_512x512x512
@@ -3102,10 +3102,10 @@
     ContractionPattern: Ailk_Bljk
     ProblemType: 512x512x512
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 53018ca6d69fced4b5f26110e763dd02d783ddd33ccd3c786b3fffbf76b9accf
+  fp: d3e93d8d013ea95217789d18db01aecc33b7a67f477a66b85f6f67d6c44b020d
   contraction_pattern: Ailk_Bljk
 - phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024
   label: HS_HPA_Ailk_Bljk_1024x1024x1024
@@ -3120,10 +3120,10 @@
     ContractionPattern: Ailk_Bljk
     ProblemType: 1024x1024x1024
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 07a62025219b121563d0422b2dea77278b3679ab1cdba90dac0a5979c0ba4052
+  fp: 4fb038f653f5788fee1e702e2b277cfa356535e8508ce91bfd4a71d5d06a1fcf
   contraction_pattern: Ailk_Bljk
 - phase_id: phase_hs_hpa_Ailk_Bljk_2048x2048x2048
   label: HS_HPA_Ailk_Bljk_2048x2048x2048
@@ -3138,10 +3138,10 @@
     ContractionPattern: Ailk_Bljk
     ProblemType: 2048x2048x2048
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: aedf67b99fc57e4ac8b95d4d89c00dc594446ba56281bf023b13c94adbbc164c
+  fp: 107cb91a1d8083df543f1029788e8a5976d49d256932c9e559a9a3136f42bbcf
   contraction_pattern: Ailk_Bljk
 - phase_id: phase_hs_hpa_Alik_Bjlk_256x256x256
   label: HS_HPA_Alik_Bjlk_256x256x256
@@ -3156,10 +3156,10 @@
     ContractionPattern: Alik_Bjlk
     ProblemType: 256x256x256
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: f1f68f71f0709ec3878ea7de87841659c3c2e1dc5a27f4f88a7c22eb2c2d4cb2
+  fp: 6f1abf6ea15eb36374448e5499b5e34ed113400c2eff96ee5cd2783f5eb9cebd
   contraction_pattern: Alik_Bjlk
 - phase_id: phase_hs_hpa_Alik_Bjlk_512x512x512
   label: HS_HPA_Alik_Bjlk_512x512x512
@@ -3174,10 +3174,10 @@
     ContractionPattern: Alik_Bjlk
     ProblemType: 512x512x512
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 7b8eaf4a131211e49bd2d7bd321b30485318bf4dd7093a20afe2ad56c9421cdc
+  fp: 1798fe180731d1ba7d420a11b7af232a95b01d179df51a526d2ea1d13d624269
   contraction_pattern: Alik_Bjlk
 - phase_id: phase_hs_hpa_Alik_Bjlk_1024x1024x1024
   label: HS_HPA_Alik_Bjlk_1024x1024x1024
@@ -3192,10 +3192,10 @@
     ContractionPattern: Alik_Bjlk
     ProblemType: 1024x1024x1024
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: f3a404ad74e60eef6191ad5020d5239be091ea255af48d284695547016e2fd4b
+  fp: c79a6fc9e57feaadef61d5dcacfa5b9cd658f82404b10b6afe207f9beb4d962d
   contraction_pattern: Alik_Bjlk
 - phase_id: phase_hs_hpa_Alik_Bjlk_2048x2048x2048
   label: HS_HPA_Alik_Bjlk_2048x2048x2048
@@ -3210,10 +3210,10 @@
     ContractionPattern: Alik_Bjlk
     ProblemType: 2048x2048x2048
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 269b1ba941e0eb621799d3af653f2a8d543da821898fd6302c1639594e8a1005
+  fp: add7080e6282f0f86a5e3396c71fccdf41eb553ea4a92dbd74f44957eb7d5414
   contraction_pattern: Alik_Bjlk
 - phase_id: phase_hs_hpa_Alik_Bljk_256x256x256
   label: HS_HPA_Alik_Bljk_256x256x256
@@ -3228,10 +3228,10 @@
     ContractionPattern: Alik_Bljk
     ProblemType: 256x256x256
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: fafdca13f01469f5f4ba60cda8625be4fd157598c46e5165495d514a4712f246
+  fp: cc558e897c455d2bb51d44ae1129a4727c7edac3ce37d39c93111894e95902d4
   contraction_pattern: Alik_Bljk
 - phase_id: phase_hs_hpa_Alik_Bljk_512x512x512
   label: HS_HPA_Alik_Bljk_512x512x512
@@ -3246,10 +3246,10 @@
     ContractionPattern: Alik_Bljk
     ProblemType: 512x512x512
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 85ba437629402e9642b80bfbc8817ad34de078d82235f48bcae2040e652d0ce1
+  fp: 1cd51171938b58f6367ee93c73ad4e591f88c1a93115d74684f6a21a7477a010
   contraction_pattern: Alik_Bljk
 - phase_id: phase_hs_hpa_Alik_Bljk_1024x1024x1024
   label: HS_HPA_Alik_Bljk_1024x1024x1024
@@ -3264,10 +3264,10 @@
     ContractionPattern: Alik_Bljk
     ProblemType: 1024x1024x1024
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: 51f3dacdfc8b9abf57c97567d544a5c9af2531c5c3ac93462c500a3bce7d99da
+  fp: 57c51b1224fbcafbb5f8149b6d1e071eaff76dd1ba6b3b09f97c4044948df73d
   contraction_pattern: Alik_Bljk
 - phase_id: phase_hs_hpa_Alik_Bljk_2048x2048x2048
   label: HS_HPA_Alik_Bljk_2048x2048x2048
@@ -3282,10 +3282,10 @@
     ContractionPattern: Alik_Bljk
     ProblemType: 2048x2048x2048
     ScheduleName: isa
-    MacroTile: 64x64x8
+    MacroTile: 64x64x16
     ThreadTile: 4x4
     NLCA: 1
-  fp: a6bc403b53b8b94f40e816345db874ea8062658828783b56ca59bf5c0e5f4ce2
+  fp: 2cfa8fbe8c1c51ec2ad288de238a0cc43299fa5a742a70cafc9414db7dbb42bf
   contraction_pattern: Alik_Bljk
 - phase_id: phase_ss_Ailk_Bjlk_256x256x256_mt96x96x16_tt6x6
   label: SS_Ailk_Bjlk_256x256x256_mt96x96x16_tt6x6

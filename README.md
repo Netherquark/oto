@@ -8,6 +8,7 @@ During execution (both active benchmarking and thermal cooldown sleep), interact
 | Key Shortcut | Action | Description |
 |---|---|---|
 | **`s`** | **Skip** | Skips the current running benchmark kernel or skips the remaining thermal cooldown sleep immediately. |
+| **`e`** | **End after iteration** | Lets the current benchmark phase finish naturally, then gracefully ends the run and generates `acceptance_report.json` and `acceptance_report.html` (works during thermal cooldown too — skips the remaining sleep, then ends). |
 | **`q`** | **Quit & Report** | Gracefully terminates execution, kills active child process groups, and immediately generates `acceptance_report.json` and `acceptance_report.html` from all data collected so far. |
 | **`Ctrl+C`** | **Interrupt (130)** | Kills all child process groups and exits with status 130 after saving run state. |
 
@@ -15,12 +16,14 @@ During execution (both active benchmarking and thermal cooldown sleep), interact
 
 ## 2. Driver Architecture
 
-The Python driver ([port_tensile.py](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/port_tensile.py)) coordinates all stages deterministically:
+The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages deterministically:
 
 ```
                   ┌─────────────────────────────────────┐
                   │          phases.yaml (Manifest)     │
-                   │   (28 families × 4 patterns = 230)  │
+                  │   (304 phases: auto=72, hh=64,      │
+                  │    ss=52, cc=34, dd=34, zz=32,      │
+                  │    hs=16)                           │
                   └──────────────────┬──────────────────┘
                                      │
                                      ▼
@@ -78,7 +81,7 @@ The Python driver ([port_tensile.py](file:///home/netherquark/Soham/Large_code/s
 ## 3. Usage & CLI Commands
 
 ### 1. Preflight Verification (Stage 1 Check)
-Validate Tensile binary, Python 3-injection shim, GPU hardware access, and registry accessibility:
+Validate Tensile binary, GPU hardware access, and registry accessibility:
 ```bash
 python3 port_tensile.py --preflight
 ```
@@ -113,7 +116,7 @@ python3 port_tensile.py --ab target_spoof target_native
 ```
 
 ### 5. Auto-Convergence Loop
-Run end-to-end deterministic convergence loop across all 28 families with budget control:
+Run end-to-end deterministic convergence loop across all 7 phase families with budget control:
 ```bash
 python3 port_tensile.py --auto --budget 50 --mutation-budget 2
 ```
@@ -130,24 +133,44 @@ python3 port_tensile.py --synthesize
 
 | Module | Purpose |
 |---|---|
-| [`port_tensile.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/port_tensile.py) | Suite CLI, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'q'`), and Stage 6/7 orchestration. |
-| [`scheduler.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation (`≤2` knobs), GEMM LDS estimation `(M*K + N*K)*elem_size*NLCA`, tile divisibility, and shape parsing. |
-| [`policy.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/policy.py) | N8 median-of-seeds aggregation, CV stability classification, 3-tier retirement model, and `should_run` policy gate matrix. |
-| [`analytics.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/analytics.py) | Stage 5 analytics, RED compute cell classification against realistic ceilings ([gfx90c_theoretical_limits.md §5](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/gfx90c_theoretical_limits.md#L125)), and native-vs-spoof delta calculations. |
-| [`agent.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
-| [`registry.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
-| [`report.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/report.py) | Acceptance report generation, 28-family coverage metrics, same-run A/B verdict synthesis (`WIN`, `TIE`, `LOSS`), and rich HTML dashboard generation. |
-| [`gfx90c_common.py`](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/gfx90c_common.py) | Single source of truth for hardware constants and theoretical peak tables (`PEAK_GFLOPS`). |
+| [`port_tensile.py`](port_tensile.py) | Suite CLI, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
+| [`scheduler.py`](scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation (`≤2` knobs), GEMM LDS estimation `(M*K + N*K)*elem_size*NLCA`, tile divisibility, and shape parsing. |
+| [`policy.py`](policy.py) | N8 median-of-seeds aggregation, CV stability classification, 3-tier retirement model, and `should_run` policy gate matrix. |
+| [`analytics.py`](analytics.py) | Stage 5 analytics, RED compute cell classification against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and native-vs-spoof delta calculations. |
+| [`agent.py`](agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
+| [`registry.py`](registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
+| [`report.py`](report.py) | Acceptance report generation, 7-family coverage metrics vs mapping.md, same-run A/B verdict synthesis (`WIN`, `TIE`, `LOSS`), and rich HTML dashboard generation. |
+| [`gfx90c_common.py`](gfx90c_common.py) | Single source of truth for hardware constants and theoretical peak tables (`PEAK_GFLOPS`). |
 
 ---
 
 ## 5. Key Documentation & System Authority
 
-* **[claude.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/claude.md)**: Entry contract, process guardrails, and file ownership rules.
-* **[implementation_plan.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/implementation_plan.md)**: Current executable implementation plan.
-* **[mapping.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/mapping.md)**: Shipped `gfx900` footprint to native `gfx90c` replication contract.
-* **[gfx90c_theoretical_limits.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/gfx90c_theoretical_limits.md)**: Hardware ceilings and acceptance criteria authority.
-* **[knowledge_base.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/knowledge_base.md)**: Core architecture and append-only data preservation law (§10).
-* **[results.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/results.md)**: Live benchmark ledger and historical ceiling metrics.
-* **[incomplete_work.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/incomplete_work.md)**: Open work register and remediation audit records.
-* **[adversarial_review.md](file:///home/netherquark/Soham/Large_code/sources/GPU/backrocm/porting_tensile/attempt2/adversarial_review.md)**: System quality baseline, failure mode audits, and anti-regression checklists.
+* **[claude.md](claude.md)**: Entry contract, process guardrails, and file ownership rules.
+* **[implementation_plan.md](implementation_plan.md)**: Current executable implementation plan.
+* **[mapping.md](mapping.md)**: Shipped `gfx900` footprint to native `gfx90c` replication contract.
+* **[gfx90c_theoretical_limits.md](gfx90c_theoretical_limits.md)**: Hardware ceilings and acceptance criteria authority.
+* **[knowledge_base.md](knowledge_base.md)**: Core architecture and append-only data preservation law (§10).
+* **[results.md](results.md)**: Live benchmark ledger and frozen ceiling metrics.
+* **[incomplete_work.md](incomplete_work.md)**: Open work register and remediation audit records.
+* **[adversarial_review.md](adversarial_review.md)**: User-run expert-agent audit register (memory leaks, race conditions, logical bugs) with the frozen prior baseline.
+
+---
+
+## 6. Configuration (`.env`)
+
+Machine-specific locations are read from a `.env` file in the repo root via
+`python-dotenv` ([`load_dotenv`](https://github.com/theskumar/python-dotenv) —
+industry-standard `.env` loader; precedence: live shell env → `.env`). ROCm
+toolchain locations are discovered by native tools only — `hipconfig` for the
+install root/HIP paths and `shutil.which` for binaries on `PATH` (this handles
+both AMD-installer `/opt/rocm` and Fedora/RHEL RPM `/usr` + `/usr/lib64/rocm`
+layouts without any hand-rolled candidate chains). Explicit overrides below win
+when they point at an existing path; stale values fall back to native discovery.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `TENSILE_ROOT` | required (set in `.env`) | Tensile checkout root; driver shells out to `Tensile/bin/Tensile` here. The driver errors out at runtime if unset — there is no built-in fallback path |
+
+Optional overrides (native discovery otherwise): `ROCM_PATH`, `ROCM_BIN`,
+`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `TENSILE_ASSEMBLER_FALLBACK`.

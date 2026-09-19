@@ -9,6 +9,131 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Legacy-silence clauses enforced] 2026-09-19
+
+- `claude.md` §8.1 written: removed machinery is **never** named in code or docs;
+  history's only sanctioned homes are `changelog.md` + frozen `prior_*`; `todo.txt`
+  is **USER-ONLY** (agent never reads/touches it).
+- Scrub pass: `implementation_plan.md` stale references to removed launcher
+  machinery reworded (entrypoint-only wording); live docs grep-clean.
+
+## [HS_HPA rejection root-caused: Tensile GLVW==VW-or-1 generator guard; guard-legal configs found] 2026-09-19
+
+- **Exact rejection isolated** (driver scratch `/tmp/opencode/e2e_hpa` +
+  `PrintSolutionRejectionReason`): stock Tensile non-MI assembly guard
+  `GlobalLoadVectorWidth{X} must be == VectorWidth or == 1`
+  (`SolutionStructs.py:4583-4596`; source comment: "Restrict GRVW/VW combos so
+  shift-ptr logic will work"). Fires when `setGlobalLoadVectorWidth`
+  (`:2010-2047`) pv-reduces GLVW 4→2 for 64x64x8/TT4x4/VW4 tabs
+  (totalElements 512 < NumThreads·GLVW = 1024, pv=2). The predicate is
+  **isa-independent** (rejects gfx900 identically) — a generator/representation
+  restriction, NOT a gfx90c HW/ISA limit and NOT an assembler failure.
+- **Same HS_HPA intent admitted by stock Tensile on native gfx90c:**
+  - MT64x64x16/TT4x4/VW4/DU16 → `1/1 after SolutionStructs`; gfx90c kernel
+    assembles (`Kernels.so-000-gfx90c.hsaco`, `TensileLibrary_gfx90c.co`).
+  - MT64x64x8/TT4x4/VW2/DU8 → `1/1 after SolutionStructs` and `1/1 after
+    KernelWriter`.
+- The 0-solution HS_HPA registry records are a parameterization collision with a
+  Tensile generator guard (not a hardware incapacity); HS_HPA tuning resumes on the
+  two guard-legal parameterizations.
+- **Fix (pending):** scheduler `_validate_tensile_loads` lacks the `GLVW==VW-or-1`
+  predicate under which the 64x64x8 deck fails — add it to the mirror.
+- Docs updated: `potential_configs.md` §4 + §5.3 item 7, `implementation_plan.md`
+  technical findings.
+
+## [Native .env + toolchain resolution (industry standard) — custom chains removed] 2026-09-19
+
+- **`.env` loading → `python-dotenv` `load_dotenv()`** (industry standard; never
+  overrides live env). The hand-rolled `_load_dotenv` parser and the
+  `*_CANDIDATES`/`_first_existing_*` probe chains are gone from
+  `port_tensile.py`; `requirements.txt` adds `python-dotenv`.
+- **ROCm discovery → native tools only:** `hipconfig` (ROCM_PATH/HIP_PATH/
+  HIP_CLANG_PATH) + `shutil.which` for binaries on PATH. `.env` and README §6
+  slimmed to `TENSILE_ROOT` + optional overrides; no candidate chains.
+- **Guardrail added to `claude.md` §5:** never re-invent known-solved problems —
+  OS/stdlib/industry-standard library wins (`.env`→python-dotenv,
+  discovery→`hipconfig`+`shutil.which`, locks/DB→stdlib, CLI→`argparse`).
+- **Validated:** Phase-0 preflight 4/4 and a suite-exact ActiveE2E
+  (`phase_ss_Ailk_Bjlk_256x256x256_mt96x96x16_tt6x6`, rc=0, Actual Solutions 1/1,
+  `TensileLibrary_gfx90c.co` + `Kernels.so-000-gfx90c.hsaco`) with the native
+  resolution (scratch `/tmp/opencode/e2e_b`, isolated).
+
+## [Docs ecosystem governance: shim & legacy-suite silence, todo.txt user-only] 2026-09-19
+
+- **Rule codified in `claude.md` §8.1:** the import-time shim no longer exists and
+  is never mentioned in code, docs, or prose; its history lives only in this
+  changelog and the frozen `prior_*` files. The prior-campaign shell suite
+  (`run_gfx90c_suite.sh`) is referenced only inside `prior_*`.
+- **`todo.txt` is a user-only file:** the agent never reads, writes, or touches it.
+- **`claude.md` native-support wording aligned** to "2-file minimal Tensile patch"
+  (`Tensile/Common.py` + `Tensile/AsmCaps.py`).
+
+## [Distro-agnostic ROCm toolchain resolution] 2026-09-19
+
+- **`.env` fleshed out for both install styles:** ROCm paths are now probed via
+  `*_CANDIDATES` ':'-chains (`ROCM_PREFIX_*`, `ROCM_BIN_*`,
+  `ROCM_LLVM_BIN_*`, `TENSILE_ASSEMBLER_*`, `TENSILE_ASSEMBLER_FALLBACK_*`);
+  first existing entry wins, so AMD-installer (`/opt/rocm`) and Fedora-RPM
+  (`/usr/bin` + `/usr/lib64/rocm`) hosts both work from one `.env`.
+- **`port_tensile.py`:** new `_first_existing_dir` / `_first_existing_file` /
+  `_resolve_rocm_paths()` used by `_get_tensile_env` (PATH injection + subprocess
+  `ROCM_PATH`/`HIP_PATH`) and the `--assembler` selection. Explicit env values
+  still win when they point at existing paths; stale values fall back to the chain.
+  Verified on live host plus synthetic AMD-only and Fedora-only scenarios
+  (`/tmp/opencode/test_rocm_probe.py`).
+- **README §6 rewritten** for the candidate-chain schema + fixed the residual
+  "28-family coverage metrics" wording on the `report.py` row.
+
+## [Repo relocation & report/driver hygiene] 2026-09-19
+
+- **`file:///` references removed:** docs previously pointed at the dead
+  `GPU/backrocm/porting_tensile/attempt2` path; README links now relative.
+- **Hardcoded locations → `.env`:** `port_tensile.py` loads `TENSILE_ROOT`,
+  `ROCM_*`, `HIP_*`, `TENSILE_ASSEMBLER(_FALLBACK)` from `.env` (shell env >
+  `.env` > defaults). `.env` created in repo root.
+- **Early-quit key `'e'`:** ends the run cleanly after the current phase /
+  iteration (run stays `completed`, metadata `end_after_iteration: true`).
+- **Verbose logs:** Tensile stdout/stderr are teed live to console (prefixed
+  `[tensile]`) and to `logs/.../stdout.log`/`stderr.log`; `TENSILE_VERBOSE=1`
+  appends `--verbose` (Tensile PrintLevel 3).
+- **Acceptance report HTML de-hardcoded:** Problem space / coverage matrix /
+  telemetry sections are now data-derived (cell analytics, registry
+  started→completed timing, `logs/telemetry.csv` medians/peaks). Fabricated
+  VRAM / SCLK / MCLK / GPU-busy rows dropped (sensors unavailable on this APU).
+- **Report dtype fix:** `extract_dtype_from_phase_id` now uses the token family
+  parser (was a regex that returned `'unknown'` for `phase_ss_spoof_baseline_vega10`);
+  `'auto'` family mapped to `'S'`. The 67 red cells previously logged as
+  dtype `unknown` now resolve to real dtypes.
+
+## [Native gfx90c support replaces the import-time shim] 2026-09-19
+
+- **Root cause of the shim:** Tensile's `populateCapabilities` runs before config
+  merge, so a config-parse-time ISA injection is too late; 2026-08–09 proved the only
+  shim-compatible hook was import time (`tensile_gfx90c_port/sitecustomize.py` on
+  `PYTHONPATH`, 3 injections: `SupportedISA`, `architectureMap`, `getCapabilitiesCache`
+  seeded from gfx90 just so gfx90c was not probed-and-rejected).
+- **Replaced by real in-tree support** on Tensile latest `develop_deprecated` HEAD
+  (verified equal to `origin/develop_deprecated`, `e8a8999e`): 3 minimal bookkeeping
+  entries in `Tensile/Common.py` (`SupportedISA` `(9,0,12)`; `architectureMap`
+  `gfx90c`/`:xnack+`/`:xnack-`) plus `Tensile/AsmCaps.py`, a first-class `(9,0,12)`
+  capability entry written from scratch from LLVM `FeatureISAVersion9_0_C`
+  (`HasMadMixInsts`; no MFMA / dot / dl-insts / VOP2-fmac / WMMA / kernarg-preload).
+  No cloning or deriving from any other ISA.
+- **Validated:** written caps == real assembler-derived gfx90c caps (0 mismatches,
+  ROCm 6.4); roundtrip `gfxName((9,0,12))`/`gfxArch('gfx90c')`; `GetArchCaps((9,0,12))`
+  needs no change. End-to-end with the driver's own known-good config from
+  `phases.yaml` (`phase_ss_Ailk_Bjlk_256x256x256_mt64x64x16_tt4x4_3`): native
+  `# Detected GPU 0: gfx90c`, "Actual Solutions: 1 / 1", kernel built, loaded
+  `TensileLibrary_gfx90c.co` / `Kernels.so-000-gfx90c.hsaco`, benchmarked 434 GFlops
+  @ 256³, exit 0.
+- **Shim removed:** `tensile_gfx90c_port/` deleted; `port_tensile.py`
+  `_get_tensile_env`/`run_preflight` stripped of shim wiring and `TENSILE_REPO_ROOT`;
+  grep-clean across driver modules. Phase-0 preflight passes 4/4 shim-free.
+- **Docs updated** (knowledge_base §2/§3, README preflight, mapping, claude.md tree
+  + PYTHONPATH, implementation_plan) to describe native support. The "pristine HEAD,
+  shim-only" wording in the `Upstream baseline` section above is **superseded** by
+  this entry.
+
 ## [Phases.yaml Fixes, Telemetry v2 & Client/Bench Split PoC] 2026-09-14
 
 - **`phases.yaml` — 48 Invalid Entries Repaired:** Reconciled NLCA and DepthU divisibility rules via in-place fixes (NLCA 3→1 ×46, DepthU 4→16 ×2); verified all 230 contraction entries pass `_validate_tensile_loads`. Archived backup at `archive/phases_20260914_prefix.yaml`.

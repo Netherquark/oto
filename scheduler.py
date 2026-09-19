@@ -302,6 +302,7 @@ class CandidateGenerator:
             totalElements = totalElementsCoalesced * totalElementsPerp
 
             numThreadGrvw = NumThreads * glvw
+            pv = 1
             if totalElements < numThreadGrvw:
                 pv = numThreadGrvw // totalElements
                 if numThreadGrvw % totalElements != 0:
@@ -315,6 +316,11 @@ class CandidateGenerator:
                 if totalElements % numThreadGrvw != 0:
                     return False, f"{tc}: totalElements={totalElements} % (NumThreads*glvw)={numThreadGrvw} != 0"
                 numLoads = totalElements // numThreadGrvw
+
+            # GLVW==VW-or-1: post-pv-reduction shift-ptr guard (SolutionStructs:4583-4596)
+            glvw_eff = glvw // pv
+            if glvw_eff > 1 and glvw_eff != vw:
+                return False, f"{tc}: GLVW={glvw_eff} must be == VectorWidth {vw} or == 1"
 
             totalVectorsCoalesced = totalElementsCoalesced // glvw
 

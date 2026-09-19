@@ -1,4 +1,4 @@
-# gfx90c Theoretical Performance Limits — attempt2
+# gfx90c Theoretical Performance Limits — oto
 
 > Authoritative acceptance-reference for "as close to the gfx90c theoretical limit as
 > possible". Derived by a research subagent (2026-09-13) from (a) READ-ONLY hardware
@@ -9,13 +9,13 @@
 
 ## 0. How this file is used
 
-- **Acceptance sourcing:** every attempt2 family ceiling in `potential_configs.md` /
+- **Acceptance sourcing:** every oto family ceiling in `potential_configs.md` /
   `implementation_plan.md` / `mapping.md` derives from the per-family ceilings in §5 —
   the same way `gfx90c_common.PEAK_GFLOPS` is the single peak authority. Squaring a
   family's best median against its §5 ceiling is how "approach the theoretical limit"
   is scored, per (datatype, bound_class).
 - **No re-derivation:** never re-derive these ceilings from model memory. Extend only
-  with first-party evidence + measured attempt2 data.
+  with first-party evidence + measured oto data.
 
 ## 1. Confirmed architecture facts (verified on this box)
 
@@ -125,7 +125,7 @@ slower than memory is fast).
   exact SS corner M=128,N=K≥2048 (I=60 vs ridge 38.4 → ALU side).
 - At max boost (2.0 GHz) ridges scale ×1.11; no shipped anchor changes class.
 
-## 5. Recommended realistic machine ceilings (attempt2 acceptance bars)
+## 5. Recommended realistic machine ceilings (oto acceptance bars)
 
 Measured-empirical on this box: FP32 best 1119 → **69%** of 1613; FP16 2461 → **77%**
 of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6 → **98%**
@@ -165,7 +165,7 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
    per-SE (4 MB/4 SE).
 5. ZZ/CC/HH_HPA/HS_HPA ceilings are derived-analytical (CC ≈ SS rate, ZZ ≈ DD rate);
    stand up a validation phase before ±5% acceptance on them.
-6. INT8 "4-wide" 3226 claim retired (no dp4a); 1613 is a soft upper bound; honest
+6. INT8 "4-wide" 3226 claim dropped (no dp4a); 1613 is a soft upper bound; honest
    ceiling ~1/2 unless one instruction wins mul+add.
 
 ## 7. Occupancy — the actual ceiling source
@@ -178,4 +178,4 @@ measured source of the 69–77% ceilings.** L2 (1 MB) holds a 128×128×128-K fp
 working set, so large squares are unambiguously ALU-side. Therefore "go as close to
 the theoretical limit as possible" = **raise achieved CU occupancy with right-sized
 GSU/WGM/MT/TT** (see `implementation_plan.md` and `potential_configs.md`),
-and 3-KD this file with measured attempt2 cells.
+and 3-KD this file with measured oto cells.
