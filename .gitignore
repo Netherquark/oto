@@ -54,7 +54,6 @@ compile_commands.json
 
 # Temporary files
 *.tmp
-*.log
 *.bak
 *.swp
 
@@ -67,3 +66,16 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+__pycache__
+gfx90c_runs/
+# *.hsaco
+# *.hsaco.raw
+# *.cmake
+# 0_Build/
+# build_tmp/
+# client_build
+# *.co
+# TensileLibrary.dat
+# source/
+# cache.yaml
