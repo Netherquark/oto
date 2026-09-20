@@ -2,7 +2,12 @@
   label: spoof_baseline_vega10
   dtype: S
   shapes:
+  - 256x256x256
+  - 512x512x512
+  - 768x768x768
+  - 1000x1000x1000
   - 1024x1024x1024
+  - 1365x1365x1365
   - 2048x2048x2048
   - 4096x4096x4096
   ScheduleName: vega10
@@ -16,7 +21,12 @@
   label: native_baseline_isa
   dtype: S
   shapes:
+  - 256x256x256
+  - 512x512x512
+  - 768x768x768
+  - 1000x1000x1000
   - 1024x1024x1024
+  - 1365x1365x1365
   - 2048x2048x2048
   - 4096x4096x4096
   ScheduleName: isa
@@ -26,6 +36,102 @@
     DataType: S
     ProblemType: Contraction
   fp: native_baseline_fp
+- phase_id: phase_cc_spoof_baseline_vega10
+  label: cc_spoof_baseline_vega10
+  dtype: C
+  shapes:
+  - 192x192x192
+  - 256x256x256
+  - 512x512x512
+  - 1024x1024x1024
+  - 2048x2048x2048
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: C
+    ProblemType: Contraction
+  fp: spoof_baseline_cc_fp
+- phase_id: phase_dd_spoof_baseline_vega10
+  label: dd_spoof_baseline_vega10
+  dtype: D
+  shapes:
+  - 192x192x192
+  - 256x256x256
+  - 512x512x512
+  - 768x768x768
+  - 1024x1024x1024
+  - 1365x1365x1365
+  - 2048x2048x2048
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: D
+    ProblemType: Contraction
+  fp: spoof_baseline_dd_fp
+- phase_id: phase_hh_spoof_baseline_vega10
+  label: hh_spoof_baseline_vega10
+  dtype: H
+  shapes:
+  - 256x256x256
+  - 512x512x512
+  - 1024x1024x1024
+  - 2048x2048x2048
+  - 4096x4096x4096
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: H
+    ProblemType: Contraction
+  fp: spoof_baseline_hh_fp
+- phase_id: phase_hh_hpa_spoof_baseline_vega10
+  label: hh_hpa_spoof_baseline_vega10
+  dtype: H
+  shapes:
+  - 512x512x512
+  - 1024x1024x1024
+  - 2048x2048x2048
+  - 4096x4096x4096
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: H
+    ProblemType: Contraction
+  fp: spoof_baseline_hh_hpa_fp
+- phase_id: phase_hs_hpa_spoof_baseline_vega10
+  label: hs_hpa_spoof_baseline_vega10
+  dtype: H
+  shapes:
+  - 512x512x512
+  - 1024x1024x1024
+  - 2048x2048x2048
+  - 4096x4096x4096
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: H
+    ProblemType: Contraction
+  fp: spoof_baseline_hs_hpa_fp
+- phase_id: phase_zz_spoof_baseline_vega10
+  label: zz_spoof_baseline_vega10
+  dtype: Z
+  shapes:
+  - 128x128x128
+  - 192x192x192
+  - 256x256x256
+  - 512x512x512
+  - 1024x1024x1024
+  ScheduleName: vega10
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx900
+    DataType: Z
+    ProblemType: Contraction
+  fp: spoof_baseline_zz_fp
 - phase_id: phase_ss_Ailk_Bjlk_mt96x96x16_tt6x6_vw2_nlca3_wgm4_alu
   label: SS_Ailk_Bjlk_mt96x96x16_tt6x6_vw2_nlca3_wgm4_alu
   dtype: S

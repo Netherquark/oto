@@ -316,51 +316,65 @@ class AnalyticsEngine:
         return "ALU"
 
     def compute_native_vs_spoof_delta(
-        self,
-        native_records: List[Dict[str, Any]],
-        spoof_records: List[Dict[str, Any]],
-        tie_band_pct: float = 5.0
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
-        """
-        Compute native-vs-spoof deltas for same-run pairs only.
+            self,
+            native_records: List[Dict[str, Any]],
+            spoof_records: List[Dict[str, Any]],
+            tie_band_pct: float = 5.0
+        ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
+            """
+            Native-vs-spoof deltas: every spoof benchmark entity is measured against
+            the BEST native median at the same (dtype, shape).
 
-        Args:
-            native_records: Records from native ScheduleName="isa" runs
-            spoof_records: Records from spoof ScheduleName="vega10" runs
-            tie_band_pct: Parity band (default ±5%)
+            A spoof entity is a (dtype, shape, fingerprint) cell of the gfx900 spoof
+            library. The native side is the best per-config median for that shape —
+            the deck winner — which is the number a shipped deck must beat.
 
-        Returns:
-            Dict mapping (dtype, shape) to delta info
-        """
-        native_by_cell = defaultdict(list)
-        spoof_by_cell = defaultdict(list)
+            Args:
+                native_records: Records from native ScheduleName="isa" runs
+                spoof_records: Records from spoof ScheduleName="vega10" runs
+                tie_band_pct: Parity band (default ±5%)
 
-        for rec in native_records:
-            dtype = rec.get("DataType", rec.get("dtype", ""))
-            shape = rec.get("ProblemType", rec.get("shape", ""))
-            gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
-            if gflops > 0:
-                native_by_cell[(dtype, shape)].append(gflops)
+            Returns:
+                Dict keyed by (dtype, shape, spoof_fp) to delta info with the spoof
+                entity's median vs the best native median.
+            """
+            native_cell: Dict[Tuple[str, str, str], List[float]] = defaultdict(list)
+            for rec in native_records:
+                dtype = rec.get("DataType", rec.get("dtype", ""))
+                shape = rec.get("ProblemType", rec.get("shape", ""))
+                fp = rec.get("fingerprint", rec.get("fp", "unknown"))
+                gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
+                if gflops > 0:
+                    native_cell[(dtype, shape, fp)].append(gflops)
 
-        for rec in spoof_records:
-            dtype = rec.get("DataType", rec.get("dtype", ""))
-            shape = rec.get("ProblemType", rec.get("shape", ""))
-            gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
-            if gflops > 0:
-                spoof_by_cell[(dtype, shape)].append(gflops)
+            # Best native median per (dtype, shape) — the deck winner to beat.
+            best_native: Dict[Tuple[str, str], float] = {}
+            for (dtype, shape, _fp), seeds in native_cell.items():
+                cell_median = aggregate_cell(seeds).median
+                key = (dtype, shape)
+                if cell_median > best_native.get(key, 0.0):
+                    best_native[key] = cell_median
 
-        deltas = {}
-        for key in set(native_by_cell.keys()) & set(spoof_by_cell.keys()):
-            native_seeds = native_by_cell[key]
-            spoof_seeds = spoof_by_cell[key]
+            spoof_cell: Dict[Tuple[str, str, str], List[float]] = defaultdict(list)
+            for rec in spoof_records:
+                dtype = rec.get("DataType", rec.get("dtype", ""))
+                shape = rec.get("ProblemType", rec.get("shape", ""))
+                fp = rec.get("fingerprint", rec.get("fp", "unknown"))
+                gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
+                if gflops > 0:
+                    spoof_cell[(dtype, shape, fp)].append(gflops)
 
-            if native_seeds and spoof_seeds:
-                native_agg = aggregate_cell(native_seeds)
+            deltas = {}
+            for (dtype, shape, fp), spoof_seeds in spoof_cell.items():
+                native_best = best_native.get((dtype, shape))
+                if native_best is None or not spoof_seeds:
+                    continue
                 spoof_agg = aggregate_cell(spoof_seeds)
+                spoof_median = spoof_agg.median
 
                 delta_pct = (
-                    ((native_agg.median - spoof_agg.median) / spoof_agg.median * 100.0)
-                    if spoof_agg.median > 0 else 0.0
+                    ((native_best - spoof_median) / spoof_median * 100.0)
+                    if spoof_median > 0 else 0.0
                 )
 
                 tie = abs(delta_pct) <= tie_band_pct
@@ -371,17 +385,16 @@ class AnalyticsEngine:
                 else:
                     verdict = "LOSS"
 
-                deltas[key] = {
-                    "native_median": native_agg.median,
-                    "spoof_median": spoof_agg.median,
+                deltas[(dtype, shape, fp)] = {
+                    "native_median": native_best,
+                    "spoof_median": spoof_median,
+                    "spoof_fp": fp,
                     "delta_pct": delta_pct,
                     "tie": tie,
                     "verdict": verdict,
-                    "native_seeds": len(native_seeds),
-                    "spoof_seeds": len(spoof_seeds)
                 }
 
-        return deltas
+            return deltas
 
     def generate_red_list(
         self,
@@ -407,7 +420,7 @@ class AnalyticsEngine:
         self,
         run_id: str,
         analytics: List[CellAnalytics],
-        deltas: Optional[Dict[Tuple[str, str], Dict[str, Any]]] = None
+        deltas: Optional[Dict[Tuple[str, str, str], Dict[str, Any]]] = None
     ) -> None:
         """
         Persist analytics results to the append-only registry.
@@ -429,12 +442,13 @@ class AnalyticsEngine:
             self.registry.append_record(record, run_id=run_id)
 
         if deltas:
-            for (dtype, shape), delta_info in deltas.items():
+            for (dtype, shape, fp), delta_info in deltas.items():
                 record = {
                     "type": "native_vs_spoof_delta",
                     "run_id": run_id,
                     "dtype": dtype,
                     "shape": shape,
+                    "fp": fp,
                     **delta_info
                 }
                 self.registry.append_record(record, run_id=run_id)

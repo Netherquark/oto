@@ -29,6 +29,7 @@ class ABVerdict:
     delta_pct: float
     tie: bool
     verdict: str  # "WIN", "TIE", "LOSS"
+    fp: str = ""  # spoof entity fingerprint (config) being compared
 
 
 @dataclass
@@ -270,6 +271,7 @@ class AcceptanceReporter:
                 {
                     "dtype": v.dtype,
                     "shape": v.shape,
+                    "fp": v.fp,
                     "native_median": v.native_median,
                     "spoof_median": v.spoof_median,
                     "delta_pct": v.delta_pct,
@@ -313,6 +315,7 @@ class AcceptanceReporter:
             <tr>
                 <td><code>{v.dtype}</code></td>
                 <td class="mono strong">{v.shape}</td>
+                <td class="mono secondary" title="spoof entity config fingerprint">{v.fp[:10]}{'…' if len(v.fp) > 10 else ''}</td>
                 <td class="num strong">{v.native_median:.1f}</td>
                 <td class="num secondary">{v.spoof_median:.1f}</td>
                 <td class="num strong" style="color: {v_color};">{v.delta_pct:+.1f}%</td>
@@ -813,14 +816,15 @@ class AcceptanceReporter:
                         <tr>
                             <th>Dtype</th>
                             <th>Problem shape</th>
-                            <th>Native median</th>
+                            <th>Spoof entity (config)</th>
+                            <th>Best native median</th>
                             <th>Spoof median</th>
                             <th>Delta (%)</th>
                             <th>Verdict</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {verdict_rows if verdict_rows else '<tr><td colspan="6" class="empty">No same-run A/B comparisons registered yet.</td></tr>'}
+                        {verdict_rows if verdict_rows else '<tr><td colspan="7" class="empty">No same-run A/B comparisons registered yet.</td></tr>'}
                     </tbody>
                 </table>
             </div>

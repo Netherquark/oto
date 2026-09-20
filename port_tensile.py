@@ -1006,17 +1006,17 @@ class TensileDriver:
         if self._stop_requested or self._finish_after_iteration:
             return {"converged": False, "reason": "Preflight aborted", "iterations": 0}
 
-        # 2. Preflight A/B anchor: spoof vs native baseline pair
-        spouses = {
-            "phase_ss_spoof_baseline_vega10",
-            "phase_ss_native_baseline_isa",
-        }
+        # 2. Preflight A/B anchor: spoof vs native baseline pair(s)
+        #    Run every *_spoof_baseline_vega10 and *_native_baseline_isa phase
+        #    so the gfx900 spoof floor covers all families (cc/dd/hh/hh_hpa/
+        #    hs_hpa/ss/zz), not just the SS anchor.
         baseline_entries = [
             p for p in self.load_phases_manifest()
-            if p.get("phase_id") in spouses
+            if str(p.get("phase_id", "")).endswith("_baseline_vega10")
+            or str(p.get("phase_id", "")).endswith("_baseline_isa")
         ]
-        if len(baseline_entries) == 2:
-            print("\n--- Preflight A/B baseline pair (anchor) ---")
+        if baseline_entries:
+            print(f"\n--- Preflight A/B baselines (anchor): {len(baseline_entries)} phases ---")
             baseline_ids = [p["phase_id"] for p in baseline_entries]
             self.run_phases(target_ids=baseline_ids, opt_in_identical_skip=False)
 
@@ -1370,6 +1370,7 @@ class TensileDriver:
             norm = {
                 "DataType": rec.get("dtype", ""),
                 "ProblemType": rec.get("shape", ""),
+                "fingerprint": rec.get("fp", ""),
                 "GFLOPS": gflops,
                 "phase_id": rec.get("phase_id", ""),
             }
@@ -1382,9 +1383,10 @@ class TensileDriver:
     def _compute_ab_verdicts(self, run_id: str, run_dir: Optional[Path] = None) -> List[Any]:
         """Compute native-vs-spoof A/B verdicts for a run.
 
-        Deck-vs-floor: native records (per-cell medians or per-seed GFLOPS from
-        the registry) are compared against the vega10/gfx900 spoof floor for the
-        same (dtype, shape), so the baseline-vs-baseline trap never applies.
+        Every spoof entity of the gfx900 library is compared against the best
+        native median at the same (dtype, shape) — deck-winner vs floor. Native
+        records come from the run's CSVs when present, otherwise per-seed GFLOPS
+        from registry benchmark_result rows.
         """
         from report import ABVerdict
 
@@ -1395,7 +1397,7 @@ class TensileDriver:
         deltas = self.analytics.compute_native_vs_spoof_delta(native_records, spoof_records)
 
         verdicts = []
-        for (dtype, shape), d in deltas.items():
+        for (dtype, shape, fp), d in deltas.items():
             verdicts.append(ABVerdict(
                 dtype=dtype,
                 shape=shape,
@@ -1403,7 +1405,8 @@ class TensileDriver:
                 spoof_median=d["spoof_median"],
                 delta_pct=d["delta_pct"],
                 tie=d["tie"],
-                verdict=d["verdict"]
+                verdict=d["verdict"],
+                fp=d.get("spoof_fp", fp)
             ))
         return verdicts
 
