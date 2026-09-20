@@ -6,7 +6,7 @@ Per-cell analytics, native-vs-spoof deltas, realistic ceiling utilization,
 and RED-list generation. Feeds seeds to Stage 2, verdicts to Stage 6/7.
 
 Key mechanics:
-- Load raw records from 2_BenchmarkData/*.csv via all_runs_dataset
+- Load raw records straight from `gfx90c_runs/*.json` (the live native-run ledger, see `results.md` §1)
 - Per-cell analytics: winner via N8 median-of-seeds, spread ratio,
   % of family-realistic ceiling (with decode DDR exemption)
 - RED-list of under-performing compute cells

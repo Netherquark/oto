@@ -10,10 +10,13 @@
  
  - Frozen prior data (conclusions only): 40 run entries, 19 benchmark-bearing
    runs; 771 benchmark records, 111 config-group cells, 66 unique problem cells.
- - Live ledger: 3 benchmark runs completed yielding 96 valid kernel-size
-   measurements across phases 20, 25, 31.
-   - Max achieved: **928.0 GFlops** (83% of 1119 ceiling) on $1365^3$ SGEMM NT (`MT96x96x16`).
-   - Phase 20 median: **601.5 GFlops**; Phase 25 median: **505.7 GFlops**; Phase 31 median: **591.6 GFlops**.
+ - Frozen prior-derived (ceiling bars carried from the prior campaign, provenance
+   `changelog.md` 2026-09-15 -- BEFORE the gfx900→gfx90c port): 3 runs / 96 valid
+   kernel-size measurements across phases 20, 25, 31.
+   - Max (prior) 928.0 GFlops (83% of 1119 ceiling) on $1365^3$ SGEMM NT (`MT96x96x16`);
+     Phase 20/25/31 medians 601.5 / 505.7 / 591.6 GFlops -- carried ceiling bars only.
+   - **Live ledger (port era, authoritative):** 1 run `run_20260915_001704`
+     (interrupted) in `gfx90c_results/registry.db` -- 1652 live records. See §11.
 
 ## 2. Per-Phase Winners (carried ceiling bars)
 

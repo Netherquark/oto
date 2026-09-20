@@ -47,6 +47,7 @@ from policy import aggregate_cell, should_repeat, should_run, apply_d2_4_protect
 from agent import ConvergenceAgent
 from report import AcceptanceReporter
 from gfx90c_common import PEAK_GFLOPS
+from telemetry import TelemetrySampler as SysfsTelemetrySampler
 
 # Industry-standard .env loader (python-dotenv); never overrides live env vars.
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -435,10 +436,10 @@ class TensileDriver:
         }
         self.registry.append_record(start_record, run_id=self.run_dir.name)
 
-        # Start telemetry sampler for run
+        # Start telemetry sampler for run (sysfs /sys/class/drm discovery)
         log_dir = self.run_dir / "logs"
         telemetry_csv = log_dir / "telemetry.csv"
-        sampler = TelemetrySampler(telemetry_csv)
+        sampler = SysfsTelemetrySampler(telemetry_csv)
         sampler.start()
 
         # Execute Tensile benchmark
@@ -456,6 +457,10 @@ class TensileDriver:
                 "run_id": self.run_dir.name,
                 "phase_id": phase_id,
                 "label": label,
+                "dtype": dtype,
+                "shapes": shapes,
+                "schedule_name": schedule_name,
+                "num_benchmarks": num_benchmarks,
                 "fp": fp,
                 "timestamp": datetime.now().isoformat(),
                 "status": status,
@@ -912,6 +917,8 @@ class TensileDriver:
             phases = [p for p in phases if p.get("label", "") in phases_filter]
 
         results = []
+        executed_count = 0
+        skipped_count = 0
         for phase in phases:
             if self._stop_requested or self._finish_after_iteration:
                 print("Stop requested, halting phase execution")
@@ -932,6 +939,7 @@ class TensileDriver:
 
             if not allowed:
                 print(f"Skipping phase {phase_id} ({reason})")
+                skipped_count += 1
                 self.registry.append_record({
                     "run_id": self.run_dir.name,
                     "phase_id": phase_id,
@@ -944,14 +952,24 @@ class TensileDriver:
 
             result = self.execute_phase(phase, self.run_dir)
             results.append(result)
+            if result.get("status") not in ("interrupted", "skipped_by_user"):
+                executed_count += 1
 
             if self._finish_after_iteration:
                 print("End-after-iteration requested, halting phase execution")
                 break
 
         # Mark run final status in registry
-        final_status = "interrupted" if self._stop_requested else "completed"
-        run_meta: Dict[str, Any] = {"phases_executed": len(results)}
+        if self._stop_requested:
+            final_status = "interrupted"
+        elif executed_count == 0 and skipped_count > 0:
+            final_status = "skipped"
+        else:
+            final_status = "completed"
+        run_meta: Dict[str, Any] = {
+            "phases_executed": executed_count,
+            "phases_skipped": skipped_count,
+        }
         if self._finish_after_iteration:
             run_meta["end_after_iteration"] = True
         self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
@@ -963,9 +981,36 @@ class TensileDriver:
         mutation_budget: int = 2
     ) -> Dict[str, Any]:
         """
-        Run auto-convergence loop.
+        Run auto-convergence loop (one-command overnight).
+
+        Order:
+          1. Preflight (Phase-0 checks, non-fatal)
+          2. Preflight A/B baseline pair (spoof vs native anchor)
+          3. All manifest phases in order (policy-filtered)
+          4. Convergent harvest/mutate loop
         """
         print(f"Starting auto-convergence loop (budget={budget}, mutation_budget={mutation_budget})")
+
+        # 1. Phase-0 preflight guarantees Tensile/DB/manifest presence
+        preflight_ok = self.run_preflight()
+        if not preflight_ok:
+            print("WARNING: preflight reported FAIL; continuing (non-fatal).")
+        if self._stop_requested or self._finish_after_iteration:
+            return {"converged": False, "reason": "Preflight aborted", "iterations": 0}
+
+        # 2. Preflight A/B anchor: spoof vs native baseline pair
+        spouses = {
+            "phase_ss_spoof_baseline_vega10",
+            "phase_ss_native_baseline_isa",
+        }
+        baseline_entries = [
+            p for p in self.load_phases_manifest()
+            if p.get("phase_id") in spouses
+        ]
+        if len(baseline_entries) == 2:
+            print("\n--- Preflight A/B baseline pair (anchor) ---")
+            baseline_ids = [p["phase_id"] for p in baseline_entries]
+            self.run_phases(target_ids=baseline_ids, opt_in_identical_skip=False)
 
         iteration = 0
         while iteration < budget and not self._stop_requested and not self._finish_after_iteration:
@@ -1181,6 +1226,50 @@ class TensileDriver:
                 retired_count += 1
         return retired_count
 
+    def _ab_records_from_csv(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Build native/spoof per-cell record lists from this run's CSVs.
+
+        Each phase's ScheduleName (arm) is resolved from the phase config
+        (architecture) since registry records carry no GFLOPS/medians.
+        Returns (native_records, spoof_records) with per-cell medians.
+        """
+        from analytics import extract_family_from_phase_id
+
+        native_records: List[Dict[str, Any]] = []
+        spoof_records: List[Dict[str, Any]] = []
+        if not self.run_dir:
+            return native_records, spoof_records
+
+        for csv_file in sorted(self.run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
+            phase_id = csv_file.parent.parent.name
+            # Resolve arm: config Architecture gfx900 == spoof, else native
+            phase = next(
+                (p for p in self.load_phases_manifest()
+                 if p.get("phase_id") == phase_id),
+                None
+            )
+            arch = ""
+            if phase:
+                arch = str(phase.get("config", {}).get("Architecture", ""))
+            is_spoof = "gfx900" in arch
+            dtype = self.analytics.extract_dtype_from_phase_id(phase_id)
+            records = self.analytics.load_benchmark_csv(csv_file)
+            cell_map = self.analytics.aggregate_by_cell(records, dtype_override=dtype)
+            for (cell_dtype, shape, fp), seeds in cell_map.items():
+                agg = aggregate_cell(seeds)
+                rec = {
+                    "DataType": cell_dtype,
+                    "ProblemType": shape,
+                    "fingerprint": fp,
+                    "GFLOPS": agg.median,
+                    "phase_id": phase_id,
+                }
+                if is_spoof:
+                    spoof_records.append(rec)
+                else:
+                    native_records.append(rec)
+        return native_records, spoof_records
+
     def run_ab_test(
         self,
         target_a: str,
@@ -1189,8 +1278,10 @@ class TensileDriver:
     ) -> Dict[str, Any]:
         """Run same-run A/B test (Stage 7): co-benchmark native vs spoof arms.
 
-        Arms are matched by target key (phase_id/label/clean-key); records are
-        grouped by ScheduleName ('isa'=native, 'vega10'=spoof) for verdicts.
+        Arms are matched by target key (phase_id/label/clean-key); per-cell
+        medians come from the run's 2_BenchmarkData CSVs, paired by
+        (dtype, shape, fp) across the two arms. Arm is discriminated by the
+        phase config Architecture ('gfx900'=spoof, 'gfx90c'=native).
         """
         print(f"Running A/B test: {target_a} vs {target_b}")
         self.run_phases(target_ids=[target_a, target_b], opt_in_identical_skip=False)
@@ -1198,12 +1289,7 @@ class TensileDriver:
         all_analytics = self._load_analytics_from_run()
         red_list = self.analytics.generate_red_list(all_analytics)
 
-        # Compute verdicts: ScheduleName is the arm discriminator
-        all_records = self.registry.read_records(run_id=self.run_dir.name)
-
-        native_records = [r for r in all_records if r.get("schedule_name") == "isa"]
-        spoof_records = [r for r in all_records if r.get("schedule_name") == "vega10"]
-        
+        native_records, spoof_records = self._ab_records_from_csv()
         deltas = self.analytics.compute_native_vs_spoof_delta(native_records, spoof_records)
 
         verdicts = []
@@ -1335,11 +1421,6 @@ def main():
         help="Target IDs or labels to execute (e.g., target_ss_Ailk_Bjlk_1024x1024x1024)"
     )
     parser.add_argument(
-        "--phases",
-        nargs="+",
-        help="Alias for --targets (deprecated; use --targets)"
-    )
-    parser.add_argument(
         "--family",
         nargs="+",
         help="Filter targets by family (e.g., --family SS or --family CC DD HH)"
@@ -1440,7 +1521,7 @@ def main():
         return 0 if result.get("status") != "failed" else 1
 
     # Semantic target execution
-    if args.targets or args.phases or args.family or args.pattern or args.shape:
+    if args.targets or args.family or args.pattern or args.shape:
         manifest = driver.load_phases_manifest()
         matched = []
 
@@ -1451,9 +1532,6 @@ def main():
         target_keys = set()
         if args.targets:
             target_keys.update(args.targets)
-        if args.phases:
-            for p in args.phases:
-                target_keys.add(str(p))
 
         for target in manifest:
             tid = str(target.get("phase_id", target.get("target_id", "")))
@@ -1498,21 +1576,24 @@ def main():
 
         print(f"Executing {len(matched)} matched targets across Stage 3 benchmark...")
         results = []
+        executed_count = 0
         for target in matched:
             if driver._stop_requested or driver._finish_after_iteration:
                 break
             res = driver.execute_phase(target, driver.run_dir)
             results.append(res)
+            if res.get("status") not in ("interrupted", "skipped_by_user"):
+                executed_count += 1
             if driver._finish_after_iteration:
                 print("End-after-iteration requested, halting target execution")
                 break
 
         final_status = "interrupted" if driver._stop_requested else "completed"
-        run_meta: Dict[str, Any] = {"targets_executed": len(results)}
+        run_meta: Dict[str, Any] = {"targets_executed": executed_count}
         if driver._finish_after_iteration:
             run_meta["end_after_iteration"] = True
         driver.registry.update_run_status(driver.run_dir.name, final_status, run_meta)
-        print(f"Completed {len(results)} targets (run status: {final_status})")
+        print(f"Completed {executed_count} targets (run status: {final_status})")
 
         # Generate acceptance report (JSON & HTML) based on available execution data
         driver.generate_acceptance_report()

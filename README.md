@@ -103,7 +103,7 @@ python3 port_tensile.py --family DD --pattern Ailk_Bjlk Alik_Bljk
 ```
 
 ### 3. Automated HTML & JSON Report Generation
-Reports are generated automatically at the end of every run (and on early quit via `'q'`). You can inspect the interactive visual dashboard:
+Reports are generated automatically at the end of every run (and on early quit via `'e'`). You can inspect the interactive visual dashboard:
 ```bash
 # View the HTML dashboard in any browser:
 xdg-open gfx90c_results/acceptance_report.html

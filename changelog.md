@@ -9,6 +9,35 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Wide gfx90c candidate deck (331 phases) + --auto baseline-anchored one-command integration] 2026-09-20
+
+- **Wide deck replaces the 304-phase manifest.** `phases.yaml` regenerated from
+  `/tmp/opencode/gen_wide_deck.py`: 331 phases (SS 105, HH 56, DD 44, HH_HPA 32,
+  CC 32, ZZ 32, HS_HPA 28, + 2 ss A/B baselines), every config passing the
+  scheduler mirror (`validate_config` + `_validate_tensile_loads` GLVW guard) and
+  per-shape M/N≥MT, K≥DepthU exact-size blockers — 0 invalid of 331.
+  Structure: one phase per (family × contraction-pattern × config) bundling ALL
+  family shapes, plus shape-matched underfill-GSU phases (small squares only, so
+  GSU2/8 is not misapplied to large ALU squares) and DDR/GEMV phases.
+- **fp-collision fix:** prior HH_HPA vs HS_HPA phases shared identical configs →
+  identical sha256 fp → policy `has_fp_passed` identical-fp skip would drop the
+  second family on re-runs. New deck keeps `FamilyLabel` (SS/HH_HPA/HS_HPA) in the
+  fp input; all 331 phase_id/fp/config triples are unique.
+- **Anchored `--auto`:** `run_auto` now runs Phase-0 preflight (non-fatal), then
+  the spoof/native baseline A/B pair first as the anchor, then all manifest phases
+  in order, then the convergent harvest/mutate loop — single overnight command.
+- **A/B verdict pipeline fixed (was producing 0 verdicts):** completed/recovery
+  records now carry `schedule_name`/`dtype`/`shapes`/`num_benchmarks` so arms
+  resolve; `run_ab_test` now sources per-cell medians from `2_BenchmarkData` CSVs
+  (which hold GFLOPS) grouped by arm instead of from registry records (which never
+  carried GFLOPS). Verified with a fabricated 1:1 native/spoof cell set (WIN).
+- **Accounting + telemetry fixes:** `phases_executed` counts only real executions
+  (interrupted/skipped-by-user excluded) and reports `phases_skipped`; inline
+  buggy sampler replaced by `telemetry.py`'s `/sys/class/drm/cardN/device`
+  discovery (old `hwmon_dir.parent.parent` resolved to `/sys/class`).
+- **Breaking CLI:** `--phases` removed (was an alias for `--targets`; the historic
+  numeric `--phases 1 31 25` matched nothing). Use `--targets` explicitly.
+
 ## [HS_HPA fixes applied: manifest re-parameterized + scheduler mirror models the GLVW guard] 2026-09-19
 
 - **Fix 1 (manifest):** the 16 `hs_hpa` phases in `phases.yaml` are re-parameterized

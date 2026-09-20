@@ -79,10 +79,10 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
   `gfx90c_results/acceptance_report.json/.html`. Referenced live: `results.md:5`,
   `knowledge_base.md:105-108,338-340,381,409,416`, `implementation_plan.md:190,440-441,
   447,476,563,572-573`, `scratch.md:44-45` (T6 legacy chain), `analytics.py:9` → round-2 reword.
-- **E — knowledge_base_final.md: unregistered + stale HS_HPA framing.** Not in claude.md §3
-  owner table, referenced by no .md (rg rc=1). `:481` "12 failing hs_hpa"; `:492` "must be
-  de-listed or fixed" — stale under Fix 1 (16 cells guard-legal MT64x64x16) → round-2 register
-  in claude.md §3 + reconcile, or freeze it.
+- **E — knowledge_base_final.md: NOT docs-ecosystem — RESOLVED 2026-09-20 by user directive.**
+  It is the user's agent-context knowledge base (fed to config-gen / adversarial agents),
+  deliberately OUTSIDE the docs governance ecosystem → **no `claude.md` §3 owner-table
+  registration** (user vetoed E's registration half 2026-09-20). Not a hygiene offender.
 - **F — results.md §1 ledger vs live DB.** "3 benchmark runs ... 96 valid ... phases 20,25,31"
   (results.md:26) vs `gfx90c_results/registry.db` = 1 run (run_20260915_001704 interrupted,
   phases_executed=1, 1652 records); root `registry.db` has no tables → round-2 verify + refresh.
@@ -108,13 +108,16 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
 - [ ] F3 `changelog.md` — APPEND "[HS_HPA fixes applied]" entry (newest top).
 - [ ] F4 Dead-pipeline rewording: results.md:5, knowledge_base.md (4 sites), implementation_plan.md
       (6 sites), scratch.md:44-45, analytics.py:9 → report.py acceptance_report pipeline.
-- [ ] F5 knowledge_base_final.md — register in claude.md §3 owner table + fix :481/:492 HS_HPA
+- [x] F5 knowledge_base_final.md — CANCELLED 2026-09-20 (user: it is agent-context, not
+      docs-ecosystem; do NOT register in claude.md §3). HS_HPA framing left to the file owner.
       framing (or freeze as of 2026-09-15 and note supersession).
 - [ ] F6 results.md §1 — refresh run ledger to match gfx90c_results/registry.db facts.
 - [ ] F7 Count reconciliation: 230/240/228 → 304 (232 family + 72 auto) in the cited docs.
 - [ ] F8 CpuThreads framing update (implementation_plan.md E + scratch carryover).
 - [ ] F9 README:106 §3 early-quit word consistency with §1 ('e').
-- [ ] F10 re-run live-doc hygiene grep (shim/legacy/CANDIDATES/hardcoded paths) at the end.
+- [x] F10 re-run live-doc hygiene grep (shim/legacy/CANDIDATES/hardcoded paths) at the end --
+      DONE 2026-09-20: CLEAN (only append-only changelog history + frozen-source names;
+      zero live cites of dead tools, zero CANDIDATES blocks, zero hardcoded paths).
 
 ## Fixed-state carried in (don't re-break)
 

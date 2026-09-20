@@ -230,8 +230,7 @@ Proposed candidates in priority order (spend rules §3: coverage first, then mut
 Any new phase must be `validate_config`-clean (occupancy/LDS) **and** pass
 `_validate_tensile_loads` (Tensile divisibility — new requirement 2026-09-14) and
 the `<host>/<knob>` uniqueness gate (no re-run of a fingerprint already benchmarked).
-All 304 phases.yaml contraction entries (232 family + 72 auto) currently pass both
-gates (48 invalid entries were repaired in place from the stock Tensile
-GLVW==VW-or-1 / MacroTile schema fixes: NLCA 3→1 ×46, DepthU 4→16 ×2; backup
-`archive/phases_20260914_prefix.yaml`). "230" was the pre-repair count; the live
-manifest total is 304 (see `results.md` §1 / `knowledge_base.md` §6).
+**Wide-deck regen (2026-09-20):** the live manifest is now 331 entries (SS 105,
+HH 56, DD 44, HH_HPA 32, CC 32, ZZ 32, HS_HPA 28, + 2 ss A/B baselines), full-shape
+bundled per phase + shape-matched underfill-GSU and DDR/GEMV phases; all 331 pass
+the mirror gates with unique phase_id/fp/config (generator: `/tmp/opencode/gen_wide_deck.py`).

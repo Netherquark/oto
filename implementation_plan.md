@@ -108,9 +108,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - **`CpuThreads: 1` is NOT dogma — it is a toolchain problem to SOLVE.** The
   `unknown resource type` child kills are a joblib/loky-vs-Python-3.14 incompatibility,
   and the generator shares mutable `globalParameters`. oto **fixes** the
-  parallelism properly (pin/loky version, or confine mutation), PoC'd in `/tmp`; only
-  while it is unfixed does the driver fall back to sequential `CpuThreads: 1` —
-  documented as a reasoned fallback, not a permanent hazard.
+  parallelism properly (default `CpuThreads: min(os.cpu_count(), 16)`, shipped in
+  changelog "[Multi-Threaded Compilation] 2026-09-13"); the pre-fix sequential
+  `CpuThreads: 1` narrower is retired, retained only as changelog history.
 - **CU occupancy ≤3 is the performance target, not a hazard.** Low achieved occupancy
   = hardware under-utilization = the very headroom "approach the theoretical limit"
   exists to claim. Occupancy is capped by VGPR pressure + grid underfill on the 7-CU
@@ -560,8 +560,8 @@ before merging.
       runs / ≥3 configs per converged cell.
 - [ ] Occupancy objective: measured per-cell utilization raised toward the §5
       ceilings (GSU/WGM/MT/TT right-sizing recorded as a first-class knob campaign).
-- [ ] Statistics/HTML tooling intact end-to-end after the refactor (double-checked by
-      re-running `all_runs_dataset.py` → `make_results_md.py` → `make_report.py`).
+- [ ] Statistics/HTML tooling intact end-to-end after the refactor (Verify by inspecting the
+      live `results_derived.json` + `gfx90c_report.html` that the current `report.py` pipeline writes).
 - [ ] Peak-table prose corrected everywhere to single-rate 1613 for BF16/INT8.
 - [ ] Final synthesis + zero-leak anti-alias + whole-library native-vs-spoof readout.
 
@@ -570,8 +570,7 @@ before merging.
   (ceiling authority), `mapping.md` (footprint contract), `potential_configs.md`
   (candidate deck), `changelog.md` (evolution), `results.md` (data, append-only),
   `claude.md` (entry contract), `knowledge_base.md` (data law §10).
-- Live repo: `gfx90c_common.py`, `all_runs_dataset.py`, `make_results_md.py`,
-  `make_report.py`, `auto_retire.py`, the native gfx90c patch
+- Live repo: `gfx90c_common.py`, `report.py` (writes `results_derived.json` + `gfx90c_report.html`), the native gfx90c patch
   (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile tree),
   `gfx90c_results/registry.db`, frozen
   `gfx90c_results/{experiment_db,benchmark_registry}.jsonl`, `gfx90c_runs/run_*`.
