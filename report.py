@@ -167,6 +167,19 @@ class AcceptanceReporter:
             theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
             best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
 
+            # Per-kernel-size breakdown (256/512/1024/2048/... cube sides, GEMV M dim).
+            by_size: Dict[str, Dict[str, Any]] = {}
+            for a in family_cells:
+                size = self._kernel_size_from_shape(a.shape)
+                bucket = by_size.setdefault(size, {"cells": 0, "best_median": 0.0})
+                bucket["cells"] += 1
+                bucket["best_median"] = max(bucket["best_median"], a.median_gflops)
+            sorted_sizes = sorted(by_size.items(),
+                                  key=lambda kv: (int(kv[0]) if kv[0].isdigit() else 10 ** 9, kv[0]))
+            for _, bucket in sorted_sizes:
+                bucket["pct_of_ceiling"] = (bucket["best_median"] / ceiling * 100.0) if ceiling > 0 else 0.0
+                bucket["pct_of_theoretical"] = (bucket["best_median"] / theoretical * 100.0) if theoretical > 0 else 0.0
+
             coverage[family] = {
                 "expected_kernels": expected_kernels[family],
                 "measured_cells": len(family_cells),
@@ -176,9 +189,22 @@ class AcceptanceReporter:
                 "ceiling_gflops": ceiling,
                 "theoretical_peak_gflops": theoretical,
                 "pct_of_theoretical": (best_median / theoretical * 100.0) if theoretical > 0 else 0.0,
+                "by_size": dict(sorted_sizes),
             }
 
         return coverage
+
+    def _kernel_size_from_shape(self, shape: str) -> str:
+        """Extract a kernel size label from a problem shape.
+
+        Cubic GEMM shapes (MxMxM) report the cube side; non-cubic / GEMV shapes
+        report the leading (M) dimension so 32x4096x1 → 32, 64x4096x1 → 64.
+        """
+        try:
+            m = str(shape).split("x")[0].strip()
+            return str(int(m))
+        except (ValueError, IndexError):
+            return "?"
 
     def _family_to_dtype(self, family: str) -> str:
         mapping = {
@@ -297,7 +323,11 @@ class AcceptanceReporter:
         # Build family rows with a dynamic "vs acceptance ceiling" scale:
         # scale = max(100%, max measured) so values >100% are never clipped and the
         # actual value stays visible; a marker line shows where 100% sits.
+        # Both bar columns (ceiling utilization and % of theoretical) get their own
+        # dynamic scale + 100% marker, and the per-kernel-size detail rows reuse the
+        # same scales so every bar stays directly comparable and nothing is clipped.
         family_data = []
+        size_data: Dict[str, List[Tuple[Any, ...]]] = {}
         for fam, cov in report.per_family_coverage.items():
             best = cov.get("best_median", 0.0)
             ceil = cov.get("ceiling_gflops", 1118.7)
@@ -306,23 +336,83 @@ class AcceptanceReporter:
             pct_theo = (best / theo * 100.0) if theo > 0 else 0.0
             family_data.append((fam, cov, best, ceil, theo, pct, pct_theo))
 
-        max_pct = max([d[5] for d in family_data] + [100.0])
-        scale = max_pct
+            sizes = []
+            for size_key, s in sorted(cov.get("by_size", {}).items(),
+                                      key=lambda kv: (int(kv[0]) if str(kv[0]).isdigit() else 10 ** 9, kv[0])):
+                sb = s.get("best_median", 0.0)
+                spct = s.get("pct_of_ceiling", (sb / ceil * 100.0) if ceil > 0 else 0.0)
+                spct_theo = s.get("pct_of_theoretical", (sb / theo * 100.0) if theo > 0 else 0.0)
+                sizes.append((size_key, s, sb, spct, spct_theo))
+            size_data[fam] = sizes
+
+        all_pcts = ([d[5] for d in family_data]
+                    + [s[3] for sd in size_data.values() for s in sd] + [100.0])
+        all_pct_theo = ([d[6] for d in family_data]
+                        + [s[4] for sd in size_data.values() for s in sd] + [100.0])
+        scale = max(all_pcts)
+        scale_theo = max(all_pct_theo)
         marker_left = 100.0 / scale * 100.0  # % width where the 100% marker sits
+        marker_left_theo = 100.0 / scale_theo * 100.0
 
         family_rows = ""
         for fam, cov, best, ceil, theo, pct, pct_theo in family_data:
             bar_width = pct / scale * 100.0
+            bar_width_theo = pct_theo / scale_theo * 100.0
+            expand_id = f"fam-{fam}"
+            sizes = size_data.get(fam, [])
+            detail_html = ""
+            if sizes:
+                size_rows = ""
+                for size_key, s, sb, spct, spct_theo in sizes:
+                    sw = spct / scale * 100.0
+                    sw_theo = spct_theo / scale_theo * 100.0
+                    size_rows += f"""
+                    <tr>
+                        <td class="mono secondary">k={size_key}</td>
+                        <td class="num">{s.get('cells', 0)}</td>
+                        <td class="num strong">{sb:.1f}</td>
+                        <td class="num secondary">{ceil:.1f}</td>
+                        <td class="num secondary">{theo:.1f}</td>
+                        <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {sw:.1f}%;"></span><span class="bar-marker" style="left: {marker_left:.1f}%;"></span></span><span class="bar-label">{spct:.1f}%</span></span></td>
+                        <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz2" style="width: {sw_theo:.1f}%;"></span><span class="bar-marker" style="left: {marker_left_theo:.1f}%;"></span></span><span class="bar-label">{spct_theo:.1f}%</span></span></td>
+                    </tr>
+                    """
+                detail_html = f"""
+                <tr class="family-detail" id="{expand_id}" hidden>
+                    <td colspan="7">
+                        <table class="size-table">
+                            <thead>
+                                <tr>
+                                    <th>Kernel size</th>
+                                    <th>Cells</th>
+                                    <th>Best median</th>
+                                    <th>Realistic ceiling</th>
+                                    <th>Theoretical peak</th>
+                                    <th>Ceiling utilization</th>
+                                    <th>% of theoretical</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {size_rows}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                """
             family_rows += f"""
-            <tr>
-                <td class="mono strong">{fam}</td>
+            <tr class="family-row">
+                <td class="mono strong">
+                    {f'<button type="button" class="row-toggle" aria-expanded="false" aria-controls="{expand_id}" data-target="{expand_id}"><span class="caret" aria-hidden="true">&#9656;</span></button>' if sizes else ''}
+                    {fam}
+                </td>
                 <td class="num">{cov.get('measured_cells', 0)} / {cov.get('expected_kernels', 0)}</td>
                 <td class="num strong">{best:.1f}</td>
                 <td class="num secondary">{ceil:.1f}</td>
                 <td class="num secondary">{theo:.1f}</td>
                 <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {bar_width:.1f}%;"></span><span class="bar-marker" style="left: {marker_left:.1f}%;"></span></span><span class="bar-label">{pct:.1f}%</span></span></td>
-                <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz2" style="width: {min(pct_theo, 100):.1f}%;"></span></span><span class="bar-label">{pct_theo:.1f}%</span></span></td>
+                <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz2" style="width: {bar_width_theo:.1f}%;"></span><span class="bar-marker" style="left: {marker_left_theo:.1f}%;"></span></span><span class="bar-label">{pct_theo:.1f}%</span></span></td>
             </tr>
+            {detail_html}
             """
 
         red_color = "var(--support-error)" if report.red_list else "var(--support-success)"
@@ -536,6 +626,7 @@ class AcceptanceReporter:
         .bar-wrap { display: inline-flex; align-items: center; gap: 4px; }
         .bar {
             display: inline-block;
+            position: relative;
             width: 96px;
             height: 6px;
             background: var(--track);
@@ -544,12 +635,37 @@ class AcceptanceReporter:
         .bar-fill { display: block; height: 100%; }
         .bar-viz1 { background: var(--viz-1); }
         .bar-viz2 { background: var(--viz-2); }
+        .bar-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            margin-left: -1px;
+            background: var(--text-secondary);
+            opacity: 0.65;
+        }
         .bar-label {
             font-family: var(--font-sans);
             font-size: 12px;
             font-variant-numeric: tabular-nums;
             color: var(--text-primary);
         }
+        .row-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 4px;
+            font-size: 12px;
+            line-height: 1;
+            color: var(--interactive);
+            font-family: var(--font-mono);
+            vertical-align: baseline;
+        }
+        .family-detail td { padding: 0; }
+        .size-table { margin: 4px 12px 12px 44px; width: calc(100% - 56px); min-width: 460px; }
+        .size-table thead th { background: var(--layer-02); }
+        .size-table tbody tr:last-child td { border-bottom: none; }
         .empty {
             padding: 24px 16px;
             text-align: center;
@@ -598,6 +714,24 @@ class AcceptanceReporter:
                 update();
             });
             update();
+        })();
+        </script>
+        """
+
+        js_expand = r"""
+        <script>
+        (function () {
+            var toggles = document.querySelectorAll('.row-toggle');
+            Array.prototype.forEach.call(toggles, function (btn) {
+                btn.addEventListener('click', function () {
+                    var target = document.getElementById(btn.getAttribute('data-target'));
+                    var expanded = btn.getAttribute('aria-expanded') === 'true';
+                    var open = !expanded;
+                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    btn.querySelector('.caret').innerHTML = open ? '\u25BE' : '\u25B8';
+                    if (target) target.hidden = !open;
+                });
+            });
         })();
         </script>
         """
@@ -697,6 +831,7 @@ class AcceptanceReporter:
         {section_telemetry}
     </main>
 
+    {js_expand}
     {js_toggle}
 </body>
 </html>"""

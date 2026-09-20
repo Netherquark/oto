@@ -52,15 +52,24 @@ _KNOWN_FAMILIES = ['hh_hpa', 'hs_hpa', 'ss', 'dd', 'hh', 'zz', 'cc']
 
 
 def extract_family_from_phase_id(phase_id: str) -> str:
-    """Extract multi-letter family key from a phase_id (e.g. 'phase_hh_hpa_...' → 'hh_hpa')."""
-    s = str(phase_id).replace('phase_', '').replace('phase', '')
-    tokens = s.split('_')
-    for fam in _KNOWN_FAMILIES:
-        if len(tokens) >= 2 and tokens[0] == fam.split('_')[0]:
-            fam_tokens = fam.split('_')
-            if tokens[:len(fam_tokens)] == fam_tokens:
-                return fam
-    return tokens[0] if tokens else ''
+    """Extract multi-letter family key from a phase_id (e.g. 'phase_hh_hpa_...' → 'hh_hpa').
+
+    Matches the longest known family token sequence anywhere on a token boundary,
+    so prefix tokens (e.g. 'draft_SS_...', 'draft_HH_HPA_...') still resolve.
+    """
+    parts = [p for p in str(phase_id).replace('phase_', '').replace('phase', '').split('_') if p]
+    best = ''
+    best_len = 0
+    for fam in sorted(_KNOWN_FAMILIES, key=len, reverse=True):
+        fam_tokens = fam.split('_')
+        if len(fam_tokens) <= best_len:
+            continue
+        for i in range(len(parts) - len(fam_tokens) + 1):
+            if parts[i:i + len(fam_tokens)] == fam_tokens:
+                best = fam
+                best_len = len(fam_tokens)
+                break
+    return best
 
 
 class CellAnalytics:

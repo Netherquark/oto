@@ -1075,10 +1075,13 @@ class TensileDriver:
             "iterations": iteration
         }
 
-    def _load_analytics_from_run(self) -> List[CellAnalytics]:
-        """Load CellAnalytics from all run CSVs in current run directory."""
+    def _load_analytics_from_run(self, run_dir: Optional[Path] = None) -> List[CellAnalytics]:
+        """Load CellAnalytics from all run CSVs in a run directory."""
+        run_dir = run_dir or self.run_dir
         all_analytics = []
-        csv_files = list(self.run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
+        if not run_dir:
+            return all_analytics
+        csv_files = list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
 
         for csv_file in csv_files:
             # Extract phase_id and family from CSV file path
@@ -1103,6 +1106,37 @@ class TensileDriver:
                     family=family
                 )
                 all_analytics.append(analytics_obj)
+
+        return all_analytics
+
+    def _load_analytics_from_registry(self, run_id: str) -> List[CellAnalytics]:
+        """Load CellAnalytics straight from registry benchmark_result rows.
+
+        For merged / draft-imported runs whose per-seed GFLOPS live only in the
+        database (no run_dir CSVs). Mirrors _load_analytics_from_run: per-config
+        fingerprint cells aggregated over seed rows, family from phase_id.
+        """
+        from analytics import extract_family_from_phase_id
+
+        all_analytics = []
+        try:
+            records = self.registry.read_records(run_id=run_id, record_type="benchmark_result")
+        except Exception:
+            return all_analytics
+        if not records:
+            return all_analytics
+
+        by_phase: Dict[str, List[Dict[str, Any]]] = {}
+        for rec in records:
+            by_phase.setdefault(str(rec.get("phase_id", "")), []).append(rec)
+
+        for phase_id, phase_records in by_phase.items():
+            dtype = phase_records[0].get("dtype") or self.analytics.extract_dtype_from_phase_id(phase_id)
+            family = extract_family_from_phase_id(phase_id)
+            cell_map = self.analytics.aggregate_by_cell(phase_records, dtype_override=dtype)
+            for (cell_dtype, shape, fp), seeds in cell_map.items():
+                all_analytics.append(self.analytics.compute_cell_analytics(
+                    dtype=cell_dtype, shape=shape, fp=fp, seeds=seeds, family=family))
 
         return all_analytics
 
@@ -1146,38 +1180,74 @@ class TensileDriver:
             for fam, durs in per_fam.items()
         }
 
-    def generate_acceptance_report(self, run_dir: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    def generate_acceptance_report(self, run_dir: Optional[Path] = None, run_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Generate the acceptance report (JSON + HTML) from run data.
         Installed in run_auto, the --targets path, and the SIGINT handler so a
         report is always emitted even on interrupt (missing-report bug fix).
+
+        Analytics come from the run's 2_BenchmarkData CSVs when on disk; for
+        merged / draft-imported runs (no run_dir) they are rebuilt from registry
+        benchmark_result rows. Reports are written into the run dir (when one
+        exists) plus the canonical base_dir/gfx90c_results/ location.
         """
         try:
             if run_dir is None:
                 run_dir = self.run_dir
-            all_analytics = self._load_analytics_from_run()
+            if run_id is None:
+                run_id = run_dir.name if run_dir is not None else self.registry.latest_run_id()
+            if not run_id:
+                print("Report generation: no run_id available")
+                return None
+
+            if run_dir is not None and any(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
+                all_analytics = self._load_analytics_from_run(run_dir)
+            else:
+                all_analytics = self._load_analytics_from_registry(run_id)
+
             red_list = self.analytics.generate_red_list(all_analytics)
-            family_timing = self._compute_family_timing(run_dir.name)
+            family_timing = self._compute_family_timing(run_id)
+            ab_verdicts = self._compute_ab_verdicts(run_id, run_dir)
             report = self.reporter.generate_acceptance_report(
-                run_id=run_dir.name,
-                ab_verdicts=[],
+                run_id=run_id,
+                ab_verdicts=ab_verdicts,
                 all_analytics=all_analytics,
                 red_list=red_list,
                 family_timing=family_timing
             )
-            report_out = run_dir / "acceptance_report.json"
-            self.reporter.write_report(report, report_out)
+            if run_dir is not None:
+                report_out = run_dir / "acceptance_report.json"
+                self.reporter.write_report(report, report_out)
+                print(f"Report emitted to: {report_out}")
             if self.reporter.base_dir:
                 try:
                     self.reporter.write_report(report, self.reporter.base_dir / "gfx90c_results" / "acceptance_report.json")
                 except Exception:
                     pass
-            print(f"Report emitted to: {report_out}")
             return {"cells": len(all_analytics), "red": len(red_list),
+                    "ab": len(ab_verdicts), "run_id": run_id,
                     "overall_pass": report.overall_pass, "summary": report.summary}
         except Exception as e:
             print(f"Report generation error: {e}")
             return None
+
+    def regenerate_report(self, run_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Regenerate the acceptance report for a run from the registry.
+
+        With no run_id, uses the most recently registered run. Reports land in
+        base_dir/gfx90c_results/acceptance_report.{json,html}.
+        """
+        if run_id is None:
+            run_id = self.registry.latest_run_id()
+        if not run_id:
+            print("No run id available to regenerate a report")
+            return None
+
+        run_dir = self.base_dir / "gfx90c_runs" / run_id
+        if not run_dir.exists():
+            run_dir = None
+        print(f"Regenerating acceptance report for run {run_id}")
+        return self.generate_acceptance_report(run_dir=run_dir, run_id=run_id)
 
     def _retire_stable_candidates(self) -> int:
         """
@@ -1234,8 +1304,8 @@ class TensileDriver:
                 retired_count += 1
         return retired_count
 
-    def _ab_records_from_csv(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Build native/spoof per-cell record lists from this run's CSVs.
+    def _ab_records_from_csv(self, run_dir: Optional[Path] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Build native/spoof per-cell record lists from a run's CSVs.
 
         Each phase's ScheduleName (arm) is resolved from the phase config
         (architecture) since registry records carry no GFLOPS/medians.
@@ -1245,10 +1315,11 @@ class TensileDriver:
 
         native_records: List[Dict[str, Any]] = []
         spoof_records: List[Dict[str, Any]] = []
-        if not self.run_dir:
+        run_dir = run_dir or self.run_dir
+        if not run_dir:
             return native_records, spoof_records
 
-        for csv_file in sorted(self.run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
+        for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
             phase_id = csv_file.parent.parent.name
             # Resolve arm: config Architecture gfx900 == spoof, else native
             phase = next(
@@ -1278,6 +1349,64 @@ class TensileDriver:
                     native_records.append(rec)
         return native_records, spoof_records
 
+    def _ab_records_from_registry(self, run_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Build native/spoof per-cell records from registry benchmark_result rows.
+
+        Used for merged / draft-imported runs whose GFLOPS live only in the
+        database (no run_dir CSVs). Arms are discriminated by schedule_name:
+        'vega10' / spoof = spoof floor, everything else = native deck.
+        """
+        native_records: List[Dict[str, Any]] = []
+        spoof_records: List[Dict[str, Any]] = []
+        try:
+            records = self.registry.read_records(run_id=run_id, record_type="benchmark_result")
+        except Exception:
+            return native_records, spoof_records
+        for rec in records:
+            gflops = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
+            if gflops <= 0:
+                continue
+            schedule = str(rec.get("schedule_name") or rec.get("ScheduleName") or "isa").lower()
+            norm = {
+                "DataType": rec.get("dtype", ""),
+                "ProblemType": rec.get("shape", ""),
+                "GFLOPS": gflops,
+                "phase_id": rec.get("phase_id", ""),
+            }
+            if "vega10" in schedule or "spoof" in schedule:
+                spoof_records.append(norm)
+            else:
+                native_records.append(norm)
+        return native_records, spoof_records
+
+    def _compute_ab_verdicts(self, run_id: str, run_dir: Optional[Path] = None) -> List[Any]:
+        """Compute native-vs-spoof A/B verdicts for a run.
+
+        Deck-vs-floor: native records (per-cell medians or per-seed GFLOPS from
+        the registry) are compared against the vega10/gfx900 spoof floor for the
+        same (dtype, shape), so the baseline-vs-baseline trap never applies.
+        """
+        from report import ABVerdict
+
+        native_records, spoof_records = self._ab_records_from_csv(run_dir)
+        if not native_records and not spoof_records:
+            native_records, spoof_records = self._ab_records_from_registry(run_id)
+
+        deltas = self.analytics.compute_native_vs_spoof_delta(native_records, spoof_records)
+
+        verdicts = []
+        for (dtype, shape), d in deltas.items():
+            verdicts.append(ABVerdict(
+                dtype=dtype,
+                shape=shape,
+                native_median=d["native_median"],
+                spoof_median=d["spoof_median"],
+                delta_pct=d["delta_pct"],
+                tie=d["tie"],
+                verdict=d["verdict"]
+            ))
+        return verdicts
+
     def run_ab_test(
         self,
         target_a: str,
@@ -1297,21 +1426,7 @@ class TensileDriver:
         all_analytics = self._load_analytics_from_run()
         red_list = self.analytics.generate_red_list(all_analytics)
 
-        native_records, spoof_records = self._ab_records_from_csv()
-        deltas = self.analytics.compute_native_vs_spoof_delta(native_records, spoof_records)
-
-        verdicts = []
-        for (dtype, shape), d in deltas.items():
-            from report import ABVerdict
-            verdicts.append(ABVerdict(
-                dtype=dtype,
-                shape=shape,
-                native_median=d["native_median"],
-                spoof_median=d["spoof_median"],
-                delta_pct=d["delta_pct"],
-                tie=d["tie"],
-                verdict=d["verdict"]
-            ))
+        verdicts = self._compute_ab_verdicts(self.run_dir.name, self.run_dir)
 
         report = self.reporter.generate_acceptance_report(
             self.run_dir.name,
@@ -1449,6 +1564,13 @@ def main():
         help="Specific pipeline stage(s) to execute (1..7 or names: manifest, candidate, benchmark, repeat, analytics, synthesis, report)"
     )
     parser.add_argument(
+        "--report",
+        nargs="?",
+        const="",
+        default=None,
+        help="Regenerate the acceptance report for RUN_ID from the registry (default: latest run)"
+    )
+    parser.add_argument(
         "--auto",
         action="store_true",
         help="Run Stage 1-7 deterministic auto-convergence loop across 28 families"
@@ -1515,12 +1637,17 @@ def main():
         phase_timeout_s=args.phase_timeout,
         tensile_root=args.tensile_root,
         cooldown_s=args.cooldown,
-        create_run=not args.dry_run
+        create_run=not (args.dry_run or args.report is not None or (args.stage and "report" in args.stage))
     )
 
     if args.preflight:
         ok = driver.run_preflight()
         return 0 if ok else 1
+
+    # Stage 7 report-only regeneration (from registry / run dir)
+    if args.report is not None or (args.stage and any(s in ["7", "report"] for s in args.stage)):
+        result = driver.regenerate_report(args.report if args.report else None)
+        return 0 if result else 1
 
     # Stage 6 explicit synthesis
     if args.synthesize or (args.stage and any(s in ["6", "synthesis", "build"] for s in args.stage)):

@@ -128,6 +128,15 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - LLM output is hypothesis input, not architecture authority. HW decides. DB remembers.
 - Wait for the two scoped control runs (`--phases 1 31`, then `--phases 20 25`) before
   re-deriving native-vs-spoof verdicts under fixed math.
+- **NEVER run full Tensile benchmark runs during code development.** This is not a
+  TTY. Full runs are ONLY allowed in a TTY, and ONLY when the USER runs them. During
+  agent work: no `Tensile`/`TensileCreateLibrary` full benchmarks, no sustained GPU
+  phases, no marathon/deck runs. Code/DB/doc work only. The agent may build, validate,
+  test, generate decks, dry-run and inspect results — never launch full runs.
+- **`todo.txt` is a USER-ONLY file. The agent never reads, writes, greps, renames,
+  or touches it — in any context, for any reason.** (Cross-ref §8.1.) Its contents
+  are not part of the agent-visible state; treat its non-existence from the agent
+  perspective as required.
 - Super-sample / adaptive-repeat policy applies before convergence claims; a cell
   needs ≥2 independent runs AND ≥3 configs tested AND ≤1% movement over the last 2
   independent runs to be considered converged.

@@ -301,6 +301,15 @@ class SQLiteRegistry:
                 return self.runs_dir / row["run_id"]
             return None
 
+    def latest_run_id(self) -> Optional[str]:
+        """Return the most recently registered run id (from the runs table)."""
+        with self._get_conn() as conn:
+            cursor = conn.execute(
+                "SELECT run_id FROM runs ORDER BY id DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            return row["run_id"] if row else None
+
     def is_phase_retired(self, phase_id: str) -> bool:
         """Check if a phase is retired at Tier 1 (fp-less)."""
         clean_id = str(phase_id).replace("phase_", "")
