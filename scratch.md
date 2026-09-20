@@ -34,7 +34,7 @@ consultation.
       modules + data-only phases.yaml manifest; `json.dumps` + SQLite `records`
       INSERT-only. Fully verified and unit-tested.
 - [x] T3 port the 28-family gfx900 footprint as NATIVE gfx90c phases — family
-      decks per dtype+pattern {CC,DD,ZZ,HH,HH_HPA,HS_HPA,SS} × 4 patterns (240 candidate configs in phases.yaml).
+      decks per dtype+pattern {CC,DD,ZZ,HH,HH_HPA,HS_HPA,SS} × 4 patterns (304 candidate configs in phases.yaml: 232 family + 72 auto).
 - [ ] T4 run the two scoped control runs under FIXED math — `--phases 1 31`
       (COMPLETED: run_20260913_135333) then `--phases 20 25` (~2h); re-derive native-vs-spoof verdicts
       (ruler-adjusted, median-of-seeds, ties = parity) before full suite.
@@ -49,6 +49,72 @@ consultation.
       gfx90c_theoretical_limits.md §5 ceilings via right-sized GSU/WGM/MT/TT (objective tuning axis).
 - [x] T8 correct peak-table prose: BF16 + INT8 = 1613 single-rate (not 3226), sourced
       from gfx90c_common.PEAK_GFLOPS.
+
+## Docs-ecosystem audit — changelog→live-doc drift (round-1 analysis + round-2 fixes)
+
+**Process (user-mandated, 2026-09-19):** Round-1 = go through `changelog.md`, find major
+changes that would need doc-ecosystem reflection; record drift instances (append-only).
+Round-2 = fix offenders ONLY after the analysis is fully complete; `changelog.md` fixes
+are APPEND (new entry), other live docs state current fact (in-place per claude.md §8.1).
+
+**Round-1 register (ANALYSIS COMPLETE):**
+
+- **[MANIFEST] Ground truth:** phases.yaml = **304 rows** (ss=52, cc=34, dd=34, zz=32,
+  hh=64, hs=16, auto=72; 232 family + 72 auto). README:24 matches. Distrust any other count.
+- **A — `.env.example` ships a dead probe-chain schema.** Code reads ONLY `TENSILE_ROOT`,
+  `ROCM_PATH`, `ROCM_BIN`, `ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`,
+  `TENSILE_ASSEMBLER_FALLBACK`, `TENSILE_VERBOSE` (changelog "[Native .env] 2026-09-19"
+  removed all `*_CANDIDATES` chains), yet `.env.example:8-31` still documents
+  `ROCM_PREFIX_CANDIDATES` / `ROCM_BIN_CANDIDATES` / `ROCM_LLVM_BIN_CANDIDATES` /
+  `TENSILE_ASSEMBLER_CANDIDATES` / `TENSILE_ASSEMBLER_FALLBACK_CANDIDATES` → round-2 align.
+- **B — "Scheduler mirror gap (pending)" now APPLIED.** scheduler.py `_validate_tensile_loads`
+  models the `GLVW==VW-or-1` predicate (`:320`; 6 tests + 304/304 sweep pass). Still marked
+  "pending/add": `implementation_plan.md:154-156`, `potential_configs.md:86-88` → round-2 flip
+  to applied/verified.
+- **C — Changelog top HS_HPA entry still says "Fix (pending)" ** (`:39-40`). Fix 2 landed;
+  changelog is append-only → round-2 APPEND a new entry ("HS_HPA fixes applied": 16 cells →
+  MT64x64x16 + mirror predicate), never edit the old bullet.
+- **D — Dead reporting pipeline referenced as live.** No `all_runs_dataset.py`,
+  `make_results_md.py`, `make_report.py`, `auto_retire.py` in repo; report.py writes
+  `gfx90c_results/acceptance_report.json/.html`. Referenced live: `results.md:5`,
+  `knowledge_base.md:105-108,338-340,381,409,416`, `implementation_plan.md:190,440-441,
+  447,476,563,572-573`, `scratch.md:44-45` (T6 legacy chain), `analytics.py:9` → round-2 reword.
+- **E — knowledge_base_final.md: unregistered + stale HS_HPA framing.** Not in claude.md §3
+  owner table, referenced by no .md (rg rc=1). `:481` "12 failing hs_hpa"; `:492` "must be
+  de-listed or fixed" — stale under Fix 1 (16 cells guard-legal MT64x64x16) → round-2 register
+  in claude.md §3 + reconcile, or freeze it.
+- **F — results.md §1 ledger vs live DB.** "3 benchmark runs ... 96 valid ... phases 20,25,31"
+  (results.md:26) vs `gfx90c_results/registry.db` = 1 run (run_20260915_001704 interrupted,
+  phases_executed=1, 1652 records); root `registry.db` has no tables → round-2 verify + refresh.
+- **G — Count drift vs the 304 manifest:** `implementation_plan.md:29` "230 targets",
+  `potential_configs.md:233` "All 230 phases.yaml contraction entries", `incomplete_work.md:31`
+  "240 candidate configs", `incomplete_work.md:84` "228 clean targets" → round-2 reconcile to
+  304 / (232 family + 72 auto).
+- **H — CpuThreads wording stale.** Code default = `min(os.cpu_count() or 8, 16)`
+  (`port_tensile.py:704`; changelog "[Multi-Threaded Compilation] 2026-09-13"); 
+  `implementation_plan.md:107-110` + `scratch.md:74-75` still say driver "falls back to
+  sequential `CpuThreads: 1` while unfixed" → round-2 update the worked/unfixed framing.
+- **I — README:136 / results.md:5 'q'-only auth phrasing.** `README:106` §3 says early-quit
+  via `'q'` (acceptance_report written on `'e'`/`'q'`/Ctrl+C); README §1 table already has `'e'`
+  → round-2 make §3 consistent with §1.
+- **Clean (verified, do not reflag):** README arch counts = manifest; no shim/sitecustomize/
+  legacy-suite greps in live docs; `_DEFAULT_TENSILE_ROOT` gone everywhere; `.env` gitignored;
+  claude.md/kb/impl-plan `.env` path wording current (2026-09-19).
+
+**Round-2 FIX task list (run only after analysis fully complete):**
+- [ ] F1 `.env.example` — drop `*_CANDIDATES` block; document native discovery (hipconfig +
+      shutil.which) with the 7 live vars only.
+- [ ] F2 `implementation_plan.md:154-156` + `potential_configs.md:86-88` — "pending → applied".
+- [ ] F3 `changelog.md` — APPEND "[HS_HPA fixes applied]" entry (newest top).
+- [ ] F4 Dead-pipeline rewording: results.md:5, knowledge_base.md (4 sites), implementation_plan.md
+      (6 sites), scratch.md:44-45, analytics.py:9 → report.py acceptance_report pipeline.
+- [ ] F5 knowledge_base_final.md — register in claude.md §3 owner table + fix :481/:492 HS_HPA
+      framing (or freeze as of 2026-09-15 and note supersession).
+- [ ] F6 results.md §1 — refresh run ledger to match gfx90c_results/registry.db facts.
+- [ ] F7 Count reconciliation: 230/240/228 → 304 (232 family + 72 auto) in the cited docs.
+- [ ] F8 CpuThreads framing update (implementation_plan.md E + scratch carryover).
+- [ ] F9 README:106 §3 early-quit word consistency with §1 ('e').
+- [ ] F10 re-run live-doc hygiene grep (shim/legacy/CANDIDATES/hardcoded paths) at the end.
 
 ## Fixed-state carried in (don't re-break)
 

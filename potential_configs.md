@@ -83,9 +83,9 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
   loads; MT64x64x8/TT4x4/VW2/DU8 → `1/1 after SolutionStructs` and `after
   KernelWriter`. HS_HPA tuning/config search resumes on those two
   parameterizations.
-- **Scheduler mirror gap (pending):** `_validate_tensile_loads` (scheduler.py
-  :211-362) does not model the `GLVW==VW or ==1` predicate (4583-4596), so it
-  wrongly pre-validated the rejected deck. Add that predicate to the mirror.
+- **Scheduler mirror gap — FIXED (2026-09-19):** `_validate_tensile_loads` (scheduler.py
+  `:211-362`) now models the `GLVW==VW or ==1` predicate (4583-4596), which the wrongly
+  pre-validated 64x64x8 deck violated; 6 unit tests + 304/304 manifest sweep pass.
 - 2026-09-13: acceptance narrowed to TWO measures — (1) beat the gfx900-spoof floor
   across the whole shipped suite; (2) approach the per-family ceilings of
   `gfx90c_theoretical_limits.md` §5 (measured utilization logged per
@@ -230,6 +230,8 @@ Proposed candidates in priority order (spend rules §3: coverage first, then mut
 Any new phase must be `validate_config`-clean (occupancy/LDS) **and** pass
 `_validate_tensile_loads` (Tensile divisibility — new requirement 2026-09-14) and
 the `<host>/<knob>` uniqueness gate (no re-run of a fingerprint already benchmarked).
-All 230 phases.yaml contraction entries currently pass both gates (48 invalid
-entries were fixed in place: NLCA 3→1 ×46, DepthU 4→16 ×2; backup
-`archive/phases_20260914_prefix.yaml`).
+All 304 phases.yaml contraction entries (232 family + 72 auto) currently pass both
+gates (48 invalid entries were repaired in place from the stock Tensile
+GLVW==VW-or-1 / MacroTile schema fixes: NLCA 3→1 ×46, DepthU 4→16 ×2; backup
+`archive/phases_20260914_prefix.yaml`). "230" was the pre-repair count; the live
+manifest total is 304 (see `results.md` §1 / `knowledge_base.md` §6).

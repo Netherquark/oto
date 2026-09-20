@@ -26,7 +26,9 @@ Stated goal (from `tensiles_in_system_rocm.txt`): replicate and produce a
 ## Core Strategy (one-shot deterministic convergence)
 
 ```
-shipped `gfx900` footprint (28 families, 4 patterns = 230 targets)
+shipped `gfx900` footprint (28 families, 4 patterns = 304 phases: 232
+family + 72 auto — 48 phase.yaml invalid entries fixed 2026-09-14, see
+`changelog.md`)
     ↓ translate decks (mapping.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
@@ -151,9 +153,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
   isa-independent, not a gfx90c HW/ISA limit, not an assembler failure.
   Guard-legal HS_HPA parameterizations (MT64x64x16/TT4x4/VW4; MT64x64x8/TT4x4/VW2)
   are admitted 1/1 and assemble for gfx90c. HS_HPA tuning resumes on them.
-- **Scheduler mirror gap (pending fix):** `_validate_tensile_loads` does not model
-  the `GLVW==VW-or-1` predicate, so it wrongly pre-validated the 64x64x8 deck. Add
-  that predicate to the mirror.
+- **Scheduler mirror gap — FIXED (2026-09-19):** `_validate_tensile_loads` now models
+  the `GLVW==VW-or-1` predicate (scheduler.py `_validate_tensile_loads`), which the
+  64x64x8 deck previously violated; 6 unit tests + 304/304 manifest sweep pass.
 
 ---
 
@@ -187,7 +189,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 **Scope:** APPEND-ONLY data registry; per-cell analytics; native-vs-spoof deltas; feed seeds to Stage 2, verdicts to Stage 6/7.
 **Key files:** Suite v7 PHASE 29 block, gfx90c_common.py (PEAK_GFLOPS), gfx90c_theoretical_limits.md (§5 ceilings).
 **Mechanics:**
-- Load raw records from 2_BenchmarkData/*.csv via all_runs_dataset
+- Load raw records from 2_BenchmarkData/*.csv via analytics.py/registry
 - Per-cell analytics: winner via N8 median-of-seeds, spread ratio, % of family-realistic ceiling (with is_decode DDR exemption), RED-list of under-performing compute cells
 - Native-vs-spoof per-cell deltas: same-run only; withhold when no same-run pair
 - Append-only DB: sqlite3 `records` INSERT of `json.dumps` payloads; rows never edited/deleted
@@ -435,17 +437,15 @@ never a retirement signal** and never re-rolled.
 5. Agent loop + `--auto`; convergence budget configurable.
 6. Single entrypoint: the python driver.
 
-### 7. Statistics/HTML tooling retained (unchanged contract)
-The reporting pipeline is untouched and remains the run-watching surface:
-`all_runs_dataset.py` → `make_results_md.py` (rewrite only `<!-- DERIVED:* -->`
-blocks) → `make_report.py` → self-contained `gfx90c_report.html`. The driver feeds the
-same data layout (append-only, per `knowledge_base.md` §10):
+### 7. Statistics/HTML tooling (report.py pipeline)
+The reporting surface is `analytics.py` → `report.py` → `acceptance_report.json` +
+self-contained `acceptance_report.html` (single-file dashboard, Carbon design
+language). The driver feeds an append-only data layout (per `knowledge_base.md` §10):
 - `gfx90c_runs/run_YYYYMMDD_HHMMSS/` with `configs/phase<N>_*.yaml`,
   `phase<N>_*/2_BenchmarkData/*.csv`, `logs/telemetry.csv` (header-in-file),
 - `gfx90c_results/registry.db` (`records` INSERT-only) as the canonical ledger,
-- frozen `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` in
-  place; optional jsonl **export** of new rows until `all_runs_dataset.py` reads
-  SQLite.
+- `gfx90c_results/acceptance_report.json/.html` regenerated per run (and on
+  `'e'`/`'q'` early exit), plus any jsonl `export` of new rows.
 Any module that changes these outputs must be validated by re-running the pipeline
 before merging.
 
@@ -473,7 +473,7 @@ before merging.
 | `adj_cells()` no-op (dt key not `(dt,cls)`) | keyed `(dt,cls)`; missing = None |
 | geo-mean fallback inferring missing rulers | removed; missing reported |
 | Phantom `("BF16","DDR")` ruler → nonexistent phase | deleted |
-| `make_report.py:112` `bound_class` AttributeError | pipeline runs end-to-end |
+| report dtype `extract_dtype_from_phase_id` | restored via token-based family parse (report.py; legacy regex produced 'unknown') |
 | `AssertSizeMultiple: [1]` crash (scalar int vs dict) | `[{}]`/fixed keys: config-validation gate |
 | Toolchain — `hipconfig --version` on stderr | try/except + explicit ROCM_PATH |
 | HardwareMonitor `stoi` on APU | `HardwareMonitor: False` in configs |
@@ -543,8 +543,9 @@ before merging.
 ### Step 6 — Synthesis + acceptance
 - `agent.converged()` → write tier-2 retirement records (≥2 independent runs/cell
   gating) → master synthesis of the harvested winner set → `results.md` +
-  `gfx90c_report.html` regenerated → final anti-alias re-assert (0 gfx900 leaks) and
-  whole-library native-vs-spoof readout with per-family %-of-theoretical ceilings.
+  `gfx90c_results/acceptance_report.json/.html` regenerated → final anti-alias
+  re-assert (0 gfx900 leaks) and whole-library native-vs-spoof readout with per-family
+  %-of-theoretical ceilings.
 
 ## Exit criteria
 

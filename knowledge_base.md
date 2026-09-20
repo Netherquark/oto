@@ -102,11 +102,10 @@ This project's driver source (outside that tree, still **calls into** it):
   `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`.
 - `gfx90c_common.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
   card, dtype tables)
-- `all_runs_dataset.py` — aggregation of all run data → `all_runs_dataset.json`
-- `make_results_md.py` — DERIVED results blocks for markdown
-- `make_report.py` — `gfx90c_report.html` single-file report (inline SVG)
-- `auto_retire.py` — retirement automation (retirement logic moves into
-  `policy.py` / `agent.py` in the refactor)
+- `report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
+  (single-file HTML dashboard; inline SVG/CSS, Carbon design language)
+- `registry.py` — append-only SQLite registry (`gfx90c_results/registry.db`, WAL)
+- `analytics.py` — per-cell analytics, native-vs-spoof deltas, RED-list generation
 
 The gfx90c delta (the entire change vs upstream — see section 3):
 
@@ -335,9 +334,12 @@ Measurement no-go's:
 
 Pipeline (in order):
 
-1. `all_runs_dataset.py` — aggregates `run_*/` data → `all_runs_dataset.json`.
-2. `make_results_md.py` — renders **DERIVED** results blocks from the dataset.
-3. `make_report.py` — builds `gfx90c_report.html` (single file).
+1. `port_tensile.py` + `registry.py` — persist raw benchmark records to SQLite
+   (`gfx90c_results/registry.db`, append-only `records`).
+2. `analytics.py` — per-cell analytics, native-vs-spoof deltas, RED-list generation.
+3. `report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
+   (single-file dashboard). Report dtype extraction is token-based
+   (`extract_dtype_from_phase_id`), no longer regex-dependent.
 
 Acceptance ceilings: per-family bars come from `gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK
@@ -378,7 +380,7 @@ Every stream of benchmark evidence, past and future:
   may ingest them into SQLite as **new** `records` rows (copy-forward), never
   truncate the jsonl.
 - `results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
-- `gfx90c_report.html` — regenerated from data, never hand-repaired.
+- `acceptance_report.json` + `acceptance_report.html` (in `gfx90c_results/`) — regenerated from data, never hand-repaired.
 - Corrupt jsonl records from the frozen set remain **in place** (triage: readers
   must tolerate and mark, never repair the file by deleting the row).
 
@@ -406,16 +408,17 @@ overwrite, or rewrite **benchmark evidence**.
   always reversible by a later append.
 - Phase-number reservations and run-order are asserted (order self-check) so a
   run can never silently skip or reorder intended work.
-- Stats/HTML pipeline (`all_runs_dataset.py` → …) still consumes run dirs + CSV.
-  Until that pipeline reads SQLite, the driver may **also** append a jsonl
+- Stats/analytics pipeline (`analytics.py` → `report.py`) reads derived data from the
+  SQLite `records` table (via the registry). The driver may **also** append a jsonl
   *export* of new `records` (dual-write). Dual-write is export, not a second
   source of truth. Canonical ledger = `records`.
 
 ### 10.3 Derived artifacts
 
-- `make_results_md.py` rewrites **only** the `<!-- DERIVED:* -->` marker blocks; hand
-  prose outside the markers is preserved verbatim by the renderer.
-- `gfx90c_report.html` is regenerated wholesale from the dataset; never hand-edited.
+- `report.py` `write_report()` writes `acceptance_report.json` and its `.html`
+  dashboard wholesale from the registry data.
+- Legacy `make_results_md.py`-style `results.md` `<!-- DERIVED:* -->` marker-block
+  regeneration no longer exists; `results.md` hand prose is append-only.
 - The single peak authority is `gfx90c_common.PEAK_GFLOPS` (see section 7); derived
   prose that contradicts it is regenerated, not hand-patched.
 

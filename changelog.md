@@ -9,6 +9,19 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [HS_HPA fixes applied: manifest re-parameterized + scheduler mirror models the GLVW guard] 2026-09-19
+
+- **Fix 1 (manifest):** the 16 `hs_hpa` phases in `phases.yaml` are re-parameterized
+  from the rejected MT64x64x8/TT4x4/VW4 deck to the guard-legal MT64x64x16/TT4x4/VW4/
+  DU16 parameterization (admitted `1/1 after SolutionStructs`, assembles for gfx90c).
+  The accepted deck previously logged `Your parameters resulted in 0 valid solutions`
+  on every pass (12 signalled, 0 valid); with Fix 1 all 16 `hs_hpa` cells are guard-legal.
+- **Fix 2 (scheduler mirror):** `_validate_tensile_loads` (scheduler.py) now models the
+  stock-Tensile non-MI assembly `GLVW==VW-or-1` predicate (`SolutionStructs.py:4583-4596`)
+  that rejected the old deck — the mirror no longer pre-validates decks the guard rejects.
+  Verified by 6 unit tests + a 304/304 phases.yaml sweep.
+- Resolves the "Fix (pending)" bullet in the prior HS_HPA root-cause entry above.
+
 ## [Legacy-silence clauses enforced] 2026-09-19
 
 - `claude.md` §8.1 written: removed machinery is **never** named in code or docs;

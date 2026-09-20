@@ -28,7 +28,7 @@ only path to a locked verdict. Blocking input to §4.2.
 
 ## 4.3 28-family native coverage (RESOLVED — 2026-09-13)
 
-**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4 contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (240 candidate configs).
+**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto).
 
 ## 4.4 Adaptive-repeat finalize (RESOLVED — 2026-09-13)
 
@@ -81,7 +81,7 @@ only path to a locked verdict. Blocking input to §4.2.
 - Abolished reliance on arbitrary numeric phase IDs (0–31); phase identity uses
   semantic filters.
 - Replaced CLI execution with semantic filters: `--family` (SS, HH, HH_HPA, HS_HPA, DD, ZZ, CC), `--pattern` (Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk), `--shape`, `--stage`, and `--auto`.
-- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets).
+- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest is 304 phases = 232 family + 72 auto, see `results.md` §1).
 - Added `--dry-run` to inspect matched candidate targets before hardware execution.
 
 ## 4.13 Parallel Clang Build, Cooldown Key Handling & Early Quit Reports (RESOLVED — 2026-09-13)
