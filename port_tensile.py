@@ -529,7 +529,7 @@ class TensileDriver:
             Alik_Bjlk → TA=True  TB=True   (TT)
         Pattern inferred from label if 'contraction_pattern' field absent.
         """
-        from scheduler import parse_tensile_shape
+        from scheduler import parse_tensile_shape, assembly_class_valid
 
         phase_id = phase.get("phase_id", "phase_unknown")
         label = phase.get("label", "")
@@ -538,6 +538,14 @@ class TensileDriver:
         num_benchmarks = phase.get("NumBenchmarks", 8)
         config = phase.get("config", {})
         shapes = phase.get("shapes", ["1024x1024x1024"])
+
+        # Assembly-class autoskip: merge the phase-level dtype/label into the
+        # config so the class predicate (FamilyLabel/label/DataType) is complete.
+        gate_config = {**config, "DataType": dtype, "label": label}
+        asm_ok, asm_reason = assembly_class_valid(gate_config)
+        if not asm_ok:
+            print(f"Skipping {phase_id}: assembly-class illegal ({asm_reason})")
+            return None
 
         # --- Contraction pattern → TransposeA/B ---
         # Prefer explicit field; fall back to label parse.

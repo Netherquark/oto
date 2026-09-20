@@ -3879,31 +3879,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 6445032abf9dd71d03aaea90fc378e676e7a0320573a1b411aef1d4f205f4fcd
-- phase_id: phase_hh_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  label: HH_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 4
-  fp: 4981d44d6fbb003ec475537cdfa9d703a669cdd63f4d74d496111b4c56ebbe81
 - phase_id: phase_hh_Ailk_Bjlk_mt128x128x8_tt8x8_vw4_wgm4_alu
   label: HH_Ailk_Bjlk_mt128x128x8_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4029,33 +4004,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 22cee863a714d962297ef4a3cba8c16a115090040d747b89e1cc68c733477056
-- phase_id: phase_hh_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 128x128x2048_K2048
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 731c4716fedfd6b0bec5da6126d9dbe6ffd7072e3d4aec9909fc4000bb06d99f
 - phase_id: phase_hh_Ailk_Bljk_mt128x128x16_tt8x8_vw4_wgm4_alu
   label: HH_Ailk_Bljk_mt128x128x16_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4181,31 +4129,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 521791f1d8f7ca91912c64426774495b2ad8aa1393493946f362d6ac6948c78f
-- phase_id: phase_hh_Ailk_Bljk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  label: HH_Ailk_Bljk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 4
-  fp: 2b7608e60360b59fcb226815178556e3722288bc820c620d4b920d90c3435a96
 - phase_id: phase_hh_Ailk_Bljk_mt128x128x8_tt8x8_vw4_wgm4_alu
   label: HH_Ailk_Bljk_mt128x128x8_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4331,33 +4254,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 8467cb212657517d8016621eb43e239d5cdc358f6b59234c7cb1e20876e87cc9
-- phase_id: phase_hh_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 128x128x2048_K2048
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: e1cdec6bc5997011ea338b695feeecca9b69fb83bbcd51e0e2c9214f1633b220
 - phase_id: phase_hh_Alik_Bjlk_mt128x128x16_tt8x8_vw4_wgm4_alu
   label: HH_Alik_Bjlk_mt128x128x16_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4483,31 +4379,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 472e730ce0ede90db32968bebbd2a09965db4a75c3101aa0bd0bdfe8e9c04611
-- phase_id: phase_hh_Alik_Bjlk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  label: HH_Alik_Bjlk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 4
-  fp: 8ae9282d078f40eb11937458b0828f2c1ce1c690f62f4382ea8ffd6345e552b0
 - phase_id: phase_hh_Alik_Bjlk_mt128x128x8_tt8x8_vw4_wgm4_alu
   label: HH_Alik_Bjlk_mt128x128x8_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4633,33 +4504,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: fc097a072869483b00c3571e9bc85d36205e1921d4e65932d9dc7ad5f0cd10af
-- phase_id: phase_hh_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 128x128x2048_K2048
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 1561cd5f0d87c5dad2399b72f494b7da3cb73873f64d0223990f4c4f5142d2f2
 - phase_id: phase_hh_Alik_Bljk_mt128x128x16_tt8x8_vw4_wgm4_alu
   label: HH_Alik_Bljk_mt128x128x16_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4785,31 +4629,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 188e2b5b029ebc0b9862a1d9adccd24f6ae59f1e78cf7bbbc705b016885fa212
-- phase_id: phase_hh_Alik_Bljk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  label: HH_Alik_Bljk_mt64x64x16_tt4x4_vw4_gsu4_alu
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 4
-  fp: 31c91216293fbd8c1cd665f0470c2f3d93eb36c43cecad23384ac7a938a9ae6a
 - phase_id: phase_hh_Alik_Bljk_mt128x128x8_tt8x8_vw4_wgm4_alu
   label: HH_Alik_Bljk_mt128x128x8_tt8x8_vw4_wgm4_alu
   dtype: H
@@ -4935,33 +4754,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 49663210f06efea90022511158a4961a4813babbda6438700ce82bc600cdab60
-- phase_id: phase_hh_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 128x128x2048_K2048
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: c2e1bee7531715ec8b99040f99cd4af8a69e411a4eb2a344ac395751f3840e80
 - phase_id: phase_hh_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HH_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5082,31 +4874,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 72bc96f1e29c451c343a385d69ceb13b1e43db7cf710d8a5d9094e2035e0b49d
-- phase_id: phase_hh_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 10c4d8178006334be6245eded33a34c17d4295f0ff41b01b27b3d983b0d1e3ec
 - phase_id: phase_hh_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HH_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5227,31 +4994,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: e67f4b8da56dc227b0224c3214adc5ac2d203d8fef0a64114d315f52f5f2f6a6
-- phase_id: phase_hh_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 138d7408c5e1f7af55500850a94f404000448ad46f2efb9b1585af6c2fa85d06
 - phase_id: phase_hh_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HH_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5372,31 +5114,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 598dddd7f645aefb77e0e46ecb17dcde35747c73a627ec5c3cec631cc8e8cf36
-- phase_id: phase_hh_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: d465fa5b863b0b3034fb17ff27b416c254566db8feb9f941fd67aca7db490c4d
 - phase_id: phase_hh_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HH_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5517,31 +5234,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 1667fdba052863eeb6301102a89a0ef723f3b4e1ec9ad78865f5f02d17ff3ec3
-- phase_id: phase_hh_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HH_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: eac40978e7c2d15f74f7f62da0a3da37abae7b25d3e3e52ef006519a76f29bef
 - phase_id: phase_hs_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HS_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5662,31 +5354,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 63d9d163e1a3e6ed6b84e7b35141b5223f0dd8948bf786181d2c9b652f7a8ded
-- phase_id: phase_hs_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HS_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: a339c5867c255129a0202c8fd6807582207dde26732f04b0e1a6c2a2010b3dc5
 - phase_id: phase_hs_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HS_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5807,31 +5474,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 7474a9660ee56d9f678cb924e70e11319b53fb7f2d0f172f5c261af8f5729ae3
-- phase_id: phase_hs_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HS_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 141c8159b7c118043f287a443d46630f42e612c1c96b58d1e43c90c171d294fe
 - phase_id: phase_hs_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HS_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -5952,31 +5594,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: 080e732078a0f3f6e5371a4b19239070bc4055a9e12d5c934da7233eccfe1de5
-- phase_id: phase_hs_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HS_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: f66004f1fd57e54fe94479ec0a7752799a5e2b19063110554d37292422861b90
 - phase_id: phase_hs_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   label: HS_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_alu
   dtype: H
@@ -6097,31 +5714,6 @@
     WorkGroupMapping: 4
     GlobalSplitU: 1
   fp: bf6819f7f19960794c27a12433d9fdb911a334fd81b7806cc1ff9955b5e80e66
-- phase_id: phase_hs_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  label: HS_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_ddr
-  dtype: H
-  shapes:
-  - 64x4096x1_K4096
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 64x4096x1_K4096
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: dd74559b312fe874c949625498cb29e67b93903872f300c3d8eab917c842c6fa
 - phase_id: phase_cc_Ailk_Bjlk_mt32x32x16_tt2x2_vw1_wgm4_alu
   label: CC_Ailk_Bjlk_mt32x32x16_tt2x2_vw1_wgm4_alu
   dtype: C
@@ -8066,427 +7658,3 @@
     WorkGroupMapping: 1
     GlobalSplitU: 8
   fp: f841c8250f4aff67b95f2c0e09ce3b9b6e96b508a8b7f3472d7159796b8ef967
-- phase_id: phase_hh_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  label: HH_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 8
-  fp: d853d56417d8faaa6d94d7c363269324d5e79feb19df72821665f0988a64ce3b
-- phase_id: phase_hh_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  label: HH_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 8
-  fp: ce8fc04e6789906bd50bb9df8cde30baec62daef610be1e4a64f3d728a34ba31
-- phase_id: phase_hh_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  label: HH_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 8
-  fp: 2b009e4fac9ef242e2190031af2b4b35ca9e91bfc41d25f850e8c270c7ebbaa8
-- phase_id: phase_hh_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  label: HH_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu8_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 8
-  fp: f0b6916144173c82c9d51e8c957033acb6a5d21a79b2a687f4f2440e28c21272
-- phase_id: phase_hh_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 04e1cb788cc13d5411836ee7598a57c4b7938c0b777bf850d1d1689a306e3630
-- phase_id: phase_hh_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: bac22cf22d199fb03961941e50bc362c6db31f5f4eeabeaa6152bee5a3c932c2
-- phase_id: phase_hh_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 0b041373214b2ae97cc3ab629ed91adbd577e50c022026f1d3e21cce73f5ce4c
-- phase_id: phase_hh_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 256x256x256
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 256x256x256
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: bfe00c5bdb314ce75249e8761260bbd496c2e0b01cf75871ac09f1b073e00573
-- phase_id: phase_hh_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: d622d5e8772f4cf1ccc00ce3a79565d2daf5c8046a4acdbbda0d4a0f4285c282
-- phase_id: phase_hh_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 20d4f7238ec1fb25abf4a8bbbc6ef7cbf1ff6c9829ae4e251192ea4423a2301d
-- phase_id: phase_hh_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 7e55b19e1ee40ab4cbf32dd49ce2538b4cd5798ff93ee089eb40468f15ef3956
-- phase_id: phase_hh_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HH_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: b6496f6cbad2c19643f3dc1764cdc4a539ca4b81d0b346945ffb3343658b2cb9
-- phase_id: phase_hh_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  label: HH_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 2
-  fp: cbee29484de111f30c2e747d50b9a463b25ae53a4e9a9643804162a9bbe84ee4
-- phase_id: phase_hh_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  label: HH_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 2
-  fp: 06c1e88b9e2f3be1cfdcfade03aee0c6a2ba1c5540bc621fc5f8b61bbcc4bfa3
-- phase_id: phase_hh_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  label: HH_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 2
-  fp: a4e80608058538dfe540592f3f830d11380a1208479d9aa3aa0377bfbb962ac7
-- phase_id: phase_hh_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  label: HH_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 1
-    GlobalSplitU: 2
-  fp: 4ea4040ea029966b673cd20fb4d05f541ead965d1d058952de18f0ac81e3315c
-- phase_id: phase_hs_hpa_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HS_HPA_Ailk_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: f4e818f7a68c381aab13e054d12cdc2ad886ec1c6695fa908b0f3234ad7b0f5e
-- phase_id: phase_hs_hpa_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HS_HPA_Ailk_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 0beccb71d4e52ea65d8bd7869c0cc4f5bdc3733ced2af7f26fb0822a01e7157a
-- phase_id: phase_hs_hpa_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HS_HPA_Alik_Bjlk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bjlk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: 7e3af471ce4cc9a3b06e00ac824812ea703ac30025f3e598e7be68e83b65a9bb
-- phase_id: phase_hs_hpa_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  label: HS_HPA_Alik_Bljk_mt64x64x16_tt4x4_vw4_wgm4_gsu2_underfill
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Alik_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 64x64x16
-    ThreadTile: 4x4
-    VectorWidth: 4
-    NLCA: 1
-    WorkGroupMapping: 4
-    GlobalSplitU: 2
-  fp: a032960a02e1b6f0ba23384086ea9a5a9ae723a57f8ed196d2c7662d16d28d87

@@ -230,7 +230,88 @@ Proposed candidates in priority order (spend rules §3: coverage first, then mut
 Any new phase must be `validate_config`-clean (occupancy/LDS) **and** pass
 `_validate_tensile_loads` (Tensile divisibility — new requirement 2026-09-14) and
 the `<host>/<knob>` uniqueness gate (no re-run of a fingerprint already benchmarked).
-**Wide-deck regen (2026-09-20):** the live manifest is now 331 entries (SS 105,
-HH 56, DD 44, HH_HPA 32, CC 32, ZZ 32, HS_HPA 28, + 2 ss A/B baselines), full-shape
-bundled per phase + shape-matched underfill-GSU and DDR/GEMV phases; all 331 pass
-the mirror gates with unique phase_id/fp/config (generator: `/tmp/opencode/gen_wide_deck.py`).
+**Wide-deck regen (2026-09-20):** the live manifest is 295 entries (SS 105,
+HH 40, DD 44, HH_HPA 20, CC 32, ZZ 32, HS_HPA 20, + 2 ss A/B baselines), full-shape
+bundled per phase + shape-matched underfill-GSU and DDR/GEMV phases; all 295 pass
+the mirror gates (validate_config + assembly_class_valid class gate) with unique
+phase_id/fp/config (generator: `/tmp/opencode/gen_wide_deck.py`). Built from 331 by
+**class-gating out the 36 illegal GSU cells** — HH/HH_HPA/HS_HPA with GlobalSplitU>1
+(no MFMA on gfx90c; SolutionStructs:3553/3616; see `scheduler.assembly_class_valid`).
+
+## 6. Next increment — 2≥ gate & wider-for-LOSS / narrower-for-WIN (2026-09-20)
+
+Driven by the draft run (`oto_gfx90c_auto_wide_20260919_full`, 2 runs, read-only) +
+the approved retirement nuance (a NEW strategy beating the OLD on the same
+problem-set retires the old — tier-2 dominance analog at strategy level).
+
+### 6.1 Retirement accounting (draft data alone)
+- Every wide cell ran **once** (satisfies nothing). The **only** ≥2-independent-run
+  fps in the draft are the two A/B baselines (48 samples each across the 2 runs) →
+  merge tool flags exactly 2 retirement-eligible fps. Everything else needs a
+  **2nd shell** from OUR deck before tier-2/tier-3 can retire anything.
+- The 24 GSU=2/DU32-wide cells are class-illegal on gfx90c (no MFMA) — NOT verdicts,
+  do NOT import as red, do NOT re-run. Class-gated out of our deck already;
+  permanent skip, documented reason.
+
+### 6.2 Draft WINs — explore further in the next run (2≥-shell + mutate ≤2 knobs)
+
+Empirical class from the **merged run1 data** (medians of the draft wide/auto cells
+vs our carried incumbent, same cell). WIN = draft best-median beats our incumbent.
+Spend for each: **(a)** 2nd independent shell of the winning fp (retirement needs
+≥2); **(b)** mutate the winner ≤2 knobs (N4/H7). All winners are in the main DB as
+`draft_*` phases; the 295-deck already bundles their family/MT-class neighbours.
+
+| family | cell | winning phase (draft, in main DB) | winner config | best med | our incumbent | margin | next mutation |
+|---|---|---|---|---|---|---|---|
+| cc | 512³ | `draft_CC_cc_Ailk_Bjlk_wide_02` | MT64x64x8 / TT4x4 / DU8 / VW1 / WGM1 | 289.6 | 175.9 | **+65%** | DU 8→16/32; WGM 1→4 |
+| cc | 1024³ | `draft_CC_cc_Ailk_Bljk_wide_02` | MT64x64x8 / TT4x4 / DU8 / VW1 / WGM1 | 244.4 | 157.4 | **+55%** | DU 8→16; WGM 1→4; MT128x64 |
+| cc | 2048³ | `draft_CC_cc_Ailk_Bljk_wide_02` | MT64x64x8 / TT4x4 / DU8 / VW1 / WGM1 | 288.1 | 281.3 | +2% | 2≥-shell only; don't chase |
+| dd | 256³ | `draft_DD_dd_Alik_Bljk_wide_00` | MT32x64x16 / TT2x4 / DU16 / VW1 / WGM4 | 86.2 | 76.2 | +13% | WGM 4→1/2 |
+| dd | 512³ | `draft_DD_dd_Ailk_Bjlk_wide_01` | MT32x64x16 / TT2x4 / DU16 / VW1 / WGM4 | 92.8 | 55.1 | **+68%** | DU 16→32; VW1→2 |
+| dd | 1024³ | `draft_DD_dd_Ailk_Bljk_wide_06` | MT32x64x16 / TT2x4 / DU16 / VW1 / WGM4 | 94.6 | 77.5 | +22% | WGM 4→1; DU 16→8 |
+| hh | 256³ | `draft_HH_hh_Ailk_Bljk_wide_05` | MT128x128x16 / TT8x8 / DU16 / VW4 / WGM1 | 764.0 | 748.2 | +2% | 2≥-shell only |
+| hh | 512³ | `draft_HH_hh_Ailk_Bjlk_wide_04` | MT128x128x16 / TT8x8 / DU32 / VW4 / WGM8 | 1677.1 | 1127.8 | **+49%** | WGM 8→4; DU 32→16 |
+| hh | 1024³ | `draft_HH_hh_Ailk_Bljk_wide_02` | MT128x128x16 / TT8x8 / DU16 / VW4 / WGM1 | 1686.4 | 847.2 | **+99%** | WGM 1→4/8; DU 16→32 |
+| hh | 2048³ | `draft_HH_hh_Ailk_Bljk_wide_02` | MT128x128x16 / TT8x8 / DU16 / VW4 / WGM1 | 1574.8 | 853.2 | **+85%** | WGM 1→4; DU 16→32 |
+| hh_hpa | 256³ | `draft_HH_HPA_hh_hpa_Alik_Bljk_wide_01` | MT64x128x16 / TT8x4 / DU16 / VW4 / WGM1 | 599.8 | 576.9 | +4% | 2≥-shell; WGM 1→4 |
+| hh_hpa | 512³ | `draft_HH_HPA_hh_hpa_Ailk_Bjlk_wide_05` | MT64x128x16 / TT8x4 / DU16 / VW4 / WGM4 | 1200.2 | 1183.2 | +1.4% (>ceil 1118.7) | 2≥-shell; WGM 4→8 |
+| hh_hpa | 2048³ | `draft_HH_HPA_hh_hpa_Ailk_Bjlk_wide_04` | MT64x128x16 / TT8x4 / DU16 / VW4 / WGM1 | 964.3 | 896.3 | +8% | WGM 1→4; DU 16→32 |
+| hs_hpa | 256³ | `draft_HS_HPA_hs_hpa_Alik_Bjlk_wide_02` | MT64x64x16 / TT4x4 / DU16 / VW4 / WGM1 | 651.6 | 603.7 | +8% | WGM 1→4; VW4→2 |
+| hs_hpa | 512³ | `draft_HS_HPA_hs_hpa_Ailk_Bjlk_wide_02` | MT64x64x16 / TT4x4 / DU16 / VW4 / WGM1 | 1204.5 | 781.1 | **+54%** (>ceil) | WGM 1→4; DU 16→32 |
+| hs_hpa | 1024³ | `draft_HS_HPA_hs_hpa_Alik_Bljk_wide_06` | MT64x64x16 / TT4x4 / DU16 / VW4 / WGM1 | 588.7 | 511.4 | +15% | WGM 1→4; DU 16→32 |
+| hs_hpa | 2048³ | `draft_HS_HPA_hs_hpa_Ailk_Bjlk_wide_05` | MT64x64x16 / TT4x4 / DU16 / VW4 / WGM1 | 877.2 | 517.3 | **+70%** | WGM 1→4; DU 16→32 |
+| ss | 512³ | `draft_SS_auto_0_ss_S_512x512x512_31` | (auto cell, SS@512) | 828.6 | 530.4 | **+56%** | pull its exact knobs; WGM/DU neighbours |
+| ss | 1024³ | `draft_SS_ss_Alik_Bljk_wide_07` | MT128x64x16 / TT8x4 / DU16 / VW2 / WGM1 | 698.3 | 421.6 (auto_9) | **+66%** | WGM 1→4; DU 16→32; VW2→4 |
+| ss | 4096³ | `draft_SS_auto_0_ss_S_4096x4096x4096_57` | (auto cell, SS@4096) | 977.6 | 665.5 (phase_1) | **+47%** | GSU-1 fast check; WGM/DU neighbours |
+
+### 6.3 Draft LOSSes — NEW wide candidates proposed (do NOT re-run the loser)
+
+Also merged run1. LOSS = draft best-median BELOW our incumbent (or red vs ceiling).
+The losing fp is spent; spend substitutes are fresh structural cells **not** in the
+draft run (± the class gate — no GSU>1 on HH/HS_HPA derived families).
+
+| family | cell | draft best | our incumbent | shortfall | new wide candidates (proposed) |
+|---|---|---|---|---|---|
+| cc | 256³ | 178.0 | 230.4 | −23% | MT128x64x16/TT8x4/DU16/WGM1; MT64x64x16/TT4x4/DU16/WGM4 |
+| hh_hpa | 1024³ | 685.9 | 866.3 | −21% | MT128x128x16/TT8x8/DU16/WGM8 (class-legal: WGM only); MT64x128x16/TT4x8/DU32 |
+| ss | 256³ | 404.1 | 415.0 | −3% (parity) | MT128x64/TT8x4/VW4/WGM1; DU 16→32 |
+| ss | 2048³ | 739.9 | 890.8 | −17% | MT128x128x16/TT8x8/DU32/VW4/WGM4; GSU-1 |
+| zz | 256³/512³/1024³/2048³ | 22–24 | none (ceil 98.6) | **RED ~23%** | structural: MT128x128x16/TT8x8/DU16/VW2/WGM4; MT64x64x16/TT4x4/DU16/VW2/WGM1; DU 16→32 |
+
+### 6.4 Strategy-scoped retirement (the nuanced gate)
+Approved framing: when a NEW config/strategy beats the OLD on the same fp with
+≥2 independent runs under BOTH, the OLD retires (dominance). Draft vs main share
+no verified fp (different fp schemes) — so retirement only fires WITHIN our merged
+deck after the 2nd shell. Do NOT hardcode draft retires on import (policy.py:240
+3-tier gate decides).
+
+### 6.5 Next-run spend order (overnight, wins first — LOSSpend no, WINspend yes)
+1. **WIN 2≥-shells** — one extra independent run per WIN in the §6.2 table (the
+   0.5×medians are from a single shell today; tier-2 retirement needs ≥2). Priority:
+   hh 1024³/2048³/512³, hs_hpa 2048³/512³, cc 512³/1024³, ss 1024³/4096³, dd 512³.
+2. **WIN mutations** — §6.2 `next mutation` (≤2 knobs per N4/H7), same cells.
+3. **NEW wide for LOSSes** — §6.3 candidates ONLY on the losing cells, class-gated.
+   zz structural + cc 256³ first (biggest % shortfall), then ss 2048³, hh_hpa 1024³.
+4. **GSU-1 @4096 SS** fast check (beat-or-tie 977.6).
+Losses are never re-run as-is (fp already spent); their deck slots hold the new
+structural substitutes.

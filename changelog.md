@@ -9,6 +9,55 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Assembly-class gate + 295-phase deck + draft-merge tooling] 2026-09-20
+
+- **Class-based Assembly gate (`scheduler.assembly_class_valid`).** Faithful to
+  the Tensile SolutionStructs rejects reproduced from the 24 draft-run failures:
+  GSU>1 on complex, GSU>1 on half+f32-accum (HPA), GSU>1 on half without
+  `AssertFree0ElementMultiple>=2`, and `DepthU * BytesPerElement > StaggerUStride`
+  (complex DU>=32) are all illegal on gfx90c (no MFMA). Wired at BOTH seams:
+  `scheduler.validate_config` (mirror gate) and `port_tensile._write_phase_config`
+  (autoskip — illegal cells never written to the Tensile deck). Class-based, so
+  ANY future same-class cell is caught pre-run, not just the 24 triaged. The
+  loky/semlock ValueError from the draft re-runs was benign stderr noise
+  (joblib>=1.5.2 is cosmetic only); the 24 were solution-validity rejects.
+- **331 → 295 phases.** Regenerated `phases.yaml` through the new gate: the 36
+  GSU-2/4/8 cells on HH/HH_HPA/HS_HPA dropped (HH 56→40, HH_HPA 32→20,
+  HS_HPA 28→20). 0 illegal cells, 0 fp/phase_id dups, 0 validate_config fails.
+- **CASE3 merge tool (`tools/merge_draft_gfx90c.py`).** Append-only import of the
+  draft run's 4962 benchmark records under the MAIN fp scheme (FamilyLabel-tagged;
+  draft target_id fps were NOT portable). `.bak`-first on both registries, no
+  dedup/deletion/id-reuse, retirement left to the codebase's 3-tier gate
+  (policy.py:240). Dry-run reports exactly 2 retirement-eligible fps — the two
+  A/B baselines (48 samples each, 2 independent runs); everything else needs a
+  2nd shell from our deck. run2 added nothing new beyond the baseline 2nd shells
+  + 6 auto SS@1024 cells (3 samples each, single run — reference only).
+- **CASE3 import applied (run1 only).** `--runs run1` (default), run2 skipped per
+  decision — its only value was the baseline 2nd shells, and the codebase gate
+  can reach retirement later with 2 independent runs. Executed 2026-09-20: 445
+  phase entries (baseline baselines_ss_native/spoof + 443 wide cells) + **4896
+  benchmark records** appended from run_20260919_213727. Registers run1 in the
+  `runs` table (completed). Backups: `backups/main_registry.db.bak` +
+  `backups/draft_registry.db.bak` (draft DB untouched — read-only). Retirement
+  gate re-run post-import: 0 forced retirements (no fp has ≥2 runs yet —
+  baselines are single-run in main, eligible only after their 2nd shell).
+  Note: first apply attempt had a phase-dedup bug that dropped the per-sample
+  records after the 1st per phase (4896→445); fixed (dedup phases only, records
+  always appended) and re-applied cleanly from pristine main DB. Backups use
+  distinct `main_`/`draft_` tags (initial name collision would clobber main's .bak).
+- **WIN/LOSS classification from merged run1** (`potential_configs.md` §6.2–§6.5).
+  Empirical per-cell class vs our carried incumbents: **24 WIN cells** (draft
+  best-median beats incumbent — hh 1024³ +99%, hh 2048³ +85%, hs_hpa 2048³ +70%,
+  dd 512³ +68%, ss 1024³ +66%, cc 512³ +65% top margins) and **5 LOSS cells**
+  (cc 256³ −23%, hh_hpa 1024³ −21%, ss 2048³ −17%, zz all RED ~23% of 98.6
+  ceiling, ss 256³ parity). Next-run policy: WINs get a 2≥-shell then ≤2-knob
+  mutations (per-cell table §6.2); LOSSes never re-run their fp — replaced by
+  fresh structural candidates proposed in §6.3 (MT128/TT8/DUs/GSU-1, class-gated).
+  Spend order §6.5: WIN shells → WIN mutations → new-wide-for-LOSS → GSU-1@4096 SS.
+- **Next-increment proposal (`potential_configs.md` §6).** Wider-for-LOSS (CC/ZZ
+  structural, HS_HPA admitted parms, SS GSU-1@4096), narrower-for-WIN (DD closed,
+  SS/HH no double-spend), 2≥-shell-first spend order, strategy-scoped retirement.
+
 ## [Wide gfx90c candidate deck (331 phases) + --auto baseline-anchored one-command integration] 2026-09-20
 
 - **Wide deck replaces the 304-phase manifest.** `phases.yaml` regenerated from

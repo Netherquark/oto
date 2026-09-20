@@ -192,6 +192,11 @@ class CandidateGenerator:
             except (ValueError, IndexError):
                 pass
 
+        # Assembly-class validity (GSU/DepthU vs dtype vs AF0EM — SolutionStructs)
+        asm_ok, asm_reason = assembly_class_valid(config)
+        if not asm_ok:
+            return False, f"Assembly class: {asm_reason}"
+
         # Tensile-faithful global load divisibility validation
         tl_ok, tl_reason = self._validate_tensile_loads(config)
         if not tl_ok:
@@ -619,3 +624,84 @@ def classify_bound_class(shape_str: str, dtype: str) -> str:
     if shape["M"] <= 128 or shape["N"] <= 64 or shape["K"] <= 64:
         return "DDR"
     return "ALU"
+
+
+_ASSEMBLY_DTYPE_ELEM_BYTES = {
+    "S": 4, "D": 8, "H": 2, "B": 2, "Z": 16, "C": 8, "I8": 1, "I1": 1,
+}
+
+
+def _assembly_depth_u(config: Dict[str, Any]) -> int:
+    """Resolve DepthU: explicit key first, else from the MacroTile string."""
+    if config.get("DepthU") is not None:
+        return int(config["DepthU"])
+    mt = str(config.get("MacroTile", "64x64x16"))
+    parts = re.split(r"[xX]", mt.replace("MT", ""))
+    if len(parts) >= 3:
+        try:
+            return int(parts[2])
+        except ValueError:
+            pass
+    return 16
+
+
+def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
+    """Return (True, "") if config is a legal gfx90c Assembly GEMM class.
+
+    CLASS-BASED validity — single source of truth for both seams (scheduler
+    validate_config + port_tensile _write_phase_config). Any cell that falls in
+    an illegal class is auto-caught pre-run, never launched on gfx90c. Faithful
+    to the Tensile SolutionStructs Assembly rejects reproduced from the 24
+    draft-run failures (gfx90c = Assembly-only, FFMA, no MatrixInstruction/MFMA
+    escape; Tensile v4.44.0):
+      SolutionStructs:3553  "GlobalSplitU only compatible with single, or asm and
+                             (half or mixed) precision, or EnableMatrixInstruction"
+      SolutionStructs:3616  "Assembly GSU half requires AssertFree0ElementMultiple>=2"
+      SolutionStructs:3342  "StaggerUStride < DepthU * BytesPerElement"
+    Rules:
+      1. GlobalSplitU > 1 on complex (Z/C) — illegal on gfx90c (no MFMA;
+         SolutionStructs:3553).
+      2. GlobalSplitU > 1 on half with f32 accumulate (HPA / HS_HPA,
+         ComputeDataType 's') — illegal (needs half/mixed compute or MFMA;
+         SolutionStructs:3553).
+      3. GlobalSplitU > 1 on half Assembly — legal only if
+         AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
+         SolutionStructs:3616).
+      4. DepthU * BytesPerElement > StaggerUStride (default 256) — illegal
+         (complex DepthU>=32 -> 512 > 256; also LDS > 64KB on gfx90c;
+         SolutionStructs:3342).
+    """
+    dtype_upper = str(config.get("DataType", "S")).upper()
+    gsu = int(config.get("GlobalSplitU", 1))
+    depth_u = _assembly_depth_u(config)
+    is_hpa = bool(config.get("HighPrecisionAccumulate", False)) or (
+        "HPA" in str(config.get("FamilyLabel", "")).upper()
+        or "HPA" in str(config.get("label", "")).upper()
+    )
+    is_hs_hpa = is_hpa and dtype_upper in ("H", "B")
+
+    if dtype_upper in ("Z", "C") and gsu > 1:
+        return False, (f"GlobalSplitU={gsu} on complex {dtype_upper}: illegal on "
+                       "gfx90c (no MatrixInstruction; SolutionStructs:3553)")
+
+    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1:
+        return False, (f"GlobalSplitU={gsu} on half with f32 accumulate "
+                       "(HPA): illegal on gfx90c (needs half/mixed compute or "
+                       "MFMA; SolutionStructs:3553)")
+
+    if dtype_upper in ("H", "B") and gsu > 1:
+        af0em = int(config.get("AssertFree0ElementMultiple",
+                               config.get("AssertFree0Multiple", 1)))
+        if af0em < 2:
+            return False, (f"GlobalSplitU={gsu} on half Assembly requires "
+                           "AssertFree0ElementMultiple>=2 (have "
+                           f"{af0em}; SolutionStructs:3616)")
+
+    bpe = _ASSEMBLY_DTYPE_ELEM_BYTES.get(dtype_upper, 4)
+    stagger = int(config.get("StaggerUStride", 256))
+    if depth_u * bpe > stagger:
+        return False, (f"DepthU={depth_u} * {bpe}B = {depth_u*bpe} > "
+                       f"StaggerUStride={stagger}: complex DepthU>=32 illegal "
+                       "on gfx90c (SolutionStructs:3342)")
+
+    return True, ""

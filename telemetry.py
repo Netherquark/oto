@@ -27,7 +27,7 @@ class TelemetrySampler:
             for hw in hwmon_base.glob("hwmon*"):
                 name = hw / "name"
                 if name.exists() and "amdgpu" in name.read_text(errors="ignore"):
-                    return hw.resolve().parent.parent, hw
+                    return hw.resolve().parent.parent / "device", hw
         return None, None
 
     @staticmethod
