@@ -112,34 +112,6 @@ class SQLiteRegistry:
             )
             return cursor.lastrowid
 
-    def append_records(self, records: List[Dict[str, Any]], run_id: str = "default") -> List[int]:
-        """
-        Append multiple records in one transaction.
-
-        Args:
-            records: List of dictionaries
-            run_id: Run identifier
-
-        Returns:
-            List of record IDs
-        """
-        if not records:
-            return []
-
-        with self._get_conn() as conn:
-            record_ids = []
-            for record in records:
-                record_type = record.get("type", "general")
-                cursor = conn.execute(
-                    """
-                    INSERT INTO records (run_id, record_type, data, timestamp)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (run_id, record_type, json.dumps(record), datetime.now().isoformat())
-                )
-                record_ids.append(cursor.lastrowid)
-            return record_ids
-
     def read_records(
         self,
         run_id: Optional[str] = None,
@@ -278,29 +250,6 @@ class SQLiteRegistry:
             cursor = conn.execute("SELECT data FROM phases ORDER BY id ASC")
             return [json.loads(row["data"]) for row in cursor]
 
-    def get_run_info(self, run_id: str) -> Optional[Dict[str, Any]]:
-        """Get run metadata."""
-        with self._get_conn() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM runs WHERE run_id = ?",
-                (run_id,)
-            )
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
-
-    def get_latest_run_dir(self) -> Optional[Path]:
-        """Get the most recent run directory."""
-        with self._get_conn() as conn:
-            cursor = conn.execute(
-                "SELECT run_id FROM runs ORDER BY id DESC LIMIT 1"
-            )
-            row = cursor.fetchone()
-            if row:
-                return self.runs_dir / row["run_id"]
-            return None
-
     def latest_run_id(self) -> Optional[str]:
         """Return the most recently registered run id (from the runs table)."""
         with self._get_conn() as conn:
@@ -329,19 +278,6 @@ class SQLiteRegistry:
             r_fp = r.get("fp", "")
             if r_phase == clean_id and r_fp == fp:
                 return True
-        return False
-
-    def has_phase_passed(self, phase_id: str) -> bool:
-        """Check if a phase has ever had a PASS / completed record."""
-        clean_id = str(phase_id).replace("phase_", "")
-        records = self.read_records()
-        for r in records:
-            r_phase = str(r.get("phase_id", "")).replace("phase_", "")
-            if r_phase == clean_id:
-                if r.get("status") in ["PASS", "completed", "success"] or (
-                    isinstance(r.get("result"), dict) and r.get("result", {}).get("status") in ["PASS", "completed", "success"]
-                ):
-                    return True
         return False
 
     def has_fp_passed(self, fp: str) -> bool:

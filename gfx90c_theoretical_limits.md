@@ -75,7 +75,8 @@ complexDouble** (FP64 lane class) — matching CBLAS c/z convention.
    the shipped gfx900 i8 kernels do) → pragmatic bound ≈ half; measured 881.
 3. **FP64 ratio? Exactly 1/16** of FP32 → 100.8 GFLOPS. Empirically vindicated:
    the measured prior FP64 best 98.6 = 98% of 100.8 (a 1/8 or 1/32 part would read
-   197% / 49%).
+   197% / 49%). `gfx90c_common.PEAK_GFLOPS['FP64']` stores the rounded **101**
+   (matches the §2 table); §5 ceilings use the measured 98.6.
 4. **Complex real-FMA cost?** An FMA counts once; a complex MAC = 4 real FMAs. CC (C =
    complex single) @ SS rate, ZZ (Z = complex double) @ DD rate, when counting BLAS-8
    flops.
@@ -127,26 +128,33 @@ slower than memory is fast).
 
 ## 5. Recommended realistic machine ceilings (oto acceptance bars)
 
-Measured-empirical on this box: FP32 best 1119 → **69%** of 1613; FP16 2461 → **77%**
+Measured-empirical on this box: FP32 best 1118.7 → **69%** of 1613; FP16 2461 → **77%**
 of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6 → **98%**
 (saturated). ZZ/CC/HH_HPA/HS_HPA have no prior measurement → derived-analytical
-(lane-class efficiency × §2 roof):
+(lane-class efficiency × §2 roof). Exact values below are canonical in
+`gfx90c_common.REALISTIC_CEILINGS`; this table quotes them:
 
 | family | theoretical @1800 | realistic ceiling | basis |
 |---|---|---|---|
-| SS | 1613 | **1119** (accept ≥ 69%) | measured-empirical |
+| SS | 1613 | **1118.7** (accept ≥ 69%) | measured-empirical (peak 1119) |
 | DD | 101 | **98.6** (accept ≥ 95%) | measured-empirical |
-| CC | 1613 | **~1119** | derived (complex single, SS efficiency) |
-| ZZ | 101 | **~98** | derived (complex double, DD efficiency) |
+| CC | 1613 | **1118.7** | derived (complex single, SS efficiency) |
+| ZZ | 101 | **98.6** | derived (complex double, DD efficiency) |
 | HH | 3226 | **2461** (accept ≥ 72%) | measured-empirical |
-| HH_HPA | 1613 | **~1119** | derived (FP32-roof, fp32-accumulate) — measured can exceed due to halved 16-bit input traffic |
-| HS_HPA | 1613 | **~1119** | derived as HH_HPA |
-| BF16 | 1613 | 1109 (accept ≥ 62%) | measured-empirical |
-| INT8 | 1613 (UPPER) | 881 (accept ≥ 50%) | measured-empirical |
+| HH_HPA | 1613 | **1118.7** | derived (FP32-roof, fp32-accumulate) — measured can exceed due to halved 16-bit input traffic |
+| HS_HPA | 1613 | **1118.7** | derived as HH_HPA |
+| BF16 | 1613 | **1109** (accept ≥ 62%) | measured-empirical |
+| INT8 | 1613 (UPPER) | **881** (accept ≥ 50%) | measured-empirical |
 
 - Do NOT use "~50% of theoretical" as the SS/HH acceptance bar — this machine already
   measures 69/77%. The measured set above is the defensible floor; only INT8 needs the
   lowered bar.
+- **Cell-status semantics (acceptance report):** every gfx900 contract cell
+  `(family, deck-shape)` from `FAMILY_SHAPES` is classified by its best measured
+  candidate: **RED = MISSING** (no measurement this run), **ORANGE = < 50%** of the
+  family realistic ceiling above, **GREEN = ≥ 50%**. The blanket 50% bar is the gate
+  floor; SS/HH must pass the tighter measured bars above (they already do natively),
+  so ORANGE cells on SS/HH indicate a genuinely bad candidate, not the ceiling.
 - Ceilings scale linearly with actual sclk (×f/1800).
 - **DDR cells (GEMV/batch) never compare to the ALU roof** — refer them to `t_min`
   (§3) with BW=42 and the measured GEMV band (64×4096×1 → 1199–1311 ≈ 40 GB/s).

@@ -15,7 +15,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 import hashlib
 
-from gfx90c_common import NUM_CUS, LDS_PER_CU_KB, PEAK_GFLOPS
+from gfx90c_common import NUM_CUS, LDS_PER_CU_KB, FAMILY_DTYPE_CHAR, MAX_WAVES_PER_CU
 
 
 @dataclass
@@ -35,13 +35,12 @@ class CandidateGenerator:
 
     def __init__(self, base_dir: Path, registry=None):
         self.base_dir = Path(base_dir)
-        self.mapping_path = self.base_dir / "mapping.md"
         self.registry = registry
         self.family_decks = self._load_family_decks()
 
     def _load_family_decks(self) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Load family decks from mapping.md §1 & §3.
+        Load family decks (native gfx90c tile candidates per family).
         """
         return {
             "SS": [
@@ -432,8 +431,8 @@ class CandidateGenerator:
         threads_per_wg = m_threads * n_threads
         waves_per_wg = max(1, threads_per_wg // 64)
         
-        # Max waves per CU is 40 on gfx90c
-        max_wgs_by_waves = max(1, 40 // waves_per_wg)
+        # Max waves per CU on gfx90c
+        max_wgs_by_waves = max(1, MAX_WAVES_PER_CU // waves_per_wg)
         return min(max_wgs_by_waves, NUM_CUS)
 
     def generate_fingerprint(self, config: Dict[str, Any]) -> str:
@@ -530,7 +529,7 @@ class CandidateGenerator:
 
                     template = {
                         "Architecture": "gfx90c",
-                        "DataType": self._family_to_dtype(family),
+                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
@@ -552,7 +551,7 @@ class CandidateGenerator:
                     candidate = self.emit_candidate(
                         phase_id=phase_id,
                         label=label,
-                        dtype=self._family_to_dtype(family),
+                        dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
                         shapes=[shape],
                         template=template,
                         knobs=rel
@@ -563,19 +562,6 @@ class CandidateGenerator:
             self.append_candidates_batch(candidates)
 
         return candidates
-
-    def _family_to_dtype(self, family: str) -> str:
-        """Map family name to Tensile DataType string."""
-        mapping = {
-            "SS": "S",
-            "DD": "D",
-            "HH": "H",
-            "ZZ": "Z",
-            "CC": "C",
-            "HH_HPA": "H",
-            "HS_HPA": "H",
-        }
-        return mapping.get(family, "S")
 
 
 def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
@@ -616,14 +602,6 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
         result["N"] = int(parts[1])
 
     return result
-
-
-def classify_bound_class(shape_str: str, dtype: str) -> str:
-    """Classify a cell as ALU-bound or DDR-bound."""
-    shape = parse_tensile_shape(shape_str)
-    if shape["M"] <= 128 or shape["N"] <= 64 or shape["K"] <= 64:
-        return "DDR"
-    return "ALU"
 
 
 _ASSEMBLY_DTYPE_ELEM_BYTES = {

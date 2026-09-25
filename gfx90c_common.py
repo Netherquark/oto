@@ -26,15 +26,38 @@ PEAK_GFLOPS = {
     "FP64": 101,
 }
 
+# Family shapes for the gfx900 spoof reference + red-cell contract.
+# Canonical family deck cubes (side lengths) benchmarked as "cells" per family.
+FAMILY_SHAPES = {
+    "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
+    "DD": [192, 256, 512, 768, 1024, 1365, 2048],
+    "HH": [256, 512, 1024, 2048, 4096],
+    "CC": [192, 256, 512, 1024, 2048],
+    "ZZ": [128, 192, 256, 512, 1024],
+    "HH_HPA": [512, 1024, 2048, 4096],
+    "HS_HPA": [512, 1024, 2048, 4096],
+}
+
 # Complex families run at the REAL rate of their lane class
 # (complex MAC = 4 real FMAs in Tensile expansion)
 # DataType C = complexSingle (FP32 pipe), DataType Z = complexDouble (FP64 pipe)
-COMPLEX_PEAKS = {
-    "CC": 1613,  # complex single (DataType C) → FP32 rate
-    "ZZ": 101,   # complex double (DataType Z) → FP64 rate
+
+# Family -> Tensile DataType char ('S'/'D'/'H'/'C'/'Z'), single source for
+# scheduler, tensile_library, analytics and report. Char table (how Tensile
+# sees the kernel) is distinct from FAMILY_DTYPES (which pipe precision the
+# family runs at). Both are family-keyed and canonical here.
+FAMILY_DTYPE_CHAR = {
+    "SS": "S",
+    "DD": "D",
+    "HH": "H",
+    "CC": "C",
+    "ZZ": "Z",
+    "HH_HPA": "H",
+    "HS_HPA": "H",
 }
 
-# Family-to-dtype mapping for ceiling lookup
+# Family -> pipe precision for realistic-ceiling lookup (distinct from the
+# Tensile DataType char; e.g. HH_HPA stores FP16 inputs but runs the FP32 pipe).
 FAMILY_DTYPES = {
     "SS": "FP32",
     "DD": "FP64",
@@ -43,6 +66,23 @@ FAMILY_DTYPES = {
     "HH": "FP16",
     "HH_HPA": "FP32",  # FP16 in/out, FP32 acc → FP32 pipe
     "HS_HPA": "FP32",  # FP16 in, FP32 out/acc → FP32 pipe
+}
+
+# Realistic acceptance ceilings, family-keyed (gfx90c_theoretical_limits.md §5,
+# which quotes these exact values). Measured-empirical on this box (precise
+# measured bests: FP32 1118.7, FP64 98.6, HH 2461.0, BF16 1109, INT8 881);
+# ZZ ≈ DD, CC/HPAs ≈ SS (derived-analytical). BF16/INT8 have no families of
+# their own — listed so the code table is complete vs the doc.
+REALISTIC_CEILINGS = {
+    "SS": 1118.7,
+    "DD": 98.6,
+    "HH": 2461.0,
+    "ZZ": 98.6,    # complex double (DataType Z) → FP64 rate
+    "CC": 1118.7,  # complex single (DataType C) → FP32 rate
+    "HH_HPA": 1118.7,
+    "HS_HPA": 1118.7,
+    "BF16": 1109,
+    "INT8": 881,
 }
 
 # Theoretical ALU peaks per family (BLAS flop count @1800 MHz)
@@ -59,9 +99,6 @@ THEORETICAL_PEAKS = {
     "INT8": 1613,  # no dp4a on gfx90c → FP32 pipe (upper bound)
 }
 
-# Bound classes for ruler/throttle system
-BOUND_CLASSES = ["ALU", "DDR"]
-
 # Hardware constants
 NUM_CUS = 7
 NUM_SIMDS_PER_CU = 4
@@ -70,6 +107,3 @@ MAX_WAVES_PER_CU = 40
 MAX_CLOCK_MHZ = 1800
 LDS_PER_CU_KB = 64
 L2_SIZE_KB = 1024
-
-# DDR roofline (measured-achievable on this box)
-DDR_ROOFLINE_GBPS = 42  # ~82% of DDR4-3200 dual-channel theoretical 51.2 GB/s

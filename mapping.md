@@ -1,24 +1,24 @@
 # mapping.md — Shipped gfx900 footprint → native gfx90c replication contract
 
 Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
-Date: 2026-09-13
-Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `gfx90c_common.py`, measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1).
+Date: 2026-09-13 (kernel counts re-derived live from the dat on 2026-09-25)
+Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `gfx90c_common.py`, measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1). Kernel identity now comes from `tensile_library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
 
 ## 1. What the shipped gfx900 library actually is
 
-28 frozen family libraries (+1 lazy placeholder), **3,066 kernels**, all mapped onto a
+28 frozen family libraries (+1 lazy placeholder), **2,285 shipped kernels** (live-derived, see `expected_kernels` in the manifest), all mapped onto a
 **defensive static mesh** for arbitrary problem shapes, NOT a per-shape tuning result.
 
 | Family | dtype/op set | kernels |
 |---|---|---|
 | CC | complex | 64 |
-| DD | double (U-tiles) | 104 |
+| DD | double (U-tiles) | 96 |
 | ZZ | small/edge | 26 |
-| HH | FP16 (packed) | 314 |
+| HH | FP16 (packed) | 223 |
 | HH_HPA | FP16 HPA | 424 |
 | HS_HPA | FP16 scalar-acc | 493 |
-| SS | single 32-bit (big tiles, deep K) | 1641 |
-| **Σ** | | **3,066** |
+| SS | single 32-bit (big tiles, deep K) | 959 |
+| **Σ** | | **2,285** |
 
 Each family = 4 contraction patterns: `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`
 (SS `Ailk_Bljk` alone: 659 kernels, 1,980 unique size-keys). Top global tiles:
@@ -40,6 +40,12 @@ emit per-family tile decks from:
    not runnable), and
 2. the measured frozen prior winners (below) — the only datapoints
    already gfx90c-native (frozen prior conclusions, per `prior_INSIGHTS_CAVEMAN_ULTRA.md`).
+
+The spoof floor for A/B is the **shipped footprint itself**: `--gfx900-reference`
+benchmarks every shipped kernel once (ScheduleName `vega10`, at the family deck shapes
+from `FAMILY_SHAPES`) into a permanent `gfx900_ref_*` run, recalled — never re-run —
+by every later acceptance report. Expected coverage denominators now come from that
+pinned manifest, not this (historical) table.
 
 ## 3. Native kernel levers that moved the needle (measured, frozen prior)
 

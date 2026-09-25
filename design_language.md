@@ -207,6 +207,18 @@ support-info
 focus
 ```
 
+Acceptance-report cell mapping (report.py `_cell_status_section`, gfx900
+contract grid):
+
+```text
+RED    support-error    cell NOT measured in this run (missing (family, shape))
+ORANGE support-info     measured but best candidate < 50% of the family ceiling
+GREEN  support-success  measured at/above the acceptance ceiling
+```
+
+`red_list` / `orange_list` in `acceptance_report.json` carry these roles so
+status is understandable without color alone (MISSING / ORANGE / GREEN labels).
+
 Accent is for links, primary actions, active/selected UI, and meaningful
 emphasis. Status must remain understandable without color alone.
 

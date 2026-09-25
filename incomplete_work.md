@@ -32,11 +32,11 @@ only path to a locked verdict. Blocking input to §4.2.
 
 ## 4.4 Adaptive-repeat finalize (RESOLVED — 2026-09-13)
 
-**Mechanism:** Production adaptive repeat logic implemented in `policy.py` (`should_repeat`, `classify_stability` with CV>15% or top-2 gap<3% doubling NumBenchmarks up to 9). Telemetry sampler in `port_tensile.py` guarantees gated sample windows.
+**Mechanism:** Production adaptive repeat logic implemented in `port_tensile.py` (NumBenchmarks doubling for high-spread cells). Telemetry sampler in `telemetry.py` (`SysfsTelemetrySampler`) guarantees gated sample windows. *(2026-09-25: the `policy.py` `should_repeat`/`classify_stability` helpers were removed — stability is now a CV≤15% gate inside `agent.converged()`.)*
 
 ## 4.5 auto-retire trust gate (RESOLVED — 2026-09-13)
 
-**Mechanism:** Implemented in `policy.py` (`check_retirement_eligibility` and `classify_retirement_tier`). Auto-retire gating requires ≥2 independent runs/cell before emitting retirement decisions. `apply_d2_4_protection` preserves 3 frozen records.
+**Mechanism:** Implemented in `policy.py` (`check_retirement_eligibility`), gated on ≥2 independent runs/cell before emitting retirement decisions. *(2026-09-25: `classify_retirement_tier` and `apply_d2_4_protection` were removed — retirement is now the single Tier-2 path via `check_retirement_eligibility` + `should_run`/`is_config_retired`.)*
 
 ## 4.6 Peak-table prose drift (RESOLVED — 2026-09-13)
 
@@ -53,7 +53,7 @@ only path to a locked verdict. Blocking input to §4.2.
 ## 4.9 Driver Implementation & Remediation (RESOLVED — 2026-09-13)
 
 **Remediation audit completed and verified across all modules:**
-- `port_tensile.py`: Added `TelemetrySampler` (`hwmon[0-9]*`, canonical units Hz/µW/mC/% logging to `logs/telemetry.csv`), interactive non-blocking `'s'` skip and `'q'` quit key listeners, fixed subprocess buffer deadlocks by piping to disk logs, fixed `run_ab_test` to query native (`ScheduleName="isa"`) and spoof (`ScheduleName="vega10"`) records separately, and implemented Stage 6 library synthesis with YAML logic generation, anti-alias scanning (`0` gfx900/vega10 leaks), and 3,066 kernel regression check.
+- `port_tensile.py`: Added telemetry sampling (via `telemetry.py` `SysfsTelemetrySampler`, canonical units Hz/µW/mC/% logging to `logs/telemetry.csv`), interactive non-blocking `'s'` skip and `'q'` quit key listeners, fixed subprocess buffer deadlocks by piping to disk logs, fixed `run_ab_test` to query native (`ScheduleName="isa"`) and spoof (`ScheduleName="vega10"`) records separately, and implemented Stage 6 library synthesis with YAML logic generation, anti-alias scanning (`0` gfx900/vega10 leaks), and 2,285-kernel regression check (the earlier 3,066 was per-file token counting).
 - `scheduler.py`: Fixed LDS usage calculation to `(M*K + N*K) * elem_size * NLCA / 1024.0`; fixed `parse_tensile_shape` to robustly handle batched (`_B16`) and explicit K (`_K4096`) shapes; improved wave-based occupancy estimation.
 - `agent.py`: Upgraded `converged()` to evaluate full multi-condition convergence (≥2 independent runs, ≥3 distinct configs, ≤1% movement, and no RED cells); replaced hardcoded static fallback in `_reconstruct_config` with family-aware defaults.
 - `registry.py`: Protected `append_phase` with `INSERT OR IGNORE` and duplicate checking.

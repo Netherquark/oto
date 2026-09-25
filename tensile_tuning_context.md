@@ -25,7 +25,7 @@ HW benchmark (median-of-seeds, ruler-adjusted)
     ↓
 deterministic evaluate → harvest wins / mutate ≤2 knobs / tie
     ↓
-convergence (no RED cells) → synthesis → acceptance readout
+convergence (no RED cells; budget exhaustion = stop, not pass) → synthesis → acceptance readout
 ```
 
 ## AI Must Not Decide

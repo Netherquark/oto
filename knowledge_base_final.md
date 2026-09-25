@@ -21,7 +21,7 @@
 | Spoof Baseline | gfx900 (vega10 schedule) — must be beaten |
 | Strategy | One-shot deterministic convergence (no LLM in loop) |
 | Codebase | oto/ (53KB driver + 7 supporting modules) |
-| Target Coverage | 28 families × 4 patterns = 3,066 kernels |
+| Target Coverage | 28 families × 4 patterns = 2,285 distinct shipped kernels |
 | Manifest | phases.yaml (304 entries as of latest run) |
 
 ---
@@ -82,13 +82,13 @@ Stage 7: Acceptance A/B & Final Report  ← report.py (AcceptanceReporter)
 |------|------|------|
 | `port_tensile.py` | 1,362 lines (53KB) | Main driver, CLI, Stage 1/3 orchestration, telemetry sampler |
 | `scheduler.py` | 615 lines | Stage 2: candidate generation, config validation, knob mutation |
-| `analytics.py` | 430 lines | Stage 5: cell analytics, native-vs-spoof delta, RED-list |
+| `analytics.py` | 430 lines | Stage 5: cell analytics, native-vs-spoof delta, cell-status classification |
 | `policy.py` | — | Stage 4: cell aggregation (N8 median-of-seeds), stability, convergence |
 | `report.py` | 816 lines | Stage 7: A/B verdicts, acceptance report JSON + HTML dashboard |
 | `agent.py` | — | Stage 4: ConvergenceAgent (harvest → mutate → loop), ConvergenceVerdict |
 | `registry.py` | — | SQLite append-only ledger (records, phases, runs tables) |
 | `telemetry.py` | — | TelemetrySampler: sysfs amdgpu sensor reader (power, temp, clocks) |
-| `gfx90c_common.py` | — | Single source of truth: PEAK_GFLOPS, FAMILY_DTYPES, THEORETICAL_PEAKS |
+| `gfx90c_common.py` | — | Single source of truth: PEAK_GFLOPS, FAMILY_DTYPES, FAMILY_DTYPE_CHAR, FAMILY_SHAPES, REALISTIC_CEILINGS |
 | `check_db.py` | — | DB inspection utility |
 | `check_retirement.py` | — | Retirement records checker |
 
@@ -200,9 +200,11 @@ gfx900 code path happens to be better-optimized for this specific config on this
 
 1024³ is the sweet spot — large enough for ALU saturation, small enough to stay in cache.
 
-### 5.3 RED-List Cells (Below 50% Ceiling, ALU-Bound)
+### 5.3 Below-Ceiling Cells (<50% Ceiling, ALU-Bound)
 
-24+ cells on RED-list. Categories:
+Terminology note: the old "RED-list of under-performing cells" is now ORANGE
+(measured but below the 50% realistic-ceiling gate); RED is reserved for missing
+contract cells. 24+ cells sit below the gate. Categories:
 - **ZZ (Complex64)**: All cells < 24% ceiling — fundamentally limited
 - **CC (Complex32)**: All cells < 25% ceiling — needs different approach
 - **SS on non-power-of-2 shapes**: 768³, 1000³, 1365³ with MT96x96x16 hit 24-35%
@@ -320,7 +322,7 @@ gfx90c_runs/ ←─────────────── port_tensile.py (c
 |------|------|---------|
 | `unified_measurements.csv` | CSV | 3,208 raw benchmark measurements |
 | `unified_cell_summary.csv` | CSV | 320 cells with median/mean/min/max/spread |
-| `acceptance_report.json` | JSON | Latest acceptance report (per-family, RED-list) |
+| `acceptance_report.json` | JSON | Latest acceptance report (per-family, per-cell status) |
 | `acceptance_report.html` | HTML | IBM Carbon-styled dashboard with theme toggle |
 | `benchmark-retirement-sensor-logging-fixes.json` | JSON | 19MB AI conversation export (1,326 messages) |
 
@@ -394,7 +396,7 @@ gfx90c_runs/ ←─────────────── port_tensile.py (c
 
 - **V8**: Tiered benchmark waterfall (all 320 cells ranked by GFlops)
 - **V9**: Per-kernel-name performance distribution (violin plot by kernel name pattern)
-- **V10**: RED-list scatter (x = shape complexity, y = % ceiling, color = bound class)
+- **V10**: below-ceiling cell scatter (x = shape complexity, y = % ceiling, color = bound class)
 
 ### 10.3 Data Sources for Visualization
 

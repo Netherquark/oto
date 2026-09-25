@@ -12,8 +12,9 @@
 ## Objective
 
 Produce native `gfx90c` Tensile libraries covering the shipped 28-family × 4-pattern
-footprint (3,066 kernels worth of coverage = 7 dtype/op families × 4 contraction
-patterns), converging per-cell so that each cell's ruler-adjusted median-of-seeds
+footprint (2,285 distinct shipped gfx900 kernels = 7 dtype/op families × 4 contraction
+patterns; the earlier 3,066 was per-file token counting, see `mapping.md`), converging
+per-cell so that each cell's ruler-adjusted median-of-seeds
 winner **beats the gfx900-spoof floor** (ties at ±5% = parity, and parity alone is not
 the win the campaign is here for) and lands as close to the `gfx90c_theoretical_limits.md`
 ceiling for its (family, bound_class) as the machine will give. The whole campaign is
@@ -78,7 +79,8 @@ Never an in-loop consultation.
 ### B. The replicated footprint (mapping contract, see `mapping.md`)
 28 frozen families = 7 dtype/op sets × 4 contraction patterns:
 `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` × `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`
-= **3,066 kernels**, 459+ distinct size-keys. No gfx90c library ships anywhere today.
+= **2,285 distinct shipped kernels** (459+ distinct size-keys; the old 3,066 was
+per-file token counting — see `mapping.md`). No gfx90c library ships anywhere today.
 Reproduce the family matrix natively; per-family tile decks come from the mapped
 gfx900 top-tiles + the measured prior winners (frozen conclusions); do NOT chase the
 1,980-key size tables (defensive mesh, not a tuning result).
@@ -190,8 +192,8 @@ convergence verdict compares against these, throttled+median-of-seeds.
 **Key files:** Suite v7 PHASE 29 block, gfx90c_common.py (PEAK_GFLOPS), gfx90c_theoretical_limits.md (§5 ceilings).
 **Mechanics:**
 - Load raw records from 2_BenchmarkData/*.csv via analytics.py/registry
-- Per-cell analytics: winner via N8 median-of-seeds, spread ratio, % of family-realistic ceiling (with is_decode DDR exemption), RED-list of under-performing compute cells
-- Native-vs-spoof per-cell deltas: same-run only; withhold when no same-run pair
+- Per-cell analytics: winner via N8 median-of-seeds, spread ratio, CV, % of family-realistic ceiling (with decode DDR exemption), and cell-status classification (RED = missing contract cell, ORANGE = measured <50% ceiling, GREEN = at/above)
+- Native-vs-spoof per-cell deltas: spoof arm = recalled gfx900 shipped reference run (cross-run, never re-run); withhold when no reference floor
 - Append-only DB: sqlite3 `records` INSERT of `json.dumps` payloads; rows never edited/deleted
 - Feed seeds to Stage 2, verdicts to Stage 6/7
 
@@ -204,7 +206,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - Schema-validate: len(data)>=9, fields per LibraryIO.py:232-249
 - TensileCreateLibrary --architecture=gfx90c --merge-files → FINAL_LIB_DIR
 - Anti-alias enforcement: scan every emitted/merged YAML + artifact for gfx900/vega10 tokens; reject build on ANY hit
-- Regression gate: count check vs mapping.md (28 families, 3,066 kernels); FAIL+DB row on mismatch
+- Regression gate: count check vs the pinned shipped-dat manifest (`gfx90c_results/gfx900_shipped_manifest.json`, 2,285 kernels re-derived 2026-09-25); FAIL+DB row on mismatch
 - FLAG: gate deferred — build must consume only certified winners, never blind-union
 
 ### Stage 7 — Acceptance A/B & Final Report
@@ -216,7 +218,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - Per-cell winner = median-of-seeds per arm; verdict = delta_pct=(nat−spoof)/spoof; |Δ|≤5% TIE=parity
 - Throttle variance ruled out via spread_ratio=(max−med)/med
 - Cross-run pairs withheld
-- Acceptance REPORT: per-family coverage vs mapping.md 28-family/3,066-kernel contract; per-cell native-vs-spoof WIN/TIE/LOSS; %-of-§5-ceiling per cell; RED-list; overall PASS/FAIL vs §3 table
+- Acceptance REPORT: per-family coverage vs the pinned shipped-dat manifest (2,285 kernels); per-cell native-vs-spoof WIN/TIE/LOSS vs the **recalled gfx900 reference floor** (`gfx900_ref_*`, via `tensile_library.py` + `_compute_ab_verdicts`); %-of-§5-ceiling per cell; RED (missing) / ORANGE (<50% ceiling) cell lists; overall PASS/FAIL
 
 ### Stage Flow & Convergence Loops (ASCII Flowchart)
 
@@ -269,8 +271,8 @@ convergence verdict compares against these, throttled+median-of-seeds.
 │              STAGE 5: Analytics & Append-Only Registry               │
 │  Load raw records → Per-cell analytics:                              │
 │    → Winner via N8 median-of-seeds                                   │
-│    → Spread ratio, % of family-realistic ceiling                     │
-│    → RED-list of under-performing compute cells                     │
+│    → Spread ratio, CV, % of family-realistic ceiling                    │
+│    → Cell status: RED(missing) / ORANGE(<50%) / GREEN                  │
 │    → Native-vs-spoof deltas (same-run only)                          │
 │  Append-only DB (sqlite3 records INSERT, json.dumps payload)         │
 │  Feed seeds to Stage 2, verdicts to Stage 6/7                        │
@@ -308,7 +310,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 │    → Schema-validate (len(data)>=9) │               │
 │    → TensileCreateLibrary --merge-files│            │
 │    → Anti-alias scan (no gfx900/vega10)│           │
-│    → Regression gate (28 families, 3066 kernels)   │
+│    → Regression gate (pinned shipped manifest, 2,285 kernels)   │
 └─────────────────────────────────────┘               │
                                       │               │
                                       ▼               │
@@ -318,11 +320,12 @@ convergence verdict compares against these, throttled+median-of-seeds.
 │    → Twin configs: identical deck, diff ScheduleName only           │
 │    → Run A→B with cooldown (COOLDOWN_S=30)                           │
 │    → Per-cell winner = median-of-seeds per arm                       │
-│    → Verdict: delta_pct = (nat-spoof)/spoof, |Δ|≤5% = TIE=parity    │
+│    → Verdict: delta_pct = (nat-spoof)/spoof, |Δ|≤5% = TIE=parity   │
+│    → Spoof floor = recalled gfx900_ref_* run (never re-run)         │
 │  Acceptance REPORT:                                                  │
-│    → Per-family coverage vs mapping.md contract                     │
+│    → Per-family coverage vs pinned shipped manifest (2,285)         │
 │    → Native-vs-spoof WIN/TIE/LOSS per cell                           │
-│    → %-of-ceiling per cell, RED-list                                 │
+│    → Cells: RED (missing) / ORANGE (<50% ceiling) / GREEN           │
 │    → Overall PASS/FAIL                                               │
 └─────────────────────────────────────┬───────────────────────────────┘
                                       │
@@ -421,9 +424,10 @@ never a retirement signal** and never re-rolled.
   median ≥ spoof median (ruler-adjusted) → incumbent; RED/non-converged cells →
   `candidates.spawn_neighbours(winner, ≤2 knobs, occupancy-aware)` appended to
   `phases.yaml`.
-- **Convergence + retirement finalize** (`agent.converged()`): no RED cells (all
-  compute cells ≥ threshold vs `gfx90c_theoretical_limits.md` §5) or budget exhausted
-  → write tier-2 retirement records (≥2 independent runs/cell gating) and stop.
+- **Convergence + retirement finalize** (`agent.converged()`): no below-ceiling cells,
+  ≥3 configs/cell, ≥2 runs/cell, CV ≤ 15% → write tier-2 retirement records (≥2
+  independent runs/cell gating) and stop. Budget exhaustion returns converged=False and
+  a FAIL readout, not a pass.
 - **`--auto`**: `for _ in range(budget): run(manifest); write_report; if
   agent.converged(): break; agent.feed(manifest)`.
 
@@ -529,10 +533,11 @@ before merging.
   non-converged cells, `candidates.spawn_neighbours(winner, ≤2 knobs,
   occupancy-aware)` → append rows to `phases.yaml` → re-run the subset. Budget:
   configurable wall-time/GPU-minutes + finite per-phase timeout default.
-- Convergence per cell (all must hold): (a) median did not improve >1% over the last
-  2 independent runs; (b) ≥3 distinct kernel configs tested; (c) benchmarked in ≥2
-  independent runs; (d) telemetry-normalized (sclk ruler where valid). Global stop:
-  no RED cells, OR budget exhausted, OR unrecoverable build gate FAIL.
+- Convergence per cell (all must hold): (a) no below-ceiling cells (b) ≥3 distinct
+  kernel configs tested per cell; (c) ≥2 independent runs/cell (≥6 seeds); (d) CV ≤ 15%
+  per cell. Budget exhaustion is a STOP, never reported as converged (a FAIL verdict on
+  unmet criteria). Global stop: fully converged, OR budget exhausted (flags FAIL), OR
+  unrecoverable build gate FAIL.
 
 ### Step 5 — Manual-LLM contingency (add-only, user-invoked, worst case ONLY)
 - If a cell is RED after deterministic mutation plateau: user calls an LLM with a

@@ -2,53 +2,45 @@
 """
 analytics.py — Stage 5: Analytics & Append-Only Registry
 
-Per-cell analytics, native-vs-spoof deltas, realistic ceiling utilization,
-and RED-list generation. Feeds seeds to Stage 2, verdicts to Stage 6/7.
+Per-cell analytics, native-vs-spoof deltas, realistic ceiling utilization.
+Feeds seeds to Stage 2, verdicts to Stage 6/7.
 
 Key mechanics:
-- Load raw records straight from `gfx90c_runs/*.json` (the live native-run ledger, see `results.md` §1)
-- Per-cell analytics: winner via N8 median-of-seeds, spread ratio,
+- Per-cell analytics: winner via N8 median-of-seeds, spread ratio, CV, and
   % of family-realistic ceiling (with decode DDR exemption)
-- RED-list of under-performing compute cells
-- Native-vs-spoof per-cell deltas: same-run only; withhold when no same-run pair
+- Native-vs-spoof per-cell deltas: every spoof entity vs the best native
+  median at the same (dtype, shape); the spoof arm is the recalled gfx900
+  shipped reference run (cross-run, never re-run)
 - Append-only DB: sqlite3 records INSERT; rows never edited/deleted
 """
 
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Set
 from collections import defaultdict
 import re
 
-from gfx90c_common import PEAK_GFLOPS, FAMILY_DTYPES, THEORETICAL_PEAKS, DDR_ROOFLINE_GBPS
-from policy import aggregate_cell, classify_stability
+from gfx90c_common import (
+    PEAK_GFLOPS,
+    FAMILY_DTYPES,
+    FAMILY_SHAPES,
+    FAMILY_DTYPE_CHAR,
+    REALISTIC_CEILINGS,
+)
+from policy import aggregate_cell
 
 
-# Realistic ceilings from gfx90c_theoretical_limits.md §5 (empirical, 69-98% of theoretical)
-REALISTIC_CEILINGS = {
-    "FP32": 1118.7,
-    "FP16": 2461.0,
-    "BF16": 1108.5,
-    "INT8": 881.2,
-    "FP64": 98.6,
-    "SS": 1118.7,
-    "DD": 98.6,
-    "HH": 2461.0,
-    "ZZ": 98.6,    # complex double (DataType Z) → FP64 rate
-    "CC": 1118.7,  # complex single (DataType C) → FP32 rate
-    "HH_HPA": 1118.7,
-    "HS_HPA": 1118.7,
-}
-
-# Family-to-dtype mapping for phase_id parsing
+# Family prefix -> Tensile DataType char (lowercase keys for phase_id parsing).
 FAMILY_TO_DTYPE = {
-    'ss': 'S', 'dd': 'D', 'hh': 'H', 'zz': 'Z',
-    'cc': 'C', 'hh_hpa': 'H', 'hs_hpa': 'H', 'auto': 'S'
+    k.lower(): v for k, v in FAMILY_DTYPE_CHAR.items()
 }
+FAMILY_TO_DTYPE["auto"] = "S"
 
-# Known family prefixes (longest first for greedy matching)
-_KNOWN_FAMILIES = ['hh_hpa', 'hs_hpa', 'ss', 'dd', 'hh', 'zz', 'cc']
+# Known family prefixes (longest first for greedy matching).
+# Note: family tokens are matched against lowercase phase_id segments, so the
+# prefix set must be lowercase regardless of the canonical FAMILY_DTYPE_CHAR.
+_KNOWN_FAMILIES = sorted(FAMILY_TO_DTYPE.keys(), key=len, reverse=True)
 
 
 def extract_family_from_phase_id(phase_id: str) -> str:
@@ -84,9 +76,10 @@ class CellAnalytics:
         spread_ratio: float,
         num_seeds: int,
         pct_of_ceiling: float,
-        is_red: bool,
+        is_below_ceiling: bool,
         bound_class: str = "ALU",
-        family: str = ""
+        family: str = "",
+        cv: float = 0.0
     ):
         self.dtype = dtype
         self.shape = shape
@@ -95,9 +88,10 @@ class CellAnalytics:
         self.spread_ratio = spread_ratio
         self.num_seeds = num_seeds
         self.pct_of_ceiling = pct_of_ceiling
-        self.is_red = is_red
+        self.is_below_ceiling = is_below_ceiling
         self.bound_class = bound_class
         self.family = family  # e.g. 'ss', 'hh_hpa', 'hs_hpa', 'cc', 'zz'
+        self.cv = cv  # coefficient of variation across seeds (stability gate)
 
 
 class AnalyticsEngine:
@@ -142,9 +136,7 @@ class AnalyticsEngine:
                     return dtype
 
         # Fallback: parse from phase_id via family prefix. Token-based parse
-        # (unlike a raw [a-z_]+ regex) survives digit-bearing suffixes such as
-        # 'phase_ss_spoof_baseline_vega10' where the regex silently produced
-        # 'unknown' dtypes.
+        # (unlike a raw [a-z_]+ regex) survives digit-bearing phase ids.
         family = extract_family_from_phase_id(norm_id)
         dtype = FAMILY_TO_DTYPE.get(family)
         if dtype:
@@ -280,9 +272,9 @@ class AnalyticsEngine:
         # Determine bound class (ALU vs DDR)
         bound_class = self._classify_bound_class(shape, dtype)
 
-        # RED-list: under-performing compute cells
-        # DDR cells exempt from ALU-compute RED status
-        is_red = (bound_class == "ALU" and pct_of_ceiling < red_threshold_pct)
+        # Below-ceiling flag: DDR cells are exempt from ALU-compute classification
+        # (not to be confused with the report's RED = missing contract cell).
+        is_below_ceiling = (bound_class == "ALU" and pct_of_ceiling < red_threshold_pct)
 
         return CellAnalytics(
             dtype=dtype,
@@ -292,9 +284,10 @@ class AnalyticsEngine:
             spread_ratio=agg.spread_ratio,
             num_seeds=agg.num_seeds,
             pct_of_ceiling=pct_of_ceiling,
-            is_red=is_red,
+            is_below_ceiling=is_below_ceiling,
             bound_class=bound_class,
-            family=family
+            family=family,
+            cv=agg.cv
         )
 
     def _classify_bound_class(self, shape: str, dtype: str) -> str:
@@ -364,6 +357,16 @@ class AnalyticsEngine:
                 if gflops > 0:
                     spoof_cell[(dtype, shape, fp)].append(gflops)
 
+            # Per-entity family from the spoof phase_id (HH / HH_HPA / HS_HPA etc).
+            fp_family: Dict[str, str] = {}
+            for rec in spoof_records:
+                fp = rec.get("fingerprint", rec.get("fp"))
+                fid = rec.get("phase_id", "")
+                if fp and fp not in fp_family:
+                    fam = extract_family_from_phase_id(fid)
+                    if fam:
+                        fp_family[fp] = fam
+
             deltas = {}
             for (dtype, shape, fp), spoof_seeds in spoof_cell.items():
                 native_best = best_native.get((dtype, shape))
@@ -389,6 +392,7 @@ class AnalyticsEngine:
                     "native_median": native_best,
                     "spoof_median": spoof_median,
                     "spoof_fp": fp,
+                    "family": fp_family.get(fp, ""),
                     "delta_pct": delta_pct,
                     "tie": tie,
                     "verdict": verdict,
@@ -396,59 +400,77 @@ class AnalyticsEngine:
 
             return deltas
 
-    def generate_red_list(
+    def classify_cell_status(
         self,
-        all_analytics: List[CellAnalytics]
-    ) -> List[Dict[str, Any]]:
-        """
-        Generate RED-list of under-performing compute cells.
-        """
-        return [
-            {
-                "dtype": a.dtype,
-                "shape": a.shape,
-                "fp": a.config_fp,
-                "median_gflops": a.median_gflops,
-                "pct_of_ceiling": a.pct_of_ceiling,
-                "bound_class": a.bound_class
-            }
-            for a in all_analytics
-            if a.is_red
-        ]
+        all_analytics: List[CellAnalytics],
+        red_threshold_pct: float = 50.0
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Classify the gfx900 contract cells (family x deck shape) for the report.
 
-    def persist_analytics(
-        self,
-        run_id: str,
-        analytics: List[CellAnalytics],
-        deltas: Optional[Dict[Tuple[str, str, str], Dict[str, Any]]] = None
-    ) -> None:
-        """
-        Persist analytics results to the append-only registry.
-        """
-        for a in analytics:
-            record = {
-                "type": "cell_analytics",
-                "run_id": run_id,
-                "dtype": a.dtype,
-                "shape": a.shape,
-                "fp": a.config_fp,
-                "median_gflops": a.median_gflops,
-                "spread_ratio": a.spread_ratio,
-                "num_seeds": a.num_seeds,
-                "pct_of_ceiling": a.pct_of_ceiling,
-                "is_red": a.is_red,
-                "bound_class": a.bound_class
-            }
-            self.registry.append_record(record, run_id=run_id)
+        The contract grid is the shipped gfx900 footprint sampled at each
+        family's canonical deck shapes (FAMILY_SHAPES). A cell is:
 
-        if deltas:
-            for (dtype, shape, fp), delta_info in deltas.items():
-                record = {
-                    "type": "native_vs_spoof_delta",
-                    "run_id": run_id,
-                    "dtype": dtype,
-                    "shape": shape,
-                    "fp": fp,
-                    **delta_info
-                }
-                self.registry.append_record(record, run_id=run_id)
+          RED    — MISSING: no candidate measurement at (family, shape) at all.
+          ORANGE — measured but the best candidate median < red_threshold_pct
+                   of the family realistic ceiling.
+          GREEN  — measured and at/above the threshold.
+
+        A cell's median is the best candidate median across configs at that
+        shape — the deck winner the shipped floor must be compared against.
+        """
+        from collections import defaultdict
+
+        measured: Dict[str, Set[str]] = defaultdict(set)
+        best_per_cell: Dict[Tuple[str, str], float] = {}
+
+        # dtype char -> family fallback for analytics rows missing a family tag.
+        # setdefault keeps the FIRST family per char, so the ambiguous 'H'
+        # (HH / HH_HPA / HS_HPA) resolves to canonical HH; the HPA variants are
+        # only ever distinguished by their phase_id family prefix, never by char.
+        dtype_to_family = {}
+        for family, ch in FAMILY_DTYPE_CHAR.items():
+            dtype_to_family.setdefault(ch, family)
+
+        for a in all_analytics:
+            fam = str(a.family or "").upper()
+            if fam not in FAMILY_SHAPES:
+                fam = dtype_to_family.get(str(a.dtype).upper(), "")
+            if not fam or fam not in FAMILY_SHAPES:
+                continue
+            measured[fam].add(a.shape)
+            key = (fam, a.shape)
+            if a.median_gflops > best_per_cell.get(key, 0.0):
+                best_per_cell[key] = a.median_gflops
+
+        def _entry(fam: str, shape: str, status: str, best: float) -> Dict[str, Any]:
+            ceiling = REALISTIC_CEILINGS.get(
+                fam, PEAK_GFLOPS.get(FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
+            )
+            pct = (best / ceiling * 100.0) if ceiling > 0 else 0.0
+            return {
+                "family": fam,
+                "shape": shape,
+                "status": status,
+                "median_gflops": round(best, 1),
+                "pct_of_ceiling": round(pct, 1),
+            }
+
+        red: List[Dict[str, Any]] = []
+        orange: List[Dict[str, Any]] = []
+        green: List[Dict[str, Any]] = []
+
+        for fam, sizes in FAMILY_SHAPES.items():
+            for s in sizes:
+                shape = f"{s}x{s}x{s}"
+                best = best_per_cell.get((fam, shape), 0.0)
+                if shape not in measured.get(fam, set()):
+                    red.append(_entry(fam, shape, "MISSING", best))
+                    continue
+                entry = _entry(fam, shape, "GREEN", best)
+                if entry["pct_of_ceiling"] < red_threshold_pct:
+                    entry["status"] = "ORANGE"
+                    orange.append(entry)
+                else:
+                    green.append(entry)
+
+        return {"red": red, "orange": orange, "green": green}

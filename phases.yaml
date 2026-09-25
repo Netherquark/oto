@@ -1,137 +1,3 @@
-- phase_id: phase_ss_spoof_baseline_vega10
-  label: spoof_baseline_vega10
-  dtype: S
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 768x768x768
-  - 1000x1000x1000
-  - 1024x1024x1024
-  - 1365x1365x1365
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: S
-    ProblemType: Contraction
-  fp: spoof_baseline_fp
-- phase_id: phase_ss_native_baseline_isa
-  label: native_baseline_isa
-  dtype: S
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 768x768x768
-  - 1000x1000x1000
-  - 1024x1024x1024
-  - 1365x1365x1365
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: S
-    ProblemType: Contraction
-  fp: native_baseline_fp
-- phase_id: phase_cc_spoof_baseline_vega10
-  label: cc_spoof_baseline_vega10
-  dtype: C
-  shapes:
-  - 192x192x192
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: C
-    ProblemType: Contraction
-  fp: spoof_baseline_cc_fp
-- phase_id: phase_dd_spoof_baseline_vega10
-  label: dd_spoof_baseline_vega10
-  dtype: D
-  shapes:
-  - 192x192x192
-  - 256x256x256
-  - 512x512x512
-  - 768x768x768
-  - 1024x1024x1024
-  - 1365x1365x1365
-  - 2048x2048x2048
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: D
-    ProblemType: Contraction
-  fp: spoof_baseline_dd_fp
-- phase_id: phase_hh_spoof_baseline_vega10
-  label: hh_spoof_baseline_vega10
-  dtype: H
-  shapes:
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: H
-    ProblemType: Contraction
-  fp: spoof_baseline_hh_fp
-- phase_id: phase_hh_hpa_spoof_baseline_vega10
-  label: hh_hpa_spoof_baseline_vega10
-  dtype: H
-  shapes:
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: H
-    ProblemType: Contraction
-  fp: spoof_baseline_hh_hpa_fp
-- phase_id: phase_hs_hpa_spoof_baseline_vega10
-  label: hs_hpa_spoof_baseline_vega10
-  dtype: H
-  shapes:
-  - 512x512x512
-  - 1024x1024x1024
-  - 2048x2048x2048
-  - 4096x4096x4096
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: H
-    ProblemType: Contraction
-  fp: spoof_baseline_hs_hpa_fp
-- phase_id: phase_zz_spoof_baseline_vega10
-  label: zz_spoof_baseline_vega10
-  dtype: Z
-  shapes:
-  - 128x128x128
-  - 192x192x192
-  - 256x256x256
-  - 512x512x512
-  - 1024x1024x1024
-  ScheduleName: vega10
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx900
-    DataType: Z
-    ProblemType: Contraction
-  fp: spoof_baseline_zz_fp
 - phase_id: phase_ss_Ailk_Bjlk_mt96x96x16_tt6x6_vw2_nlca3_wgm4_alu
   label: SS_Ailk_Bjlk_mt96x96x16_tt6x6_vw2_nlca3_wgm4_alu
   dtype: S
@@ -7764,3 +7630,2109 @@
     WorkGroupMapping: 1
     GlobalSplitU: 8
   fp: f841c8250f4aff67b95f2c0e09ce3b9b6e96b508a8b7f3472d7159796b8ef967
+- phase_id: phase_auto_0_S_256x256x256_4
+  label: mutate_S_256x256x256_4
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 5464dfb56d85106d3f1375a08d17f72bddad02816ce0017f3d47c2cf848117fe
+- phase_id: phase_auto_0_S_256x256x256_6
+  label: mutate_S_256x256x256_6
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 68fc103a64154fcaa8fa9a1c2117a842f92cbb40f7b6752d63fba5533e7aa9dc
+- phase_id: phase_auto_0_S_256x256x256_8
+  label: mutate_S_256x256x256_8
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: ee88ef8ac2a3fad45afc1e100620474afdaa4936306a29eda94b21f82be05dd2
+- phase_id: phase_auto_0_S_256x256x256_9
+  label: mutate_S_256x256x256_9
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 045559c4cc7b56af07abed7d04abddb44ca5cb3d74bcded934ae2d921d189a08
+- phase_id: phase_auto_0_S_256x256x256_38
+  label: mutate_S_256x256x256_38
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 015ab517756447d0b1c67155c23780faf3cd910a485674b31986d6f5b41bcc9b
+- phase_id: phase_auto_0_S_256x256x256_42
+  label: mutate_S_256x256x256_42
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 644f7f141b1be8b6f88b095a6e496569045979501dc6f4d36bc86c0f0b6fb565
+- phase_id: phase_auto_0_S_256x256x256_43
+  label: mutate_S_256x256x256_43
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: c1d89e3e9ae7fb18b83ac100d40140247ae2c88e9c4fd8a11800952496082c49
+- phase_id: phase_auto_0_S_256x256x256_46
+  label: mutate_S_256x256x256_46
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 27221bdcf32791a6ce2e111a0fe86228706c90b8e62f344ec51a2ac06e3c8197
+- phase_id: phase_auto_0_S_256x256x256_47
+  label: mutate_S_256x256x256_47
+  dtype: S
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 1e06ef4bb814a0bb2c489a88164dc0b3e4cef2cd438b6bbe78cc1075b539afe6
+- phase_id: phase_auto_0_S_512x512x512_4
+  label: mutate_S_512x512x512_4
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 985f8c31b02b45c722540a317721163d820ebc74cb25980c94dfdced12c41d92
+- phase_id: phase_auto_0_S_512x512x512_6
+  label: mutate_S_512x512x512_6
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 574b55c067d25395d1993a186c5a2a7deb0e98ba7e81190ddb75ed1a2b703c08
+- phase_id: phase_auto_0_S_512x512x512_8
+  label: mutate_S_512x512x512_8
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: afccd2f83c4f116c307e51bfac87e6ea4e7cd9b200579740a01a1f90c2709677
+- phase_id: phase_auto_0_S_512x512x512_9
+  label: mutate_S_512x512x512_9
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 61bd3ee60b00bf3c3bb9af4f71eff444ea269be0d691743e314189159ad70156
+- phase_id: phase_auto_0_S_512x512x512_38
+  label: mutate_S_512x512x512_38
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 3985479d93236765324ce931a43ad69ebdc67f7474b1137aa0e25bc877f9edeb
+- phase_id: phase_auto_0_S_512x512x512_42
+  label: mutate_S_512x512x512_42
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 6207adf79cddfbca19b94a9f9cdad46b3b228b6f8b3e203bf3f3983549447bae
+- phase_id: phase_auto_0_S_512x512x512_43
+  label: mutate_S_512x512x512_43
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: e2c968b96f08e5752de0337186fb4feb82d66062af5c7193b29355635f05d686
+- phase_id: phase_auto_0_S_512x512x512_46
+  label: mutate_S_512x512x512_46
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 50848047cc111cb1b9783fcd7f751b5c501c9ec65671dd86d19b04e5071437d6
+- phase_id: phase_auto_0_S_512x512x512_47
+  label: mutate_S_512x512x512_47
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 504787961f9520e989a450f162b907b69e58f47fd40b3368db05bcacac273bd0
+- phase_id: phase_auto_0_S_768x768x768_4
+  label: mutate_S_768x768x768_4
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: abf9dcfb1939d995394e43ff8cdb6589373e481e596da9827a19aaf062c5417b
+- phase_id: phase_auto_0_S_768x768x768_6
+  label: mutate_S_768x768x768_6
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 872e0e14c296b79700fd7a4cfae1382b5dc98397141ddfad15a3530a5c944457
+- phase_id: phase_auto_0_S_768x768x768_8
+  label: mutate_S_768x768x768_8
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: a8109dc48cbfe51a0c8f0b4d491641f74f8b0dd9dc4e368eef38223355825b66
+- phase_id: phase_auto_0_S_768x768x768_9
+  label: mutate_S_768x768x768_9
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: cc4167edb9fd56c0756d7c1d8232d8727851118941b653cf1db161a6aae51fcf
+- phase_id: phase_auto_0_S_768x768x768_38
+  label: mutate_S_768x768x768_38
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 8b6f635aaa7269117c18e9b0823b81824caec94e729f4e5abbd9cd5a250f54f3
+- phase_id: phase_auto_0_S_768x768x768_42
+  label: mutate_S_768x768x768_42
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 39e04ab3c52d83794fc630d1215602b3e484d671c39d8dc680781474f70545f0
+- phase_id: phase_auto_0_S_768x768x768_43
+  label: mutate_S_768x768x768_43
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 5ec5104a225a1756bcafc8d74fc8858ca0edcbf42e95ae2b0b02b9980914a869
+- phase_id: phase_auto_0_S_768x768x768_46
+  label: mutate_S_768x768x768_46
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 345b075f8914c82d230936cd3ee17452307e6646566c144d85d4ab6a46602128
+- phase_id: phase_auto_0_S_768x768x768_47
+  label: mutate_S_768x768x768_47
+  dtype: S
+  shapes:
+  - 768x768x768
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 768x768x768
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: e18a83ba61304873dec65a55d68e7bee922154938cacdb4ab401e4013d5635ef
+- phase_id: phase_auto_0_S_1000x1000x1000_4
+  label: mutate_S_1000x1000x1000_4
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: d51b2607e6ff2f40b0303d747de72c1a7e6893e7cfa91d0db11b0496ab535053
+- phase_id: phase_auto_0_S_1000x1000x1000_6
+  label: mutate_S_1000x1000x1000_6
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 1c52485bd0a29d46f1e11c54c83e9f17514f3f085ec13f7d917b017fa9416b07
+- phase_id: phase_auto_0_S_1000x1000x1000_8
+  label: mutate_S_1000x1000x1000_8
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 97166066e8c173eaddc7cc26d4f72cbb82c212ebe015a9107e93203ce6c2d16f
+- phase_id: phase_auto_0_S_1000x1000x1000_9
+  label: mutate_S_1000x1000x1000_9
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 2a2764e76c1c1fb2c5880aed631813ca4ff80bc8ae3fbe38a83d607b4e6f209b
+- phase_id: phase_auto_0_S_1000x1000x1000_38
+  label: mutate_S_1000x1000x1000_38
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 98d9e8ec5d80830ad7653017cf5d150029d7d50e9bc2de2ba027f389f87c3c8b
+- phase_id: phase_auto_0_S_1000x1000x1000_42
+  label: mutate_S_1000x1000x1000_42
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 94a4bf740711f9a39f0067e0336787b64b115f69f165dc04ba851fcd9addb454
+- phase_id: phase_auto_0_S_1000x1000x1000_43
+  label: mutate_S_1000x1000x1000_43
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 846a7a727a6cf7901a61a84b9991bfb0626e400cba2f93e8d7096c289fa5f4b1
+- phase_id: phase_auto_0_S_1000x1000x1000_46
+  label: mutate_S_1000x1000x1000_46
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: aeb0ef9a8f3ec4003b032fb9cafe437e6c577466ab886673ae48c4066e89df3a
+- phase_id: phase_auto_0_S_1000x1000x1000_47
+  label: mutate_S_1000x1000x1000_47
+  dtype: S
+  shapes:
+  - 1000x1000x1000
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1000x1000x1000
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: c8dcd67f85669a7fa8d9b63ced54b8f2327a17ec6287dd879b4359f7e32809ca
+- phase_id: phase_auto_0_S_1024x1024x1024_4
+  label: mutate_S_1024x1024x1024_4
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 56a365aa430601e45f0e270431c461f063ea7f0089954ccc9a9d4c4e20f7a7e8
+- phase_id: phase_auto_0_S_1024x1024x1024_6
+  label: mutate_S_1024x1024x1024_6
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 81c39d2686f134ca2055dc4137319bf7299c55c6f6c78bbbba275164afe0fa05
+- phase_id: phase_auto_0_S_1024x1024x1024_8
+  label: mutate_S_1024x1024x1024_8
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 4446de343fa40e11198cf390597fc930b5e670730b31b500fd02493050944bc1
+- phase_id: phase_auto_0_S_1024x1024x1024_9
+  label: mutate_S_1024x1024x1024_9
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: a743c468180f9b29c14ef6a48bfa120cbc1bd0eb031c030ffaa3bed69517af51
+- phase_id: phase_auto_0_S_1024x1024x1024_38
+  label: mutate_S_1024x1024x1024_38
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 89ebeb6ffa1725c66e493bc398a964d3e5191285c060c134287dced58914e6e0
+- phase_id: phase_auto_0_S_1024x1024x1024_42
+  label: mutate_S_1024x1024x1024_42
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: cd666a4e5eddcf3d4111ca58f483cad48babd081e8d4b8be4584abb2b6a1cc3d
+- phase_id: phase_auto_0_S_1024x1024x1024_43
+  label: mutate_S_1024x1024x1024_43
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 8c2648ed7f474fef53921b3303539de515d55e6d6643de4ef1892a275f5b5643
+- phase_id: phase_auto_0_S_1024x1024x1024_46
+  label: mutate_S_1024x1024x1024_46
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: ed73b0d129847550312604ec0164a50ef1657d2775b071b878073b8191cfb02c
+- phase_id: phase_auto_0_S_1024x1024x1024_47
+  label: mutate_S_1024x1024x1024_47
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 9191c3b65f8613ff8cf484241a5c553da85c648d013a71727f816a7ffc5b0c2f
+- phase_id: phase_auto_0_S_1365x1365x1365_4
+  label: mutate_S_1365x1365x1365_4
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 9e80c3607325fafba713e6a6b149deca209bac64722a8d1c69fe623d9af7fdb2
+- phase_id: phase_auto_0_S_1365x1365x1365_6
+  label: mutate_S_1365x1365x1365_6
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: e87e75c0bb5d0a27519688d170f79fad14a3f6315080124d9c2bdcca57ca28e0
+- phase_id: phase_auto_0_S_1365x1365x1365_8
+  label: mutate_S_1365x1365x1365_8
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 522c7c73ec7306fe82c9eb9b6f9c50a8895b5ad324d2fc39c5971be77053bc5c
+- phase_id: phase_auto_0_S_1365x1365x1365_9
+  label: mutate_S_1365x1365x1365_9
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 6d0cdd801ee416666a7437b512e2d433cb5f7d6c95af8c8e91147fefb187323a
+- phase_id: phase_auto_0_S_1365x1365x1365_38
+  label: mutate_S_1365x1365x1365_38
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 63304bc63d2ffc13b02d0f23944772b941fdf9ef9e5f0aa807d52b37f3a3508b
+- phase_id: phase_auto_0_S_1365x1365x1365_42
+  label: mutate_S_1365x1365x1365_42
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: bd142e27bacb978bf5b2511794bb11e11757895ddb78af1ba135c1f181e162e2
+- phase_id: phase_auto_0_S_1365x1365x1365_43
+  label: mutate_S_1365x1365x1365_43
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: a571181882913b4e67b5e13f276addecb4c8373e8bbb64889b55ceb812ae684f
+- phase_id: phase_auto_0_S_1365x1365x1365_46
+  label: mutate_S_1365x1365x1365_46
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 1e5015fad47cc3eb50b43df36287f054bcb9b7bbb045c2729771e8770dad1a99
+- phase_id: phase_auto_0_S_1365x1365x1365_47
+  label: mutate_S_1365x1365x1365_47
+  dtype: S
+  shapes:
+  - 1365x1365x1365
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 1365x1365x1365
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: a2f997593a68f08cc225a399529eb28989e7d4d3ebfe39f459580c5c3c52e32c
+- phase_id: phase_auto_0_S_2048x2048x2048_4
+  label: mutate_S_2048x2048x2048_4
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: b5e798c18140a8e2bf824b36aab7914db2d99eb4c7c3d00cbd3d1cf3919488e8
+- phase_id: phase_auto_0_S_2048x2048x2048_6
+  label: mutate_S_2048x2048x2048_6
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 656639cd735cd4bbac2ec5e20e927d632fdfb3b7e8fbf60614038649c1965ad8
+- phase_id: phase_auto_0_S_2048x2048x2048_8
+  label: mutate_S_2048x2048x2048_8
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 9b1b98a8b211487d9f84974c318be63072c83013734d9a7e6967256652d21ab7
+- phase_id: phase_auto_0_S_2048x2048x2048_9
+  label: mutate_S_2048x2048x2048_9
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: edc6edabe757f24060d0f270b18f5612b9091b21c3615203ed7beb299fda1c19
+- phase_id: phase_auto_0_S_2048x2048x2048_38
+  label: mutate_S_2048x2048x2048_38
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: fc8dd74990d3f90ec942a1aabbda5601bb384aff637b4a175f134aed14e39c71
+- phase_id: phase_auto_0_S_2048x2048x2048_42
+  label: mutate_S_2048x2048x2048_42
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 832f4c793b024ef94dead0a82ded95a85887bd942837132710eed7c4389562d0
+- phase_id: phase_auto_0_S_2048x2048x2048_43
+  label: mutate_S_2048x2048x2048_43
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 41eca4aaeb781d288149801702abf1fc7bd8572c12737d4032c8a8d738c14bc8
+- phase_id: phase_auto_0_S_2048x2048x2048_46
+  label: mutate_S_2048x2048x2048_46
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: aed6910d9e7d5a8e36f922b8d986bcc0246f95f9b17536f6b2febbd0ece9bc54
+- phase_id: phase_auto_0_S_2048x2048x2048_47
+  label: mutate_S_2048x2048x2048_47
+  dtype: S
+  shapes:
+  - 2048x2048x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 2048x2048x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 4923147191acddac133868b7b469642389eb83fa4ec38ee8e0884bcc3639d644
+- phase_id: phase_auto_0_S_4096x4096x4096_4
+  label: mutate_S_4096x4096x4096_4
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: f936b49b08c8f48deba6ade226e2744b7fd1636bec4e3bdcca86feb6a7f3e6ce
+- phase_id: phase_auto_0_S_4096x4096x4096_6
+  label: mutate_S_4096x4096x4096_6
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 35ff65f8707138224f1831d32816032f746889a86566f98b137cb4739a77d7af
+- phase_id: phase_auto_0_S_4096x4096x4096_8
+  label: mutate_S_4096x4096x4096_8
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 2b408af208bb6cf37424ccae13c52ffc8b4f945037292aa1ef901ac6fc331dee
+- phase_id: phase_auto_0_S_4096x4096x4096_9
+  label: mutate_S_4096x4096x4096_9
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 91a00cc750e4a5cb9693651538d3b1d2f2da17cd2f9c3ee1c7aa80c2ce673a59
+- phase_id: phase_auto_0_S_4096x4096x4096_38
+  label: mutate_S_4096x4096x4096_38
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 6ba8462138dd56094c282b7605c86a8b452a08c1dbaf5a6053a19917765b8638
+- phase_id: phase_auto_0_S_4096x4096x4096_42
+  label: mutate_S_4096x4096x4096_42
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 88a692871efb0ca97993a520c2ede4e5d972294e012ff1205ffed300d649cbaa
+- phase_id: phase_auto_0_S_4096x4096x4096_43
+  label: mutate_S_4096x4096x4096_43
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: c80bed55d6a59caade3f1ec1e053aa7386c3cc1a7b9246110da36acab3c05086
+- phase_id: phase_auto_0_S_4096x4096x4096_46
+  label: mutate_S_4096x4096x4096_46
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 94e8c65379cd21149ee81b1984d132405e6268cb759261c636712d0d000e49e7
+- phase_id: phase_auto_0_S_4096x4096x4096_47
+  label: mutate_S_4096x4096x4096_47
+  dtype: S
+  shapes:
+  - 4096x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 4096x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 61a905f27cd118fa7aa89b7948e1e314bd6d337ae8ef15bf632d8f0706544452
+- phase_id: phase_auto_0_Z_128x128x128_4
+  label: mutate_Z_128x128x128_4
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: cba428730ee8288b2258164edddbcaeb68afea474d279e2e8e068a0dfb1d94b5
+- phase_id: phase_auto_0_Z_128x128x128_6
+  label: mutate_Z_128x128x128_6
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: e0212f6e436283933c5a3cf5869f05c0b24e589f0cbe1135a98fbbfc9dc190ed
+- phase_id: phase_auto_0_Z_128x128x128_8
+  label: mutate_Z_128x128x128_8
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: aef03accfd4b52e6f0c9cdeef300af352dbd94a1122bc898096693f80316e26f
+- phase_id: phase_auto_0_Z_128x128x128_9
+  label: mutate_Z_128x128x128_9
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 4d6dd8e2fe4ddd606660706af559ec45580ffbb2f0694416a7d4c6f2d184b3bb
+- phase_id: phase_auto_0_Z_128x128x128_38
+  label: mutate_Z_128x128x128_38
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 09a318098e5d6f078900d029ba6daab33a58ba5513461e09899dd632ede9434e
+- phase_id: phase_auto_0_Z_128x128x128_42
+  label: mutate_Z_128x128x128_42
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: e8cf820621d16f5a40f8e59e22d035525a0055652ddcfb609dbebd8ce0334158
+- phase_id: phase_auto_0_Z_128x128x128_43
+  label: mutate_Z_128x128x128_43
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 0dede6a39f9391fb7679259fee6ad0b36ec34f4d37d940acae30b4f4ad09f027
+- phase_id: phase_auto_0_Z_128x128x128_46
+  label: mutate_Z_128x128x128_46
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 3af1f0b097370bd756f3cace9b1d38656c04e446b185a06b290ac25892751f68
+- phase_id: phase_auto_0_Z_128x128x128_47
+  label: mutate_Z_128x128x128_47
+  dtype: S
+  shapes:
+  - 128x128x128
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x128
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: cd48daf8ef764e0c67940191f1297e44dce7a05f9214983ba9d1a803f8cfc3db
+- phase_id: phase_auto_0_Z_192x192x192_4
+  label: mutate_Z_192x192x192_4
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 20521a28ed955117fdffdaa7c2e20a333395bf8196840439e4eae8c6b5c1904c
+- phase_id: phase_auto_0_Z_192x192x192_6
+  label: mutate_Z_192x192x192_6
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 955cca9d4c2fe9140be8c80aed6130f9e158bba13715b56b99828729a134fe54
+- phase_id: phase_auto_0_Z_192x192x192_8
+  label: mutate_Z_192x192x192_8
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 8f0fe68ac6af1038eb405fa118ef769374446845fe7095eb4fae932ef4929eb3
+- phase_id: phase_auto_0_Z_192x192x192_9
+  label: mutate_Z_192x192x192_9
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: c6a594ff59af643b554dfff810330541d8e16d642e9babfb94ceb4853f276d1e
+- phase_id: phase_auto_0_Z_192x192x192_38
+  label: mutate_Z_192x192x192_38
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: ca9b2a635bbdce1b7eab07046e18627b1f91693f96a613c014b06f41c48ffdb7
+- phase_id: phase_auto_0_Z_192x192x192_42
+  label: mutate_Z_192x192x192_42
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: aba49717efc075ab07e638e4fb7a72659f2563381779f156cdb4376b2cff0496
+- phase_id: phase_auto_0_Z_192x192x192_43
+  label: mutate_Z_192x192x192_43
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: f67cf8658c8fb9bf7dcb2b8fbf33edc19206ef3f680d2414546d1d19b361d849
+- phase_id: phase_auto_0_Z_192x192x192_46
+  label: mutate_Z_192x192x192_46
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 11ce65b1e97a63e84492b68e483491d3e001f07d9a4dd233e084cdd657323541
+- phase_id: phase_auto_0_Z_192x192x192_47
+  label: mutate_Z_192x192x192_47
+  dtype: S
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 94ac23e8cd6a8b0bdd739ef1d32012c226a50b156750d7f280f7d2a97fb64f42
+- phase_id: phase_auto_0_S_64x4096x4096_4
+  label: mutate_S_64x4096x4096_4
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 1b88b1c61eafedd44720388fdab2ca9b33856718ce803d3e8abbbee5f1d53ca5
+- phase_id: phase_auto_0_S_64x4096x4096_6
+  label: mutate_S_64x4096x4096_6
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 7035a178a35784e6452d3968943c8873cae4870fcd51a7fb099f5a97917d7407
+- phase_id: phase_auto_0_S_64x4096x4096_8
+  label: mutate_S_64x4096x4096_8
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 6c80f49def89e044bc72ee1ea55043002ad28cbfc693996082b0cf9514db02b9
+- phase_id: phase_auto_0_S_64x4096x4096_9
+  label: mutate_S_64x4096x4096_9
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: acbb0b4f34e55686d27466d180da7978535102925c80e8d7cf7673594eca7725
+- phase_id: phase_auto_0_S_64x4096x4096_38
+  label: mutate_S_64x4096x4096_38
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 3d7043b5c62bcba295d8c882d508e988c20b7a0fe8ed6e2b7f819e8a357ced46
+- phase_id: phase_auto_0_S_64x4096x4096_42
+  label: mutate_S_64x4096x4096_42
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 7f8e863ed82e7d6140eb09b8fe501f0f80fc75d0d04ff962a865d20fb0e0173c
+- phase_id: phase_auto_0_S_64x4096x4096_43
+  label: mutate_S_64x4096x4096_43
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 3c0c09419ce6022227803f4f5a47d9c77362a3909cef4dc32c242f8142324171
+- phase_id: phase_auto_0_S_64x4096x4096_46
+  label: mutate_S_64x4096x4096_46
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: d481500ed555ff16cb3451e544544c2ffc7c7988bf290ab7f15751db8d061b89
+- phase_id: phase_auto_0_S_64x4096x4096_47
+  label: mutate_S_64x4096x4096_47
+  dtype: S
+  shapes:
+  - 64x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 64x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 1492044f3a01a90781caee5a439f7c03f7588460c0479fda3bfb51a383435b0e
+- phase_id: phase_auto_0_S_128x128x2048_4
+  label: mutate_S_128x128x2048_4
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: cec7a903330f1c8af9a08d751f10794a2e709198c4558147cd4309ace840d597
+- phase_id: phase_auto_0_S_128x128x2048_6
+  label: mutate_S_128x128x2048_6
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 3797d7277bbd3dfe381d49abc5c37f312f6a1181e5a168dce9f1ad7534ec2319
+- phase_id: phase_auto_0_S_128x128x2048_8
+  label: mutate_S_128x128x2048_8
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: c5018ae727c50105d32dd61d8cadb962c045480df15d6310b798a37b825f7f42
+- phase_id: phase_auto_0_S_128x128x2048_9
+  label: mutate_S_128x128x2048_9
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 885dd504440e95ff7d8f74f4ced038f1ff58ee1f1cab0d415eaf1da325f49ef8
+- phase_id: phase_auto_0_S_128x128x2048_38
+  label: mutate_S_128x128x2048_38
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: e1c12894eb800ec383e6f468e2b07fabc103cf40587e82c1e4fe9b9e98fa9934
+- phase_id: phase_auto_0_S_128x128x2048_42
+  label: mutate_S_128x128x2048_42
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 680b63f23284c3f988c504ebcba3f69d1637191fc2e421e57fdb7c41ffd8d073
+- phase_id: phase_auto_0_S_128x128x2048_43
+  label: mutate_S_128x128x2048_43
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: 281d83e21d52e1ce24dd00524736aff470a41b34536199bb9d1903d7e5cbd0d4
+- phase_id: phase_auto_0_S_128x128x2048_46
+  label: mutate_S_128x128x2048_46
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 4214d676ac0227b3c9cc804e6de16464c64ac941e1711d5d95e4d19cdf1aabc7
+- phase_id: phase_auto_0_S_128x128x2048_47
+  label: mutate_S_128x128x2048_47
+  dtype: S
+  shapes:
+  - 128x128x2048
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 128x128x2048
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 7be92c07994b4b142c64a03d4a8b9d2c50c1b0e46070afd65dbc84bd7cbb4fba
+- phase_id: phase_auto_0_S_32x4096x4096_4
+  label: mutate_S_32x4096x4096_4
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 4
+  fp: 304b71338ed8ac043d01333de99f52717880899d7aaebf73506ebcc75e1c18db
+- phase_id: phase_auto_0_S_32x4096x4096_6
+  label: mutate_S_32x4096x4096_6
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 83eafc79a67afdaaea9622763509f1b68f777a955187b53812bdeccda1b97217
+- phase_id: phase_auto_0_S_32x4096x4096_8
+  label: mutate_S_32x4096x4096_8
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: 1bc2c7043bc0f62314a0b437cc11f9fca450ffac5dc20aa6062c12da0013798b
+- phase_id: phase_auto_0_S_32x4096x4096_9
+  label: mutate_S_32x4096x4096_9
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: ffab514177c08f186af68888fd37106352928b2ea953fad1bde073cd4a3f53b8
+- phase_id: phase_auto_0_S_32x4096x4096_38
+  label: mutate_S_32x4096x4096_38
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 1
+    WorkGroupMapping: 4
+  fp: 89c9ba9864f298fe8b32da1fd0673b1ca5f7b7d5eaefaf7e3dde6d39d5f68463
+- phase_id: phase_auto_0_S_32x4096x4096_42
+  label: mutate_S_32x4096x4096_42
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 8
+  fp: ce96866ed36f0f7924d85937b414a2b4b3ffa445378ce280999f63a4ae08b521
+- phase_id: phase_auto_0_S_32x4096x4096_43
+  label: mutate_S_32x4096x4096_43
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 1
+    VectorWidth: 2
+    WorkGroupMapping: 1
+  fp: ff0d0425558f67d26d579de0fd4405fd57a19514815b21d25f4f57fed0f22f7a
+- phase_id: phase_auto_0_S_32x4096x4096_46
+  label: mutate_S_32x4096x4096_46
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 8
+  fp: 486d747d8289e30cce2dd1ba637e98da744004befaea4761f543ad5a6ec19de8
+- phase_id: phase_auto_0_S_32x4096x4096_47
+  label: mutate_S_32x4096x4096_47
+  dtype: S
+  shapes:
+  - 32x4096x4096
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ProblemType: 32x4096x4096
+    ScheduleName: isa
+    MacroTile: 96x96x16
+    ThreadTile: 6x6
+    NLCA: 3
+    VectorWidth: 1
+    WorkGroupMapping: 1
+  fp: 4c75a1a160d45ba56619f98593f072a5bf14950476874854d235c60bdf8e3b40

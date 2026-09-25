@@ -7,7 +7,6 @@ retirement logic, and the should_run gating matrix.
 """
 
 import statistics
-import math
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
@@ -21,16 +20,6 @@ class CellAggregation:
     num_seeds: int
     cv: float  # coefficient of variation
     top2_gap_pct: float  # gap between top 2 seeds/medians
-
-
-class StabilityStatus:
-    """Stability matrix classification."""
-    APPROVED = "approved"
-    NEEDS_REPEAT = "needs_repeat"
-    NEEDS_SUPER_SAMPLE = "needs_super_sample"
-    TIE = "tie"
-    NEEDS_2ND_INDEPENDENT_RUN = "needs_2nd_independent_run"
-    RETIRE_CANDIDATE = "retire_candidate"
 
 
 def aggregate_cell(seeds: List[float]) -> CellAggregation:
@@ -71,70 +60,6 @@ def aggregate_cell(seeds: List[float]) -> CellAggregation:
         cv=cv,
         top2_gap_pct=top2_gap_pct
     )
-
-
-def classify_stability(agg: CellAggregation) -> str:
-    """
-    Classify cell stability based on aggregation metrics.
-
-    Spec: Super-sample if CV > 15% or top-2 gap < 3% or seeds < 3.
-
-    Args:
-        agg: CellAggregation from aggregate_cell()
-
-    Returns:
-        StabilityStatus constant string
-    """
-    if agg.num_seeds < 3:
-        return StabilityStatus.NEEDS_SUPER_SAMPLE
-
-    if agg.cv > 0.15 or agg.top2_gap_pct < 3.0:
-        return StabilityStatus.NEEDS_SUPER_SAMPLE
-
-    return StabilityStatus.APPROVED
-
-
-def classify_tie(reference_median: float, candidate_median: float, tie_band_pct: float = 5.0) -> bool:
-    """
-    Classify if two medians are tied (within ±% band).
-
-    Args:
-        reference_median: Reference median value
-        candidate_median: Candidate median value
-        tie_band_pct: ±% band for tie classification (default 5%)
-
-    Returns:
-        True if tied, False otherwise
-    """
-    if reference_median <= 0:
-        return False
-
-    delta_pct = abs(candidate_median - reference_median) / reference_median * 100.0
-    return delta_pct <= tie_band_pct
-
-
-def should_repeat(agg: CellAggregation, current_numbench: int) -> Tuple[bool, int]:
-    """
-    Determine if a cell needs selective repeat and what NumBenchmarks to use.
-
-    Args:
-        agg: CellAggregation from aggregate_cell()
-        current_numbench: Current NumBenchmarks value
-
-    Returns:
-        (should_repeat, suggested_numbench) tuple
-    """
-    # If CV > 15% or top-2 gap < 3%, recommend super-sample
-    if agg.cv > 0.15 or agg.top2_gap_pct < 3.0:
-        suggested = min(current_numbench * 2, 9)  # Cap at 9
-        return True, suggested
-
-    # If seeds < 3, recommend at least 3
-    if agg.num_seeds < 3:
-        suggested = max(3, current_numbench)
-        return True, suggested
-
-    return False, current_numbench
 
 
 def should_run(
@@ -242,73 +167,3 @@ def check_retirement_eligibility(
             return False, f"run drift {spread*100:.2f}% > 1%"
 
     return True, f"≥3 samples, {len(per_run_meds)} runs, drift within 1%"
-
-
-class RetirementTier:
-    """Three-tier retirement classification."""
-    TIER1_IDENTICAL_FP = "tier1_identical_fp"  # Identical-fp skip (default on)
-    TIER2_DOMINANCE = "tier2_dominance"  # Dominance retirement (≥2 runs/cell)
-    TIER3_PEAK_SPOOF = "tier3_peak_spoof"  # Peak/spoof never retires
-
-
-def classify_retirement_tier(
-    is_identical_fp: bool,
-    is_peak_or_spoof: bool,
-    has_dominance: bool,
-    independent_runs: int
-) -> Optional[str]:
-    """
-    Classify retirement tier for a config.
-
-    Args:
-        is_identical_fp: True if fingerprint identical to another config
-        is_peak_or_spoof: True if this is a peak or spoof reference
-        has_dominance: True if this config is dominated by another
-        independent_runs: Number of independent runs for this cell
-
-    Returns:
-        RetirementTier constant string or None
-    """
-    if is_peak_or_spoof:
-        return RetirementTier.TIER3_PEAK_SPOOF
-    if is_identical_fp:
-        return RetirementTier.TIER1_IDENTICAL_FP
-    if has_dominance and independent_runs >= 2:
-        return RetirementTier.TIER2_DOMINANCE
-    return None
-
-
-def apply_d2_4_protection(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Apply D2.4 protection: 3 premature auto-retire records stay as ordinary rows,
-    never marked as verdicts.
-
-    The 3 protected records are:
-    - p12 387d2577
-    - p5 286b940a
-    - p6 1570d91a
-
-    Args:
-        records: List of registry records
-
-    Returns:
-        Filtered records with retirement verdicts removed from protected entries
-    """
-    protected_fps = {
-        "387d2577",  # p12
-        "286b940a",  # p5
-        "1570d91a",  # p6
-    }
-
-    protected = []
-    for rec in records:
-        fp = rec.get("fp", "")
-        if fp in protected_fps and rec.get("action") == "retire":
-            rec_copy = rec.copy()
-            rec_copy["action"] = None
-            rec_copy["d2_4_protected"] = True
-            protected.append(rec_copy)
-        else:
-            protected.append(rec)
-
-    return protected

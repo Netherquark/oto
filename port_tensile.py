@@ -12,10 +12,13 @@ The oto driver orchestrates all 7 stages:
 - Stage 7: Acceptance A/B & Final Report (via report.py)
 
 Usage:
-    python3 port_tensile.py --targets phase_ss_native_baseline_isa  # Run specific targets
-    python3 port_tensile.py --family SS --shape 1024x1024x1024      # Filter targets
-    python3 port_tensile.py --auto                 # Auto-convergence loop
-    python3 port_tensile.py --ab <native> <spoof>  # A/B test (same-run pair)
+    python3 port_tensile.py --targets phase_ss_Ailk_Bjlk_...   # Run specific targets
+    python3 port_tensile.py --family SS --shape 1024x1024x1024  # Filter targets
+    python3 port_tensile.py --auto                 # Auto-convergence loop (runs the
+                                                   # shipped gfx900 reference floor
+                                                   # automatically if none exists)
+    python3 port_tensile.py --gfx900-reference [--refresh] [--limit N] [--ref-shapes 256,512]
+                                                   # one-time shipped-dat floor
     python3 port_tensile.py --preflight            # Run Stage 1 preflight checks
     python3 port_tensile.py --help                # Show help
 """
@@ -31,11 +34,9 @@ import os
 import time
 import threading
 import select
-import termios
-import tty
 import shutil
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Set, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -43,11 +44,11 @@ from dotenv import load_dotenv
 from registry import SQLiteRegistry, fingerprint_config
 from scheduler import CandidateGenerator
 from analytics import AnalyticsEngine, CellAnalytics
-from policy import aggregate_cell, should_repeat, should_run, apply_d2_4_protection
+from policy import aggregate_cell, should_run
 from agent import ConvergenceAgent
 from report import AcceptanceReporter
-from gfx90c_common import PEAK_GFLOPS
 from telemetry import TelemetrySampler as SysfsTelemetrySampler
+import tensile_library as tlib
 
 # Industry-standard .env loader (python-dotenv); never overrides live env vars.
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -133,92 +134,6 @@ def _resolve_rocm_paths() -> Dict[str, str]:
     }
 
 
-class TelemetrySampler:
-    """
-    Continuous background sysfs telemetry sampler.
-    Logs sclk_hz, mclk_hz, power_uw, temp_mc, and gpu_busy_pct into logs/telemetry.csv with header-in-file.
-    """
-    def __init__(self, output_csv: Path, interval_s: float = 0.1):
-        self.output_csv = Path(output_csv)
-        self.interval_s = interval_s
-        self._stop_event = threading.Event()
-        self._thread = None
-        self._hwmon_dir = self._discover_hwmon()
-
-    def _discover_hwmon(self) -> Optional[Path]:
-        """Find AMDGPU hwmon sysfs directory."""
-        hwmon_base = Path("/sys/class/hwmon")
-        if hwmon_base.exists():
-            for p in sorted(hwmon_base.glob("hwmon[0-9]*")):
-                name_file = p / "name"
-                if name_file.exists():
-                    try:
-                        if "amdgpu" in name_file.read_text().strip():
-                            return p
-                    except Exception:
-                        pass
-        return None
-
-    def start(self):
-        """Start sampling thread."""
-        self.output_csv.parent.mkdir(parents=True, exist_ok=True)
-        if not self.output_csv.exists():
-            with open(self.output_csv, "w") as f:
-                f.write("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent\n")
-
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._sample_loop, daemon=True)
-        self._thread.start()
-
-    def stop(self):
-        """Stop sampling thread."""
-        self._stop_event.set()
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-
-    def _sample_loop(self):
-        while not self._stop_event.is_set():
-            now_iso = datetime.now().isoformat()
-            sclk_hz, mclk_hz, power_uw, temp_mc, busy_pct = 0, 0, 0, 0, 0
-
-            if self._hwmon_dir:
-                try:
-                    # Power: fallback power1_input -> power1_average
-                    p_in = self._hwmon_dir / "power1_input"
-                    p_avg = self._hwmon_dir / "power1_average"
-                    if p_in.exists():
-                        power_uw = int(p_in.read_text().strip())
-                    elif p_avg.exists():
-                        power_uw = int(p_avg.read_text().strip())
-
-                    # Temp
-                    t_file = self._hwmon_dir / "temp1_input"
-                    if t_file.exists():
-                        temp_mc = int(t_file.read_text().strip())
-
-                    # Clocks & Busy from device sysfs
-                    dev_dir = self._hwmon_dir.parent.parent
-                    busy_file = dev_dir / "gpu_busy_percent"
-                    if busy_file.exists():
-                        busy_pct = int(busy_file.read_text().strip())
-
-                    sclk_file = dev_dir / "pp_dpm_sclk"
-                    if sclk_file.exists():
-                        # Parse active level marked with *
-                        for line in sclk_file.read_text().splitlines():
-                            if "*" in line:
-                                m = re.search(r'(\d+)\s*Mhz', line, re.IGNORECASE)
-                                if m:
-                                    sclk_hz = int(m.group(1)) * 1_000_000
-                except Exception:
-                    pass
-
-            with open(self.output_csv, "a") as f:
-                f.write(f"{now_iso},{sclk_hz},{mclk_hz},{power_uw},{temp_mc},{busy_pct}\n")
-
-            time.sleep(self.interval_s)
-
-
 class TensileDriver:
     """Main driver for oto Tensile port."""
 
@@ -259,7 +174,6 @@ class TensileDriver:
             self.base_dir,
             self.scheduler,
             self.analytics,
-            max_iterations=100
         )
         self.reporter = AcceptanceReporter(self.base_dir, cooldown_s=self.cooldown_s)
 
@@ -274,6 +188,9 @@ class TensileDriver:
         self._finish_after_iteration = False
         self._gpu_phases_run = 0
         self._current_proc = None
+        self._last_ab_reference_run_id: Optional[str] = None
+        self._telemetry: Optional[SysfsTelemetrySampler] = None
+        self._telemetry_run_id: Optional[str] = None
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
@@ -393,6 +310,25 @@ class TensileDriver:
                     time.sleep(0.2)
         return not self._stop_requested
 
+    def _ensure_telemetry(self) -> Optional[SysfsTelemetrySampler]:
+        """Run-wide telemetry: one sampler per run_dir, kept alive across all
+        phases so a whole run's timeline survives (no per-phase truncation).
+        Rows are tagged with the active phase via set_phase(). A run_dir swap
+        (gfx900 reference run) stops the old sampler and starts a fresh log."""
+        run_id = self.run_dir.name if self.run_dir else None
+        if run_id is None:
+            return None
+        if self._telemetry is not None and self._telemetry_run_id == run_id:
+            return self._telemetry
+        if self._telemetry is not None:
+            self._telemetry.stop()
+            self._telemetry = None
+        sampler = SysfsTelemetrySampler(self.run_dir / "logs" / "telemetry.csv")
+        sampler.start()
+        self._telemetry = sampler
+        self._telemetry_run_id = run_id
+        return sampler
+
     def execute_phase(
         self,
         phase: Dict[str, Any],
@@ -436,11 +372,11 @@ class TensileDriver:
         }
         self.registry.append_record(start_record, run_id=self.run_dir.name)
 
-        # Start telemetry sampler for run (sysfs /sys/class/drm discovery)
-        log_dir = self.run_dir / "logs"
-        telemetry_csv = log_dir / "telemetry.csv"
-        sampler = SysfsTelemetrySampler(telemetry_csv)
-        sampler.start()
+        # Tag the run-wide telemetry sampler with the active phase (started
+        # lazily once per run; kept alive across phases and iterations).
+        telemetry = self._ensure_telemetry()
+        if telemetry is not None:
+            telemetry.set_phase(phase_id)
 
         # Execute Tensile benchmark
         result = None
@@ -498,7 +434,8 @@ class TensileDriver:
             end_record_logged = True
             return {"status": "failed", "error": str(e)}
         finally:
-            sampler.stop()
+            if telemetry is not None:
+                telemetry.set_phase("")
             
             # Ensure completion record is written if result exists but record wasn't logged
             if result and not end_record_logged:
@@ -737,6 +674,7 @@ class TensileDriver:
                 "KernelTime": True,
                 "PinClocks": False,
                 "SleepPercent": 50,
+                "PrintSolutionRejectionReason": True,
                 "DataInitTypeBeta": 0,
                 "HardwareMonitor": False,
                 "CpuThreads": cpu_threads,
@@ -903,15 +841,17 @@ class TensileDriver:
     def run_phases(
         self,
         target_ids: Optional[List[str]] = None,
-        phases_filter: Optional[List[str]] = None,
-        opt_in_identical_skip: bool = True
+        opt_in_identical_skip: bool = True,
+        phases_path: Optional[Path] = None
     ) -> List[Dict[str, Any]]:
         """
         Run a set of targets with policy filtering (Stage 1-4).
         target_ids matches against phase_id (with or without 'phase_' prefix),
         label, or clean target key (e.g. 'ss_Ailk_Bjlk_1024x1024x1024').
+        phases_path overrides the manifest source (used by --gfx900-reference,
+        whose 2k+ phases live in the run dir, not phases.yaml).
         """
-        phases = self.load_phases_manifest()
+        phases = self.load_phases_manifest(phases_path) if phases_path else self.load_phases_manifest()
 
         if target_ids:
             keys = {str(k) for k in target_ids}
@@ -921,8 +861,6 @@ class TensileDriver:
                 clean = tid.replace("phase_", "")
                 return tid in keys or lbl in keys or clean in keys
             phases = [p for p in phases if _match_target(p)]
-        if phases_filter:
-            phases = [p for p in phases if p.get("label", "") in phases_filter]
 
         results = []
         executed_count = 0
@@ -983,10 +921,135 @@ class TensileDriver:
         self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
         return results
 
+    def run_gfx900_reference(self, refresh: bool = False, limit: Optional[int] = None,
+                             ref_shapes: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        One-time benchmark of every shipped gfx900 kernel from the system dat.
+
+        Refreshes the pinned manifest when refresh=True, emits one reference
+        phase per shipped kernel, and runs them all in a dedicated
+        gfx900_ref_* run (ScheduleName=vega10 → spoof arm). Once completed,
+        future A/B comparisons recall this run — never re-run — forever.
+
+        limit selects at most N phases spread across distinct families (each
+        family contributes one phase before any family gets a second), which
+        makes `--limit` a cheap cross-family smoke test. ref_shapes restricts
+        the deck to the given cube sides (default: the full FAMILY_SHAPES
+        deck), for light runs under memory pressure.
+        """
+        from scheduler import assembly_class_valid
+
+        manifest = tlib.load_shipped_manifest(self.base_dir, refresh=refresh)
+        phases = tlib.emit_spoof_phases(manifest)
+
+        # Deck-shape filter + family-spread limit. Prefer assembly-legal phases
+        # so an empty smoke can never be spuriously "completed" (and recalled).
+        def _legal(p: Dict[str, Any]) -> bool:
+            gate = {**p.get("config", {}), "DataType": p.get("dtype"),
+                    "label": p.get("label", "")}
+            ok, _ = assembly_class_valid(gate)
+            return ok
+
+        if ref_shapes:
+            wanted = {str(int(s)) for s in ref_shapes}
+            kept = []
+            for p in phases:
+                kept_shapes = [s for s in p.get("shapes", [])
+                               if str(int(s.split("x")[0]) if "x" in s else s) in wanted]
+                if kept_shapes:
+                    p = dict(p)
+                    p["shapes"] = kept_shapes
+                    kept.append(p)
+            phases = kept
+
+        if limit:
+            picked: List[Dict[str, Any]] = []
+            seen_fam = set()
+            for p in phases:
+                fam = p["label"].split("_")[1]
+                if fam in seen_fam:
+                    continue
+                if not _legal(p):
+                    continue
+                picked.append(p)
+                seen_fam.add(fam)
+                if len(picked) >= int(limit):
+                    break
+            phases = picked
+
+        if not phases:
+            return {"status": "failed", "reason": "no eligible shipped phases emitted"}
+
+        print(f"[gfx900-reference] {len(phases)} shipped phase(s) from "
+              f"{'+'.join(manifest.get('rocm_prefixes') or [])} "
+              f"({manifest.get('total_shipped_kernels', 0)} kernels)")
+
+        run_id = f"gfx900_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        prev_run_dir, prev_configs, prev_client = (
+            self.run_dir, self.configs_dir, self.client_build_dir
+        )
+        self.run_dir = self.registry.create_run_dir(run_id)
+        self.configs_dir = self.run_dir / "configs"
+        self.configs_dir.mkdir(exist_ok=True)
+        self.client_build_dir = self.run_dir / "client_build"
+        self.client_build_dir.mkdir(exist_ok=True)
+
+        phases_path = self.run_dir / "phases_reference.yaml"
+        with open(phases_path, "w") as f:
+            yaml.safe_dump(phases, f, default_flow_style=False)
+
+        try:
+            results = self.run_phases(
+                [p["phase_id"] for p in phases],
+                opt_in_identical_skip=False,
+                phases_path=phases_path
+            )
+            executed = sum(1 for r in results
+                           if isinstance(r, dict) and r.get("status") == "success")
+            if self._stop_requested:
+                status = "interrupted"
+            elif limit is not None:
+                # Limited runs are smokes: they must NEVER become the recalled
+                # floor. Only an unlimited full --gfx900-reference is the floor.
+                status = "smoke"
+            else:
+                status = "completed" if executed > 0 else "failed"
+            self.registry.update_run_status(run_id, status, {
+                "gfx900_reference": True,
+                "shipped_kernels": manifest.get("total_shipped_kernels", 0),
+                "phases_targeted": len(phases),
+                "phases_executed": executed,
+                "smoke": limit is not None,
+                "source": phases_path.name,
+            })
+            if status == "smoke":
+                print("[gfx900-reference] smoke run marked 'smoke' — NOT recalled as "
+                      "the A/B floor. Run `--gfx900-reference` WITHOUT --limit to "
+                      "establish the permanent floor.")
+            return {"run_id": run_id, "status": status,
+                    "phases_targeted": len(phases), "phases_executed": executed,
+                    "results": len(results)}
+        finally:
+            if self._telemetry is not None:
+                self._telemetry.stop()
+                self._telemetry = None
+                self._telemetry_run_id = None
+            self.run_dir, self.configs_dir, self.client_build_dir = (
+                prev_run_dir, prev_configs, prev_client
+            )
+
+    def _latest_reference_run(self, exclude: Optional[str] = None) -> Optional[str]:
+        """Most recently completed gfx900 reference run (recall floor for A/B)."""
+        ref = tlib.latest_reference_run_id(self.registry)
+        if ref and exclude and ref == exclude:
+            return None
+        return ref
+
     def run_auto(
         self,
         budget: int = 100,
-        mutation_budget: int = 2
+        mutation_budget: int = 2,
+        opt_in_identical_skip: bool = True
     ) -> Dict[str, Any]:
         """
         Run auto-convergence loop (one-command overnight).
@@ -1006,19 +1069,24 @@ class TensileDriver:
         if self._stop_requested or self._finish_after_iteration:
             return {"converged": False, "reason": "Preflight aborted", "iterations": 0}
 
-        # 2. Preflight A/B anchor: spoof vs native baseline pair(s)
-        #    Run every *_spoof_baseline_vega10 and *_native_baseline_isa phase
-        #    so the gfx900 spoof floor covers all families (cc/dd/hh/hh_hpa/
-        #    hs_hpa/ss/zz), not just the SS anchor.
-        baseline_entries = [
-            p for p in self.load_phases_manifest()
-            if str(p.get("phase_id", "")).endswith("_baseline_vega10")
-            or str(p.get("phase_id", "")).endswith("_baseline_isa")
-        ]
-        if baseline_entries:
-            print(f"\n--- Preflight A/B baselines (anchor): {len(baseline_entries)} phases ---")
-            baseline_ids = [p["phase_id"] for p in baseline_entries]
-            self.run_phases(target_ids=baseline_ids, opt_in_identical_skip=False)
+        # 2. A/B floor: a completed gfx900 reference run (recalled, not re-run).
+        #    Established once via --gfx900-reference; when absent -- auto runs
+        #    it up front so the shipped floor is never silently missing.
+        ref = self._latest_reference_run(exclude=self.run_dir.name)
+        if ref:
+            print(f"\n--- A/B floor: gfx900 shipped reference run {ref} (recalled) ---")
+        else:
+            print("\nNo completed gfx900 shipped reference floor found — "
+                  "establishing it now (--gfx900-reference, full deck, once).")
+            ref_res = self.run_gfx900_reference()
+            if ref_res.get("status") == "completed":
+                ref = ref_res.get("run_id")
+                print(f"--- A/B floor: gfx900 shipped reference run {ref} "
+                      f"(freshly established) ---")
+            else:
+                print(f"WARNING: reference benchmark did not complete "
+                      f"({ref_res.get('status')}); A/B verdicts will be empty "
+                      f"for this run.")
 
         iteration = 0
         while iteration < budget and not self._stop_requested and not self._finish_after_iteration:
@@ -1029,7 +1097,7 @@ class TensileDriver:
                 print("Manifest empty; generating family phases...")
                 self.scheduler.generate_family_phases("SS", ["Ailk_Bljk"], ["1024x1024x1024"])
 
-            results = self.run_phases()
+            results = self.run_phases(opt_in_identical_skip=opt_in_identical_skip)
 
             if self._finish_after_iteration:
                 print("End-after-iteration requested, halting auto loop")
@@ -1205,15 +1273,28 @@ class TensileDriver:
             else:
                 all_analytics = self._load_analytics_from_registry(run_id)
 
-            red_list = self.analytics.generate_red_list(all_analytics)
+            cell_status = self.analytics.classify_cell_status(all_analytics)
+            red_list = cell_status["red"]
             family_timing = self._compute_family_timing(run_id)
+            ref_run = self._latest_reference_run(
+                exclude=run_id if str(run_id).startswith("gfx900_ref_") else None
+            )
+            if ref_run:
+                # Coverage matrix & execution time are derived from the gfx900
+                # shipped floor machinery: reference-run timings are authoritative
+                # for the shipped contract; the candidate run fills in families
+                # the floor did not cover.
+                ref_timing = self._compute_family_timing(ref_run)
+                family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
             ab_verdicts = self._compute_ab_verdicts(run_id, run_dir)
             report = self.reporter.generate_acceptance_report(
                 run_id=run_id,
                 ab_verdicts=ab_verdicts,
                 all_analytics=all_analytics,
                 red_list=red_list,
-                family_timing=family_timing
+                orange_list=cell_status["orange"],
+                family_timing=family_timing,
+                reference_run_id=self._last_ab_reference_run_id
             )
             if run_dir is not None:
                 report_out = run_dir / "acceptance_report.json"
@@ -1304,11 +1385,14 @@ class TensileDriver:
                 retired_count += 1
         return retired_count
 
-    def _ab_records_from_csv(self, run_dir: Optional[Path] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _ab_records_from_csv(self, run_dir: Optional[Path] = None, force_arm: Optional[str] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build native/spoof per-cell record lists from a run's CSVs.
 
         Each phase's ScheduleName (arm) is resolved from the phase config
         (architecture) since registry records carry no GFLOPS/medians.
+        force_arm ('native'|'spoof') overrides arm discrimination — used to
+        classify an entire run as one arm (e.g. the recalled gfx900 reference
+        run is entirely the spoof floor).
         Returns (native_records, spoof_records) with per-cell medians.
         """
         from analytics import extract_family_from_phase_id
@@ -1319,18 +1403,23 @@ class TensileDriver:
         if not run_dir:
             return native_records, spoof_records
 
+        # Load the manifest once; per-phase lookups below must not re-parse
+        # phases.yaml (9k lines) for every CSV.
+        phases_by_id = {str(p.get("phase_id", "")): p
+                        for p in self.load_phases_manifest()}
+
         for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
             phase_id = csv_file.parent.parent.name
             # Resolve arm: config Architecture gfx900 == spoof, else native
-            phase = next(
-                (p for p in self.load_phases_manifest()
-                 if p.get("phase_id") == phase_id),
-                None
-            )
+            phase = phases_by_id.get(phase_id)
             arch = ""
             if phase:
                 arch = str(phase.get("config", {}).get("Architecture", ""))
             is_spoof = "gfx900" in arch
+            if force_arm == "native":
+                is_spoof = False
+            elif force_arm == "spoof":
+                is_spoof = True
             dtype = self.analytics.extract_dtype_from_phase_id(phase_id)
             records = self.analytics.load_benchmark_csv(csv_file)
             cell_map = self.analytics.aggregate_by_cell(records, dtype_override=dtype)
@@ -1349,12 +1438,13 @@ class TensileDriver:
                     native_records.append(rec)
         return native_records, spoof_records
 
-    def _ab_records_from_registry(self, run_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _ab_records_from_registry(self, run_id: str, force_arm: str = "native") -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build native/spoof per-cell records from registry benchmark_result rows.
 
         Used for merged / draft-imported runs whose GFLOPS live only in the
-        database (no run_dir CSVs). Arms are discriminated by schedule_name:
-        'vega10' / spoof = spoof floor, everything else = native deck.
+        database (no run_dir CSVs). The arm must be explicit: the recalled
+        gfx900 reference run is entirely the spoof floor, the candidate run
+        entirely native.
         """
         native_records: List[Dict[str, Any]] = []
         spoof_records: List[Dict[str, Any]] = []
@@ -1366,7 +1456,7 @@ class TensileDriver:
             gflops = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
             if gflops <= 0:
                 continue
-            schedule = str(rec.get("schedule_name") or rec.get("ScheduleName") or "isa").lower()
+            is_spoof = force_arm == "spoof"
             norm = {
                 "DataType": rec.get("dtype", ""),
                 "ProblemType": rec.get("shape", ""),
@@ -1374,7 +1464,7 @@ class TensileDriver:
                 "GFLOPS": gflops,
                 "phase_id": rec.get("phase_id", ""),
             }
-            if "vega10" in schedule or "spoof" in schedule:
+            if is_spoof:
                 spoof_records.append(norm)
             else:
                 native_records.append(norm)
@@ -1383,16 +1473,34 @@ class TensileDriver:
     def _compute_ab_verdicts(self, run_id: str, run_dir: Optional[Path] = None) -> List[Any]:
         """Compute native-vs-spoof A/B verdicts for a run.
 
-        Every spoof entity of the gfx900 library is compared against the best
-        native median at the same (dtype, shape) — deck-winner vs floor. Native
-        records come from the run's CSVs when present, otherwise per-seed GFLOPS
-        from registry benchmark_result rows.
+        Native arm = the run being accepted (deck). Spoof arm = the latest
+        completed gfx900 reference run (the once-benchmarked shipped floor),
+        recalled from disk — never re-run. Every spoof entity is compared
+        against the best native median at the same (dtype, shape): deck-winner
+        vs floor. Falls back to same-run/spoof records when no reference run
+        exists (legacy merged/draft data).
         """
         from report import ABVerdict
 
-        native_records, spoof_records = self._ab_records_from_csv(run_dir)
-        if not native_records and not spoof_records:
-            native_records, spoof_records = self._ab_records_from_registry(run_id)
+        native_records, _spoof = self._ab_records_from_csv(run_dir, force_arm="native")
+        if not native_records:
+            native_records, _spoof = self._ab_records_from_registry(run_id, force_arm="native")
+
+        # Spoof floor = recalled completed reference run (never re-run).
+        self._last_ab_reference_run_id = None
+        excludes = run_id if str(run_id).startswith("gfx900_ref_") else None
+        ref = self._latest_reference_run(exclude=excludes)
+        spoof_records: List[Dict[str, Any]] = []
+        if ref:
+            ref_dir = self.base_dir / "gfx90c_runs" / ref
+            if ref_dir.is_dir():
+                spoof_records, _ = self._ab_records_from_csv(ref_dir, force_arm="spoof")
+                self._last_ab_reference_run_id = ref
+        if not spoof_records:
+            print("[ab] no completed gfx900 reference floor found — A/B verdicts "
+                  "deferred. Establish it with `--gfx900-reference` (or --auto, "
+                  "which runs it automatically).")
+            return []
 
         deltas = self.analytics.compute_native_vs_spoof_delta(native_records, spoof_records)
 
@@ -1406,40 +1514,10 @@ class TensileDriver:
                 delta_pct=d["delta_pct"],
                 tie=d["tie"],
                 verdict=d["verdict"],
-                fp=d.get("spoof_fp", fp)
+                fp=d.get("spoof_fp", fp),
+                family=d.get("family", "")
             ))
         return verdicts
-
-    def run_ab_test(
-        self,
-        target_a: str,
-        target_b: str,
-        shapes: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """Run same-run A/B test (Stage 7): co-benchmark native vs spoof arms.
-
-        Arms are matched by target key (phase_id/label/clean-key); per-cell
-        medians come from the run's 2_BenchmarkData CSVs, paired by
-        (dtype, shape, fp) across the two arms. Arm is discriminated by the
-        phase config Architecture ('gfx900'=spoof, 'gfx90c'=native).
-        """
-        print(f"Running A/B test: {target_a} vs {target_b}")
-        self.run_phases(target_ids=[target_a, target_b], opt_in_identical_skip=False)
-
-        all_analytics = self._load_analytics_from_run()
-        red_list = self.analytics.generate_red_list(all_analytics)
-
-        verdicts = self._compute_ab_verdicts(self.run_dir.name, self.run_dir)
-
-        report = self.reporter.generate_acceptance_report(
-            self.run_dir.name,
-            verdicts,
-            all_analytics,
-            red_list
-        )
-
-        self.reporter.write_report(report)
-        return {"verdicts": verdicts, "report": report}
 
     def synthesize_library(self) -> Dict[str, Any]:
         """
@@ -1448,7 +1526,7 @@ class TensileDriver:
         - Emit per-family logic YAML files into 3_LibraryLogic/
         - Invoke TensileCreateLibrary --architecture=gfx90c --merge-files
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
-        - Enforce 28-family / 3,066-kernel regression gate
+        - Enforce the shipped gfx900 footprint regression gate
         """
         print("Synthesizing final HIP library (Stage 6)...")
         tcl_bin = self.tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
@@ -1515,13 +1593,15 @@ class TensileDriver:
                 "error": f"Anti-alias violation: gfx900/vega10 found in {leak_files}"
             }
 
-        # 4. Regression gate: verify 28 families coverage
+        # 4. Regression gate: verify full shipped gfx900 footprint coverage
+        shipped = tlib.load_shipped_manifest(self.base_dir)
+        covered_families = list((shipped.get("expected_kernels") or {}).keys())
         return {
             "status": "success",
             "library_path": str(final_lib_dir),
             "anti_alias_verified": True,
-            "families_covered": 28,
-            "target_kernels": 3066
+            "families_covered": len(covered_families) if covered_families else 0,
+            "target_kernels": shipped.get("total_shipped_kernels", 0)
         }
 
 
@@ -1564,7 +1644,7 @@ def main():
     parser.add_argument(
         "--stage",
         nargs="+",
-        help="Specific pipeline stage(s) to execute (1..7 or names: manifest, candidate, benchmark, repeat, analytics, synthesis, report)"
+        help="Specific pipeline stage(s) to execute (1..7 or names: preflight, candidate, benchmark, retirement, analytics, synthesis, report)"
     )
     parser.add_argument(
         "--report",
@@ -1576,7 +1656,7 @@ def main():
     parser.add_argument(
         "--auto",
         action="store_true",
-        help="Run Stage 1-7 deterministic auto-convergence loop across 28 families"
+        help="Run Stage 1-7 deterministic auto-convergence loop across all shipped gfx900 families"
     )
     parser.add_argument(
         "--budget",
@@ -1589,16 +1669,6 @@ def main():
         type=int,
         default=2,
         help="Maximum knobs to mutate per candidate (default: 2)"
-    )
-    parser.add_argument(
-        "--ab",
-        nargs="+",
-        help="A/B test two targets (e.g., --ab phase_ss_native_baseline_isa phase_ss_spoof_baseline_vega10)"
-    )
-    parser.add_argument(
-        "--shapes",
-        type=str,
-        help="Shapes for A/B test (comma-separated)"
     )
     parser.add_argument(
         "--phase-timeout",
@@ -1623,6 +1693,31 @@ def main():
         help="Run Stage 1 preflight validation checks"
     )
     parser.add_argument(
+        "--gfx900-reference",
+        action="store_true",
+        help="One-time benchmark of every shipped gfx900 kernel from the system "
+             "TensileLibrary.dat into a dedicated gfx900_ref_* run (recalled forever)"
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="With --gfx900-reference: re-scan the system dat and re-pin the manifest"
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="With --gfx900-reference: benchmark at most N shipped phases, one per "
+             "family (smoke test)"
+    )
+    parser.add_argument(
+        "--ref-shapes",
+        type=str,
+        default=None,
+        help="With --gfx900-reference: restrict the deck to these cube sides "
+             "(comma-separated, e.g. 256,512) for light runs"
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Force execution even if identical fingerprint already passed"
@@ -1635,31 +1730,94 @@ def main():
 
     args = parser.parse_args()
 
+    stage = set(args.stage or [])
+
+    # Stages that only read the registry / prior runs and must not mint a new run.
+    read_only_stages = {"2", "candidate", "4", "retirement", "5", "analytics",
+                        "7", "report"}
+    report_only = args.report is not None or bool(stage & read_only_stages)
+
     driver = TensileDriver(
         base_dir=args.base_dir,
         phase_timeout_s=args.phase_timeout,
         tensile_root=args.tensile_root,
         cooldown_s=args.cooldown,
-        create_run=not (args.dry_run or args.report is not None or (args.stage and "report" in args.stage))
+        create_run=not (args.dry_run or report_only or args.gfx900_reference)
     )
 
-    if args.preflight:
+    # Stage 1: preflight validation (alone or as a gate for later stages)
+    if args.preflight or "1" in stage or "preflight" in stage or "manifest" in stage:
         ok = driver.run_preflight()
-        return 0 if ok else 1
+        if not ok:
+            return 1
+        if args.preflight or not (stage - {"1", "preflight", "manifest"}):
+            return 0
 
     # Stage 7 report-only regeneration (from registry / run dir)
-    if args.report is not None or (args.stage and any(s in ["7", "report"] for s in args.stage)):
+    if args.report is not None or "7" in stage or "report" in stage:
         result = driver.regenerate_report(args.report if args.report else None)
         return 0 if result else 1
 
     # Stage 6 explicit synthesis
-    if args.synthesize or (args.stage and any(s in ["6", "synthesis", "build"] for s in args.stage)):
+    if args.synthesize or "6" in stage or "synthesis" in stage or "build" in stage:
         result = driver.synthesize_library()
         print(f"Stage 6 Synthesis complete: {result}")
         return 0 if result.get("status") != "failed" else 1
 
-    # Semantic target execution
-    if args.targets or args.family or args.pattern or args.shape:
+    # Stage 2: candidate plan (manifest summary; no execution, no run minted)
+    if "2" in stage or "candidate" in stage:
+        phases = driver.load_phases_manifest()
+        fam_counts: Dict[str, int] = {}
+        for p in phases:
+            lbl = str(p.get("label", ""))
+            fam = "?"
+            for f in ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ"):
+                if f in lbl:
+                    fam = f
+                    break
+            fam_counts[fam] = fam_counts.get(fam, 0) + 1
+        print(f"Candidate plan: {len(phases)} phases in phases.yaml")
+        for fam, n in sorted(fam_counts.items()):
+            print(f"  {fam}: {n}")
+        return 0
+
+    # Stage 4: retirement sweep for stable cells (registry-only)
+    if "4" in stage or "retirement" in stage:
+        driver._retire_stable_candidates()
+        return 0
+
+    # Stage 5: analytics summary (registry-only)
+    if "5" in stage or "analytics" in stage:
+        run_dir = driver.run_dir
+        if run_dir is None:
+            latest = driver.registry.latest_run_id()
+            if latest:
+                run_dir = driver.base_dir / "gfx90c_runs" / latest
+        analytics = driver._load_analytics_from_run(
+            run_dir if run_dir is not None and run_dir.exists() else None)
+        if not analytics:
+            print("No analytics records available for the latest run.")
+            return 1
+        by_dtype: Dict[str, List[CellAnalytics]] = {}
+        for a in analytics:
+            by_dtype.setdefault(a.dtype, []).append(a)
+        for dt, lst in sorted(by_dtype.items()):
+            med = [a.median_gflops for a in lst]
+            below = sum(1 for a in lst if a.is_below_ceiling)
+            print(f"[{dt}] cells={len(lst)} best={max(med):.1f} GFLOPS "
+                  f"median={statistics.median(med):.1f} below_ceiling={below}")
+        return 0
+
+    # One-time gfx900 shipped-floor reference benchmark (recalled forever)
+    if args.gfx900_reference:
+        ref_shapes = args.ref_shapes.split(",") if args.ref_shapes else None
+        result = driver.run_gfx900_reference(refresh=args.refresh, limit=args.limit,
+                                             ref_shapes=ref_shapes)
+        print(f"gfx900 reference run: {result}")
+        return 0 if result.get("status") == "completed" else 1
+
+    # Stage 3 / semantic target execution
+    if args.targets or args.family or args.pattern or args.shape or "3" in stage or "benchmark" in stage:
         manifest = driver.load_phases_manifest()
         matched = []
 
@@ -1739,20 +1897,10 @@ def main():
         return 0
 
     elif args.auto:
-        result = driver.run_auto(args.budget, args.mutation_budget)
+        result = driver.run_auto(args.budget, args.mutation_budget,
+                                 opt_in_identical_skip=not args.force)
         print(f"7-Stage Auto loop complete: {result}")
         return 0 if result.get("converged") else 1
-
-    elif args.ab:
-        ab_items = list(args.ab)
-        if len(ab_items) < 2:
-            print("Error: --ab requires 2 targets (e.g., --ab target_1 target_2)")
-            return 1
-        target_a, target_b = ab_items[0], ab_items[1]
-        shapes = args.shapes.split(",") if args.shapes else None
-        result = driver.run_ab_test(target_a, target_b, shapes)
-        print(f"Stage 7 A/B test complete: {len(result['verdicts'])} verdicts")
-        return 0
 
     else:
         parser.print_help()

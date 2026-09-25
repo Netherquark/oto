@@ -105,7 +105,7 @@ This project's driver source (outside that tree, still **calls into** it):
 - `report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
   (single-file HTML dashboard; inline SVG/CSS, Carbon design language)
 - `registry.py` — append-only SQLite registry (`gfx90c_results/registry.db`, WAL)
-- `analytics.py` — per-cell analytics, native-vs-spoof deltas, RED-list generation
+- `analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing, ORANGE = below ceiling)
 
 The gfx90c delta (the entire change vs upstream — see section 3):
 
@@ -230,29 +230,29 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 ## 6. Shipped gfx900 Footprint
 
-> The replication goal (see `mapping.md`): **28 frozen family libraries, 3,066
-> kernels** — zero of which are loadable on gfx90c today. That absence is the gap:
+> The replication goal (see `mapping.md`): **28 frozen family libraries, 2,285
+> distinct shipped kernels** — zero of which are loadable on gfx90c today. That absence is the gap:
 > replicate this footprint and produce a `tensilelibrary` that performs all of these
 > functions natively on gfx90c (performing better than gfx900 spoofing). No more, no
 > less.
 
 28 families = 7 dtype families × 4 contraction patterns (section 5).
 
-Kernel counts per family (total 3,066):
+Kernel counts per family (total 2,285; the earlier 3,066 was per-file token counting):
 
 | Family | Kernels |
 |---|---|
 | CC | 64 |
-| DD | 104 |
+| DD | 96 |
 | ZZ | 26 |
-| HH | 314 |
+| HH | 223 |
 | HH_HPA | 424 |
 | HS_HPA | 493 |
-| SS | 1,641 |
+| SS | 959 |
 
 Character of the mesh:
 
-- **SS 1,641** — big-tile deep-K mesh; the dominant family by far.
+- **SS 959** — big-tile deep-K mesh; the dominant family by far.
 - **DD / ZZ** — small U-tiles.
 - **HH / HH_HPA / HS_HPA** — 64×64 tiles.
 - The mesh spans **459+ size-keys** and is a **defensive** coverage net — it is NOT a
@@ -336,7 +336,7 @@ Pipeline (in order):
 
 1. `port_tensile.py` + `registry.py` — persist raw benchmark records to SQLite
    (`gfx90c_results/registry.db`, append-only `records`).
-2. `analytics.py` — per-cell analytics, native-vs-spoof deltas, RED-list generation.
+2. `analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
 3. `report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
    (single-file dashboard). Report dtype extraction is token-based
    (`extract_dtype_from_phase_id`), no longer regex-dependent.
@@ -449,8 +449,9 @@ overwrite, or rewrite **benchmark evidence**.
 - **era** — suite era, named by first-run date; gates such as Phase-0 10/10 are per-era.
 - **PROTECT set** — the set of cells/records protected from modification or retirement;
   the append-only law applies to these absolutely.
-- **RED list** — the retirement list; entries marked retired are excluded from win/loss
-  scoring.
+- **RED cell** — a contract cell with no candidate measurement at all (MISSING);
+  ORANGE = measured but below the 50% realistic-ceiling gate; GREEN = at/above. Distinct
+  from the retirement list (stable cells excluded from re-benchmarking).
 - **EnqueuesPerSync / Syncs** — brick sizes; small for smoke gates, large for
   production benchmarking (smoke-vs-production note, section 4).
 - **tensilelibrary** — the assembled library artifact (`.dat` / `.co`) plus dispatch

@@ -9,6 +9,111 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Run-wide telemetry + gpu_busy_percent path + peak-table reconciliation] 2026-09-25
+
+- **Telemetry is now run-wide, not per-phase.** `telemetry.py` `TelemetrySampler`
+  gained `set_phase()` + a `phase_id` column and a restart-safe `start()` (header
+  written only when missing; never truncates). `port_tensile.TensileDriver` keeps
+  one sampler per run dir via `_ensure_telemetry()`, tagging every row with the
+  active phase in `execute_phase` and clearing the tag in its `finally`. Previously
+  each phase created a fresh sampler whose `start()` truncated `telemetry.csv`, so
+  a ~9.5h run kept only the last (~46s, itself an idle failed-at-compile ZZ phase)
+  window — the root cause of "telemetry only measured for ~40 seconds".
+  `run_gfx900_reference` stops the sampler on its run-dir swap. `report.py` reads
+  the CSV by column name (`csv.DictReader`), so the extra column is transparent.
+- **gpu_busy_percent path hardened.** Primary discovery now requires the candidate
+  card dir to actually expose `gpu_busy_percent` (rejects connector dirs like
+  `card1-DP-1/device`, which symlink to the card node and have no busy file); the
+  `/sys/class/hwmon` fallback no longer appends `/device` (double-suffix never
+  resolved → busy would always read 0 if the fallback ever fired), and a sampler
+  that cannot find the busy file prints a one-time warning instead of silently
+  logging zeros. The surviving run's busy=0 was *correct* data — its last phase
+  failed during compilation (GPU never woke; sclk pinned 400 MHz).
+- **Peak/ceiling tables reconciled** (`gfx90c_common.py` is the single authority;
+  `gfx90c_theoretical_limits.md` §5 now quotes its exact values). Added the missing
+  BF16 `1109` and INT8 `881` entries to `REALISTIC_CEILINGS`; §5 updates 1119→1118.7
+  (SS/CC/HH_HPA/HS_HPA), ~98→98.6 (ZZ); §2.1 notes `PEAK_GFLOPS['FP64']` stores the
+  rounded 101 (vs derived 100.8). Removed the stale "(replaced by …)" comment in
+  `gfx90c_common.py`.
+
+## [Shipped-dat gfx900 reference floor + red/orange cell semantics] 2026-09-25
+
+- **New `tensile_library.py`.** Parses the system ROCm `TensileLibrary_*_gfx900.dat`
+  binaries directly (msgpack length-prefixed solution names, marker-canonicalized
+  `Cijk_...`), unions every installed ROCm prefix (`/usr` + `/opt/rocm`), emits one
+  spoof phase per shipped kernel with its MT/WG/VW/DepthU/GSU knobs, and pins the
+  result once at `gfx90c_results/gfx900_shipped_manifest.json` (pin-on-first-load,
+  `refresh=True` re-scans). Live expected counts: SS 959, DD 96, HH 223, CC 64,
+  ZZ 26, HH_HPA 424, HS_HPA 493 → **2,285** distinct shipped kernels (the old 3,066
+  was per-file token counting). Config generation validated on all families
+  (2,164/2,285 assembly-legal under the class gate).
+- **One-time reference run (`--gfx900-reference`).** Benchmarks every shipped
+  gfx900 kernel once (ScheduleName `vega10`, `FAMILY_SHAPES` deck) into a dedicated
+  `gfx900_ref_*` run; later A/B `_compute_ab_verdicts` *recalls* it forever instead
+  of re-running per-run baselines. The 8 hand-authored `*_baseline_*` phases were
+  removed from `phases.yaml`; `run_auto` now just checks the reference run exists.
+- **RED = MISSING, ORANGE = <50%.** `analytics.classify_cell_status` classifies each
+  gfx900 contract cell `(family, deck-shape)` from `FAMILY_SHAPES` (38 cells):
+  RED if unmeasured this run, ORANGE if best measured candidate is below the
+  family realistic ceiling threshold, else GREEN. `report.py` gate/summary/JSON/HTML
+  reworked to these semantics, with per-family coverage denominators now derived
+  from the pinned manifest and the reference-run provenance embedded in the report.
+- **Perf fix.** `_ab_records_from_csv` re-parsed the 9k-line `phases.yaml` per CSV
+  (hundreds of parses per report); it now builds a phase-id → phase dict once
+  (~120s → ~1s per report regeneration).
+
+## [Cruft audit + convergence contract + CLI stage dispatch] 2026-09-25
+
+- **Convergence contract fixed (`agent.converged()`).** Removed the `iteration < 10`
+  bypass; budget exhaustion is now a STOP that returns `converged=False` (never
+  reported as a pass), and a CV ≤ 15% per-cell stability gate was added via the new
+  `CellAnalytics.cv` field. Criteria: no below-ceiling cells, ≥3 configs/cell, ≥2
+  independent runs/cell.
+- **Mutation family loss fixed (`agent.mutate_and_feed`).** Winners now harvest their
+  `.family` token, mutation derives the Tensile DataType from `FAMILY_DTYPE_CHAR`
+  instead of raw dtype char, so HH / HH_HPA / HS_HPA winners no longer silently fall
+  back to FP32. Harvest/emit now carry `is_below_ceiling`; agent construction dropped
+  the unused `max_iterations`/`red_threshold_pct` kwargs (driver updated).
+- **Single-path retirement.** Removed dead `classify_retirement_tier`,
+  `apply_d2_4_protection`, `classify_tie`, `should_repeat`, `classify_stability`
+  (policy.py) and registry `append_records`/`get_run_info`/`get_latest_run_dir`/
+  `has_phase_passed`; retirement is the single Tier-2 path via
+  `check_retirement_eligibility` + `should_run`/`is_config_retired`.
+- **`--stage 1-7` dispatch + bugs.** `create_run` now recognizes stage `"7"` (the old
+  `"report" in args.stage` never matched the number, minting stray runs); read-only
+  stages 2/4/5/7 no longer create runs; stages 1-5 have explicit handlers (preflight /
+  candidate plan / benchmark / retirement sweep / analytics summary).
+- **`--force` no longer a no-op.** Wired as `opt_in_identical_skip=False` through
+  `run_auto` (flag was previously parsed but never read).
+- **RED semantics rename.** `is_red` → `is_below_ceiling` (report RED = missing
+  contract cell stays untouched); `Red` → `below_ceiling` in harvest/convergence.
+- **Coverage metric fixed.** `_compute_family_coverage` denominator is now the
+  contract deck (`FAMILY_SHAPES[family]`, coverage = deck cells measured); the
+  shipped-kernel footprint moves to informational `footprint_pct` in the report.
+- **Centralized maps.** `REALISTIC_CEILINGS` (SS 1118.7 / DD 98.6 / HH 2461.0 /
+  ZZ 98.6 / CC 1118.7 / HH_HPA 1118.7 / HS_HPA 1118.7) and `FAMILY_DTYPE_CHAR` are
+  now both canonical in `gfx90c_common.py`; `tensile_library.py`, `analytics.py`,
+  `scheduler.py`, `report.py`, `agent.py` import them (family decks use
+  `MAX_WAVES_PER_CU` instead of a hardcoded 40).
+- **Dead code / imports / state removed.** Local unreferenced `TelemetrySampler`
+  class + `termios`/`tty`/`Set`/`PEAK_GFLOPS` imports in `port_tensile.py`;
+  `MANIFEST_KEY`/`expected_kernels_from_manifest` (tensile_library.py);
+  `persist_analytics`, `THEORETICAL_PEAKS`/`DDR_ROOFLINE_GBPS` deps (analytics.py);
+  `compute_ab_verdict`, `_family_to_dtype`/`mapping_path` (report.py);
+  `classify_bound_class` (scheduler.py); orphan
+  `tools/__pycache__/merge_draft_gfx90c.cpython-314.pyc`.
+- **Regression caught & fixed during the audit.** `_KNOWN_FAMILIES` (analytics) lost
+  its lowercasing when re-derived from `FAMILY_DTYPE_CHAR`, breaking every
+  `extract_family_from_phase_id` match, and the `dtype_to_family` fallback collapsed
+  the ambiguous `'H'` char to `HS_HPA`. Both fixed (lowercase prefix set; first-wins
+  char map → `'H'` = HH). Regenerated report identical to baseline: `Acceptance FAIL:
+  0 WIN / 0 TIE / 0 LOSS, 0 RED (missing) / 15 ORANGE (<50% ceiling)`.
+- **Docs sweep.** Replaced stale 3,066 pip-count references with the live 2,285
+  manifest split in `implementation_plan.md`, `knowledge_base.md`,
+  `knowledge_base_final.md`, `incomplete_work.md`; updated RED-list/RED-cell
+  terminology and dead-helper mechanism claims; expanded the `gfx90c_common.py`
+  single-source-of-truth row.
+
 ## [Assembly-class gate + 295-phase deck + draft-merge tooling] 2026-09-20
 
 - **Class-based Assembly gate (`scheduler.assembly_class_valid`).** Faithful to

@@ -2,11 +2,10 @@
 """
 report.py — Stage 7: Acceptance A/B & Final Report
 
-Scoped same-run A/B (native vs spoof); per-family acceptance report.
+Scoped native-vs-shipped-floor A/B; per-family acceptance report.
 """
 
 import json
-import math
 import csv
 import statistics
 from pathlib import Path
@@ -14,14 +13,15 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from gfx90c_common import PEAK_GFLOPS, FAMILY_DTYPES, THEORETICAL_PEAKS
-from analytics import AnalyticsEngine, CellAnalytics, REALISTIC_CEILINGS, FAMILY_TO_DTYPE
-from policy import aggregate_cell, classify_tie
+from gfx90c_common import PEAK_GFLOPS, FAMILY_DTYPES, THEORETICAL_PEAKS, FAMILY_SHAPES, REALISTIC_CEILINGS
+from analytics import AnalyticsEngine, CellAnalytics, FAMILY_TO_DTYPE
+from policy import aggregate_cell
+import tensile_library as tlib
 
 
 @dataclass
 class ABVerdict:
-    """Result of same-run A/B comparison."""
+    """Result of native-vs-shipped-floor A/B comparison."""
     dtype: str
     shape: str
     native_median: float
@@ -30,6 +30,7 @@ class ABVerdict:
     tie: bool
     verdict: str  # "WIN", "TIE", "LOSS"
     fp: str = ""  # spoof entity fingerprint (config) being compared
+    family: str = ""  # family from the spoof phase (SS/DD/HH/HH_HPA/HS_HPA/CC/ZZ)
 
 
 @dataclass
@@ -45,6 +46,9 @@ class AcceptanceReport:
     all_analytics: List[CellAnalytics] = field(default_factory=list)
     run_dir: Optional[str] = None
     family_timing: Optional[Dict[str, Dict[str, Any]]] = None
+    orange_list: List[Dict[str, Any]] = field(default_factory=list)
+    reference_run_id: Optional[str] = None
+    shipped_manifest: Optional[Dict[str, Any]] = None
 
 
 class AcceptanceReporter:
@@ -53,58 +57,6 @@ class AcceptanceReporter:
     def __init__(self, base_dir: Path, cooldown_s: int = 30):
         self.base_dir = Path(base_dir)
         self.cooldown_s = cooldown_s
-        self.mapping_path = self.base_dir / "mapping.md"
-
-    def compute_ab_verdict(
-        self,
-        native_seeds: List[float],
-        spoof_seeds: List[float],
-        dtype: str,
-        shape: str,
-        tie_band_pct: float = 5.0
-    ) -> ABVerdict:
-        """
-        Compute A/B verdict from seed lists.
-
-        Args:
-            native_seeds: List of native benchmark results
-            spoof_seeds: List of spoof benchmark results
-            dtype: Data type
-            shape: Problem shape
-            tie_band_pct: ±% band for tie classification (default 5%)
-
-        Returns:
-            ABVerdict object
-        """
-        if not native_seeds or not spoof_seeds:
-            raise ValueError("Both native and spoof must have seeds")
-
-        native_agg = aggregate_cell(native_seeds)
-        spoof_agg = aggregate_cell(spoof_seeds)
-
-        delta_pct = (
-            ((native_agg.median - spoof_agg.median) / spoof_agg.median * 100.0)
-            if spoof_agg.median > 0 else 0.0
-        )
-
-        tie = classify_tie(spoof_agg.median, native_agg.median, tie_band_pct)
-
-        if tie:
-            verdict = "TIE"
-        elif delta_pct > 0:
-            verdict = "WIN"
-        else:
-            verdict = "LOSS"
-
-        return ABVerdict(
-            dtype=dtype,
-            shape=shape,
-            native_median=native_agg.median,
-            spoof_median=spoof_agg.median,
-            delta_pct=delta_pct,
-            tie=tie,
-            verdict=verdict
-        )
 
     def generate_acceptance_report(
         self,
@@ -113,12 +65,20 @@ class AcceptanceReporter:
         all_analytics: List[CellAnalytics],
         red_list: List[Dict[str, Any]],
         red_threshold_pct: float = 50.0,
-        family_timing: Optional[Dict[str, Dict[str, Any]]] = None
+        family_timing: Optional[Dict[str, Dict[str, Any]]] = None,
+        orange_list: Optional[List[Dict[str, Any]]] = None,
+        reference_run_id: Optional[str] = None
     ) -> AcceptanceReport:
         """Generate final acceptance report."""
-        per_family_coverage = self._compute_family_coverage(all_analytics)
-        overall_pass = self._compute_overall_pass(ab_verdicts, red_list, red_threshold_pct)
-        summary = self._generate_summary(ab_verdicts, red_list, overall_pass)
+        orange_list = orange_list or []
+        shipped = self._load_shipped_manifest()
+        per_family_coverage = self._compute_family_coverage(all_analytics, shipped)
+        overall_pass = self._compute_overall_pass(
+            ab_verdicts, red_list, orange_list, red_threshold_pct, reference_run_id
+        )
+        summary = self._generate_summary(
+            ab_verdicts, red_list, orange_list, overall_pass, reference_run_id
+        )
 
         return AcceptanceReport(
             timestamp=datetime.now().isoformat(),
@@ -130,43 +90,62 @@ class AcceptanceReporter:
             summary=summary,
             all_analytics=all_analytics,
             run_dir=str(self.base_dir / "gfx90c_runs" / run_id) if self.base_dir else None,
-            family_timing=family_timing
+            family_timing=family_timing,
+            orange_list=orange_list,
+            reference_run_id=reference_run_id,
+            shipped_manifest=shipped
         )
+
+    def _load_shipped_manifest(self) -> Dict[str, Any]:
+        """Pinned (scan-once) gfx900 shipped-library manifest for this repo."""
+        try:
+            return tlib.load_shipped_manifest(self.base_dir)
+        except Exception:
+            return {"expected_kernels": {}, "total_shipped_kernels": 0}
 
     def _compute_family_coverage(
         self,
-        all_analytics: List[CellAnalytics]
+        all_analytics: List[CellAnalytics],
+        shipped: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Dict[str, Any]]:
         """
-        Compute per-family coverage vs mapping.md contract (7 families).
+        Compute per-family coverage of the gfx900 contract deck.
+
+        The contract deck is each family's canonical FAMILY_SHAPES cube grid
+        (the cells the acceptance report classifies RED/ORANGE/GREEN).
+        Numerator = distinct *deck cells* measured; denominator = len(deck).
+        The shipped gfx900 footprint (expected_kernels from the pinned dat
+        manifest) is reported separately as an informational `footprint_pct`,
+        not as the coverage gate — measuring N deck shapes against thousands of
+        shipped kernels would cap coverage at a meaningless ~1%.
         """
+        shipped = shipped or self._load_shipped_manifest()
+        expected_kernels = shipped.get("expected_kernels", {})
         expected_families = ["CC", "DD", "ZZ", "HH", "HH_HPA", "HS_HPA", "SS"]
-        expected_kernels = {
-            "CC": 64,
-            "DD": 104,
-            "ZZ": 26,
-            "HH": 314,
-            "HH_HPA": 424,
-            "HS_HPA": 493,
-            "SS": 1641,
-        }
 
         coverage = {}
         for family in expected_families:
             fam_lower = family.lower()
             # Match by explicit family prefix first (distinguishes HH / HH_HPA / HS_HPA),
-            # fall back to single-letter dtype / family name / display name for cells
-            # that carry no family tag (older runs / aggregate_by_cell path).
+            # fall back to single-letter dtype / family name for cells that carry
+            # no family tag (older runs / aggregate_by_cell path).
             family_cells = [a for a in all_analytics
                             if a.family == fam_lower]
             if not family_cells:
                 short = FAMILY_TO_DTYPE.get(fam_lower)
                 family_cells = [a for a in all_analytics
-                                if a.dtype == short or a.dtype == family or a.dtype == self._family_to_dtype(family)]
+                                if a.dtype == short or a.dtype == family]
 
             ceiling = REALISTIC_CEILINGS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
             theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
             best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
+
+            # Contract deck: distinct family deck shapes measured (the cells the
+            # acceptance grid classifies), distinct from the config-cell count.
+            deck_sizes = FAMILY_SHAPES.get(family, [])
+            deck_shapes = {f"{s}x{s}x{s}" for s in deck_sizes}
+            measured_shapes = {a.shape for a in family_cells}
+            deck_cells_measured = len(measured_shapes & deck_shapes)
 
             # Per-kernel-size breakdown (256/512/1024/2048/... cube sides, GEMV M dim).
             by_size: Dict[str, Dict[str, Any]] = {}
@@ -181,11 +160,14 @@ class AcceptanceReporter:
                 bucket["pct_of_ceiling"] = (bucket["best_median"] / ceiling * 100.0) if ceiling > 0 else 0.0
                 bucket["pct_of_theoretical"] = (bucket["best_median"] / theoretical * 100.0) if theoretical > 0 else 0.0
 
+            exp = expected_kernels.get(family, 0)
             coverage[family] = {
-                "expected_kernels": expected_kernels[family],
+                "expected_kernels": exp,
+                "deck_cells_measured": deck_cells_measured,
+                "deck_cells": len(deck_shapes),
+                "coverage_pct": (deck_cells_measured / len(deck_shapes) * 100.0) if deck_shapes else 0.0,
                 "measured_cells": len(family_cells),
-                "coverage_pct": min(100.0, (len(family_cells) / expected_kernels[family] * 100.0)
-                                  if expected_kernels[family] > 0 else 0.0),
+                "footprint_pct": min(100.0, (len(family_cells) / exp * 100.0) if exp > 0 else 0.0),
                 "best_median": best_median,
                 "ceiling_gflops": ceiling,
                 "theoretical_peak_gflops": theoretical,
@@ -207,25 +189,25 @@ class AcceptanceReporter:
         except (ValueError, IndexError):
             return "?"
 
-    def _family_to_dtype(self, family: str) -> str:
-        mapping = {
-            "SS": "FP32",
-            "DD": "FP64",
-            "HH": "FP16",
-            "CC": "FP32",   # complex single (DataType C)
-            "ZZ": "FP64",   # complex double (DataType Z)
-            "HH_HPA": "FP32",
-            "HS_HPA": "FP32",
-        }
-        return mapping.get(family, "FP32")
-
     def _compute_overall_pass(
         self,
         ab_verdicts: List[ABVerdict],
         red_list: List[Dict[str, Any]],
-        red_threshold_pct: float = 50.0
+        orange_list: List[Dict[str, Any]],
+        red_threshold_pct: float = 50.0,
+        reference_run_id: Optional[str] = None
     ) -> bool:
-        if not ab_verdicts and not red_list:
+        """Pass only if every gfx900 contract cell is covered and at/above threshold.
+
+        red_list = MISSING cells (no measurement), orange_list = measured but
+        below the acceptance ceiling threshold. Both are blocking. With no
+        recalled shipped reference floor there is no comparison basis, so the
+        run can never pass ("no data" is not a pass).
+        """
+        if not reference_run_id:
+            return False
+
+        if not ab_verdicts and not red_list and not orange_list:
             return True
 
         wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
@@ -235,7 +217,10 @@ class AcceptanceReporter:
         if losses > (wins + ties):
             return False
 
-        for cell in red_list:
+        if red_list:
+            return False
+
+        for cell in orange_list:
             if cell.get("pct_of_ceiling", 0.0) < red_threshold_pct:
                 return False
 
@@ -245,16 +230,24 @@ class AcceptanceReporter:
         self,
         ab_verdicts: List[ABVerdict],
         red_list: List[Dict[str, Any]],
-        overall_pass: bool
+        orange_list: List[Dict[str, Any]],
+        overall_pass: bool,
+        reference_run_id: Optional[str] = None,
+        red_threshold_pct: float = 50.0
     ) -> str:
         wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
         ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
         losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
 
         status = "PASS" if overall_pass else "FAIL"
+        if reference_run_id:
+            ref = f" (ref {reference_run_id})"
+        else:
+            ref = " (no shipped gfx900 reference floor yet — run --gfx900-reference or --auto)"
         return (
-            f"Acceptance {status}: {wins} WIN / {ties} TIE / {losses} LOSS vs spoof floor. "
-            f"{len(red_list)} RED cells remain."
+            f"Acceptance {status}: {wins} WIN / {ties} TIE / {losses} LOSS vs "
+            f"gfx900 shipped floor{ref}. {len(red_list)} RED (missing) / "
+            f"{len(orange_list)} ORANGE (<{int(red_threshold_pct)}% ceiling) cells."
         )
 
     def write_report(self, report: AcceptanceReport, output_path: Optional[Path] = None) -> None:
@@ -274,6 +267,7 @@ class AcceptanceReporter:
                     "fp": v.fp,
                     "native_median": v.native_median,
                     "spoof_median": v.spoof_median,
+                    "family": v.family,
                     "delta_pct": v.delta_pct,
                     "tie": v.tie,
                     "verdict": v.verdict
@@ -281,6 +275,14 @@ class AcceptanceReporter:
                 for v in report.per_cell_verdicts
             ],
             "red_list": report.red_list,
+            "orange_list": report.orange_list,
+            "reference_run_id": report.reference_run_id,
+            "shipped_manifest": {
+                "total_shipped_kernels": (report.shipped_manifest or {}).get("total_shipped_kernels", 0),
+                "expected_kernels": (report.shipped_manifest or {}).get("expected_kernels", {}),
+                "rocm_prefixes": (report.shipped_manifest or {}).get("rocm_prefixes", []),
+                "generated_at": (report.shipped_manifest or {}).get("generated_at", ""),
+            },
             "overall_pass": report.overall_pass,
             "summary": report.summary
         }
@@ -303,7 +305,7 @@ class AcceptanceReporter:
         status_badge = "Pass" if report.overall_pass else "Fail"
         status_class = "tag-pass" if report.overall_pass else "tag-fail"
 
-        verdict_rows = ""
+        verdict_families = {}  # family -> list of row html fragments
         for v in report.per_cell_verdicts:
             if v.verdict == "WIN":
                 v_cls, v_color = "tag-win", "var(--support-success)"
@@ -311,7 +313,7 @@ class AcceptanceReporter:
                 v_cls, v_color = "tag-tie", "var(--support-info)"
             else:
                 v_cls, v_color = "tag-loss", "var(--support-error)"
-            verdict_rows += f"""
+            row = f"""
             <tr>
                 <td><code>{v.dtype}</code></td>
                 <td class="mono strong">{v.shape}</td>
@@ -322,6 +324,32 @@ class AcceptanceReporter:
                 <td><span class="tag {v_cls}">{v.verdict}</span></td>
             </tr>
             """
+            verdict_families.setdefault(v.family or v.dtype or "Unknown", []).append(row)
+        verdict_sections = ""
+        for fam in sorted(verdict_families):
+            fam_rows = "".join(verdict_families[fam])
+            verdict_sections += f"""
+        <section class="section">
+            <h2 class="section-title">Native vs spoof A/B &mdash; {fam}</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dtype</th>
+                            <th>Problem shape</th>
+                            <th>Spoof entity (config)</th>
+                            <th>Best native median</th>
+                            <th>Spoof median</th>
+                            <th>Delta (%)</th>
+                            <th>Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody>{fam_rows}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        """
 
         # Build family rows with a dynamic "vs acceptance ceiling" scale:
         # scale = max(100%, max measured) so values >100% are never clipped and the
@@ -408,7 +436,7 @@ class AcceptanceReporter:
                     {f'<button type="button" class="row-toggle" aria-expanded="false" aria-controls="{expand_id}" data-target="{expand_id}"><span class="caret" aria-hidden="true">&#9656;</span></button>' if sizes else ''}
                     {fam}
                 </td>
-                <td class="num">{cov.get('measured_cells', 0)} / {cov.get('expected_kernels', 0)}</td>
+                <td class="num">{cov.get('deck_cells_measured', 0)} / {cov.get('deck_cells', 0)} <span class="mono secondary" title="distinct shipped gfx900 kernels in the pinned manifest for this family">{cov.get('expected_kernels', 0)} shipped</span></td>
                 <td class="num strong">{best:.1f}</td>
                 <td class="num secondary">{ceil:.1f}</td>
                 <td class="num secondary">{theo:.1f}</td>
@@ -423,6 +451,7 @@ class AcceptanceReporter:
         section_explore = self._problem_space_section(report)
         section_coverage_matrix = self._coverage_matrix_section(report)
         section_telemetry = self._telemetry_section(report)
+        section_cell_status = self._cell_status_section(report)
 
         css = """
         :root {
@@ -442,9 +471,11 @@ class AcceptanceReporter:
             --support-success: #24a148;
             --support-error: #da1e28;
             --support-info: #0f62fe;
+            --support-warning: #b28600;
             --tag-success-bg: #defbe6;
             --tag-error-bg: #fff1f1;
             --tag-info-bg: #edf5ff;
+            --tag-warning-bg: #fff8dd;
             --track: #e0e0e0;
             --hover-row: #e8e8e8;
             --viz-1: #0f62fe;
@@ -465,9 +496,11 @@ class AcceptanceReporter:
             --support-success: #42be65;
             --support-error: #fa4d56;
             --support-info: #78a9ff;
+            --support-warning: #f1c21b;
             --tag-success-bg: #0a2b12;
             --tag-error-bg: #3a1212;
             --tag-info-bg: #0f2b4d;
+            --tag-warning-bg: #33270a;
             --track: #393939;
             --hover-row: #252525;
             --viz-1: #78a9ff;
@@ -489,9 +522,11 @@ class AcceptanceReporter:
                 --support-success: #42be65;
                 --support-error: #fa4d56;
                 --support-info: #78a9ff;
+                --support-warning: #f1c21b;
                 --tag-success-bg: #0a2b12;
                 --tag-error-bg: #3a1212;
                 --tag-info-bg: #0f2b4d;
+                --tag-warning-bg: #33270a;
                 --track: #393939;
                 --hover-row: #252525;
                 --viz-1: #78a9ff;
@@ -626,6 +661,7 @@ class AcceptanceReporter:
         .tag-win { color: var(--support-success); background: var(--tag-success-bg); }
         .tag-tie { color: var(--support-info); background: var(--tag-info-bg); }
         .tag-loss { color: var(--support-error); background: var(--tag-error-bg); }
+        .tag-orange { color: var(--support-warning); background: var(--tag-warning-bg); }
         .bar-wrap { display: inline-flex; align-items: center; gap: 4px; }
         .bar {
             display: inline-block;
@@ -765,6 +801,7 @@ class AcceptanceReporter:
         <h1 class="page-title">Acceptance Report</h1>
         <p class="page-sub">
             Run ID: <code>{report.run_id}</code> &middot; Timestamp: {now}
+            {self._provenance_line(report)}
         </p>
 
         <div class="metrics">
@@ -777,12 +814,16 @@ class AcceptanceReporter:
                 <div class="metric-value">{len(report.per_cell_verdicts)}</div>
             </div>
             <div class="metric">
-                <div class="metric-label">Red cells remaining</div>
+                <div class="metric-label">Red (missing)</div>
                 <div class="metric-value" style="color: {red_color};">{len(report.red_list)}</div>
             </div>
             <div class="metric">
-                <div class="metric-label">Architecture target</div>
-                <div class="metric-value">gfx90c (Vega 7)</div>
+                <div class="metric-label">Orange (&lt;50% ceiling)</div>
+                <div class="metric-value" style="color: var(--support-info);">{len(report.orange_list)}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Shipped gfx900 kernels</div>
+                <div class="metric-value">{(report.shipped_manifest or {}).get('total_shipped_kernels', 0)}</div>
             </div>
         </div>
 
@@ -811,24 +852,11 @@ class AcceptanceReporter:
         <section class="section">
             <h2 class="section-title">Native vs spoof A/B head-to-head</h2>
             <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Dtype</th>
-                            <th>Problem shape</th>
-                            <th>Spoof entity (config)</th>
-                            <th>Best native median</th>
-                            <th>Spoof median</th>
-                            <th>Delta (%)</th>
-                            <th>Verdict</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {verdict_rows if verdict_rows else '<tr><td colspan="7" class="empty">No same-run A/B comparisons registered yet.</td></tr>'}
-                    </tbody>
-                </table>
+                {verdict_sections if verdict_sections else '<p class="empty">No native-vs-shipped-floor comparisons registered yet — run <code>--gfx900-reference</code> (established once, recalled forever) then a candidate run.</p>'}
             </div>
         </section>
+
+        {section_cell_status}
 
         {section_explore}
         {section_coverage_matrix}
@@ -843,6 +871,59 @@ class AcceptanceReporter:
         with open(html_path, "w") as f:
             f.write(html)
         print(f"Acceptance dashboard HTML generated at: {html_path}")
+
+    def _provenance_line(self, report) -> str:
+        """One-line provenance: spoof floor source + reference run + ROCm prefixes."""
+        out = ""
+        if report.reference_run_id:
+            out += f" &middot; Spoof floor: gfx900 shipped TensileLibrary (ref <code>{report.reference_run_id}</code>)"
+        prefixes = (report.shipped_manifest or {}).get("rocm_prefixes", [])
+        if prefixes:
+            out += f" &middot; ROCm: {', '.join('<code>%s</code>' % p for p in prefixes)}"
+        return out
+
+    def _cell_status_section(self, report) -> str:
+        """Gfx900 contract cell grid: RED missing / ORANGE below threshold / GREEN."""
+        cells = []
+        for e in report.red_list:
+            cells.append((e, "RED", "tag-loss", "var(--support-error)"))
+        for e in report.orange_list:
+            cells.append((e, "ORANGE", "tag-orange", "var(--support-warning)"))
+
+        row_html = ""
+        for e, label, cls, _color in cells:
+            row_html += f"""
+                <tr>
+                    <td class="mono strong">{e.get('family', e.get('dtype', ''))}</td>
+                    <td class="mono">{e.get('shape', '')}</td>
+                    <td class="num">{e.get('median_gflops', 0.0):.1f}</td>
+                    <td class="num">{e.get('pct_of_ceiling', 0.0):.1f}%</td>
+                    <td><span class="tag {cls}">{label}</span></td>
+                </tr>"""
+
+        if not row_html:
+            row_html = '<tr><td colspan="5" class="empty">No missing or below-threshold cells — every gfx900 contract cell covered at/above the bar.</td></tr>'
+
+        return f"""
+        <section class="section">
+            <h2 class="section-title">gfx900 contract cells (RED = missing, ORANGE = &lt;50% ceiling)</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Family</th>
+                            <th>Problem shape</th>
+                            <th>Best median</th>
+                            <th>% of ceiling</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>{row_html}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        """
 
     def _problem_space_section(self, report) -> str:
         """Problem-space table derived from the recorded cell analytics."""
@@ -867,7 +948,8 @@ class AcceptanceReporter:
             entry = cov.get(label)
             if entry:
                 footprint = (f"{entry['coverage_pct']:.1f}% "
-                             f"({entry['measured_cells']}/{entry['expected_kernels']} kernels)")
+                             f"({entry['deck_cells_measured']}/{entry['deck_cells']} deck cells; "
+                             f"{entry['measured_cells']} config-cells)")
             else:
                 footprint = "—"
             rows += f"""
@@ -915,7 +997,9 @@ class AcceptanceReporter:
             cov = report.per_family_coverage.get(fam)
             t = timing.get(fam)
             if cov is not None:
-                completed = f"{cov['measured_cells']} / {cov['expected_kernels']}"
+                completed = (f"{cov['deck_cells_measured']} / {cov['deck_cells']} deck"
+                             f" <span class=\"mono secondary\" title=\"measured config-cells vs shipped kernels\">"
+                             f"{cov['measured_cells']} / {cov['expected_kernels']} kernels</span>")
                 measured = cov["measured_cells"] > 0
             else:
                 completed = f"{t['cells'] if t else 0} / —"
