@@ -922,7 +922,9 @@ class TensileDriver:
         return results
 
     def run_gfx900_reference(self, refresh: bool = False, limit: Optional[int] = None,
-                             ref_shapes: Optional[List[str]] = None) -> Dict[str, Any]:
+                             ref_shapes: Optional[List[str]] = None,
+                             resume: bool = False,
+                             resume_base: Optional[str] = None) -> Dict[str, Any]:
         """
         One-time benchmark of every shipped gfx900 kernel from the system dat.
 
@@ -931,60 +933,90 @@ class TensileDriver:
         gfx900_ref_* run (ScheduleName=vega10 → spoof arm). Once completed,
         future A/B comparisons recall this run — never re-run — forever.
 
-        limit selects at most N phases spread across distinct families (each
-        family contributes one phase before any family gets a second), which
-        makes `--limit` a cheap cross-family smoke test. ref_shapes restricts
-        the deck to the given cube sides (default: the full FAMILY_SHAPES
-        deck), for light runs under memory pressure.
+        resume=True targets ONLY the phases of the base run's deck that have no
+        definite verdict yet (unattempted + previously-started-without-end).
+        The base is the newest completed non-smoke reference run (or
+        resume_base); the completed base phases are reused as-is, and a new
+        gfx900_ref_*_resume run is created that records resume_of=<base>, so
+        the reference_chain() fixture spans base+resume as one logical floor.
+        smoke/limit/ref_shapes are ignored in resume mode.
         """
         from scheduler import assembly_class_valid
 
-        manifest = tlib.load_shipped_manifest(self.base_dir, refresh=refresh)
-        phases = tlib.emit_spoof_phases(manifest)
+        manifest = tlib.load_shipped_manifest(
+            self.base_dir, refresh=(not resume and refresh))
+        resume_meta: Dict[str, Any] = {}
+        if resume:
+            chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+            base = resume_base or (chain_ids[0] if chain_ids else None)
+            if not base:
+                return {"status": "failed",
+                        "reason": "resume requires an existing completed "
+                                  "gfx900 reference run"}
+            base_dir = self.base_dir / "gfx90c_runs" / base
+            base_yaml = base_dir / "phases_reference.yaml"
+            if not base_yaml.is_file():
+                return {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
+            with open(base_yaml) as f:
+                deck = yaml.safe_load(f) or []
+            completed, _ = self._chain_phase_sets(chain_ids)
+            phases = [p for p in deck
+                      if str(p.get("phase_id", "")) not in completed]
+            resume_meta = {"gfx900_resume": True, "resume_of": base}
+            if not phases:
+                print("[gfx900-reference] reference deck already fully completed — "
+                      "nothing to resume")
+                return {"status": "noop", "run_id": base,
+                        "phases_targeted": 0, "phases_executed": 0, "results": 0}
+        else:
+            phases = tlib.emit_spoof_phases(manifest)
 
-        # Deck-shape filter + family-spread limit. Prefer assembly-legal phases
-        # so an empty smoke can never be spuriously "completed" (and recalled).
-        def _legal(p: Dict[str, Any]) -> bool:
-            gate = {**p.get("config", {}), "DataType": p.get("dtype"),
-                    "label": p.get("label", "")}
-            ok, _ = assembly_class_valid(gate)
-            return ok
+            # Deck-shape filter + family-spread limit. Prefer assembly-legal phases
+            # so an empty smoke can never be spuriously "completed" (and recalled).
+            def _legal(p: Dict[str, Any]) -> bool:
+                gate = {**p.get("config", {}), "DataType": p.get("dtype"),
+                        "label": p.get("label", "")}
+                ok, _ = assembly_class_valid(gate)
+                return ok
 
-        if ref_shapes:
-            wanted = {str(int(s)) for s in ref_shapes}
-            kept = []
-            for p in phases:
-                kept_shapes = [s for s in p.get("shapes", [])
-                               if str(int(s.split("x")[0]) if "x" in s else s) in wanted]
-                if kept_shapes:
-                    p = dict(p)
-                    p["shapes"] = kept_shapes
-                    kept.append(p)
-            phases = kept
+            if ref_shapes:
+                wanted = {str(int(s)) for s in ref_shapes}
+                kept = []
+                for p in phases:
+                    kept_shapes = [s for s in p.get("shapes", [])
+                                   if str(int(s.split("x")[0]) if "x" in s else s) in wanted]
+                    if kept_shapes:
+                        p = dict(p)
+                        p["shapes"] = kept_shapes
+                        kept.append(p)
+                phases = kept
 
-        if limit:
-            picked: List[Dict[str, Any]] = []
-            seen_fam = set()
-            for p in phases:
-                fam = p["label"].split("_")[1]
-                if fam in seen_fam:
-                    continue
-                if not _legal(p):
-                    continue
-                picked.append(p)
-                seen_fam.add(fam)
-                if len(picked) >= int(limit):
-                    break
-            phases = picked
+            if limit:
+                picked: List[Dict[str, Any]] = []
+                seen_fam = set()
+                for p in phases:
+                    fam = p["label"].split("_")[1]
+                    if fam in seen_fam:
+                        continue
+                    if not _legal(p):
+                        continue
+                    picked.append(p)
+                    seen_fam.add(fam)
+                    if len(picked) >= int(limit):
+                        break
+                phases = picked
 
         if not phases:
             return {"status": "failed", "reason": "no eligible shipped phases emitted"}
 
         print(f"[gfx900-reference] {len(phases)} shipped phase(s) from "
               f"{'+'.join(manifest.get('rocm_prefixes') or [])} "
-              f"({manifest.get('total_shipped_kernels', 0)} kernels)")
+              f"({manifest.get('total_shipped_kernels', 0)} kernels)"
+              + (f" [RESUME of {resume_meta.get('resume_of')}]" if resume_meta else ""))
 
         run_id = f"gfx900_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        if resume:
+            run_id = f"{run_id}_resume"
         prev_run_dir, prev_configs, prev_client = (
             self.run_dir, self.configs_dir, self.client_build_dir
         )
@@ -1008,20 +1040,22 @@ class TensileDriver:
                            if isinstance(r, dict) and r.get("status") == "success")
             if self._stop_requested:
                 status = "interrupted"
-            elif limit is not None:
+            elif limit is not None and not resume:
                 # Limited runs are smokes: they must NEVER become the recalled
                 # floor. Only an unlimited full --gfx900-reference is the floor.
                 status = "smoke"
             else:
                 status = "completed" if executed > 0 else "failed"
-            self.registry.update_run_status(run_id, status, {
+            run_meta = {
                 "gfx900_reference": True,
                 "shipped_kernels": manifest.get("total_shipped_kernels", 0),
                 "phases_targeted": len(phases),
                 "phases_executed": executed,
-                "smoke": limit is not None,
+                "smoke": limit is not None and not resume,
                 "source": phases_path.name,
-            })
+            }
+            run_meta.update(resume_meta)
+            self.registry.update_run_status(run_id, status, run_meta)
             if status == "smoke":
                 print("[gfx900-reference] smoke run marked 'smoke' — NOT recalled as "
                       "the A/B floor. Run `--gfx900-reference` WITHOUT --limit to "
@@ -1044,6 +1078,56 @@ class TensileDriver:
         if ref and exclude and ref == exclude:
             return None
         return ref
+
+    def _reference_floor_runs(self, run_id: Any) -> List[str]:
+        """Full resume chain of the recalled reference floor, newest first,
+        excluding the candidate run itself when it is a reference run."""
+        exclude = str(run_id) if str(run_id).startswith("gfx900_ref_") else None
+        chain = tlib.reference_chain(self.registry, exclude=exclude)
+        return [r for r in chain
+                if (self.base_dir / "gfx90c_runs" / r).is_dir()]
+
+    def _chain_phase_sets(self, run_ids: List[str]) -> Tuple[Set[str], Set[str]]:
+        """Per-phase verdict sets across the whole reference chain.
+
+        completed: phases that produced a kernel (status completed/success).
+        decided:   phases with any definite verdict (completed/success/failed).
+                   The gap deck - decided = unattempted (never started);
+                   the gap deck - completed = what a --resume must still try
+                   (unattempted + retried-free failed + started-without-end).
+        """
+        completed: Set[str] = set()
+        decided: Set[str] = set()
+        for rid in run_ids:
+            try:
+                records = self.registry.read_records(run_id=rid)
+            except Exception:
+                continue
+            for rec in records:
+                if not rec.get("phase_id"):
+                    continue
+                status = str(rec.get("status", "")).lower()
+                if status in ("completed", "success"):
+                    completed.add(str(rec["phase_id"]))
+                    decided.add(str(rec["phase_id"]))
+                elif status == "failed":
+                    decided.add(str(rec["phase_id"]))
+        return completed, decided
+
+    def _reference_remaining(self) -> int:
+        """Phases with no definite verdict left in the reference deck (the
+        completeness gate for --auto). -1 when no completed floor exists yet."""
+        chain = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        if not chain:
+            return -1
+        base_deck = (self.base_dir / "gfx90c_runs" / chain[-1]
+                     / "phases_reference.yaml")
+        try:
+            deck = yaml.safe_load(base_deck.read_text()) or []
+        except Exception:
+            return -1
+        _, decided = self._chain_phase_sets(chain)
+        return max(0, len(deck) - len(decided))
 
     def run_auto(
         self,
@@ -1070,11 +1154,34 @@ class TensileDriver:
             return {"converged": False, "reason": "Preflight aborted", "iterations": 0}
 
         # 2. A/B floor: a completed gfx900 reference run (recalled, not re-run).
-        #    Established once via --gfx900-reference; when absent -- auto runs
-        #    it up front so the shipped floor is never silently missing.
+        #    Established via --gfx900-reference, or by --auto. If the reference
+        #    deck is not fully decided yet, --auto RESUMES it (finishing only
+        #    the undecided shipped phases) and refuses to proceed with any
+        #    tuning until every shipped phase has a verdict.
         ref = self._latest_reference_run(exclude=self.run_dir.name)
         if ref:
             print(f"\n--- A/B floor: gfx900 shipped reference run {ref} (recalled) ---")
+            remaining = self._reference_remaining()
+            if remaining > 0:
+                print(f"Reference deck incomplete ({remaining} shipped phases "
+                      "without a verdict) — resuming it before tuning...")
+                ref_res = self.run_gfx900_reference(resume=True, resume_base=ref)
+                if str(ref_res.get("status")) not in ("completed", "noop"):
+                    print(f"Reference resume did not complete "
+                          f"({ref_res.get('status')}); aborting before any tuning.")
+                    return {"converged": False,
+                            "reason": f"reference deck incomplete after resume "
+                                      f"({ref_res.get('status')})",
+                            "iterations": 0}
+                remaining = self._reference_remaining()
+            if remaining > 0:
+                print(f"\nReference deck STILL {remaining} shipped phases undecided — "
+                      "aborting BEFORE any tuning (per the completeness gate: "
+                      "the reference floor must be fully decided first).")
+                return {"converged": False,
+                        "reason": f"reference deck incomplete ({remaining} undecided)",
+                        "iterations": 0}
+            print("--- reference floor fully decided; proceeding with tuning ---")
         else:
             print("\nNo completed gfx900 shipped reference floor found — "
                   "establishing it now (--gfx900-reference, full deck, once).")
@@ -1085,8 +1192,12 @@ class TensileDriver:
                       f"(freshly established) ---")
             else:
                 print(f"WARNING: reference benchmark did not complete "
-                      f"({ref_res.get('status')}); A/B verdicts will be empty "
-                      f"for this run.")
+                      f"({ref_res.get('status')}); aborting before any tuning "
+                      "— the floor must be fully decided first.")
+                return {"converged": False,
+                        "reason": "reference deck not established "
+                                  f"({ref_res.get('status')})",
+                        "iterations": 0}
 
         iteration = 0
         while iteration < budget and not self._stop_requested and not self._finish_after_iteration:
@@ -1276,14 +1387,11 @@ class TensileDriver:
             cell_status = self.analytics.classify_cell_status(all_analytics)
             red_list = cell_status["red"]
             family_timing = self._compute_family_timing(run_id)
-            ref_run = self._latest_reference_run(
-                exclude=run_id if str(run_id).startswith("gfx900_ref_") else None
-            )
-            if ref_run:
+            for ref_run in self._reference_floor_runs(run_id):
                 # Coverage matrix & execution time are derived from the gfx900
                 # shipped floor machinery: reference-run timings are authoritative
                 # for the shipped contract; the candidate run fills in families
-                # the floor did not cover.
+                # the floor did not cover. Chain runs (base + resume) merge.
                 ref_timing = self._compute_family_timing(ref_run)
                 family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
             ab_verdicts = self._compute_ab_verdicts(run_id, run_dir)
@@ -1486,16 +1594,17 @@ class TensileDriver:
         if not native_records:
             native_records, _spoof = self._ab_records_from_registry(run_id, force_arm="native")
 
-        # Spoof floor = recalled completed reference run (never re-run).
+        # Spoof floor = recalled completed reference run chain (never re-run).
         self._last_ab_reference_run_id = None
-        excludes = run_id if str(run_id).startswith("gfx900_ref_") else None
-        ref = self._latest_reference_run(exclude=excludes)
+        ref_run_ids = self._reference_floor_runs(run_id)
         spoof_records: List[Dict[str, Any]] = []
-        if ref:
+        for ref in ref_run_ids:
             ref_dir = self.base_dir / "gfx90c_runs" / ref
             if ref_dir.is_dir():
-                spoof_records, _ = self._ab_records_from_csv(ref_dir, force_arm="spoof")
-                self._last_ab_reference_run_id = ref
+                ref_records, _ = self._ab_records_from_csv(ref_dir, force_arm="spoof")
+                spoof_records.extend(ref_records)
+        if ref_run_ids:
+            self._last_ab_reference_run_id = ref_run_ids[0]
         if not spoof_records:
             print("[ab] no completed gfx900 reference floor found — A/B verdicts "
                   "deferred. Establish it with `--gfx900-reference` (or --auto, "
@@ -1718,6 +1827,13 @@ def main():
              "(comma-separated, e.g. 256,512) for light runs"
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="With --gfx900-reference: only benchmark the reference deck phases "
+             "that have no completed verdict yet (continues the newest completed "
+             "run; previously-failed phases are attempted once more)"
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Force execution even if identical fingerprint already passed"
@@ -1812,9 +1928,9 @@ def main():
     if args.gfx900_reference:
         ref_shapes = args.ref_shapes.split(",") if args.ref_shapes else None
         result = driver.run_gfx900_reference(refresh=args.refresh, limit=args.limit,
-                                             ref_shapes=ref_shapes)
+                                             ref_shapes=ref_shapes, resume=args.resume)
         print(f"gfx900 reference run: {result}")
-        return 0 if result.get("status") == "completed" else 1
+        return 0 if result.get("status") in ("completed", "noop") else 1
 
     # Stage 3 / semantic target execution
     if args.targets or args.family or args.pattern or args.shape or "3" in stage or "benchmark" in stage:

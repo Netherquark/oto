@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Graceful gfx900-reference resume + completeness gate] 2026-09-26
+
+- **Reference runs are now resumable.** `tensile_library.reference_chain()`
+  returns the newest completed, non-smoke `gfx900_ref_*` run plus its
+  `resume_of` ancestors as one logical floor; `port_tensile` `--gfx900-reference
+  --resume` creates `gfx900_ref_<ts>_resume` targeting ONLY the base deck's
+  phases with no completed verdict (unattempted + failed-again once), reusing
+  the completed base phases as-is (`_chain_phase_sets()` distinguishes
+  completed vs decided). A/B verdicts (`_compute_ab_verdicts`) and family
+  timings now recall the WHOLE chain, not the newest run alone, so cells split
+  across base and resume are never lost.
+- **`--auto` completeness gate.** If a completed reference run exists but the
+  deck has undecided phases, `run_auto` now resumes it first and refuses to
+  proceed with ANY tuning until `_reference_remaining() == 0` (every shipped
+  phase has a verdict — completed, or enumerated-invalid `failed`). Previously
+  a truncated (47%) run was silently recalled as the floor and the remaining
+  ~1096 phases were permanently dropped. `--gfx900-reference --resume` alone
+  returns `noop` when the deck is already complete.
+
 ## [Run-wide telemetry + gpu_busy_percent path + peak-table reconciliation] 2026-09-25
 
 - **Telemetry is now run-wide, not per-phase.** `telemetry.py` `TelemetrySampler`

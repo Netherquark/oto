@@ -405,3 +405,51 @@ def latest_reference_run_id(registry) -> Optional[str]:
     except Exception:
         return None
     return None
+
+
+def reference_chain(registry, exclude: Optional[str] = None) -> List[str]:
+    """
+    Newest-first list of completed, non-smoke gfx900_ref_* runs forming ONE
+    logical reference floor (a --resume run links to its base via
+    metadata.resume_of, so the whole chain is recalled together).
+    Only the newest chain head is returned; ancestors are walked back through
+    resume_of pointers. Runs that are smokes, truncated ('interrupted') or the
+    excluded id never appear. Determined per-phase coverage = union over the
+    chain, which is what A/B recall and --auto's completeness gate use.
+    """
+    import sqlite3
+    try:
+        conn = sqlite3.connect(registry.db_path, timeout=30.0)
+        try:
+            rows = conn.execute(
+                "SELECT run_id, status, metadata FROM runs "
+                "WHERE run_id LIKE 'gfx900_ref_%' ORDER BY id DESC"
+            ).fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        return []
+    by_id: Dict[str, Tuple[str, Dict[str, Any]]] = {}
+    for run_id, status, metadata in rows:
+        meta: Dict[str, Any] = {}
+        if metadata:
+            try:
+                meta = json.loads(metadata)
+            except Exception:
+                meta = {}
+        by_id[str(run_id)] = (str(status), meta)
+    for run_id, (status, meta) in by_id.items():
+        if run_id == exclude or status != "completed" or meta.get("smoke"):
+            continue
+        chain: List[str] = []
+        cur: Optional[str] = run_id
+        while cur in by_id and cur not in chain:
+            cur_status, cur_meta = by_id[cur]
+            chain.append(cur)
+            nxt = cur_meta.get("resume_of")
+            if not nxt:
+                break
+            cur = str(nxt)
+        if chain:
+            return chain
+    return []
