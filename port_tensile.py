@@ -44,6 +44,7 @@ from dotenv import load_dotenv
 from registry import SQLiteRegistry, fingerprint_config
 from scheduler import CandidateGenerator
 from analytics import AnalyticsEngine, CellAnalytics
+from gfx90c_common import cell_key, kernel_key
 from policy import aggregate_cell, should_run
 from agent import ConvergenceAgent
 from report import AcceptanceReporter
@@ -329,6 +330,31 @@ class TensileDriver:
         self._telemetry_run_id = run_id
         return sampler
 
+    def _current_arm(self) -> str:
+        """Arm of the run whose phases execute_phase is running: spoof for the
+        gfx900 reference floor runs, native otherwise."""
+        return "spoof" if "gfx900_ref" in str(self.run_dir.name) else "native"
+
+    def _named_cell_stamps(self, phase: Dict[str, Any], arm: Optional[str] = None) -> Dict[str, Any]:
+        """fix.md cell-key stamps for a phase's registry records.
+
+        Identity comes from the authoritative config (FamilyLabel + MacroTile +
+        ProblemType), NOT re-derived from phase_id text — this is what keeps
+        HH_HPA/HS_HPA distinct from HH in the named-cell mapping.
+        """
+        arm = arm or self._current_arm()
+        config = phase.get("config", {})
+        shapes = phase.get("shapes") or [str(config.get("ProblemType", ""))]
+        stamps = {
+            "cell_key": cell_key(config.get("FamilyLabel", phase.get("family", "")),
+                                 shapes[0] if shapes else ""),
+            "arm": arm,
+            "kernel_key": kernel_key(config),
+        }
+        if stamps["cell_key"] is None:
+            stamps.pop("cell_key")
+        return stamps
+
     def execute_phase(
         self,
         phase: Dict[str, Any],
@@ -370,6 +396,7 @@ class TensileDriver:
             "timestamp": datetime.now().isoformat(),
             "status": "started"
         }
+        start_record.update(self._named_cell_stamps(phase))
         self.registry.append_record(start_record, run_id=self.run_dir.name)
 
         # Tag the run-wide telemetry sampler with the active phase (started
@@ -402,6 +429,7 @@ class TensileDriver:
                 "status": status,
                 "result": result
             }
+            end_record.update(self._named_cell_stamps(phase))
             self.registry.append_record(end_record, run_id=self.run_dir.name)
             end_record_logged = True
             self._gpu_phases_run += 1
@@ -1540,6 +1568,9 @@ class TensileDriver:
                     "GFLOPS": agg.median,
                     "phase_id": phase_id,
                 }
+                rec.update(self._named_cell_stamps(
+                    phase or {"config": {}, "shapes": [shape], "family": ""},
+                    arm="spoof" if is_spoof else "native"))
                 if is_spoof:
                     spoof_records.append(rec)
                 else:
@@ -1572,6 +1603,10 @@ class TensileDriver:
                 "GFLOPS": gflops,
                 "phase_id": rec.get("phase_id", ""),
             }
+            norm["cell_key"] = rec.get("cell_key", cell_key(
+                rec.get("config", {}).get("FamilyLabel", ""), rec.get("shape", "")))
+            norm["kernel_key"] = rec.get("kernel_key", kernel_key(rec.get("config") or {}))
+            norm["arm"] = rec.get("arm", "spoof" if is_spoof else "native")
             if is_spoof:
                 spoof_records.append(norm)
             else:
@@ -1601,7 +1636,7 @@ class TensileDriver:
         for ref in ref_run_ids:
             ref_dir = self.base_dir / "gfx90c_runs" / ref
             if ref_dir.is_dir():
-                ref_records, _ = self._ab_records_from_csv(ref_dir, force_arm="spoof")
+                _ref_native, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
                 spoof_records.extend(ref_records)
         if ref_run_ids:
             self._last_ab_reference_run_id = ref_run_ids[0]

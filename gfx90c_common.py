@@ -107,3 +107,67 @@ MAX_WAVES_PER_CU = 40
 MAX_CLOCK_MHZ = 1800
 LDS_PER_CU_KB = 64
 L2_SIZE_KB = 1024
+
+
+# ---------------------------------------------------------------------------
+# Cell-key labelling (fix.md) — canonical workload-cell identity for the
+# spoof-baseline <-> native-candidate mapping in the acceptance A/B flow.
+#
+# A workload cell is (family, cube shape side). cell_key("HH", "1024x1024x1024")
+# -> "HH:1024" is the mapping key between the two arms. kernel_key is a
+# drill-down citation only (never the pairing key). Identity is stamped at emit
+# time from the authoritative config (family/shape), NOT re-derived from
+# phase_id text, so HH_HPA/HS_HPA never collapse into HH.
+# ---------------------------------------------------------------------------
+
+# DataType char -> canonical family (first-wins; 'H' resolves to HH — the HPA
+# variants are only disambiguated by an explicit family / phase_id, never by
+# dtype char alone).
+DTYPE_TO_FAMILY = {}
+for _fam, _ch in FAMILY_DTYPE_CHAR.items():
+    DTYPE_TO_FAMILY.setdefault(_ch, _fam)
+
+
+def cube_side(shape: object) -> "int | None":
+    """Side length N of an 'NxNxN' cube shape string; None for non-cubes.
+
+    Non-cube workloads (GEMV-probe shapes such as 32x4096x1) have no A/B cell
+    and are excluded at the pairing boundary, not in production kernels.
+    """
+    import re
+    m = re.match(r"\s*(\d+)x(\d+)x(\d+)", str(shape))
+    if not m:
+        return None
+    a, b, c = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    return a if a == b == c else None
+
+
+def cell_key(family: object, shape: object) -> "str | None":
+    """Canonical workload-cell key 'FAMILY:SIDE'; None if family unknown or
+    shape is not a cube."""
+    side = cube_side(shape)
+    if not side:
+        return None
+    fam = str(family or "").upper()
+    if not fam or fam == "NONE":
+        return None
+    return f"{fam}:{side}"
+
+
+def kernel_key(cfg: object) -> str:
+    """Canonical kernel-identity key (config knobs) for drill-down citation.
+
+    Citation only — the cell is keyed by cell_key. Unstable/missing configs
+    yield '' (matched by the shape+family pairing regardless).
+    """
+    if not isinstance(cfg, dict):
+        return ""
+    parts = []
+    for k in ("contraction_pattern", "ContractionPattern", "DataType"):
+        if cfg.get(k):
+            parts.append(f"{k}={cfg[k]}")
+    for k in ("MacroTile", "MT0", "MT1", "ThreadTile", "TT0", "TT1",
+              "VectorWidth", "DepthU", "GlobalSplitU", "WorkGroupMapping"):
+        if cfg.get(k) is not None:
+            parts.append(f"{k}={cfg[k]}")
+    return "|".join(parts)

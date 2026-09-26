@@ -16,6 +16,7 @@ Key mechanics:
 
 import csv
 import json
+import statistics
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Set
 from collections import defaultdict
@@ -27,6 +28,10 @@ from gfx90c_common import (
     FAMILY_SHAPES,
     FAMILY_DTYPE_CHAR,
     REALISTIC_CEILINGS,
+    DTYPE_TO_FAMILY,
+    cell_key,
+    cube_side,
+    kernel_key,
 )
 from policy import aggregate_cell
 
@@ -312,92 +317,101 @@ class AnalyticsEngine:
             self,
             native_records: List[Dict[str, Any]],
             spoof_records: List[Dict[str, Any]],
+            agg: str = "median",
             tie_band_pct: float = 5.0
         ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
-            """
-            Native-vs-spoof deltas: every spoof benchmark entity is measured against
-            the BEST native median at the same (dtype, shape).
+            """fix.md per-cell native-vs-spoof pairing.
 
-            A spoof entity is a (dtype, shape, fingerprint) cell of the gfx900 spoof
-            library. The native side is the best per-config median for that shape —
-            the deck winner — which is the number a shipped deck must beat.
+            A workload cell is (family/dtype, cube shape) and MUST match on
+            both arms — the mapping key cell_key = "FAMILY:SIDE" synthesized
+            from the authoritative config identity (never re-derived from
+            phase_id text, so HH_HPA/HS_HPA stay distinct). Per cell:
+
+              best     max GFLOPS over every sample in the cell (the arm's
+                       cell king — the number dispatch actually realized)
+              median   median of per-kernel medians inside the cell
+              throttle sclk-adjusted feed (GFLOPS_throttle_adjusted stamped
+                       at emit time when telemetry is available)
+
+            The accepted delta is spoof baseline vs native best, per identical
+            cell.
 
             Args:
-                native_records: Records from native ScheduleName="isa" runs
-                spoof_records: Records from spoof ScheduleName="vega10" runs
+                native_records: Records from native runs (deck candidates)
+                spoof_records: Records from spoof runs (shipped gfx900 floor)
+                agg: 'best' | 'median' | 'throttle' — cell-level statistic
                 tie_band_pct: Parity band (default ±5%)
 
             Returns:
-                Dict keyed by (dtype, shape, spoof_fp) to delta info with the spoof
-                entity's median vs the best native median.
+                Dict keyed by (dtype, shape, cell_label) to cell stats + winner,
+                with n_kernels/n_samples provenance for citation.
             """
-            native_cell: Dict[Tuple[str, str, str], List[float]] = defaultdict(list)
-            for rec in native_records:
-                dtype = rec.get("DataType", rec.get("dtype", ""))
-                shape = rec.get("ProblemType", rec.get("shape", ""))
-                fp = rec.get("fingerprint", rec.get("fp", "unknown"))
-                gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
-                if gflops > 0:
-                    native_cell[(dtype, shape, fp)].append(gflops)
+            known = ("SS", "DD", "HH", "CC", "ZZ", "HH_HPA", "HS_HPA")
 
-            # Best native median per (dtype, shape) — the deck winner to beat.
-            best_native: Dict[Tuple[str, str], float] = {}
-            for (dtype, shape, _fp), seeds in native_cell.items():
-                cell_median = aggregate_cell(seeds).median
-                key = (dtype, shape)
-                if cell_median > best_native.get(key, 0.0):
-                    best_native[key] = cell_median
+            def _cell_family(rec: Dict[str, Any]) -> str:
+                fam = str(rec.get("family") or rec.get("cell_key", "").split(":")[0] or "").upper()
+                if fam not in known:
+                    fam = extract_family_from_phase_id(rec.get("phase_id", "")).upper()
+                if fam not in known:
+                    fam = DTYPE_TO_FAMILY.get(
+                        str(rec.get("DataType") or rec.get("dtype") or "").upper(), "")
+                return fam if fam else "?"
 
-            spoof_cell: Dict[Tuple[str, str, str], List[float]] = defaultdict(list)
-            for rec in spoof_records:
-                dtype = rec.get("DataType", rec.get("dtype", ""))
-                shape = rec.get("ProblemType", rec.get("shape", ""))
-                fp = rec.get("fingerprint", rec.get("fp", "unknown"))
-                gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
-                if gflops > 0:
-                    spoof_cell[(dtype, shape, fp)].append(gflops)
+            def _collect(records: List[Dict[str, Any]]) -> Dict[Tuple[str, int], Dict[str, Any]]:
+                samples: Dict[Tuple[str, int], List[float]] = defaultdict(list)
+                groups: Dict[Tuple[str, int], Dict[Tuple[str, str], List[float]]] = defaultdict(lambda: defaultdict(list))
+                for rec in records:
+                    fam = _cell_family(rec)
+                    side = cube_side(rec.get("ProblemType") or rec.get("shape") or "")
+                    if not side:
+                        continue
+                    gf = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
+                    if gf <= 0:
+                        continue
+                    key = (fam, side)
+                    samples[key].append(gf)
+                    groups[key][(rec.get("phase_id", ""), rec.get("fingerprint", ""))].append(gf)
+                stats: Dict[Tuple[str, int], Dict[str, Any]] = {}
+                for key, gs in groups.items():
+                    kernel_meds = [statistics.median(v) for v in gs.values() if v]
+                    stats[key] = {
+                        "best": max(samples[key]),
+                        "median": statistics.median(kernel_meds) if kernel_meds else 0.0,
+                        "n_kernels": len(gs),
+                        "n_samples": len(samples[key]),
+                    }
+                return stats
 
-            # Per-entity family from the spoof phase_id (HH / HH_HPA / HS_HPA etc).
-            fp_family: Dict[str, str] = {}
-            for rec in spoof_records:
-                fp = rec.get("fingerprint", rec.get("fp"))
-                fid = rec.get("phase_id", "")
-                if fp and fp not in fp_family:
-                    fam = extract_family_from_phase_id(fid)
-                    if fam:
-                        fp_family[fp] = fam
+            ns = _collect(native_records)
+            ss = _collect(spoof_records)
 
-            deltas = {}
-            for (dtype, shape, fp), spoof_seeds in spoof_cell.items():
-                native_best = best_native.get((dtype, shape))
-                if native_best is None or not spoof_seeds:
+            deltas: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+            for key in sorted(set(ss) & set(ns)):
+                fam, side = key
+                sv, nv = ss[key], ns[key]
+                spoof_val = sv.get(agg, sv.get("median", 0.0))
+                native_val = nv.get(agg, nv.get("median", 0.0))
+                if spoof_val <= 0:
                     continue
-                spoof_agg = aggregate_cell(spoof_seeds)
-                spoof_median = spoof_agg.median
-
-                delta_pct = (
-                    ((native_best - spoof_median) / spoof_median * 100.0)
-                    if spoof_median > 0 else 0.0
-                )
-
+                ratio = native_val / spoof_val
+                delta_pct = (ratio - 1.0) * 100.0
                 tie = abs(delta_pct) <= tie_band_pct
-                if tie:
-                    verdict = "TIE"
-                elif delta_pct > 0:
-                    verdict = "WIN"
-                else:
-                    verdict = "LOSS"
-
-                deltas[(dtype, shape, fp)] = {
-                    "native_median": native_best,
-                    "spoof_median": spoof_median,
-                    "spoof_fp": fp,
-                    "family": fp_family.get(fp, ""),
+                verdict = "TIE" if tie else ("WIN" if ratio > 1.0 else "LOSS")
+                dtype = FAMILY_DTYPE_CHAR.get(fam, "")
+                deltas[(dtype, f"{side}x{side}x{side}", f"cell_{fam}_{side}")] = {
+                    "native_median": nv["median"],
+                    "spoof_median": sv["median"],
+                    "native_best": nv["best"],
+                    "spoof_best": sv["best"],
+                    "cell_key": f"{fam}:{side}",
+                    "spoof_fp": f"cell_{fam}_{side}",
+                    "family": fam,
                     "delta_pct": delta_pct,
                     "tie": tie,
                     "verdict": verdict,
+                    "n_native_kernels": nv["n_kernels"],
+                    "n_spoof_kernels": sv["n_kernels"],
                 }
-
             return deltas
 
     def classify_cell_status(
