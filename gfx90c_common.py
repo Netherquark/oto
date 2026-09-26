@@ -110,7 +110,7 @@ L2_SIZE_KB = 1024
 
 
 # ---------------------------------------------------------------------------
-# Cell-key labelling (fix.md) — canonical workload-cell identity for the
+# Cell-key labelling — canonical workload-cell identity for the
 # spoof-baseline <-> native-candidate mapping in the acceptance A/B flow.
 #
 # A workload cell is (family, cube shape side). cell_key("HH", "1024x1024x1024")

@@ -318,7 +318,7 @@ class AnalyticsEngine:
             agg: str = "median",
             tie_band_pct: float = 5.0
         ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
-            """fix.md per-cell native-vs-spoof pairing.
+            """per-cell native-vs-spoof pairing.
 
             A workload cell is (family/dtype, cube shape) and MUST match on
             both arms — the mapping key cell_key = "FAMILY:SIDE" synthesized

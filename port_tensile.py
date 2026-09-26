@@ -336,7 +336,7 @@ class TensileDriver:
         return "spoof" if "gfx900_ref" in str(self.run_dir.name) else "native"
 
     def _named_cell_stamps(self, phase: Dict[str, Any], arm: Optional[str] = None) -> Dict[str, Any]:
-        """fix.md cell-key stamps for a phase's registry records.
+        """cell-key stamps for a phase's registry records.
 
         Identity comes from the authoritative config (FamilyLabel + MacroTile +
         ProblemType), NOT re-derived from phase_id text — this is what keeps
