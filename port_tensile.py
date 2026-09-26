@@ -581,8 +581,15 @@ class TensileDriver:
             tt0, tt1 = int(thread_tile[0]), int(thread_tile[1])
 
         # --- HPA / mixed-precision family flags ---
-        is_hpa = "HPA" in label or "HPA" in str(config.get("ProblemType", ""))
-        is_hs_hpa = "HS_HPA" in label
+        # Case-insensitive: deck labels are uppercase ("HH_HPA_...") while
+        # agent-mutated candidates are lowercase ("mutate_hh_hpa_..."). Without
+        # this, HPA mutants silently lost HighPrecisionAccumulate / DestDataType
+        # and benchmarked as plain FP16 (assembly_class_valid already uppercases).
+        is_hpa = ("HPA" in label.upper()
+                  or "HPA" in str(config.get("ProblemType", "")).upper()
+                  or "HPA" in str(config.get("FamilyLabel", "")).upper())
+        is_hs_hpa = ("HS_HPA" in label.upper()
+                     or "HS_HPA" in str(config.get("FamilyLabel", "")).upper())
 
         # --- ProblemType dict ---
         problem_type: Dict[str, Any] = {

@@ -256,6 +256,7 @@ class ConvergenceAgent:
                     "DataType": data_type,
                     "ProblemType": "Contraction",
                     "ScheduleName": "isa",
+                    "FamilyLabel": family,
                 }
 
                 candidate = self.scheduler.emit_candidate(

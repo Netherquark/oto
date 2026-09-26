@@ -29,9 +29,7 @@ from gfx90c_common import (
     FAMILY_DTYPE_CHAR,
     REALISTIC_CEILINGS,
     DTYPE_TO_FAMILY,
-    cell_key,
     cube_side,
-    kernel_key,
 )
 from policy import aggregate_cell
 
