@@ -6,8 +6,8 @@
 **ISA:** (9,0,12) — GFX9/GCN5 "Vega 7", NOT RDNA
 **Tensile:** v4.44.0 — **only** the tree named by the repo-root `.env` key
 `TENSILE_ROOT`:
-(pristine upstream + **minimal in-tree gfx90c support**: 3 bookkeeping entries in
-`Common.py` + `AsmCaps.py`, landed 2026-09-19)
+(tracked in-tree checkout holding the **minimal native gfx90c support**: the 2-file
+`Common.py` + `AsmCaps.py` patch, landed 2026-09-19 — not pristine, no shim)
 **Date:** 2026-09-13 (mechanism updated 2026-09-19)
 **Numeric source:** `gfx90c_common.PEAK_GFLOPS` — the single source for every peak figure in this ecosystem
 
@@ -99,7 +99,9 @@ This project's driver source (outside that tree, still **calls into** it):
 
 - `port_tensile.py` — the oto driver (phases from `phases.yaml`; specification in
   `implementation_plan.md` §The Driver Architecture); plus its modules `registry.py`,
-  `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`.
+  `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`,
+  `telemetry.py` (run-wide sysfs sampler), `tensile_library.py` (gfx900 dat parser +
+  reference-floor chain).
 - `gfx90c_common.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
   card, dtype tables)
 - `report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
@@ -375,10 +377,11 @@ Every stream of benchmark evidence, past and future:
 - `gfx90c_results/registry.db` table `records` — the shared ledger (INSERT-only).
 - `gfx90c_runs/run_YYYYMMDD_HHMMSS/**` — per-run artifacts: `configs/phase*.yaml`,
   `phase*/2_BenchmarkData/*.csv`, `00_Final.csv`, `logs/telemetry.csv`.
-- Frozen `gfx90c_results/{experiment_db,benchmark_registry}.jsonl` ledgers. Remain
-  **in place**; never rewritten, never deleted, never "migrated in place". Readers
-  may ingest them into SQLite as **new** `records` rows (copy-forward), never
-  truncate the jsonl.
+- Prior-campaign jsonl artifacts (`experiment_db.jsonl` / `benchmark_registry.jsonl`),
+  if present in an archive, remain **in place** — never rewritten, never deleted,
+  never "migrated in place". Readers may ingest them into SQLite as **new** `records`
+  rows (copy-forward), never truncate the jsonl. The canonical **live** ledger is
+  `gfx90c_results/registry.db`; no jsonl ledger currently exists there.
 - `results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
 - `acceptance_report.json` + `acceptance_report.html` (in `gfx90c_results/`) — regenerated from data, never hand-repaired.
 - Corrupt jsonl records from the frozen set remain **in place** (triage: readers
@@ -433,11 +436,13 @@ overwrite, or rewrite **benchmark evidence**.
 
 ## 11. Glossary
 
-- **run** — one execution of the driver over a set of phases (`port_tensile.py
-  [--phases ...]`); captured in an era-named `run_YYYYMMDD_HHMMSS/` directory.
-- **phase** — one manifest row of the driver (`phases.yaml`); phase 1 is
-  first-ever-run-only by contract, and phase-number gaps are reserved (see
-  `changelog.md`).
+- **run** — one execution of the driver over a set of phases (`port_tensile.py` with
+  semantic filters `--targets`/`--family`/`--pattern`/`--shape`/`--stage`, or
+  `--gfx900-reference` for the spoof floor); captured in an era-named
+  `run_YYYYMMDD_HHMMSS/` directory.
+- **phase** — one manifest row of the driver (`phases.yaml`); the spoof/reference
+  floor lives in its own `gfx900_ref_*` run chain (recalled via `--resume`, never
+  re-rolled), and phase-number gaps are reserved (see `changelog.md`).
 - **fp (fingerprint)** — canonical hash of a config (`configs/phaseN_*.yaml`); a change
   of fp means a new attempt, never an in-place edit.
 - **cell** — one (shape × dtype × config) benchmark unit; the atomic row of the dataset.

@@ -21,9 +21,9 @@ The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages de
 ```
                   ┌─────────────────────────────────────┐
                   │          phases.yaml (Manifest)     │
-                  │   (304 phases: auto=72, hh=64,      │
-                  │    ss=52, cc=34, dd=34, zz=32,      │
-                  │    hs=16)                           │
+                  │   (410 phases: SS 105 · HH 40 ·     │
+                  │    HH_HPA 20 · HS_HPA 20 · DD 44 ·  │
+                  │    CC 32 · ZZ 32 · legacy auto 117) │
                   └──────────────────┬──────────────────┘
                                      │
                                      ▼
@@ -56,9 +56,9 @@ The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages de
                   └──────────────────┬──────────────────┘
                                      │
                    ┌─────────────────┴─────────────────┐
-                   │ CONVERGENCE LOOP (agent.py)       │
-                   │ - Check: >=2 runs, >=3 configs,   │
-                   │   <=1% delta, 0 RED cells         │
+│ CONVERGENCE LOOP (agent.py)       │
+                    │ - Gate: >=3 configs, >=2 runs/    │
+                    │   >=6 seeds, CV<=15%, 0 RED cells │
                    │ - If unconverged: harvest ->      │
                    │   mutate <=2 knobs -> append      │
                    └─────────────────┬─────────────────┘
@@ -110,20 +110,23 @@ xdg-open gfx90c_results/acceptance_report.html
 ```
 
 ### 4. A/B vs the shipped gfx900 floor (Stage 7)
-Establish the once-only spoof floor from the system ROCm TensileLibrary.dat, then every report recalls it forever:
+A dedicated `gfx900_ref_*` run benchmarks every shipped gfx900 kernel once (from
+the system ROCm TensileLibrary.dat), recalled by every later report:
 ```bash
 # 1. One-time: benchmark every shipped gfx900 kernel (dedicated gfx900_ref_* run)
 python3 port_tensile.py --gfx900-reference          # --refresh to re-scan the dat, --limit N to smoke-test
 
-# 2. Head-to-head (same-run, thermal cooldowns)
-python3 port_tensile.py --ab target_spoof target_native
+# 2. Resume an interrupted floor (recalls the whole chain, retries failed once)
+python3 port_tensile.py --gfx900-reference --resume
 
 # 3. Any later report recalls the reference floor automatically
 python3 port_tensile.py --report
 ```
-The A/B verdict compares every deck entity vs the best native median at its
-`(dtype, shape)`. Gate semantics: **RED = MISSING** contract cell, **ORANGE =
-measured but < 50% of the family realistic ceiling** — both block acceptance.
+The A/B verdict compares the spoof floor vs native by workload cell
+`(family, dtype, shape)`: best-of-cell per arm, medians the unit, ±5% tie band.
+Gate semantics: **RED = MISSING** contract cell, **ORANGE = measured but < 50% of
+the family realistic ceiling** — both block acceptance. `--auto` auto-resumes an
+incomplete floor and refuses to tune until it is fully decided.
 The shipped footprint (2,285 kernels, pinned once at
 `gfx90c_results/gfx900_shipped_manifest.json`) supplies the coverage
 denominators; provenance (list of ROCm prefixes) rides in the report JSON.
@@ -148,12 +151,12 @@ python3 port_tensile.py --synthesize
 |---|---|
 | [`port_tensile.py`](port_tensile.py) | Suite CLI, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
 | [`scheduler.py`](scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation (`≤2` knobs), GEMM LDS estimation `(M*K + N*K)*elem_size*NLCA`, tile divisibility, and shape parsing. |
-| [`policy.py`](policy.py) | N8 median-of-seeds aggregation, CV stability classification, 3-tier retirement model, and `should_run` policy gate matrix. |
-| [`analytics.py`](analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and native-vs-spoof delta calculations. |
+| [`policy.py`](policy.py) | Median-of-seeds aggregation, CV≤15% stability gating, evidence-gated Tier-2 retirement (`check_retirement_eligibility`), and `should_run`/`should_repeat` policy gates. |
+| [`analytics.py`](analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and per-cell native-vs-spoof deltas (workload cells via `cell_key`). |
 | [`agent.py`](agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
 | [`registry.py`](registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
 | [`report.py`](report.py) | Acceptance report generation, per-family coverage vs the pinned shipped-dat manifest, A/B verdict synthesis (`WIN`, `TIE`, `LOSS`) vs the recalled gfx900 reference floor, and rich HTML dashboard generation. |
-| [`tensile_library.py`](tensile_library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once) and emits the 2,285-kernel one-time reference phase list. |
+| [`tensile_library.py`](tensile_library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
 | [`gfx90c_common.py`](gfx90c_common.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
 
 ---

@@ -94,8 +94,9 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   `TENSILE_ROOT`, e.g. `${TENSILE_ROOT:-<checkout>}`). Driver shells out to
    `Tensile/bin/Tensile` and `Tensile/bin/TensileCreateLibrary` **in that tree**.
     Native gfx90c support = a 2-file minimal Tensile patch (`Tensile/Common.py` +
-    `Tensile/AsmCaps.py`) **in that tree**. Run ledgers = `gfx90c_runs/` +
-   `gfx90c_results/` **in that tree**. Peak table = that tree's `gfx90c_common.py`.
+    `Tensile/AsmCaps.py`) **in that tree**. Run ledgers (`gfx90c_runs/`,
+    `gfx90c_results/`), the peak table (`gfx90c_common.py`) and the driver modules
+    live in the oto base dir (`--base-dir`, default repo root).
    `PYTHONPATH` = `<TENSILE_ROOT>:…`.
    Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
 
@@ -116,9 +117,10 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   deleted; all data streams are append-only (canonical law: `knowledge_base.md` §10).
 - **Ask before deleting/replacing files or materially changing existing experiments.**
 - Do not overwrite existing tests/results merely to make a cleaner implementation.
-- Do not silently retire/revive/rename/reinterpret phases; the driver's `--phases`
-  scoping is the only phase-selector (phase-1 floor stays first-ever-run-only by
-  contract).
+- Do not silently retire/revive/rename/reinterpret phases; the driver's
+  `--targets`/`--family`/`--pattern`/`--shape` scoping is the only phase-selector.
+  The spoof floor lives in a dedicated `gfx900_ref_*` run chain (base +
+  `--resume` continuations), never as a phase-1 slot of the native deck.
 - Treat telemetry gaps as telemetry gaps; do not invent measurements or use broken
   telemetry as proof of behavior.
 - Do not use a mathematically or physically unjustified normalization just because it
@@ -126,8 +128,10 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - Every change to `port_tensile.py` / its modules is PoC'd in `/tmp` and
   tested before landing.
 - LLM output is hypothesis input, not architecture authority. HW decides. DB remembers.
-- Wait for the two scoped control runs (`--phases 1 31`, then `--phases 20 25`) before
-  re-deriving native-vs-spoof verdicts under fixed math.
+- The native-vs-spoof A/B floor is the dedicated `gfx900_ref_*` run chain (recalled,
+  never re-run). Re-derive verdicts only once the floor is fully decided: `--auto`
+  auto-resumes an incomplete floor and aborts before any tuning while >0 shipped
+  phases remain undecided.
 - **NEVER run full Tensile benchmark runs during code development.** This is not a
   TTY. Full runs are ONLY allowed in a TTY, and ONLY when the USER runs them. During
   agent work: no `Tensile`/`TensileCreateLibrary` full benchmarks, no sustained GPU
@@ -137,9 +141,9 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   or touches it — in any context, for any reason.** (Cross-ref §8.1.) Its contents
   are not part of the agent-visible state; treat its non-existence from the agent
   perspective as required.
-- Super-sample / adaptive-repeat policy applies before convergence claims; a cell
-  needs ≥2 independent runs AND ≥3 configs tested AND ≤1% movement over the last 2
-  independent runs to be considered converged.
+- Convergence claims need the agent gate: ≥3 distinct configs tested, ≥2 independent
+  runs (≥6 seeds), CV ≤ 15% per cell, and 0 RED contract cells. The ≤1% run-to-run
+  drift bar applies to retirement eligibility, not to convergence.
 
 ## 6. Change discipline
 

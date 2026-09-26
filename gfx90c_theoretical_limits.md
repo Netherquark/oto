@@ -5,7 +5,6 @@
 > introspection of the actual machine (`rocminfo`, `rocm-smi`, sysfs/kfd, amdgpu
 > `pp_dpm_*`), (b) the installed ROCm 6.4.4 clang-19 used as an ISA oracle
 > (compile-only — NO benchmarks, NO GPU work allocated), and (c) first-party web docs.
-> Raw research + verification log: `/tmp/opencode/gfx90c_theoretical_limits_draft.md`.
 
 ## 0. How this file is used
 

@@ -78,7 +78,9 @@ decides; DB remembers.
 
 ## Current State
 
-Port mechanics done; parity not wins (frozen baseline, `prior_*`); candidate deck
-harvested; 2 control runs pending (`--phases 1 31`, then `--phases 20 25`); the
-deterministic driver + ecosystem are the active workflow. No LLM consultations in
-the loop.
+Port mechanics done; parity not wins (frozen baseline, `prior_*`); the native deck
+(`phases.yaml` = 410 phases) plus the dedicated gfx900 reference floor are the
+active workflow. Floor `gfx900_ref_20260925_152942`: 1,073/2,285 executed, 1,096
+unattempted + 116 failed — continued via `--gfx900-reference --resume`;
+`--auto` gates tuning on full floor completion, then converges per-cell verdicts
+by workload cell `(family, dtype, shape)`. No LLM consultations in the loop.

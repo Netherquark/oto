@@ -16,7 +16,7 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
 | A sgemm controller sweep (p16) | 0W/3T/0L (2048³ +0.3..+5.6) | keep 2048³ as deck seed; do NOT re-sweep |
 | A hgemm (p17) | 0W/0T/3L (−8..−9%) | drop |
 | B LLM-decode GEMV deeper (p18) | **2W/3T/0L**: 32x4096x1 +13.6%, 64x4096x1 +21.3% | **harvest as incumbent** (native GPUs) |
-| C asymmetric/odd (p20/p25) | **CRASHED every run** (`AssertSizeMultiple: [1]`) | fix `[{}]` applied; scoped re-test `--phases 20 25` |
+| C asymmetric/odd (p20/p25) | **CRASHED every run** (`AssertSizeMultiple: [1]`) | fix `[{}]` applied; re-test runs via the native deck, verdict vs the floor chain |
 | D occupancy/LDS (p19) | 512/1024³ L (−8.6/−19.7%); **2048³ W +14.1/+20.1%** | harvest 2048³; kill sweep path |
 | E bf16 (p22) | 0W/1T/1L (−13.6% @1024³; +2.4% @2048³ T) | keep 2048³ seed; don't chase bf16 |
 | E fp64 (p23) | 0W/1T/2L (ties +0.1%; pipe-saturated) | drop new sweeps; fp64 is done at 98% |
@@ -85,19 +85,22 @@ Candidate sweep A–G over 21 shared cells (throttle-adjusted, ±5% band, median
   parameterizations.
 - **Scheduler mirror gap — FIXED (2026-09-19):** `_validate_tensile_loads` (scheduler.py
   `:211-362`) now models the `GLVW==VW or ==1` predicate (4583-4596), which the wrongly
-  pre-validated 64x64x8 deck violated; 6 unit tests + 304/304 manifest sweep pass.
+  pre-validated 64x64x8 deck violated; 6 unit tests + 410/410 manifest sweep pass.
 - 2026-09-13: acceptance narrowed to TWO measures — (1) beat the gfx900-spoof floor
   across the whole shipped suite; (2) approach the per-family ceilings of
   `gfx90c_theoretical_limits.md` §5 (measured utilization logged per
   (family, bound_class)). Occupancy (GSU/WGM/MT/TT right-sizing) is the first-class
   objective, not a constraint (T9).
-- Carry-over: candidate C 20/25 re-test remains scheduled (`--phases 20 25`).
+ the native deck + recalled reference-floor verdicts are
+  the re-test path now.
 
 ## 5. Next-round candidate deck
 
 Working area the deterministic loop appends to (`phases.yaml` mirror). Entries are
 `(family, cell / shape, incumbent config knobs, best median GFlops, % of family
-ceiling, next mutation)`. Data source: `run_20260913_215546` (93 CSVs / 101 cells).
+ceiling, next mutation)`. Deck = `phases.yaml` (410 phases, 2026-09-26); seed data:
+`run_20260913_215546` (93 CSVs / 101 cells) + the draft deck run
+`run_20260920_235815` + the recalled reference floor.
 
 ### 5.1 Incumbents by family (median-of-seeds, per winning cell)
 
@@ -230,13 +233,15 @@ Proposed candidates in priority order (spend rules §3: coverage first, then mut
 Any new phase must be `validate_config`-clean (occupancy/LDS) **and** pass
 `_validate_tensile_loads` (Tensile divisibility — new requirement 2026-09-14) and
 the `<host>/<knob>` uniqueness gate (no re-run of a fingerprint already benchmarked).
-**Wide-deck regen (2026-09-20):** the live manifest is 295 entries (SS 105,
+**Wide-deck regen (2026-09-20):** the manifest reached 295 entries (SS 105,
 HH 40, DD 44, HH_HPA 20, CC 32, ZZ 32, HS_HPA 20, + 2 ss A/B baselines), full-shape
-bundled per phase + shape-matched underfill-GSU and DDR/GEMV phases; all 295 pass
+bundled per phase + shape-matched underfill-GSU and DDR/GEMV phases; all 295 passed
 the mirror gates (validate_config + assembly_class_valid class gate) with unique
 phase_id/fp/config (generator: `/tmp/opencode/gen_wide_deck.py`). Built from 331 by
 **class-gating out the 36 illegal GSU cells** — HH/HH_HPA/HS_HPA with GlobalSplitU>1
 (no MFMA on gfx90c; SolutionStructs:3553/3616; see `scheduler.assembly_class_valid`).
+Re-derived live 2026-09-26: **410 phases** (117 legacy dtype-char auto mutants
+added), all gate-clean.
 
 ## 6. Next increment — 2≥ gate & wider-for-LOSS / narrower-for-WIN (2026-09-20)
 

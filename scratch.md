@@ -34,17 +34,25 @@ consultation.
       modules + data-only phases.yaml manifest; `json.dumps` + SQLite `records`
       INSERT-only. Fully verified and unit-tested.
 - [x] T3 port the 28-family gfx900 footprint as NATIVE gfx90c phases — family
-      decks per dtype+pattern {CC,DD,ZZ,HH,HH_HPA,HS_HPA,SS} × 4 patterns (304 candidate configs in phases.yaml: 232 family + 72 auto).
-- [ ] T4 run the two scoped control runs under FIXED math — `--phases 1 31`
-      (COMPLETED: run_20260913_135333) then `--phases 20 25` (~2h); re-derive native-vs-spoof verdicts
-      (ruler-adjusted, median-of-seeds, ties = parity) before full suite.
+      decks per dtype+pattern {CC,DD,ZZ,HH,HH_HPA,HS_HPA,SS} × 4 patterns
+      (phases.yaml re-derived to 410 phases 2026-09-26: SS 105, DD 44, HH 40,
+      HH_HPA 20, HS_HPA 20, CC 32, ZZ 32, legacy auto 117).
+- [x] T4 native-vs-spoof verdicts — SUPERSEDED by the dedicated reference floor:
+      `--gfx900-reference` (`gfx900_ref_20260925_152942`, 2026-09-25: 2,285-kernel
+      deck, 1,073 executed / 116 failed / 1,096 unattempted). The old
+      `--phases 1 31` / `--phases 20 25` control-run windows are retired; the floor
+      chain resumes via `--gfx900-reference --resume` and `--auto` gates on its
+      completion.
 - [ ] T5 deterministic candidate loop to convergence: harvest wins → mutate
       winner-neighbours ≤2 knobs → append to manifest; stop when no RED cells or
       budget exhausted.
-- [x] T6 retain/verify stats + HTML tooling through the refactor: all_runs_dataset
-      → make_results_md → make_report → results_derived.json → gfx90c_report.html.
-- [x] T7 single-phase kill ('s'/'q') + Ctrl+C process group termination + finite default PHASE_TIMEOUT_S;
-      auto_retire emits retires only after ≥2 independent runs per cell.
+- [x] T6 retain/verify stat + HTML tooling through the refactor: live chain =
+      `analytics.py → report.py → gfx90c_results/acceptance_report.json/.html`
+      (the `all_runs_dataset` → `make_results_md` → `make_report` → `results_derived.json`
+      → `gfx90c_report.html` chain was superseded).
+- [x] T7 single-phase kill ('s'/'q') + Ctrl+C process group termination + finite
+      `--phase-timeout` default; retirement = single Tier-2 path
+      (`policy.check_retirement_eligibility`), gated on ≥2 independent runs per cell.
 - [x] T9 occupancy-as-objective: raise measured CU utilization toward the
       gfx90c_theoretical_limits.md §5 ceilings via right-sized GSU/WGM/MT/TT (objective tuning axis).
 - [x] T8 correct peak-table prose: BF16 + INT8 = 1613 single-rate (not 3226), sourced
@@ -59,8 +67,10 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
 
 **Round-1 register (ANALYSIS COMPLETE):**
 
-- **[MANIFEST] Ground truth:** phases.yaml = **304 rows** (ss=52, cc=34, dd=34, zz=32,
-  hh=64, hs=16, auto=72; 232 family + 72 auto). README:24 matches. Distrust any other count.
+- **[MANIFEST] Ground truth (round-3 2026-09-26: re-derived live):** phases.yaml =
+  **410 rows** (SS 105, DD 44, HH 40, HH_HPA 20, HS_HPA 20, CC 32, ZZ 32, legacy auto
+  117 dtype-char mutants). Round-2's "304 rows (ss=52, cc=34, dd=34, zz=32, hh=64,
+  hs=16, auto=72)" is superseded. Distrust any other count.
 - **A — `.env.example` ships a dead probe-chain schema.** Code reads ONLY `TENSILE_ROOT`,
   `ROCM_PATH`, `ROCM_BIN`, `ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`,
   `TENSILE_ASSEMBLER_FALLBACK`, `TENSILE_VERBOSE` (changelog "[Native .env] 2026-09-19"
@@ -102,10 +112,14 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
   claude.md/kb/impl-plan `.env` path wording current (2026-09-19).
 
 **Round-2 FIX task list (run only after analysis fully complete):**
-- [ ] F1 `.env.example` — drop `*_CANDIDATES` block; document native discovery (hipconfig +
-      shutil.which) with the 7 live vars only.
-- [ ] F2 `implementation_plan.md:154-156` + `potential_configs.md:86-88` — "pending → applied".
-- [ ] F3 `changelog.md` — APPEND "[HS_HPA fixes applied]" entry (newest top).
+- [x] F1 `.env.example` — DONE: `*_CANDIDATES` block dropped; native discovery
+      (hipconfig + shutil.which) is documented with the live vars only (verified
+      2026-09-26).
+- [x] F2 `implementation_plan.md:154-156` + `potential_configs.md:86-88` — DONE:
+      both say "Scheduler mirror gap — FIXED" (verified 2026-09-26).
+- [x] F3 `changelog.md` — DONE: covered by the round-3 append entry
+      "[Named workload cells + reference-floor A/B ...[...]]" 2026-09-26
+      (HS_HPA mirror predicate + HPA case sensitivity land there).
 - [ ] F4 Dead-pipeline rewording: results.md:5, knowledge_base.md (4 sites), implementation_plan.md
       (6 sites), scratch.md:44-45, analytics.py:9 → report.py acceptance_report pipeline.
 - [x] F5 knowledge_base_final.md — CANCELLED 2026-09-20 (user: it is agent-context, not
@@ -127,24 +141,26 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
   16/17/19/22/23/24 H2-gated by PASS fingerprint.
 - Telemetry: continuous whole-run sampler, header-in-CSV, `hwmon[0-9]*`,
   `power1_input` → `power1_average` fallback, Hz/µW/mC/%.
-- Retirement: 3-tier, no hardcoded list, evidence-only; auto_retire.py idempotent
-  (retirement logic moves into policy.py/agent.py; ≥2-run gate pending T7).
+- Retirement: evidence-only single Tier-2 path via `policy.check_retirement_eligibility`
+  (the 3-tier split + auto_retire.py script moved out; ≥2-run gate per cell).
 - JSON: `json.dumps` is the only serializer across all four writers; no printf-JSON
   (prior §5.1 corruption lesson).
 
 ## Carryover OPEN items
 
-- Two scoped control runs (`--phases 1 31`, `--phases 20 25`) — verdicts may move
-  under fixed math.
-- No out-of-footprint cells are ever scheduled; a finite `PHASE_TIMEOUT_S` default
+- Reference floor completion: `gfx900_ref_20260925_152942` at 1,073/2,285 — resume
+  the remaining 1,096 unattempted + 116 failed (1,212 phases) via
+  `--gfx900-reference --resume`; `--auto` gates tuning on it. (The two scoped
+  control runs `--phases 1 31` / `--phases 20 25` are superseded by the floor.)
+- No out-of-footprint cells are ever scheduled; a finite `--phase-timeout` default
   still ships as generic runaway protection (implementation_plan.md §E).
 - CU occupancy ≤3 in light phases = the performance headroom to claim (T9): raise it
   toward the §5 ceilings with right-sized GSU/WGM/MT/TT — objective, not hazard.
-- `CpuThreads: 1`: joblib/loky-vs-3.14 root-cause to SOLVE (pin/version fix), fallback
-  sequential documented until solved — not dogmatic "mandatory".
-- Interactive single-phase kill ('s'/'q') end-to-end in the oto driver.
-- 3 auto-retire records need ≥2-independent-run gating before trust.
-- Peak-table prose still cites 3226 for BF16/INT8 → T8.
+- Interactive single-phase kill ('s'/'q') end-to-end in the oto driver — RESOLVED (T7).
+- CpuThreads parallelism — RESOLVED: default `min(os.cpu_count(), 16)` landed
+  2026-09-13 (changelog "[Multi-Threaded Compilation]").
+- Auto-retire trust gating — RESOLVED: single Tier-2 path, ≥2-run gate (T7).
+- Peak-table prose 3226 for BF16/INT8 — RESOLVED (T8; single-rate 1613).
 
 ## Frozen prior conclusions (pointer to the two sanctioned MDs)
 

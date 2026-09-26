@@ -61,7 +61,7 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
 | unmanaged concurrency / joblib+shared-temp races | FIXED (isolated workdirs + advisory locking) | single-writer process; no fork-lock, no parallel temp writers |
 | flawed ruler normalization (4 bugs: max-anchored squares, cross-dtype geo-mean leaking DDR factor, dt-string key no-op, missing → 1.0 fabrication) | FIXED (bound-class median, keyed (dt,cls), missing → reported not inferred) | ruler-adjusted winner semantics unchanged, byte-for-byte if possible |
 | half-baked telemetry + 1000× sclk_khz unit error (Hz under kHz label) | FIXED (continuous sampler, Hz, header-in-CSV) | telemetry header-in-file; canonical Hz/µW/mC/% |
-| conflated lifecycle states (retire vs dominate vs peak) with zero provenance | FIXED (3-tier, hardcoded list removed, registry lineage) | policy.should_run + auto_retire with ≥2-run gate |
+| conflated lifecycle states (retire vs dominate vs peak) with zero provenance | FIXED (evidence-only single Tier-2 path, hardcoded list removed, registry lineage) | policy.should_run + `check_retirement_eligibility` with ≥2-run gate |
 | blind-union synthesis merge with no per-cell regression filter | **STILL OPEN / deferred** | agent.harvest() admission gate (§4 below) |
 
 ## 2. What the oto driver must not reintroduce
@@ -79,10 +79,10 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
 - **No hardcoded retirement lists:** the 3-tier model is evidence-only (registry
   rows). No `PHASE_RETIRE`-style reserved set compiled into code; spoof / peak
   are NEVER a retire signal (guardrail: gfx900 = floor).
-- **No self-terminating run-all:** phase 1 is first-ever-run-only floor; every
-  phase runs from the manifest unless `policy.should_run` says otherwise
-  (tier-1 fp-less retire → tier-2 (phase,fp) retire → phase-1-once → identical-fp
-  skip opt-in).
+- **No self-terminating run-all:** the spoof floor = the dedicated `gfx900_ref_*`
+  chain (recalled, never a manifest phase-1 slot); every phase runs from the
+  manifest unless `policy.should_run` says otherwise (tier-1 fp-less retire →
+  tier-2 (phase,fp) retire → identical-fp skip opt-in).
 - **No hwmon parent-glob:** read `hwmon[0-9]*` paths via pathlib; never
   `find -name 'hwmon*'` (v2 §5.2 — parent dir matched first → all-NA rows while
   `gpu_busy_percent` still worked, masking the failure).
@@ -105,15 +105,14 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
   mC/% .
 - [ ] **PEAK single-source import.** `from gfx90c_common import PEAK_GFLOPS` —
   no duplicated dict in the driver; BF16/INT8 = 1613 single-rate.
-- [ ] **policy.should_run unit-test matrix.** Re-run the 4-case matrix from the
-  prior policy spec: empty-registry→RUN (`--phases 1 31`), prior PASS fp→SKIP,
-  phase-1-once disabled→RUN, phase-scope-exempt→RUN. New cases: tier-1
-  fp-less record→SKIP; tier-2 (phase,fp)→SKIP.
+- [ ] **policy.should_run unit-test matrix.** Re-run the gate matrix: empty-registry→RUN,
+  prior PASS fp→SKIP, deck-scope-exempt→RUN. New cases: tier-1 fp-less record→SKIP;
+  tier-2 (phase,fp)→SKIP.
 - [ ] **Detached + killable GPU phases.** `setsid` process groups; 's' kills the
   CURRENT phase and continues, 'e' ends the run after the current phase
   completes, 'q' quits the run; Ctrl+C kills the in-flight
   benchmark group; EXIT trap stops telemetry idempotently.
-- [ ] **Finite per-phase timeout default.** `PHASE_TIMEOUT_S` default must be
+- [ ] **Finite per-phase timeout default.** `--phase-timeout` default must be
       finite — generic runaway protection, never a size-specific special case.
 
 ## 4. Known-open exposures for oto
@@ -146,9 +145,9 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
   a real native gfx90c measurement, never against a gfx900-spoof or CPU-fallback
   number; re-assert isa scheduling per cell so no spoof leaks into the native
   determination. Convergence = no RED cells below threshold, or budget spent.
-- **Native-vs-spoof, same-run, ruler-adjusted, median-of-seeds, ties = parity:**
-  superiority is demonstrated per cell via a same-run A/B (`--phases 1 31` vs
-  `--phases 20 25` pair),
+- **Native-vs-spoof, recalled-floor, ruler-adjusted, median-of-seeds, ties = parity:**
+  superiority is demonstrated per workload cell vs the recalled `gfx900_ref_*`
+  chain (dedicated floor runs, `--resume` continuations — never a phase-1 slot),
   ruler-adjusted (bound-class median), median-of-seeds; a tie is PARITY, not a
   regression, and not a win. Every metric must meet this or the acceptance is
   not claimed.

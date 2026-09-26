@@ -1,4 +1,4 @@
-# Incomplete Work register (re-verified 2026-09-13)
+# Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26)
 
 Status key: RESOLVED (mechanism landed + proven) / PENDING (real gap, still open) /
 PARTIAL (mechanism landed; execution/validation outstanding).
@@ -8,19 +8,27 @@ PARTIAL (mechanism landed; execution/validation outstanding).
 - Replaced fragile telemetry sampler with `telemetry.py` (non-root sysfs, `mclk_hz` parsed correctly).
 - Client/bench split PoC verified via `--prebuilt-client`.
 
-**Gap:** native-vs-spoof verdicts still rest on a single same-run pair
-(run_171325 = 0/11/0 parity) computed under the OLD pre-fix ruler/telemetry math;
-verdicts may move once re-derived under fixed math.
+**Gap (2026-09-26: CLOSED, now §4.15):** the frozen same-run pair (run_171325 =
+0/11/0 parity) is superseded by the dedicated `gfx900_ref_*` reference floor;
+verdicts are re-derived per workload cell vs the recalled floor chain
+(ruler-adjusted, median-of-seeds, ±5% tie = parity).
 
-**Mechanism:** run exactly the two scoped windows on the now-fixed state —
-`python3 port_tensile.py --phases 1 31` (~2-3h), then `python3 port_tensile.py
---phases 20 25` (~2h). Re-derive per-cell native-vs-spoof deltas the
-way the current pipeline defines them: same-run A/B, ruler-adjusted
-(bound-class median), median-of-seeds, ties = parity. NO full-suite run before
-these complete.
+## 4.15 Reference floor + per-cell A/B (RESOLVED — 2026-09-26; completion pending)
 
-**Residue/evidence:** results.md §7 gate; the control runs are T4 and are the
-only path to a locked verdict. Blocking input to §4.2.
+**Mechanism:** `tensile_library.py` parses the system ROCm gfx900 `TensileLibrary_*_gfx900.dat`
+and pins 2,285 shipped kernels once at `gfx90c_results/gfx900_shipped_manifest.json`; every
+report recalls the whole `gfx900_ref_*` chain (base + `--resume` continuations) via
+`reference_chain` + `_compute_ab_verdicts`. `analytics.compute_native_vs_spoof_delta`
+pairs by workload cell `(family, dtype, shape)` (`cell_key`) — best-of-cell median per
+arm, ±5% tie = parity.
+
+**Status:** `gfx900_ref_20260925_152942` = 1,073/2,285 executed, 116 failed,
+1,096 unattempted → 1,212 phases to resume (~1.1 day). `--auto` gates all tuning
+behind floor completion (`_reference_remaining() == 0`).
+
+**Residue/evidence:** `gfx90c_results/registry.db` 3,369 measured rows stamped
+`cell_key`/`arm`/`kernel_key`; `idx_cell_key` index exists in the live registry
+only — `registry.py` does not create it, so a fresh DB would miss it.
 
 ## 4.2 One-shot driver + --auto (RESOLVED — 2026-09-13)
 
@@ -28,7 +36,7 @@ only path to a locked verdict. Blocking input to §4.2.
 
 ## 4.3 28-family native coverage (RESOLVED — 2026-09-13)
 
-**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto).
+**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto; re-derived to **410 phases** 2026-09-26).
 
 ## 4.4 Adaptive-repeat finalize (RESOLVED — 2026-09-13)
 
@@ -81,7 +89,7 @@ only path to a locked verdict. Blocking input to §4.2.
 - Abolished reliance on arbitrary numeric phase IDs (0–31); phase identity uses
   semantic filters.
 - Replaced CLI execution with semantic filters: `--family` (SS, HH, HH_HPA, HS_HPA, DD, ZZ, CC), `--pattern` (Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk), `--shape`, `--stage`, and `--auto`.
-- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest is 304 phases = 232 family + 72 auto, see `results.md` §1).
+- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest = **410 phases** as of 2026-09-26, see `results.md` §1).
 - Added `--dry-run` to inspect matched candidate targets before hardware execution.
 
 ## 4.13 Parallel Clang Build, Cooldown Key Handling & Early Quit Reports (RESOLVED — 2026-09-13)

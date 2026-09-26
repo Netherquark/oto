@@ -9,6 +9,39 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Named workload cells + reference-floor A/B fix + HPA case-sensitivity] 2026-09-26
+
+- **A/B floor binding bug FIXED (`ccd7fed`).** `port_tensile.py` `_compute_ab_verdicts`
+  bound the spoof floor from the wrong tuple slot (`ref_records, _ = _ab_records_from_csv(
+  ref_dir, force_arm="spoof")` puts all records in the second element), silently dropping
+  the floor → "0 WIN / 0 TIE / 0 LOSS" reports. Corrected; the same run now yields
+  **30 per-cell verdicts (18 WIN / 9 TIE / 3 LOSS)**.
+- **Workload-cell naming (fix.md applied, `ccd7fed`).** Every measured row is stamped
+  `arm` + `cell_key` (`"<FAMILY>:<SHAPE>"`) + `kernel_key` via `gfx90c_common`
+  `cell_key()`/`kernel_key()`/`shape_side()`; `analytics.compute_native_vs_spoof_delta`
+  now pairs by workload cell `(family, dtype, shape)` on BOTH arms (best-of-cell median,
+  ±5% tie) instead of spoof-per-fingerprint vs native-per-cell.
+- **Live DB stamped (`ccd7fed`).** `gfx90c_results/registry.db` backfilled — 3,369
+  measured rows carry `cell_key`/`arm`/`kernel_key`; pre-backfill backup at
+  `backups/2026-09-26_impl/registry.db`. Added `idx_cell_key` index — NOTE:
+  `registry.py` does not create it, so a fresh DB lacks the index.
+- **HPA case-sensitivity FIXED (`58245c8`).** `_write_phase_config` matched
+  `"HPA"/"HS_HPA"` case-sensitively, so lowercase agent mutants (`mutate_hh_hpa_…`,
+  `mutate_hs_hpa_…`) ran as plain FP16 without `HighPrecisionAccumulate`/
+  `DestDataType`. Now uppercases + consults `FamilyLabel` (consistent with
+  `assembly_class_valid`); `agent.mutate_and_feed` stamps `FamilyLabel` on mutants.
+  Verified against all 6 label shapes (deck / reference / mutant). Closes the
+  round-2 HS_HPA pending item: HS_HPA 16 cells run at MT64x64x16 with the
+  `GLVW==VW-or-1` mirror predicate.
+- **Analytics cleanup (`58245c8`).** `analytics.py` dropped unused
+  `cell_key`/`kernel_key` imports.
+- **Corrections to earlier entries (append-only).** The "Shim removed:" bullet's
+  "deleted" claim is technically inaccurate — `tensile_gfx90c_port/` source is gone
+  from git, but shim-era `__pycache__` `.pyc` residue remains on disk (untracked;
+  scheduled for cleanup). The bottom "Upstream baseline" section's "pristine HEAD,
+  shim-only" wording is fully superseded by the native 2-file `Common.py` +
+  `AsmCaps.py` patch entry.
+
 ## [Graceful gfx900-reference resume + completeness gate] 2026-09-26
 
 - **Reference runs are now resumable.** `tensile_library.reference_chain()`

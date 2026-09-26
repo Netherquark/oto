@@ -15,8 +15,14 @@
    kernel-size measurements across phases 20, 25, 31.
    - Max (prior) 928.0 GFlops (83% of 1119 ceiling) on $1365^3$ SGEMM NT (`MT96x96x16`);
      Phase 20/25/31 medians 601.5 / 505.7 / 591.6 GFlops -- carried ceiling bars only.
-   - **Live ledger (port era, authoritative):** 1 run `run_20260915_001704`
-     (interrupted) in `gfx90c_results/registry.db` -- 1652 live records. See §11.
+   - **Live ledger (port era, authoritative, `gfx90c_results/registry.db`):** 3 runs,
+     8,687 records (4,896 benchmark_result + 3,791 general); all measured rows are
+     stamped `cell_key`/`arm`/`kernel_key`. Draft deck run
+     `run_20260920_235815` (1 executed / 258 skipped) and the reference floor run
+     `gfx900_ref_20260925_152942` (see §8). The archived interrupted run
+     `run_20260915_001704` (1,652 records) lives in
+     `archive/gfx90c_results/registry.db`. Live reports:
+     `gfx90c_results/acceptance_report.json/.html`.
 
 ## 2. Per-Phase Winners (carried ceiling bars)
 
@@ -51,8 +57,9 @@ measured bars; INT8 has the most headroom (candidate wins already +18.3% at
   0 / tie = 11 / loss = 0 at ±5% (largest +4.2% BF16 768³).
 - Port mechanics: native build + Phase-0 10/10 + anti-alias 0 gfx900 leak + synthesis
   PASS. This is the baseline to beat.
-- Action: re-derive after the two scoped control runs (`port_tensile.py
-  --phases 1 31`, then `--phases 20 25`), then coverage-first native family phases.
+- Action: the dedicated floor chain (`gfx900_ref_*`) supersedes the frozen same-run
+  pair. Complete it via `--gfx900-reference --resume` (1,212 remaining phases), then
+  `--auto` re-derives per-cell verdicts by workload cell `(family, dtype, shape)`.
 
 ## 5. Candidate suite A–G (carried verdicts)
 
@@ -76,6 +83,15 @@ E bf16 @1024³, D 512/1024³. C crashed (fix pending scoped re-test). F = 3 new 
 - oto acceptance: beat the gfx900-spoof floor across the whole shipped suite
   AND approach the per-family ceilings of `gfx90c_theoretical_limits.md` §5
   (measured utilization is the score, logged per (family, bound_class)).
+
+## 8. Reference floor (gfx900 spoof, live)
+
+Dedicated `gfx900_ref_20260925_152942` (deck = the pinned 2,285 shipped kernels,
+ScheduleName `vega10`): **1,073 executed, 116 failed, 1,096 unattempted** (~25.6 h,
+2026-09-25 15:29 → 2026-09-26 17:05). Interrupted at 1,073/2,285; resumed via
+`--gfx900-reference --resume` (1,212 phases). `--auto` gates all tuning behind its
+completion. Both it and the draft deck run (`run_20260920_235815`) are registered
+in `gfx90c_results/registry.db`.
 
 <!-- DERIVED:summary -->
 <!-- /DERIVED -->

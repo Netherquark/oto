@@ -1,6 +1,7 @@
 # mapping.md — Shipped gfx900 footprint → native gfx90c replication contract
 
 Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
+Floor: 2,285
 Date: 2026-09-13 (kernel counts re-derived live from the dat on 2026-09-25)
 Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `gfx90c_common.py`, measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1). Kernel identity now comes from `tensile_library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
 
@@ -21,7 +22,8 @@ Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded fro
 | **Σ** | | **2,285** |
 
 Each family = 4 contraction patterns: `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`
-(SS `Ailk_Bljk` alone: 659 kernels, 1,980 unique size-keys). Top global tiles:
+(SS `Ailk_Bljk` per-pattern sub-totals are historical — pre-manifest token-count era;
+authoritative per-family totals live in the pinned manifest). Top global tiles:
 `MT64x64x16` 336, `MT64x64x8` 208, `MT128x64x16` 157, `MT32x32x16` 150, SS heads
 `MT128x64x16/MT64x64x16/MT128x64x8`. DD heads `MT64x64x8/MT32x32x8`; HH heads
 `MT64x64x16/MT128x64x16`; HPA heads `MT64x64x16/MT64x64x8`; HS heads `MT64x64x8/MT64x64x16`.
@@ -43,9 +45,10 @@ emit per-family tile decks from:
 
 The spoof floor for A/B is the **shipped footprint itself**: `--gfx900-reference`
 benchmarks every shipped kernel once (ScheduleName `vega10`, at the family deck shapes
-from `FAMILY_SHAPES`) into a permanent `gfx900_ref_*` run, recalled — never re-run —
-by every later acceptance report. Expected coverage denominators now come from that
-pinned manifest, not this (historical) table.
+from `FAMILY_SHAPES`) into a permanent `gfx900_ref_*` **chain** — an interrupted floor
+is continued via `--gfx900-reference --resume` (retries failed phases once, reuses
+decided base phases) — recalled — never re-run — by every later acceptance report.
+Expected coverage denominators now come from that pinned manifest, not this (historical) table.
 
 ## 3. Native kernel levers that moved the needle (measured, frozen prior)
 
@@ -73,7 +76,7 @@ FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
   `phase<N>_<family>_<pattern>` (or collides into existing phase labels by purpose).
 - Per-cell verdict uses **throttle-adjusted median-of-seeds**, ±5% tie band.
 - Peaks are never a signal; gfx900 spoof is a floor; `SPOOF floor is never re-rolled`
-  (phase-1 first-ever-run-only).
+  (dedicated `gfx900_ref_*` chain; `--resume` only, no partial re-runs).
 - **Retire only on sampling-gated evidence** (≥2 independent runs/cell + CV gates),
   never on a single N=1 run.
 - No re-sweep of already-failed cells (potential_configs verdicts carried).
