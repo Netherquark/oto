@@ -87,6 +87,39 @@ def _gate_of(why: str) -> str:
     return "occupancy" if why.startswith("Occupancy limit: ") else "divisibility"
 
 
+def self_inconsistencies(phase: dict) -> list:
+    """Deck bookkeeping that must agree with the config it describes.
+
+    Both checks below caught real bugs that the legality check could not see:
+    a config edited to a legal replacement while its phase_id and fp still
+    described the old dead one. Nothing in Tensile reads either field, so the
+    deck compiled cleanly and still lied about itself.
+    """
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    problems = []
+    cfg = phase.get("config") or {}
+    pid = str(phase.get("phase_id", ""))
+
+    # 1. an id that embeds MT/TT must match the config's MT/TT
+    if "_mt" in pid and cfg.get("MacroTile") and cfg.get("ThreadTile"):
+        want = f"mt{cfg['MacroTile']}_tt{cfg['ThreadTile']}"
+        if want not in pid:
+            problems.append(("id_config_mismatch",
+                             f"phase_id describes {want}, but the config is "
+                             f"{cfg['MacroTile']}/{cfg['ThreadTile']}"))
+
+    # 2. the fingerprint must be the hash of the config actually stored
+    stored = phase.get("fp")
+    if stored:
+        from registry import fingerprint_config
+        if fingerprint_config(cfg) != stored:
+            problems.append(("fp_stale",
+                             f"fp {stored[:12]} is not the hash of the config "
+                             f"({fingerprint_config(cfg)[:12]})"))
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -112,6 +145,7 @@ def main() -> int:
         checked += 1
         fam_total[fam or "?"] += 1
         bad = check_config(gen, cfg)
+        bad = list(bad) + self_inconsistencies(phase)
         if bad:
             fails.append((phase.get("phase_id", "?"), bad))
         elif not args.quiet:

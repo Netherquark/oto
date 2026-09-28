@@ -25,6 +25,7 @@ sys.path.insert(0, str(BASE))
 
 import port_tensile  # noqa: E402
 from port_tensile import TensileDriver  # noqa: E402
+from auto_prompt import AutoPlan  # noqa: E402
 
 
 def make_driver(tmp: Path, *, ref_exists: bool, remaining: int,
@@ -68,9 +69,10 @@ class TestAutoAlwaysReachesNative(unittest.TestCase):
         self.tmp = Path("/tmp/opencode/autofloor")
         self.tmp.mkdir(parents=True, exist_ok=True)
 
-    def _run(self, **kw):
+    def _run(self, plan=None, **kw):
         drv = make_driver(self.tmp, **kw)
-        return drv, TensileDriver.run_auto(drv, budget=1, skip_reference=False)
+        plan = plan or AutoPlan(rerun_illegal=True, rerun_underspecified=False)
+        return drv, TensileDriver.run_auto(drv, budget=1, skip_reference=False, plan=plan)
 
     def test_complete_floor_is_authoritative(self):
         drv, res = self._run(ref_exists=True, remaining=0,
@@ -115,12 +117,82 @@ class TestAutoAlwaysReachesNative(unittest.TestCase):
                         "run_phases was never reached")
 
 
+class TestDeclinedReference(unittest.TestCase):
+    """Answering no to all three questions must not quietly start a reference
+    run -- and answering yes to any one of them must."""
+
+    def setUp(self):
+        self.tmp = Path("/tmp/opencode/autofloor")
+        self.tmp.mkdir(parents=True, exist_ok=True)
+
+    def test_no_answers_never_call_run_gfx900_reference(self):
+        drv = make_driver(self.tmp, ref_exists=False, remaining=127,
+                          resume_status="completed", fresh_status="completed")
+        TensileDriver.run_auto(drv, budget=1, skip_reference=False,
+                               plan=AutoPlan(rerun_illegal=False,
+                                             rerun_underspecified=False))
+        drv.run_gfx900_reference.assert_not_called()
+        self.assertFalse(drv._reference_floor_authoritative)
+        self.assertIn("declined", drv._reference_floor_status)
+
+    def test_yes_to_unreproducible_alone_does_call_it(self):
+        """Q3 alone is a real opt-in: T3 cannot be rebuilt, but a Tensile
+        upgrade may have changed that, so the user's yes must reach the run."""
+        drv = make_driver(self.tmp, ref_exists=False, remaining=277,
+                          resume_status="completed", fresh_status="completed")
+        TensileDriver.run_auto(drv, budget=1, skip_reference=False,
+                               plan=AutoPlan(rerun_illegal=False,
+                                             rerun_underspecified=False,
+                                             rerun_unreproducible=True))
+        drv.run_gfx900_reference.assert_called_once()
+        self.assertTrue(drv.run_gfx900_reference.call_args.kwargs["release_drop"])
+        # and it must NOT have dragged the ~1-day T2 release along with it
+        self.assertFalse(drv.run_gfx900_reference.call_args.kwargs["release_held"])
+
+    def test_q2_alone_releases_only_held(self):
+        drv = make_driver(self.tmp, ref_exists=False, remaining=1881,
+                          resume_status="completed", fresh_status="completed")
+        TensileDriver.run_auto(drv, budget=1, skip_reference=False,
+                               plan=AutoPlan(rerun_underspecified=True))
+        kw = drv.run_gfx900_reference.call_args.kwargs
+        self.assertTrue(kw["release_held"])
+        self.assertFalse(kw["release_drop"])
+
+    def test_legacy_flag_still_answers_q2_only(self):
+        drv = make_driver(self.tmp, ref_exists=False, remaining=1881,
+                          resume_status="completed", fresh_status="completed")
+        TensileDriver.run_auto(drv, budget=1, skip_reference=False,
+                               release_held=True,
+                               plan=AutoPlan(rerun_illegal=False,
+                                             rerun_underspecified=False))
+        kw = drv.run_gfx900_reference.call_args.kwargs
+        self.assertTrue(kw["release_held"])
+        self.assertFalse(kw["release_drop"])
+
+    def test_yes_to_illegal_does_call_it(self):
+        drv = make_driver(self.tmp, ref_exists=False, remaining=127,
+                          resume_status="completed", fresh_status="completed")
+        TensileDriver.run_auto(drv, budget=1, skip_reference=False,
+                               plan=AutoPlan(rerun_illegal=True,
+                                             rerun_underspecified=False))
+        drv.run_gfx900_reference.assert_called()
+
+    def test_plan_numbers_reach_the_loop(self):
+        drv = make_driver(self.tmp, ref_exists=True, remaining=0,
+                          resume_status="completed", fresh_status="completed")
+        plan = AutoPlan(rerun_illegal=True, iterations=10, mutations=3)
+        TensileDriver.run_auto(drv, skip_reference=False, plan=plan)
+        self.assertEqual(drv._auto_plan.iterations, 10)
+        self.assertEqual(drv._auto_plan.mutations, 3)
+
+
 class TestSkipReference(unittest.TestCase):
     def test_skip_reference_marks_no_floor(self):
         drv = make_driver(Path("/tmp/opencode/autofloor"), ref_exists=True,
                           remaining=0, resume_status="completed",
                           fresh_status="completed")
-        TensileDriver.run_auto(drv, budget=1, skip_reference=True)
+        TensileDriver.run_auto(drv, budget=1, skip_reference=True,
+                               plan=AutoPlan())
         self.assertIsNone(drv._last_ab_reference_run_id)
         self.assertTrue(drv._reference_floor_authoritative)
 

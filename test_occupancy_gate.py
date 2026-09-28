@@ -124,6 +124,86 @@ class TestMeasuredRule(unittest.TestCase):
         self.assertGreater(first_bad, last_ok)
 
 
+class TestVectorWidthCap(unittest.TestCase):
+    """The native deck must contain a 16 B global-load config for every family.
+
+    11 of the 16 large-cell losses had one cause: the family decks hardcoded a
+    VectorWidth one step below the cap, so the winning config was never even
+    generated. 11 cells could not be won by any number of iterations.
+    """
+
+    def setUp(self):
+        from scheduler import CandidateGenerator
+        g = CandidateGenerator.__new__(CandidateGenerator)
+        self.decks = g._load_family_decks()
+
+    def test_cap_vector_width_reproduces_the_floor_winners(self):
+        from scheduler import cap_vector_width
+        # The floor's winning widths, read off the completed reference chain.
+        for fam, mt, tt, want in (
+            ("SS", "128x128x16", "8x8", 4),
+            ("HH", "128x128x16", "8x8", 8),
+            ("DD", "64x64x8", "4x4", 2),
+        ):
+            self.assertEqual(cap_vector_width(fam, mt, tt), want, fam)
+
+    def test_cap_vector_width_never_exceeds_the_hardware_cap(self):
+        from scheduler import (cap_vector_width, FAMILY_BYTES_PER_ELEMENT,
+                               GLOBAL_LOAD_BYTE_CAP)
+        for fam, bpe in FAMILY_BYTES_PER_ELEMENT.items():
+            for vw in (1, 2, 4, 8):
+                v = cap_vector_width(fam, "128x128x16", "8x8")
+                self.assertLessEqual(v * bpe, GLOBAL_LOAD_BYTE_CAP, fam)
+
+    def test_cap_vector_width_respects_tile_divisibility(self):
+        from scheduler import cap_vector_width
+        # vw may not exceed the per-thread extent of a macro-tile dimension.
+        self.assertLessEqual(cap_vector_width("SS", "32x32x16", "4x4"), 8)
+        self.assertLessEqual(cap_vector_width("SS", "16x16x16", "8x8"), 2)
+
+    def test_every_wide_family_deck_reaches_the_cap(self):
+        from scheduler import FAMILY_BYTES_PER_ELEMENT
+        for fam in ("SS", "DD", "HH"):
+            bpe = FAMILY_BYTES_PER_ELEMENT[fam]
+            best = 0
+            for c in self.decks[fam]:
+                vw = c.get("VectorWidth")
+                if vw:
+                    best = max(best, vw * bpe)
+            self.assertEqual(
+                best, 16,
+                f"{fam} deck tops out at {best} B; the 16 B cap is unreachable "
+                f"and this family cannot win a large cell")
+
+    def test_added_candidates_pass_the_dual_resource_gate(self):
+        from scheduler import occupancy_feasible
+        checked = 0
+        for fam, cfgs in self.decks.items():
+            for c in cfgs:
+                vw = c.get("VectorWidth")
+                if not vw:
+                    continue
+                config = {"DataType": fam, "FamilyLabel": fam, "NLCA": 1,
+                          "WorkGroupMapping": 4, "GlobalSplitU": 1,
+                          "ContractionPattern": "Ailk_Bjlk", "VectorWidth": vw}
+                config.update({k: v for k, v in c.items() if k != "NLCA"})
+                ok, why = occupancy_feasible(config)
+                self.assertTrue(ok, f"{fam} {c.get('MacroTile')} vw{vw}: {why}")
+                checked += 1
+        self.assertGreater(checked, 0)
+
+    def test_widened_variants_do_not_duplicate_an_existing_tile(self):
+        from scheduler import cap_vector_width
+        for fam in ("SS", "DD", "HH"):
+            seen = set()
+            for c in self.decks[fam]:
+                key = (c.get("MacroTile"), c.get("ThreadTile"), c.get("VectorWidth"))
+                self.assertNotIn(key, seen, f"duplicate {fam} {key}")
+                seen.add(key)
+            widths = {c.get("VectorWidth") for c in self.decks[fam]}
+            self.assertTrue(widths, fam)
+
+
 class TestLdsGate(unittest.TestCase):
     """LDS is a second, independent limit -- on macro tile and depth, not
     thread tile. 128x32x16 complex needs 106496 B and Tensile rejects it with

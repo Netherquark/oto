@@ -50,6 +50,7 @@ from agent import ConvergenceAgent
 from report import AcceptanceReporter
 from telemetry import TelemetrySampler as SysfsTelemetrySampler
 import tensile_library as tlib
+from auto_prompt import AutoPlan, ask  # noqa: E402  (--auto asks the user)
 
 # Industry-standard .env loader (python-dotenv); never overrides live env vars.
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -1110,7 +1111,8 @@ class TensileDriver:
                              ref_shapes: Optional[List[str]] = None,
                              resume: bool = False,
                              resume_base: Optional[str] = None,
-                             release_held: bool = False) -> Dict[str, Any]:
+                             release_held: bool = False,
+                             release_drop: bool = False) -> Dict[str, Any]:
         """
         One-time benchmark of every shipped gfx900 kernel from the system dat.
 
@@ -1281,10 +1283,16 @@ class TensileDriver:
         if _rerun:
             _before = len(phases)
             _tiers = [tlib.tier_for(p, _rerun) for p in phases]
-            phases = tlib.apply_rerun_tiers(phases, _rerun, release_held=release_held)
+            phases = tlib.apply_rerun_tiers(phases, _rerun,
+                                            release_held=release_held,
+                                            release_drop=release_drop)
             n_held = _tiers.count(tlib.TIER_HELD)
+            n_drop = _tiers.count(tlib.TIER_DROP)
             print(f"[gfx900-reference] triage: {_before} -> {len(phases)} "
-                  f"phase(s) (T3 unreproducible dropped, T1 first"
+                  f"phase(s) (T1 first"
+                  + (f", {n_drop} T3 unreproducible dropped"
+                     if n_drop and not release_drop else "")
+                  + (f", {n_drop} T3 released to the back" if release_drop and n_drop else "")
                   + (f", {n_held} T2 pinned-held"
                      if n_held and not release_held else "")
                   + (", T2 released to the back" if release_held else "")
@@ -1519,11 +1527,12 @@ class TensileDriver:
 
     def run_auto(
         self,
-        budget: int = 100,
-        mutation_budget: int = 2,
+        budget: Optional[int] = None,
+        mutation_budget: Optional[int] = None,
         opt_in_identical_skip: bool = True,
         release_held: bool = False,
-        skip_reference: bool = False
+        skip_reference: bool = False,
+        plan: Optional["AutoPlan"] = None,
     ) -> Dict[str, Any]:
         """
         Run auto-convergence loop (one-command overnight).
@@ -1534,7 +1543,28 @@ class TensileDriver:
           3. All manifest phases in order (policy-filtered)
           4. Convergent harvest/mutate loop
         """
-        print(f"Starting auto-convergence loop (budget={budget}, mutation_budget={mutation_budget})")
+        # The four decisions (re-measure illegal? re-measure under-specified?
+        # iterations? mutations?) are the user's, not a default's. resolve_plan
+        # is filled by the CLI after asking; the values here are the fallback.
+        from auto_prompt import AutoPlan, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS
+        plan = plan or AutoPlan()
+        if budget is None:
+            budget = plan.iterations
+        if mutation_budget is None:
+            mutation_budget = plan.mutations
+        # The legacy --release-under-specified flag is a non-interactive way to
+        # answer question 2; keep it working, but never let it answer question 3.
+        if release_held:
+            plan.rerun_underspecified = True
+        release_held = plan.rerun_underspecified
+        release_drop = plan.rerun_unreproducible
+        self._auto_plan = plan
+        self._reference_floor_authoritative = True
+        self._reference_floor_status = "not attempted"
+
+        print(f"Starting auto-convergence loop (budget={budget}, "
+              f"mutation_budget={mutation_budget})")
+        print(f"Plan: {plan.summary()}")
 
         # 1. Phase-0 preflight guarantees Tensile/DB/manifest presence
         preflight_ok = self.run_preflight()
@@ -1556,7 +1586,18 @@ class TensileDriver:
         #    deck is not fully decided yet, --auto RESUMES it (finishing only
         #    the undecided shipped phases) and refuses to proceed with any
         #    tuning until every shipped phase has a verdict.
-        if not skip_reference:
+        if not skip_reference and not plan.reruns_any_reference:
+            # The user was asked and said no to all three re-measurement
+            # questions. Do not silently resume the reference anyway -- that is
+            # the exact behaviour being replaced.
+            print("Reference re-measurement declined (all three questions answered "
+                  "no); recalling the existing floor and proceeding to native "
+                  "tuning. A/B for this run is PROVISIONAL.")
+            self._reference_floor_authoritative = False
+            self._reference_floor_status = "re-measurement declined by user"
+            ref = None
+            self._reference_declined = True
+        elif not skip_reference:
             ref = self._latest_reference_run(exclude=self.run_dir.name)
             if ref:
                 print(f"\n--- A/B floor: gfx900 shipped reference run {ref} (recalled) ---")
@@ -1565,7 +1606,8 @@ class TensileDriver:
                     print(f"Reference floor incomplete ({remaining} triaged phase(s) still "
                           "owed) — resuming it before tuning...")
                     ref_res = self.run_gfx900_reference(resume=True, resume_base=ref,
-                                                        release_held=release_held)
+                                                        release_held=release_held,
+                                                        release_drop=release_drop)
                     remaining = self._reference_remaining()
                     if remaining > 0:
                         # Deliberately NOT an abort. Three consecutive overnight
@@ -1593,10 +1635,13 @@ class TensileDriver:
                               "mandatory (T1) phases are re-measured. Held/best-effort T2 "
                               "phases may be skipped at any point — proceeding to tuning.")
                 print("--- reference floor mandatory phases decided; proceeding with tuning ---")
+            elif getattr(self, "_reference_declined", False):
+                pass  # answered no at the prompt; do not start one anyway
             else:
                 print("\nNo completed gfx900 shipped reference floor found — "
                       "establishing it now (--gfx900-reference, full deck, once).")
-                ref_res = self.run_gfx900_reference(release_held=release_held)
+                ref_res = self.run_gfx900_reference(release_held=release_held,
+                                                    release_drop=release_drop)
                 if ref_res.get("status") == "completed":
                     ref = ref_res.get("run_id")
                     print(f"--- A/B floor: gfx900 shipped reference run {ref} "
@@ -2492,14 +2537,23 @@ def main():
     parser.add_argument(
         "--budget",
         type=int,
-        default=100,
-        help="Auto-convergence budget (iterations, default: 100)"
+        default=None,
+        help="Auto-convergence iterations. Asked interactively at the start of "
+             "--auto; default 10 when not a TTY."
     )
     parser.add_argument(
         "--mutation-budget",
         type=int,
-        default=2,
-        help="Maximum knobs to mutate per candidate (default: 2)"
+        default=None,
+        help="Maximum knobs to mutate per candidate. Asked interactively at the "
+             "start of --auto; default 3 when not a TTY."
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Accept the default --auto plan (no illegal rerun, no "
+             "under-specified rerun, 10 iterations, 3 mutations) without "
+             "being asked. For cron/CI."
     )
     parser.add_argument(
         "--phase-timeout",
@@ -2538,11 +2592,18 @@ def main():
     parser.add_argument(
         "--release-under-specified",
         action="store_true",
-        help="Release the 1881 HELD T2 kernels (measured with glvw/grvw left to "
-             "Tensile's defaults) into a run, at the very back of the deck after "
-             "T1. Off by default: they are pinned out because re-measuring them "
-             "costs ~1 day of GPU time and fixes nothing. See "
-             "incomplete_work.md section 4.16."
+        help="Non-interactive equivalent of answering 'yes' to question 2 "
+             "(re-measure the UNDER-SPECIFIED reference cells). --auto asks "
+             "interactively; this flag exists for cron/CI or when the same choice "
+             "is being made repeatedly."
+    )
+    parser.add_argument(
+        "--release-unreproducible",
+        action="store_true",
+        help="Non-interactive equivalent of answering 'yes' to question 3 "
+             "(re-attempt the UNREPRODUCIBLE reference cells). They are dropped "
+             "by default because this Tensile build cannot rebuild them. Use "
+             "after a Tensile upgrade, where 'unreproducible' may no longer hold."
     )
     parser.add_argument(
         "--refresh",
@@ -2782,7 +2843,23 @@ def main():
         return 0 if result.get("converged") else 1
 
     elif args.auto:
-        result = driver.run_auto(args.budget, args.mutation_budget,
+        # Ask first. The plan owns the four decisions; the CLI flags, when
+        # given, only override the numeric half.
+        plan = ask(base_dir=driver.base_dir, assume_yes=args.yes)
+        if args.budget is not None:
+            plan.iterations = args.budget
+        if args.mutation_budget is not None:
+            plan.mutations = args.mutation_budget
+        # The --release-* flags are the non-interactive spelling of questions 2
+        # and 3. They are one-directional: a flag can say yes, the prompt (or
+        # its absence) decides otherwise.
+        if args.release_under_specified:
+            plan.rerun_underspecified = True
+        if getattr(args, "release_unreproducible", False):
+            plan.rerun_unreproducible = True
+        result = driver.run_auto(plan=plan,
+                                 budget=plan.iterations,
+                                 mutation_budget=plan.mutations,
                                  opt_in_identical_skip=not args.force,
                                  release_held=args.release_under_specified)
         print(f"7-Stage Auto loop complete: {result}")

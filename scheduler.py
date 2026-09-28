@@ -18,6 +18,43 @@ import hashlib
 from gfx90c_common import NUM_CUS, LDS_PER_CU_KB, FAMILY_DTYPE_CHAR, MAX_WAVES_PER_CU
 
 
+#: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
+#: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
+#: `_validate_tensile_loads` rejects anything above it.
+GLOBAL_LOAD_BYTE_CAP = 16
+
+#: Bytes per element per family, matching the dtype table in _validate_tensile_loads.
+FAMILY_BYTES_PER_ELEMENT = {
+    "SS": 4, "DD": 8, "HH": 2, "HS": 4, "CC": 8, "ZZ": 8,
+    "HH_HPA": 2, "HS_HPA": 4,
+}
+
+
+def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
+    """Widest VectorWidth that still reaches the 16 B global-load cap.
+
+    A tile only converts load width into throughput once the contiguous load is
+    actually 16 B. Every large-cell loss in the corpus had a legal but
+    *under-wide* winner, because the family decks hardcoded one step below this.
+    The tile shape is honoured too: VectorWidth may not exceed the per-thread
+    extent of either macro-tile dimension, or the load cannot be contiguous.
+
+    Returns the largest power of two satisfying both bounds.
+    """
+    bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper())
+    if not bpe:
+        return 0
+    limit = GLOBAL_LOAD_BYTE_CAP // bpe
+    mt = [int(x) for x in str(macro_tile).split("x")[:2]]
+    tt = [int(x) for x in str(thread_tile).split("x")[:2]]
+    if len(mt) == 2 and len(tt) == 2:
+        limit = min(limit, mt[0] // tt[0], mt[1] // tt[1])
+    vw = 1
+    while vw * 2 <= limit:
+        vw *= 2
+    return vw
+
+
 @dataclass
 class CandidateConfig:
     """Candidate configuration for benchmarking."""
@@ -43,17 +80,28 @@ class CandidateGenerator:
         Load family decks (native gfx90c tile candidates per family).
         """
         return {
+            # VectorWidth 2 at 128x128 was 8 B, half the 16 B the classic path
+            # allows, and cost 5.5-15.1% on every large SS cell. The *_at_cap
+            # entries exist because cap_vector_width() says so, not by hand, so
+            # the gap cannot silently reopen.
             "SS": [
                 {"MacroTile": "96x96x16", "ThreadTile": "6x6", "NLCA": 3, "VectorWidth": 2, "WorkGroupMapping": 4},
                 {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
+                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
             ],
+            # Same story: vw1 on 64x64 is 8 B and lost DD 192 by 8.2% and 768 by
+            # 2.9%. DD:2048 ties either way, so both widths stay in the deck.
             "DD": [
                 {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 1},
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
                 {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 1},
             ],
+            # PrefetchGlobalRead stays off at 128x128: it would double the LDS
+            # footprint to 16 KB and the tile is already at the 16384 B budget.
             "HH": [
                 {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "PrefetchGlobalRead": False},
+                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 8, "PrefetchGlobalRead": False},
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2},
             ],
             "ZZ": [
@@ -64,13 +112,21 @@ class CandidateGenerator:
                 {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
                 {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
             ],
+            # The transposed 64x128 tile is the floor's winner on HH_HPA:2048
+            # (1345.7 vs 1439.6 GF/s) and was absent from the deck entirely, so
+            # that cell was unwinnable. Both orientations are now staged for the
+            # HPA families; VectorWidth is left unset because those families are
+            # bound by the GLVW==VW-or-1 generator restriction (§5.3).
             "HH_HPA": [
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
                 {"MacroTile": "128x64x16", "ThreadTile": "4x8", "NLCA": 1},
+                {"MacroTile": "64x128x16", "ThreadTile": "4x8", "NLCA": 1},
             ],
             "HS_HPA": [
                 {"MacroTile": "64x64x8", "ThreadTile": "4x4", "NLCA": 1},
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
+                {"MacroTile": "128x64x16", "ThreadTile": "4x8", "NLCA": 1},
+                {"MacroTile": "64x128x16", "ThreadTile": "4x8", "NLCA": 1},
             ],
         }
 

@@ -476,22 +476,48 @@ def config_fingerprint(phase: Dict[str, Any]) -> str:
 
 RERUN_MANIFEST_PATH = "gfx90c_results/reference_rerun_manifest.json"
 
-# Tiers, in the order they must execute.
-TIER_DROP = "T3_UNREPRODUCIBLE"   # never re-run: current Tensile cannot derive them
-TIER_FIRST = "T1_RERUN"           # fixed synthesis bugs -> run first
-TIER_LAST = "T2_RERUN_LAST"      # measured under under-specified glvw -> run last
-TIER_KEEP = "T0_KEEP"            # leave the existing measurement alone
-# Designed + fully audited, but deliberately PINNED OUT of every default run.
-# These kernels are not wrong, they are merely under-specified (glvw/grvw were
-# left to Tensile's defaults), so re-measuring 1881 of them costs ~1 day of GPU
-# time for no correctness gain. The tier, the shipped-config rebuild, the
-# fingerprint machinery and the ordering are all landed and tested; only the
-# "actually stage them" decision is withheld. Release with
-# --release-under-specified (or TIER_LAST in a hand-edited manifest).
-# Tracked as PENDING in incomplete_work.md section 4.16.
-TIER_HELD = "T2_RERUN_HELD"       # pinned: not staged, does not block, needs opt-in
-#: Tiers that are not staged and never block, split by whether an opt-in releases them.
-PINNED_TIERS = (TIER_HELD, TIER_DROP)
+# ---------------------------------------------------------------------------
+# Reference-cell classification.
+#
+# These tiers only *classify* the reference corpus. They never decide anything.
+# Whether to re-measure each class is asked at the start of every --auto run
+# (see auto_prompt.py); the four answers become an AutoPlan, and that plan is
+# the only thing that governs a run. The names below are the historical T1/T2/T3
+# labels, kept because they appear in the stored manifest and in every run
+# directory on disk -- renaming the constants would silently invalidate the
+# triage that has already been audited.
+#
+#   TIER_FIRST  "T1_RERUN"           ILLEGAL
+#       These cells were measured with a config our own extractors got wrong
+#       (GlobalReduceVectorWidth, glvw/grvw handling), so the measurement does
+#       not describe the kernel it claims to. Nothing downstream can be trusted
+#       while they stand. Cheap: 127 cells.
+#
+#   TIER_HELD   "T2_RERUN_HELD"      UNDER-SPECIFIED
+#       Correct but loose: glvw/grvw were left to Tensile's defaults, so the
+#       config is not pinned and a rebuild may not reproduce it. No known
+#       correctness problem, and re-measuring all of them is a ~1 day GPU job.
+#       Default answer is therefore no, and it is a question rather than a
+#       policy because the cost is the user's to judge.
+#
+#   TIER_LAST   "T2_RERUN_LAST"      UNDER-SPECIFIED, older manifest spelling
+#   TIER_DROP   "T3_UNREPRODUCIBLE"  UNREPRODUCIBLE
+#       Current Tensile cannot derive these kernels at all. Re-running them just
+#       reproduces the failure, so they are left failed on purpose and are never
+#       staged.
+#
+#   TIER_KEEP   "T0_KEEP"            FINE
+#       Config and measurement agree. Leave alone.
+# ---------------------------------------------------------------------------
+TIER_DROP = "T3_UNREPRODUCIBLE"   # UNREPRODUCIBLE: never re-run
+TIER_FIRST = "T1_RERUN"           # ILLEGAL: fix the measurement
+TIER_LAST = "T2_RERUN_LAST"       # UNDER-SPECIFIED (older manifest spelling)
+TIER_KEEP = "T0_KEEP"            # FINE: leave the existing measurement alone
+TIER_HELD = "T2_RERUN_HELD"       # UNDER-SPECIFIED: a question, not a default
+#: Under-specified under either manifest spelling.
+UNDERSPECIFIED_TIERS = (TIER_HELD, TIER_LAST)
+#: Classes never staged by default and which never block a run.
+UNRUNNABLE_TIERS = (TIER_HELD, TIER_DROP)
 
 
 def load_rerun_manifest(base_dir: Path) -> Optional[Dict[str, Any]]:
@@ -518,7 +544,8 @@ def tier_for(phase: Dict[str, Any],
 
 def apply_rerun_tiers(phases: List[Dict[str, Any]],
                       manifest: Optional[Dict[str, Any]],
-                      release_held: bool = False) -> List[Dict[str, Any]]:
+                      release_held: bool = False,
+                      release_drop: bool = False) -> List[Dict[str, Any]]:
     """Order a deck by the audited triage.
 
     T3 phases are dropped outright (the user wants them left failed rather than
@@ -526,11 +553,17 @@ def apply_rerun_tiers(phases: List[Dict[str, Any]],
     so the fragile re-measurements only run once everything else is settled and
     a failure there cannot mask a real regression in T1.
 
-    TIER_HELD phases are pinned: with release_held=False (the default, and the
-    only thing --auto does) they are neither staged nor ordered — they are
-    skipped exactly like T3, because the whole point of the pin is to stop a
-    ~1-day re-measurement that fixes nothing. release_held=True is the explicit
-    opt-in that finally stages them, at the very back of the deck.
+    TIER_HELD phases are pinned: with release_held=False (the default) they are
+    neither staged nor ordered — they are skipped exactly like T3, because the
+    whole point of the pin is to stop a ~1-day re-measurement that fixes nothing.
+    release_held=True is the explicit opt-in that finally stages them, at the
+    very back of the deck.
+
+    TIER_DROP (unreproducible) phases used to be removed unconditionally, on the
+    reasoning that re-running only reproduces the failure. That is a judgement
+    about *this* Tensile build, not a property of the cell, so it is now a
+    question like the other two: release_drop=True stages them at the very back
+    (after the held tier), release_drop=False keeps the historical drop.
 
     Lookup is by phase_key (hash of the shipped solution name) first and by
     phase_id only as a fallback: a triaged resume rebuilds the deck, and the
@@ -544,10 +577,13 @@ def apply_rerun_tiers(phases: List[Dict[str, Any]],
     last: List[Dict[str, Any]] = []
     for ph in phases:
         tier = tier_for(ph, manifest)
-        if tier == TIER_DROP:
+        if tier == TIER_DROP and not release_drop:
             continue
-        if tier == TIER_HELD:
-            if release_held:
+        if tier in (TIER_HELD, TIER_DROP):
+            if tier == TIER_DROP:
+                if release_drop:
+                    last.append(ph)
+            elif release_held:
                 last.append(ph)
             continue
         if tier == TIER_FIRST:

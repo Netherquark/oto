@@ -57,10 +57,29 @@ class TestTierSelection(unittest.TestCase):
         out = tl.apply_rerun_tiers(self.phases, MANIFEST, release_held=True)
         self.assertEqual([p["phase_id"] for p in out], T1 + T2)
 
-    def test_t3_never_staged_even_on_release(self):
+    def test_t3_dropped_unless_release_drop(self):
+        """T3 is dropped by default, and is NOT bundled with releasing T2."""
         for rel in (False, True):
             out = tl.apply_rerun_tiers(_PHASES, MANIFEST, release_held=rel)
-            self.assertNotIn("p_t3_a", [p["phase_id"] for p in out])
+            self.assertNotIn("p_t3_a", [p["phase_id"] for p in out],
+                             "answering yes to T2 must not stage T3")
+
+    def test_t3_staged_at_the_back_on_release_drop(self):
+        out = [p["phase_id"] for p in
+               tl.apply_rerun_tiers(_PHASES, MANIFEST, release_drop=True)]
+        self.assertIn("p_t3_a", out)
+        # T2 stays pinned -- releasing T3 is not a release of T2
+        self.assertEqual(out, T1 + T3)
+
+    def test_t1_precedes_t3_on_release_drop(self):
+        out = [p["phase_id"] for p in
+               tl.apply_rerun_tiers(_PHASES, MANIFEST, release_drop=True)]
+        self.assertLess(out.index("p_t1_c"), out.index("p_t3_a"))
+
+    def test_both_releases_staged_independently(self):
+        out = [p["phase_id"] for p in tl.apply_rerun_tiers(
+            _PHASES, MANIFEST, release_held=True, release_drop=True)]
+        self.assertEqual(out, T1 + T2 + T3)
 
     def test_t1_precedes_t2_on_release(self):
         out = [p["phase_id"] for p in
@@ -84,6 +103,7 @@ class TestTierSelection(unittest.TestCase):
     def test_default_signature_is_conservative(self):
         sig = __import__("inspect").signature(tl.apply_rerun_tiers)
         self.assertFalse(sig.parameters["release_held"].default)
+        self.assertFalse(sig.parameters["release_drop"].default)
 
 
 def _bare_driver():
@@ -139,7 +159,8 @@ class TestCallSitePlumbing(unittest.TestCase):
                                return_value={"status": "completed"}) as mref, \
              mock.patch.object(pt.TensileDriver, "generate_acceptance_report",
                                return_value=None):
-            pt.TensileDriver.run_auto(drv, budget=0, release_held=True)
+            pt.TensileDriver.run_auto(drv, budget=0, release_held=True,
+                                      plan=pt.AutoPlan(rerun_illegal=True))
         self.assertTrue(mref.call_args.kwargs.get("release_held"))
 
     def test_run_auto_default_does_not_release(self):
@@ -153,7 +174,8 @@ class TestCallSitePlumbing(unittest.TestCase):
                                              "run_id": "r"}) as mref, \
              mock.patch.object(pt.TensileDriver, "generate_acceptance_report",
                                return_value=None):
-            pt.TensileDriver.run_auto(drv, budget=0)
+            pt.TensileDriver.run_auto(drv, budget=0,
+                                      plan=pt.AutoPlan(rerun_illegal=True))
         self.assertFalse(mref.call_args.kwargs.get("release_held"))
 
 
