@@ -23,6 +23,7 @@ to `gfx90c_results/gfx900_shipped_manifest.json`, and regenerated only with
 refresh=True (--gfx900-reference --refresh).
 """
 
+import hashlib
 import json
 import os
 import re
@@ -109,9 +110,17 @@ def find_gfx900_dat_files(rocm: Optional[str] = None) -> List[Path]:
 _SOLUTION_NAME = re.compile(r"^[A-Za-z]Cijk(_[A-Za-z0-9_]+)+$")
 _CANON = re.compile(r"^[A-Za-z]Cijk")
 _MT = re.compile(r"MT(\d+)x(\d+)x(\d+)")
-_TT = re.compile(r"TT(\d+)x(\d+)")
+# Shipped names use `TT4_2` (underscore), not `TT4x2`; the old r"TT(\d+)x(\d+)"
+# matched nothing in 1212/1212 phases, so ThreadTile was always derived, never read.
+_TT = re.compile(r"(?:^|_)TT(\d+)[x_](\d+)(?:_|$)")
 _WG = re.compile(r"WG(\d+)_(\d+)_(\d+)")
-_VW = re.compile(r"VW(\d+)")
+# `VW(\d+)` is ambiguous: GLVWA/GLVWB/GRVW/LRVW/SVW/VWB all contain "VW", and
+# GRVW appears before the real _VW_ token, so it silently yielded the reduce
+# width. Anchor to a standalone token.
+_VW = re.compile(r"(?:^|_)VW(\d+)(?:_|$)")
+_GLVWA = re.compile(r"(?:^|_)GLVWA(\d+)(?:_|$)")
+_GLVWB = re.compile(r"(?:^|_)GLVWB(\d+)(?:_|$)")
+_GRVW = re.compile(r"(?:^|_)GRVW(\d+)(?:_|$)")
 _GSU = re.compile(r"GSU(\d+)")
 
 
@@ -160,6 +169,10 @@ def _parse_kernel_knobs(name: str) -> Dict[str, Any]:
     v = _VW.search(name)
     if v:
         knobs["vw"] = int(v.group(1))
+    for key, rx in (("glvwa", _GLVWA), ("glvwb", _GLVWB), ("grvw", _GRVW)):
+        m = rx.search(name)
+        if m:
+            knobs[key] = int(m.group(1))
     g = _GSU.search(name)
     if g:
         knobs["gsu"] = int(g.group(1))
@@ -231,6 +244,17 @@ def _config_from_kernel(name: str, dtype: str) -> Dict[str, Any]:
         config["DepthU"] = k["dup"]
     if k.get("gsu"):
         config["GlobalSplitU"] = k["gsu"]
+    # Global load/reduce widths ship as explicit solution tokens. Omitting them
+    # let Tensile default them, and the default then contradicts the named
+    # VectorWidth (SolutionStructs.py:4588/4595 reject glvw != VW and != 1).
+    if k.get("glvwa"):
+        config["GlobalLoadVectorWidthA"] = k["glvwa"]
+    if k.get("glvwb"):
+        config["GlobalLoadVectorWidthB"] = k["glvwb"]
+    # `grvw` is deliberately dropped. It is not a Tensile parameter (absent
+    # from SolutionStructs.validParameters), and BenchmarkStructs calls
+    # printExit() on unrecognised names, so emitting it aborted every reference
+    # phase at "Filling in Parameters With Defaults" with zero phases executed.
     return config
 
 
@@ -405,6 +429,134 @@ def latest_reference_run_id(registry) -> Optional[str]:
     except Exception:
         return None
     return None
+
+
+def phase_key(phase: Dict[str, Any]) -> str:
+    """Stable identity for a phase, independent of parsed knob values.
+
+    `phase_id` embeds the knobs that `_parse_kernel_knobs` derived, so any fix to
+    those parsers renames every phase. Completion was then re-decided from
+    scratch: 1073 of 1212 ids changed between two consecutive runs and only 116
+    matched, i.e. one resume silently re-ran the whole floor.
+
+    The shipped solution name is the authoritative kernel identity and does not
+    depend on our parsing, so hash that instead.
+    """
+    name = str(phase.get("kernel") or "")
+    if not name:
+        return "pid_" + hashlib.sha1(str(phase.get("phase_id", "")).encode()).hexdigest()[:12]
+    return "k_" + hashlib.sha1(name.encode()).hexdigest()[:12]
+
+
+def config_fingerprint(phase: Dict[str, Any]) -> str:
+    """Content hash of everything that determines the measured kernel.
+
+    A prior measurement may only be reused when this matches the value recorded
+    with that measurement. Closes the phase_id hole: a fixed parser (or any knob
+    change) now invalidates exactly the affected measurements instead of
+    silently reusing them under a stale id.
+
+    The config half reuses registry.fingerprint_config (the existing `fp` field)
+    so there is a single notion of config identity; the phase-level half adds the
+    things that are not in the config dict but still change what gets measured.
+    """
+    from registry import fingerprint_config
+    cfg = dict(phase.get("config") or {})
+    material = {
+        "config_fp": fingerprint_config(cfg),
+        "dtype": phase.get("dtype"),
+        "ScheduleName": phase.get("ScheduleName"),
+        "NumBenchmarks": phase.get("NumBenchmarks"),
+        "shapes": phase.get("shapes"),
+        "kernel": phase.get("kernel"),
+    }
+    blob = json.dumps(material, sort_keys=True, default=str)
+    return "fp_" + hashlib.sha1(blob.encode()).hexdigest()[:16]
+
+
+RERUN_MANIFEST_PATH = "gfx90c_results/reference_rerun_manifest.json"
+
+# Tiers, in the order they must execute.
+TIER_DROP = "T3_UNREPRODUCIBLE"   # never re-run: current Tensile cannot derive them
+TIER_FIRST = "T1_RERUN"           # fixed synthesis bugs -> run first
+TIER_LAST = "T2_RERUN_LAST"      # measured under under-specified glvw -> run last
+TIER_KEEP = "T0_KEEP"            # leave the existing measurement alone
+# Designed + fully audited, but deliberately PINNED OUT of every default run.
+# These kernels are not wrong, they are merely under-specified (glvw/grvw were
+# left to Tensile's defaults), so re-measuring 1881 of them costs ~1 day of GPU
+# time for no correctness gain. The tier, the shipped-config rebuild, the
+# fingerprint machinery and the ordering are all landed and tested; only the
+# "actually stage them" decision is withheld. Release with
+# --release-under-specified (or TIER_LAST in a hand-edited manifest).
+# Tracked as PENDING in incomplete_work.md section 4.16.
+TIER_HELD = "T2_RERUN_HELD"       # pinned: not staged, does not block, needs opt-in
+#: Tiers that are not staged and never block, split by whether an opt-in releases them.
+PINNED_TIERS = (TIER_HELD, TIER_DROP)
+
+
+def load_rerun_manifest(base_dir: Path) -> Optional[Dict[str, Any]]:
+    """Load the audited re-run triage, or None when absent/unreadable."""
+    try:
+        with open(Path(base_dir) / RERUN_MANIFEST_PATH) as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(doc, dict) or "tiers" not in doc:
+        return None
+    return doc
+
+
+def tier_for(phase: Dict[str, Any],
+             manifest: Optional[Dict[str, Any]]) -> str:
+    """Triaged tier of one phase: by phase_key, falling back to phase_id."""
+    if not manifest:
+        return TIER_KEEP
+    by_key: Dict[str, str] = manifest.get("tiers_by_key") or {}
+    tiers: Dict[str, str] = manifest.get("tiers") or {}
+    return by_key.get(phase_key(phase)) or tiers.get(phase.get("phase_id"), TIER_KEEP)
+
+
+def apply_rerun_tiers(phases: List[Dict[str, Any]],
+                      manifest: Optional[Dict[str, Any]],
+                      release_held: bool = False) -> List[Dict[str, Any]]:
+    """Order a deck by the audited triage.
+
+    T3 phases are dropped outright (the user wants them left failed rather than
+    retried forever). T1 is hoisted to the front and T2 pushed to the very back,
+    so the fragile re-measurements only run once everything else is settled and
+    a failure there cannot mask a real regression in T1.
+
+    TIER_HELD phases are pinned: with release_held=False (the default, and the
+    only thing --auto does) they are neither staged nor ordered — they are
+    skipped exactly like T3, because the whole point of the pin is to stop a
+    ~1-day re-measurement that fixes nothing. release_held=True is the explicit
+    opt-in that finally stages them, at the very back of the deck.
+
+    Lookup is by phase_key (hash of the shipped solution name) first and by
+    phase_id only as a fallback: a triaged resume rebuilds the deck, and the
+    rebuilt phase_ids differ from the audited ones precisely because the config
+    fixes landed.
+    """
+    if not manifest:
+        return phases
+    kept: List[Dict[str, Any]] = []
+    first: List[Dict[str, Any]] = []
+    last: List[Dict[str, Any]] = []
+    for ph in phases:
+        tier = tier_for(ph, manifest)
+        if tier == TIER_DROP:
+            continue
+        if tier == TIER_HELD:
+            if release_held:
+                last.append(ph)
+            continue
+        if tier == TIER_FIRST:
+            first.append(ph)
+        elif tier == TIER_LAST:
+            last.append(ph)
+        else:
+            kept.append(ph)
+    return first + kept + last
 
 
 def reference_chain(registry, exclude: Optional[str] = None) -> List[str]:

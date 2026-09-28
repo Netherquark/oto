@@ -205,9 +205,13 @@ class CandidateGenerator:
         if lds_kb_est > LDS_PER_CU_KB:
             return False, f"LDS overflow: {lds_kb_est:.1f}KB > {LDS_PER_CU_KB}KB"
 
-        occupancy = self._estimate_occupancy(config)
-        if occupancy < 1:
-            return False, f"Occupancy too low: {occupancy}"
+        # Register-file / occupancy feasibility. This is the gate that catches
+        # Tensile's overflowedResources==4 ("Occupancy limit"), which the
+        # previous _estimate_occupancy could never fire (it ignored MacroTile
+        # and never counted VGPRs). See occupancy_feasible() for the model.
+        occ_ok, occ_reason = occupancy_feasible(config)
+        if not occ_ok:
+            return False, f"Occupancy limit: {occ_reason}"
 
         return True, "Valid"
 
@@ -409,31 +413,19 @@ class CandidateGenerator:
         return (total_elements * elem_size) / 1024.0
 
     def _estimate_occupancy(self, config: Dict[str, Any]) -> float:
-        """Estimate CU occupancy considering workgroup size and VGPR limit."""
-        wg = config.get("WorkGroupMapping", 4)
-        tt = config.get("ThreadTile", "4x4")
-        
-        # Estimate threads per workgroup from MacroTile / ThreadTile
-        m_threads, n_threads = 16, 16
-        if isinstance(tt, str):
-            clean_tt = tt.replace("_", "x").lower()
-            parts = clean_tt.split("x")
-            if len(parts) >= 2:
-                try:
-                    tt_m = max(1, int(parts[0]))
-                    tt_n = max(1, int(parts[1]))
-                    # Rough estimate
-                    m_threads = max(4, 64 // tt_m)
-                    n_threads = max(4, 64 // tt_n)
-                except ValueError:
-                    pass
-        
-        threads_per_wg = m_threads * n_threads
-        waves_per_wg = max(1, threads_per_wg // 64)
-        
-        # Max waves per CU on gfx90c
-        max_wgs_by_waves = max(1, MAX_WAVES_PER_CU // waves_per_wg)
-        return min(max_wgs_by_waves, NUM_CUS)
+        """Modelled workgroups-per-CU from the register file (gfx90c).
+
+        Delegates to occupancy_feasible()'s model so the number reported here
+        and the pass/fail decision can never disagree. The previous version
+        inferred threads from ThreadTile via a `64 // tt` heuristic, ignored
+        MacroTile and VGPRs entirely, and therefore returned >= 1 for every
+        config — which is how all 8 ZZ phases in run_20260926_201835 reached the
+        compiler and died there with overflowedResources==4.
+        """
+        ok, _reason = occupancy_feasible(config)
+        if not ok:
+            return 0.0
+        return float(occupancy_workgroups_per_cu(config))
 
     def generate_fingerprint(self, config: Dict[str, Any]) -> str:
         """Generate canonical SHA256 fingerprint for a config."""
@@ -466,6 +458,15 @@ class CandidateGenerator:
     def append_candidates_batch(self, candidates: List[CandidateConfig], phases_file: Optional[Path] = None) -> int:
         """
         Append a list of candidates to phases.yaml in a single batch write.
+
+        Every candidate is re-validated here, at the append boundary, not left to
+        the caller. This is the last point before a config becomes a launchable
+        phase, and it used to trust its input: a caller that skipped validation
+        could inject a config that dies mid-run as Tensile "error 4"
+        (overflowedResources=4, Occupancy limit) — the exact failure that killed
+        all 8 native ZZ phases. Validation is CPU-only, so refusing here costs
+        nothing and never touches the GPU. Duplicate fingerprints are still
+        skipped, and rejections are counted and reported.
         """
         target_yaml = phases_file or (self.base_dir / "phases.yaml")
         existing_phases = []
@@ -475,7 +476,13 @@ class CandidateGenerator:
 
         existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
         added = 0
+        rejected: List[str] = []
         for cand in candidates:
+            merged = {**cand.template, **cand.knobs}
+            ok, why = self.validate_config(merged)
+            if not ok:
+                rejected.append(f"{cand.phase_id}: {why}")
+                continue
             if cand.fingerprint not in existing_fps:
                 phase_entry = {
                     "phase_id": cand.phase_id,
@@ -484,7 +491,7 @@ class CandidateGenerator:
                     "shapes": cand.shapes,
                     "ScheduleName": "isa",
                     "NumBenchmarks": 8,
-                    "config": {**cand.template, **cand.knobs},
+                    "config": merged,
                     "fp": cand.fingerprint
                 }
                 existing_phases.append(phase_entry)
@@ -493,6 +500,11 @@ class CandidateGenerator:
 
                 if self.registry is not None:
                     self.registry.append_phase(cand.phase_id, cand.fingerprint, phase_entry)
+
+        if rejected:
+            print(f"[gate] refused {len(rejected)} illegal candidate(s) before append:")
+            for r in rejected:
+                print(f"       - {r}")
 
         with open(target_yaml, "w") as f:
             yaml.safe_dump(existing_phases, f, sort_keys=False, default_flow_style=False)
@@ -621,6 +633,261 @@ def _assembly_depth_u(config: Dict[str, Any]) -> int:
         except ValueError:
             pass
     return 16
+
+
+# ---------------------------------------------------------------------------
+# Register-file / occupancy feasibility (Tensile overflowedResources==4)
+# ---------------------------------------------------------------------------
+#
+# Tensile source of truth — Tensile/KernelWriterAssembly.py, functionSuffix:
+#
+#     vgprPerCU = 65536
+#     vgprPerThreadPerOccupancy = vgprPerCU // kernel["NumThreads"]
+#     numWorkGroupsPerCU = vgprPerThreadPerOccupancy // max(vgpr, agpr)
+#     if numWorkGroupsPerCU < 1:
+#         self.overflowedResources = 4      # "Occupancy limit"
+#
+# i.e. error 4 is REGISTER-FILE exhaustion, not LDS. It is only detectable at
+# kernel-generation time, which is why it cannot be caught by the divisibility
+# or assembly-class gates — those all pass on a config that dies here.
+#
+# Model. With NumThreads = (MT0/TT0)*(MT1/TT1):
+#     acc_vgprs_per_thread = TT0*TT1*R
+#     budget               = 65536 // NumThreads
+#     acc/budget           = R * MT0 * MT1 / 65536      <- ThreadTile cancels
+# so the decision depends only on dtype weight R and MacroTile AREA. R
+# additionally absorbs the operand/address/local-read pipeline registers that
+# an accumulator-only count misses.
+#
+# RETIRED: this gate used to model R * MacroTile_area <= 65536/2. That model was
+# calibrated against the pass/fail boundary but was structurally wrong, and real
+# runs proved it. It predicted complex (Z) 128x64 and 64x128 would fail -- true,
+# but for the wrong reason -- while passing complex 128x32, which then died 116
+# times in run_20260928_024945. Building every phase's kernel with Tensile's own
+# writer (check_tensile_build.py, CPU-only) showed the constraint is the
+# per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
+# limit, and MacroTile is not in the expression at all. Calibration table now
+# lives in MEASURED_VGPR below; post-mortem in potential_configs.md.
+
+# Register file is 64K VGPRs per CU, but a single thread is architecturally
+# capped at 256 VGPRs. Tensile enforces that cap when generating assembly and
+# raises instead of emitting a kernel
+# (KernelWriterAssembly: "total vgpr: N not in [0, 256]").
+VGPR_PER_CU = 65536
+MAX_VGPR_PER_THREAD = 256
+# Effective VGPRs consumed per thread-tile element, per dtype char.
+VGPR_PER_ELEMENT = {"S": 1, "D": 2, "H": 1, "B": 1, "I8": 1, "C": 4, "Z": 8}
+# Accumulator VGPRs budgeted per thread, chosen from measurement (see
+# _measured_accvgpr below): 128 keeps the observed worst case (199 VGPRs for
+# TT 4x4 complex) under the 256 cap, while the first failing step
+# (TT 8x4 complex, 256 accVGPRs -> 271 VGPRs) is excluded.
+ACCVGPR_BUDGET = 128
+# LDS budget per workgroup, expressed in the *unpadded* base tile footprint
+# (MacroTile0 + MacroTile1) * DepthU * bytesPerElement. Tensile's real check
+# (SolutionStructs:4334, "Kernel Uses %u > %u bytes of LDS") runs against an
+# allocator result inflated by prefetch double-buffering, power-of-two offset
+# alignment and LdsPad, so the base is not the number Tensile compares -- but it
+# is a sound *upper-bound* proxy in the only direction that matters here.
+# Measured complex (Z, 8 B) boundary on gfx90c: 16384 legal, 20480 dead
+# (128x32x16 needs 106496 B and is rejected). Deliberately conservative: it may
+# refuse a config Tensile would accept, never admits one Tensile refuses.
+LDS_BUDGET = 16384
+# Bytes per element for the LDS footprint, by dtype char. Note this is NOT
+# VGPR_PER_ELEMENT: a f64 element is 8 bytes but only 2 VGPRs, while a complex
+# f64 element is 8 VGPRs and 8 bytes.
+BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
+# Retained for the workgroup estimate: budget is expressed in accumulators, and
+# the register file is shared by every thread in a workgroup.
+VGPR_BUDGET = VGPR_PER_CU // 2
+
+# Measured per-thread VGPR totals from Tensile's own kernel writer on gfx90c,
+# reported by check_tensile_build.py. (threadtile, accvgpr, observed total).
+# Every entry satisfies: total = accvgpr + a small tile-dependent overhead, and
+# the pass/fail boundary is exactly accvgpr > 128 for complex.
+MEASURED_VGPR = {
+    (2, 2): 63, (4, 2): 95, (2, 4): 99, (4, 4): 154,
+    (2, 8): 171, (8, 4): 271, (8, 8): 519,
+}
+
+
+def _measured_accvgpr(tt0: int, tt1: int, weight: int) -> int:
+    """Accumulator VGPRs per thread for a thread tile and dtype weight."""
+    return tt0 * tt1 * weight
+
+
+def _depth_u(config: Dict[str, Any]) -> int:
+    """DepthU (K-dimension tile depth), 0 when it cannot be determined.
+
+    Depth lives in two different places depending on who wrote the config:
+    scheduler-generated phases carry it as the third MacroTile field
+    ("128x32x16" -> 16) and omit the DepthU key entirely, while explicit configs
+    and tests set DepthU directly. Both must resolve, or the LDS gate silently
+    computes a footprint 16x too small and waves through 128x32x16.
+    """
+    for key in ("DepthU", "depth_u"):
+        raw = config.get(key)
+        try:
+            ku = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if ku > 0:
+            return ku
+    raw_mt = config.get("MacroTile", config.get("macro_tile"))
+    if raw_mt:
+        parts = str(raw_mt).split("x")
+        if len(parts) >= 3:
+            try:
+                ku = int(parts[2])
+            except ValueError:
+                return 0
+            return ku if ku > 0 else 0
+    return 0
+
+
+def _lds_base_bytes(mt0: int, mt1: int, ch: str) -> int:
+    """Unpadded LDS footprint of one workgroup's A and B tiles."""
+    bpe = BYTES_PER_ELEMENT.get(ch)
+    if bpe is None:
+        return 0
+    return (mt0 + mt1) * bpe
+
+
+def _tile_dims(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int]]:
+    """(MT0, MT1, TT0, TT1) from MacroTile/ThreadTile, or None if unusable."""
+    mt_raw = config.get("MacroTile")
+    tt_raw = config.get("ThreadTile")
+    if not mt_raw or not tt_raw:
+        return None
+    mt_clean = str(mt_raw).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
+    tt_clean = str(tt_raw).lower().replace("_", "x")
+    try:
+        mt_parts = [int(x) for x in re.split(r'[xX]', mt_clean)]
+        tt_parts = [int(x) for x in re.split(r'[xX]', tt_clean)]
+    except ValueError:
+        return None
+    if len(mt_parts) < 2 or len(tt_parts) < 2:
+        return None
+    if mt_parts[0] <= 0 or mt_parts[1] <= 0 or tt_parts[0] <= 0 or tt_parts[1] <= 0:
+        return None
+    return mt_parts[0], mt_parts[1], tt_parts[0], tt_parts[1]
+
+
+def _dtype_char(config: Dict[str, Any]) -> str:
+    """Dtype char for a config, or "" when it cannot be determined.
+
+    Never guesses a default: a wrong guess would pick the wrong VGPR weight
+    (Z is 8, S is 1) and silently admit a config the gate must reject. Callers
+    fail closed on "".
+    """
+    raw = config.get("DataType", config.get("dtype"))
+    if raw is None:
+        # Label-only configs exist in the auto-generated phases; the label
+        # carries the same information, so resolve through it rather than
+        # failing closed on a config whose dtype is knowable.
+        raw = config.get("FamilyLabel", config.get("family_label"))
+    if raw is None:
+        return ""
+    ch = str(raw).upper()
+    return {"SS": "S", "DD": "D", "HH": "H", "ZZ": "Z", "CC": "C", "FF": "S"}.get(ch, ch)
+
+
+def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
+    """Modelled workgroups per CU; 0 when the gate rejects the config.
+
+    Per-thread register demand is fixed by the thread tile (accumulators) and
+    shared across the workgroup, so this is the 64K file divided by the
+    per-thread cost. 0 means "this config is not launchable", not "zero
+    occupancy".
+    """
+    dims = _tile_dims(config)
+    if not dims:
+        return 0
+    mt0, mt1, tt0, tt1 = dims
+    r = VGPR_PER_ELEMENT.get(_dtype_char(config))
+    if r is None:
+        return 0
+    acc = _measured_accvgpr(tt0, tt1, r)
+    if acc > ACCVGPR_BUDGET:
+        return 0
+    ku = _depth_u(config)
+    if ku <= 0:
+        return 0
+    if _lds_base_bytes(mt0, mt1, _dtype_char(config)) * ku > LDS_BUDGET:
+        return 0
+    return VGPR_PER_CU // acc
+
+
+def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+    """Register-file gate: reject configs Tensile cannot generate.
+
+    Complements (does not replace) validate_config / _validate_tensile_loads /
+    assembly_class_valid: those check divisibility and dtype-class legality,
+    which an over-wide thread tile passes.
+
+    The constraint is on **ThreadTile**, not MacroTile. A thread holds
+    TT0 x TT1 accumulators, each `weight` VGPRs, so
+
+        accVGPRs = TT0 * TT1 * weight
+
+    and MacroTile only changes how many threads share the file, not the
+    per-thread cost. Tensile then refuses to emit a kernel once the per-thread
+    total crosses 256 VGPRs. Measured on gfx90c, complex (Z, weight 8):
+
+        TT 2x2 ->  32 accVGPR ->  63-71 VGPRs  ok
+        TT 4x2 ->  64 accVGPR ->  95-99 VGPRs  ok
+        TT 4x4 -> 128 accVGPR -> 154-199 VGPRs  ok
+        TT 8x4 -> 256 accVGPR -> 271 VGPRs     FAIL "not in [0, 256]"
+        TT 8x8 -> 512 accVGPR -> 519 VGPRs     FAIL
+
+    An earlier version of this gate modelled MacroTile area instead and was
+    wrong in both directions: it passed TT 8x4 complex (the 8 ZZ phases that
+    died 116 times each across real runs) and rejected nothing that Tensile
+    accepts. See potential_configs.md for the full post-mortem.
+    """
+    dims = _tile_dims(config)
+    if not dims:
+        return True, ""                      # nothing to model; other gates own it
+    mt0, mt1, tt0, tt1 = dims
+    ch = _dtype_char(config)
+    r = VGPR_PER_ELEMENT.get(ch)
+    if r is None:
+        # Fail closed: an unmodelled dtype could be a complex one (Z weights 8),
+        # and guessing low would let a config through that then dies as error 4.
+        return False, (f"DataType {ch or '<missing>'!r} has no VGPR weight in "
+                       f"VGPR_PER_ELEMENT; cannot prove register-file occupancy")
+    ku = _depth_u(config)
+    acc = _measured_accvgpr(tt0, tt1, r)
+    if acc > ACCVGPR_BUDGET:
+        observed = MEASURED_VGPR.get((tt0, tt1))
+        seen = f"; measured {observed} VGPRs" if observed else ""
+        return False, (
+            f"ThreadTile {tt0}x{tt1} needs {acc} accumulator VGPRs/thread "
+            f"({ch} weight {r}), budget {ACCVGPR_BUDGET}{seen}. Tensile emits "
+            f"'total vgpr: N not in [0, {MAX_VGPR_PER_THREAD}]' and refuses the "
+            f"kernel. Reduce ThreadTile to {ACCVGPR_BUDGET // r} elements or fewer "
+            f"(e.g. {(2, 2) if r >= 8 else (4, 4)} for this dtype)."
+        )
+
+    if ku <= 0:
+        # Fail closed for the same reason as an unknown dtype weight: a config
+        # whose depth cannot be read computes a footprint up to 16x too small,
+        # which is exactly how 128x32x16 slipped through an earlier revision.
+        return False, (
+            "DepthU could not be determined from DepthU or MacroTile; cannot "
+            "prove the LDS footprint. Set MacroTile as 'MT0xMT1xDepthU' or set "
+            "DepthU explicitly."
+        )
+    lds = _lds_base_bytes(mt0, mt1, ch) * ku
+    if lds > LDS_BUDGET:
+        return False, (
+            f"MacroTile {mt0}x{mt1} at DepthU {ku} needs a {lds}-byte LDS tile "
+            f"footprint for {ch}, budget {LDS_BUDGET}. Prefetch double-buffering "
+            f"and offset alignment push the real figure well past 64 KB, so "
+            f"Tensile rejects it with 'Kernel Uses N > 65536 bytes of LDS' and "
+            f"the phase yields zero solutions. Reduce MacroTile area or DepthU "
+            f"(keep (MT0+MT1)*DepthU <= {LDS_BUDGET // BYTES_PER_ELEMENT[ch]})."
+        )
+    return True, ""
 
 
 def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:

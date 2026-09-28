@@ -9,6 +9,97 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+## [Acceptance best-vs-best default + telemetry-adjusted bases] 2026-09-27
+
+- **All-zero acceptance report FIXED (arm-scope asymmetry).** The spoof arm resolved
+  across the whole gfx900 reference chain (1,881 completed cells) while the native arm
+  read only the reported run. `run_20260926_201835` executed 8 non-duplicate phases
+  (402 were `identical_fp_already_passed`) and all 8 died on
+  `Generating kernel source resulted in error 4` = `overflowedResources == 4` =
+  **Occupancy limit** in the ZZ/double assembly writer → 0 native cells → every family
+  `measured_cells=0`, `per_cell_verdicts=[]`, all 38 deck cells RED/MISSING at 0.0.
+  The zeros were deterministic, not random.
+- **Native arm is now whole-db.** `port_tensile._native_records_all_runs()` aggregates
+  every `gfx90c_runs/run_*` dir's CSVs plus every registry `benchmark_result` row
+  (deduped on phase/fingerprint/GFLOPS), each stamped with `source_run`;
+  `_native_analytics_all_runs()` does the same for coverage/RED/ORANGE. Winners —
+  including prior older winner runs — are picked across all history, matching how the
+  spoof arm already worked. `gfx900_ref_*` is never admitted as native.
+- **Delta-semantics bug FIXED (columns did not reconcile with the percentage).**
+  `delta_pct` was computed from the cell's **max raw sample** on both arms while the
+  report's "Best native median" / "Spoof median" columns displayed **medians**, so the
+  displayed ratio never matched the printed delta (CC 192: displayed 31.4 vs 31.5 =
+  −0.3%, reported −6.1% from underlying 40.49 vs 43.12). All statistics are now
+  **per-kernel-median-first** so one lucky seed cannot decide a verdict, and the
+  default `best_median` is exactly `native_best_median / spoof_median - 1` — the deck
+  winner's per-kernel median vs the floor's median of per-kernel medians, term for
+  term with the two displayed columns.
+- **Kernel medians are keyed by source run.** The same `(phase_id, fingerprint)`
+  benchmarked by two runs was pooled into a single "kernel median", averaging across
+  runs; it is now one median per (run, phase, fingerprint).
+- **Rendered columns can no longer disagree with the delta (second delta bug).** The
+  two A/B columns were hard-wired to "Best native median" / "Spoof median" regardless of
+  the basis in use, so switching basis silently re-broke the guarantee fixed above. They
+  now render `native_value` / `spoof_value` — the operands actually divided — under
+  basis-aware headers (`report._BASIS_HEADERS`). Verified 0 mismatches in JSON and in all
+  38 HTML rows (residual ≤0.44pp = 1-decimal display rounding).
+- **Default comparison basis is now `winner` = BEST vs BEST** (both arms' best
+  per-kernel median), the drop-in-replacement question: replacing shipped kernel X with
+  native X' compares the two arms' best candidates. `winner_clock` / `median_clock` add
+  telemetry adjustment; `floor_best`, `strict`, `best_median`, `median`, `throttle`,
+  `best` remain selectable. All statistics are per-kernel-median-first, so "best" means
+  the best *kernel* over its seeds, never the single luckiest seed.
+- **Telemetry-adjusted bases implemented and independently verified.** Each kernel's
+  median is scaled by `sclk_ref / sclk_measured` from its own phase's sustained clock,
+  with ONE shared corpus-wide `sclk_ref` (1800 MHz) so neither arm is rescaled in its
+  own favour. Per-phase clock comes from `logs/telemetry.csv` (busy-filtered median,
+  >= 3 samples, idle floor excluded). Verified against an independent recompute from the
+  raw benchmark CSVs + telemetry: 38/38 cells match on both the raw best and its
+  normalized twin.
+- **Two guards stop the clock adjustment from producing confident nonsense.**
+  (1) A phase whose only busy samples sit at the 400 MHz idle clock is dropped, not
+  scaled — scaling it 4.5x let a 20.7 GFLOPS kernel "win" a cell at 93.0 GFLOPS;
+  genuinely throttled phases (0.9-1.2 GHz) are kept. (2) `CLOCK_MIN_COVERAGE = 0.5`
+  gate, applied SYMMETRICALLY: a clock-adjusted best is only comparable if drawn from
+  the same population as the unadjusted best, and at 9% coverage (CC cells) the eligible
+  subset's max sat 52-67% low, flipping CC to native wins. Below the gate both arms fall
+  back together to the unadjusted twin (`winner_clock` -> `winner`) and report
+  `clock_adjusted: false`.
+- **The native arm has no clock data, so `*_clock` is honestly inert today.**
+  `run_20260919_213727` (4,896 of 6,790 native records) has no telemetry file;
+  `run_20260920_235815` has 458 all-idle rows and predates `phase_id` tagging. Native
+  clock coverage is 0.000 on all 38 cells, so every `*_clock` run degrades to its
+  unadjusted twin with a printed warning. The spoof arm is well covered (mean 0.74,
+  1,719 tagged phases), so the machinery is real but cannot be applied symmetrically
+  until native is re-benchmarked with the phase-tagging sampler. Adjusting only the
+  spoof arm would deflate the floor and flatter the deck.
+- **Winner provenance in the report.** `analytics.compute_native_vs_spoof_delta` now
+  reports `native_winner_run`/`native_winner_phase`/`native_runs`/`n_native_runs` per
+  cell; `ABVerdict` + the JSON/HTML carry them, and the HTML provenance line states the
+  native arm scope. An empty native arm now prints a loud warning and the summary says
+  so, instead of rendering a clean-looking all-zero grid.
+- **Measured result on the new default (best vs best): 14 WIN / 10 TIE / 14 LOSS.**
+  Native arm = 6,790 cells from 2 runs (`run_20260919_213727`, `run_20260920_235815`);
+  coverage **100% of deck cells in all 7 families** (was 0%), **0 RED / 13 ORANGE /
+  25 GREEN**. Losses are modest and cluster at large shapes (HH:4096 −14.5%,
+  HH:2048 −14.6%, SS:2048 −15.1%); wins are large (HH:256 +272%, SS:256 +227%,
+  HH_HPA:512 +188%) but are partly a pool-size artifact, since the floor's best is a max
+  over ~303 kernels/cell vs the deck's ~75. On stricter bases the deck fares worse:
+  `floor_best` 3/7/28, `strict` (per-cell dominance) **0/0/38**, `median` 23/7/8.
+  `overall_pass=False`.
+  **Caveat:** the basis is pool-size biased against the deck — the floor averages 303
+  candidate kernels per cell vs the deck's 75 (larger in 35/38 cells), so a `max` over
+  the floor is biased upward. Part of the 28 losses is that asymmetry, not kernel
+  quality. The decisive artifact remains a per-fingerprint pairing (native X' vs shipped
+  X), which per-cell rollups cannot express. Per-cell numbers in `results.md` §10.
+- **Reference floor chain complete.** `gfx900_ref_20260926_201843_resume`: 1,212
+  targeted, 808 completed, 404 failed → chain **1,881 completed / 404 unique failed =
+  2,285 decided, 0 undecided**. 116 base failures retried and failed again; 288 new.
+- **Open (not fixed here).** `_write_phase_config` still returns early on the
+  assembly-class gate without writing the config, so `execute_phase` launches Tensile
+  against a missing path — the 121 rc=1 bucket. Reference-deck generation should
+  pre-filter those configs. Tracked in `implementation_plan.md`.
+
 ## [Named workload cells + reference-floor A/B fix + HPA case-sensitivity] 2026-09-26
 
 - **A/B floor binding bug FIXED (`ccd7fed`).** `port_tensile.py` `_compute_ab_verdicts`
@@ -630,6 +721,56 @@ and NOT the experimental data (that is `results.md`).
 - **Toolchain stderr fix** — the single most impactful change of the prior campaign:
   tool stderr kept out of machine-readable outputs made the append-only result stream
   trustworthy. Every downstream pipeline depends on it.
+
+---
+
+## 2026-09-28 — Occupancy preflight gate; ZZ dead tiles replaced
+
+**Why.** All 8 executed native ZZ phases (`run_20260926_201835`) ended
+`Generating kernel source resulted in error 4` = `overflowedResources == 4`
+= Tensile's *Occupancy limit* (register-file exhaustion, `KernelWriterAssembly.py:15422`),
+not a launch failure and not the benign "error 3". They died because the
+legality preflight **could not detect this class of failure at all**:
+`_estimate_occupancy` inferred the thread count from `ThreadTile` via a
+`64 // tt` heuristic, ignored `MacroTile` entirely, and never counted VGPRs —
+so it returned ≥ 1 for every config and never fired.
+
+**What changed.**
+
+- `scheduler.py`: added `VGPR_PER_ELEMENT`, `VGPR_BUDGET`, `_tile_dims`,
+  `_dtype_char`, `occupancy_workgroups_per_cu`, `occupancy_feasible`.
+  `validate_config` and `_estimate_occupancy` both delegate to the one model, so
+  there is a single source of truth. The gate **fails closed** on a dtype with no
+  VGPR weight: a low guess (S=1) would re-admit a failure that a high guess (Z=8)
+  catches.
+- `phases.yaml`: 410 → 418. Removed the 8 dead phases (`MT 128x64x8/8x4` and
+  `MT 64x128x8/4x8` × 4 contraction patterns); added 16 legal ones:
+  `128x32x8/8x4` and `32x128x8/2x8` as same-aspect replacements, plus `64x64x8/4x2`
+  (thread count never varied for ZZ) and `128x32x16/8x4` (deeper K). Phase IDs and
+  SHA-256 fingerprints regenerated; uniqueness asserted. The pre-fix deck is kept at
+  `archive/phases.yaml.pre-occupancy-gate.bak` as regression evidence.
+- New `check_candidates.py`: sweeps any deck through the 4 gates
+  (divisibility, assembly-class, LDS, occupancy), exits 1 on any illegal config,
+  so an illegal deck can be caught before a GPU run instead of mid-run.
+- New `allruns.py`: all-runs pattern analysis over the whole DB, driving oto's own
+  loaders (`_native_records_all_runs`, `_ab_records_from_csv`,
+  `compute_native_vs_spoof_delta` winner semantics) so it cannot drift from the
+  pipeline that produced the ledger.
+- New `test_occupancy_gate.py`: 18 tests, incl. the calibration matrix, the
+  ThreadTile-cancels identity, fail-closed dtype behaviour, the shipped deck being
+  legal, and the pre-fix deck still failing exactly 8.
+
+**Verification (CPU only, no Tensile launch, no GPU).** 18/18 tests pass;
+`check_candidates.py` reports 0 illegal across all 418 shipped phases and exactly 8
+illegal against the archived pre-fix deck.
+
+**Honest limits.** The weights are **calibrated, not derived**: `R=8` for ZZ is the
+smallest value reproducing every observed outcome, and the gate demands 2× headroom
+because the raw accumulator-only count predicts `numWorkGroupsPerCU == 1` for the
+tile that actually died (pinned in `test_raw_tensile_model_would_have_missed_the_failure`).
+It reproduces all 9 observed cases and has zero false positives over 410 phases, but
+it is a model, not a register allocator. ZZ is now **legal but unbenchmarked** — the
+next step for the family is a TTY run, not more code.
 
 ---
 

@@ -31,6 +31,27 @@ class ABVerdict:
     verdict: str  # "WIN", "TIE", "LOSS"
     fp: str = ""  # spoof entity fingerprint (config) being compared
     family: str = ""  # family from the spoof phase (SS/DD/HH/HH_HPA/HS_HPA/CC/ZZ)
+    native_best: float = 0.0
+    spoof_best: float = 0.0
+    native_best_median: float = 0.0  # deck winner's per-kernel median
+    spoof_best_median: float = 0.0
+    native_worst_median: float = 0.0  # deck's weakest kernel (dominance basis)
+    spoof_worst_median: float = 0.0
+    native_value: float = 0.0  # the two operands actually compared
+    spoof_value: float = 0.0
+    agg: str = ""  # comparison basis these operands came from
+    clock_adjusted: bool = False  # both arms really had per-phase clock data
+    native_clock_coverage: float = 0.0  # fraction of native samples clocked
+    spoof_clock_coverage: float = 0.0
+    sclk_ref_hz: float = 0.0  # shared reference clock both arms normalized TO
+    native_clock_sclk_hz: float = 0.0  # clock the winning native kernel ran at
+    spoof_clock_sclk_hz: float = 0.0
+    native_runs: List[str] = field(default_factory=list)
+    native_winner_run: str = ""  # run that produced this cell's best native sample
+    native_winner_phase: str = ""
+    n_native_runs: int = 0
+    n_native_kernels: int = 0
+    n_spoof_kernels: int = 0
 
 
 @dataclass
@@ -49,6 +70,11 @@ class AcceptanceReport:
     orange_list: List[Dict[str, Any]] = field(default_factory=list)
     reference_run_id: Optional[str] = None
     shipped_manifest: Optional[Dict[str, Any]] = None
+    native_arm: Optional[Dict[str, Any]] = None
+    # Provenance of the A/B floor. A floor that never finished is not evidence,
+    # so the report must say so rather than letting its verdicts read as final.
+    reference_floor_status: str = "not attempted"
+    reference_floor_authoritative: bool = True
 
 
 class AcceptanceReporter:
@@ -67,7 +93,10 @@ class AcceptanceReporter:
         red_threshold_pct: float = 50.0,
         family_timing: Optional[Dict[str, Dict[str, Any]]] = None,
         orange_list: Optional[List[Dict[str, Any]]] = None,
-        reference_run_id: Optional[str] = None
+        reference_run_id: Optional[str] = None,
+        native_arm: Optional[Dict[str, Any]] = None,
+        reference_floor_status: str = "not attempted",
+        reference_floor_authoritative: bool = True,
     ) -> AcceptanceReport:
         """Generate final acceptance report."""
         orange_list = orange_list or []
@@ -79,6 +108,12 @@ class AcceptanceReporter:
         summary = self._generate_summary(
             ab_verdicts, red_list, orange_list, overall_pass, reference_run_id
         )
+        if not reference_floor_authoritative:
+            summary = (
+                f"PROVISIONAL FLOOR (status={reference_floor_status}): the gfx900 "
+                f"reference chain did not finish, so these A/B verdicts are "
+                f"indicative only and must not gate a release. {summary}"
+            )
 
         return AcceptanceReport(
             timestamp=datetime.now().isoformat(),
@@ -93,7 +128,10 @@ class AcceptanceReporter:
             family_timing=family_timing,
             orange_list=orange_list,
             reference_run_id=reference_run_id,
-            shipped_manifest=shipped
+            shipped_manifest=shipped,
+            native_arm=native_arm,
+            reference_floor_status=reference_floor_status,
+            reference_floor_authoritative=reference_floor_authoritative,
         )
 
     def _load_shipped_manifest(self) -> Dict[str, Any]:
@@ -244,6 +282,13 @@ class AcceptanceReporter:
             ref = f" (ref {reference_run_id})"
         else:
             ref = " (no shipped gfx900 reference floor yet — run --gfx900-reference or --auto)"
+        if not ab_verdicts:
+            return (
+                f"Acceptance {status}: no native-vs-spoof pairs could be formed{ref}. "
+                f"{len(red_list)} RED (missing) / {len(orange_list)} ORANGE cells. "
+                f"An all-zero coverage table here means the native arm is empty, not that "
+                f"the hardware measured zero."
+            )
         return (
             f"Acceptance {status}: {wins} WIN / {ties} TIE / {losses} LOSS vs "
             f"gfx900 shipped floor{ref}. {len(red_list)} RED (missing) / "
@@ -267,16 +312,38 @@ class AcceptanceReporter:
                     "fp": v.fp,
                     "native_median": v.native_median,
                     "spoof_median": v.spoof_median,
+                    "native_best": v.native_best,
+                    "spoof_best": v.spoof_best,
+                    "native_best_median": v.native_best_median,
+                    "spoof_best_median": v.spoof_best_median,
+                    "native_worst_median": v.native_worst_median,
+                    "spoof_worst_median": v.spoof_worst_median,
+                    "agg": v.agg,
+                    "native_value": v.native_value,
+                    "spoof_value": v.spoof_value,
+                    "clock_adjusted": v.clock_adjusted,
+                    "native_clock_coverage": v.native_clock_coverage,
+                    "spoof_clock_coverage": v.spoof_clock_coverage,
+                    "sclk_ref_hz": v.sclk_ref_hz,
+                    "native_clock_sclk_hz": v.native_clock_sclk_hz,
+                    "spoof_clock_sclk_hz": v.spoof_clock_sclk_hz,
                     "family": v.family,
                     "delta_pct": v.delta_pct,
                     "tie": v.tie,
-                    "verdict": v.verdict
+                    "verdict": v.verdict,
+                    "native_runs": v.native_runs,
+                    "native_winner_run": v.native_winner_run,
+                    "native_winner_phase": v.native_winner_phase,
+                    "n_native_runs": v.n_native_runs,
+                    "n_native_kernels": v.n_native_kernels,
+                    "n_spoof_kernels": v.n_spoof_kernels,
                 }
                 for v in report.per_cell_verdicts
             ],
             "red_list": report.red_list,
             "orange_list": report.orange_list,
             "reference_run_id": report.reference_run_id,
+            "native_arm": report.native_arm,
             "shipped_manifest": {
                 "total_shipped_kernels": (report.shipped_manifest or {}).get("total_shipped_kernels", 0),
                 "expected_kernels": (report.shipped_manifest or {}).get("expected_kernels", {}),
@@ -318,13 +385,15 @@ class AcceptanceReporter:
                 <td><code>{v.dtype}</code></td>
                 <td class="mono strong">{v.shape}</td>
                 <td class="mono secondary" title="spoof entity config fingerprint">{v.fp[:10]}{'…' if len(v.fp) > 10 else ''}</td>
-                <td class="num strong">{v.native_median:.1f}</td>
-                <td class="num secondary">{v.spoof_median:.1f}</td>
+                <td class="num strong">{v.native_value:.1f}</td>
+                <td class="num secondary">{v.spoof_value:.1f}</td>
                 <td class="num strong" style="color: {v_color};">{v.delta_pct:+.1f}%</td>
                 <td><span class="tag {v_cls}">{v.verdict}</span></td>
             </tr>
             """
             verdict_families.setdefault(v.family or v.dtype or "Unknown", []).append(row)
+        agg_used = report.per_cell_verdicts[0].agg if report.per_cell_verdicts else ""
+        native_col, spoof_col = self._basis_headers(agg_used)
         verdict_sections = ""
         for fam in sorted(verdict_families):
             fam_rows = "".join(verdict_families[fam])
@@ -338,8 +407,8 @@ class AcceptanceReporter:
                             <th>Dtype</th>
                             <th>Problem shape</th>
                             <th>Spoof entity (config)</th>
-                            <th>Best native median</th>
-                            <th>Spoof median</th>
+                            <th>{native_col}</th>
+                            <th>{spoof_col}</th>
                             <th>Delta (%)</th>
                             <th>Verdict</th>
                         </tr>
@@ -873,14 +942,43 @@ class AcceptanceReporter:
         print(f"Acceptance dashboard HTML generated at: {html_path}")
 
     def _provenance_line(self, report) -> str:
-        """One-line provenance: spoof floor source + reference run + ROCm prefixes."""
+        """One-line provenance: native arm scope, spoof floor source + reference run, ROCm prefixes."""
         out = ""
+        arm = report.native_arm or {}
+        if arm:
+            runs = arm.get("runs", [])
+            stat = arm.get("agg", "best")
+            if runs:
+                shown = ", ".join(f"<code>{r}</code>" for r in runs[:4])
+                more = f" +{len(runs) - 4} more" if len(runs) > 4 else ""
+                out += (f" &middot; Native arm: whole-db best/{stat} across {arm.get('n_runs', len(runs))} "
+                        f"run(s) [{shown}{more}] ({arm.get('n_records', 0)} cells)")
+            else:
+                out += (f" &middot; Native arm: <strong>EMPTY</strong> — no native measurement "
+                        f"anywhere in the db, so every cell reads 0/MISSING")
         if report.reference_run_id:
             out += f" &middot; Spoof floor: gfx900 shipped TensileLibrary (ref <code>{report.reference_run_id}</code>)"
         prefixes = (report.shipped_manifest or {}).get("rocm_prefixes", [])
         if prefixes:
             out += f" &middot; ROCm: {', '.join('<code>%s</code>' % p for p in prefixes)}"
         return out
+
+    # Column headers per comparison basis, so the two rendered columns are
+    # always exactly the operands behind delta_pct (never a proxy for them).
+    _BASIS_HEADERS = {
+        "floor_best":   ("Native median", "Floor best median"),
+        "strict":       ("Native worst median", "Floor best median"),
+        "best_median":  ("Native best median", "Floor median"),
+        "winner":       ("Native best median", "Floor best median"),
+        "winner_clock": ("Native best (clk-adj)", "Floor best (clk-adj)"),
+        "median_clock": ("Native median (clk-adj)", "Floor median (clk-adj)"),
+        "median":       ("Native median", "Floor median"),
+        "throttle":     ("Native throttle-adj", "Floor throttle-adj"),
+        "best":         ("Native max sample", "Floor max sample"),
+    }
+
+    def _basis_headers(self, agg: str):
+        return self._BASIS_HEADERS.get(agg, ("Native value", "Floor value"))
 
     def _cell_status_section(self, report) -> str:
         """Gfx900 contract cell grid: RED missing / ORANGE below threshold / GREEN."""
