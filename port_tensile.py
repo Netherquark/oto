@@ -1896,37 +1896,63 @@ class TensileDriver:
     SCLK_MIN_HZ = 800_000_000
     SCLK_MAX_HZ = 2_500_000_000
 
-    def _load_sclk_by_phase(self, run_dir: Path) -> Dict[str, float]:
-        """Per-phase sustained core clock (Hz) from one run's telemetry timeline.
+    # A busy sample at or above this temperature is discarded from the clock
+    # estimate rather than scaled, on the same grounds as SCLK_MIN_HZ: it is "no
+    # reliable measurement", not "a slower measurement".
+    #
+    # This is a validity gate, NOT a second throughput correction. The obvious
+    # design -- scale GFLOPS by (temp_ref / temp) after the clock correction --
+    # double-counts, because core clock is the channel temperature acts through,
+    # and this corpus contradicts it anyway. Across ~17.9k busy samples from the
+    # two full reference runs, sustained clock rises with temperature and then
+    # plateaus; it never falls off a thermal ceiling:
+    #
+    #     temp      46-48C  56-58C  64-66C  70-72C  76-78C  80-82C
+    #     median     930MHz 1537MHz 1725MHz 1787MHz 1800MHz 1800MHz
+    #
+    # The clock tracks each kernel's power draw, not the die temperature: the
+    # *coldest* bucket holds the *lowest* clock and the hottest is still pinned at
+    # the 1800 MHz maximum. A temperature factor fitted to that curve would have
+    # a negative slope through the midrange, i.e. it would credit thermally
+    # stressed measurements with a speedup. The gate sits above the hottest
+    # sample ever recorded (82C), so it is inert on the current corpus and only
+    # bites if a future run genuinely thermal-throttles.
+    THERMAL_MAX_C = 88.0
 
-        Only samples taken while the GPU was actually busy are counted: a phase's
-        wall window also covers Tensile's compile/idle gaps, where sclk sits at
-        the 400 MHz idle floor, so an unfiltered per-phase mean would understate
-        the clock every kernel really ran at. Phases need >= 3 busy samples, and
-        readings at/below the idle floor are dropped as "no measurement" rather
-        than scaled (see SCLK_MIN_HZ).
+    def _telemetry_rows(self, run_dir: Path) -> List[Tuple[str, int, Optional[float]]]:
+        """(phase_id, sclk_hz, temp_c) for usable busy samples in one run.
 
-        Returns {} when the run has no telemetry, or when its sampler predates
+        Only samples taken while the GPU was actually busy are counted: a
+        phase's wall window also covers Tensile's compile/idle gaps, where sclk
+        sits at the 400 MHz idle floor and the die cools, so folding those in
+        understates both the clock the kernel ran at and the temperature it ran
+        at. Readings outside [SCLK_MIN_HZ, SCLK_MAX_HZ] are dropped for the same
+        reason SCLK_MIN_HZ exists (idle floor => no measurement, not a low one).
+
+        Returns [] when the run has no telemetry, or when its sampler predates
         per-phase tagging (the phase_id column), since those rows cannot be
         attributed to a phase at all.
         """
         import csv as _csv
-        import statistics as _stats
 
-        out: Dict[str, float] = {}
         path = Path(run_dir) / "logs" / "telemetry.csv"
         if not path.is_file():
-            return out
-        buckets: Dict[str, List[int]] = {}
+            return []
+        rows: List[Tuple[str, int, Optional[float]]] = []
         try:
             with path.open(newline="") as fh:
                 rd = _csv.DictReader(fh)
                 if not rd.fieldnames or "phase_id" not in rd.fieldnames:
-                    return {}
+                    return []
                 for row in rd:
                     pid = (row.get("phase_id") or "").strip()
                     if not pid:
                         continue
+                    # Read by column name, not position. Some samplers omit
+                    # temp_mc, and positional reads would then silently consume
+                    # power_uw as the busy percentage -- which reads as a
+                    # permanently idle GPU and drops every sample, leaving a
+                    # corpus with no clock data and no error to explain it.
                     try:
                         if int(row.get("gpu_busy_percent") or 0) <= self.TELEMETRY_BUSY_PCT:
                             continue
@@ -1935,13 +1961,68 @@ class TensileDriver:
                         continue
                     if not (self.SCLK_MIN_HZ <= hz <= self.SCLK_MAX_HZ):
                         continue
-                    buckets.setdefault(pid, []).append(hz)
+                    raw_temp = row.get("temp_mc")
+                    if raw_temp in (None, ""):
+                        temp_c = None
+                    else:
+                        try:
+                            temp_c = int(raw_temp) / 1000.0
+                        except (TypeError, ValueError):
+                            temp_c = None
+                    rows.append((pid, hz, temp_c))
         except OSError:
-            return {}
-        for pid, vals in buckets.items():
-            if len(vals) >= self.TELEMETRY_MIN_SAMPLES:
-                out[pid] = _stats.median(vals)
+            return []
+        return rows
+
+    def _load_telemetry_by_phase(self, run_dir: Path) -> Dict[str, Dict[str, Any]]:
+        """Per-phase sustained clock plus the thermal context it was taken in.
+
+        Each phase needs >= TELEMETRY_MIN_SAMPLES usable busy samples. Samples at
+        or above THERMAL_MAX_C are excluded from the clock estimate (see that
+        constant) and counted in `hot_samples`, so a thermally throttled phase
+        reports as *unmeasured* rather than as a slow kernel that clock scaling
+        would then over-reward.
+        """
+        import statistics as _stats
+
+        hz_by_phase: Dict[str, List[int]] = {}
+        temp_by_phase: Dict[str, List[float]] = {}
+        hot_by_phase: Dict[str, int] = {}
+        for pid, hz, temp_c in self._telemetry_rows(run_dir):
+            if temp_c is not None and temp_c >= self.THERMAL_MAX_C:
+                hot_by_phase[pid] = hot_by_phase.get(pid, 0) + 1
+                continue
+            hz_by_phase.setdefault(pid, []).append(hz)
+            if temp_c is not None:
+                temp_by_phase.setdefault(pid, []).append(temp_c)
+
+        out: Dict[str, Dict[str, Any]] = {}
+        for pid, hz in hz_by_phase.items():
+            if len(hz) < self.TELEMETRY_MIN_SAMPLES:
+                continue
+            temps = temp_by_phase.get(pid, [])
+            out[pid] = {
+                "sclk_hz": _stats.median(hz),
+                # temp_c is None when the sampler recorded no temperature. That
+                # is reported, not gated on: an unmeasured die temperature is not
+                # evidence of a hot die, so the clock estimate still stands. The
+                # gate only fires on a temperature that was actually seen and
+                # actually high.
+                "temp_c": _stats.median(temps) if temps else None,
+                "temp_max_c": max(temps) if temps else None,
+                "hot_samples": hot_by_phase.get(pid, 0),
+            }
         return out
+
+    def _load_sclk_by_phase(self, run_dir: Path) -> Dict[str, float]:
+        """Per-phase sustained core clock (Hz) from one run's telemetry timeline.
+
+        A thin projection of _load_telemetry_by_phase, so the existing clock
+        consumers -- the (run, phase) map in _sclk_map and the coverage
+        accounting -- keep the same {phase_id: hz} shape.
+        """
+        return {pid: d["sclk_hz"]
+                for pid, d in self._load_telemetry_by_phase(run_dir).items()}
 
     def _sclk_map(self, run_ids: List[str]) -> Dict[Tuple[str, str], float]:
         """(source_run, phase_id) -> sustained sclk across the given runs."""
@@ -1954,6 +2035,53 @@ class TensileDriver:
             for pid, hz in self._load_sclk_by_phase(run_dir).items():
                 self._sclk_cache[(rid, pid)] = hz
         return self._sclk_cache
+
+    def _thermal_map(self, run_ids: List[str]) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """(source_run, phase_id) -> thermal context for the same busy samples.
+
+        Shares the parse with _load_sclk_by_phase via _load_telemetry_by_phase, so
+        the temperature reported for a phase is the temperature of the exact
+        samples its clock estimate came from -- a phase's clock and its thermal
+        state can never be attributed to different windows.
+        """
+        if self._thermal_cache is None:
+            self._thermal_cache: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        for rid in run_ids:
+            if any(k[0] == rid for k in self._thermal_cache):
+                continue
+            run_dir = self.base_dir / "gfx90c_runs" / rid
+            for pid, d in self._load_telemetry_by_phase(run_dir).items():
+                self._thermal_cache[(rid, pid)] = d
+        return self._thermal_cache
+
+    def _thermal_summary(self, run_ids: List[str]) -> Dict[str, Any]:
+        """Corpus-wide thermal envelope for the runs feeding the A/B report.
+
+        Reported, never scaled: see THERMAL_MAX_C for why a temperature factor
+        is not applied on top of the clock correction. The point of surfacing
+        it is that a reader can see whether a clock-adjusted delta came from a
+        thermally stressed window, which the sclk number alone cannot show.
+        """
+        temps: List[float] = []
+        peaks: List[float] = []
+        hot_phases: List[str] = []
+        for (rid, pid), d in self._thermal_map(run_ids).items():
+            if d.get("temp_c") is not None:
+                temps.append(float(d["temp_c"]))
+            if d.get("temp_max_c") is not None:
+                peaks.append(float(d["temp_max_c"]))
+            if d.get("hot_samples"):
+                hot_phases.append(f"{rid}:{pid}")
+        if not temps:
+            return {"phases": 0, "temp_c": None, "temp_max_c": None,
+                    "hot_phases": 0, "hot_phase_ids": []}
+        return {
+            "phases": len(temps),
+            "temp_c": statistics.median(temps),
+            "temp_max_c": max(peaks) if peaks else None,
+            "hot_phases": len(hot_phases),
+            "hot_phase_ids": sorted(hot_phases)[:10],
+        }
 
     def _clock_coverage(self, records: List[Dict[str, Any]],
                         sclk_by_phase: Dict[Tuple[str, str], float]) -> Tuple[int, int]:
@@ -2307,6 +2435,7 @@ class TensileDriver:
         from report import ABVerdict
 
         self._sclk_cache = None
+        self._thermal_cache = None
         self._native_arm_records = self._native_records_all_runs()
         native_records = self._native_arm_records
         if not native_records and run_dir is not None:
@@ -2337,16 +2466,29 @@ class TensileDriver:
         # shared reference clock. Native runs are loaded too, so a future native
         # run with phase-tagged telemetry is adjusted automatically.
         native_runs = [str(r.get("source_run") or "") for r in native_records]
-        sclk_by_phase = self._sclk_map(sorted({r for r in native_runs if r} | set(ref_run_ids)))
+        clock_runs = sorted({r for r in native_runs if r} | set(ref_run_ids))
+        sclk_by_phase = self._sclk_map(clock_runs)
         sclk_ref = self._sclk_reference(sclk_by_phase)
         native_cov = self._clock_coverage(native_records, sclk_by_phase)
         spoof_cov = self._clock_coverage(spoof_records, sclk_by_phase)
+        thermal = self._thermal_summary(clock_runs)
         self._sclk_info = {
             "sclk_ref_hz": sclk_ref,
             "native_coverage": native_cov,
             "spoof_coverage": spoof_cov,
             "phases": len(sclk_by_phase),
+            "thermal": thermal,
+            "thermal_max_c_gate": self.THERMAL_MAX_C,
         }
+        if thermal["hot_phases"]:
+            print("[report] WARNING: "
+                  f"{thermal['hot_phases']} phase(s) hit or exceeded the "
+                  f"{self.THERMAL_MAX_C:.0f}C telemetry validity gate. Those "
+                  "samples were dropped from the clock estimate rather than "
+                  "scaled, so the phases show as UNMEASURED (and their cells "
+                  "fall back to unadjusted grading below the coverage floor) "
+                  "instead of as slow kernels. Affected: "
+                  + ", ".join(thermal["hot_phase_ids"][:5]))
         if agg.endswith("_clock") and native_cov[1] == 0:
             print("[report] WARNING: --native-agg "
                   f"{agg!r} requires per-phase telemetry clocks, but the NATIVE arm "
@@ -2359,8 +2501,18 @@ class TensileDriver:
             native_records, spoof_records, agg=agg,
             sclk_by_phase=sclk_by_phase, sclk_ref=sclk_ref)
 
+        thermal_by_phase = self._thermal_map(clock_runs)
+
+        def _temp(run: str, phase: str) -> Tuple[Optional[float], Optional[float]]:
+            d = thermal_by_phase.get((str(run or ""), str(phase or ""))) or {}
+            return d.get("temp_c"), d.get("temp_max_c")
+
         verdicts = []
         for (dtype, shape, fp), d in deltas.items():
+            n_temp, n_temp_max = _temp(d.get("native_winner_run", ""),
+                                       d.get("native_winner_phase", ""))
+            s_temp, s_temp_max = _temp(d.get("spoof_winner_run", ""),
+                                       d.get("spoof_winner_phase", ""))
             verdicts.append(ABVerdict(
                 dtype=dtype,
                 shape=shape,
@@ -2392,6 +2544,10 @@ class TensileDriver:
                 sclk_ref_hz=d.get("sclk_ref_hz", 0.0),
                 native_clock_sclk_hz=d.get("native_clock_sclk_hz", 0.0),
                 spoof_clock_sclk_hz=d.get("spoof_clock_sclk_hz", 0.0),
+                native_temp_c=n_temp,
+                spoof_temp_c=s_temp,
+                native_temp_max_c=n_temp_max,
+                spoof_temp_max_c=s_temp_max,
             ))
         return verdicts
 

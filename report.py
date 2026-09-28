@@ -46,6 +46,14 @@ class ABVerdict:
     sclk_ref_hz: float = 0.0  # shared reference clock both arms normalized TO
     native_clock_sclk_hz: float = 0.0  # clock the winning native kernel ran at
     spoof_clock_sclk_hz: float = 0.0
+    # Thermal context for the same busy samples the clocks came from. Reported
+    # alongside the clock, never folded into it: core clock is the channel
+    # temperature acts through, so a second temperature factor would
+    # double-count (see port_tensile.THERMAL_MAX_C).
+    native_temp_c: Optional[float] = None  # median die temp, winning native phase
+    spoof_temp_c: Optional[float] = None
+    native_temp_max_c: Optional[float] = None
+    spoof_temp_max_c: Optional[float] = None
     native_runs: List[str] = field(default_factory=list)
     native_winner_run: str = ""  # run that produced this cell's best native sample
     native_winner_phase: str = ""
@@ -327,6 +335,10 @@ class AcceptanceReporter:
                     "sclk_ref_hz": v.sclk_ref_hz,
                     "native_clock_sclk_hz": v.native_clock_sclk_hz,
                     "spoof_clock_sclk_hz": v.spoof_clock_sclk_hz,
+                    "native_temp_c": v.native_temp_c,
+                    "spoof_temp_c": v.spoof_temp_c,
+                    "native_temp_max_c": v.native_temp_max_c,
+                    "spoof_temp_max_c": v.spoof_temp_max_c,
                     "family": v.family,
                     "delta_pct": v.delta_pct,
                     "tie": v.tie,
@@ -1228,6 +1240,12 @@ class AcceptanceReporter:
                     </tbody>
                 </table>
             </div>
+            <p class="note">Throughput is normalized for sustained shader clock,
+            using GPU-busy samples only. Temperature is a measurement-validity
+            gate, not a throughput correction: core clock is the channel
+            temperature acts through, so scaling throughput by temperature as
+            well would double-count. A phase at or above the gate temperature
+            is reported as unmeasured rather than as a slow kernel.</p>
         </section>
         """
 
