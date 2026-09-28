@@ -68,9 +68,11 @@ are APPEND (new entry), other live docs state current fact (in-place per claude.
 **Round-1 register (ANALYSIS COMPLETE):**
 
 - **[MANIFEST] Ground truth (round-3 2026-09-26: re-derived live):** phases.yaml =
-  **410 rows** (SS 105, DD 44, HH 40, HH_HPA 20, HS_HPA 20, CC 32, ZZ 32, legacy auto
-  117 dtype-char mutants). Round-2's "304 rows (ss=52, cc=34, dd=34, zz=32, hh=64,
-  hs=16, auto=72)" is superseded. Distrust any other count.
+  **418 rows** as of 2026-09-27 (SS 105, DD 44, HH 40, HH_HPA 20, HS_HPA 20, CC 32,
+  ZZ 40, legacy auto 117 dtype-char mutants) — 410 plus 8 gate-legal ZZ tile
+  replacements after the occupancy gate (see `changelog.md`). Round-2's "304 rows
+  (ss=52, cc=34, dd=34, zz=32, hh=64, hs=16, auto=72)" is superseded. Distrust any
+  other count.
 - **A — `.env.example` ships a dead probe-chain schema.** Code reads ONLY `TENSILE_ROOT`,
   `ROCM_PATH`, `ROCM_BIN`, `ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`,
   `TENSILE_ASSEMBLER_FALLBACK`, `TENSILE_VERBOSE` (changelog "[Native .env] 2026-09-19"

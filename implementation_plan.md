@@ -27,9 +27,10 @@ Stated goal (from `tensiles_in_system_rocm.txt`): replicate and produce a
 ## Core Strategy (one-shot deterministic convergence)
 
 ```
-shipped `gfx900` footprint (28 families, 4 patterns = 410 phases:
-SS 105 · DD 44 · HH 40 · HH_HPA 20 · HS_HPA 20 · CC 32 · ZZ 32 · legacy auto 117
-— re-derived 2026-09-26, see `changelog.md`)
+shipped `gfx900` footprint (28 families, 4 patterns = 418 phases:
+SS 105 · DD 44 · HH 40 · HH_HPA 20 · HS_HPA 20 · CC 32 · ZZ 40 · legacy auto 117
+— re-derived 2026-09-27: 410 + 8 legal ZZ replacements after the occupancy gate,
+see `changelog.md`)
     ↓ translate decks (mapping.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
@@ -493,6 +494,60 @@ before merging.
 | joblib/loky vs Python 3.14 resource-tracer | **solve not avoid** (pin/fix parallelism; fallback `CpuThreads: 1` documented) |
 | Self-terminating run (no new bench work) | prove the run will execute something before starting |
 | Orphaned subprocess fragilities on abrupt breaks | `|| true`, `set +e`-style isolation (python makes it moot) |
+| Acceptance native arm scoped to one run → all-zero report | whole-db arm (`_native_records_all_runs` / `_native_analytics_all_runs`); winners may come from an older run |
+| A/B delta from max raw sample while columns showed medians | all stats per-kernel-median-first; kernel medians keyed by (run, phase, fp) |
+| A/B columns hard-wired to one basis, re-breaking the delta | columns render `native_value`/`spoof_value` (the operands actually divided) under basis-aware headers |
+| Occupancy gate unable to fire (no `MacroTile`, no VGPR count) | `scheduler.occupancy_feasible`; `validate_config` + `_estimate_occupancy` both delegate |
+
+### Open defects (triaged 2026-09-27, resume/candidate evidence)
+1. **`_write_phase_config` early-returns without writing the file.**
+   `execute_phase` ignores the return, so Tensile is launched against a config that
+   was never written → `FileNotFoundError`, rc=1. This is the entire 121-phase
+   rc=1 bucket of `gfx900_ref_20260926_201843_resume` (1,091 configs exist for 1,212
+   targets; the 121 missing are exactly the rc=1 set). Fix both ends: treat a
+   `None` return as a pre-flight rejection (record a skip, never spawn Tensile), and
+   filter assembly-class-illegal configs out of reference-deck generation. Cost
+   today: a wasted Tensile launch per phase and an unattributable failure bucket.
+2. **ZZ/double native phases die on Occupancy limit — FIXED (preflight gate + deck revision).**
+   All 8 executed `run_20260926_201835` phases ended `Generating kernel source resulted in error 4`
+   = `overflowedResources == 4` = Occupancy limit (`Tensile/KernelWriterAssembly.py:15422`,
+   `functionSuffix`). Distinct from the benign "error 3" note below. Root cause was a
+   gate hole, not a bad tile choice: `CandidateGenerator._estimate_occupancy` inferred
+   threads from `ThreadTile` with a `64 // tt` heuristic, **ignored `MacroTile`, and
+   never counted VGPRs**, so it could never fire.
+   Landed: `scheduler.occupancy_feasible` + `VGPR_PER_ELEMENT` / `VGPR_BUDGET`, wired
+   into `validate_config` and `_estimate_occupancy`; fails closed on an unmodelled
+   dtype (a wrong guess picks the wrong weight and would re-admit the failure).
+   Verified: reproduces all 9 observed pass/fail cases, rejects exactly the 8 dead
+   phases and nothing else in the pre-fix 410-phase deck, 18/18 tests
+   (`test_occupancy_gate.py`). Deck 410 → 418: dead `128x64x8/8x4` + `64x128x8/4x8`
+   replaced by legal `128x32x8/8x4` + `32x128x8/2x8`, plus new-axis `64x64x8/4x2` and
+   `128x32x16/8x4`, all × 4 contraction patterns. Full derivation, the calibrated
+   weight table, and the pre-fix deck proof live in `potential_configs.md` §5.7 —
+   that section is the authoritative home, not this entry. ZZ is now **legal but
+   unbenchmarked**: the next real step is a TTY run, not more code.
+
+### CPU-only work queued (no GPU, ordered by value)
+These are the only remaining items that do **not** need a TTY. Everything else in
+the route portfolio is measurement-bound (`potential_configs.md` §8.2).
+
+1. **Measure real per-thread VGPRs** for the tile families, via `roc-obj-ls` /
+   `llvm-mc` on Tensile-emitted assembly (build only, no benchmark). Replaces the
+   calibrated `VGPR_PER_ELEMENT` table in `scheduler.py` with a measurement, which
+   is the only way to retire the 2× headroom assumption (`potential_configs.md`
+   §5.8). Highest-value item outstanding.
+2. **Set `PrintSolutionRejectionReason`** on ZZ phases so the next run's rejection
+   reason is logged instead of inferred from `overflowedResources`.
+3. **Sweep the floor reference deck through `check_candidates.py`** to *prove* the
+   floor's winning configs are natively gate-legal, rather than assuming they are
+   because both arms emit `TensileLibrary_gfx90c.co.raw`.
+4. **Fingerprint-diff native vs floor winner sets per cell** — turns "floor wins at
+   128-bit" into an exact per-cell knob delta, which is what §9 candidates are
+   derived from.
+5. **Report the occupancy margin** (not just pass/fail) in `check_candidates.py`
+   output so near-boundary configs are visible.
+6. **Audit the 117 legacy `auto` phases** — they are the largest single block in the
+   deck and are all dtype-char mutants, so their marginal value is unproven.
 
 ### Known hazards — must never regress
 - **APU wedge at sustained 2048³-style benchmarks** (HW-Exception, exit 134). Rule:

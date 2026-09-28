@@ -79,7 +79,7 @@ decides; DB remembers.
 ## Current State
 
 Port mechanics done; parity not wins (frozen baseline, `prior_*`); the native deck
-(`phases.yaml` = 410 phases) plus the dedicated gfx900 reference floor are the
+(`phases.yaml` = 418 phases) plus the dedicated gfx900 reference floor are the
 active workflow. Floor `gfx900_ref_20260925_152942`: 1,073/2,285 executed, 1,096
 unattempted + 116 failed — continued via `--gfx900-reference --resume`;
 `--auto` gates tuning on full floor completion, then converges per-cell verdicts

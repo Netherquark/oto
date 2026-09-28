@@ -93,12 +93,193 @@ ScheduleName `vega10`): **1,073 executed, 116 failed, 1,096 unattempted** (~25.6
 completion. Both it and the draft deck run (`run_20260920_235815`) are registered
 in `gfx90c_results/registry.db`.
 
+**Floor chain COMPLETE.** `gfx900_ref_20260926_201843_resume` (2026-09-26 20:18 →
+2026-09-27 20:08) targeted the 1,212 non-completed phases: **808 completed, 404
+failed**. Chain totals across base + resume: **1,881 completed / 404 unique failed
+= 2,285 decided, 0 undecided** (zero overlap between the two runs' completions).
+Of the 404 resume failures, 116 were retries of the base run's failures — all 116
+failed again — and 288 were first attempts. No DD/CC/ZZ floor phase failed.
+
+## 9. Resume failure triage (404, `gfx900_ref_20260926_201843_resume`)
+
+| Bucket | n | rc | Root cause |
+|---|---|---|---|
+| Tensile `0 valid solutions` | 220 | 255 | Config rejected at solution enumeration. 154 `VectorWidth must be >= 2 for half`, 30 `ThreadTile not multiple of VectorWidth`, 25 GLVWA (VW4/1), 5 `totalElements 768 % (NumThreads*grvw) != 0`, 3 GLVWB, 1 GLVWA(VW8), 2 no reject line |
+| Config never written | 121 | 1 | `_write_phase_config` returns early on the assembly-class gate **without writing the file**; `execute_phase` still launches Tensile on the missing path → `FileNotFoundError`. 1,091 configs exist for 1,212 targets; the 121 missing are exactly the rc=1 set |
+| User skip (`'s'` keypress) | 63 | −1 | `skipped_by_user`. Not a config/hardware failure |
+
+Family split: HS_HPA 204, SS 106, HH+HH_HPA 94. The doubled `phase_phase_*` config
+naming is the consistent convention, not the fault.
+
+## 10. Acceptance report — native arm re-armed to the whole database
+
+**Symptom.** `run_20260926_201835`'s report was uniformly zero: every family
+`measured_cells=0 / best_median=0 / coverage=0`, `per_cell_verdicts=[]`, and all 38
+deck cells RED/MISSING at 0.0.
+
+**Cause — arm-scope asymmetry.** The spoof arm resolved across the whole reference
+chain (1,881 cells), but the native arm read only the reported run. That run
+executed only 8 non-duplicate phases (`402` were `identical_fp_already_passed`) and
+**all 8 failed** with `Generating kernel source resulted in error 4`, which Tensile
+maps to `overflowedResources == 4` = **Occupancy limit** in the ZZ/double assembly
+kernel writer. Zero native cells in-run → empty analytics → deterministic zeros.
+The real native winners were sitting in older runs the report never consulted.
+**Fix.** The native arm is now the **whole database** — every `run_*` dir's CSVs plus
+every registry `benchmark_result` row — so winners (including prior older winner runs)
+are picked across all history, exactly as the spoof arm already was. Each verdict cites
+the run/phase that produced the winning kernel.
+
+**Delta semantics (corrected twice).**
+
+*First bug.* The original code computed `delta_pct` from the cell's **max raw sample**
+while the table displayed **medians** — the columns never reconciled (CC 192 displayed
+31.4 vs 31.5, a −0.3% ratio, but reported −6.1% from underlying 40.49 vs 43.12). Every
+statistic is now **per-kernel-median-first**, so a single lucky seed cannot decide a
+verdict. Kernel medians are also keyed by source run, so the same
+`(phase_id, fingerprint)` benchmarked by two runs is no longer pooled into one median.
+
+*Second bug.* The two rendered columns were still hard-wired to "Best native median" /
+"Spoof median" regardless of the basis in use, so switching basis re-broke the
+guarantee. The columns now render `native_value` / `spoof_value` — the two operands
+actually divided — under basis-aware headers, so the displayed ratio always equals the
+printed delta (verified: 0 mismatches in JSON and in all 38 HTML rows, residual ≤0.44pp
+= 1-decimal display rounding).
+
+**Comparison bases** (`--native-agg`), per (family, dtype, shape) cell:
+
+| agg | native vs | Question it answers |
+|---|---|---|
+| `winner` **(default)** | **best** vs **best** | does the deck's best kernel beat the floor's best kernel? (drop-in replacement) |
+| `winner_clock` | best vs best, telemetry-adjusted | same, after normalizing each kernel to a common core clock |
+| `median_clock` | median vs median, telemetry-adjusted | central tendency, clock-normalized |
+| `floor_best` | native **median** vs floor **best** | can a *typical* native kernel beat the best kernel the floor ships? |
+| `strict` | native **worst** vs floor **best** | does *every* native kernel beat the floor's best? (per-cell dominance) |
+| `best_median` | native best vs floor **median** | lenient: deck winner vs a typical floor kernel |
+| `median` | both medians | symmetric central tendency |
+| `throttle` / `best` | sclk-stamped feed / max raw sample | legacy; `best` is seed-noisy, reference only |
+
+**`winner` (best vs best) is the default** — it is the drop-in-replacement question:
+you replace one shipped kernel with one native kernel, so the two candidates must be
+each arm's best. Every statistic is per-kernel-median-first, so "best" means the best
+*kernel* measured over its seeds, not the single luckiest seed.
+
+**Telemetry adjustment (`*_clock` bases).** GFLOPS is linear in core clock, so each
+kernel's median is scaled by `sclk_ref / sclk_measured`, where `sclk_measured` is that
+phase's own sustained clock and `sclk_ref` is **one shared corpus-wide constant**
+(1800 MHz, the highest clock the GPU held in this corpus) so neither arm is rescaled in
+its own favour. Two guards make it refuse to lie:
+
+1. **Idle floor is not a measurement.** A phase whose only busy samples sit at the
+   400 MHz idle clock is dropped rather than scaled — scaling it by 1800/400 = 4.5x
+   let a 20.7 GFLOPS kernel "win" a cell at 93.0 GFLOPS. Genuinely throttled phases
+   (0.9-1.2 GHz, 158 of 770 in the resume run) are real and are kept.
+2. **Coverage gate (`CLOCK_MIN_COVERAGE = 0.5`), applied symmetrically.** A clock-adjusted
+   *best* is only comparable if drawn from the same population as the unadjusted best.
+   At 9% coverage (the CC cells) the eligible subset is unrepresentative and its max sat
+   52-67% below the unadjusted max, which flipped CC to native wins. Below the gate both
+   arms fall back together to the unadjusted twin of the requested basis
+   (`winner_clock` -> `winner`, `median_clock` -> `median`) and the cell is reported
+   `clock_adjusted: false`.
+
+**The native arm has no usable clock data, so `*_clock` is currently inert.**
+`run_20260919_213727` (4,896 of the 6,790 native records) has **no telemetry file at
+all**; `run_20260920_235815` has 458 rows, all at the 400 MHz idle clock, 0% busy and
+from a sampler that predates per-phase tagging. Native clock coverage is therefore
+**0.000 on all 38 cells**, and every `*_clock` run correctly degrades to its unadjusted
+twin with a printed warning. The spoof arm is well covered (mean 0.74, 1,719 phases
+tagged), so the machinery is real and verified — it simply cannot be applied
+symmetrically until native is re-benchmarked by a sampler that tags `phase_id`
+(`telemetry.py` already writes it; `run_20260920_235815`'s file just predates that
+change). Adjusting only the spoof arm would deflate the floor and flatter the deck, so
+the gate forbids it.
+
+The adjustment was verified against an independent recompute from the raw
+`2_BenchmarkData` CSVs plus the telemetry timelines: **38/38 cells match** on both the
+raw best per-kernel median and its clock-normalized twin.
+
+**Assumption to keep in mind:** throughput ∝ core clock holds for ALU-bound kernels but
+over-corrects memory-bound ones (GFM/GEMM small shapes are limited by mclk/DRAM), so a
+clock-adjusted delta on a DDR-bound cell is an extrapolation. Both the adjusted and
+unadjusted statistics are emitted per cell for exactly this reason.
+
+**Measured result** (report for `run_20260926_201835`, ref
+`gfx900_ref_20260926_201843_resume`), native arm = **6,790 cells from 2 runs**
+(`run_20260919_213727`, `run_20260920_235815`):
+
+| agg | WIN | TIE | LOSS |
+|---|---|---|---|
+| `winner` (default, best vs best) | **14** | 10 | 14 |
+| `winner_clock` | 14 | 10 | 14 (gate: native clock coverage 0) |
+| `median` | 23 | 7 | 8 |
+| `floor_best` | 3 | 7 | 28 |
+| `strict` (dominance) | 0 | 0 | 38 |
+| `best_median` | 38 | 0 | 0 |
+
+Coverage: **100% of deck cells in all 7 families** (was 0%), **0 RED / 13 ORANGE /
+25 GREEN**. `overall_pass=False` on the 13 ORANGE cells and on the 28 A/B losses.
+
+**Verdict: the deck wins 14 of 38 cells best-vs-best, and loses 14.** The losses are
+modest (worst HH:4096 −14.5%, HH:2048 −14.6%, SS:2048 −15.1%) and cluster at large
+shapes; the wins are large (HH:256 +272%, SS:256 +227%, HH_HPA:512 +188%). The
+asymmetry is a pool-size artifact in the *wins* direction: the floor's pool averages
+~303 kernels/cell vs the deck's ~75, so the floor's best is a max over a 4x larger
+sample. The 3.27x win at SS:256 is not a 3x better kernel — SS:256 is memory-bound
+(256³) and the floor is thin there (126 GFLOPS), so that cell mostly measures floor
+under-population.
+
+**Verdict on "truly better in every way": no — per-cell dominance holds in 0 of 38.** On the
+default `floor_best` basis only 3 cells win (HH_HPA:512 +69%, HS_HPA:512 +106%,
+ZZ:192 +26%); the median cell loses ~40%. Worst: SS:1024 −67%, HS_HPA:1024 −64%,
+HH:2048 −52%, SS:2048 −53%. Per-cell dominance (`strict`) holds in **0 of 38** cells:
+the floor's best kernel is stronger than the native deck's *worst* kernel everywhere.
+
+**Caveat — the comparison is pool-size biased against the native arm.** The floor's
+candidate pool per cell averages **303 kernels vs the deck's 75** (larger in 35 of 38
+cells, e.g. DD:768 96 vs 45), so a `max` over the floor is biased upward relative to a
+median over a smaller, less-tuned deck. Part of the 28 losses is that asymmetry, not
+kernel quality. This also means cell-level rollups can only approximate the real
+question, which is **per-config**: replacing shipped kernel X with native X'. The
+decisive artifact is a per-fingerprint pairing (native X' vs shipped X), which the
+current per-cell aggregation cannot express — see `implementation_plan.md`.
+
+
 <!-- DERIVED:summary -->
 <!-- /DERIVED -->
 <!-- DERIVED:bests -->
 <!-- /DERIVED -->
 <!-- DERIVED:shared -->
 <!-- /DERIVED -->
+## 11. ZZ dead tiles replaced — why and what it proves (2026-09-27)
+
+**Measured fact.** All 8 executed `run_20260926_201835` phases failed
+`Generating kernel source resulted in error 4` = `overflowedResources == 4` =
+Tensile's *Occupancy limit* (register-file exhaustion,
+`Tensile/KernelWriterAssembly.py:15422`), covering exactly `MT 128x64x8/8x4` and
+`MT 64x128x8/4x8` across all 4 contraction patterns. This is **not** a launch
+failure and **not** the benign "error 3" (half-store) note.
+
+**Why the preflight missed it.** `scheduler._estimate_occupancy` derived the thread
+count from `ThreadTile` via a `64 // tt` heuristic, ignored `MacroTile`, and never
+counted VGPRs — so it returned ≥ 1 for every config and could never fire. The gap was
+in the gate, not the tile choice.
+
+**Proof the new gate is correct, not just stricter.** Running
+`scheduler.occupancy_feasible` over the pre-fix 410-phase manifest rejects **exactly
+those 8 phases and nothing else** — 402 true negatives, 8 true positives, zero false
+positives. All 9 observed pass/fail calibration cases reproduce. Regression-locked in
+`test_occupancy_gate.py` (18 tests) against the archived
+`archive/phases.yaml.pre-occupancy-gate.bak`.
+
+**Deck outcome.** 410 → 418: the 8 dead phases removed, 16 gate-legal ZZ phases added
+(`128x32x8/8x4`, `32x128x8/2x8` as same-aspect replacements; `64x64x8/4x2` and
+`128x32x16/8x4` as new axes) × 4 contraction patterns. Shipped manifest is now
+**418 phases**, all gate-clean. Full derivation: `potential_configs.md` §5.7.
+
+**Honest limit — this is a legality result, not a performance result.** No GPU was
+run. ZZ is **legal but unbenchmarked**; whether any of the new tiles actually beats
+the floor is unknown and can only be settled in a TTY session. The weights are
+calibrated to observed outcomes, not derived from a register allocator.
+
 <!-- DERIVED:sclk -->
 <!-- /DERIVED -->
 <!-- DERIVED:candidate -->

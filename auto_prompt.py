@@ -180,7 +180,7 @@ def ask(base_dir: Any = None,
         print(msg, file=out)
 
     say("=" * 72)
-    say("About to start an --auto run. Four decisions, and they are yours:")
+    say("About to start an --auto run. Five decisions, and they are yours:")
     say("=" * 72)
     say(f"  reference corpus: {counts.get('total', 0)} cells")
     say(f"    {illegal:>5}  ILLEGAL          measured with a config we got wrong")

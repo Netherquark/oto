@@ -22,21 +22,101 @@ report recalls the whole `gfx900_ref_*` chain (base + `--resume` continuations) 
 pairs by workload cell `(family, dtype, shape)` (`cell_key`) — best-of-cell median per
 arm, ±5% tie = parity.
 
-**Status:** `gfx900_ref_20260925_152942` = 1,073/2,285 executed, 116 failed,
-1,096 unattempted → 1,212 phases to resume (~1.1 day). `--auto` gates all tuning
-behind floor completion (`_reference_remaining() == 0`).
+**the floor is 2,285 kernels, not 1,212.**
+`gfx900_ref_20260925_152942` targeted 2,285 and was interrupted after 1,189
+(1,073 completed / 116 failed); `gfx900_ref_20260926_201843_resume` targeted 1,212
+of those and attempted every one. So the two runs between them attempted all
+2,285. Any triage scoped to the resume deck alone would silently drop the 1,073
+kernels the base run had already measured — every `tier_for` lookup is therefore
+keyed by `tlib.phase_key()` (hash of the shipped solution name), and the resume
+rebuild intersects against the manifest key set, not the loaded deck.
+`phase_id` is *not* safe as an identity: 328 of 2,285 phase_ids change when the
+deck is rebuilt after the config fixes, so pid-based triaging is unusable.
+
+**Status:** the two runs now span the whole 2,285-kernel universe. Re-measurement
+need is triaged in §4.16, and `--auto` gates tuning behind **T1 only**
+(`_reference_remaining() == 0`).
 
 **Residue/evidence:** `gfx90c_results/registry.db` 3,369 measured rows stamped
 `cell_key`/`arm`/`kernel_key`; `idx_cell_key` index exists in the live registry
 only — `registry.py` does not create it, so a fresh DB would miss it.
 
-## 4.2 One-shot driver + --auto (RESOLVED — 2026-09-13)
+## 4.16 gfx900 floor triage: T1 active, T2 HELD (PARTIAL — T1 active, T2 pinned 2026-09-28)
+
+**The problem.** Two independent defect classes made the shipped-kernel reference
+floor untrustworthy. Both were ours, in the config *extraction*, not in Tensile:
+
+1. **Incorrect config (127 kernels).** Our extractors mis-parsed the system
+   `TensileLibrary_*_gfx900.dat`: the `VW` match was unanchored (so `VW1` leaked
+   into `VectorWidth`), `TT4_2` was mis-parsed, and `GLVWA`/`GLVWB`/`GRVW` were
+   never parsed at all. These phases ran with the *wrong shape*, so their
+   numbers describe a computation we do not care about. Fixed in
+   `tensile_library.py` (anchored `VW`, corrected `TT4_2`, full GLVW emission).
+2. **Under-specified config (1,881 kernels).** `glvw`/`grvw` were left to
+   Tensile's defaults rather than taken from the shipped solution name. The
+   kernels are *correct*, just not pinned to what the vendor shipped, so the
+   measurement is reproducible but not faithful to the intent. Also fixed in the
+   parser — the rebuilt configs now pin all three values for all 2,285.
+
+**Triage (`gfx90c_results/reference_rerun_manifest.json`, keyed by `phase_key`):**
+
+| tier | n | behaviour | status |
+|---|---|---|---|
+| `T1_RERUN` | 127 | staged **first**, mandatory; `--auto` blocks until done | **ACTIVE** |
+| `T2_RERUN_HELD` | 1,881 | not staged, does not block; opt-in only | **PENDING** |
+| `T3_UNREPRODUCIBLE` | 277 | never staged, left failed | terminal |
+| `T0_KEEP` | 0 | reuse the existing measurement | — |
+
+127 + 1,881 + 277 = 2,285. T1's 127 = 64 Tensile rejections under the broken
+config (rc=255, config-fixable) + 63 operator skips (rc=-1) that were therefore
+never actually measured.
+
+**T3 breakdown (277, terminal).** 154 half-input kernels pinned to `VW1` by
+Tensile, 121 rejected by `assembly_class_valid()` (a real legality gap vs the
+shipped `.dat`), 2 with no resolvable schedule. The vendored Tensile cannot
+reproduce these; changing dtype or config to force them through would benchmark
+a *different* computation, which is worse than a documented gap. Left failed.
+
+**What is deliberately NOT in use (the pin).** T2's mechanism is fully landed
+and tested — the shipped-config rebuild, the content fingerprint, the triaged
+ordering, the hold/release switch — but the **staging decision is withheld**.
+1,881 phases is ~1 day of GPU time to re-measure kernels that were never wrong,
+for no correctness gain. The floor therefore keeps their existing
+default-resolved measurements, and that is recorded rather than hidden.
+
+Release when the floor is stable and a GLVW-faithful re-measurement is actually
+wanted:
+
+```bash
+python port_tensile.py --gfx900-reference --release-under-specified
+# or, via --auto:  python port_tensile.py --auto --release-under-specified
+```
+
+**Files:** `tensile_library.py` (`TIER_HELD`, `PINNED_TIERS`,
+`apply_rerun_tiers(..., release_held=)`); `port_tensile.py`
+(`run_gfx900_reference(..., release_held=)`, `run_auto(..., release_held=)`,
+`--release-under-specified`); lists in `gfx90c_results/`:
+`reference_rerun_first.txt` (127), `reference_rerun_last.txt` (1,881 held),
+`reference_rerun_never.txt` (277); audit in
+`reference_integrity_audit.json`.
+
+**Verified (CPU-only, no GPU):** default deck stages **127** and nothing else;
+`--release-under-specified` stages **2,008** with T1 first and T2 at the very
+back; the `--auto` gate returns 127 owed → 0 once T1 completes, stays 0 with T2
+untouched/partial/absent, and returns 27 with T1 at 100/127 — so held T2 can
+never deadlock or falsely satisfy the floor. The real `--resume` path was
+exercised with execution stubbed and reported `127 to run, 277 dropped, 1881
+pinned as held`.
+
+**To close:** run the 127 in a TTY, confirm the floor completes, then decide
+whether T2 is worth its day. No code work is outstanding.
+
 
 **Mechanism:** `port_tensile.py` + `phases.yaml` manifest + 7 modules (`registry.py`, `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`, `gfx90c_common.py`) fully implemented and unit-tested. `--auto` convergence loop operational with deterministic mutate-≤2-knobs candidate generation.
 
 ## 4.3 28-family native coverage (RESOLVED — 2026-09-13)
 
-**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto; re-derived to **410 phases** 2026-09-26).
+**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto; re-derived to **418 phases** 2026-09-27: 410 + 8 gate-legal ZZ replacements, see `changelog.md`.)
 
 ## 4.4 Adaptive-repeat finalize (RESOLVED — 2026-09-13)
 
@@ -89,7 +169,7 @@ only — `registry.py` does not create it, so a fresh DB would miss it.
 - Abolished reliance on arbitrary numeric phase IDs (0–31); phase identity uses
   semantic filters.
 - Replaced CLI execution with semantic filters: `--family` (SS, HH, HH_HPA, HS_HPA, DD, ZZ, CC), `--pattern` (Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk), `--shape`, `--stage`, and `--auto`.
-- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest = **410 phases** as of 2026-09-26, see `results.md` §1).
+- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest = **418 phases** as of 2026-09-27, see `results.md` §1).
 - Added `--dry-run` to inspect matched candidate targets before hardware execution.
 
 ## 4.13 Parallel Clang Build, Cooldown Key Handling & Early Quit Reports (RESOLVED — 2026-09-13)

@@ -330,6 +330,57 @@ Measurement no-go's:
 - Scoring a ±5% tie as a win.
 - Reading a winner from a single-shot seed run.
 
+### 8.1 Reading the raw evidence (canonical, do not re-derive)
+
+Getting these wrong produces confident, wrong conclusions. `allruns.py` encodes
+all of them and drives oto's own loaders, so use it instead of hand-parsing.
+
+- **A `2_BenchmarkData` CSV is a multi-size sweep, one row per shape** — not one
+  row per measurement. Column 0 is the **row index**, not GFlops. **GFlops is the
+  last column whose name looks like a kernel name.**
+- **Shape is `SizeI x SizeJ x SizeL`; `SizeK` is 1.** The sweep varies the *problem
+  size*, so the cube side is the L dimension, not K.
+- **`MacroTile` / `ThreadTile` come back as strings** (`"128x128x16"`), and
+  `ThreadTile` in particular is lowercase (`"8x8"` vs `"8X8"`). Parse, never
+  assume ints or case.
+- **A run directory may be gone.** Registry-only runs (e.g. `run_20260919_213727`)
+  have no YAML; their records carry only a 12-key `config` snapshot. The 13 native
+  winner cells that rely on it are flagged partial, not silently treated as complete.
+- **Family comes from the run's own `FamilyLabel`.** Do not derive it from the live
+  `phases.yaml`: the reference `hh_hpa` / `hs_hpa` phases are no longer listed there,
+  so a YAML lookup silently folds them into `HH`.
+- **Winner aggregation is median-per-kernel, then max** — never max over raw
+  samples, or one lucky seed becomes the family's "best" config.
+- **Bytes per element for the global load:** S 4, D 8, H 2, **C 8, Z 8** (complex
+  types are 8 B, not 4/8), I8 1, B 2. Hard cap `GLVW x bytes <= 16`, so
+  `GLVW` targets are SS 4, DD 2, **CC 2, ZZ 2**, HH 8.
+- **Both arms are the same silicon** (same gfx90c APU); the "spoof" arm is the same
+  device running the gfx900-tuned config deck. Identical configs do not agree
+  between the two run trees (mean −5.30%, median −1.56%), so a cross-arm delta
+  needs interleaved controls.
+- **`unified_measurements.csv` is not an A/B input** — partial provenance and
+  config fields.
+
+### 8.2 Config legality is a 4-gate preflight, not a launch-time surprise
+
+A config can pass divisibility, assembly-class and LDS checks and still die at
+kernel-generation time. The four gates, all CPU-side:
+
+1. **divisibility** — `GLVW % mv/pv == 0` and `% lpv == 0` (`validate_config`)
+2. **assembly class** — MT/TT/DepthU/Threads/StaggerU/FP16 clamp (`assembly_class_valid`)
+3. **LDS** — per-thread LDS in VGPR-equivalent registers
+4. **register-file occupancy** — `scheduler.occupancy_feasible`
+
+Gate 4 is the one that was silently absent. Tensile sets
+`overflowedResources = 4` ("Occupancy limit", user-visible as
+`Generating kernel source resulted in error 4`) when the register file cannot hold
+one workgroup. Run `python3 check_candidates.py` to sweep a deck; it exits 1 on any
+illegal config, so legality is provable **before** a GPU run. Occupancy is decided
+by MacroTile area and a dtype weight only — `ThreadTile` cancels out — and it is
+the only gate that can kill a whole family through tile width alone. Full model,
+calibration table and the evidence for the 2× headroom rule: `potential_configs.md`
+§5.7.
+
 ---
 
 ## 9. Reporting Toolchain

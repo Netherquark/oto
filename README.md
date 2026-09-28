@@ -21,9 +21,9 @@ The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages de
 ```
                   ┌─────────────────────────────────────┐
                   │          phases.yaml (Manifest)     │
-                  │   (410 phases: SS 105 · HH 40 ·     │
+                  │   (434 phases: SS 105 · HH 40 ·     │
                   │    HH_HPA 20 · HS_HPA 20 · DD 44 ·  │
-                  │    CC 32 · ZZ 32 · legacy auto 117) │
+                  │    CC 32 · ZZ 47 · AUTO 9 · ? 117)  │
                   └──────────────────┬──────────────────┘
                                      │
                                      ▼
@@ -125,16 +125,70 @@ python3 port_tensile.py --report
 The A/B verdict compares the spoof floor vs native by workload cell
 `(family, dtype, shape)`: best-of-cell per arm, medians the unit, ±5% tie band.
 Gate semantics: **RED = MISSING** contract cell, **ORANGE = measured but < 50% of
-the family realistic ceiling** — both block acceptance. `--auto` auto-resumes an
-incomplete floor and refuses to tune until it is fully decided.
+the family realistic ceiling** — both block acceptance.
+
+**`--auto` never gates on the floor.** It asks whether to re-measure the
+reference corpus (see §3.5), attempts that if you say yes, and then always
+proceeds to native tuning. If the floor is incomplete or failed, the run sets
+`reference_floor_authoritative = false` and the report is prefixed
+`PROVISIONAL FLOOR`, which marks its A/B verdicts as indicative only. This is
+deliberate: three consecutive overnight runs spent their entire budget on the
+floor and measured nothing native.
 The shipped footprint (2,285 kernels, pinned once at
 `gfx90c_results/gfx900_shipped_manifest.json`) supplies the coverage
 denominators; provenance (list of ROCm prefixes) rides in the report JSON.
 
 ### 5. Auto-Convergence Loop
-Run end-to-end deterministic convergence loop across all 7 phase families with budget control:
+Run the end-to-end deterministic convergence loop across all phase families.
+
+In a terminal, `--auto` **asks first** and then runs to that plan:
 ```bash
-python3 port_tensile.py --auto --budget 50 --mutation-budget 2
+python3 port_tensile.py --auto
+```
+
+```
+  reference corpus: 2285 cells
+      127  ILLEGAL          measured with a config we got wrong
+     1881  UNDER-SPECIFIED  glvw/grvw left to Tensile's defaults
+      277  UNREPRODUCIBLE  cannot be rebuilt
+
+  1. Re-measure the 127 ILLEGAL reference cells? [y/N]
+  2. Re-measure the 1881 UNDER-SPECIFIED reference cells? [y/N]
+  3. Re-attempt the 277 UNREPRODUCIBLE reference cells? [y/N]
+  4. How many iterations? (default 10):
+  5. How many mutations per candidate? (default 3):
+```
+
+The answers become an `AutoPlan` that governs the run. The three corpus tiers
+are **classification only** — no tier decides anything on its own, and the driver
+never starts a reference run you declined. Answering "no" to all three leaves the
+A/B floor provisional but still tunes, per §4.
+
+Outside a TTY (cron, CI) nothing is asked; the defaults are taken and printed.
+`--yes` takes them explicitly:
+```bash
+# Non-interactive, all defaults (no re-measurement, 10 iterations, 3 mutations)
+python3 port_tensile.py --auto --yes
+
+# Override the numbers the prompt would ask for (defaults are 10 and 3)
+python3 port_tensile.py --auto --budget 50 --mutation-budget 5
+
+# Non-interactive answer to questions 2 and 3
+python3 port_tensile.py --auto --yes \
+    --release-under-specified --release-unreproducible
+```
+
+| Flag | Effect |
+|---|---|
+| `--yes` | Take the default plan without asking. |
+| `--budget N` | Iterations. Overrides the answer to question 4. |
+| `--mutation-budget N` | Knobs mutated per candidate. Overrides question 5. |
+| `--release-under-specified` | Non-interactive "yes" to question 2 (~1 day of GPU). |
+| `--release-unreproducible` | Non-interactive "yes" to question 3. Worth using after a Tensile upgrade, when "unreproducible" may no longer hold. |
+
+Native-only tuning, with no reference floor at all:
+```bash
+python3 port_tensile.py --native
 ```
 
 ### 6. Library Synthesis (Stage 6)
@@ -150,18 +204,43 @@ python3 port_tensile.py --synthesize
 | Module | Purpose |
 |---|---|
 | [`port_tensile.py`](port_tensile.py) | Suite CLI, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
-| [`scheduler.py`](scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation (`≤2` knobs), GEMM LDS estimation `(M*K + N*K)*elem_size*NLCA`, tile divisibility, and shape parsing. |
+| [`scheduler.py`](scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation, shape parsing, and the **dual measured resource gate**: `TT0*TT1*dtype_weight <= 128` accumulator VGPRs/thread and `(MT0+MT1)*DepthU*bytesPerElement <= 16384` LDS. Unknown dtype or unresolvable depth fails closed. `cap_vector_width()` derives each family's 16 B global-load-cap variant. |
 | [`policy.py`](policy.py) | Median-of-seeds aggregation, CV≤15% stability gating, evidence-gated Tier-2 retirement (`check_retirement_eligibility`), and `should_run`/`should_repeat` policy gates. |
 | [`analytics.py`](analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and per-cell native-vs-spoof deltas (workload cells via `cell_key`). |
 | [`agent.py`](agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
 | [`registry.py`](registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
 | [`report.py`](report.py) | Acceptance report generation, per-family coverage vs the pinned shipped-dat manifest, A/B verdict synthesis (`WIN`, `TIE`, `LOSS`) vs the recalled gfx900 reference floor, and rich HTML dashboard generation. |
 | [`tensile_library.py`](tensile_library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
+| [`auto_prompt.py`](auto_prompt.py) | The five `--auto` questions, live corpus counts read from the registry, and the `AutoPlan` they resolve to. Non-TTY defaults are explicit and reported. |
 | [`gfx90c_common.py`](gfx90c_common.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
 
 ---
 
-## 5. Key Documentation & System Authority
+## 5. Validation Tools (CPU-only, no GPU needed)
+
+Neither of these runs a benchmark, so both are safe outside a TTY.
+
+```bash
+# Lint a candidate deck. Checks resource legality AND deck self-consistency
+# (an id that embeds MT/TT must match its config; fp must be the hash of the
+# config actually stored). Exits non-zero on any failure, so it can gate a pipeline.
+python3 check_candidates.py --quiet
+python3 check_candidates.py --family ZZ --json out.json
+
+# Ask Tensile itself to generate and compile kernels for every phase, and report
+# any reject() reason. Proves solution generation and kernel resource legality --
+# it is NOT a complete code-object or library build.
+python3 check_tensile_build.py --jobs 8 --json build.json
+python3 check_tensile_build.py --family ZZ          # just the ZZ family
+python3 check_tensile_build.py --compare            # cross-check our gate vs Tensile
+```
+
+Current state: `check_candidates` reports 434 checked, 0 illegal; the last full
+`check_tensile_build` run was 434 passed, 0 failed.
+
+---
+
+## 6. Key Documentation & System Authority
 
 * **[claude.md](claude.md)**: Entry contract, process guardrails, and file ownership rules.
 * **[implementation_plan.md](implementation_plan.md)**: Current executable implementation plan.
@@ -174,7 +253,7 @@ python3 port_tensile.py --synthesize
 
 ---
 
-## 6. Configuration (`.env`)
+## 7. Configuration (`.env`)
 
 Machine-specific locations are read from a `.env` file in the repo root via
 `python-dotenv` ([`load_dotenv`](https://github.com/theskumar/python-dotenv) —

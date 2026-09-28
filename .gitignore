@@ -80,3 +80,8 @@ gfx90c_runs/
 # source/
 # cache.yaml
 .env
+
+gfx90c_results
+backups/
+unified_cell_summary.csv
+unified_measurements.csv

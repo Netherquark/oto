@@ -41,6 +41,23 @@ For every substantive task:
 Read only the documents relevant to the task when scope is narrow; use the full
 sequence when changing strategy, architecture, methodology, or the implementation plan.
 
+### 2.1 Do not re-derive what the tooling already answers
+
+Before hand-parsing a `2_BenchmarkData` CSV, a registry row, or a phase's knobs,
+run the canonical tools. They drive oto's own loaders, so they cannot drift from
+the pipeline that produced the ledger. **Do not write a new parser.**
+
+| Need | Run |
+|---|---|
+| Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
+| Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`) |
+| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §5.7 |
+
+`knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
+(multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
+A phase dying with `Generating kernel source resulted in error 4` is a
+**legality-gate miss, not bad luck** — see `potential_configs.md` §5.7.
+
 ## 3. MD ownership — do not duplicate
 
 | File | Sole purpose |
@@ -128,10 +145,45 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - Every change to `port_tensile.py` / its modules is PoC'd in `/tmp` and
   tested before landing.
 - LLM output is hypothesis input, not architecture authority. HW decides. DB remembers.
+- **Every family deck must be able to reach the 16 B global-load cap.** The
+  classic path caps a contiguous load at `GLVW * bytesPerElement <= 16`. A tile
+  reaching only 8 B leaves ~5-15% on the table for no legal reason, and the
+  native deck hardcoded exactly that for SS/HH/DD. `cap_vector_width()` derives
+  the width; `test_occupancy_gate.py` fails if any family deck cannot reach 16 B.
+  Do not re-add a hand-picked narrower width as the only option.
+- **Two measured resource limits gate every candidate, on two different
+  parameters** (both derived from Tensile's own kernel writer, not guessed):
+  `ThreadTile0 x ThreadTile1 x dtype_weight <= 128` accumulator VGPRs per thread
+  (the hardware cap is 256/thread), and
+  `(MT0 + MT1) x DepthU x bytesPerElement <= 16384` for the LDS tile footprint.
+  Neither is a tuning knob and neither may be relaxed to admit a candidate: the
+  2026-09-28 overnight run spent 288 of 309 attempts on phases that could never
+  build. `bytesPerElement` is NOT the VGPR weight (f64 = 8 bytes but 2 VGPRs).
 - The native-vs-spoof A/B floor is the dedicated `gfx900_ref_*` run chain (recalled,
-  never re-run). Re-derive verdicts only once the floor is fully decided: `--auto`
-  auto-resumes an incomplete floor and aborts before any tuning while >0 shipped
-  phases remain undecided.
+  never re-run). `--auto` auto-resumes an incomplete floor, but it **always
+  proceeds to native tuning** — the floor is attempted, never a gate. If the floor
+  is incomplete or failed, the run sets `reference_floor_authoritative = False`
+  and the acceptance report is prefixed `PROVISIONAL FLOOR`; its A/B verdicts are
+  indicative only and must not gate a release. Rationale: three consecutive
+  overnight runs spent their entire budget on the floor and measured nothing
+  native. Verdicts are authoritative **only** when all mandatory (T1) phases are
+  decided.
+- **`--auto` ASKS before it runs; the tiers only classify.** In a TTY every
+  `--auto` asks five questions (see `auto_prompt.py`): (1) re-measure the 127
+  ILLEGAL reference cells? (2) re-measure the 1881 UNDER-SPECIFIED cells? (3)
+  re-attempt the 277 UNREPRODUCIBLE cells? (4) how many iterations (default
+  **10**)? (5) how many mutations per candidate (default **3**)? The answers
+  become an `AutoPlan`, and that plan — not a hardcoded default, not a tier —
+  governs the run. Non-interactive invocations take the defaults and print that
+  they did. The agent must not add a default that pre-answers these, and must
+  not start a reference run the user declined.
+- **Every tier decision is a question; nothing is hardcoded.** T2 is pinned via
+  `release_held`, T3 was formerly *dropped unconditionally* on the reasoning that
+  re-running only reproduces the failure. That is a judgement about *this*
+  Tensile build, not a property of the cell, so T3 is now question 3 with
+  `release_drop`, defaulting to dropped. Do not reintroduce an unconditional
+  drop, and do not bundle a T3 opt-in with a T2 opt-in — they release
+  independently (`--release-under-specified` / `--release-unreproducible`).
 - **NEVER run full Tensile benchmark runs during code development.** This is not a
   TTY. Full runs are ONLY allowed in a TTY, and ONLY when the USER runs them. During
   agent work: no `Tensile`/`TensileCreateLibrary` full benchmarks, no sustained GPU

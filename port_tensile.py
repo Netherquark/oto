@@ -2552,8 +2552,8 @@ def main():
         "--yes",
         action="store_true",
         help="Accept the default --auto plan (no illegal rerun, no "
-             "under-specified rerun, 10 iterations, 3 mutations) without "
-             "being asked. For cron/CI."
+             "under-specified rerun, no unreproducible rerun, 10 iterations, "
+             "3 mutations) without being asked. For cron/CI."
     )
     parser.add_argument(
         "--phase-timeout",
