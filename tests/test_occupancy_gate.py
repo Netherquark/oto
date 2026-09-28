@@ -33,7 +33,10 @@ from pathlib import Path
 
 import yaml
 
-BASE = Path(__file__).resolve().parent
+# This file lives in tests/, so the repo root is one level up. BASE is both the
+# import root and the data root (phases.yaml) and the cwd used to shell out to
+# check_candidates.py, and all three are the repo root.
+BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
     if _p and _p not in sys.path:

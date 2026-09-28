@@ -17,7 +17,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-BASE = Path(__file__).resolve().parent
+# This file lives in tests/, so the repo root is one level up. BASE is both the
+# import root and the data root (phases.yaml, gfx90c_results/), and both are the
+# repo root -- the harness modules are imported flat, so they sit beside this
+# file's parent rather than in a package.
+BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 import auto_prompt  # noqa: E402

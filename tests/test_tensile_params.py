@@ -21,7 +21,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# This file lives in tests/, so the repo root is one level up. Used as the
+# import root, as the driver's base_dir, and to locate phases.yaml and
+# gfx90c_runs/ -- the harness modules are imported flat, so they sit beside this
+# file's parent.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 
 import signal
 
@@ -59,7 +64,7 @@ def driver():
     real = signal.signal
     signal.signal = lambda *a, **k: None  # driver installs SIGINT/SIGTERM handlers
     try:
-        return TensileDriver(Path(__file__).resolve().parent, create_run=False)
+        return TensileDriver(REPO_ROOT, create_run=False)
     finally:
         signal.signal = real
 
@@ -86,9 +91,9 @@ check(
 
 # 3. end-to-end: no written config may carry a bad name
 d = driver()
-deck = Path(__file__).resolve().parent / "phases.yaml"
+deck = REPO_ROOT / "phases.yaml"
 phases = yaml.safe_load(deck.read_text()) or []
-ref_file = Path(__file__).resolve().parent / "gfx90c_runs"
+ref_file = REPO_ROOT / "gfx90c_runs"
 ref_candidates = sorted(ref_file.glob("*/phases_reference.yaml"))
 
 # `ProblemSizes` is special-cased by Tensile and lives in BenchmarkFinalParameters.
