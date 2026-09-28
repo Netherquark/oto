@@ -11,11 +11,16 @@ now belongs to the person who owns the GPU.
 This module asks the questions and returns a plan. It is deliberately
 dependency-free and never imports Tensile, so it is safe to unit-test.
 
-    1. re-measure the 127 ILLEGAL cells   (measured with a config we got wrong)
-    2. re-measure the 1881 UNDER-SPECIFIED cells (glvw/grvw left to defaults)
-    3. re-attempt the 277 UNREPRODUCIBLE cells (this Tensile cannot rebuild them)
+    1. re-measure the ILLEGAL cells        (measured with a config we got wrong)
+    2. re-measure the UNDER-SPECIFIED cells (glvw/grvw left to defaults)
+    3. re-attempt the UNREPRODUCIBLE cells (this Tensile cannot rebuild them)
     4. how many ITERATIONS               (default 10)
     5. how many MUTATIONS per candidate  (default 3)
+
+Every count in the banner and in the questions is read live by `_read_counts`
+from the audited tiers -- none of them is written down here or in any doc. A
+number transcribed into a docstring is wrong the moment a cell is re-triaged,
+and a stale number in a question the user answers is worse than no number.
 
 Non-interactive runs (cron, CI, no TTY) take documented defaults and say so.
 """
@@ -76,9 +81,14 @@ class AutoPlan:
 def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     """Live counts of each reference tier, best effort.
 
+    Nothing here is cached or transcribed: the universe is the union of every
+    reference chain's phase list, and each phase is classified by `tier_for`
+    against the audited manifest. Re-triaging a cell changes the number printed
+    in the question on the next run, with no code or doc to update.
+
     A failure here must not stop the run: the counts are only used to phrase the
-    question ("re-measure the 127 ..."), and a wrong-but-plausible number is far
-    better than refusing to start.
+    question ("re-measure the N ILLEGAL ..."), and a wrong-but-plausible number
+    is far better than refusing to start.
     """
     from pathlib import Path
     import yaml

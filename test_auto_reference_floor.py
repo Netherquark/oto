@@ -28,6 +28,13 @@ from port_tensile import TensileDriver  # noqa: E402
 from auto_prompt import AutoPlan  # noqa: E402
 
 
+#: Stand-in for "the reference floor still owes work". The value is opaque to
+#: run_auto -- it only ever asks whether the count is zero -- so it is a
+#: placeholder rather than a real corpus size, which would go stale the moment
+#: a cell is re-triaged.
+OWES_WORK = 1
+
+
 def make_driver(tmp: Path, *, ref_exists: bool, remaining: int,
                 resume_status: str, fresh_status: str) -> TensileDriver:
     """A driver with run_auto's collaborators stubbed out.
@@ -98,7 +105,7 @@ class TestAutoAlwaysReachesNative(unittest.TestCase):
                          "must not early-return before tuning")
 
     def test_no_floor_and_fresh_attempt_fails_still_runs_native(self):
-        drv, res = self._run(ref_exists=False, remaining=127,
+        drv, res = self._run(ref_exists=False, remaining=OWES_WORK,
                              resume_status="failed", fresh_status="failed")
         self.assertFalse(drv._reference_floor_authoritative)
         self.assertNotIn("reference", res.get("reason", ""),
@@ -126,7 +133,7 @@ class TestDeclinedReference(unittest.TestCase):
         self.tmp.mkdir(parents=True, exist_ok=True)
 
     def test_no_answers_never_call_run_gfx900_reference(self):
-        drv = make_driver(self.tmp, ref_exists=False, remaining=127,
+        drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
                           resume_status="completed", fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                plan=AutoPlan(rerun_illegal=False,
@@ -138,7 +145,7 @@ class TestDeclinedReference(unittest.TestCase):
     def test_yes_to_unreproducible_alone_does_call_it(self):
         """Q3 alone is a real opt-in: T3 cannot be rebuilt, but a Tensile
         upgrade may have changed that, so the user's yes must reach the run."""
-        drv = make_driver(self.tmp, ref_exists=False, remaining=277,
+        drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
                           resume_status="completed", fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                plan=AutoPlan(rerun_illegal=False,
@@ -150,7 +157,7 @@ class TestDeclinedReference(unittest.TestCase):
         self.assertFalse(drv.run_gfx900_reference.call_args.kwargs["release_held"])
 
     def test_q2_alone_releases_only_held(self):
-        drv = make_driver(self.tmp, ref_exists=False, remaining=1881,
+        drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
                           resume_status="completed", fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                plan=AutoPlan(rerun_underspecified=True))
@@ -159,7 +166,7 @@ class TestDeclinedReference(unittest.TestCase):
         self.assertFalse(kw["release_drop"])
 
     def test_legacy_flag_still_answers_q2_only(self):
-        drv = make_driver(self.tmp, ref_exists=False, remaining=1881,
+        drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
                           resume_status="completed", fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                release_held=True,
@@ -170,7 +177,7 @@ class TestDeclinedReference(unittest.TestCase):
         self.assertFalse(kw["release_drop"])
 
     def test_yes_to_illegal_does_call_it(self):
-        drv = make_driver(self.tmp, ref_exists=False, remaining=127,
+        drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
                           resume_status="completed", fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                plan=AutoPlan(rerun_illegal=True,

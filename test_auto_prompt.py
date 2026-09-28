@@ -173,12 +173,54 @@ class TestInteractiveAnswers(unittest.TestCase):
 
 
 class TestCountReading(unittest.TestCase):
-    def test_counts_come_from_the_registry(self):
+    def test_counts_match_the_audited_manifest(self):
+        """The prompt's numbers must be derived, never transcribed.
+
+        Recomputed here from the same inputs _read_counts uses, so a
+        re-triaged cell changes both sides together instead of one of them
+        going stale. Deliberately asserts no literal count: the point of this
+        test is that nothing in the codebase pins the corpus size.
+        """
+        import json
+        import tensile_library as tlib
+
         counts = auto_prompt._read_counts(BASE)
-        self.assertEqual(counts.get("total", 0), 2285)
-        self.assertEqual(counts.get("illegal"), 127)
-        self.assertEqual(counts.get("underspecified"), 1881)
-        self.assertEqual(counts.get("unreproducible"), 277)
+        manifest = tlib.load_rerun_manifest(BASE)
+        shipped = json.load(
+            open(BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"))
+
+        expected = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
+        for fam, pats in shipped["families"].items():
+            for pat, dt in pats.items():
+                for name in dt["kernels"]:
+                    tier = tlib.tier_for(
+                        {"kernel": tlib._CANON.sub("Cijk", name)}, manifest)
+                    if tier == tlib.TIER_FIRST:
+                        expected["illegal"] += 1
+                    elif tier in tlib.UNDERSPECIFIED_TIERS:
+                        expected["underspecified"] += 1
+                    elif tier == tlib.TIER_DROP:
+                        expected["unreproducible"] += 1
+
+        for tier in ("illegal", "underspecified", "unreproducible"):
+            self.assertEqual(counts[tier], expected[tier],
+                             f"{tier} count drifted from the audited tiers")
+        self.assertEqual(counts["total"],
+                         sum(expected.values()),
+                         "every shipped cell must land in exactly one tier")
+
+    def test_no_hardcoded_corpus_counts_in_the_prompt_source(self):
+        """A transcribed count in the prompt module is a bug, not a comment.
+
+        The banner and the three questions are phrased from _read_counts. This
+        keeps the module free of the corpus size so the two cannot diverge.
+        """
+        src = (BASE / "auto_prompt.py").read_text()
+        body = src.split('"""', 2)[-1]  # drop the module docstring
+        for literal in ("2285", "1881"):
+            self.assertNotIn(
+                literal, body,
+                f"{literal} is hardcoded in auto_prompt.py; counts must be read live")
 
     def test_missing_db_yields_zeros_not_a_crash(self):
         counts = auto_prompt._read_counts(Path("/tmp/opencode/does-not-exist"))

@@ -169,14 +169,23 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   native. Verdicts are authoritative **only** when all mandatory (T1) phases are
   decided.
 - **`--auto` ASKS before it runs; the tiers only classify.** In a TTY every
-  `--auto` asks five questions (see `auto_prompt.py`): (1) re-measure the 127
-  ILLEGAL reference cells? (2) re-measure the 1881 UNDER-SPECIFIED cells? (3)
-  re-attempt the 277 UNREPRODUCIBLE cells? (4) how many iterations (default
+  `--auto` asks five questions (see `auto_prompt.py`): (1) re-measure the
+  ILLEGAL reference cells? (2) re-measure the UNDER-SPECIFIED cells? (3)
+  re-attempt the UNREPRODUCIBLE cells? (4) how many iterations (default
   **10**)? (5) how many mutations per candidate (default **3**)? The answers
   become an `AutoPlan`, and that plan — not a hardcoded default, not a tier —
   governs the run. Non-interactive invocations take the defaults and print that
   they did. The agent must not add a default that pre-answers these, and must
   not start a reference run the user declined.
+- **Never write a corpus count down — anywhere.** The tier sizes printed in the
+  banner and the counts in those three questions are read live by
+  `auto_prompt._read_counts()` from the audited manifest. A number transcribed
+  into a docstring, a README transcript, a test, or a comment is wrong the
+  moment a cell is re-triaged, and one shown in a question the user is answering
+  is worse than showing none. `test_auto_prompt.py` and
+  `test_reference_tiers.py` both assert structure and live agreement, never a
+  literal corpus size. Cite the *date and decision* in prose instead
+  ("16 SS cells re-triaged on 2026-09-28"), never the resulting totals.
 - **Every tier decision is a question; nothing is hardcoded.** T2 is pinned via
   `release_held`, T3 was formerly *dropped unconditionally* on the reasoning that
   re-running only reproduces the failure. That is a judgement about *this*

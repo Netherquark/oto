@@ -1130,7 +1130,7 @@ class TensileDriver:
         smoke/limit/ref_shapes are ignored in resume mode.
 
         release_held=False (the default, and the only thing --auto passes) keeps
-        the 1881 audited-but-under-specified T2 kernels pinned out of the deck.
+        the audited-but-under-specified T2 kernels pinned out of the deck.
         Pass --release-under-specified to finally measure them; see
         incomplete_work.md section 4.16.
         """

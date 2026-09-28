@@ -146,18 +146,29 @@ In a terminal, `--auto` **asks first** and then runs to that plan:
 python3 port_tensile.py --auto
 ```
 
-```
-  reference corpus: 2285 cells
-      127  ILLEGAL          measured with a config we got wrong
-     1881  UNDER-SPECIFIED  glvw/grvw left to Tensile's defaults
-      277  UNREPRODUCIBLE  cannot be rebuilt
+It opens with the live size of the reference corpus, split by tier, then asks
+five questions — re-measure ILLEGAL, re-measure UNDER-SPECIFIED, re-attempt
+UNREPRODUCIBLE, how many iterations (default 10), how many mutations per
+candidate (default 3):
 
-  1. Re-measure the 127 ILLEGAL reference cells? [y/N]
-  2. Re-measure the 1881 UNDER-SPECIFIED reference cells? [y/N]
-  3. Re-attempt the 277 UNREPRODUCIBLE reference cells? [y/N]
+```
+  reference corpus: <N> cells
+    <n>  ILLEGAL          measured with a config we got wrong
+    <n>  UNDER-SPECIFIED  glvw/grvw left to Tensile's defaults
+    <n>  UNREPRODUCIBLE  cannot be rebuilt
+
+  1. Re-measure the <n> ILLEGAL reference cells? [y/N]
+  2. Re-measure the <n> UNDER-SPECIFIED reference cells? [y/N]
+  3. Re-attempt the <n> UNREPRODUCIBLE reference cells? [y/N]
   4. How many iterations? (default 10):
   5. How many mutations per candidate? (default 3):
 ```
+
+Every number above is read at runtime by `auto_prompt._read_counts()` from the
+audited tiers in `gfx90c_results/reference_rerun_manifest.json`. None is
+transcribed here, so re-triaging a cell changes what you are asked without any
+doc to update. `test_auto_prompt.py` asserts the banner and the manifest agree
+and that the module itself carries no hardcoded corpus count.
 
 The answers become an `AutoPlan` that governs the run. The three corpus tiers
 are **classification only** — no tier decides anything on its own, and the driver

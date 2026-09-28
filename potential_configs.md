@@ -29,7 +29,7 @@
 | ZZ native family | **has winners** — 47/47 ZZ phases now build clean under the corrected dual gate (§5.7) |
 | candidate gates | **2 hard resource gates**, both measured: per-thread 256 VGPRs on `ThreadTile`, 64 KB LDS on `MacroTile × DepthU` (§5.7) |
 | register-file model | **retired** — the old `R × MacroTile_area` rule was falsified; §5.7/§5.8 |
-| reference floor | 127 phases blocked by a config bug now **fixed** but **not yet rerun**; needs TTY (§11) |
+| reference floor | still owed; the 16 SS cells Tensile 4.44 cannot build were re-triaged to UNREPRODUCIBLE on 2026-09-28; needs TTY (§11) |
 | `--auto` policy | **fixed** — an incomplete/failed reference floor can no longer consume a whole budget; A/B is labelled `PROVISIONAL FLOOR` (§5.9) |
 | GPU benchmarking | **blocked** — requires TTY |
 
@@ -767,8 +767,11 @@ Worst losers and the floor config each one is chasing:
 5. Spend order: P1, P2, P3 → P11, P16 → P7, P21, P22 (ZZ, the family that
    currently produces no native winner) → P4, P5, P18, P19 → exploratory.
 6. Reference floor is **never re-run** to make a candidate look good; the
-   127 `T1_RERUN` phases are a separate integrity task, 1,881 `T2_RERUN_HELD` stay
-   held absent explicit opt-in, 277 `T3_UNREPRODUCIBLE` are terminal.
+   `T1_RERUN` phases are a separate integrity task, `T2_RERUN_HELD` stay
+   held absent explicit opt-in, `T3_UNREPRODUCIBLE` are terminal. The three
+   counts are read live from `reference_rerun_manifest.json` at run time and are
+   deliberately not written down here — see the "Never write a corpus count
+   down" rule in `claude.md`.
 
 ---
 
@@ -937,11 +940,13 @@ Evaluate analytical filtering, wave-aware ranking, and scheduling independently 
   — precisely the failures the retired model could not see.
 - **2026-09-28** — **`--auto` now asks instead of assuming.** The T1/T2/T3 tiers
   silently chose what to re-measure and how long to run. **Five** questions are
-  now asked at the start of every `--auto` (in a TTY): re-measure the **127
-  ILLEGAL** cells? re-measure the **1881 UNDER-SPECIFIED** cells? re-attempt the
-  **277 UNREPRODUCIBLE** cells? how many **iterations** (default **10**, was
+  now asked at the start of every `--auto` (in a TTY): re-measure the
+  **ILLEGAL** cells? re-measure the **UNDER-SPECIFIED** cells? re-attempt the
+  **UNREPRODUCIBLE** cells? how many **iterations** (default **10**, was
   100)? how many **mutations** (default **3**, was 2)? Non-interactive runs take
-  the defaults and say so. `auto_prompt.py`, 23 tests in `test_auto_prompt.py`.
+  the defaults and say so. `auto_prompt.py`, 24 tests in `test_auto_prompt.py`.
+  Every count in the banner and the questions is read live by `_read_counts()`;
+  none is transcribed into the module, the docs, or the tests.
   Answering no to all three re-measurement questions no longer triggers a
   reference run behind the user's back. The tier labels remain in stored
   manifests for provenance, but no tier decides anything on its own any more.
@@ -953,6 +958,25 @@ Evaluate analytical filtering, wave-aware ranking, and scheduling independently 
   and are **not** bundled with the T2 opt-in: `--release-under-specified` and
   `--release-unreproducible` release independently. Worth re-attempting once,
   after the next Tensile upgrade.
+- **2026-09-28** — **16 SS reference cells moved ILLEGAL → UNREPRODUCIBLE.** The
+  rerun of the 127 ILLEGAL cells got 68 through, rejected 16, and was interrupted
+  on a 17th. The 16 are **not** our bug: the config emitter is now correct, and
+  Tensile 4.44 refuses the *shipped* kernel whatever we pin. Probing `23e1d06b`
+  against seven variants, only `FractionalLoad=True` compiled — a different
+  kernel, which would have made the floor describe something other than the
+  reference, so it was rejected. The three rejects are classic global-load
+  divisibility (`No valid DepthU found`, 12 cells), `ThreadTile not a multiple of
+  VectorWidth` (2) and `GlobalLoadVectorWidthA must be == VectorWidth or == 1`
+  (2). Floor coverage is unchanged — every cell keeps a best-per-cell winner, and
+  all 16 were non-winners anyway. `184f2441` was killed mid-run rather than
+  rejected, so it keeps its T1 verdict and is re-measured on resume. The tier
+  totals shift with this decision; they are read live rather than recorded.
+  `TestSSUnbuildableTriaged` in `test_reference_tiers.py` fails if a future
+  Tensile can build them.
+  *A hand-rolled reimplementation of Tensile's solution validator was tried here
+  and discarded: it misread the `GLVW`/`VectorWidth` rule, which is gated on
+  `not bufferLoad or not GuaranteeNoPartial{A,B}`, and wrongly flagged 55 cells
+  that build fine. Use Tensile itself as the oracle, never a reimplementation.*
 - **2026-09-28** — **11 of the 16 large-cell losses were unwinnable by
   construction.** The floor's winners at SS 128x128 (`vw4`), HH 128x128 (`vw8`)
   and DD 64x64 (`vw2`) all hit the 16 B global-load cap, and the native family
