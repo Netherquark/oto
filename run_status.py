@@ -44,6 +44,7 @@ import os
 import sqlite3
 import statistics
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -389,7 +390,16 @@ def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
 # main report
 # ---------------------------------------------------------------------------
 def build_report(base: Path, run_id: Optional[str],
-                 plan: RunPlan) -> Dict[str, Any]:
+                 plan: RunPlan,
+                 now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Build the status report for a run.
+
+    `now` overrides the wall clock used to age a still-running head run. It
+    exists so callers (and tests) can pin the clock: a head run with no
+    completed_at is aged against real time, so a fixture pinned to a literal
+    timestamp silently starts failing once the calendar moves past it.
+    Defaults to the system clock, so production behavior is unchanged.
+    """
     db = base / DB_REL
     if not db.exists():
         raise SystemExit(f"no registry at {db}")
@@ -584,9 +594,8 @@ def build_report(base: Path, run_id: Optional[str],
     if head_start and head_end and head_end > head_start:
         elapsed = (head_end - head_start).total_seconds() / 60.0
     elif head_start:
-        now = (datetime.now(head_start.tzinfo) if head_start.tzinfo
-               else datetime.now())
-        elapsed = max((now - head_start).total_seconds() / 60.0, 0.0)
+        clock = now if now is not None else datetime.now(head_start.tzinfo)
+        elapsed = max((clock - head_start).total_seconds() / 60.0, 0.0)
     else:
         elapsed = None
     chain_span = ((last_event - first_start).total_seconds() / 60.0
@@ -713,6 +722,181 @@ def bar(pct: float, width: int = 24) -> str:
     return "[" + "#" * filled + "." * (width - filled) + "]"
 
 
+def render_compact(rep: Dict[str, Any]) -> str:
+    """Few-line panel for a live in-place TTY repaint.
+
+    The full render() is ~35 lines. Repainting that under a running benchmark
+    would scroll the run log away and overflow a short terminal, so the live
+    view keeps only what changes while you watch it: state, progress, elapsed,
+    ETA and the outcome tally.
+    """
+    est = rep["estimate"]
+    tally = rep["tally"]
+    lines: List[str] = []
+    state = rep["head_status"].upper() + ("  (in flight)" if rep["in_flight"] else "")
+    head = rep["head"] or "none"
+    lines.append(f"  {head}  [{state}]")
+    decided = f"{rep['decided']}/{rep['corpus']}" if rep["corpus"] else str(rep["decided"])
+    lines.append(f"    decided   {decided}  "
+                 f"success {tally.get('success', 0)}  failed {tally.get('failed', 0)}  "
+                 f"skipped {tally.get('skipped', 0)}")
+    pct = est["percent"]
+    if pct is not None:
+        lines.append(f"    progress  {bar(pct, 20)} {pct:5.1f}%   "
+                     f"remaining {est['remaining']} units")
+    else:
+        lines.append(f"    progress  {bar(0.0, 20)}   0.0%   "
+                     f"remaining {est['remaining']} units")
+    eta = (fmt_duration(est["eta_minutes"]) if est["eta_minutes"] is not None
+           else "unknown")
+    lines.append(f"    elapsed   {fmt_duration(rep['elapsed_minutes'])}"
+                 f"   ETA {eta}")
+    th = rep.get("thermals")
+    if th and th.get("temp"):
+        lines.append(f"    thermals  {th['temp']}  {th['power']}  {th['sclk']}")
+    return "\n".join(lines)
+
+
+class LiveStatus:
+    """Repaints run_status into a TTY while a benchmark runs.
+
+    Two things make this safe inside a long run:
+
+    * A background thread owns repainting, so the panel keeps advancing while
+      `execute_phase` blocks on Tensile -- the main loop is where progress
+      actually happens, so a caller-driven pump would freeze for minutes at a
+      time.
+    * stdout is wrapped in _PanelStdout, which erases the panel before any other
+      write. Without that, the run's own "Skipping phase ..." lines land *under*
+      the panel and the next repaint shreds them.
+
+    When stdout is not a TTY (a piped log, CI) it degrades to appending the
+    panel on an interval rather than repainting in place.
+    """
+
+    def __init__(self, base: Path, run_id: Optional[str] = None,
+                 plan: Optional[RunPlan] = None, interval: float = 15.0,
+                 compact: bool = True, show_thermals: bool = False,
+                 stream=None):
+        self.base = Path(base)
+        self.run_id = run_id
+        self.plan = plan or RunPlan(rerun_illegal=True)
+        self.interval = max(interval, 1.0)
+        self.compact = compact
+        self.show_thermals = show_thermals
+        self.stream = stream or sys.stdout
+        self._lock = threading.RLock()
+        self._painted = 0
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._orig_stdout = None
+        self._isatty = False
+        self.errors = 0
+
+    # -- painting ----------------------------------------------------------
+    def _erase(self) -> None:
+        """Erase the panel and leave the cursor where it started."""
+        if not self._painted or not self._isatty:
+            self._painted = 0
+            return
+        # Move up over the painted block, then clear downward. \x1b[J clears
+        # from the cursor to the end of the screen, so one sequence is enough.
+        self.stream.write(f"\x1b[{self._painted}A\x1b[J")
+        self.stream.flush()
+        self._painted = 0
+
+    def _paint(self) -> None:
+        if self._stop.is_set():
+            return
+        try:
+            rep = build_report(self.base, self.run_id, self.plan)
+        except BaseException:
+            # A status display must never take the run down with it.
+            # SystemExit matters here: build_report raises it when there is no
+            # registry yet, which is exactly the state a first run starts in,
+            # and it is not an Exception subclass.
+            self.errors += 1
+            return
+        if self.compact:
+            rep["_compact"] = True
+        try:
+            text = render(rep, self.show_thermals)
+        except Exception:
+            self.errors += 1
+            return
+        with self._lock:
+            self._erase()
+            self.stream.write(text + "\n")
+            self.stream.flush()
+            if self._isatty:
+                self._painted = text.count("\n") + 1
+
+    def _loop(self) -> None:
+        while not self._stop.wait(self.interval):
+            self._paint()
+
+    # -- lifecycle ---------------------------------------------------------
+    def start(self) -> "LiveStatus":
+        self._isatty = bool(getattr(self.stream, "isatty", lambda: False)())
+        self._thread = threading.Thread(target=self._loop, name="run-status",
+                                        daemon=True)
+        self._thread.start()
+        if self._isatty:
+            # Route the run's own prints through the eraser. Assigned only for
+            # a real terminal: wrapping a log file would rewrite it.
+            self._orig_stdout = sys.stdout
+            sys.stdout = _PanelStdout(self._orig_stdout, self)
+        return self
+
+    def refresh(self) -> None:
+        """Force one repaint now (used at start/stop for an immediate frame)."""
+        self._paint()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+        if self._orig_stdout is not None:
+            sys.stdout = self._orig_stdout
+            self._orig_stdout = None
+        with self._lock:
+            self._erase()
+            self.stream.flush()
+
+    def __enter__(self) -> "LiveStatus":
+        return self.start()
+
+    def __exit__(self, *exc) -> None:
+        self.stop()
+
+
+class _PanelStdout:
+    """stdout proxy that lifts the live panel out of the way before writing."""
+
+    def __init__(self, real, panel: LiveStatus):
+        self._real = real
+        self._panel = panel
+
+    def write(self, text: str) -> int:
+        if text:
+            with self._panel._lock:
+                self._panel._erase()
+                n = self._real.write(text)
+                self._real.flush()
+            return n
+        return 0
+
+    def flush(self) -> None:
+        self._real.flush()
+
+    def isatty(self) -> bool:
+        return bool(getattr(self._real, "isatty", lambda: False)())
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
 def render(rep: Dict[str, Any], show_thermals: bool) -> str:
     out: List[str] = []
     est = rep["estimate"]
@@ -720,6 +904,8 @@ def render(rep: Dict[str, Any], show_thermals: bool) -> str:
     plan = rep["plan"]
     chain = rep["chain"]
 
+    if rep.get("_compact"):
+        return render_compact(rep)
     out.append("=" * 72)
     state = rep["head_status"].upper()
     if rep["in_flight"]:

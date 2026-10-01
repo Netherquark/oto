@@ -258,6 +258,12 @@ class TensileDriver:
         self._native_arm_records: List[Dict[str, Any]] = []
         self._telemetry: Optional[SysfsTelemetrySampler] = None
         self._telemetry_run_id: Optional[str] = None
+        # Live TTY status panel. None unless a run turned it on; see
+        # _start_live_status / _stop_live_status.
+        self._last_run_status = ""
+        self._live_status = None
+        self._live_enabled = True
+        self._live_interval = 15.0
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
@@ -1019,6 +1025,53 @@ class TensileDriver:
                 "num_benchmarks": 8
             }
 
+    def _start_live_status(self, run_id: Optional[str] = None,
+                           plan=None, interval: Optional[float] = None) -> None:
+        """Paint run_status into the TTY for the duration of a run.
+
+        CPU-only: build_report reads the registry, so this adds no GPU work and
+        no Tensile invocation. Failures are swallowed -- a status display must
+        never be the reason a run dies. When stdout is not a TTY (piped log,
+        CI) LiveStatus degrades to periodic plain lines instead of repainting,
+        which keeps the log readable.
+        """
+        if not getattr(self, "_live_enabled", True):
+            return
+        if self._live_status is not None:
+            return
+        # Bind to THIS run. With no run_dir the panel would fall back to the
+        # most recent run in the registry and display an unrelated run's tally
+        # and ETA for the whole duration -- a confidently wrong display is worse
+        # than none, so decline instead.
+        resolved = run_id or (self.run_dir.name if self.run_dir else None)
+        if not resolved:
+            return
+        try:
+            from run_status import LiveStatus, RunPlan
+            self._live_status = LiveStatus(
+                base=self.base_dir,
+                run_id=resolved,
+                plan=plan or RunPlan(rerun_illegal=True),
+                interval=interval if interval is not None else self._live_interval,
+                compact=True,
+            ).start()
+            self._live_status.refresh()
+        except BaseException as e:
+            # BaseException, not Exception: run_status raises SystemExit when the
+            # registry is not there yet, and that must not abort a run that is
+            # in the middle of creating one.
+            self._live_status = None
+            print(f"[live] status panel unavailable ({e}); continuing without it")
+
+    def _stop_live_status(self) -> None:
+        panel, self._live_status = self._live_status, None
+        if panel is None:
+            return
+        try:
+            panel.stop()
+        except BaseException:
+            pass
+
     def run_phases(
         self,
         target_ids: Optional[List[str]] = None,
@@ -1034,6 +1087,20 @@ class TensileDriver:
         """
         phases = self.load_phases_manifest(phases_path) if phases_path else self.load_phases_manifest()
 
+        # No run directory means nothing was created to benchmark into (--dry-run,
+        # and the reference-floor path, which builds phases in the run dir). Every
+        # registry write and every execute_phase below dereferences self.run_dir,
+        # so report the plan and stop rather than dying on the first skipped
+        # phase with an AttributeError on None.
+        if self.run_dir is None:
+            print(f"[plan] {len(phases)} phase(s) in the manifest; no run "
+                  f"directory, so this is a dry run and nothing is executed.")
+            return []
+
+        # Live TTY panel: repaints while phases execute. Started after the
+        # manifest is known to exist so the first frame is not an error.
+        self._start_live_status()
+
         if target_ids:
             keys = {str(k) for k in target_ids}
             def _match_target(p):
@@ -1047,65 +1114,72 @@ class TensileDriver:
         executed_count = 0
         skipped_count = 0
         refused_count = 0
-        for phase in phases:
-            if self._stop_requested or self._finish_after_iteration:
-                print("Stop requested, halting phase execution")
-                break
+        try:
+            for phase in phases:
+                if self._stop_requested or self._finish_after_iteration:
+                    print("Stop requested, halting phase execution")
+                    break
 
-            phase_id = phase.get("phase_id", "")
-            config = phase.get("config", {})
-            fp = phase.get("fp", fingerprint_config(config))
+                phase_id = phase.get("phase_id", "")
+                config = phase.get("config", {})
+                fp = phase.get("fp", fingerprint_config(config))
 
-            # Policy check: should_run
-            allowed, reason = should_run(
-                phase_id=phase_id,
-                fp=fp,
-                registry=self.registry,
-                phase_scope=target_ids,
-                opt_in_identical_skip=opt_in_identical_skip
-            )
+                # Policy check: should_run
+                allowed, reason = should_run(
+                    phase_id=phase_id,
+                    fp=fp,
+                    registry=self.registry,
+                    phase_scope=target_ids,
+                    opt_in_identical_skip=opt_in_identical_skip
+                )
 
-            if not allowed:
-                print(f"Skipping phase {phase_id} ({reason})")
-                skipped_count += 1
-                self.registry.append_record({
-                    "run_id": self.run_dir.name,
-                    "phase_id": phase_id,
-                    "fp": fp,
-                    "timestamp": datetime.now().isoformat(),
-                    "status": "skipped",
-                    "reason": reason
-                }, run_id=self.run_dir.name)
-                continue
+                if not allowed:
+                    print(f"Skipping phase {phase_id} ({reason})")
+                    skipped_count += 1
+                    self.registry.append_record({
+                        "run_id": self.run_dir.name,
+                        "phase_id": phase_id,
+                        "fp": fp,
+                        "timestamp": datetime.now().isoformat(),
+                        "status": "skipped",
+                        "reason": reason
+                    }, run_id=self.run_dir.name)
+                    continue
 
-            result = self.execute_phase(phase, self.run_dir)
-            results.append(result)
-            if result.get("status") == "skipped_illegal":
-                refused_count += 1      # refused pre-launch; nothing was executed
-            elif result.get("status") not in ("interrupted", "skipped_by_user"):
-                executed_count += 1
+                result = self.execute_phase(phase, self.run_dir)
+                results.append(result)
+                if result.get("status") == "skipped_illegal":
+                    refused_count += 1      # refused pre-launch; nothing was executed
+                elif result.get("status") not in ("interrupted", "skipped_by_user"):
+                    executed_count += 1
 
+                if self._finish_after_iteration:
+                    print("End-after-iteration requested, halting phase execution")
+                    break
+
+            # Mark run final status in registry
+            if self._stop_requested:
+                final_status = "interrupted"
+            elif executed_count == 0 and (skipped_count + refused_count) > 0:
+                final_status = "skipped"
+            else:
+                final_status = "completed"
+            run_meta: Dict[str, Any] = {
+                "phases_executed": executed_count,
+                "phases_skipped": skipped_count,
+            }
+            if refused_count:
+                run_meta["phases_refused_illegal"] = refused_count
             if self._finish_after_iteration:
-                print("End-after-iteration requested, halting phase execution")
-                break
-
-        # Mark run final status in registry
-        if self._stop_requested:
-            final_status = "interrupted"
-        elif executed_count == 0 and (skipped_count + refused_count) > 0:
-            final_status = "skipped"
-        else:
-            final_status = "completed"
-        run_meta: Dict[str, Any] = {
-            "phases_executed": executed_count,
-            "phases_skipped": skipped_count,
-        }
-        if refused_count:
-            run_meta["phases_refused_illegal"] = refused_count
-        if self._finish_after_iteration:
-            run_meta["end_after_iteration"] = True
-        self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
-        return results
+                run_meta["end_after_iteration"] = True
+            self._last_run_status = final_status
+            self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
+            return results
+        finally:
+            # Always tear the panel down, including on Ctrl-C or an exception
+            # mid-phase, so the terminal is not left with a half-drawn panel
+            # and stdout is restored before the acceptance report prints.
+            self._stop_live_status()
 
     def run_gfx900_reference(self, refresh: bool = False, limit: Optional[int] = None,
                              ref_shapes: Optional[List[str]] = None,
@@ -2147,6 +2221,113 @@ class TensileDriver:
             for fam, durs in per_fam.items()
         }
 
+    def _run_span_minutes(self, run_id: str) -> Optional[float]:
+        """Wall-clock minutes a run occupied, from its registry row.
+
+        None when the run has no start stamp, or when it is still in flight --
+        an open-ended run has no execution time to report yet.
+        """
+        started = self._run_stamp(run_id, "started_at")
+        completed = self._run_stamp(run_id, "completed_at")
+        if not started or not completed:
+            return None
+        try:
+            delta = completed - started
+        except TypeError:      # naive vs aware datetimes
+            return None
+        return round(delta.total_seconds() / 60.0, 2)
+
+    def _run_stamp(self, run_id: str, column: str) -> Optional[datetime]:
+        row = None
+        try:
+            row = self.registry.run_row(run_id)
+        except Exception:
+            return None
+        if row is None:
+            return None
+        try:
+            value = row[column]
+        except (IndexError, KeyError):
+            return None
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value))
+        except ValueError:
+            return None
+
+    def _compute_execution_timing(self, run_id: str, family_timing: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execution-time block for the acceptance report.
+
+        Three different numbers get conflated as "runtime", so all three are
+        reported explicitly rather than one ambiguous field:
+
+        * native_elapsed_minutes -- wall clock of the run being reported. This
+          is the execution time of *one* pass of the deck.
+        * chain_elapsed_minutes -- wall clock summed over the gfx900 reference
+          chain. A resumed floor is several runs, so its cost is never the head
+          run's cost.
+        * busy_minutes -- sum of per-phase started->ended spans. Less than wall
+          clock because the gap is queueing, config generation and Tensile
+          build time; a large gap means the ETA is measuring harness overhead
+          rather than the GPU.
+        """
+        native_min = self._run_span_minutes(run_id)
+        chain_runs = list(self._reference_floor_runs(run_id) or [])
+        chain_spans = []
+        for ref in chain_runs:
+            mins = self._run_span_minutes(ref)
+            if mins is not None:
+                chain_spans.append({"run_id": ref, "elapsed_minutes": mins,
+                                    "started_at": self._stamp_str(self._run_stamp(ref, "started_at")),
+                                    "completed_at": self._stamp_str(self._run_stamp(ref, "completed_at"))})
+        per_family = family_timing or {}
+        busy = sum(float(f.get("total_min") or 0.0) for f in per_family.values())
+        return {
+            "generated_at": datetime.now().isoformat(),
+            "native_run": {
+                "run_id": run_id,
+                "status": getattr(self, "_last_run_status", ""),
+                "started_at": self._stamp_str(self._run_stamp(run_id, "started_at")),
+                "completed_at": self._stamp_str(self._run_stamp(run_id, "completed_at")),
+                "elapsed_minutes": native_min,
+                "elapsed_human": self._fmt_minutes(native_min),
+                "in_flight": native_min is None and bool(
+                    self._run_stamp(run_id, "started_at")),
+            },
+            "reference_chain": {
+                "runs": chain_runs,
+                "per_run": chain_spans,
+                "elapsed_minutes": round(sum(s["elapsed_minutes"] for s in chain_spans), 2) or None,
+                "elapsed_human": self._fmt_minutes(
+                    round(sum(s["elapsed_minutes"] for s in chain_spans), 2) or None),
+            },
+            "phase_busy": {
+                "minutes": round(busy, 1),
+                "hours": round(busy / 60.0, 2),
+                "per_family_minutes": {k: v.get("total_min") for k, v in per_family.items()},
+                "note": ("sum of per-phase started->ended spans; less than wall "
+                         "clock by config generation, Tensile build and queueing"),
+            },
+        }
+
+    @staticmethod
+    def _stamp_str(dt: Optional[datetime]) -> Optional[str]:
+        return dt.isoformat() if dt else None
+
+    @staticmethod
+    def _fmt_minutes(minutes: Optional[float]) -> str:
+        if minutes is None:
+            return "unknown"
+        total = int(round(minutes))
+        days, rem = divmod(total, 24 * 60)
+        hours, mins = divmod(rem, 60)
+        if days:
+            return f"{days}d {hours}h {mins}m"
+        if hours:
+            return f"{hours}h {mins}m"
+        return f"{mins}m"
+
     def generate_acceptance_report(self, run_dir: Optional[Path] = None, run_id: Optional[str] = None,
                                     native_agg: str = "winner") -> Optional[Dict[str, Any]]:
         """
@@ -2170,7 +2351,11 @@ class TensileDriver:
             if run_dir is None:
                 run_dir = self.run_dir
             if run_id is None:
-                run_id = run_dir.name if run_dir is not None else self.registry.latest_run_id()
+                # arm="native": the subject of the A/B must be a native run. See
+                # registry.latest_run_id -- the newest row overall is usually the
+                # gfx900 floor, which would be scored against itself.
+                run_id = (run_dir.name if run_dir is not None
+                          else self.registry.latest_run_id(arm="native"))
             if not run_id:
                 print("Report generation: no run_id available")
                 return None
@@ -2192,6 +2377,8 @@ class TensileDriver:
                 # the floor did not cover. Chain runs (base + resume) merge.
                 ref_timing = self._compute_family_timing(ref_run)
                 family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
+
+            execution_timing = self._compute_execution_timing(run_id, family_timing)
 
             # Must precede provenance: this is what populates _native_arm_records.
             ab_verdicts = self._compute_ab_verdicts(run_id, run_dir, agg=native_agg)
@@ -2215,6 +2402,7 @@ class TensileDriver:
                 red_list=red_list,
                 orange_list=cell_status["orange"],
                 family_timing=family_timing,
+                execution_timing=execution_timing,
                 reference_run_id=self._last_ab_reference_run_id,
                 native_arm=native_arm,
                 reference_floor_status=getattr(
@@ -2249,7 +2437,7 @@ class TensileDriver:
         cells from an older run than run_id.
         """
         if run_id is None:
-            run_id = self.registry.latest_run_id()
+            run_id = self.registry.latest_run_id(arm="native")
         if not run_id:
             print("No run id available to regenerate a report")
             return None
@@ -2793,6 +2981,22 @@ def main():
         help="Force execution even if identical fingerprint already passed"
     )
     parser.add_argument(
+        "--live",
+        choices=("on", "off"),
+        default="on",
+        help="Repaint run_status in the TTY while phases execute (default: on). "
+             "CPU-only -- reads the registry, no GPU work. Degrades to periodic "
+             "plain lines when stdout is not a terminal, so piped logs stay "
+             "readable. Use --live off for a quiet transcript."
+    )
+    parser.add_argument(
+        "--live-interval",
+        type=float,
+        default=15.0,
+        metavar="SECONDS",
+        help="Seconds between live status repaints (default: 15)"
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="List matched targets without executing benchmarks"
@@ -2836,6 +3040,8 @@ def main():
         cooldown_s=args.cooldown,
         create_run=not (args.dry_run or report_only or args.gfx900_reference)
     )
+    driver._live_interval = max(float(args.live_interval), 1.0)
+    driver._live_enabled = (args.live == "on")
 
     # Stage 1: preflight validation (alone or as a gate for later stages)
     if args.preflight or "1" in stage or "preflight" in stage or "manifest" in stage:

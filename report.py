@@ -75,6 +75,10 @@ class AcceptanceReport:
     all_analytics: List[CellAnalytics] = field(default_factory=list)
     run_dir: Optional[str] = None
     family_timing: Optional[Dict[str, Dict[str, Any]]] = None
+    # Execution time. family_timing is per-family phase cost; this is the
+    # wall-clock cost of the run and of the reference chain, which are
+    # different numbers for a resumed floor and must not be conflated.
+    execution_timing: Optional[Dict[str, Any]] = None
     orange_list: List[Dict[str, Any]] = field(default_factory=list)
     reference_run_id: Optional[str] = None
     shipped_manifest: Optional[Dict[str, Any]] = None
@@ -100,6 +104,7 @@ class AcceptanceReporter:
         red_list: List[Dict[str, Any]],
         red_threshold_pct: float = 50.0,
         family_timing: Optional[Dict[str, Dict[str, Any]]] = None,
+        execution_timing: Optional[Dict[str, Any]] = None,
         orange_list: Optional[List[Dict[str, Any]]] = None,
         reference_run_id: Optional[str] = None,
         native_arm: Optional[Dict[str, Any]] = None,
@@ -114,7 +119,8 @@ class AcceptanceReporter:
             ab_verdicts, red_list, orange_list, red_threshold_pct, reference_run_id
         )
         summary = self._generate_summary(
-            ab_verdicts, red_list, orange_list, overall_pass, reference_run_id
+            ab_verdicts, red_list, orange_list, overall_pass, reference_run_id,
+            execution_timing=execution_timing
         )
         if not reference_floor_authoritative:
             summary = (
@@ -134,6 +140,7 @@ class AcceptanceReporter:
             all_analytics=all_analytics,
             run_dir=str(self.base_dir / "gfx90c_runs" / run_id) if self.base_dir else None,
             family_timing=family_timing,
+            execution_timing=execution_timing,
             orange_list=orange_list,
             reference_run_id=reference_run_id,
             shipped_manifest=shipped,
@@ -279,7 +286,8 @@ class AcceptanceReporter:
         orange_list: List[Dict[str, Any]],
         overall_pass: bool,
         reference_run_id: Optional[str] = None,
-        red_threshold_pct: float = 50.0
+        red_threshold_pct: float = 50.0,
+        execution_timing: Optional[Dict[str, Any]] = None
     ) -> str:
         wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
         ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
@@ -297,10 +305,17 @@ class AcceptanceReporter:
                 f"An all-zero coverage table here means the native arm is empty, not that "
                 f"the hardware measured zero."
             )
+        timing = ""
+        native = ((execution_timing or {}).get("native_run") or {})
+        if native.get("elapsed_human") and native["elapsed_human"] != "unknown":
+            timing = f" Execution time: {native['elapsed_human']}."
+        elif native.get("in_flight"):
+            timing = " Execution time: still running."
         return (
             f"Acceptance {status}: {wins} WIN / {ties} TIE / {losses} LOSS vs "
             f"gfx900 shipped floor{ref}. {len(red_list)} RED (missing) / "
             f"{len(orange_list)} ORANGE (<{int(red_threshold_pct)}% ceiling) cells."
+            f"{timing}"
         )
 
     def write_report(self, report: AcceptanceReport, output_path: Optional[Path] = None) -> None:
@@ -354,6 +369,8 @@ class AcceptanceReporter:
             ],
             "red_list": report.red_list,
             "orange_list": report.orange_list,
+            "execution_timing": report.execution_timing,
+            "family_timing": report.family_timing,
             "reference_run_id": report.reference_run_id,
             "native_arm": report.native_arm,
             "shipped_manifest": {
@@ -906,7 +923,12 @@ class AcceptanceReporter:
                 <div class="metric-label">Shipped gfx900 kernels</div>
                 <div class="metric-value">{(report.shipped_manifest or {}).get('total_shipped_kernels', 0)}</div>
             </div>
+            <div class="metric">
+                <div class="metric-label">Run execution time</div>
+                <div class="metric-value">{self._timing_metric(report)}</div>
+            </div>
         </div>
+        {self._timing_section(report)}
 
         <section class="section">
             <h2 class="section-title">Family matrix coverage &amp; peak utilization</h2>
@@ -952,6 +974,70 @@ class AcceptanceReporter:
         with open(html_path, "w") as f:
             f.write(html)
         print(f"Acceptance dashboard HTML generated at: {html_path}")
+
+    def _timing_metric(self, report) -> str:
+        """Headline execution-time figure for the metrics row."""
+        t = report.execution_timing or {}
+        native = t.get("native_run") or {}
+        human = native.get("elapsed_human")
+        if human and human != "unknown":
+            return human
+        if native.get("in_flight"):
+            return "in flight"
+        return "unknown"
+
+    def _timing_section(self, report) -> str:
+        """Execution-time detail table.
+
+        Native run and reference chain are shown separately: a resumed floor
+        spans several runs, so quoting one number for "the run" would
+        understate the floor's cost by however many resumes it took.
+        """
+        t = report.execution_timing or {}
+        if not t:
+            return ""
+        native = t.get("native_run") or {}
+        chain = t.get("reference_chain") or {}
+        busy = t.get("phase_busy") or {}
+        rows = []
+        if native.get("started_at"):
+            rows.append((
+                "Native run",
+                native.get("elapsed_human") or "unknown",
+                f"{native.get('started_at', '')} &rarr; {native.get('completed_at') or 'in flight'}",
+            ))
+        if chain.get("elapsed_human"):
+            rows.append((
+                "Reference floor chain",
+                chain["elapsed_human"],
+                f"{len(chain.get('per_run') or [])} run(s): "
+                f"{', '.join(r['run_id'] for r in chain.get('per_run') or [])}",
+            ))
+        if busy.get("minutes"):
+            rows.append((
+                "Phase busy time",
+                f"{busy['hours']:.2f} h",
+                "sum of per-phase spans; the gap to wall clock is config "
+                "generation, Tensile build and queueing",
+            ))
+        if not rows:
+            return ""
+        body = "".join(
+            f"<tr><td>{label}</td><td class='mono strong'>{value}</td>"
+            f"<td class='mono secondary'>{detail}</td></tr>"
+            for label, value, detail in rows
+        )
+        return f"""
+        <section class="section">
+            <h2 class="section-title">Execution time</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Scope</th><th>Wall clock</th><th>Detail</th></tr></thead>
+                    <tbody>{body}</tbody>
+                </table>
+            </div>
+        </section>
+        """
 
     def _provenance_line(self, report) -> str:
         """One-line provenance: native arm scope, spoof floor source + reference run, ROCm prefixes."""

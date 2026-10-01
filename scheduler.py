@@ -36,19 +36,38 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
     A tile only converts load width into throughput once the contiguous load is
     actually 16 B. Every large-cell loss in the corpus had a legal but
     *under-wide* winner, because the family decks hardcoded one step below this.
-    The tile shape is honoured too: VectorWidth may not exceed the per-thread
-    extent of either macro-tile dimension, or the load cannot be contiguous.
 
-    Returns the largest power of two satisfying both bounds.
+    Three bounds apply, and this returns the largest power of two satisfying all
+    of them, so the result is a legal upper bound rather than a hopeful one:
+
+      1. `VW * bytesPerElement <= 16` -- the global-load byte cap
+         (Tensile SolutionStructs:3460).
+      2. `VW <= MT0/TT0` and `VW <= MT1/TT1` -- the load must be contiguous
+         inside a thread's own extent of the tile.
+      3. `TT0 % VW == 0` and `TT1 % VW == 0` -- Tensile rejects a thread tile
+         that is not a multiple of the vector width
+         (`_validate_tensile_loads`, scheduler.py:338, mirroring
+         SolutionStructs.setGlobalLoadVectorWidth).
+
+    Bound 3 is what the previous version missed, and it is not a corner case:
+    it is exactly the non-power-of-two thread tiles this device uses most
+    (SS 96x96x16/6x6, HH 64x64x16/4x4). Without it the cap claimed 4 and 8 for
+    tiles where Tensile accepts only 2 and 4, and the generator emitted phases
+    that died at config fill.
     """
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper())
     if not bpe:
         return 0
     limit = GLOBAL_LOAD_BYTE_CAP // bpe
-    mt = [int(x) for x in str(macro_tile).split("x")[:2]]
-    tt = [int(x) for x in str(thread_tile).split("x")[:2]]
-    if len(mt) == 2 and len(tt) == 2:
-        limit = min(limit, mt[0] // tt[0], mt[1] // tt[1])
+    parts = [int(x) for x in str(macro_tile).split("x") if x.strip().isdigit()]
+    tt = [int(x) for x in str(thread_tile).split("x") if x.strip().isdigit()]
+    if len(parts) >= 2 and len(tt) == 2 and min(tt) > 0:
+        limit = min(limit, parts[0] // tt[0], parts[1] // tt[1])
+        # Bound 3: the thread tile must tile evenly at the vector width.
+        vw = 1
+        while vw * 2 <= limit and (tt[0] % (vw * 2) == 0) and (tt[1] % (vw * 2) == 0):
+            vw *= 2
+        return vw
     vw = 1
     while vw * 2 <= limit:
         vw *= 2
@@ -74,56 +93,217 @@ class CandidateGenerator:
         self.base_dir = Path(base_dir)
         self.registry = registry
         self.family_decks = self._load_family_decks()
+        #: (family, MacroTile, ThreadTile, requested_vw, emitted_vw) for every
+        #: phase whose VectorWidth the generator had to clamp down to pass
+        #: validate_config. Populated by generate_family_phases; reported so a
+        #: deck entry that is silently narrower than intended is visible rather
+        #: than inferred from a missing phase.
+        self._clamped_widths: List[Tuple[str, Any, Any, Any, int]] = []
 
     def _load_family_decks(self) -> Dict[str, List[Dict[str, Any]]]:
         """
         Load family decks (native gfx90c tile candidates per family).
+
+        Every entry is one of three kinds, and the comment says which:
+
+          MEASURED  the shipped-gfx900 floor's own winning solution at a named
+                    cell, read from that phase's resolved 2_BenchmarkData yaml.
+                    These convert known losses directly.
+          QUANT     a tile chosen for 7-CU wave quantization. gfx90c has 7 CUs,
+                    so ceil(N/MT)^2 tiles spread badly whenever the count is a
+                    small power of two: at N=256 a 128x128 tile yields 4 tiles on
+                    7 CUs and leaves 3 idle (57% of the machine), while 32x32
+                    yields 64 tiles at 91%. This is the "narrower" direction.
+          LADDER    a width step either side of an existing deck entry, so the
+                    overnight run brackets each tile rather than guessing one
+                    width.
+
+        Widths are requested, not assumed: generate_family_phases clamps any
+        width the gate rejects down to the widest it accepts, so an entry is
+        never silently dropped.
         """
         return {
-            # VectorWidth 2 at 128x128 was 8 B, half the 16 B the classic path
-            # allows, and cost 5.5-15.1% on every large SS cell. The *_at_cap
-            # entries exist because cap_vector_width() says so, not by hand, so
-            # the gap cannot silently reopen.
+            # ---- SS: largest gaps in the corpus (768/1000/1024/1365/2048/4096
+            # all lose 5.5-15.1%), and SS:256 sits at 25.5% of the FP32 ALU
+            # roof. 128x128 + VW4 is the floor's winner everywhere (MEASURED);
+            # the QUANT entries attack the 256-cell quantization loss.
             "SS": [
-                {"MacroTile": "96x96x16", "ThreadTile": "6x6", "NLCA": 3, "VectorWidth": 2, "WorkGroupMapping": 4},
+                # MEASURED floor winner, all 7 large cells: 128x128x8/8x8/VW4.
+                {"MacroTile": "128x128x8", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                # MEASURED floor winner at SS:256 -- 32x64x8/4x8/VW4, an
+                # anisotropic tile. SS:256 is 25.5% of the 1613 GFLOPS roof, the
+                # widest relative gap in the corpus, and the winning tile is
+                # neither square nor in the quantisation ladder. It was never
+                # generated, so native could not have matched it.
+                {"MacroTile": "32x64x8", "ThreadTile": "4x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                # LADDER 64x64x16/4x4/VW4: the 16 B square tile at the smallest
+                # square that still has 16 tiles at N=256 (76%).
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                # QUANT 32x32 at N=256 is 64 tiles / 7 CUs = 91% machine use,
+                # the best packing of any tile in the ladder. Also 2x2 threads,
+                # which halves VGPR pressure and doubles occupancy headroom.
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                # QUANT 96x96 is non-power-of-two on purpose: ceil(2048/96)=22,
+                # 22^2=484 tiles over 7 CUs quantizes far finer than 128x128's
+                # 16^2=256, and at N=1365 it is the only tile in the ladder that
+                # does not overshoot.
+                {"MacroTile": "96x96x16", "ThreadTile": "6x6", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
+                # LADDER bracket the incumbent 128x128 VW2 downward, and the
+                # incumbent 64x64 VW2 upward, so both are bracketed by data.
                 {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
-                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
+                {"MacroTile": "128x128x8", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
+                # PrefetchGlobalRead stays off at 128x128: it doubles the LDS
+                # footprint to 16 KB and the tile is already at the LDS budget.
+            ],
+            # ---- DD: FP64 is 85-96% of its 101 GFLOPS roof on every cell except
+            # DD:192, which is at 20.5% and loses 12.7%. DD is 100% VW1 across
+            # all 44 measured phases, so the whole width axis is unexplored.
+            "DD": [
+                # MEASURED floor winner on DD:192 -- 32x32x8/4x4/VW2, never run
+                # natively. DD's deck has 32x32 but at 2x2 threads and VW1.
+                {"MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 2},
+                # MEASURED floor winner on DD:768 (a tie) and the 64x64 VW2 the
+                # deck has never produced.
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
+                # MEASURED floor winner on DD:1024 sits at DepthU 4, not 8 -- a
+                # shallow-K variant no deck entry has expressed.
+                {"MacroTile": "64x64x4", "ThreadTile": "4x4", "VectorWidth": 2},
+                # QUANT DD:192 at 32x32 is 36 tiles / 7 = 86% machine use; 64x64
+                # gives only 9 tiles and 64%. Keep both orientations.
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2},
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "VectorWidth": 2},
+                # LADDER: DD is at 95% of roof on the big cells, so the only
+                # open width is narrower, for the small ones.
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 1},
+                {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 1},
+            ],
+            # ---- HH: loses 10.9-14.6% at 1024/2048/4096 while already at
+            # 71-75% of the 3226 GFLOPS packed-FP16 roof -- the widest gap
+            # between utilisation and verdict. Floor winner is 128x128x16 VW8.
+            "HH": [
+                # MEASURED floor winner on 1024/2048/4096. Native has never run
+                # VW8 on any HH tile.
+                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 8, "WorkGroupMapping": 4, "PrefetchGlobalRead": False},
+                # MEASURED floor winner at HH:256 -- 64x32x16, not 64x64. HH:256
+                # is the one HH cell below 50% of roof (23.7%), and 64x32/4x4
+                # gives 128 threads against 64x64's 64, which is the axis the
+                # quantisation argument below cannot see. An earlier revision of
+                # this deck asserted 64x64x16/4x4/VW4 was the measured winner;
+                # it was not, and the tile that actually won was never generated.
+                {"MacroTile": "64x32x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+                # QUANT HH:256 at 64x64 is 16 tiles / 7 = 76%; at 32x32 it is
+                # 64 tiles and 91%, which is the only tile that meaningfully
+                # unpacks the 256 square on a 7-CU part.
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 8, "WorkGroupMapping": 4},
+                # QUANT 96x96/6x6: 484 tiles at N=2048, and ceil(4096/96)=43 so
+                # 43^2 tiles at the top cell -- the finest quantization in the
+                # ladder. 6x6 threads cap this family at VW2, which the
+                # generator enforces.
+                {"MacroTile": "96x96x16", "ThreadTile": "6x6", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
+                # LADDER keep the incumbent 128x128 VW4 and the 64x64 VW2 so the
+                # 8->4->2 descent is measured rather than assumed monotone.
+                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4, "PrefetchGlobalRead": False},
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
             ],
-            # Same story: vw1 on 64x64 is 8 B and lost DD 192 by 8.2% and 768 by
-            # 2.9%. DD:2048 ties either way, so both widths stay in the deck.
-            "DD": [
-                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 1},
-                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
-                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 1},
-            ],
-            # PrefetchGlobalRead stays off at 128x128: it would double the LDS
-            # footprint to 16 KB and the tile is already at the 16384 B budget.
-            "HH": [
-                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "PrefetchGlobalRead": False},
-                {"MacroTile": "128x128x16", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 8, "PrefetchGlobalRead": False},
-                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2},
-            ],
+            # ---- ZZ: wins all four large cells but at 16.7-23.7% of the 101
+            # GFLOPS FP64 roof -- the worst absolute utilization in the corpus.
+            # Every ZZ winner is VW1 across 40 measured configs, and 128x64x8 and
+            # 64x128x8 are documented as dead (accumulator VGPR overflow).
             "ZZ": [
-                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
+                # MEASURED-style probe: the floor never wins ZZ above VW1, so VW2
+                # is a reach test, not a conversion. 4x4 threads at complex
+                # double is TT0*TT1*8 VGPRs -- over the 128 accumulator budget,
+                # so the generator's occupancy gate is expected to refuse it.
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "NLCA": 1},
                 {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1},
+                # QUANT: ZZ is quantized hardest of all -- 128x128 gives 4 tiles
+                # at N=256 and 16 at N=512. 32x32 is the only tile that fills 7
+                # CUs. This is the single highest-leverage ZZ change.
+                {"MacroTile": "32x32x8", "ThreadTile": "2x2", "NLCA": 1},
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2, "NLCA": 1},
+                # MEASURED floor winner at ZZ:192 -- 32x32x8 on 4x4 threads, not
+                # the 2x2 this deck had assumed. At complex double 4x4 is
+                # TT0*TT1*8 = 128 accumulator VGPRs, exactly on the budget, so
+                # it is legal but at the ceiling; this is the measured optimum
+                # and was never generated natively.
+                {"MacroTile": "32x32x8", "ThreadTile": "4x4", "NLCA": 1},
+                # LADDER: exercise DepthU, which no ZZ entry has varied. Complex
+                # double LDS is 8 B/elem, so DepthU 8 halves the 16 KB footprint.
+                {"MacroTile": "64x64x4", "ThreadTile": "4x4", "NLCA": 1},
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
+                # MEASURED floor winner at ZZ:128 is 64x64x16/4x4/VW1, and
+                # ZZ:512 is the same tile at DepthU 8 plus LdsPadB 1. Pad B is
+                # the only ZZ knob with measured support; include it.
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
             ],
+            # ---- CC: 2.5-19.7% of the FP32 roof on every cell, and the only
+            # family where the floor's winning config was already run natively
+            # and still lost. Complex single is 8 B/elem for A and B, so this
+            # family is data-movement bound long before it is ALU bound: the
+            # lever is tile size and LDS padding, not width (VW2 = 16 B is
+            # already the cap).
             "CC": [
+                # MEASURED floor winner on CC:192 -- 32x32x8/4x4/VW2, never run.
+                {"MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 2},
+                # MEASURED floor winner on CC:256/1024/512 (64x64x8/4x4/VW2).
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
+                # MEASURED floor winner on CC:2048 is the same tile with
+                # LdsPadA 2, LdsPadB 0 -- asymmetric, and the only CC row in the
+                # whole census with a non-zero pad. GFX9 LDS bank =
+                # (byte_addr/4) mod 32, so a 128 B-aligned B row collides.
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2, "LdsPadA": 2, "LdsPadB": 0},
+                # QUANT: CC is the most quantized family because a 128x128
+                # complex tile is 128 KB of A and B. 32x32 is the only tile that
+                # gets past 4 tiles at N=256.
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2},
+                {"MacroTile": "16x16x16", "ThreadTile": "2x2", "VectorWidth": 2},
+                # LADDER keep the incumbent VW1 tiles: at 8 B CC may genuinely
+                # prefer the narrower load, and the overnight run should be able
+                # to prove that rather than assume it.
                 {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
                 {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
             ],
-            # The transposed 64x128 tile is the floor's winner on HH_HPA:2048
-            # (1345.7 vs 1439.6 GF/s) and was absent from the deck entirely, so
-            # that cell was unwinnable. Both orientations are now staged for the
-            # HPA families; VectorWidth is left unset because those families are
-            # bound by the GLVW==VW-or-1 generator restriction (§5.3).
+            # ---- HH_HPA: loses 7.7-9.8% at 2048/4096. The floor wins 4096 at
+            # 128x64x8 with **8x4** threads and 2048 at the transposed
+            # 64x128x8/4x8, both at VW2. The deck has 128x64x16 and 64x128x16 at
+            # 4x8 threads and no VW, so it expresses neither floor winner.
             "HH_HPA": [
-                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
-                {"MacroTile": "128x64x16", "ThreadTile": "4x8", "NLCA": 1},
+                # MEASURED floor winner HH_HPA:4096. TT is 8x4, not the deck's
+                # 4x8 -- 128/8 x 64/4 = 16x16 threads either way, but the
+                # per-thread extents differ, so these are different kernels.
+                {"MacroTile": "128x64x8", "ThreadTile": "8x4", "NLCA": 1, "VectorWidth": 2},
+                # MEASURED floor winner HH_HPA:2048, the transposed tile.
+                {"MacroTile": "64x128x8", "ThreadTile": "4x8", "NLCA": 1, "VectorWidth": 2},
+                # MEASURED floor winner HH_HPA:1024 (a tie): 128x64x16/8x4/VW4.
+                {"MacroTile": "128x64x16", "ThreadTile": "8x4", "NLCA": 1, "VectorWidth": 4},
+                # QUANT 96x96 and 32x32 to unpack the 512/1024 squares.
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2},
+                {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 2},
+                # LADDER keep the incumbent, and add the asymmetric pad the CC
+                # census shows is sometimes decisive.
                 {"MacroTile": "64x128x16", "ThreadTile": "4x8", "NLCA": 1},
+                {"MacroTile": "128x64x16", "ThreadTile": "4x8", "NLCA": 1, "LdsPadA": 2, "LdsPadB": 0},
             ],
+            # ---- HS_HPA: three ties at 83-89% of roof, one win at 512. No
+            # losses, so the goal here is depth: the floor's winners are the
+            # 128x64x16/8x4/VW4 tile, with LdsPad 4/4 on 2048 specifically.
             "HS_HPA": [
-                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "NLCA": 1},
+                # MEASURED floor winner on 1024/4096 (ties).
+                {"MacroTile": "128x64x16", "ThreadTile": "8x4", "NLCA": 1, "VectorWidth": 4},
+                # MEASURED floor winner on 2048 (tie) is the same tile with
+                # LdsPadA 4, LdsPadB 4.
+                {"MacroTile": "128x64x16", "ThreadTile": "8x4", "NLCA": 1, "VectorWidth": 4, "LdsPadA": 4, "LdsPadB": 4},
+                # MEASURED floor winner on HS_HPA:512 is 64x64x8/4x4/VW4.
+                {"MacroTile": "64x64x8", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 4},
+                # QUANT: mirror the HH_HPA additions so the two HPA families are
+                # compared on identical tiles rather than different ones.
+                {"MacroTile": "128x64x8", "ThreadTile": "8x4", "NLCA": 1, "VectorWidth": 2},
+                {"MacroTile": "64x128x8", "ThreadTile": "4x8", "NLCA": 1, "VectorWidth": 2},
+                {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 2},
+                # LADDER keep the incumbent tiles.
                 {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
                 {"MacroTile": "128x64x16", "ThreadTile": "4x8", "NLCA": 1},
                 {"MacroTile": "64x128x16", "ThreadTile": "4x8", "NLCA": 1},
@@ -531,7 +711,11 @@ class CandidateGenerator:
                 existing_phases = yaml.safe_load(f) or []
 
         existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
+        existing_ids = {
+            p.get("phase_id"): p.get("fp") for p in existing_phases if isinstance(p, dict)
+        }
         added = 0
+        renamed = 0
         rejected: List[str] = []
         for cand in candidates:
             merged = {**cand.template, **cand.knobs}
@@ -539,9 +723,30 @@ class CandidateGenerator:
             if not ok:
                 rejected.append(f"{cand.phase_id}: {why}")
                 continue
+            # A phase_id already bound to a DIFFERENT fingerprint means two configs
+            # would share one output directory, and the second would silently
+            # overwrite the first's results. phase_id is built from MT/TT (plus, on
+            # a repeated tile, the width/pad/mapping tags), which cannot capture
+            # every knob -- a deck entry that leaves VectorWidth unset and a sibling
+            # that sets it to 2 both land on `..._mt32x32x16_tt2x2` with different
+            # configs. Rather than drop a legal candidate or silently corrupt the
+            # corpus, bind the id to the fingerprint that owns it.
+            phase_id = cand.phase_id
+            renamed_this = False
+            if existing_ids.get(phase_id) not in (None, cand.fingerprint):
+                phase_id = f"{cand.phase_id}_h{cand.fingerprint[:8]}"
+                if existing_ids.get(phase_id) not in (None, cand.fingerprint):
+                    rejected.append(
+                        f"{cand.phase_id}: phase_id collision could not be resolved "
+                        f"(fp {cand.fingerprint[:12]})"
+                    )
+                    continue
+                cand.phase_id = phase_id
+                cand.label = f"{cand.label}_h{cand.fingerprint[:8]}"
+                renamed_this = True
             if cand.fingerprint not in existing_fps:
                 phase_entry = {
-                    "phase_id": cand.phase_id,
+                    "phase_id": phase_id,
                     "label": cand.label,
                     "dtype": cand.dtype,
                     "shapes": cand.shapes,
@@ -552,11 +757,20 @@ class CandidateGenerator:
                 }
                 existing_phases.append(phase_entry)
                 existing_fps.add(cand.fingerprint)
+                existing_ids[phase_id] = cand.fingerprint
                 added += 1
+                if renamed_this:
+                    renamed += 1
 
                 if self.registry is not None:
-                    self.registry.append_phase(cand.phase_id, cand.fingerprint, phase_entry)
+                    self.registry.append_phase(phase_id, cand.fingerprint, phase_entry)
 
+        if renamed:
+            print(
+                f"[gate] bound {renamed} candidate(s) to a fingerprint-suffixed "
+                f"phase_id: the generated id was already owned by a different "
+                f"config, which would have silently overwritten its results."
+            )
         if rejected:
             print(f"[gate] refused {len(rejected)} illegal candidate(s) before append:")
             for r in rejected:
@@ -591,16 +805,44 @@ class CandidateGenerator:
                 mt = tile_config.get("MacroTile", "").replace("x", "x")
                 tt = tile_config.get("ThreadTile", "").replace("x", "x")
                 tile_tag = f"_mt{mt}_tt{tt}"
+                # ...and when a family deck repeats the same MT/TT (optionally at
+                # different widths) it must also carry the knobs that actually
+                # differ, otherwise two configs land on one phase_id and one
+                # silently overwrites the other's output directory. MT/TT alone is
+                # not unique: 64x64x8/4x4 appears both plain and with LdsPadA=2, and
+                # 64x64x16/4x4 appears at both VW2 and VW4. Only disambiguated when
+                # the tile actually repeats, so every unique-tile entry keeps its
+                # historical phase_id and its already-benchmarked run dir.
+                tile_key = (
+                    tile_config.get("MacroTile"),
+                    tile_config.get("ThreadTile"),
+                    tile_config.get("VectorWidth"),
+                )
+                tile_uses = sum(
+                    1 for e in family_deck
+                    if (
+                        e.get("MacroTile"),
+                        e.get("ThreadTile"),
+                        e.get("VectorWidth"),
+                    ) == tile_key
+                )
                 for shape in base_shapes:
-                    label = f"{family}_{pattern}_{shape}{tile_tag}"
-                    phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tile_tag}"
-
                     template = {
                         "Architecture": "gfx90c",
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
+                        # FamilyLabel is the workload-cell identity the driver
+                        # stamps each record with (cell_key = FAMILY:SIDE). A
+                        # generated phase without it gets cell_key None, is
+                        # recorded with no cell stamp, and analytics cannot group
+                        # it into any acceptance cell -- the run burns its full
+                        # duration and the report shows no new coverage. It also
+                        # has to be the real family name, not the dtype: H
+                        # covers both HH and HH_HPA, so DataType cannot
+                        # disambiguate the HPA variants.
+                        "FamilyLabel": family,
                     }
 
                     is_valid, reason = self.validate_config({**template, **tile_config})
@@ -613,8 +855,47 @@ class CandidateGenerator:
                         # phase is always runnable.
                         rel = {**tile_config, "NLCA": 1}
                         is_valid, reason = self.validate_config({**template, **rel})
+                    if not is_valid and rel.get("VectorWidth"):
+                        # Width rejected for this tile. Do not drop the phase: step
+                        # the width down to the widest value the gate actually
+                        # accepts and emit that. The gate is the only legality
+                        # oracle (see cap_vector_width), and the usual causes are
+                        # structural rather than fatal -- a TLU contraction side
+                        # forces the post-reduction GLVW, so the `GLVW == VW or 1`
+                        # guard caps HH_HPA 128x64x8/8x4 at VW2 even though the
+                        # divisibility bound allows 4. Emitting the clamped width
+                        # keeps the tile in the search instead of silently losing
+                        # it, which is how a whole family of candidates went
+                        # missing from the deck before.
+                        vw = int(rel["VectorWidth"])
+                        while vw > 1 and not is_valid:
+                            vw //= 2
+                            rel = {**rel, "VectorWidth": vw}
+                            is_valid, reason = self.validate_config({**template, **rel})
+                        if is_valid:
+                            self._clamped_widths.append(
+                                (family, tile_config.get("MacroTile"),
+                                 tile_config.get("ThreadTile"),
+                                 tile_config.get("VectorWidth"), vw))
                     if not is_valid:
                         continue
+
+                    # Build the id from the knobs that were actually EMITTED, not
+                    # from the deck request, so a clamped width is named for what
+                    # will actually run. Only disambiguated when the tile repeats,
+                    # which preserves historical ids for unique tiles.
+                    tag = tile_tag
+                    if tile_uses > 1:
+                        if rel.get("VectorWidth"):
+                            tag += f"_vw{rel['VectorWidth']}"
+                        if rel.get("LdsPadA"):
+                            tag += f"_pa{rel['LdsPadA']}"
+                        if rel.get("LdsPadB"):
+                            tag += f"_pb{rel['LdsPadB']}"
+                        if rel.get("WorkGroupMapping"):
+                            tag += f"_wgm{rel['WorkGroupMapping']}"
+                    label = f"{family}_{pattern}_{shape}{tag}"
+                    phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
 
                     candidate = self.emit_candidate(
                         phase_id=phase_id,
@@ -844,7 +1125,14 @@ def _dtype_char(config: Dict[str, Any]) -> str:
     if raw is None:
         return ""
     ch = str(raw).upper()
-    return {"SS": "S", "DD": "D", "HH": "H", "ZZ": "Z", "CC": "C", "FF": "S"}.get(ch, ch)
+    # HPA families carry the base dtype in their label: HH_HPA is f16 pairs
+    # (weight 1) and HS_HPA is f32 pairs (weight 1). Without these, a
+    # label-only HPA config cannot be modelled and the register-file gate fails
+    # it closed -- which silently removes the entire HPA deck from generation.
+    return {
+        "SS": "S", "DD": "D", "HH": "H", "ZZ": "Z", "CC": "C", "FF": "S",
+        "HH_HPA": "H", "HS_HPA": "S",
+    }.get(ch, ch)
 
 
 def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:

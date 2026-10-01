@@ -179,21 +179,38 @@ class TestVectorWidthCap(unittest.TestCase):
                 f"and this family cannot win a large cell")
 
     def test_added_candidates_pass_the_dual_resource_gate(self):
-        from scheduler import occupancy_feasible
+        from scheduler import occupancy_feasible, FAMILY_DTYPE_CHAR
         checked = 0
         for fam, cfgs in self.decks.items():
             for c in cfgs:
                 vw = c.get("VectorWidth")
                 if not vw:
                     continue
-                config = {"DataType": fam, "FamilyLabel": fam, "NLCA": 1,
-                          "WorkGroupMapping": 4, "GlobalSplitU": 1,
+                # DataType must be the real dtype char, not the family label: a
+                # phase's DataType is what the gate weights, and the label is
+                # only a fallback for label-only auto phases.
+                config = {"DataType": FAMILY_DTYPE_CHAR[fam], "FamilyLabel": fam,
+                          "NLCA": 1, "WorkGroupMapping": 4, "GlobalSplitU": 1,
                           "ContractionPattern": "Ailk_Bjlk", "VectorWidth": vw}
                 config.update({k: v for k, v in c.items() if k != "NLCA"})
                 ok, why = occupancy_feasible(config)
                 self.assertTrue(ok, f"{fam} {c.get('MacroTile')} vw{vw}: {why}")
                 checked += 1
         self.assertGreater(checked, 0)
+
+    def test_family_labels_resolve_to_a_dtype(self):
+        """Every family in a deck must be modellable by the register-file gate.
+
+        A family label with no mapping in _dtype_char makes occupancy fail
+        closed, which drops the whole family from generation rather than
+        reporting a bad config.
+        """
+        from scheduler import _dtype_char, VGPR_PER_ELEMENT
+        for fam in self.decks:
+            ch = _dtype_char({"DataType": fam, "FamilyLabel": fam})
+            self.assertIn(ch, VGPR_PER_ELEMENT,
+                          f"{fam} resolves to dtype {ch!r}, absent from "
+                          f"VGPR_PER_ELEMENT; its candidates would all be dropped")
 
     def test_widened_variants_do_not_duplicate_an_existing_tile(self):
         from scheduler import cap_vector_width
@@ -417,6 +434,59 @@ class TestDeckLinter(unittest.TestCase):
         )
         self.assertIn(proc.returncode, (0, 1), proc.stdout + proc.stderr)
         self.assertNotIn("FAIL", proc.stdout)
+
+
+class TestGeneratedPhaseCellIdentity(unittest.TestCase):
+    """A generated phase must carry the family that defines its workload cell.
+
+    cell_key() is built from config["FamilyLabel"], and the driver drops the
+    cell_key stamp entirely when that is missing (cell_key("", side) is None),
+    leaving analytics to recover the family from the phase_id text instead.
+    That fallback happens to work today, so a missing FamilyLabel is silent:
+    the run completes, the cells still fill in, and nothing looks wrong. It is
+    still a real defect -- the documented identity path is the config, and the
+    H/HH_HPA split (both DataType 'H') is exactly what the phase_id heuristic
+    has to get right on its own. So assert the config carries it, not that the
+    fallback happens to cope.
+    """
+
+    def _generated(self, family, pattern="Ailk_Bjlk", shape="256x256x256"):
+        import tempfile
+        from pathlib import Path
+        from scheduler import CandidateGenerator
+        with tempfile.TemporaryDirectory() as tmp:
+            gen = CandidateGenerator(Path(tmp))
+            cands = gen.generate_family_phases(family, [pattern], [shape])
+            self.assertTrue(cands, f"no candidates generated for {family}")
+            return cands
+
+    def test_every_family_emits_a_resolvable_cell_key(self):
+        from gfx90c_common import FAMILY_SHAPES, cell_key
+        for family, sides in FAMILY_SHAPES.items():
+            with self.subTest(family=family):
+                shape = f"{sides[0]}x{sides[0]}x{sides[0]}"
+                for cand in self._generated(family, shape=shape):
+                    cfg = {**cand.template, **cand.knobs}
+                    self.assertEqual(
+                        cfg.get("FamilyLabel"), family,
+                        f"{cand.phase_id} has no FamilyLabel; its records would "
+                        f"be stamped with no cell_key")
+                    self.assertIsNotNone(
+                        cell_key(cfg.get("FamilyLabel"), shape),
+                        f"{cand.phase_id} does not resolve to a cell key")
+
+    def test_family_label_is_not_derivable_from_dtype(self):
+        """'H' covers three families, so DataType cannot stand in for it."""
+        from gfx90c_common import FAMILY_DTYPE_CHAR
+        by_dtype = {}
+        for fam, dt in FAMILY_DTYPE_CHAR.items():
+            by_dtype.setdefault(dt, set()).add(fam)
+        ambiguous = {dt: f for dt, f in by_dtype.items() if len(f) > 1}
+        self.assertIn("H", ambiguous,
+                      "expected the H dtype to be family-ambiguous")
+        # DTYPE_TO_FAMILY resolves 'H' to HH alone, so anything relying on the
+        # dtype fallback would fold HH_HPA and HS_HPA into HH.
+        self.assertEqual(ambiguous["H"], {"HH", "HH_HPA", "HS_HPA"})
 
 
 if __name__ == "__main__":

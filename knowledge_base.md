@@ -393,6 +393,49 @@ Pipeline (in order):
 3. `report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
    (single-file dashboard). Report dtype extraction is token-based
    (`extract_dtype_from_phase_id`), no longer regex-dependent.
+4. `run_status.py` — progress/ETA accounting, and the live TTY panel
+   (`LiveStatus`) that `port_tensile.py --live` paints while phases execute.
+
+### 9.1 Execution time in the acceptance report
+
+`execution_timing` in the report JSON/HTML is three distinct numbers, never
+collapsed into one "runtime":
+
+| field | meaning |
+|---|---|
+| `native_run.elapsed_minutes` | wall clock of the run being reported — one pass of the deck |
+| `reference_chain.elapsed_minutes` | wall clock summed over the gfx900 chain |
+| `phase_busy.minutes` | sum of per-phase `started`→`ended` spans |
+
+The first two are separate because the floor is usually a *resumed chain*: the
+head run's cost is a fraction of the floor's total, so one combined figure
+would understate the floor by however many resumes it took. `phase_busy` is
+below wall clock by config generation, Tensile build and queueing; a large gap
+means an ETA is timing harness overhead, not the GPU.
+
+A run that is still in flight has no execution time yet. It reports
+`elapsed_minutes: null` and `in_flight: true` rather than `0.0`, so
+"not finished yet" is never read as "instant".
+
+### 9.2 Live TTY status
+
+`run_status.LiveStatus` repaints a compact panel (state, decided/total, progress
+bar, elapsed, ETA, tally) into the terminal while a run executes:
+
+- A **background thread** repaints, because the main loop is blocked inside
+  `execute_phase` for minutes at a time — a caller-driven pump would freeze.
+- **stdout is wrapped** in `_PanelStdout`, which erases the panel before any
+  other write. Without it, the run's own `Skipping phase ...` lines land under
+  the panel and the next repaint shreds them.
+- A **non-TTY** (piped log, CI) gets appended plain lines, never ANSI, so logs
+  stay readable.
+- The panel **catches `BaseException`**: `build_report` raises `SystemExit` when
+  the registry does not exist, which is exactly the state a first run starts
+  in, and `SystemExit` is not an `Exception`. A status display must never be
+  the reason a run dies.
+
+Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
+`python3 run_status.py --watch` remains the standalone full-panel view.
 
 Acceptance ceilings: per-family bars come from `gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK

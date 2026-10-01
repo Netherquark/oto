@@ -9,6 +9,23 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-02** — `family_timing` was computed on every report and then
+  **never written** — the whole per-family cost block was dropped on the floor.
+  The report now carries an `execution_timing` block (native run wall clock,
+  reference-chain wall clock, phase-busy time) and `family_timing`, in the JSON,
+  the HTML, and the one-line summary. Native run and chain are separate numbers
+  on purpose: the floor is a 3-run chain, so one combined "runtime" would
+  understate it. Measured on the current corpus: native `1d 19h 39m`, chain
+  `3d 20h 34m`.
+- **2026-10-02** — `run_status.py` wired into the TTY via `LiveStatus`, on by
+  default (`--live off` to disable, `--live-interval` to tune). A background
+  thread repaints a compact panel so it keeps advancing while a phase blocks,
+  and stdout is wrapped so the run's own prints clear the panel first. Degrades
+  to plain appended lines when stdout is not a terminal, so piped logs stay
+  readable. `build_report` raises `SystemExit` when the registry is absent —
+  not an `Exception` — so the first run of a fresh tree would have died in the
+  panel's first frame; the panel now catches `BaseException`.
+
 ## [Acceptance best-vs-best default + telemetry-adjusted bases] 2026-09-27
 
 - **All-zero acceptance report FIXED (arm-scope asymmetry).** The spoof arm resolved

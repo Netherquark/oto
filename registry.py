@@ -90,6 +90,20 @@ class SQLiteRegistry:
         finally:
             conn.close()
 
+    def run_row(self, run_id: str) -> Optional[sqlite3.Row]:
+        """One run's registry row, or None.
+
+        Read helper for consumers that need run lifecycle timestamps
+        (started_at / completed_at) -- e.g. the acceptance report's execution
+        time. Returns None for an unknown run_id so callers do not have to
+        distinguish "no such run" from "no value in the column".
+        """
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchall()
+        return rows[0] if rows else None
+
     def append_record(self, record: Dict[str, Any], run_id: str = "default") -> int:
         """
         Append a single record to the ledger.
@@ -250,12 +264,25 @@ class SQLiteRegistry:
             cursor = conn.execute("SELECT data FROM phases ORDER BY id ASC")
             return [json.loads(row["data"]) for row in cursor]
 
-    def latest_run_id(self) -> Optional[str]:
-        """Return the most recently registered run id (from the runs table)."""
+    def latest_run_id(self, arm: Optional[str] = None) -> Optional[str]:
+        """Return the most recently registered run id (from the runs table).
+
+        arm='native' restricts to non-reference runs. The A/B subject must be a
+        native run: the newest row overall is usually the gfx900 reference
+        floor, and scoring that as the subject makes _reference_floor_runs
+        exclude it from its own floor chain (it excludes the subject when the
+        subject is a gfx900_ref run). The floor then gets compared against
+        itself minus its own head, which halves the spoof kernel count and
+        silently moves verdicts -- CC:1024 LOSS->TIE, HH_HPA:4096 LOSS->WIN,
+        HS_HPA:4096 TIE->WIN on the current corpus.
+        """
+        query = "SELECT run_id FROM runs"
+        params: tuple = ()
+        if arm == "native":
+            query += " WHERE run_id NOT LIKE 'gfx900_ref_%'"
+        query += " ORDER BY id DESC LIMIT 1"
         with self._get_conn() as conn:
-            cursor = conn.execute(
-                "SELECT run_id FROM runs ORDER BY id DESC LIMIT 1"
-            )
+            cursor = conn.execute(query, params)
             row = cursor.fetchone()
             return row["run_id"] if row else None
 
