@@ -300,6 +300,34 @@ class TestChainAndClock(StatusFixture):
         self.assertEqual(rep["chain"], ["gfx900_ref_r1", "gfx900_ref_r2", "gfx900_ref_r3"])
         self.assertEqual(rep["head"], "gfx900_ref_r3")
 
+    def test_closed_interrupted_run_does_not_outrank_newer_floor(self):
+        """A finished interrupted run is history, not the current head.
+
+        Real occurrence: gfx900_ref_20260928_155422_resume was interrupted but
+        had closed, while the floor locked five days later had completed. The
+        default view stopped on the interrupted run, so every tier count and ETA
+        came from a chain eight days stale.
+        """
+        self.add_run("gfx900_ref_old", "interrupted", [], resume_of=None,
+                     started="2026-09-28T10:00:00",
+                     completed="2026-09-28T12:00:00")
+        self.add_run("gfx900_ref_floor", "completed", [],
+                     started="2026-10-03T10:00:00",
+                     completed="2026-10-03T12:00:00")
+        rep = self.report()
+        self.assertEqual(rep["head"], "gfx900_ref_floor")
+        self.assertEqual(rep["chain"], ["gfx900_ref_floor"])
+
+    def test_unclosed_interrupted_run_still_outranks_older_floor(self):
+        """The mirror case: no completed_at means live, resumable work."""
+        self.add_run("gfx900_ref_floor", "completed", [],
+                     started="2026-10-03T10:00:00",
+                     completed="2026-10-03T12:00:00")
+        self.add_run("gfx900_ref_live", "interrupted", [],
+                     started="2026-10-05T10:00:00", completed=None)
+        rep = self.report()
+        self.assertEqual(rep["head"], "gfx900_ref_live")
+
     def test_elapsed_is_head_run_not_chain_span(self):
         """Two days of ancestor runs must not inflate this run's elapsed."""
         self.add_run("gfx900_ref_r1", "completed", [], started="2026-09-20T10:00:00",

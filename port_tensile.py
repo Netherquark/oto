@@ -351,6 +351,38 @@ class TensileDriver:
 
         return phases
 
+    _KEY_POLL_S = 0.2
+
+    def _read_key(self, block: bool = True) -> str:
+        """One non-blocking keystroke, lowercased, or "" when there is none.
+
+        Single owner of stdin for 's'/'e'/'q'. Two independent pollers on one
+        fd race for the same byte, so the keys meant one thing in the cooldown
+        latch and something else (or nothing) elsewhere; keeping the read here
+        means every call site sees the same semantics and no keystroke is
+        half-consumed.
+
+        block=True is for spin-wait loops (cooldown, Tensile wait): it waits up
+        to the poll interval, and when stdin is not a TTY (piped log, CI, cron)
+        it sleeps that interval so the loop cannot busy-spin. block=False is for
+        callers that already do real work per iteration, where sleeping would
+        just add latency -- a deck with hundreds of skips must not pay 0.2s per
+        phase to discover there are no keys to read.
+        """
+        try:
+            if not sys.stdin.isatty():
+                if block:
+                    time.sleep(self._KEY_POLL_S)
+                return ""
+            r, _, _ = select.select([sys.stdin], [], [],
+                                   self._KEY_POLL_S if block else 0)
+            if not r:
+                return ""
+            return sys.stdin.read(1).lower()
+        except (OSError, ValueError):
+            # A closed or detached stdin must not take the run down.
+            return ""
+
     def _apply_cooldown(self) -> bool:
         """
         Apply interruptible thermal cooldown latch between GPU benchmark phases.
@@ -364,23 +396,18 @@ class TensileDriver:
             while time.time() - start < self.cooldown_s:
                 if self._stop_requested:
                     return False
-                if sys.stdin.isatty():
-                    r, _, _ = select.select([sys.stdin], [], [], 0.2)
-                    if r:
-                        key = sys.stdin.read(1).lower()
-                        if key == 's':
-                            print("\n[USER ACTION] 's' pressed: Skipping thermal cooldown...")
-                            break
-                        elif key == 'e':
-                            print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
-                            self._finish_after_iteration = True
-                            break
-                        elif key == 'q':
-                            print("\n[USER ACTION] 'q' pressed: Quitting run during cooldown...")
-                            self._stop_requested = True
-                            return False
-                else:
-                    time.sleep(0.2)
+                key = self._read_key()
+                if key == 's':
+                    print("\n[USER ACTION] 's' pressed: Skipping thermal cooldown...")
+                    break
+                elif key == 'e':
+                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+                    self._finish_after_iteration = True
+                    break
+                elif key == 'q':
+                    print("\n[USER ACTION] 'q' pressed: Quitting run during cooldown...")
+                    self._stop_requested = True
+                    return False
         return not self._stop_requested
 
     def _ensure_telemetry(self) -> Optional[SysfsTelemetrySampler]:
@@ -980,26 +1007,21 @@ class TensileDriver:
                         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                         raise subprocess.TimeoutExpired(cmd, timeout)
 
-                    # Non-blocking key check if sys.stdin is a tty
-                    if sys.stdin.isatty():
-                        r, _, _ = select.select([sys.stdin], [], [], 0.2)
-                        if r:
-                            key = sys.stdin.read(1).lower()
-                            if key == 's':
-                                print("\n[USER ACTION] 's' pressed: Skipping current phase...")
-                                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                                skipped = True
-                                break
-                            elif key == 'e':
-                                print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
-                                self._finish_after_iteration = True
-                            elif key == 'q':
-                                print("\n[USER ACTION] 'q' pressed: Quitting run...")
-                                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                                self._stop_requested = True
-                                break
-                    else:
-                        time.sleep(0.2)
+                    # Wait up to the poll interval for 's'/'e'/'q' (no-op off a TTY).
+                    key = self._read_key()
+                    if key == 's':
+                        print("\n[USER ACTION] 's' pressed: Skipping current phase...")
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                        skipped = True
+                        break
+                    elif key == 'e':
+                        print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
+                        self._finish_after_iteration = True
+                    elif key == 'q':
+                        print("\n[USER ACTION] 'q' pressed: Quitting run...")
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                        self._stop_requested = True
+                        break
 
                 if self._stop_requested and proc.poll() is None:
                     try:
@@ -1156,6 +1178,22 @@ class TensileDriver:
                         "status": "skipped",
                         "reason": reason
                     }, run_id=self.run_dir.name)
+                    # A skip does no GPU work, so it used to run with no key
+                    # polling at all: pressing 'q' during a deck whose phases
+                    # were all already-passed did nothing until some phase
+                    # actually launched, which for a fully-skipped deck is never.
+                    # The keys are documented as run-wide, so honour them here
+                    # too. 's' has no meaning (nothing is executing to skip) but
+                    # is consumed rather than left in the buffer.
+                    key = self._read_key(block=False)
+                    if key == 'q':
+                        print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")
+                        self._stop_requested = True
+                        break
+                    elif key == 'e':
+                        print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+                        self._finish_after_iteration = True
+                        break
                     continue
 
                 result = self.execute_phase(phase, self.run_dir)

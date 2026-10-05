@@ -9,6 +9,37 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-05** — **`s`/`e`/`q` were dead while phases were skipped, and stdin had
+  two competing readers.** A phase that policy skips (identical `fp` already
+  passed) does no GPU work, and that code path polled no keys at all — so a
+  re-run or `--resume` of an already-passed deck ignored `q` completely until
+  some phase actually launched, which for a fully-skipped deck is never. The
+  keys are documented as run-wide, so the gap was a contract violation, not a
+  missing feature. Root cause was structural: the `select`+`read(1)` poll was
+  copy-pasted into the cooldown latch and the Tensile wait loop and simply
+  omitted from the third context.
+  - stdin now has a single owner, `TensileDriver._read_key()`, used by all three
+    call sites. Two pollers on one fd race for the same byte, so the keys could
+    mean one thing in one place and something else in another.
+  - `block=False` for the skip path: a spin-wait loop must not busy-spin off a
+    TTY, but a skip loop already does real work per phase and must not pay 0.2 s
+    × N phases to discover there are no keys.
+  - A user-quit during skips is now filed as `interrupted`, not `skipped`.
+    `skipped` asserts the corpus already had those measurements, which is a
+    different statement from "the operator stopped it".
+  - **CLI option audit (one pass, all 29 `--` options): no dead options.** The
+    only candidate, `--release-unreproducible`, is a false positive from a
+    `getattr(args, ...)` read and is genuinely wired — it sets
+    `plan.rerun_unreproducible`, consumed as `release_drop`. Both `--release-*`
+    flags reach the plan correctly. What was missing was a check that this stays
+    true, so `tests/test_interactive_keys.py` now fails if any option is declared
+    and never consulted, and if any option is absent from `--help`.
+  - README §1's stated contract said the keys were active "during active
+    benchmarking and thermal cooldown sleep" — the incomplete contract that let
+    this ship. It now names the skip path explicitly.
+  Covered by `tests/test_interactive_keys.py` (12 tests). The regression is
+  load-bearing: reverting the skip branch to a bare `continue` fails 3 of them.
+
 - **2026-10-05** — **`verify_run.py`: the append-only law finally has a checker.**
   Verifying the trial needed shell one-liners in `/tmp`, which is the same
   scratch-the-answer-away pattern `run_status.py` was built to end. The law
@@ -955,6 +986,58 @@ tile that actually died (pinned in `test_raw_tensile_model_would_have_missed_the
 It reproduces all 9 observed cases and has zero false positives over 410 phases, but
 it is a model, not a register allocator. ZZ is now **legal but unbenchmarked** — the
 next step for the family is a TTY run, not more code.
+
+---
+
+## 2026-10-05 — Native arm flushed from registry; `run_status` default-head fix
+
+### Native registry rows removed (user-authorised, backed up first)
+
+The live registry was flushed of **native** rows only, so the deck would measure every
+candidate instead of skipping all 29 as `identical_fp_already_passed`.
+
+- **Backup (verified before the write):** `gfx90c_results/backups/registry.db.pre-native-flush.20261005_182448`
+  — `PRAGMA integrity_check: ok`, 42 runs / 49,540 records / 612 phases, byte-identical
+  row counts to origin. All 33 native runs are recoverable from it.
+- **Deleted:** 35,729 records + 33 run rows (`run_*`). **Untouched:** all 9
+  `gfx900_ref_*` floor runs (13,811 records), including `gfx900_ref_locked_52149f315d`
+  with its 2,194 pooled phase records. `phases` (612 `draft_*` catalog rows) kept —
+  it is a config catalogue, not measurements, and `should_run` never reads it.
+- **Result:** `should_run` now returns approved for **29/29** deck phases under
+  *default* policy; `reference_chain()` still resolves to the locked floor.
+  `--force` is no longer required.
+
+**Scope was chosen from evidence, not assumption.** Floor runs also carry `fp` and
+`completed` records, so a native-only flush would not have worked had any deck
+fingerprint been decided by a reference run. Checked first: **0 of 29** were
+floor-decided, all 29 were native-only. There were also **0 `retire` records**, which
+`is_phase_retired`/`is_config_retired` consult, so no second gate remained.
+
+**Nothing was actually lost.** `ab_audit.py` reads `2_BenchmarkData` CSVs from disk,
+not the registry, and still reports the identical 8 WIN / 30 TIE verdict against the
+same 6 on-disk `run_*` directories. Only registry rows were removed.
+
+### `run_status.py` default head: a closed interrupted run was outranking the floor
+
+The default view headlined `gfx900_ref_20260928_155422_resume` — **interrupted, and
+closed 8 days earlier** — while skipping the floor locked 5 days later. Every tier
+count and ETA it printed came from the wrong corpus; a 25 h ETA derived from it was
+wrong. `reference_chain()` (what `--auto` actually gates on) was never affected.
+
+Cause: `ACTIVE_STATES = ("started", "interrupted")` treats *any* interrupted run as
+active, and the selection took the newest-first match, so the scan walked past the
+completed floor.
+
+Fix — in flight is decided by `completed_at`, not the status label: prefer (1) a run
+with no `completed_at` (live, resumable), then (2) the newest **completed** chain, then
+(3) the newest finished-but-interrupted run.
+
+The status label alone was the wrong axis: `test_chain_follows_resume_of` pins the
+contract that an interrupted run which *never closed* stays at the head. Both
+directions are now pinned by new tests, and the fix was verified load-bearing (reverting
+it fails `test_closed_interrupted_run_does_not_outrank_newer_floor`).
+
+**Verification.** `test_run_status`: 41/41. Full suite: **247 tests, OK (skipped=1)**.
 
 ---
 

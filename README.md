@@ -3,13 +3,17 @@ A deterministic, benchmark-driven autonomous kernel tuning suite designed to gen
 
 ## 1. Interactive Runtime Controls & Shortcuts
 
-During execution (both active benchmarking and thermal cooldown sleep), interactive single-key listeners are active on `stdin`:
+During execution the interactive single-key listener is active on `stdin` in
+**every** phase of a run: while a benchmark kernel is running, during thermal
+cooldown sleep, **and while phases are being skipped** because policy already has
+that fingerprint (see `--force` to defeat skipping). Skipping is not a gap in the
+key handling — a re-run of an already-passed deck is still interruptible.
 
 | Key Shortcut | Action | Description |
 |---|---|---|
-| **`s`** | **Skip** | Skips the current running benchmark kernel or skips the remaining thermal cooldown sleep immediately. |
-| **`e`** | **End after iteration** | Lets the current benchmark phase finish naturally, then gracefully ends the run and generates `acceptance_report.json` and `acceptance_report.html` (works during thermal cooldown too — skips the remaining sleep, then ends). |
-| **`q`** | **Quit & Report** | Gracefully terminates execution, kills active child process groups, and immediately generates `acceptance_report.json` and `acceptance_report.html` from all data collected so far. |
+| **`s`** | **Skip** | Skips the current running benchmark kernel or skips the remaining thermal cooldown sleep immediately. During a skip there is nothing executing to skip, so it is consumed and has no other effect. |
+| **`e`** | **End after iteration** | Lets the current benchmark phase finish naturally, then gracefully ends the run and generates `acceptance_report.json` and `acceptance_report.html` (works during thermal cooldown and while skipping too). |
+| **`q`** | **Quit & Report** | Gracefully terminates execution, kills active child process groups, and immediately generates `acceptance_report.json` and `acceptance_report.html` from all data collected so far. During a skip it stops at once and the run is recorded as `interrupted`, not `skipped`. |
 | **`Ctrl+C`** | **Interrupt (130)** | Kills all child process groups and exits with status 130 after saving run state. |
 
 ---
@@ -264,10 +268,7 @@ python3 verify_run.py cheapest --family ZZ
 ```
 
 Current state: `check_candidates` reports 434 checked, 0 illegal; the last full
-`check_tensile_build` run was 434 passed, 0 failed. `verify_run.py snapshot`
-twice in a row is clean against the current corpus (13 run dirs; 41 runs / 612
-phases / 49,540 records).
-
+`check_tensile_build` run was 434 passed, 0 failed.
 ---
 
 ## 6. Key Documentation & System Authority

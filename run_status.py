@@ -453,16 +453,28 @@ def build_report(base: Path, run_id: Optional[str],
                 cur = str(parent)
             chain.reverse()
         else:
+            # Precedence, highest first:
+            #   1. a run still in flight (no completed_at)
+            #   2. the newest *completed* chain -- the authoritative floor
+            #   3. the newest finished-but-interrupted run
+            #
+            # In flight is decided by completed_at, not by the status label. An
+            # interrupted run that never closed is resumable work and belongs at
+            # the head; one that did close is history. Treating every
+            # 'interrupted' run as active walked straight past the floor locked
+            # five days later and stopped on a run that had been closed for
+            # eight, so the default view described a stale chain and every tier
+            # count and ETA it printed came from the wrong corpus.
             chain = []
-            for rid in ref_ids:  # newest started_at first
-                if status_by_run[rid] == "started":
-                    chain = [rid]
+            for cand in ([rid for rid in ref_ids
+                          if completed_by_run.get(rid) is None],
+                         [rid for rid in ref_ids
+                          if status_by_run[rid] == "completed"],
+                         [rid for rid in ref_ids
+                          if status_by_run[rid] in ACTIVE_STATES]):
+                if cand:
+                    chain = [cand[0]]  # ref_ids is newest started_at first
                     break
-            if not chain:
-                for rid in ref_ids:
-                    if status_by_run[rid] in ACTIVE_STATES:
-                        chain = [rid]
-                        break
             if not chain and ref_ids:
                 chain = [ref_ids[0]]
             seen = set(chain)
