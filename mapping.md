@@ -74,7 +74,11 @@ FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
 
 - Family coverage = the mapped matrix; each emitted phase is native `isa`, name =
   `phase<N>_<family>_<pattern>` (or collides into existing phase labels by purpose).
-- Per-cell verdict uses **throttle-adjusted median-of-seeds**, ±5% tie band.
+- Per-cell verdict uses **throttle-adjusted median-of-seeds**. The tie band is a
+  *policy* choice, not a measured fact: the corpus-measured noise floor is ±27.8%
+  (repeat CV p90, `ab_audit.repeat_dispersion`), so a ±5% tie band reports
+  sub-noise differences as if they were parity. `ab_audit.py` grades at ±27.8%.
+  See `results.md` §12.3.
 - Peaks are never a signal; gfx900 spoof is a floor; `SPOOF floor is never re-rolled`
   (dedicated `gfx900_ref_*` chain; `--resume` only, no partial re-runs).
 - **Retire only on sampling-gated evidence** (≥2 independent runs/cell + CV gates),

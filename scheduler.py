@@ -24,8 +24,12 @@ from gfx90c_common import NUM_CUS, LDS_PER_CU_KB, FAMILY_DTYPE_CHAR, MAX_WAVES_P
 GLOBAL_LOAD_BYTE_CAP = 16
 
 #: Bytes per element per family, matching the dtype table in _validate_tensile_loads.
+#: Cross-checked against ``Tensile.DataType.properties`` (``numBytes() == reg * 4``)
+#: by tests.test_scheduler_dtypes -- do not hand-edit without updating that test.
+#: ZZ is complex *double*: 16 bytes, not 8. The old 8 let VectorWidth 2 through
+#: the cap and Tensile rejected those configs at assembly time.
 FAMILY_BYTES_PER_ELEMENT = {
-    "SS": 4, "DD": 8, "HH": 2, "HS": 4, "CC": 8, "ZZ": 8,
+    "SS": 4, "DD": 8, "HH": 2, "HS": 4, "CC": 8, "ZZ": 16,
     "HH_HPA": 2, "HS_HPA": 4,
 }
 

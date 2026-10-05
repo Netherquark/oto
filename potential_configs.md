@@ -136,7 +136,7 @@ cell, or an untried neighbour of it. Legality = CPU-only, via the project's own
 | **C5** | CC 192 | CC | 32x32x8 | 4x4 | **2** | 2 | 8 | 4 | 1 | 0/0 | floor winner on CC:192 (−6.4%); native only has 32x32 at VW1 | **PASS** (cap 2) |
 | **C6** | HH_HPA 4096 | HH_HPA | 128x64x8 | **8x4** | **2** | 2 | 8 | 4 | 1 | 0/0 | floor winner on HH_HPA:4096 (−9.8%). Note **TT is 8x4**; `family_decks` has 128x64x16 with **TT 4x8** — a different config | **PASS** (cap 8) |
 | **C7** | HH_HPA 2048 | HH_HPA | 64x128x8 | 4x8 | **2** | 2 | 8 | 4 | 1 | 0/0 | floor winner on HH_HPA:2048 (−7.7%); tile orientation absent from `family_decks` | **PASS** (cap 8) |
-| **C8** | ZZ VW2 probe | ZZ | 64x64x8 | 4x4 | **2** | 2 | 8 | 4 | 1 | 0/0 | not a loss — the floor never wins ZZ above VW1. Probes whether 16 B is reachable for int8 at all | **PASS** (cap 2) |
+| ~~**C8**~~ | ZZ VW2 probe | ZZ | 64x64x8 | 4x4 | 2 | 2 | 8 | 4 | 1 | 0/0 | **WITHDRAWN — illegal, not a candidate.** Listed here as "cap 2 / PASS" on the strength of `cap_vector_width()`, which read `ZZ: 8` bytes/element. Complex double is **16** B, so `VW=2` demands a 32 B global load against a 16 B cap and Tensile refuses the kernel (`GlobalLoadVectorWidthA * DataType.numBytes() > 16`). 28 archived phases carried this config and one overnight run was spent rediscovering it. The widest legal ZZ width is **VW=1** | **FAIL** (see `gfx90c_theoretical_limits.md` §1) |
 | **C9** | SS 256 | SS | 32x64x8 | **4x8** | **4** | 4 | 8 | 4 | 1 | 0/0 | floor winner on SS:256. **Anisotropic** tile; no quantisation argument proposes it, and it was never generated. Note SS:256 is already a WIN (+226.9%) — this candidate targets utilisation (25.5% of roof), not conversion | **PASS** |
 | **C10** | HH 256 | HH | **64x32**x16 | 4x4 | **4** | 4 | 16 | 4 | 1 | 0/0 | floor winner on HH:256. 128 threads vs 64 for 64x64 — an axis the quantisation ladder cannot see. Never generated. Already a WIN (+270.8%); targets 23.7% of roof | **PASS** |
 | **C11** | ZZ 192 | ZZ | 32x32x8 | **4x4** | 1 | 1 | 8 | 4 | 1 | 0/0 | floor winner on ZZ:192. 4x4 complex double is TT0*TT1*8 = 128 accumulator VGPRs, exactly on budget. Already a WIN (+37.5%); targets 20.4% of roof | **PASS** |
@@ -144,8 +144,37 @@ cell, or an untried neighbour of it. Legality = CPU-only, via the project's own
 | **C13** | ZZ 512 | ZZ | 64x64x8 | 4x4 | 1 | 1 | 8 | 4 | 1 | 0/**1** | floor winner on ZZ:512 is C12's tile at DU8 plus `LdsPadB 1` — the only ZZ pad with measured support. Already a WIN (+8.3%), the thinnest margin of the six; targets 22.6% of roof | **PASS** |
 
 `GLVW = VectorWidth` throughout: the stock `GLVW == VW or GLVW == 1` generator
-restriction is satisfied without weakening it, so none of C1–C8 needs the
-guard-relaxation route that HS_HPA required.
+restriction is satisfied without weakening it, so none of C1–C7 needs the
+guard-relaxation route that HS_HPA required. C8 is withdrawn (illegal VW2 for
+complex double) rather than re-scoped.
+
+## 3.0 What actually ships: the consolidated deck (2026-10-03)
+
+C1–C13 above are *proposals*. The deck that is actually on disk is different and
+much smaller, because it was selected by measurement rather than by argument.
+`consolidate.py` picks, per target cell, the **best measured** existing phase and
+the **widest existing** phase matching the floor's invocation form, then emits the
+union. Current result:
+
+- **29 phases, covering 38/38 target cells**, dtype mix `H`11 / `D`5 / `S`5 /
+  `C`4 / `Z`4. Every entry has 4–8 shapes, i.e. every shipped phase is a
+  **multi-shape sweep** — the single-shape form that made the last run
+  ungradable is gone from the deck entirely.
+- Every entry is a **verbatim copy** of a phase in
+  `archive/phases.yaml.pre_consolidation_oct3`. Nothing was generated, re-keyed,
+  or invented; the deck is a selection, not a design.
+- Every cell's **best measured solution is retained**, including the six current
+  losses (`HH:1024/2048/4096`, `SS:768/1024/2048`). Verified cell-by-cell
+  against the mining record: 38/38 present, 0 missing.
+- 28 candidate phases are **dropped as illegal** before selection.
+
+Because selection draws from the union of all archived decks (1644 solutions ever
+written) rather than the live deck, re-running reproduces the same 29 — see
+`changelog.md` 2026-10-03 for why the earlier 45-phase deck was not a fixpoint.
+
+The C1–C13 proposals remain the *next* step; they are deliberately not folded
+into the deck, because doing so would mean shipping unmeasured configs and the
+user's constraint is to retain measured solutions, not invent new ones.
 
 ### 3.1 DepthU is not a free parameter — copy the floor's value
 

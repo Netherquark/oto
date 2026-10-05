@@ -20,7 +20,9 @@ and pins 2,285 shipped kernels once at `gfx90c_results/gfx900_shipped_manifest.j
 report recalls the whole `gfx900_ref_*` chain (base + `--resume` continuations) via
 `reference_chain` + `_compute_ab_verdicts`. `analytics.compute_native_vs_spoof_delta`
 pairs by workload cell `(family, dtype, shape)` (`cell_key`) — best-of-cell median per
-arm, ±5% tie = parity.
+arm. The ±5% tie band originally used here is narrower than the corpus-measured
+repeat noise (CV p90 27.8%, `ab_audit.repeat_dispersion`), so "parity" at ±5% does
+not mean statistically indistinguishable; see `results.md` §12.3.
 
 **the floor is 2,285 kernels, not 1,212.**
 `gfx900_ref_20260925_152942` targeted 2,285 and was interrupted after 1,189

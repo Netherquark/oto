@@ -47,12 +47,32 @@ from analytics import extract_family_from_phase_id          # noqa: E402
 from gfx90c_common import DTYPE_TO_FAMILY, cube_side         # noqa: E402
 from port_tensile import TensileDriver                      # noqa: E402
 
-# bytes per element for the GLOBAL LOAD, per Tensile/scheduler convention.
-# Complex is 8 B, NOT 4/8 — the single most common misreading in this project.
-DTYPE_BYTES = {"S": 4, "D": 8, "H": 2, "C": 8, "Z": 8, "I8": 1, "B": 2}
-# dtype char for a family label
+# bytes per element for the GLOBAL LOAD. Read from Tensile via
+# consolidate.dtype_bytes rather than hardcoded: this table used to be a second
+# copy of scheduler.FAMILY_BYTES_PER_ELEMENT and had already drifted, carrying
+# the same wrong "Z": 8 (complex double is 16) that let VectorWidth 2 through
+# the cap. tests.test_measurement_integrity asserts the two agree.
+_DTYPE_CHARS = ("S", "D", "H", "C", "Z", "I8", "B")
+
+
+def _load_dtype_bytes() -> dict:
+    from consolidate import dtype_bytes
+    out = {}
+    for ch in _DTYPE_CHARS:
+        n = dtype_bytes(ch)
+        if n:
+            out[ch] = n
+    # Tensile unavailable: fall back to the cap only, never to a guess that
+    # could understate a width and silently pass an illegal config.
+    return out or {ch: 16 for ch in _DTYPE_CHARS}
+
+
+DTYPE_BYTES = _load_dtype_bytes()
+# dtype char per family label. Mixed-precision families are governed by their
+# widest loaded operand, matching scheduler.cap_vector_width: HS/HS_HPA load a
+# single, HH_HPA loads a half.
 FAMILY_CHAR = {"SS": "S", "DD": "D", "CC": "C", "ZZ": "Z", "HH": "H",
-               "HH_HPA": "H", "HS_HPA": "H", "HS": "H", "HF": "H"}
+               "HH_HPA": "H", "HS_HPA": "S", "HS": "S", "HF": "H"}
 # hard cap: scheduler._validate_tensile_loads rejects GLVW * bytes > 16
 GLOBAL_LOAD_CAP_BYTES = 16
 

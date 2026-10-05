@@ -34,6 +34,17 @@
 | Memory | APU UMA; `Coherent Host Access FALSE`; VRAM carve-out 4 GiB, GTT 14.6 GiB |
 | HasMFMA / dp4a / packed-BF16 | **FALSE / absent / absent** (see §1.2) |
 | SDMA | 1; CP queues 24 |
+| Global-load byte cap | **16 B** (`GlobalLoadVectorWidthA * DataType.numBytes() <= 16`) |
+
+- **Element byte widths are `numBytes() == reg * 4`, and complex double is 16 B,
+  not 8.** From `Tensile/DataType.py`: `S`=4, `H`=2, `D`=8, `C`=8, `Z`=**16**.
+  The 16 B cap therefore bites hardest exactly where it is easiest to get wrong:
+  `Z` at `VectorWidth=1` sits *on* the cap, so `VW=2` needs a 32 B global load and
+  Tensile rejects the kernel at assembly. Getting `Z` from a "complex is 2× a
+  double" intuition gives 8 and silently admits `VW=2`. This is now read from
+  `DataType.properties` rather than a hand-kept table — see
+  `scheduler.FAMILY_BYTES_PER_ELEMENT`, which still lists `ZZ: 8` and is wrong.
+  Worst legal `VectorWidth` per dtype under the cap: S 4, H 8, D 2, C 2, **Z 1**.
 
 - ISA oracle (compile-only, clang-19): `v_pk_fma_f16` OK; `v_pk_fma_bf16` **absent on
   all gfx9** (900/90c/906); `v_dot*` **absent on gfx90c** (gfx906+ only);

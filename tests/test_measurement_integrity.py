@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""Tests for the measurement-integrity invariants.
+
+Three seams that silently corrupted results before, and whose failure mode is
+invisible in the output:
+
+1. ``scheduler.FAMILY_BYTES_PER_ELEMENT`` listed ZZ as 8 bytes. Complex double is
+   16, so the 16 B global-load cap admitted VectorWidth 2 and Tensile rejected
+   those configs at assembly time.
+2. ``ab_audit.phase_family`` decides whether two measurements are comparable at
+   all. It must read the *generator* (Tensile AutoTuner vs a deck sweep), not
+   the raw phase-id prefix, or the live deck's ``phase_<cell>_*`` and the
+   floor's ``phase_ss_*`` get misfiled as different generators.
+3. Measurement data must never be overwritten in place: run directories,
+   telemetry CSVs, per-phase results, and the locked floor.
+"""
+from __future__ import annotations
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import ab_audit
+import scheduler
+from consolidate import _TENSILE_ROOT, dtype_bytes
+from telemetry import HEADER, TelemetrySampler
+
+if _TENSILE_ROOT and str(_TENSILE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_TENSILE_ROOT))
+
+
+class TestDtypeByteTable(unittest.TestCase):
+    """scheduler's byte table must agree with Tensile.DataType."""
+
+    #: Families whose loaded operands are a single dtype, so the char lookup is
+    #: exact. HS/HS_HPA and HH_HPA are mixed-precision and are governed by
+    #: their widest loaded operand, checked separately below.
+    SINGLE_DTYPE = {"SS": "S", "DD": "D", "HH": "H", "CC": "C", "ZZ": "Z"}
+
+    def test_single_dtype_families_match_tensile(self):
+        for family, char in self.SINGLE_DTYPE.items():
+            with self.subTest(family=family):
+                self.assertIsNotNone(
+                    dtype_bytes(char), f"Tensile has no dtype for char {char}")
+                self.assertEqual(
+                    scheduler.FAMILY_BYTES_PER_ELEMENT[family], dtype_bytes(char),
+                    f"{family}: scheduler table disagrees with Tensile numBytes()")
+
+    def test_complex_double_is_16_bytes(self):
+        """The exact defect: ZZ was 8, which let VectorWidth 2 through."""
+        self.assertEqual(dtype_bytes("Z"), 16)
+        self.assertEqual(scheduler.FAMILY_BYTES_PER_ELEMENT["ZZ"], 16)
+
+    def test_zz_vector_width_capped_at_one(self):
+        for mt, tt in (("64x64x16", "4x4"), ("128x128x16", "8x8")):
+            with self.subTest(macro=mt):
+                self.assertLessEqual(
+                    scheduler.cap_vector_width("ZZ", mt, tt), 1,
+                    "complex double must not admit VectorWidth 2")
+
+    def test_mixed_precision_families_governed_by_widest_operand(self):
+        """HS/HS_HPA load a single alongside a half; HH_HPA loads half."""
+        self.assertEqual(
+            scheduler.FAMILY_BYTES_PER_ELEMENT["HS"],
+            dtype_bytes("S"), "HS is governed by its single operand")
+        self.assertEqual(
+            scheduler.FAMILY_BYTES_PER_ELEMENT["HS_HPA"],
+            dtype_bytes("S"), "HS_HPA is governed by its single operand")
+        self.assertEqual(
+            scheduler.FAMILY_BYTES_PER_ELEMENT["HH_HPA"],
+            dtype_bytes("H"), "HH_HPA is governed by its half operand")
+
+    def test_allruns_shares_the_same_table(self):
+        """allruns.py carried its own copy and drifted to the same wrong ZZ."""
+        import allruns
+        self.assertEqual(allruns.DTYPE_BYTES["Z"], dtype_bytes("Z"))
+        for family, byte_width in scheduler.FAMILY_BYTES_PER_ELEMENT.items():
+            with self.subTest(family=family):
+                self.assertEqual(
+                    allruns.DTYPE_BYTES[allruns.FAMILY_CHAR[family]], byte_width,
+                    f"{family} disagrees between allruns and scheduler")
+
+
+class TestPhaseFamily(unittest.TestCase):
+    """The certainty tier is only as good as this mapping."""
+
+    def test_autotuner_phases_are_auto(self):
+        self.assertEqual(ab_audit.phase_family("phase_auto_0_S_1000x1000x1000_9"),
+                         "auto")
+
+    def test_all_deck_namings_are_one_generator(self):
+        for pid in ("phase_ss_Ailk_Bjlk_mt128x128x16_tt8x8_vw2_wgm4_alu",
+                    "phase_hh_Ailk_Bjlk_mt128x128x16_tt8x8_vw4_wgm4_alu",
+                    "phase_ss_gfx900_Ailk_Bjlk_mt128-tt8-vw2-du16-gsu1-88dde43f"):
+            with self.subTest(phase=pid):
+                self.assertEqual(ab_audit.phase_family(pid), "deck",
+                                 "deck sweeps must not be split by prefix")
+
+    def test_missing_phase_id_is_unknown_not_deck(self):
+        self.assertEqual(ab_audit.phase_family(""), "unknown")
+
+
+class TestTelemetryIsAppendOnly(unittest.TestCase):
+    def test_matching_schema_reuses_the_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "telemetry.csv"
+            p.write_text(HEADER + "\n1,2,3,4,5,6,7,8,phase_x\n")
+            s = TelemetrySampler(p)
+            self.assertEqual(s._resolve_log_path(), p)
+
+    def test_legacy_schema_is_not_appended_to(self):
+        """Appending 9-field rows to an 8-column file yields an unparseable CSV."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "telemetry.csv"
+            legacy = "timestamp,sclk_hz,mclk_hz,power_uw,temp_mc," \
+                     "gpu_busy_percent,vram_used_bytes,vram_total_bytes\n"
+            p.write_text(legacy + "1,2,3,4,5,6,7,8\n")
+            s = TelemetrySampler(p)
+            chosen = s._resolve_log_path()
+            self.assertNotEqual(chosen, p, "must step aside from a legacy file")
+            self.assertEqual(chosen.suffix, ".csv")
+            # The previous data is left exactly as it was.
+            self.assertEqual(p.read_text(), legacy + "1,2,3,4,5,6,7,8\n")
+
+    def test_missing_file_is_used_directly(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "telemetry.csv"
+            self.assertEqual(TelemetrySampler(p)._resolve_log_path(), p)
+
+
+class TestRunDirIsNotSilentlyReused(unittest.TestCase):
+    def _registry(self, root: Path):
+        from registry import SQLiteRegistry
+        return SQLiteRegistry(root)
+
+    def test_populated_run_dir_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            reg = self._registry(Path(d))
+            run = reg.create_run_dir("run_fixed")
+            # Stand in for a phase that has already written its results.
+            (run / "phase_x").mkdir()
+            with self.assertRaises(FileExistsError):
+                reg.create_run_dir("run_fixed")
+
+    def test_explicit_reuse_is_allowed_and_keeps_data(self):
+        with tempfile.TemporaryDirectory() as d:
+            reg = self._registry(Path(d))
+            reg.create_run_dir("run_fixed")
+            (reg.runs_dir / "run_fixed" / "marker.txt").write_text("keep")
+            reg.create_run_dir("run_fixed", allow_existing=True)
+            self.assertEqual(
+                (reg.runs_dir / "run_fixed" / "marker.txt").read_text(), "keep",
+                "continuing a run must not clear what is already there")
+
+    def test_fresh_run_dir_is_fine(self):
+        with tempfile.TemporaryDirectory() as d:
+            reg = self._registry(Path(d))
+            reg.create_run_dir("run_a")
+            reg.create_run_dir("run_b")
+
+
+class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
+    def test_rerun_refuses_existing_benchmark_csvs(self):
+        import port_tensile
+
+        with tempfile.TemporaryDirectory() as d:
+            phase_out = Path(d) / "phase_test"
+            (phase_out / "2_BenchmarkData").mkdir(parents=True)
+            (phase_out / "2_BenchmarkData" / "Cijk_Ailk_Bjlk_SB_00.csv").write_text(
+                "GFlops, SizeI\n1,2\n")
+
+            class _Stub:
+                tensile_root = Path(d)
+
+            with self.assertRaises(FileExistsError):
+                port_tensile.TensileDriver._run_tensile_benchmark(
+                    _Stub(), Path(d) / "cfg.yaml", phase_out, 60)
+
+    def test_empty_phase_dir_is_allowed(self):
+        import port_tensile
+
+        with tempfile.TemporaryDirectory() as d:
+            phase_out = Path(d) / "phase_fresh"
+
+            class _Stub:
+                tensile_root = Path(d) / "no-such-tensile"
+
+                def __init__(self, root):
+                    self.client_build_dir = root / "client_build"
+                    self.client_build_dir.mkdir(parents=True, exist_ok=True)
+
+                def _get_tensile_env(self):
+                    return {}
+
+            # No Tensile binary present, so it returns a failure result rather
+            # than raising; the point is that the guard did not fire.
+            result = port_tensile.TensileDriver._run_tensile_benchmark(
+                _Stub(Path(d)), Path(d) / "cfg.yaml", phase_out, 5)
+            self.assertIsInstance(result, dict)
+
+
+class TestLockedFloorIsSwappedNotDeleted(unittest.TestCase):
+    def test_install_does_not_delete_the_live_lock(self):
+        """A rebuild must never rmtree the locked floor in place."""
+        src = (Path(__file__).resolve().parent.parent
+               / "consolidate.py").read_text()
+        body = src.split("def install(", 1)[1]
+        self.assertNotIn("rmtree(live_lock)", body,
+                         "install() must archive the old lock, not delete it")
+        self.assertIn("superseded_locks", body)
+
+
+if __name__ == "__main__":
+    unittest.main()

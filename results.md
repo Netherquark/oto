@@ -286,3 +286,142 @@ calibrated to observed outcomes, not derived from a register allocator.
 <!-- /DERIVED -->
 <!-- DERIVED:budget -->
 <!-- /DERIVED -->
+
+## 12. Locked floor + consolidated deck — A/B snapshot (2026-10-03)
+
+Post-consolidation state. Floor is locked and no longer being re-measured;
+`reference_chain()` resolves to exactly one run, `gfx900_ref_locked_52149f315d`,
+built by pooling all 3802 CSVs (2194 phases) from the 3-run chain. Reproduce with
+`python3 ab_audit.py`.
+
+**Reproducible band, measured rather than assumed.** Same-invocation-form pairs
+give `n=26`, median ratio `0.987`, p10 `0.858`, p90 `1.113` → band **±14.2%**,
+and only **53.8%** of those pairs land inside the shipped ±5% default. That
+`n=26` envelope is too small and too kind to the corpus: grouping *repeats* of one
+identical kernel at one identical shape under one identical form (`n=1495`
+groups) gives median CV **8.1%**, p90 **27.8%**, worst single-shape **36.1%**,
+worst multi-shape **75.0%**. `ab_audit.py` now grades against
+`max(cross-arm band, repeat p90) = ±27.8%`, and a verdict inside that is labelled
+`within_noise`, not a result. Mismatched-form pairs (`n=4`) remain meaningless as
+an A/B: median `1.374`, band ±273.7%.
+
+**51 cells: 8 WIN / 30 TIE / 0 LOSS, 13 ungraded.** Under the old ±5% band this
+read as 10 WIN / 22 TIE / 6 LOSS; under the measured ±27.8% band **every one of
+those six "losses" is inside the noise and becomes TIE.** There is no surviving
+evidence that the native arm is behind the floor anywhere:
+
+| Former "loss" | native | floor | delta | now |
+|---|---|---|---|---|
+| `HH:1024` | 2169.6 | 2578.3 | −15.85% | TIE |
+| `HH:2048` | 2258.3 | 2684.1 | −15.86% | TIE |
+| `HH:4096` | 2412.1 | 2821.0 | −14.50% | TIE |
+| `SS:1024` | 951.1 | 1116.9 | −14.84% | TIE |
+| `SS:2048` | 1032.8 | 1216.5 | −15.11% | TIE |
+| `SS:768` | 928.0 | 1105.8 | −16.08% | TIE |
+
+All six spanned −14.5% to −16.1%, a cluster entirely inside the measured repeat
+tail. They are retained in the deck as the best known solution for those cells
+regardless.
+
+Wins are concentrated where the shipped floor is weak, not where tuning is
+strong: `HH:256` +1018%, `SS:256` +733%, `CC:192` +635%, `ZZ:128` +329%,
+`DD:192` +308%, `HS_HPA:512` +232%, `HH_HPA:512` +228%. Every surviving win is
+far outside the ±27.8% band, so unlike the former losses these are not
+band-sensitive. Certainty now also requires the *same Tensile generator*, not
+merely the same shape count: 11 cells are `form_mismatch` (native side from the
+registry-only `run_20260919_213727`) and 13 are `missing` (native `AUTO:*` cells
+with no floor counterpart). The 38-cell target matrix is covered 38/38 by the new
+deck; the 51 above is every cell appearing in either arm.
+
+### 12.1 The ~2x invocation-form swing is real, and it is larger than every graded effect
+
+Verified end to end, from raw per-seed rows rather than from any summary:
+
+| phase | run | form | seeds | median | max seed |
+|---|---|---|---|---|---|
+| `phase_ss_Ailk_Bljk_mt128x128x16_tt8x8_vw2_wgm4_alu` | `run_20260920_235815` | multi-shape | 8 | 624.5 | **658.2** |
+| `phase_ss_gfx900_Ailk_Bljk_mt128-tt8-vw2-du16-gsu1-f7b2c99e` | `gfx900_ref_20260929_164544_resume` | multi-shape | 8 | 626.3 | 657.9 |
+| `phase_ss_Ailk_Bljk_1000x1000x1000_mt128x128x16_tt8x8` | `run_20261002_021805` | single-shape | 8 | 313.0 | **333.0** |
+
+The kernel is genuinely the same configuration: comparing the full derived
+`2_BenchmarkData/*.yaml` solution sets of the single-shape and multi-shape phases
+gives an intersection of 2 of 3 solutions, i.e. **byte-identical parameter sets**
+(`MacroTile=[128,128]`, `ThreadTile=[8,8]`, `VectorWidth=2`, `DepthU=16`,
+`GlobalSplitU=1`, `WorkGroupMapping=4`, identical `LDA/LDB/LDC/LDD=1000`, and
+identical `TotalFlops=2e9`). Max-seed ratio **1.98x**, median ratio **2.00x**.
+
+Clock does not explain it. Busy-only (`gpu_busy_percent > 50`) core-clock
+samples from the per-run `logs/telemetry.csv` give median `sclk` **1587 MHz** for
+the overnight single-shape run and **1650 MHz** for the reference run, with p90
+1800 MHz in both, and a phase-window sample from the multi-shape phase sits at
+1612 MHz / 70 C. That is a **4-8%** spread against a **2x** gap.
+
+One caution that cuts the other way: within the multi-shape phase itself the 8
+seeds span **370.1 to 658.2 GFLOPS**, so seed-level noise alone covers most of
+the gap. The honest reading is that this kernel sits on a steep, unstable part of
+the curve where form, seed, and thermal state are all entangled -- not that form
+alone was isolated as the cause.
+
+### 12.2 The same gap appears inside a single run, still confounded
+
+Grouping on true config identity (`kernel_key`), 16 kernel+shape groups were
+measured in both forms, all inside `run_20260920_235815`. For
+`Cijk_Ailk_Bjlk_SB_MT96x96x16_SN_K1` at `1000^3` the two populations are
+**completely disjoint**: single-shape max 394.3 vs multi-shape min 635.8, best
+**855.1 vs 394.3 = 2.38x**. All 16 pairs are **identical across every derived
+Tensile parameter** with identical `LDA/LDB/LDC/LDD`; both sides run 8 seeds and
+the recorded medians reproduce the seed lists exactly.
+
+Form nevertheless cannot be isolated, because it is confounded twice:
+
+- **Generator.** The single-shape population is 94% `phase_auto_*` (Tensile
+  AutoTuner); the multi-shape population is entirely `phase_ss_*`/other. No pair
+  in the corpus is same-generator.
+- **Time window.** In that run `phase_ss_*` executed 00:00-06:44 and
+  `phase_auto_*` 06:58-09:28 -- the auto phases ran in the last 2.5 h of a 9.5 h
+  sustained session, so thermal state is confounded with generator.
+
+The gap is also not a constant offset; it peaks mid-range and **inverts sign**:
+`256^3: 0.25x`, `512^3: 1.34x`, `768^3: 1.82x`, `1000^3: 2.38x`, `2048^3: 1.40x`,
+`4096^3: 1.00x`.
+
+### 12.3 Resolution: how the grading handles it
+
+The A/B is **internally form- and generator-consistent** -- the floor is entirely
+`phase_ss_*` multi-shape sweeps and the surviving wins come from multi-shape
+native phases -- so the gap only bites when crossing generator families, which
+the certainty tier now refuses to grade. With the band set from measured repeat
+spread, the summary is: **8 large wins where the floor is weak, 30 ties, no
+losses.** No verdict rests on a cross-form comparison.
+
+Two gaps were closed by the first native run on 2026-10-05 (`run_20261005_170141`,
+one phase: `phase_zz_Ailk_Bjlk_mt32x32x16_tt2x2_vw1_wgm4_alu`, cheapest legal
+cell in the deck):
+
+- **Tensile's own CSVs carry no telemetry.** Across all 8113 CSVs and 394,176 rows,
+  `WinnerFreq`, `WinnerPower` and `WinnerTemperature` are 0 in every cell —
+  reconfirmed on the trial phase, where all three are 0 across all 40 rows.
+  Clocks only exist in the separate per-run `logs/telemetry.csv` written by
+  `telemetry.py`.
+- **Historical telemetry had no phase attribution; new telemetry does.** The
+  existing `telemetry.csv` files predate the **`phase_id`** column (not `phase`),
+  so a phase's own clock could only be bounded by run-level windows. The trial
+  is the first phase-resolved telemetry: **1,916 of 1,950 rows tagged** (the 34
+  untagged are pre-phase startup), resolving the phase to a clock base of
+  **1787 MHz, 76 °C median, 82 °C max**.
+- **A third gap surfaced only because the run was cheap enough to inspect:
+  `gpu_busy_percent` cannot be used to gate telemetry.** The clock base is
+  derived from "busy" samples at `busy > 50%`, and that filter kept **1 of 1,916**
+  samples. amdgpu reports 3–8% for short and small kernels, so the filter was
+  testing saturation rather than activity; `power_uw` does not separate idle from
+  loaded either (idle median 20 W, p95 28 W; clocked median 23 W, min 8 W, and
+  the readings are coarsely quantised). `sclk` is the discriminator that works —
+  idle sits pinned at the 400 MHz floor (1,568 of 1,916 samples), which
+  `SCLK_MIN_HZ` already excludes. Gate now off by default; corpus effect is
+  53,860 → 93,427 usable samples with phase coverage essentially unchanged
+  (92.4% → 92.3%), so no existing verdict is overturned.
+
+What this still cannot answer: form-vs-thermal. The 2× question needs the *same*
+kernel in *both* invocation forms on the *same* cell, which is precisely the
+comparison the certainty tiers refuse to grade. A single cheap phase validates
+the plumbing; it does not settle the mechanism.

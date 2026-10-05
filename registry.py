@@ -164,12 +164,21 @@ class SQLiteRegistry:
             cursor = conn.execute(query, params)
             return [json.loads(row["data"]) for row in cursor]
 
-    def create_run_dir(self, run_id: Optional[str] = None) -> Path:
+    def create_run_dir(self, run_id: Optional[str] = None,
+                        allow_existing: bool = False) -> Path:
         """
         Create a new run directory and checkpoint it.
 
+        Never silently reuses a populated directory. The run directory is the
+        only place a phase's CSVs, resolved YAML and stdout/stderr land, and the
+        phase writer truncates those files, so reusing a populated run_id would
+        destroy a previous run's measurements in place. A collision raises
+        instead; callers that genuinely mean to continue an existing run must
+        say so with allow_existing.
+
         Args:
             run_id: Optional custom run ID
+            allow_existing: permit reuse of an existing directory
 
         Returns:
             Path to the new run directory
@@ -178,14 +187,27 @@ class SQLiteRegistry:
             run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         run_path = self.runs_dir / run_id
+        if run_path.exists() and not allow_existing:
+            populated = any(run_path.iterdir())
+            if populated:
+                raise FileExistsError(
+                    f"run directory {run_path} already exists and is not empty; "
+                    f"refusing to overwrite its measurements. Choose a new "
+                    f"run_id, or pass allow_existing=True to continue it "
+                    f"deliberately.")
         run_path.mkdir(parents=True, exist_ok=True)
 
-        # Checkpoint in database
+        # Checkpoint in database. Deliberate continuation of an existing run_id
+        # refreshes the row rather than colliding on the UNIQUE constraint; an
+        # accidental collision is already refused above.
         with self._get_conn() as conn:
             conn.execute(
                 """
                 INSERT INTO runs (run_id, status, metadata, started_at)
                 VALUES (?, ?, ?, ?)
+                ON CONFLICT(run_id) DO UPDATE SET
+                    status = excluded.status,
+                    started_at = excluded.started_at
                 """,
                 (run_id, "started", json.dumps({}), datetime.now().isoformat())
             )

@@ -58,6 +58,7 @@ class LoaderOnlyDriver:
     """
 
     TELEMETRY_BUSY_PCT = pt.TensileDriver.TELEMETRY_BUSY_PCT
+    TELEMETRY_REQUIRE_BUSY = pt.TensileDriver.TELEMETRY_REQUIRE_BUSY
     TELEMETRY_MIN_SAMPLES = pt.TensileDriver.TELEMETRY_MIN_SAMPLES
     SCLK_MIN_HZ = pt.TensileDriver.SCLK_MIN_HZ
     SCLK_MAX_HZ = pt.TensileDriver.SCLK_MAX_HZ
@@ -124,6 +125,29 @@ class TestGateThreshold(unittest.TestCase):
 
 
 class TestSampleFiltering(TelemetryFixture):
+    def test_low_busy_but_clocked_phase_still_gets_a_base(self):
+        """Regression: the 2026-10-05 native trial produced no clock data.
+
+        gpu_busy_percent is reported as 3-8% on this machine for short and
+        small kernels, so requiring busy>50 dropped 1915 of 1916 samples and the
+        phase silently reported as unmeasured. Saturation and "is the GPU doing
+        the benchmark" are different questions; sclk is the discriminator that
+        works, and SCLK_MIN_HZ already excludes the idle floor.
+        """
+        self.write(self.samples("p1", 1_787_000_000, 76, busy=5))
+        d = self.driver()
+        self.assertEqual(d._load_sclk_by_phase(self.run_dir)["p1"], 1_787_000_000)
+
+    def test_low_busy_idle_floor_is_still_rejected(self):
+        """Dropping the busy gate must not also admit the idle floor."""
+        self.write(self.samples("p1", 400_000_000, 68, busy=5))
+        d = self.driver()
+        self.assertNotIn("p1", d._load_sclk_by_phase(self.run_dir))
+
+    def test_busy_gate_stays_off_by_default(self):
+        """Pinned: re-enabling it silently zeroes clock data for cheap phases."""
+        self.assertFalse(pt.TensileDriver.TELEMETRY_REQUIRE_BUSY)
+
     def test_idle_samples_are_excluded(self):
         """A compile/idle gap must not drag the clock down to the 400MHz floor."""
         self.write(self.samples("p1", 1_800_000_000, 70)

@@ -16,7 +16,10 @@ footprint (2,285 distinct shipped gfx900 kernels = 7 dtype/op families × 4 cont
 patterns; the earlier 3,066 was per-file token counting, see `mapping.md`), converging
 per-cell so that each cell's ruler-adjusted median-of-seeds
 winner **beats the gfx900-spoof floor** (ties at ±5% = parity, and parity alone is not
-the win the campaign is here for) and lands as close to the `gfx90c_theoretical_limits.md`
+the win the campaign is here for). ±5% is the standing success bar, but it is
+narrower than the measured repeat noise (CV p90 27.8%, `results.md` §12.3), so a
+±5% "parity" is not evidence of indistinguishability — grade with `ab_audit.py`
+(±27.8%) when the claim matters. and lands as close to the `gfx90c_theoretical_limits.md`
 ceiling for its (family, bound_class) as the machine will give. The whole campaign is
 driven by `port_tensile.py --auto` (deterministic harvest → mutate ≤2 knobs → re-run).
 
@@ -129,7 +132,63 @@ convergence verdict compares against these, throttled+median-of-seeds.
 ## Work State
 
 ### Completed
-- Ecosystem consolidated: single `changelog.md`, `gfx90c_theoretical_limits.md`
+
+#### Corpus consolidation + locked floor (2026-10-03)
+- Floor **locked, not re-measured**: `gfx900_ref_locked_52149f315d`, built by
+  pooling all 3802 CSVs / 2194 phases from the 3-run chain. `reference_chain()`
+  resolves to exactly this one run. The id is `sha256(chain)[:10]`, so re-running
+  is a fixpoint rather than minting a new floor each time.
+- Deck consolidated to **29 phases covering 38/38 target cells**, all multi-shape
+  (4–8 shapes each), every entry a verbatim archived phase, every cell's best
+  measured solution retained including the six losses. 28 illegal phases dropped.
+- `consolidate.py` (mine / stage / `--commit`) + `ab_audit.py` formalised on top
+  of the canonical loaders; `tests/test_consolidate.py` + `tests/test_ab_audit.py`
+  = 32 tests passing.
+- Fixed four correctness defects that were silently shaping results: missing
+  global-load byte cap in the CPU gate (`ZZ` byte width 8 → 16), per-phase floor
+  selection biasing the floor *down* on 17/38 cells, non-idempotent floor id and
+  DB insert, and selection reading its own output as its candidate pool.
+- `run_20261002_021805` (1168 single-shape, 0 multi-shape) archived out of the
+  live loader path; 25 empty phantom run dirs moved aside. No data deleted;
+  pre-consolidation state backed up with checksums under
+  `archive/gfx90c_results/pre_consolidation_oct3/`.
+- Integration verified end-to-end and **read-only**: `ab_audit.audit()` →
+  `AcceptanceReporter.generate_acceptance_report()` produces a report against the
+  locked floor with no change to registry rows or run directories.
+
+### Next
+- User-run TTY validation of the 29-phase deck. GPU work is out of scope for the
+  consolidation session.
+- Resolved: the ~2× invocation-form swing (658.2 multi-shape vs 333.0
+  single-shape, identical config) was verified as a **real** measurement, not an
+  artifact — same kernel (2 of 3 solution sets byte-identical), identical
+  leading dimensions, and clock ruled out at 4–8%. It is now handled rather than
+  open: grading never crosses invocation form or Tensile generator
+  (`form_mismatch` / `generator_mismatch`), and the tie band is derived from
+  measured repeat spread (±27.8%) instead of the unsupportable ±5%. Under that
+  band the A/B reads **8 WIN / 30 TIE / 0 LOSS**, so no verdict depends on it.
+- Instrumentation gap **closed and measured** (2026-10-05 native trial,
+  `run_20261005_170141`): Tensile's own CSVs carry no telemetry
+  (`WinnerFreq`/`Power`/`Temperature` are 0 in all 8113 files), so clocks live
+  only in per-run `logs/telemetry.csv`. `telemetry.py` samples at 10 Hz with a
+  **`phase_id`** column (not `phase`), and the trial confirmed it end to end:
+  1,916 of 1,950 rows phase-tagged, and the phase now resolves to a real clock
+  base of **1787 MHz @ 76 °C (max 82 °C)**.
+- **New defect found by that trial: `gpu_busy_percent` cannot gate telemetry.**
+  Requiring `busy > 50%` kept 1 of 1,916 phase-tagged samples, so cheap phases
+  silently reported as unmeasured. amdgpu reports 3–8% for short/small kernels;
+  `power_uw` does not separate idle from loaded either (idle median 20 W vs
+  clocked 23 W, idle p95 28 W). `sclk` is the discriminator that works, and
+  `SCLK_MIN_HZ` already excludes the 400 MHz idle floor. The gate is now off by
+  default (`TELEMETRY_REQUIRE_BUSY = False`), kept for reporting only. Measured
+  corpus impact: 53,860 → 93,427 usable samples, phase coverage 92.4% → 92.3%
+  (rate unchanged), so existing clock-adjusted verdicts are not overturned.
+- **Still open, and now the one thing the instrumentation was built for:** the
+  form-vs-thermal question needs the *same* kernel in *both* forms on the *same*
+  cell, which is exactly what the certainty tiers refuse to grade. A single
+  cheap phase cannot answer it; it needs a deliberately paired run.
+
+### Ecosystem consolidated: single `changelog.md`, `gfx90c_theoretical_limits.md`
   added, superseded MDs removed, prior conclusions held only in
   `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
 - Full driver + 7 module suite implemented, import-clean, `--help` passes.

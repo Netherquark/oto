@@ -116,8 +116,40 @@ class TelemetrySampler:
         return {"ts": now, "sclk": sclk, "mclk": mclk, "pwr": pwr, "temp": temp,
                 "busy": busy, "vram_u": vram_u, "vram_t": vram_t, "phase": self._current_phase}
 
+    def _resolve_log_path(self) -> Path:
+        """Pick a writable CSV that matches HEADER, never clobbering an older one.
+
+        An existing telemetry.csv written before per-phase attribution has an
+        8-column header. Appending 9-field rows to it would produce a ragged CSV
+        that no consumer can parse, so in that case -- and only in that case --
+        we step aside to a numbered sidecar and leave the old file untouched.
+        """
+        p = Path(self.log_path)
+        if not p.exists() or p.stat().st_size == 0:
+            return p
+        try:
+            first = p.read_text(errors="ignore").splitlines()
+        except OSError:
+            return p
+        if not first:
+            return p
+        header = first[0].strip()
+        if header == HEADER or header.split(",") == list(HEADER.split(",")):
+            return p
+        for n in range(1, 1000):
+            cand = p.with_name(f"{p.stem}.{n}{p.suffix}")
+            if not cand.exists():
+                return cand
+        return p
+
     def start(self):
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        target = self._resolve_log_path()
+        if target != self.log_path:
+            self.log_path = target
+            print(f"[telemetry] existing CSV has an older schema; "
+                  f"writing per-phase telemetry to {target.name} instead "
+                  f"(previous file left intact).")
         lines = self.log_path.read_text().splitlines() if self.log_path.exists() else []
         header_missing = not lines or not lines[0].startswith("timestamp")
         if header_missing:

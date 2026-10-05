@@ -224,12 +224,13 @@ python3 port_tensile.py --synthesize
 | [`tensile_library.py`](tensile_library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
 | [`auto_prompt.py`](auto_prompt.py) | The five `--auto` questions, live corpus counts read from the registry, and the `AutoPlan` they resolve to. Non-TTY defaults are explicit and reported. |
 | [`gfx90c_common.py`](gfx90c_common.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
+| [`verify_run.py`](verify_run.py) | Append-only checker: corpus `snapshot`/`diff` (proves a run only appended, nothing was rewritten or lost), per-run `telemetry` funnel (how many rows survive each clock filter, so a filter cannot silently zero the data), and `cheapest` legal phase for a cheap smoke run. |
 
 ---
 
 ## 5. Validation Tools (CPU-only, no GPU needed)
 
-Neither of these runs a benchmark, so both are safe outside a TTY.
+None of these runs a benchmark, so they are safe outside a TTY.
 
 ```bash
 # Lint a candidate deck. Checks resource legality AND deck self-consistency
@@ -244,10 +245,28 @@ python3 check_candidates.py --family ZZ --json out.json
 python3 check_tensile_build.py --jobs 8 --json build.json
 python3 check_tensile_build.py --family ZZ          # just the ZZ family
 python3 check_tensile_build.py --compare            # cross-check our gate vs Tensile
+
+# Enforce the append-only data law (knowledge_base.md §10). Take a snapshot
+# around any run, then diff: a new run dir and more registry rows is clean;
+# anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
+python3 verify_run.py snapshot --out before.json
+#   ... run the driver ...
+python3 verify_run.py diff before.json after.json
+
+# Is this run's telemetry actually usable? Prints per-phase survival at every
+# clock filter (busy -> sclk range -> thermal), so an over-strict filter is
+# visible instead of reading as "no clock data".
+python3 verify_run.py telemetry run_20261005_170141
+
+# Cheapest LEGAL phase in the live deck, for a smoke run that costs ~nothing.
+# Prints the exact --targets command to drive it.
+python3 verify_run.py cheapest --family ZZ
 ```
 
 Current state: `check_candidates` reports 434 checked, 0 illegal; the last full
-`check_tensile_build` run was 434 passed, 0 failed.
+`check_tensile_build` run was 434 passed, 0 failed. `verify_run.py snapshot`
+twice in a row is clean against the current corpus (13 run dirs; 41 runs / 612
+phases / 49,540 records).
 
 ---
 

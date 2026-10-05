@@ -9,6 +9,173 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-05** — **`verify_run.py`: the append-only law finally has a checker.**
+  Verifying the trial needed shell one-liners in `/tmp`, which is the same
+  scratch-the-answer-away pattern `run_status.py` was built to end. The law
+  (`knowledge_base.md` §10) makes overwriting benchmark data project-blocking,
+  and nothing could *check* it: `registry.config_fingerprint` and
+  `scheduler.generate_fingerprint` hash kernel CONFIGS, and consolidate's
+  `PRAGMA integrity_check` only proves the SQLite file is intact — none of them
+  notice a phase's CSVs being rewritten. Three subcommands, CPU-only, no gate
+  arithmetic reimplemented (the clock funnel reads through `TensileDriver`'s own
+  loaders, so it cannot disagree with the pipeline that made the verdict):
+  - `snapshot` / `diff` — per-run-directory file counts and bytes plus registry
+    row counts. A new run dir and more rows is additive; anything shrunk,
+    removed, rewritten in place, or any lost row exits non-zero. Snapshotting
+    twice over the current corpus is clean (13 run dirs, 41 runs / 612 phases /
+    49,540 records). A missing table reports as unknown, never as zero.
+  - `telemetry <run_id>` — the per-phase funnel (rows → busy → sclk range →
+    thermal), so a filter that discards everything is visible instead of reading
+    as "the run measured nothing". That is precisely the shape of the busy-gate
+    defect above, which was invisible until counted by hand.
+  - `cheapest --family ZZ` — cheapest *legal* live-deck phase, with the exact
+    `--targets` command to drive it. Legality comes from `consolidate._is_legal`
+    because sorting by volume alone returns configs Tensile rejects at assembly.
+    It reads the LIVE `phases.yaml`, not `load_deck()`'s 1644-phase universe, so
+    the suggested target is always one the driver can resolve — verified by
+    dry-running the tool's own suggestion back through `port_tensile`.
+  Covered by `tests/test_verify_run.py` (18 tests); the failure paths get as much
+  attention as the happy one, since a checker that cannot fail is worse than none.
+
+- **2026-10-05** — **First native run on the locked deck: `run_20261005_170141`.
+  It validated phase-resolved telemetry, confirmed the ZZ fix end to end, and
+  exposed that the telemetry clock gate was throwing the data away.** One phase,
+  `phase_zz_Ailk_Bjlk_mt32x32x16_tt2x2_vw1_wgm4_alu` — deliberately the cheapest
+  legal cell in the deck (128³ primary, ZZ, `vw1`), because it is the config the
+  ZZ=16 fix exists to make legal.
+  - *The fix holds under real compilation.* The phase assembled and produced all
+    5 shapes × 8 seeds (128³…1024³, medians 4.5 / 20.6 / 20.3 / 19.0 / 22.4
+    GFLOPS). Under the old `ZZ = 8` table this phase's `VectorWidth=1` was not
+    the thing that broke, but its siblings at `vw2` were rejected at assembly with
+    `GlobalLoadVectorWidthA * DataType.numBytes() > 16`; nothing dead now ships.
+  - *Phase-resolved telemetry works.* 1,916 of 1,950 rows carry `phase_id` (the
+    34 without it are pre-phase startup), giving a real per-phase clock base of
+    **1787 MHz @ 76 °C median, 82 °C max** — the first phase-owned clock in the
+    project. `WinnerFreq`/`Power`/`Temperature` were 0 in all 40 benchmark rows,
+    reconfirming that `logs/telemetry.csv` is the only clock source.
+  - *`gpu_busy_percent` is not a usable gate, and had been silently deleting the
+    evidence.* Clock bases are built from `busy > 50%` samples; that filter kept
+    **1 of 1,916**. amdgpu reports 3–8% for short and small kernels, so the gate
+    measured saturation, not activity. `power_uw` is no substitute (idle median
+    20 W vs clocked 23 W, idle p95 28 W, quantised). The gate is now **off by
+    default** (`TELEMETRY_REQUIRE_BUSY = False`) and retained for reporting only:
+    `sclk` is the discriminator that works, and `SCLK_MIN_HZ` already removes the
+    400 MHz idle floor. Corpus impact measured, not assumed: 53,860 → 93,427
+    usable samples, phase coverage 3375/3654 (92.4%) → 4167/4516 (92.3%), i.e.
+    bases get ~1.7× more samples and cheap phases become measurable, while the
+    coverage *rate* — and so every existing clock-adjusted verdict — is unchanged.
+  - *Nothing pre-existing was touched.* Every run directory fingerprint is
+    byte-identical before and after except the new one; the registry went 40 → 41
+    runs and 49,538 → 49,540 records with the old rows intact.
+  - *What a cheap run still cannot do:* settle form-vs-thermal. That needs the
+    same kernel in both invocation forms on the same cell, which is the exact
+    comparison the certainty tiers refuse to grade. Plumbed, not answered.
+
+- **2026-10-05** — **The "~2× invocation-form swing" is real, and grading no longer
+  depends on it.** The long-standing caveat — identical config at 658.2 GFLOPS
+  multi-shape vs 333.0 GFLOPS single-shape at `1000³`, larger than every graded
+  effect — survived an attempt to retract it, which is itself the useful part:
+  a live-tree-only search missed `archive/gfx90c_runs/run_20261002_021805` and
+  `logs/telemetry.csv`, and both halves of the claim are genuine measurements.
+  Verified from raw per-seed rows: the single-shape phase median is 313.0 (max
+  seed 333.0), the multi-shape phase median 624.5 (max seed 658.2), **2.00×**,
+  with 2 of 3 derived Tensile solution sets byte-identical between them and
+  identical `LDA/LDB/LDC/LDD` and `TotalFlops=2e9`. Clock is ruled out: busy-only
+  core-clock medians are 1587 MHz vs 1650 MHz (4–8%) against a 2× gap.
+  The same gap reproduces inside one run (`Cijk_Ailk_Bjlk_SB_MT96x96x16_SN_K1` at
+  `1000³`: 394.3 vs 855.1 = 2.38×) with identical parameters, but it cannot be
+  attributed to form, because form is confounded with generator (single-shape is
+  94% Tensile AutoTuner, multi-shape is entirely deck sweeps) *and* with the
+  run's time window (`phase_ss_*` 00:00–06:44 vs `phase_auto_*` 06:58–09:28), and
+  it inverts sign across sizes (0.25× at 256³, 1.00× at 4096³). Three changes
+  follow:
+  - *Certainty no longer rests on shape count alone.* `ab_audit.py` gained
+    `phase_family()` (`auto` vs `deck` — keyed on the generator, not the raw
+    prefix, since the live deck's `phase_<cell>_*` and the floor's `phase_ss_*`
+    are the same sweep generator) and grades `certain` only on same form **and**
+    same generator **and** a margin beyond noise. Otherwise:
+    `form_mismatch`, `generator_mismatch`, `within_noise`, `missing`.
+  - *The ±5% tie band was unsupportable and is no longer used.* Repeat spread of
+    one identical kernel under one identical form (n=1495 groups): median CV 8.1%,
+    p90 27.8%, worst single-shape 36.1%, worst multi-shape 75.0%. Grading now uses
+    `max(cross-arm band, repeat p90) = ±27.8%`, computed from data every run.
+  - *The six "certain losses" were an artifact of the old band.* At −14.5% to
+    −16.1% they sat entirely inside the repeat tail; the audit now reads
+    **8 WIN / 30 TIE / 0 LOSS**, and every surviving win is far outside the band.
+  Instrumentation gap recorded for the next native run: all 8113 Tensile CSVs have
+  `WinnerFreq`/`WinnerPower`/`WinnerTemperature` = 0 in every cell, so clocks live
+  only in per-run `logs/telemetry.csv`, whose historical files predate the `phase`
+  column. `telemetry.py` now samples at 10 Hz with per-phase attribution, making
+  the form-vs-thermal question answerable by measurement for the first time.
+
+- **2026-10-05** — **Measurement paths made non-destructive, and the ZZ width
+  bug was found a second time in a second place.** A sweep for write paths that
+  could destroy prior measurements turned up four, plus a duplicate of the same
+  wrong constant:
+  - *`scheduler.FAMILY_BYTES_PER_ELEMENT["ZZ"] = 8` had been fixed, but the same
+    number was hardcoded a second time in `allruns.py` (`DTYPE_BYTES["Z"] = 8`)* —
+    the "one fact, one canonical home" rule violated by the byte table itself. It
+    now reads widths through `consolidate.dtype_bytes()`, and
+    `tests/test_measurement_integrity.py` asserts the two tables agree for every
+    family, so a future drift fails a test instead of quietly understating a
+    width. `allruns.py` had also mapped `HS`/`HS_HPA` to `H` (2 B) while
+    `scheduler` mapped them to `S` (4 B); both now use the widest loaded operand,
+    matching `scheduler.cap_vector_width`.
+  - *Re-running a run directory silently reused it.* `create_run_dir()` now
+    refuses a populated `run_id` unless `allow_existing=True`, and the DB
+    checkpoint upserts on conflict instead of colliding on `UNIQUE(run_id)` —
+    deliberate continuation works, accidental reuse cannot start.
+  - *`consolidate.install()` overwrote the live floor lock.* It now moves the old
+    lock into `archive/gfx90c_runs/superseded_locks/` with a timestamped suffix
+    before writing the new one; there is no `rmtree` left on that path.
+  - *A phase rerun would overwrite `2_BenchmarkData/*.csv`.*
+    `TensileDriver._run_tensile_benchmark()` now raises `FileExistsError` before
+    launching if a phase already has results.
+  - *`telemetry.py` would append 9-column rows to a legacy 8-column file,* making
+    the CSV unreadable to older readers. It now compares the header and starts a
+    `telemetry.<n>.csv` sidecar on mismatch.
+  Regression coverage for all of the above lives in
+  `tests/test_measurement_integrity.py` (17 tests); the full suite is 211 tests.
+
+- **2026-10-03** — **Corpus consolidated; the gfx900 floor is locked, the deck is
+  reduced to 29 phases, and the legality gate no longer ships dead ZZ configs.**
+  Four defects surfaced while building the lock, each of which had been silently
+  shaping results:
+  - *The global-load byte cap was not enforced anywhere CPU-side.*
+    `occupancy_feasible()` and `assembly_class_valid()` both pass a
+    complex-double phase at `VectorWidth=2`, and Tensile rejects it at assembly
+    with `GlobalLoadVectorWidthA * DataType.numBytes() > 16` — 16 bytes for `Z`,
+    because complex double is 16 B, not 8. The cause was
+    `scheduler.FAMILY_BYTES_PER_ELEMENT["ZZ"] = 8`, one number wrong, and
+    `check_candidates.py` inherited it. 28 archived phases are affected and one
+    whole overnight run was spent proving it. `consolidate._is_legal()` now runs
+    all three gates and reads byte widths from `Tensile.DataType.properties`
+    (`numBytes() == reg * 4`) rather than from a hand-maintained table.
+  - *Selecting the floor by best-single-CSV-per-phase understated it.* Choosing
+    one source run per phase gave a floor below the chain best on 17 of 38 cells,
+    by up to 11.9%. A lower floor flatters the native arm, so the bias pointed
+    the wrong way. The lock now pools **every** CSV from the chain (3802 files,
+    2194 phases) and lets the canonical aggregator take the median.
+  - *The pipeline was not idempotent.* The locked floor was named from a
+    timestamp, so every re-run minted a new `gfx900_ref_locked_*` id and left the
+    previous one behind looking authoritative; and the DB insert appended a
+    duplicate row. The id is now `sha256(chain)[:10]` and the insert is scoped
+    `DELETE`-then-reinsert for that one `run_id`. Re-running `all --commit`
+    twice leaves row counts identical.
+  - *Selection read the live deck as its candidate pool.* After a consolidation
+    the deck *is* the output, so the next pass had only the survivors to choose
+    from and collapsed 45 → 17. `load_deck()` now unions every `archive/phases.yaml.*`
+    with the live deck, so the universe is all 1644 solutions ever written and
+    re-running reproduces the same 29.
+  Locked floor: `gfx900_ref_locked_52149f315d`, from the 3-run chain
+  `20260929_164544_resume → 20260926_201843_resume → 20260925_152942`.
+  Deck: 29 phases covering 38/38 target cells, every entry a verbatim copy of an
+  archived phase, every cell's best *measured* solution retained, including the
+  six current losses. `run_20261002_021805` (1168 single-shape phases, 0
+  multi-shape) moved to `archive/gfx90c_runs/` — out of the live loader path but
+  preserved, since its configs are deck priors. Nothing was deleted; 25
+  empty/no-record phantom run dirs were moved aside and their registry rows left
+  in place.
 - **2026-10-02** — `family_timing` was computed on every report and then
   **never written** — the whole per-family cost block was dropped on the floor.
   The report now carries an `execution_timing` block (native run wall clock,

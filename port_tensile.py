@@ -910,6 +910,18 @@ class TensileDriver:
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
         phase_out_dir.mkdir(parents=True, exist_ok=True)
 
+        # Tensile writes 2_BenchmarkData/*.csv and the resolved YAML into
+        # phase_out_dir, and the log files below are opened with "w". Re-running
+        # a phase into a directory that already holds results would therefore
+        # destroy that phase's measurements and its logs in place. Refuse, and
+        # let the caller pick a fresh run id or archive the directory first.
+        existing = sorted(phase_out_dir.glob("2_BenchmarkData/*.csv"))
+        if existing:
+            raise FileExistsError(
+                f"phase output {phase_out_dir} already contains "
+                f"{len(existing)} benchmark CSV(s); re-running would overwrite "
+                f"them. Move the directory aside or use a fresh run id.")
+
         rocm = _resolve_rocm_paths()
         assembler = rocm["TENSILE_ASSEMBLER"]
         if not os.path.isfile(assembler):
@@ -1970,6 +1982,31 @@ class TensileDriver:
     SCLK_MIN_HZ = 800_000_000
     SCLK_MAX_HZ = 2_500_000_000
 
+    # gpu_busy_percent is NOT a usable gate on this machine, so it is off by
+    # default and kept for reporting only. Measured on the 2026-10-05 native
+    # trial (run_20261005_170141, 1916 phase-tagged samples): exactly ONE
+    # exceeded 50%. amdgpu reports 3-8% for short and small kernels, so the
+    # gate was measuring "did this kernel saturate the GPU", not "was the GPU
+    # running the benchmark" -- and it silently produced zero clock data for
+    # exactly the cheap phases a smoke run executes.
+    #
+    # power_uw does not separate idle from loaded either: idle median 20 W vs
+    # clocked median 23 W, idle p95 28 W, clocked min 8 W, and the readings are
+    # coarsely quantised. The one discriminator that does work is sclk, which is
+    # why SCLK_MIN_HZ exists: idle sits pinned at the 400 MHz floor (1568 of the
+    # 1916 samples) and SCLK_MIN_HZ already removes it, leaving 331 usable
+    # samples here instead of 1.
+    #
+    # Measured corpus-wide impact, gate ON vs OFF: 53,860 -> 93,427 usable
+    # samples, and phases holding a clock base 3375/3654 (92.4%) -> 4167/4516
+    # (92.3%). Coverage RATE is unchanged, so this does not overturn the existing
+    # clock-adjusted verdicts -- the gate was never what made most phases
+    # clockless. What it does is (a) stabilise every base by ~1.7x more samples
+    # and (b) give a base to cheap/small phases, which is the whole point of a
+    # smoke run. Historical runs do carry busy>50 samples in bulk, which is why
+    # the gate looked reasonable when it was written.
+    TELEMETRY_REQUIRE_BUSY = False
+
     # A busy sample at or above this temperature is discarded from the clock
     # estimate rather than scaled, on the same grounds as SCLK_MIN_HZ: it is "no
     # reliable measurement", not "a slower measurement".
@@ -2028,7 +2065,8 @@ class TensileDriver:
                     # permanently idle GPU and drops every sample, leaving a
                     # corpus with no clock data and no error to explain it.
                     try:
-                        if int(row.get("gpu_busy_percent") or 0) <= self.TELEMETRY_BUSY_PCT:
+                        busy = int(row.get("gpu_busy_percent") or 0)
+                        if self.TELEMETRY_REQUIRE_BUSY and busy <= self.TELEMETRY_BUSY_PCT:
                             continue
                         hz = int(row.get("sclk_hz") or 0)
                     except (TypeError, ValueError):
