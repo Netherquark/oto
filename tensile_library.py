@@ -122,6 +122,10 @@ _GLVWA = re.compile(r"(?:^|_)GLVWA(\d+)(?:_|$)")
 _GLVWB = re.compile(r"(?:^|_)GLVWB(\d+)(?:_|$)")
 _GRVW = re.compile(r"(?:^|_)GRVW(\d+)(?:_|$)")
 _GSU = re.compile(r"GSU(\d+)")
+# Beta-on-edge element multiple. Not part of any phase config (omitting it lets
+# Tensile default it to 1, which its own half/GSU rejects then reject), so the
+# legality prior has to read it to inherit a shipped kernel's real setting.
+_AF0EM = re.compile(r"(?:^|_)AF0EM(\d+)(?:_|$)")
 
 
 def parse_shipped_kernels(dat_file: Path) -> Set[str]:
@@ -176,7 +180,28 @@ def _parse_kernel_knobs(name: str) -> Dict[str, Any]:
     g = _GSU.search(name)
     if g:
         knobs["gsu"] = int(g.group(1))
+    a = _AF0EM.search(name)
+    if a:
+        knobs["af0em"] = int(a.group(1))
     return knobs
+
+
+def shipped_kernel_knobs(name: str) -> Dict[str, Any]:
+    """Public canonical read: structural knobs of one shipped solution name.
+
+    Thin public wrapper over the single `_parse_kernel_knobs` owner, so callers
+    (legality prior) never grow a second solution-name parser.
+    """
+    return _parse_kernel_knobs(name)
+
+
+def shipped_kernel_config(name: str, family: str) -> Dict[str, Any]:
+    """Public canonical read: phase `config` for one shipped kernel of `family`.
+
+    Resolves `family` to its Tensile DataType char via the shared
+    FAMILY_DTYPE_CHAR map rather than each caller re-deriving it.
+    """
+    return _config_from_kernel(name, FAMILY_DTYPE_CHAR[family])
 
 
 def _reconcile_knobs(k: Dict[str, Any]) -> None:

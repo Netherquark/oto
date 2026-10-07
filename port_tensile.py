@@ -47,6 +47,7 @@ from analytics import AnalyticsEngine, CellAnalytics
 from gfx90c_common import cell_key, kernel_key
 from policy import aggregate_cell, should_run
 from agent import ConvergenceAgent
+from mutator import Mutator
 from report import AcceptanceReporter
 from telemetry import TelemetrySampler as SysfsTelemetrySampler
 import tensile_library as tlib
@@ -236,11 +237,29 @@ class TensileDriver:
         # Initialize sub-modules
         self.scheduler = CandidateGenerator(self.base_dir, registry=self.registry)
         self.analytics = AnalyticsEngine(self.registry, self.base_dir)
+        # Option H Phase 1: the ledger-backed mutator. Constructed here so the
+        # mutation arm records proposals and resolves outcomes; when it is
+        # absent ConvergenceAgent falls back to appending to phases.yaml and
+        # keeps the identical-fp skip on (see ConvergenceAgent.skip_mutation_arm).
+        self.mutator = None
+        try:
+            self.mutator = Mutator(self.registry, self.base_dir, self.analytics)
+            if not self.mutator.ledger_available():
+                # Ledger missing or unreadable: do NOT bypass the identical-fp
+                # skip, because novelty would then be unverifiable.
+                self.mutator = None
+        except Exception as e:
+            self.mutator = None
+            print(f"[mutator] unavailable ({e}); mutation arm keeps phases.yaml "
+                  "behaviour and the identical-fp skip")
+
         self.agent = ConvergenceAgent(
             self.base_dir,
             self.scheduler,
             self.analytics,
+            mutator=self.mutator,
         )
+        self._sync_agent_run_id()
         self.reporter = AcceptanceReporter(self.base_dir, cooldown_s=self.cooldown_s)
 
         # Shared client build dir: built once per run, reused by all phases
@@ -338,18 +357,95 @@ class TensileDriver:
 
         return all_ok
 
-    def load_phases_manifest(self, phases_path: Optional[Path] = None) -> List[Dict[str, Any]]:
-        """Load phases.yaml manifest (the data manifest)."""
+    def load_phases_manifest(self, phases_path: Optional[Path] = None,
+                             include_overlay: bool = True
+                             ) -> List[Dict[str, Any]]:
+        """Load phases.yaml manifest (the data manifest), plus this run's overlay.
+
+        `phases.yaml` is the curated deck and is never written to. The mutation
+        arm's candidates live in a per-run overlay
+        (`gfx90c_results/overlays/phases.<run_id>.overlay.yaml`), so they are
+        merged here, after the curated phases, and tagged `origin: overlay`.
+
+        Without this merge the overlay is write-only: candidates were emitted,
+        recorded in the ledger and then never scheduled, so the arm would report
+        progress while measuring nothing.
+
+        The overlay is keyed on the *active* run. Another run's overlay is not
+        applied, because its phases were scored against that run's state and
+        re-running them here would produce measurements attributed to the wrong
+        run. `--dry-run` has no run and therefore no overlay.
+
+        An explicit `phases_path` means the caller owns that deck outright, so no
+        overlay is merged -- `--gfx900-reference` passes the reference run's own
+        phase file, and appending native-arm candidates to the spoof floor would
+        corrupt the comparison the whole A/B rests on.
+        """
         if phases_path is None:
             phases_path = self.base_dir / "phases.yaml"
+            explicit_deck = False
+        else:
+            explicit_deck = True
 
-        if not phases_path.exists():
-            return []
+        phases: List[Dict[str, Any]] = []
+        if phases_path.exists():
+            with open(phases_path, "r") as f:
+                phases = yaml.safe_load(f) or []
 
-        with open(phases_path, "r") as f:
-            phases = yaml.safe_load(f) or []
+        if explicit_deck or not include_overlay:
+            return phases
 
+        run_id = self.run_dir.name if self.run_dir else None
+        if not run_id:
+            return phases
+
+        overlay = self._load_run_overlay(run_id)
+        if not overlay:
+            return phases
+
+        seen = {str(p.get("phase_id", "")) for p in phases}
+        merged = 0
+        for entry in overlay:
+            entry = dict(entry or {})
+            phase_id = str(entry.get("phase_id", ""))
+            if not phase_id or phase_id in seen:
+                # A phase_id collision would make `phases.phase_id UNIQUE` reject
+                # the overlay row, so the candidate would silently never run.
+                continue
+            seen.add(phase_id)
+            entry["origin"] = entry.get("origin") or "overlay"
+            entry["overlay_run_id"] = run_id
+            phases.append(entry)
+            merged += 1
+
+        if merged:
+            print(f"[overlay] merged {merged} candidate phase(s) from "
+                  f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
         return phases
+
+    def _load_run_overlay(self, run_id: str) -> List[Dict[str, Any]]:
+        """This run's overlay phases, or [] when there is none.
+
+        Read through the mutator when one exists so overlay parsing has a single
+        owner; falls back to the file directly so the overlay is still honoured
+        with no ledger-backed mutator.
+        """
+        path = (self.base_dir / "gfx90c_results" / "overlays"
+                / f"phases.{run_id}.overlay.yaml")
+        if not path.exists():
+            return []
+        if self.mutator is not None:
+            try:
+                return self.mutator.load_overlay(run_id) or []
+            except Exception:
+                pass
+        try:
+            with open(path) as f:
+                payload = yaml.safe_load(f) or {}
+            return payload.get("phases", []) or []
+        except Exception as e:
+            print(f"[overlay] unreadable, ignoring: {e}")
+            return []
 
     _KEY_POLL_S = 0.2
 
@@ -1106,6 +1202,57 @@ class TensileDriver:
         except BaseException:
             pass
 
+    def _sync_agent_run_id(self) -> None:
+        """Keep `agent.run_id` bound to the currently active run dir.
+
+        Proposals carry the run that emitted them, and the overlay is written per
+        run. Both read this one binding, so a swapped run dir (the reference path
+        creates its own) cannot leave them pointing at a finished run.
+        """
+        if getattr(self, "agent", None) is None:
+            return
+        self.agent.run_id = self.run_dir.name if self.run_dir else None
+
+    def _resolve_proposal_outcome(self, phase: Dict[str, Any],
+                                     run_dir: Path) -> Optional[str]:
+        """Write a mutated candidate's measured outcome back to the ledger.
+
+        Called after a phase that came from the mutation overlay has actually run.
+        Without this the ledger records candidates that are then never resolved:
+        they stay `pending` forever, so their `n` never grows, so the cell is
+        routed to `replicate` on every later pass. A mutation arm that never
+        writes back an outcome is indistinguishable from one that measured
+        nothing.
+
+        Only acts when the phase's fingerprint is in the ledger, so curated and
+        reference-floor phases are untouched. Returns the outcome written, or
+        None when the phase was not a ledger proposal / no mutator is present.
+        """
+        if self.mutator is None:
+            return None
+        fp = phase.get("fp")
+        if not fp:
+            return None
+        try:
+            if self.registry.get_proposal(fp) is None:
+                return None
+        except Exception:
+            return None
+
+        phase_dir = run_dir / str(phase.get("phase_id", ""))
+        try:
+            outcome, detail = self.mutator.resolve_phase_dir(
+                fp, phase_dir, run_id=self.run_dir.name if self.run_dir else None)
+        except Exception as e:
+            # A classification failure must not abort a run whose phases have
+            # already executed; the candidate simply stays pending.
+            print(f"[ledger] could not resolve {fp}: {e}")
+            return None
+        if outcome and outcome != "pending":
+            print(f"[ledger] {fp} -> {outcome} "
+                  f"(winner_freq={detail.get('winner_freq')})")
+        return None if outcome == "pending" else outcome
+
     def run_phases(
         self,
         target_ids: Optional[List[str]] = None,
@@ -1158,6 +1305,24 @@ class TensileDriver:
                 config = phase.get("config", {})
                 fp = phase.get("fp", fingerprint_config(config))
 
+                # Identical-fp skip bypass (Hplan.3 step 8), scoped to the
+                # mutation overlay. The bypass exists so a candidate is measured
+                # even when its fp has passed before: novelty and outcome are then
+                # decided by the ledger instead of by pass/fail history. It is
+                # authorised only while `skip_mutation_arm()` is False, i.e. the
+                # ledger is present *and* outcomes can be written back -- with
+                # neither, a bypassed candidate is re-measured forever and the arm
+                # reports progress while learning nothing.
+                #
+                # Scoped to overlay phases deliberately: applying it to the curated
+                # deck would re-benchmark settled phases on every run, which is the
+                # opposite of what the skip is for.
+                from_overlay = bool(phase.get("overlay_run_id")) or \
+                    str(phase.get("origin") or "") == "overlay"
+                bypass_identical_skip = (
+                    from_overlay and self.agent is not None
+                    and not self.agent.skip_mutation_arm())
+
                 # Policy check: should_run
                 allowed, reason = should_run(
                     phase_id=phase_id,
@@ -1165,7 +1330,12 @@ class TensileDriver:
                     registry=self.registry,
                     phase_scope=target_ids,
                     opt_in_identical_skip=opt_in_identical_skip
+                    and not bypass_identical_skip
                 )
+                if bypass_identical_skip and not allowed \
+                        and reason == "identical_fp_already_passed":
+                    # The ledger, not pass history, decides this one.
+                    allowed, reason = True, "bypassed_identical_fp_via_ledger"
 
                 if not allowed:
                     print(f"Skipping phase {phase_id} ({reason})")
@@ -1198,6 +1368,11 @@ class TensileDriver:
 
                 result = self.execute_phase(phase, self.run_dir)
                 results.append(result)
+                # Outcome feedback (H.3.8). Only reached for phases that actually
+                # launched, so a skipped or refused phase is not classified as
+                # non-functional for having produced no output.
+                if result.get("status") in ("completed", "failed", "success"):
+                    self._resolve_proposal_outcome(phase, self.run_dir)
                 if result.get("status") == "skipped_illegal":
                     refused_count += 1      # refused pre-launch; nothing was executed
                 elif result.get("status") not in ("interrupted", "skipped_by_user"):
@@ -1441,6 +1616,10 @@ class TensileDriver:
         self.configs_dir.mkdir(exist_ok=True)
         self.client_build_dir = self.run_dir / "client_build"
         self.client_build_dir.mkdir(exist_ok=True)
+        # The reference run replaces the active run dir; keep the agent's
+        # run_id bound to whatever run is current, or every candidate emitted
+        # during it would be attributed to the previous run.
+        self._sync_agent_run_id()
 
         phases_path = self.run_dir / "phases_reference.yaml"
         with open(phases_path, "w") as f:
@@ -1487,6 +1666,7 @@ class TensileDriver:
             self.run_dir, self.configs_dir, self.client_build_dir = (
                 prev_run_dir, prev_configs, prev_client
             )
+            self._sync_agent_run_id()
 
     def _latest_reference_run(self, exclude: Optional[str] = None) -> Optional[str]:
         """Most recently completed gfx900 reference run (recall floor for A/B)."""

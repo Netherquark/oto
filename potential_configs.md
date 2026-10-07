@@ -393,3 +393,223 @@ Append-only. Earlier entries retained.
   (`phase_auto_0_zz_128x128x128_6` / `_25`) is pre-existing in the original 434
   from the AUTO generator, not introduced here. Distinct ids, so harmless, but
   it benchmarks the same ZZ config twice.
+---
+
+## 8. Mutation/auto-run findings (2026-10-07) — why iteration "broke", and the real remaining gap
+
+Everything below is derived from the run corpus (`run_20260920_235815`
+… `run_20261006_122020` + the locked floor), re-parsed directly from each
+phase's own `00_Final.yaml` (DataType enum) and `00_Final.csv` (per-seed
+GFlops), cross-checked against `registry.db` and `acceptance_report.json`.
+No GPU was used; all legality checks are CPU-only.
+
+### 8.1 Why the last iteration stage looked broken
+
+`run_20261006_122020` (auto + mutation arm, 12:20→22:06, status `completed`)
+proposed **506** candidates: **329 functional, 97 legal_rejected, 59
+legal_slow, 21 pending**.
+
+- The ledger's last row is `phase_auto_8_*` at 22:05:59. Iteration 9 then
+  emitted 23 proposals (**2 legal_rejected + 21 accepted**) into the overlay
+  and the run ended *without benchmarking them*. The overlay therefore holds 21
+  **never-measured** phases — the arm stopped after writing its final
+  generation (`phases_executed: 18`, `phases_skipped: 29`).
+- The overlay carries **only iteration 9**. Every benchmarked winner from
+  iterations 0–8 exists as a phase dir + CSV but is **not** in `phases.yaml`
+  (29-phase deck) nor in any overlay, so a resumed/fresh auto run would never
+  re-benchmark them. That is the "existing / explored / proven winners aren't
+  in use" observation — quantified in §8.4.
+- 97 legal_rejected (19%) and the 21-pending cap are the sampler faults this
+  week's fix removes: the pre-fix generator proposed configs `validate_config`
+  would never accept (GLVW≠VW divisibility, 24,576-B LDS footprints, half
+  `GlobalSplitU` assembly classes). The new co-occurrence gate
+  (`legality.cooccurrence_check`, DepthU folded into the tile group) raised the
+  sweep's legal rate from 88% to 100% and prunes ~9% of draws — measured
+  CPU-only, all 7 families still propose.
+
+### 8.2 The report's SS verdicts were dtype-polluted
+
+`acceptance_report.json` assigns a phase to a cell from the phase-id family
+token, with `FAMILY_TO_DTYPE["auto"]="S"` as fallback. Under the run corpus
+that mis-keys two classes of kernel into the **f32 (SS)** cells:
+
+- `phase_auto_2_hh_*` — a **pure f16** kernel (`DataType` enum 4, token `HB`),
+  measured 2366–2871 GFlops, physically impossible at the 1613 f32 peak, yet
+  the report lists it as the `SS:512/1024/2048/4096` winner.
+- `phase_hh_hpa_*` / `phase_hs_hpa_*` — half-input, f32-accumulate kernels
+  whose `ComputeDataType` is 0, credited with `SS:1024/2048/4096` "wins" of
+  1365–1447 (86–90% of the f32 peak — HPA rate, not SS rate).
+
+Re-splitting every row by its own `00_Final.yaml` DataType and by the
+phase-id family token gives the corrected terrain:
+
+| | WIN | TIE | LOSS (dtype-true native vs spoof, >2%) |
+|---|---|---|---|
+| acceptance report | 16 | 15 | 7 (CC192/256, HH256/1024/2048/4096, SS1365) |
+| **dtype-isolated** | 16 | 12 | **10: SS512/768/1000/1365/2048, HH1024/2048, CC256/1024, HS_HPA512** |
+
+The SS large-"wins" were epiphenomena of H/HPA kernels wearing an SS name. The
+true SS picture is the opposite: pure-f32 native is 2–7% *below* the spoof at
+every shape from 512 up except a 1024 tie. SS:256 is a genuine win (+232%, 98→412
+via `auto_0_S`, MT96x96/vw2/du16).
+
+### 8.3 The C1/C2/C5 candidates were measured — and still lose
+
+The Oct-3 headline candidates were configured by **coverage gap**: native had
+never run the floor's winning config. The mutation arm then *did* benchmark all
+of them. Same source config, both arms, best-median:
+
+| cell | config | native best | floor best | gap |
+|---|---|---|---|---|
+| SS 768/1000/1365/2048 | `MT128x128x8/8x8/VW4/DU8` | 1046/1030/999/1098 | 1095/1075/1073/1121 | −4…−7% |
+| HH 1024/2048 | `MT128x128x16/8x8/VW8/DU16` | 2368/2494 | 2547/2658 | −6…−7% |
+| CC 256/1024 | `MT64x64x8/4x4/VW2/DU8` | 188/290 | 214/301 | −12/−4% |
+
+Pooling matched kernel-shape medians across arms (*best*-seed vs *best*-seed is
+the report basis; whole-median basis washes most of this out to ~±1%) means the
+persistent deficit sits at the **best-seed/tail level**, not in any knob the
+deck is missing. It is not coverage: these rows exist. Consequence: **probes
+that only widen the same tile no longer target anything**; the load-bearing
+move is either (a) the spoof-steal route (§8.6) or (b) shape-specific tile
+downsizing (occupancy, §8.5).
+
+### 8.4 Proven winners not in the current 29-phase deck
+
+Every row below is a *measured* all-time-best native kernel that has **no
+representative in `phases.yaml`** (+ means beside the deck's current value):
+
+| cell | all-time best (phase) | GFlops | vs deck |
+|---|---|---|---|
+| SS 256 | `phase_auto_0_S_256x256x256_42` (MT96x96/vw2/du16) | 412 | +320% |
+| SS 1024 | `phase_auto_0_ss_1000x1000x1000_0` (MT128x128/vw4/du8) | 1135 | +14% |
+| DD 192 / 768 | `auto_0_dd_1365x1365x1365_7` / `auto_0_dd_768x768x768_3` | 21.0 / 93.0 | +9% / +4% |
+| HH 256 | `phase_auto_0_hh_256x256x256_4` (MT32x64/vw4/du16) | 206 | +24% |
+| HH 512 | `phase_auto_2_hh_1024x1024x1024_2` (MT128x128/vw8/du16) | 1564 | +19% |
+| HH 1024/2048/4096 | same kernel | 2368/2494/2665 | +3/+9/+16% |
+| CC 192 | `phase_auto_0_cc_192x192x192_2` (MT32x32/vw2/du8) | 43.2 | +7% |
+| ZZ 128 | `phase_auto_0_zz_128x128x128_16` | 16.8 | +154% |
+| HH_HPA 512 | `phase_hh_hpa_Ailk_Bljk_mt128x64x16…` | 406 | +22% |
+| HS_HPA 512 | `phase_hs_hpa_spoof_baseline_vega10` | 380 | +23% |
+
+These are the reuse loss from §8.1's overlay-only-last-gen behavior: 425 measured
+functional candidates sat in the run but never made any yaml.
+
+### 8.5 Why "CU occupancy" reads ≤3 everywhere
+
+The kernel metadata (`00_Final/cache.yaml`) carries `MaxOccupancy: 40` and the
+model's `occupancy_workgroups_per_cu` reports `VGPR_PER_CU // acc` = 1024–2048 —
+**both are register-slot counts, not resident workgroups**, so neither is what a
+report of "≤3" is describing. The real per-CU residency, given 64 KB LDS/CU and a
+per-workgroup tile footprint `(MT0+MT1)·bpe·DU`:
+
+| kernel | LDS/workgroup (no dbuf) | resident wg/CU (LDS-bound) |
+|---|---|---|
+| SS `MT128x128x8/8x8/VW4` | (128+128)·4·8 = 8 KB (→≥16 KB dual-buffered) | **≤4 (≈2–3** with double buffer) |
+| HH `MT128x128x16/8x8/VW8` | (128+128)·2·16 = 8 KB | **≈2–4** |
+| ZZ `MT32x32x8/4x4` | (32+32)·8·8 = 4 KB | ~8 |
+
+So the wide tiles the deck wins with land at **2–4 resident workgroups per CU**,
+and the "≤3" is structural. It gets worse at small shapes: `SS 256` with a
+128-tile has only 2×2=4 workgroups over 7 CUs — most CUs are idle regardless of
+residency. Occupancy is therefore **not a knob to raise without shrinking the
+tile**, and shrinking the tile is what the mid-shape losses are sensitive to
+(the measured SS curve is non-monotonic across MT64/96/128). Treat "occupancy 3"
+as a property of the wide-tile strategy, not a bug to fix in isolation.
+
+### 8.6 Next candidates (CPU-gated PASS, TTY benchmark only)
+
+Validated through `check_candidates.py` (all three gates) except where noted —
+the two rejects are restatements of existing rules, listed so nobody re-proposes
+them.
+
+| id | target cells | config | gates | evidence |
+|---|---|---|---|---|
+| N1 | SS 512/768/1000/1365 | `64x64x8/8x8/VW4/DU8` | PASS | tile-downsizing occupancy probe; current best (MT128x128) loses 2–7% |
+| N2 | SS 512/768/1000 | `64x64x16/8x8/VW4/DU16` | PASS | DU variant of N1 |
+| N3 | SS 2048 | `128x128x8/8x8/VW4/GSU2` | PASS | GSU axis untried on SS; −2.0% left |
+| N4 | HH 1024 | `128x128x32/8x8/VW8/DU32` | PASS | DU32 never tried; floor leaves −7.0% |
+| N5 | CC 1024/2048 | `64x64x16/4x4/VW2/DU16` | PASS | current best is DU8; −3.9% left |
+| N6 | CC 256 | `32x32x8/4x4/VW2/DU8` | PASS | small-tile occupancy probe; −12.1% left |
+| N7 | DD 192 | `32x32x8/4x4/VW2/DU8` | PASS | C3 tape, re-included for the sweep |
+| S1 | SS 768/1000/1365/2048 | **spoof-steal**: ship floor's `MT128x128x8/8x8/VW4/DU8` config as native (gfx900-ISA code object is allowed on this APU; this is literally what the floor arm runs) | PASS | closes the −4…−7% tail gap without a new config |
+| S2 | HH 1024/2048 | spoof-steal `MT128x128x16/8x8/VW8/DU16` | PASS | closes −6…−7% |
+| S3 | CC 256/1024 | spoof-steal `MT64x64x8/4x4/VW2/DU8` (+ `LdsPadA=2` variant) | PASS | closes −12/−4% |
+| — | HH GSU2, SS `96x96x8/6x6/VW2` | — | **FAIL** | half assembly blocks GSU2 (Free0Multiple); 96-tile VW2 non-divisible — do not re-propose |
+
+**Order of work (TTY only).** (1) fold the §8.4 proven winners into the deck —
+pure re-use, no GPU time; (2) S1–S3 spoof-steal — highest expected value, no
+rest of the tuning loop required; (3) N1/N4/N6 only if any tail gap survives.
+The 21 pending iteration-9 phases should be harvested first: they are already
+written to the overlay and carry the co-occurrence-gated sampler from the same
+fix.
+
+### 8.7 Accuracy notes
+
+`phase_auto_0_dd_1365x1365x1365_7`, `phase_auto_0_cc_*.` etc. bench a *grid* of
+shapes per phase (each CSV covers 4–8 sizes), so "best at cell X" below is the
+kernel's per-shape median, not its headline number. Row counts are per
+kernel-shape; distinct kernels per cell are smaller. `n_native_runs` in the
+report counts runs that touched the cell, so `CC:192 n=2` means two runs, not
+two repeats — repeats are 8 inside every phase (`NumBenchmarks: 8`).
+
+---
+
+## 7 (dup) Decision log — continuation
+
+- **2026-10-07** — Mutation-run post-mortem: 506 proposals (329/97/59/21); the
+  overlay carries *only* the unmeasured iteration-9; the 425 measured functional
+  candidates never reached any yaml (see §8.1, §8.4). The 97 legal_rejected are
+  the pre-fix sampler inefficiency; the co-occurrence gate (this week) raised the
+  legal rate 88%→100% (CPU-measured, 232/232, all families still propose).
+- **2026-10-07** — `acceptance_report.json` SS cells were gfx90c-f16/HPA
+  polluted: `phase_auto_2_hh_*` (f16) and `hh_hpa/hs_hpa` (half-input) kernels
+  were being scored as f32 winners; SS "wins" at 1024/2048/4096 were physically
+  impossible for f32. Corrected cells give **10 true losses**, including four SS
+  mid cells the report called wins.
+- **2026-10-07** — The C1/C2/C5 coverage-gap candidates were benchmarked by the
+  mutation arm. Same config, best-median: native tail-gaps of −4…−12% remain
+  (SS/HH/CC), i.e. the residual deficit is at best-seed level, not a missing
+  row (see §8.3).
+- **2026-10-07** — CU residency: the "≤3" observation is structural (wide-tile
+  LDS ⇒ 2–4 resident wg/CU; plus <7 CUs of work at small shapes). The `wg/cu`
+  values printed by `check_candidates.py` (1024–2048) are register-slot counts,
+  not occupancy, and must not be quoted as such.
+
+---
+
+## 9. Hardware grounding (2026-10-07, web-verified)
+
+The peak rates in `gfx90c_common.py` are arithmetic identities, not guesses:
+
+- `gfx90c` is the Cezanne (Ryzen 5000-series APU) Vega IGP — GCN 5.x / GFX9
+  family, wave64, 448 shaders = **7 CUs × 64 lanes** at 1800 MHz boost →
+  FP32 = 448·2·1.80e9 = **1.613 TF**, FP16 2:1 = **3.226 TF**, FP64 1:16 =
+  **100.8 GF**. All three match the project's constants. (8-CU parts like the
+  5700G are the same die at 2.0 GHz; the project device is the 7-CU bin.)
+- Per ROCm's accelerator spec tables, GFX9 CU resources: **64 KiB LDS/CU** and a
+  256 KiB VGPR file/CU. Both are the hard limits the occupancy gates model
+  (§8.5's 2–4 resident wide-tile workgroups and the `error 4` rejections).
+- GFX9 SGEMM tuning consequences that are *measured here*, not literature:
+  1. 7 CUs make wave-quantisation real at every shape whose grid is not a
+     multiple of 7 — the SS 512..2048 curve's non-monotonicity.
+  2. DU8/DU16 (not 4) is required before the global load is covered, matching
+     the floor's own choices (§3.1).
+  3. Wide tiles (MT128×128) buy LDS-residency for a smaller payoff than a
+     second resident workgroup because 64 KiB LDS only seats 2–4 of them.
+  4. Anisotropic ZZ tiles (MT128×64/64×128, VW1) at 8 acc-registers per thread
+     hit the register pressure that produces Tensile `error 4` — the 2026-09-26
+     experiment died on exactly that (§10). Occupancy-first sizing (smaller
+     MT, du up, VW ≥ 2) is the SOTA-correct direction for this class of part.
+
+---
+
+## 10. run_20260926_201835 root cause (ZZ anisotropic experiment, empty)
+
+8 phases, all ZZ anisotropy (MT128×64/8×8·4 row, MT64×128, VW1, `wgm4_alu`).
+Every one exits at `Generating kernel source resulted in error 4` with no CSV.
+**Error 4 is the Tensile register-file occupancy failure** — the scheduler's
+`occupancy_feasible` reproduces it CPU-side, which is why this run is correctly
+absent from the native arm and why ZZ decks are gated so hard. Secondary noise
+in `stderr.log` (Python 3.14 `loky` `semlock` cleanup warnings) is client-side
+and did not contribute. No winners are hidden here; the run is best treated as
+a live confirmation of the occupancy gate's §5.7 record.

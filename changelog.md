@@ -9,6 +9,224 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-06 — `legal_slow` is reference-derived, and the Phase-4 legal rate hit 100%.**
+  The legality verdict is now measured the way the gfx900/spoof reference actually ran:
+  `ab_audit.cell_deltas()` exposes the spoiled reference median per cell, and
+  `coverage.reference_thresholds()` (cached, re-entrancy-guarded) computes the band once and
+  gives every cell a bar of `reference_median * (1 - band/100)`. `classify_outcome` reports
+  `legal_slow` only when **every** measured cell in a sweep is below its bar (ties are not
+  slowness; one competitive shape rescues a sweep), unmatched cells are never slow, and
+  zero-throughput is `non_functional`, not slow. Two implementation details that mattered:
+  the per-cell bars must be built lazily (the band itself can only come from
+  `ConvergenceAgent.band()`, see the Phase-4 entry), and the dtype must be resolved from the
+  phase id for the cell keys — an unresolved dtype silently mutes the whole verdict.
+  `tests/test_legal_slow.py` pins it, 28 tests.
+
+  Second finding: **the registry WAL is part of the ledger.** Copying `registry.db` alone
+  after an un-checkpointed write loses the newest rows (`-wal` must travel, or
+  `PRAGMA wal_checkpoint(TRUNCATE)` first) — demonstrated by `tests/test_ledger_durability.py`
+  (9 tests) with an `early`/`late` write split across a copy+restore.
+
+  Third: **an 88% legal rate was hiding a structural bug, and the fix is manifest reading,
+  not a reject-set model.** The sampler crossed `DepthU`/`GlobalSplitU` onto incompatible
+  tiles. The shipped manifest stores DepthU as the K component of the MacroTile
+  (`128x32x16` *is* "MacroTile 128x32, DepthU 16"), so `DepthU` now rides with the `tile`
+  group, and `legality.cooccurrence_check` rejects every cross-group knob pair that never
+  ships together (read off the manifest, cached, deliberately *not* the occupancy/assembly
+  predicates — those still reject shipped configs: 31/135 HS_HPA, 19/169 SS). Measured:
+  legal rate 88% (176/200, HS_HPA 0%, HH_HPA entirely declining) → **100% (232/232), all
+  seven families proposing, zero false drops.** The gate cannot reject a shipped config —
+  a shipped solution co-occurs with itself.
+
+  The overnight command now exists: `python3 port_tensile.py --auto --yes --budget 10
+  --mutation-budget 2 --live off` (appended to `command.txt`).
+
+- **2026-10-06** — **Option H Phase 4 landed: coverage-guided synthesis, graded candidates.**
+  New `synthesis.py`, plus the agent/mutator wiring to use it. `Hplan.6`'s four items: coverage
+  state now directs which knob groups a draw may touch; the lattice remains as a reported
+  fallback; candidates carry the family's shape sweep so a mutant is gradable at all
+  (`Hplan.1` item 5); and `ThreadTile`/`WorkGroup` are re-derived from `MacroTile`.
+
+  Two findings worth keeping. First, `Hplan.6` item 2 ("extend beyond the lattice's six
+  knobs") was **already satisfied by Phase 2**, and is now exhausted rather than merely
+  satisfied: all eight structural knobs the shipped solutions encode are covered. The ninth
+  parsed knob, `grvw`, is excluded on purpose — it is not a Tensile parameter, and
+  `BenchmarkStructs` calls `printExit()` on unrecognised names. A knob invented to look like
+  progress would have aborted parameter filling instead.
+
+  Second, and more important: **the acceptance band cannot be computed in
+  `ConvergenceAgent.__init__`.** `ab_audit.arm_record_sets` builds an agent to manage phases,
+  and `coverage.measured_band_pct` calls `arm_record_sets`, so doing it at construction time is
+  `measured_band_pct → agent → agent → …` and terminates only by exhausting the stack. This
+  presented as `TestMeasuredBand` *hanging* rather than failing, and it cost real time to
+  diagnose — the traceback was the only evidence. It is now `ConvergenceAgent.band()`,
+  resolved lazily, at most once, with a re-entrancy guard, and `BandResolutionTests` pins it.
+  The related question of "is 5.0 a real measurement?" has a clean answer: it is
+  `TIE_BAND_PCT`, the documented shipped floor, chosen by `measured_band`'s `max(...)`, so on
+  an empty corpus the band is the floor and says so via `band_source`.
+
+  Two latent bugs surfaced by the new tests and fixed: `reconcile_tile` returned early when
+  `ThreadTile` or `WorkGroup` was **missing** — precisely the case it exists to solve — and an
+  unsolved dimension rendered as the literal string `"None"`, which Tensile rejects at
+  parameter-parse time rather than at our own check.
+
+  Design choice worth recording: **the ledger's single `shape` column keeps the cell identity,
+  and the sweep lives in phase data.** Coverage joins on `(family, shape)`, so storing the
+  sweep's first shape would re-file the candidate into a different cell and quietly corrupt
+  every coverage join.
+
+- **2026-10-06** — **Option H Phase 1 integration closed: the ledger now actually runs.**
+  Phase 1 shipped every piece of Hplan.3 and reached a run with none of them wired. Each gap
+  failed silently, which is why none of it was visible from the tests: the per-run overlay was
+  written and never merged into the deck, so candidates were emitted, recorded, and never
+  scheduled; `run_id` was dropped on emission; the proposal row and its phase were two commits,
+  so a crash between them left a permanently-`pending` candidate whose `n` never grows and
+  which is therefore re-routed to `replicate` on every later pass, indistinguishable from
+  genuine instability; `resolve_phase_dir` was never called by the driver, so the ledger only
+  ever accumulated `pending` rows; `WinnerFreq` was parsed by a private CSV reader whose failure
+  mode is zeros, which reads as "no kernel won"; the negative cache was process-local, so every
+  restart reported a saturated neighbourhood as untouched — it switched off exactly when needed;
+  and `skip_mutation_arm()` was computed on every emission and then ignored by the loop that
+  performs the skip.
+
+  `load_phases_manifest` now merges this run's overlay (tagged `origin: overlay`), keyed on the
+  active run and suppressed for an explicit deck so `--gfx900-reference`'s spoof floor can never
+  absorb native candidates. Proposal and phase are inserted in one transaction
+  (`emit_proposal_with_phase`). `run_phases` calls the outcome write-back for phases that
+  actually launched, so a phase that never ran is not classified as `non_functional` for having
+  produced no output. WinnerFreq is read through `analytics.read_column`/`winner_freq` — the
+  single owner of Tensile column parsing — and persisted to a new append-only
+  `proposal_observations` table, written before the verdict so a crash leaves recoverable
+  evidence rather than a decision with no basis. WinnerFreq lives outside the `proposals` row
+  deliberately: evidence is re-observable, verdicts are decided once, and columns there would
+  invite overwriting the basis of an already-made decision. The negative cache is rebuilt from
+  the ledger's resolution order at construction, because `consecutive` is a claim about
+  sequence. The identical-fp bypass is scoped to overlay phases only, so it cannot re-benchmark
+  settled curated phases.
+
+  Also fixed: `SQLiteRegistry.__init__` ran the additive schema migration unconditionally, so
+  every `ab_audit` run rewrote the live floor registry's bytes — schema only, no row touched,
+  but a report had changed its own subject. `SQLiteRegistry(base, read_only=True)` skips the
+  migration and every mutating method raises `PermissionError`; the audit now reads read-only.
+  New `tests/test_phase1_integration.py` (53 cases) drives the driver's loop rather than the
+  helpers, since testing the helpers in isolation passes even when the loop calls neither.
+
+- **2026-10-05** — **Option H Phase 3 landed: cell coverage, three distinct states, and LCB
+  parent selection.** New `coverage.py` reports per `(family, shape)` evidence (distinct
+  fingerprints, `min_n`, median, spread) and classifies each cell as `explore`,
+  `replicate` or `retired`. `agent.harvest` now picks a parent by **lower confidence
+  bound** instead of raw winner, which closes the path by which a noise-level win becomes
+  the parent of the next batch: a config whose median is high because one seed landed well
+  now ranks below a merely-good one. `CellAnalytics` carries its seeds (an LCB is not
+  recoverable from a median, a CV and a count), `ab_audit.py` prints `n`, spread and the
+  novel/replicate split, and `registry.all_proposals` exposes the ordered ledger.
+
+  The states are kept deliberately distinct: retirement is only reachable once decided
+  evidence exists, so "never tried" is never recorded as "tried and failed" (§H.1.2a), and
+  `legal_rejected` does not retire a cell because a rejected proposal never ran. `min_n` is
+  the *worst* measured config in a cell rather than the mean, since averaging that away is
+  how thin evidence becomes a verdict. The acceptance band is read from
+  `ab_audit.reproducible_band` and returns `None` when it cannot be measured, rather than
+  falling back to a literal — the same failure mode as the retracted `GFlops` figure. A
+  single sample degrades the bound to its median instead of claiming precision; thin
+  evidence is reported as thin. `parent_by="median"` stays reachable and
+  `selected_by_lcb` / `parent_by` / `parent_score` are recorded per winner so the two
+  policies stay comparable on the same data.
+
+  **Defect found and fixed during the phase.** `coverage.measured_band_pct()` never
+  actually read a band: it called `ab_audit.reproducible_band()` with one argument for
+  a two-argument function, and a bare `except Exception` converted the `TypeError`
+  into `None`. Every cell therefore evaluated with no band at all, while the plan and
+  changelog asserted the band was measured from the corpus. `ab_audit` now exposes
+  `arm_record_sets()` and `measured_band()` — the exact two calls `audit()` makes —
+  so coverage reads one canonical band, the audit passes its band into the coverage
+  report instead of recursing into itself, and the two cannot disagree. Measured on
+  the current corpus the band is **18.29%**, against a shipped floor of 5%. The test
+  that missed it (`assertTrue(value is None or value > 0)`) passed for a function
+  that always raises; it is replaced by four assertions, all of which fail when the
+  read is stubbed back to `None`. Also added explicit `target_cells`, so a cell that
+  was targeted but never proposed for is reported as `explore` rather than vanishing.
+
+- **2026-10-05** — **Option H Phase 2 landed: manifest-derived legality prior, measured live
+  at 35.7% -> 85.3% legal.** New `legality.py` replaces the ≤2-knob lattice in
+  `agent.mutate_and_feed` with a prior that draws knob values only from what Tensile ships
+  for that family, so the reject classes are never proposed. Measured on the same 29 curated
+  parents, same process, same `validate_config`: lattice 417/1169 legal, prior 198/232. The
+  lattice figure reproduces the D3 table when re-run, which is the cross-check that both
+  arms share one reject model. Hard walls encode the half `VectorWidth` floor and the
+  no-schedule MacroTile case; `validate_config` stays an assertion per Hplan.4 step 4, so
+  the residual (occupancy, and load divisibility on the full problem instance) is recorded
+  `legal_rejected` rather than searched away. `tensile_library` gained public
+  `shipped_kernel_config` / `shipped_kernel_knobs` wrappers and an `AF0EM` field so the prior
+  reads solution names through the single existing parser; `_config_from_kernel` is unchanged
+  so the pinned reference build is untouched.
+
+  Three corrections came out of implementing it, and none of them are confirmations:
+  (a) the audit's `A_half_VW1_assembly` is two conditions in different places, and the GSU
+  half is not enforceable from our config surface — a first cut that modelled it produced 90
+  false rejections on shipped HS_HPA `GlobalSplitU` 2/3/5/7 vectors, so it is now recorded in
+  `legality.DEFERRED_RULES` with its reason rather than enforced wrongly; (b) the half
+  `VectorWidth` wall was **dead on arrival** because `EnableMatrixInstruction` tests
+  `len(ThreadTile) == 2` while our configs carry ThreadTile as the string `"8x4"` — every
+  candidate read as undetermined and the sweep reported a perfect 100% accepted, which is
+  how the bug surfaced; (c) GlobalLoadVectorWidth is a function of MacroTile, so schedule and
+  loads had to become one atomic group, and the base had to be a complete shipped vector
+  rather than the partial deck config.
+
+- **2026-10-05** — **Option H Phase 1 landed: append-only `proposals` ledger, outcome
+  classification, and a mutation arm that stops writing to `phases.yaml`.** New `mutator.py`
+  (classifier, novelty, negative cache, per-run overlay); `registry.py` gains the `proposals`
+  table plus `record_proposal` / `resolve_proposal` / `is_novel` / `coverage_view`, created
+  additively so an existing registry picks it up on next open without rewriting a row;
+  `agent.mutate_and_feed` now emits to a per-run overlay (`gfx90c_results/overlays/`) and
+  refuses to re-propose a known fingerprint, which is the first time D2 and D4 are actually
+  closed rather than described. `analytics.count_benchmark_rows` was added because the
+  classifier must distinguish "rows that produced nothing" from "no rows" and the value-loader
+  drops non-positive rows by design — CSV shape now has one owner, as does CSV values.
+  Two guards are load-bearing and tested: `ConvergenceAgent.skip_mutation_arm()` returns True
+  when the ledger is missing **or** when it exists without an outcome signal, so the
+  identical-fp bypass cannot be unlocked by a novelty-only ledger (Hplan.3 steps 8 and 11).
+  `resolve_proposal` advances `pending → terminal` exactly once and silently no-ops after,
+  and the registry exposes no delete method, so append-only holds by interface rather than by
+  caller discipline. `scheduler.mutate_winner` is unchanged — Phase 1 fixes the loop's memory,
+  not its generator. No GPU work, no full Tensile benchmark, `phases.yaml` untouched, and the
+  live `registry.db` byte-identical after the run (verified by sha256). Suite: 317 tests,
+  1 skipped, exit 0.
+
+- **2026-10-05** — **RETRACTED: the "mutants produced zero GFlops" finding was an artefact
+  of the wrong CSV column.** `proposal.md` §H.1.2a reported 2,480 mutant benchmark rows with
+  0 non-zero GFLOPs, and the whole Option H priority list was ordered on it. The count was
+  read from the column *headed* `GFlops`, which in these CSVs is a **problem index**, not a
+  throughput — it reads `0,1,2,3` across a four-shape file and `0` in any single-shape file.
+  Real throughput is in the trailing `Cijk_…` kernel column, which is what the canonical
+  loader `analytics.load_benchmark_csv` reads. Re-measured through that loader the sign
+  flips: **2,960 rows, 2,960 non-zero, 370 of 374 dirs productive.** The mutants were never
+  broken. What is true, and what D5 already said, is that they are **ungraded**: keying both
+  populations by (kernel class, shape) leaves exactly **one** like-for-like cell out of 14,
+  and in that cell the mutants are *better* (6.89 vs 4.36 median). Two defects survive —
+  outcome is never recorded (D6) and every mutant is single-shape (D5) — and the second is
+  now co-equal with the first, since an unmeasurable result is not a search result.
+  **Why a same-run positive control did not catch it:** the control (`phase_zz_*`) is
+  non-zero under *both* readings, so the control passed while the measurement was wrong.
+  Lesson recorded in `proposal.md` §H.8 and §H.11: prefer the canonical loader over a column
+  name, and key comparative claims by (class, shape), not raw yield. Every affected claim in
+  §H.0, §H.1.2a, D3/D6, §H.3, §H.3.4, §H.3.8, §H.4, §H.7.10-11, §H.8 and §H.11 has been
+  corrected in place; the original figures are quoted only inside the correction notices.
+
+- **2026-10-05** — **`--auto` cannot express "no mutations".** Found while formalising
+  the Option H mutator plan. Three independent traps: `--mutation-budget 0` still emits
+  single-knob mutants (the budget gates only the two-knob block in
+  `scheduler.mutate_winner`); `--budget 1` still harvests and mutates, because
+  `run_auto` calls `mutate_and_feed` before incrementing the iteration counter
+  (`port_tensile.py`), so a single-iteration run appends candidates to the curated
+  `phases.yaml`; and `--stage` gates only the non-`--auto` branch. The mutation-free
+  path is therefore to omit `--auto` and use the plain Stage-3 route, which is what
+  `command.txt` now records. **Resolution:** the user confirmed omitting `--auto` is the
+  intended route, so the proposed `--mutation-budget 0` = "emit nothing" fix is
+  **withdrawn** — `--auto` semantics stay as they are. The overpromising flag text is
+  still wrong and Option H fixes the underlying width problem in `scheduler.mutate_winner`
+  by construction rather than by flag (`implementation_plan.md` §Option H, `Hplan.10`).
+
 - **2026-10-05** — **`s`/`e`/`q` were dead while phases were skipped, and stdin had
   two competing readers.** A phase that policy skips (identical `fp` already
   passed) does no GPU work, and that code path polled no keys at all — so a

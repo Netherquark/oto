@@ -18,7 +18,7 @@ import csv
 import json
 import statistics
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Set
+from typing import Dict, List, Any, Optional, Sequence, Tuple, Set
 from collections import defaultdict
 import re
 
@@ -89,7 +89,8 @@ class CellAnalytics:
         bound_class: str = "ALU",
         family: str = "",
         cv: float = 0.0,
-        source_run: str = ""
+        source_run: str = "",
+        seeds: Optional[List[float]] = None
     ):
         self.dtype = dtype
         self.shape = shape
@@ -103,6 +104,11 @@ class CellAnalytics:
         self.family = family  # e.g. 'ss', 'hh_hpa', 'hs_hpa', 'cc', 'zz'
         self.cv = cv  # coefficient of variation across seeds (stability gate)
         self.source_run = source_run  # run that produced this cell (whole-db corpora)
+        # The seeds themselves travel with the cell. An LCB cannot be recovered
+        # from a median, a CV and a count, so parent selection needs the samples;
+        # keeping them here avoids a second read of every CSV just to pick a
+        # parent (`Hplan.5` step 3).
+        self.seeds = list(seeds) if seeds else []
 
 
 class AnalyticsEngine:
@@ -154,6 +160,94 @@ class AnalyticsEngine:
             return dtype
 
         return 'unknown'
+
+    def count_benchmark_rows(self, csv_path: Path) -> int:
+        """
+        Count raw data rows in a benchmark CSV, ignoring their values.
+
+        Exists because the outcome classifier must distinguish "CSV present with
+        rows but every row non-functional" from "no rows at all", and that
+        distinction cannot be recovered from load_benchmark_csv -- that loader
+        drops non-positive-GFlops rows by design, so both cases return []. This
+        is the single owner of CSV *shape*; load_benchmark_csv remains the
+        single owner of CSV *values*, and neither re-implements the other.
+
+        Do not read throughput from the column headed "GFlops" to answer this
+        question. In these CSVs that column is a problem index (0,1,2,3 across a
+        multi-shape file, 0 in a single-shape file); real throughput is in the
+        trailing kernel column and load_benchmark_csv already reads it. Reading
+        the wrong column is what made a whole mutant population look
+        zero-yield when it was not.
+
+        Args:
+            csv_path: Path to 2_BenchmarkData/*.csv or 00_Final.csv
+
+        Returns:
+            Number of data rows (0 for a missing/header-only file)
+        """
+        if not csv_path.exists():
+            return 0
+        try:
+            with open(csv_path, "r") as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames:
+                    return 0
+                return sum(1 for _ in reader)
+        except Exception as e:
+            print(f"Error counting rows in CSV {csv_path}: {e}")
+            return 0
+
+    def read_column(self, csv_path: Path, column: str) -> List[float]:
+        """Every value of one named column, as floats, unfiltered.
+
+        The single canonical place a raw named column is read. `WinnerFreq` is the
+        only current caller, but the reason it lives here rather than in the
+        mutator is that stripping field whitespace and tolerating a missing or
+        ragged column is a property of Tensile's CSV format, not of the mutation
+        ledger. A second reader is a second set of format assumptions, and the
+        failure mode is quiet: a wrong column read yields zeros, which looks like
+        "no kernel won", which looks like a working kernel that merely lost.
+
+        Values that cannot be parsed as floats are skipped rather than coerced to
+        0.0, so a corrupt row cannot be reported as a measured zero.
+        """
+        out: List[float] = []
+        if not Path(csv_path).exists():
+            return out
+        try:
+            with open(csv_path, "r") as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames:
+                    return out
+                reader.fieldnames = [h.strip() if h else h
+                                     for h in reader.fieldnames]
+                for row in reader:
+                    raw = row.get(column)
+                    if raw is None:
+                        continue
+                    try:
+                        out.append(float(str(raw).strip()))
+                    except (TypeError, ValueError):
+                        continue
+        except Exception:
+            return out
+        return out
+
+    def winner_freq(self, csv_paths: Sequence[Path]) -> Dict[str, Any]:
+        """WinnerFreq summary over one or more benchmark CSVs.
+
+        Returns `{"max": float|None, "positive": bool, "n": int}`. Observed, never
+        decisive: a kernel that ran but never won its own internal comparison is
+        still functional, which is why `positive` is reported alongside `max`
+        rather than folded into an outcome.
+        """
+        values: List[float] = []
+        for path in csv_paths or ():
+            values.extend(self.read_column(Path(path), "WinnerFreq"))
+        if not values:
+            return {"max": None, "positive": False, "n": 0}
+        return {"max": max(values), "positive": any(v > 0 for v in values),
+                "n": len(values)}
 
     def load_benchmark_csv(self, csv_path: Path) -> List[Dict[str, Any]]:
         """
@@ -300,7 +394,8 @@ class AnalyticsEngine:
             bound_class=bound_class,
             family=family,
             cv=agg.cv,
-            source_run=source_run
+            source_run=source_run,
+            seeds=list(seeds)
         )
 
     def _classify_bound_class(self, shape: str, dtype: str) -> str:
