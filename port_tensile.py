@@ -341,17 +341,36 @@ class TensileDriver:
         print("Running Phase-0 Preflight checks...")
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
 
+        parity_line = "not checked"
+        parity_ok = True
+        try:
+            from library_parity import load_pipeline_phases, parity_report
+            manifest = load_pipeline_phases(
+                self.base_dir,
+                run_id=self.run_dir.name if self.run_dir else None)
+            pr = parity_report(manifest)
+            parity_line = (f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
+                           f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
+            parity_ok = pr["parity_ok"]
+        except Exception as exc:  # pragma: no cover - defensive (never blocks)
+            parity_line = f"error: {exc}"
+
         checks = [
             ("Tensile root exists", self.tensile_root.is_dir()),
             ("Tensile CLI exists", tensile_bin.is_file()),
             ("Registry DB accessible", self.registry.db_path.exists() or self.registry.results_dir.is_dir()),
             ("phases.yaml accessible", (self.base_dir / "phases.yaml").exists()),
+            # Coverage-parity rule (knowledge_base.md §6.1): the produced
+            # TensileLibrary must address exactly the shipped gfx900 cell grid.
+            ("TensileLibrary shape/dtype parity vs shipped gfx900", parity_ok),
         ]
 
         all_ok = True
         for name, ok in checks:
             status = "[OK]" if ok else "[FAIL]"
-            print(f"  {status} {name}")
+            print(f"  {status} {name}"
+                  if name != checks[-1][0]
+                  else f"  {status} {name} ({parity_line})")
             if not ok:
                 all_ok = False
 
@@ -396,32 +415,79 @@ class TensileDriver:
             return phases
 
         run_id = self.run_dir.name if self.run_dir else None
-        if not run_id:
-            return phases
+        if run_id:
+            overlay = self._load_run_overlay(run_id)
+            if overlay:
+                merged = self._merge_overlay_entries(
+                    phases, overlay, origin_label="overlay", src=run_id)
+                if merged:
+                    print(f"[overlay] merged {merged} candidate phase(s) from "
+                          f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
 
-        overlay = self._load_run_overlay(run_id)
-        if not overlay:
-            return phases
+        # Persistent seed overlay (proposal D2, potential_configs.md §8): the
+        # proven-winner rows and next-phase probes queued for every native run,
+        # deliberately NOT in phases.yaml so the curated deck stays exactly as
+        # shipped. Same semantics as a per-run overlay (pure measurement-first
+        # candidates), except the rows come from the documented seed list instead
+        # of a live arm. Like the per-run overlay it is never applied to an
+        # explicit phases_path (reference-floor runs keep their own deck).
+        if self.run_dir is not None:
+            seed = self._load_seed_overlay()
+            if seed:
+                merged = self._merge_overlay_entries(
+                    phases, seed, origin_label="seed_overlay", src="seed")
+                if merged:
+                    print(f"[overlay] merged {merged} seed phase(s) from "
+                          f"phases.seed.overlay.yaml (D2 list, phases.yaml untouched)")
+        return phases
 
+    def _merge_overlay_entries(
+        self,
+        phases: List[Dict[str, Any]],
+        entries: List[Dict[str, Any]],
+        origin_label: str,
+        src: str,
+    ) -> int:
+        """Append overlay entries to `phases`, keyed on a stable phase_id.
+
+        A phase_id collision (in the deck, a prior overlay layer, or within the
+        entries themselves) would make `phases.phase_id UNIQUE` reject the
+        overlay row, so the candidate would silently never run -- collisions are
+        skipped loudly instead. Every merged row is tagged with `origin` and
+        `overlay_run_id` so downstream policy can treat these as measurement-first
+        candidates regardless of which overlay they came from.
+        """
         seen = {str(p.get("phase_id", "")) for p in phases}
         merged = 0
-        for entry in overlay:
+        for entry in entries:
             entry = dict(entry or {})
             phase_id = str(entry.get("phase_id", ""))
             if not phase_id or phase_id in seen:
-                # A phase_id collision would make `phases.phase_id UNIQUE` reject
-                # the overlay row, so the candidate would silently never run.
                 continue
             seen.add(phase_id)
-            entry["origin"] = entry.get("origin") or "overlay"
-            entry["overlay_run_id"] = run_id
+            entry["origin"] = entry.get("origin") or origin_label
+            entry.setdefault("overlay_run_id", src)
             phases.append(entry)
             merged += 1
+        return merged
 
-        if merged:
-            print(f"[overlay] merged {merged} candidate phase(s) from "
-                  f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
-        return phases
+    def _load_seed_overlay(self) -> List[Dict[str, Any]]:
+        """This project's persistent seed overlay, or [] when there is none.
+
+        `gfx90c_results/overlays/phases.seed.overlay.yaml` is curated by hand /
+        by the D2 tooling and applied to every native run. The per-run overlay
+        path is not used because the seed is not tied to a single run_id.
+        """
+        path = self.base_dir / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        if not path.exists():
+            return []
+        try:
+            with open(path) as f:
+                payload = yaml.safe_load(f) or {}
+            return payload.get("phases", []) or []
+        except Exception as e:
+            print(f"[overlay] seed overlay unreadable, ignoring: {e}")
+            return []
 
     def _load_run_overlay(self, run_id: str) -> List[Dict[str, Any]]:
         """This run's overlay phases, or [] when there is none.
@@ -1318,10 +1384,20 @@ class TensileDriver:
                 # deck would re-benchmark settled phases on every run, which is the
                 # opposite of what the skip is for.
                 from_overlay = bool(phase.get("overlay_run_id")) or \
-                    str(phase.get("origin") or "") == "overlay"
+                    str(phase.get("origin") or "") in ("overlay", "seed_overlay")
                 bypass_identical_skip = (
                     from_overlay and self.agent is not None
                     and not self.agent.skip_mutation_arm())
+                if (phase.get("overlay_run_id") == "seed"
+                        and self.run_dir is not None
+                        and self.registry.has_run_benchmarked(
+                            self.run_dir.name, fp)):
+                    # A static seed must not re-benchmark itself every
+                    # iteration. The seed rows are measurement-first *once per
+                    # run*: after this run has produced a completed record for
+                    # the fp, the seed falls back to the ordinary
+                    # identical-fp skip for the rest of the run.
+                    bypass_identical_skip = False
 
                 # Policy check: should_run
                 allowed, reason = should_run(

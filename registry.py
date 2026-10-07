@@ -476,6 +476,37 @@ class SQLiteRegistry:
                 return True
         return False
 
+    def has_run_benchmarked(self, run_id: str, fp: str) -> bool:
+        """Check if a specific run already produced a completed record for fp.
+
+        Scoped to the seed-overlay semantics: a seed phase is measured once per
+        run and then stays out of the identical-fp bypass for the rest of that
+        run (a static seed must not re-benchmark itself on every iteration). A
+        failed/interrupted attempt does not count as passed, so it retries.
+        """
+        if not fp or not run_id:
+            return False
+        with self._get_conn() as conn:
+            try:
+                rows = conn.execute(
+                    "SELECT data FROM records WHERE run_id = ? "
+                    "AND json_extract(data, '$.fp') = ?",
+                    (run_id, fp)
+                ).fetchall()
+            except sqlite3.OperationalError:
+                rows = conn.execute(
+                    "SELECT data FROM records WHERE run_id = ?",
+                    (run_id,)
+                ).fetchall()
+        for row in rows:
+            r = json.loads(row["data"])
+            if r.get("status") in ["PASS", "completed", "success"] or (
+                isinstance(r.get("result"), dict)
+                and r.get("result", {}).get("status") in ["PASS", "completed", "success"]
+            ):
+                return True
+        return False
+
     # ------------------------------------------------------------------
     # Proposals ledger (Option H Phase 1)
     #

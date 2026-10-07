@@ -154,6 +154,36 @@ def cell_key(family: object, shape: object) -> "str | None":
     return f"{fam}:{side}"
 
 
+def shipped_cells() -> Dict[str, Dict[str, str]]:
+    """The canonical gfx90c "shape x dtype" coverage grid (the coverage-parity rule).
+
+    This is the *single* definition of what the produced gfx90c TensileLibrary
+    may address: the exact cell set the shipped gfx900 library addresses today.
+
+    Cell = (family, cube shape); family implies the Tensile DataType char via
+    :data:`FAMILY_DTYPE_CHAR` (the shipped per-family `.dat` are keyed the same
+    way). Returns ``{"SS:256": {"family": "SS", "shape": "256x256x256",
+    "side": "256", "dtype": "S"}, ...}``. The rule itself (both clauses) is
+    stated once in `knowledge_base.md` §6.1 and enforced by
+    `check_library_parity.py` + `library_parity.parity_report`.
+    """
+    return {
+        f"{fam}:{side}": {
+            "family": fam,
+            "shape": f"{side}x{side}x{side}",
+            "side": str(side),
+            "dtype": FAMILY_DTYPE_CHAR[fam],
+        }
+        for fam in FAMILY_SHAPES
+        for side in FAMILY_SHAPES[fam]
+    }
+
+
+def shipped_cell_set() -> "Set[Tuple[str, str]]":
+    """The coverage-parity grid as a set of ``(family, "NxNxN")`` tuples."""
+    return {(v["family"], v["shape"]) for v in shipped_cells().values()}
+
+
 def kernel_key(cfg: object) -> str:
     """Canonical kernel-identity key (config knobs) for drill-down citation.
 

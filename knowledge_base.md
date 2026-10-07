@@ -266,6 +266,47 @@ Translation constraint:
   natively. The tuning intel carried across is the *lever* knowledge (section 7), not
   the binaries or the per-ISA tiles.
 
+### 6.1 Coverage-parity contract (THE rule)
+
+> **The `tensilelibrary.dat` this pipeline produces must map EXACTLY to the
+> shipped gfx900 TensileLibrary in the (shape, dtype) combinations addressed —
+> no contraction, no extension.** "Addressed" cells are the canonical contract
+> grid `gfx90c_common.shipped_cells()`: per family, the cube shapes in
+> `FAMILY_SHAPES`, family → dtype char via `FAMILY_DTYPE_CHAR` (38 cells, the
+> same deck the acceptance report classifies RED/ORANGE/GREEN against).
+
+Two clauses, both enforced CPU-only:
+
+- **No contraction** — every shipped-addressed (family, shape, dtype) cell must
+  have ≥ 1 gfx90c phase in the produced library. A shipped cell with no native
+  kernel is a coverage hole that can never win its cell.
+- **No extension** — no phase may address a cell the shipped library does not.
+  Candidate/probe/consolidation shapes stay inside the grid; anything else must
+  be justified as a deliberate footprint widening and requires an explicit
+  decision, because an extended library would A/B against a floor that never
+  ships it.
+
+Enforcement (the rule has one home here; every pointer below is a mechanical
+check, never a restatement):
+
+- `check_library_parity.py` — grades `phases.yaml` + current overlays (deck +
+  seed, plus a run's overlay via `--run-id`) against the grid; exit 1 on
+  divergence. This is the *starter* gate for any agent or human editing the
+  deck or adding candidates.
+- `port_tensile.py --preflight` — the library-parity verdict is one of the
+  Phase-0 checks (non-fatal, like the rest of preflight).
+- `consolidate.py all --commit` — refuses to install a consolidated deck whose
+  cell set diverges from the grid.
+- `tests/test_library_parity.py` — pins the committed `phases.yaml` + seed
+  overlay to exact parity (38/38 today), so a future D1-style edit that breaks
+  the grid fails CI before any GPU time is spent.
+
+The grid's single source is `gfx90c_common.shipped_cells()`; family keys,
+shape lists and dtype chars live in `gfx90c_common.FAMILY_*` and are imported,
+never transcribed, anywhere else. Non-cube probe shapes (e.g. `32x4096x1`)
+have no cell and are excluded from the check by construction — they are
+reported separately, never counted as coverage.
+
 ---
 
 ## 7. Kernel Levers That Matter on gfx90c

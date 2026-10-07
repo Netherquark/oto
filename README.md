@@ -243,6 +243,18 @@ None of these runs a benchmark, so they are safe outside a TTY.
 python3 check_candidates.py --quiet
 python3 check_candidates.py --family ZZ --json out.json
 
+# Enforcement of the coverage-parity rule (knowledge_base.md §6.1): the produced
+# tensilelibrary.dat must address EXACTLY the shipped gfx900 cell grid (38 cells)
+# -- no contraction, no extension. Exits non-zero on divergence.
+python3 check_library_parity.py --quiet          # deck + seed (+ --run-id's overlay)
+python3 check_library_parity.py --json out.json  # machine-readable verdict
+
+# Ground-truth candidate machinery for agents (CPU-only). Builds the per-kernel
+# measurement DB and the deck-vs-floor-vs-all-time regression matrix (median
+# basis, per-family shipped grid). See harness/README.md for the runbook.
+python3 -m harness.kernel_db --base-dir . --rebuild
+python3 -m harness.regression_matrix --base-dir .
+
 # Ask Tensile itself to generate and compile kernels for every phase, and report
 # any reject() reason. Proves solution generation and kernel resource legality --
 # it is NOT a complete code-object or library build.

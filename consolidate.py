@@ -706,10 +706,30 @@ def cmd_all(args) -> int:
           f"csvs={lock['csvs_copied']}  chain={lock['chain']}")
     print(f"  registry  : rows {dbres['before']} -> {dbres['after']}  "
           f"integrity={dbres['integrity']}")
+
+    # Coverage-parity rule (knowledge_base.md §6.1): the consolidated deck
+    # (which becomes the produced TensileLibrary) must address exactly the
+    # shipped gfx900 cell grid. Refuse to install a deck that diverges.
+    try:
+        from library_parity import parity_report
+        pr = parity_report(sel["phases"])
+        parity_ok = pr["parity_ok"]
+        print(f"  library parity: {'OK' if parity_ok else 'FAIL'} "
+              f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
+              f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
+    except Exception as exc:  # pragma: no cover
+        parity_ok = False
+        print(f"  library parity: FAIL (checker error: {exc})")
+
     print("\n" + explain_archive(base))
     if not args.commit:
         print("dry run; nothing installed. re-run with --commit")
-        return 0
+        return 0 if parity_ok else 1
+    if not parity_ok:
+        print("REFUSED to install: consolidated deck breaks TensileLibrary "
+              "coverage parity vs the shipped gfx900 grid "
+              "(knowledge_base.md §6.1). Fix the deck, then re-run --commit.")
+        return 1
     install(base, stage, sel, lock, dbres, stamp)
     print(f"installed. live floor = {lock['run_id']}")
     return 0

@@ -427,6 +427,38 @@ legal_slow, 21 pending**.
   sweep's legal rate from 88% to 100% and prunes ~9% of draws — measured
   CPU-only, all 7 families still propose.
 
+**The loop itself was never the bottleneck — it is captured by its own
+convergence test.** `agent.converged` (agent.py:126) requires **no below-ceiling
+cells** plus ≥3 configs/cell, ≥6 seeds/cell, CV ≤15%. SS sits at ~1–10% of the
+1613 ceiling and CC at ~20–28%, so `below_ceiling_cells` is non-empty on every
+pass; convergence can never fire and the loop always ends on **"Budget
+exhausted"** (iterations = budget) rather than a clean stop. Run 55 made 9
+full passes (phase dirs per iteration: 134/62/60/40/25/33/22/21/18, 444 started
+/ 417 completed / 27 failed / 261 identical-fp-skipped) and its final pass
+over-ran the budget by exactly the 21+2 tail.
+
+**The regression that made the *next* night do nothing is run_20261007_012721
+(01:27→01:29, status `skipped`, 0 phase dirs, 0 configs, 0 proposals).** Its
+29 `general` records are *all* `status: skipped / reason:
+identical_fp_already_passed` — every deck row's fp was already recorded by
+run 55's era, so `run_phases` measured nothing. Chain: empty analytics →
+`converged([])` returns False ("No analytics data available", never True) →
+`harvest({})` yields zero winners → `mutate_and_feed` emits zero candidates →
+"No valid mutations generated, stopping" (port_tensile.py:2060). A restart with
+nothing new to do is a **silent no-op night**, not a harvest failure. Three
+fixes land to make the next overnight run productive regardless:
+
+1. **D1 deck bootstrap** (§8 addendum): 11 provenance rows whose fp has never
+   been recorded on a gfx90c registry → guaranteed first-night measurements.
+2. **Seed probe bypass**: `run_phases` gates the identical-fp skip for seed
+   rows on `overlay_run_id == "seed"` + `has_run_benchmarked(run_id, fp)`, so
+   N1–N5 always re-benchmark once per run (fresh variance; also un-blocks the
+   mutation arm, which needs analytics to fire).
+3. **Spawn the arm from seed analytics**: once probes re-measure, `harvest`
+   picks a per-cell winner from *that run's* data and the mutation arm has a
+   parent to mutate — the loop can actually run instead of dying at
+   mutate-and-feed.
+
 ### 8.2 The report's SS verdicts were dtype-polluted
 
 `acceptance_report.json` assigns a phase to a cell from the phase-id family
@@ -529,19 +561,20 @@ them.
 | N3 | SS 2048 | `128x128x8/8x8/VW4/GSU2` | PASS | GSU axis untried on SS; −2.0% left |
 | N4 | HH 1024 | `128x128x32/8x8/VW8/DU32` | PASS | DU32 never tried; floor leaves −7.0% |
 | N5 | CC 1024/2048 | `64x64x16/4x4/VW2/DU16` | PASS | current best is DU8; −3.9% left |
-| N6 | CC 256 | `32x32x8/4x4/VW2/DU8` | PASS | small-tile occupancy probe; −12.1% left |
-| N7 | DD 192 | `32x32x8/4x4/VW2/DU8` | PASS | C3 tape, re-included for the sweep |
+| N6 | CC 256 | `32x32x8/4x4/VW2/DU8` | PASS* | *fingerprint-identical to the CC 192 winner (`phase_auto_0_cc_192x192x192_2`) and subsumed by the seed overlay's winner row — removed from the seed as no-signal |
+| N7 | DD 192 | `32x32x8/4x4/VW2/DU8` | PASS* | *fingerprint-identical to the DD 1365 winner (`phase_auto_0_dd_1365x1365x1365_7`) — same, removed |
 | S1 | SS 768/1000/1365/2048 | **spoof-steal**: ship floor's `MT128x128x8/8x8/VW4/DU8` config as native (gfx900-ISA code object is allowed on this APU; this is literally what the floor arm runs) | PASS | closes the −4…−7% tail gap without a new config |
 | S2 | HH 1024/2048 | spoof-steal `MT128x128x16/8x8/VW8/DU16` | PASS | closes −6…−7% |
 | S3 | CC 256/1024 | spoof-steal `MT64x64x8/4x4/VW2/DU8` (+ `LdsPadA=2` variant) | PASS | closes −12/−4% |
 | — | HH GSU2, SS `96x96x8/6x6/VW2` | — | **FAIL** | half assembly blocks GSU2 (Free0Multiple); 96-tile VW2 non-divisible — do not re-propose |
 
-**Order of work (TTY only).** (1) fold the §8.4 proven winners into the deck —
-pure re-use, no GPU time; (2) S1–S3 spoof-steal — highest expected value, no
-rest of the tuning loop required; (3) N1/N4/N6 only if any tail gap survives.
-The 21 pending iteration-9 phases should be harvested first: they are already
-written to the overlay and carry the co-occurrence-gated sampler from the same
-fix.
+**Order of work (TTY only).** (1) run the current deck against the seed
+overlay (§8 addendum, D2b — already implemented, nothing TTY-specific beyond
+starting a run) so the 11 proven winners re-benchmark once against the live
+GPU; (2) S1–S3 spoof-steal — highest expected value, tuned for gfx90c per the
+D3 caveat, no rest of the tuning loop required; (3) N1/N4/N5 only if any tail
+gap survives. Revisit D2 (the 21 pending iteration-9 phases) once the mutation
+arm's per-run overlay behaviour is confirmed stable.
 
 ### 8.7 Accuracy notes
 
@@ -574,6 +607,22 @@ two repeats — repeats are 8 inside every phase (`NumBenchmarks: 8`).
   LDS ⇒ 2–4 resident wg/CU; plus <7 CUs of work at small shapes). The `wg/cu`
   values printed by `check_candidates.py` (1024–2048) are register-slot counts,
   not occupancy, and must not be quoted as such.
+- **2026-10-07** — The 2026-10-07 run (3 mutations/10 iterations via both the
+  CLI flags and the interactive entry) executed **nothing**: the mutation arm is
+  measurement-guided (it can only mutate winners harvested from the *current*
+  run's CSVs), the deck's phases were all `identical_fp_already_passed` by
+  design, so 0 measurements → empty harvest → `converged([])` returns False → no
+  mutations → stop at iteration 1. Not a regression; it is the skip/harvest
+  contract behaving exactly. This is precisely what D2b's measure-once override
+  exists for.
+- **2026-10-07 — D2b seed overlay implemented and verified.** 16 rows (11
+  winners with their shape grids + probes N1–N5) in
+  `phases.seed.overlay.yaml`; `has_run_benchmarked(run_id, fp)` restores and
+  extends the registry (the identical-fp method body was accidentally deleted
+  while scoping it — restored under test), and `run_phases` gates the seed
+  bypass to the first pass of a run (16/16 + curated each executed exactly once
+  across 3 iterations in the dry harness). Full suite 585 passed (+4 seed
+  tests), 1 skipped, 27 subtests.
 
 ---
 
@@ -613,3 +662,203 @@ absent from the native arm and why ZZ decks are gated so hard. Secondary noise
 in `stderr.log` (Python 3.14 `loky` `semlock` cleanup warnings) is client-side
 and did not contribute. No winners are hidden here; the run is best treated as
 a live confirmation of the occupancy gate's §5.7 record.
+
+---
+
+## 11. All-run best-kernel-pattern analysis (2026-10-07, kernel_db sweep)
+
+Best native kernel per cell across every measured run, from `kernel_db.json`
+(rows aggregated gflops_median; `ss/hh/cc/dd/zz`-prefixed phases = native
+arms, including the auto run). Two findings that are load-bearing for tuning:
+
+| size → best native kernel (MT/tt/vw/du/gsu) | 256 | 512 | 768 | 1000–1024 | 2048 | 4096 |
+|---|---|---|---|---|---|---|
+| **SS** | MT96x96/6x6/vw2/du16 | MT128x128/8x8/vw4/du8 | same | same | same | same |
+| **HH** | MT32x64/4x4/vw4/du16 | MT128x128/8x8/vw8/du16 | same | same | same | same |
+| **CC** | MT64x64/4x4/vw2/du8 | same | same | same | same | same |
+| **ZCZ 128/192/256/512** | MT32x32/2x2/vw1/du16 | MT32x32/2x2/vw1/du8(16) | same | same | MT64x32/4x2@1024 | — |
+| **DD** | MT64x64/4x4/vw2/du8 | MT32x32/2x2/vw1/du8 | MT32x32/2x2/vw1/du8 | MT64x64/4x4/vw2 (1024+, 1024=64x32) | MT64x64/4x4/vw1 | — |
+
+Observations:
+
+1. **One tile per family covers the whole range.** SS is won by the SAME
+   MT128x128/tt8x8/vw4/du8 kernel at every size 768→4096 (187–195 rows, best
+   kernel unchanged); the only size that wants a different tile is the small end
+   (256 → MT96x96/vw2/du16, the proven §8.4 winner). Widening/narrowing the tile
+   per-cell (N1/N2 probes) is therefore **not** predicted to matter anywhere
+   except the 512–768 knee and the small end.
+2. **HH has a genuine size-dependent winner switch at the 256/512 boundary**
+   (MT32x64/tt4x4/vw4/du16 → MT128x128/tt8x8/vw8/du16) — that is why HH 256 is a
+   win and HH 1024/2048 stay losses: the floor's HH winner at the large cells is
+   the same wide kernel the deck ships, and the residual is best-seed-level.
+3. **CC is solved by exactly one pattern** (MT64x64/tt4x4/vw2/du8) at every size
+   except 192 (MT32x32). The N5/N6 probes add DU/tile axes this sweep says are
+   already settled; only CC 256's −12% tail gap (§8.2) is worth a probe.
+4. **ZZ/DD winners are spread** across Mt32x32 tt2x2 vw1 du8/du16 and MT64x64 —
+   multiple patterns within 2%, so no single "desert" tile exists for the double
+   family; the ≲100 GF FP64 ceiling caps any further gain.
+5. **The reference-arm rows ("S/H/C/Z/D"-prefixed, spoof/reference runs) sit
+   LOW on the same cells** (e.g. SS 512 reference 577 vs native 771) — a
+   discrepancy with the §8.2 tail-gap verdicts that must be reconciled per-cell
+   per-dtype (cells_v2) before any §11 number is quoted in a report. The
+   reference rows are the raw gfx900-spoof bests discussed in §8.6, not native
+   re-measures.
+
+Consequence for the tuning loop: the load-bearing knobs are **size-K
+classified tiles** (small-end tile per family, wide tile above), and the only
+unshipped real deficits are the best-seed tails (§8.3) — which the S1–S3
+spoof-steal rows and the seed overlay (§8 addendum, D2b) target directly.
+
+---
+
+## 12. Programmatic regression matrix: deck vs ALL-time best (2026-10-07)
+
+`gfx90c_results/analysis/regression_matrix.json` (regenerated by
+`harness/regression_matrix.py` from `gfx90c_results/analysis/kernel_db.json`,
+which `harness/kernel_db.py` rebuilds byte-identically from the run corpus)
+compares, per cell `(family, shape)` of the shipped gfx900 grid
+(`gfx90c_common.shipped_cell_set`, 38 cells — HH_HPA/HS_HPA are their own
+cells, unlike the earlier dtype-collapsed view), the current **40-row deck's
+best median** with the **all-time best measured median** across every native
+run (`run_20260920_235815` … `run_20261006_122020`) and the gfx900 spoof floor
+(`gfx900_ref_locked_52149f315d`), ranked by median GFlops (best-seed as
+tiebreak only — §8.3 showed the `gflops_best` basis is tail-prone: e.g. the
+D:192 all-time *best* 41.96 came from a kernel with median 17.67).
+
+**Result:** **38 cells, 1 material median finding** — the deck ships the
+median-best kernel for every cell except HH_HPA:4096, where the stranded
+iteration-9 overlay candidate `phase_auto_1_hh_hpa_2048x2048x2048_4`
+(measured in `run_20261006_122020`, not in the deck) sits **−4.0%** above the
+deck's `MT64x128/4x8/VW4` at the median (1411 vs 1355). So the reuse-loss hole
+§8.4 quantified (10 kernels absent from the deck) is closed for the 2026-10-06
+mesh — with exactly one carry-over candidate left to ship (probe N7 below).
+The best-seed-only gaps (D:192, H:256, Z:512 …) wash out at the median (§8.3).
+
+**Deck-vs-floor residuals (median basis, the real remaining signal):**
+
+| cell | deck best (MT/tt/vw/du) | floor best (MT/tt/vw/du) | gap | configs |
+|---|---|---|---|---|
+| C:256 | 188.1 (64x64/4x4/vw2/du8) | 214.0 (64x64/4x4/vw2/du8) | −12.1% | **identical** |
+| H:1024 | 2367.9 (128x128/8x8/vw8/du16) | 2546.7 (128x128/8x8/vw8/du16) | −7.0% | **identical** |
+| S:1365 | 998.7 (128x128/8x8/vw4/du8) | 1073.0 (128x128/8x8/vw4/du8) | −6.9% | **identical** |
+| H:2048 | 2494.2 (128x128/8x8/vw8/du16) | 2658.0 (128x128/8x8/vw8/du16) | −6.2% | **identical** |
+| S:768 | 1046.5 (128x128/8x8/vw4/du8) | 1094.9 (128x128/8x8/vw4/du8) | −4.4% | **identical** |
+| S:1000 | 1029.7 (128x128/8x8/vw4/du8) | 1075.2 (128x128/8x8/vw4/du8) | −4.2% | **identical** |
+| C:1024 | 289.7 (64x64/4x4/vw2/du8) | 301.4 (64x64/4x4/vw2/du8) | −3.9% | **identical** |
+| S:512 | 771.9 (**128x128/8x8/vw2**/du8) | 801.6 (**128x128/8x8/vw4**/du8) | −3.7% | **vw differs** |
+| S:2048 | 1098.2 (128x128/8x8/vw4/du8) | 1120.7 (128x128/8x8/vw4/du8) | −2.0% | **identical** |
+
+Reading:
+
+1. **8 of the 9 floor-loss cells benchmark the exact same kernel the deck
+   ships.** The residual is *cross-run variance at the median*, not a missing
+   knob or an occupancy effect — there is no configuration difference to tune.
+   The only remaining experiment on these cells is a **re-measure**: carry the
+   floor's kernel (which the deck already ships) in one run and see whether the
+   deficit reproduces. Whatever it re-reports is the true per-cell floor gap.
+   (S:2048 sits right on the −2% band edge; treat it identically.)
+2. **S:512 is the single cell with a real config difference**: floor
+   `MT128x128/8x8/VW4/DU8/GSU1` (801.6) vs the deck's `MT128x128/8x8/VW2/DU8`
+   (771.9). This is the one knobs-level target on the whole board — a
+   vw2→vw4 bump at SS 512. It joins §8.6's S-routes as a concrete candidate.
+3. **The genuinely strong wins confirm the deck is sized right**
+   (median-basis, per-family grid): **16 wins (>2%), 13 ties, 9 losses** vs the
+   floor; S:256 +232%, S:1024 +3.2%, H:512 +12.6%, H:2048–… , Z:* +12…+243%,
+   D:* ≈ parity (only 256/512/1365 at >+2%), C:192/512/2048 parity, and every
+   HH_HPA/HS_HPA cell ≥ parity.
+4. **One material median finding to ship, not to chase**: HH_HPA:4096's
+   stranded overlay winner (`phase_auto_1_hh_hpa_2048x2048x2048_4`, −4.0% at
+   the median over the deck's shipped kernel) is the only non-deck native
+   kernel that beats the deck by >2% on any cell. It was accepted in the
+   iteration-9 overlay and left un-shipped; add it as a D-row (probe N7) in
+   the next deck edit.
+
+**HH 256 reconciled (acceptance-report "LOSS" vs §12 "WIN" — a basis flip, not
+a contradiction).** The acceptance-report scores best-seed per cell: floor
+`phase_hh_gfx900_Ailk_Bljk_mt128-tt8-vw2-du8` measured best **303.6**, vs native
+`phase_auto_0_hh_256x256x256_4` best 210.5 → "−31% LOSS". But that floor kernel
+has a median of only **171.3** (its best seed is +77% over its own median), i.e.
+*below* the native kernel's median. By median, the floor's best H:256 kernel is
+`Ailk_Bjlk MT32x32/4x4/VW4/DU16` (201.5) and the deck's `MT32x64/4x4/DU16`
+wins 206.5 (+2.5%, §1's table). One high single-seed on a wide=VW2 variant is
+not a config signal — this is the §8.3 tail verdict on one cell. Same reasoning
+applies to the CC 192 "43.2 GFlops" (§8.4) vs CC 512 "318" figures: both are
+complex medians at different shapes (43 @ 192 → 318 @ 512 → 290 @ 1024), so no
+unit inconsistency — complex kernels are simply a factor ~7 below the f32
+peaks at equal size.
+
+Recommended next TTY run (all are measured-once probes, not deck edits): carry
+the 5 seed probes (N1–N5) **plus a sixth probe N6 = the SS:512 vw4 floor
+kernel** (`Ailk_Bjlk, MT128x128, tt8x8, VW4, DU8, GSU1`) and keep one
+re-measure pass of the 8 config-identical loss kernels — that isolates
+variance from signal on every open cell in a single overnight. Deck-side, ship
+the stranded HH_HPA:4096 winner **N7 = `phase_auto_1_hh_hpa_2048x2048x2048_4`**
+as a D-row (it is already measured at −4.0% over the shipped kernel; only the
+deck edit + one settle run are left).
+
+**Occupancy gate (`scheduler.occupancy_feasible`), pre-run CPU check:** all
+40 deck rows + 5 seed probes pass (0 failures); modelled register-file
+workgroups/CU span 512–8192 — every row is launchable, so the overnight run
+has no gate-blocked rows to trip `spawn_arms` at creation. (wg/CU here is the
+register-file metric, not Gazebo occupancy; the low ≈3 figures elsewhere are
+the LDS-bound residency view, see `results.md`/`knowledge_base.md`.)
+
+---
+
+## 8 (addendum) Decisions (2026-10-07) and their statuses
+
+- **D1 — fold the §8.4 proven winners into the deck. IMPLEMENTED 2026-10-07.**
+  The user explicitly approved it ("implement d1 from potential configs") after
+  the earlier decline that spawned D2b. The 11 proven winners from §8.4
+  (`phase_auto_{0,2}_*` URL rows + the CC 192/CC 256/HH_HPA 512/HS_HPA 512
+  deck-born winners) are appended to `phases.yaml` as curated rows — `Ailk_Bjlk`
+  pattern, `contraction_pattern` verbatim from source, `fp =
+  fingerprint_config(config)` (self-consistency verified), `NumBenchmarks: 8`,
+  `ScheduleName: isa`. The deck is now **40 rows** (29 archived + 11 D1).
+  `check_candidates.py` validates all 40 (0 skipped, 0 illegal, exit 0).
+  **Measure-once bootstrap:** D1 rows' fp was never recorded historically (run-55
+  registry fps came from configs carrying the extra `WorkGroup`/`GlobalLoadVectorWidthA/B`/
+  `AssertFree0ElementMultiple` keys), so the next run benchmarks each D1 row once
+  and then settles — exactly the surviving-arm behaviour D2b was created for.
+  `tests/test_consolidate.py::TestDeckIsVerbatim` was adapted: archive-sourced
+  rows stay byte-identical to the archived deck; D1 rows are pinned by phase_id
+  shape and the fp==fingerprint_config(config) contract. Suite: 603 passed,
+  1 skipped, 27 subtests.
+- **D2 — carry the 21 unmeasured iteration-9 phases into the next run's
+  overlay.** The mutation arm spills candidates to a *per-run, write-only*
+  overlay (`overlays/phases.<run_id>.overlay.yaml`); the last generation
+  (21 configs, gated by the co-occurrence fix) was spilled after the budget
+  expired, so those 21 were never benchmarked. **Confirmed by registry:**
+  `phases.run_20261006_122020.overlay.yaml` holds 23 iteration-9 entries; the 2
+  non-pending are `legal_rejected` at creation, the other 21 are stranded
+  (`_load_run_overlay` reads only the *active* run's overlay, port_tensile.py:473).
+  Cross-run continuation is by deck-consolidation only (D1 folded the winners);
+  the strand is therefore superseded, not lost. Status: **open** (rows remain in
+  the run dir + registry).
+- **D2b (user-sanctioned replacement for D1+D2) — persistent seed overlay,
+  IMPLEMENTED 2026-10-07, now carrying N1–N5 only.** A static, run-independent
+  overlay `gfx90c_results/overlays/phases.seed.overlay.yaml` is merged by
+  `load_phases_manifest` on every run (origin `seed_overlay`, tagged
+  `overlay_run_id: seed`, `phases.yaml` provably untouched). Post-D1 it carries
+  **5 probe rows (N1–N5)** — the 11 winners now live in the deck (§D1 above),
+  so keeping them in the seed as well would make them re-measure twice.
+  `port_tensile.run_phases` treats seed rows as **measure-once-per-run**: the
+  iteration-1 first pass re-benchmarks each row against the live GPU (this is
+  the intended behaviour so the arm re-derives them), after which
+  `registry.has_run_benchmarked(run_id, fp)` gates the identical-fp bypass off
+  for the rest of that run — a static seed never re-fires on every iteration
+  (verified: 16/16 pre-D1 seed + curated, each executed exactly once across 2
+  iterations in the D1 dry run). Two planned probe rows were pruned during
+  validation: N6/N7 v2 were *fingerprint-identical* to the CC 192 and DD 1365
+  winners (same MT/tt/vw/du, different shapes only) and added no signal.
+  Runtime: 603 passed, 1 skipped (+4 new tests in `tests/test_phase1_integration.py`).
+- **D3 — S1–S3 spoof-steal rows (§8.6) as native deck entries.** Status:
+  **proposed, not implemented.** Caveat recorded with the proposal: do **not**
+  ship the gfx900 code object raw-textured as a "win." S1–S3 must be a gfx90c
+  *tuned* re-compile of the winning gfx900-ISA pattern — same MT/tt/vw/du as
+  the floor's best (MT128x128x8/8x8/VW4/DU8 for SS, MT128x128x16/8x8/VW8/DU16
+  for HH, MT64x64x8/4x4/VW2/DU8 for CC) but re-targeted and documented, since
+  gfx900 (Vega10, 64 CUs, 8 CU's worth of LDS per partition) and gfx90c
+  (Cezanne, 7 CUs) have starkly different residency economics. The seed overlay
+  gives a second, cheaper way to test the same pixel: its N1–N4 probes are the
+  gfx90c-native expressions of the small-end tile hypothesis.

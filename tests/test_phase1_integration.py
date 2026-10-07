@@ -66,6 +66,12 @@ class Harness(unittest.TestCase):
         (d / f"phases.{run_id}.overlay.yaml").write_text(
             yaml.safe_dump({"run_id": run_id, "phases": phases}))
 
+    def write_seed_overlay(self, phases):
+        d = self.tmp / "gfx90c_results" / "overlays"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "phases.seed.overlay.yaml").write_text(
+            yaml.safe_dump({"run_id": "seed", "phases": phases}))
+
     def read_phases_yaml(self):
         return yaml.safe_load((self.tmp / "phases.yaml").read_text())
 
@@ -129,6 +135,23 @@ class OverlayMergeTests(Harness):
         run_id = self._driver("new_run").run_dir.name
         phases = self._driver(run_id).load_phases_manifest()
         self.assertNotIn("phase_auto_old", [p["phase_id"] for p in phases])
+
+    def test_seed_overlay_is_merged_and_tagged(self):
+        self.write_seed_overlay([
+            {"phase_id": "phase_seed_0", "fp": "fpS", "config": {}}])
+        run_id = self._driver("run_seed_merge").run_dir.name
+        phases = self._driver(run_id).load_phases_manifest()
+        merged = [p for p in phases if p["phase_id"] == "phase_seed_0"]
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["origin"], "seed_overlay")
+        self.assertEqual(merged[0]["overlay_run_id"], "seed")
+        self.assertIn("phase_curated_0", [p["phase_id"] for p in phases])
+        self.assertEqual(len(self.read_phases_yaml()), 1)
+
+    def test_seed_overlay_absent_means_deck_alone(self):
+        run_id = self._driver("run_no_seed").run_dir.name
+        phases = self._driver(run_id).load_phases_manifest()
+        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
 
     def test_no_run_dir_means_no_overlay(self):
         self.write_overlay("anything", [
@@ -475,6 +498,51 @@ class SkipBypassTests(Harness):
             opt_in_identical_skip=True)
         self.assertFalse(allowed)
         self.assertEqual(reason, "identical_fp_already_passed")
+
+    def test_seed_row_is_measured_once_per_run_then_skipped(self):
+        """A static seed must not re-benchmark itself every iteration."""
+        driver = self._driver("run_seed_bypass")
+        self.write_seed_overlay([
+            {"phase_id": "phase_seed_1", "label": "seed1", "fp": "fpSeed1",
+             "shapes": ["256x256x256"], "config": {"Architecture": "gfx90c",
+                                                  "DataType": "S"},
+             "origin": "seed"}])
+        calls = []
+
+        def fake_execute(phase, rundir):
+            calls.append(phase["phase_id"])
+            # A completed record lands in the registry, exactly like a real run.
+            self.registry.append_record(
+                {"fp": phase["fp"], "phase_id": phase["phase_id"],
+                 "status": "completed",
+                 "result": {"status": "success", "returncode": 0,
+                            "benchmark_path": "x", "csv_count": 1}},
+                run_id=driver.run_dir.name)
+            return {"status": "completed", "phase_id": phase["phase_id"]}
+
+        driver.execute_phase = fake_execute
+        driver._start_live_status = lambda *a, **k: None
+        driver._stop_live_status = lambda *a, **k: None
+        driver._read_key = lambda block=False, **k: None
+        driver.load_phases_manifest()
+        driver.run_phases()
+        self.assertIn("phase_seed_1", calls)
+        driver.load_phases_manifest()
+        driver.run_phases()
+        # Second pass: identical fp already passed for this run -> ordinary skip.
+        self.assertEqual(calls.count("phase_seed_1"), 1)
+
+    def test_has_run_benchmarked_scopes_to_the_run(self):
+        self.registry.append_record(
+            {"fp": "fpHas", "status": "completed",
+             "result": {"status": "success"}}, run_id="other_run")
+        self.assertFalse(self.registry.has_run_benchmarked("this_run", "fpHas"))
+        self.registry.append_record(
+            {"fp": "fpHas", "status": "completed",
+             "result": {"status": "success"}}, run_id="this_run")
+        self.assertTrue(self.registry.has_run_benchmarked("this_run", "fpHas"))
+        # A failed attempt does not count as benchmarked.
+        self.assertFalse(self.registry.has_run_benchmarked("fail_run", "fpHas"))
 
 
 # ------------------------------------------------------- outcome write-back
