@@ -9,6 +9,29 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-08 — Generated seed candidate pool (proposal D4) implemented + triage of the short run.**
+  Triage of `run_20261008_005217` (~22 min, 16 phases, 0 proposals): the executed command was the
+  manual one-shot `--stage 3` (`command.txt:19`), not the overnight `--auto` loop (`command.txt:53`);
+  the auto arm also collapses on iteration 1 with "No valid mutations generated, stopping" — the
+  native arm had no novel candidates left. Root gap: not enough proposals, not the deck. Fix =
+  `harness/generate_candidates.py`, which emits a **287-row config→shapes candidate pool**
+  (one row per config; fp is shape-independent and a row carries ALL of its family's in-grid target
+  cells, matching deck semantics): wide (252, ladder tiles × patterns × DepthU 8/16 × GSU × WGM 4),
+  narrow (24, 1-knob neighbours of each cell's deck winner, merged onto the wide row that already
+  measures the fp), auto (2 explicit evidence rows N6/N7 — N6 fingerprint-identical to a wide row),
+  probe (10, off-grid SS 32/64/128 + DD 128 at forced DepthU 4, `graded: false`, structurally disjoint).
+  Parity-safe placement: only the **277 in-grid rows** land in `phases.seed.overlay.yaml` (282 total
+  with N1–N5); the 10 probes live in the timestamped mirror only (`--with-probes` opts them into the
+  seed and breaks `test_seed_only_extends_within_grid` until the rule is amended). Verified CPU-side:
+  unique phase_ids + fps, zero deck/curated-seed fp collisions, full cell coverage, per-row dtype/label/
+  ScheduleName/NumBenchmarks, and all 277 rows pass the real launch-boundary `_write_phase_config`
+  (both CPU gates, 0 refusals). `tests/test_generate_candidates.py` (14) + `tests/test_library_parity.py`
+  (17) green. Mirror: `gfx90c_results/overlays/phases.candidates.20261008_024733.overlay.yaml`.
+  Overnight budget note: deck (40) + seed (282) measure once per run before the loop mutates.
+  Open: ceiling model still %-of-roof for CC/ZZ (§8.6); the three analytics feed gaps
+  (`probe_*` globs ×3, dtype-from-config, `_write_phase_config` forwarding of LdsPadA/B,
+  AssertFree0ElementMultiple, StaggerUStride, StoreCInUnroll) are still unimplemented.
+
 - **2026-10-08 — Coverage-parity rule formalised + ad-hoc /tmp machinery integrated as `harness/`.**
   The produced `tensilelibrary.dat` must map EXACTLY to the shipped gfx900 grid in (shape, dtype)
   cells — no contraction, no extension — canonicalised once in `knowledge_base.md` §6.1, with

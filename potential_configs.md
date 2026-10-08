@@ -836,7 +836,8 @@ the LDS-bound residency view, see `results.md`/`knowledge_base.md`.)
   the strand is therefore superseded, not lost. Status: **open** (rows remain in
   the run dir + registry).
 - **D2b (user-sanctioned replacement for D1+D2) — persistent seed overlay,
-  IMPLEMENTED 2026-10-07, now carrying N1–N5 only.** A static, run-independent
+  IMPLEMENTED 2026-10-07, now carrying N1–N5 + the generated candidate pool
+  (2026-10-08).** A static, run-independent
   overlay `gfx90c_results/overlays/phases.seed.overlay.yaml` is merged by
   `load_phases_manifest` on every run (origin `seed_overlay`, tagged
   `overlay_run_id: seed`, `phases.yaml` provably untouched). Post-D1 it carries
@@ -862,3 +863,43 @@ the LDS-bound residency view, see `results.md`/`knowledge_base.md`.)
   (Cezanne, 7 CUs) have starkly different residency economics. The seed overlay
   gives a second, cheaper way to test the same pixel: its N1–N4 probes are the
   gfx90c-native expressions of the small-end tile hypothesis.
+
+- **D4 — generated seed candidate pool (2026-10-08), IMPLEMENTED.**
+  `harness/generate_candidates.py` emits a 287-row config->shapes candidate
+  pool intended so a single overnight run finally has enough candidates to
+  iterate (the 2026-10-08 short run exposed that the native arm had ~0 novel
+  proposals to make). One row per config (fp is shape-independent; a row
+  carries ALL of its family's in-grid target cells, matching deck semantics),
+  three tiers:
+  - **wide (252)** — redescends the family's ladder tiles x contraction
+    patterns x DepthU (8/16, or the tile's pinned DU) x GSU ∈ {1,(2)} x WGM 4,
+    spanning every in-grid target cell per family;
+  - **narrow (24)** — 1-knob neighbours of each cell's deck winner
+    (NARROW_NEIGHBOURS: MacroTile/ThreadTile/VectorWidth/WorkGroupMapping/
+    GlobalSplitU), merged onto the wide row whose config (fp) already measures
+    them, never duplicated;
+  - **auto (1 standalone + 1 merged)** — evidence-derived explicit rows N6
+    (SS:512 floor-vw4, merged into a wide row) and N7 (HH_HPA:4096
+    128x128x16/8x8/VW4/DU16; standalone because HH_HPA wide patterns are
+    `[:2]` and exclude Ailk_Bjlk);
+  - **probe (10)** — off-grid cells (SS 32/64/128, DD 128) at forced DepthU 4
+    in a *separate* pool (`graded: false`, origin probe_C*, never shipped;
+    structurally disjoint from the in-grid pool by construction).
+  **Parity-correct placement:** only the 277 in-grid rows land in the seed
+  overlay (a §6.1 parity rule pins every overlay row to the shipped grid —
+  `test_seed_only_extends_within_grid` — so `--with-probes` is the explicit
+  opt-in that breaks it until the rule is amended). The 10 probe rows are
+  always preserved in the mirror under a `probes` key.
+  Verified end-to-end CPU-side: unique phase_ids + fps, zero collision with
+  deck/seed fps, per-cell coverage, pool<->probe fp disjointness, and all
+  277 seed rows pass the actual launch-boundary writer `_write_phase_config`
+  (both CPU gates; 0 refusals). Appended to `phases.seed.overlay.yaml`
+  (now 282 rows = 5 curated + 277 generated); standalone mirror preserved at
+  `gfx90c_results/overlays/phases.candidates.20261008_024733.overlay.yaml`
+  (287 rows under `phases`, 10 under `probes`) so after the overnight run the
+  `phase_cand_*` ids can be stripped from the seed file to keep later runs
+  light. `tests/test_library_parity.py`: 17/17 green with the pool in place.
+  Open (unchanged): ceil model still %-of-f32/f64 roof for CC/ZZ (§8.6 note);
+  candidates include a pattern-overlap with deck favourites only via `[:2]`
+  wide patterns — deck's other patterns remain deck-only. Runtime: full suite
+  not re-run; generator unit coverage lives in `tests/test_generate_candidates.py`.
