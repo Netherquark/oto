@@ -630,20 +630,36 @@ Full write-up: `gfx90c_tuning_guide.md` (the tuning cookbook).
 
 ## Option H — Mutator overhaul (formalised, single-shot)
 
-> **Status: Phases 1-3 LANDED (2026-10-05).** `Hplan.3`, `Hplan.4` and
-> `Hplan.5` are implemented and green. Phase 4 (synthesis) is approved in
-> principle but not started; nothing above is superseded.
-> What landed: the append-only `proposals` table and ledger/novelty API (`registry.py`),
-> `mutator.py` (classifier, novelty, negative cache, per-run overlay), the `agent.mutate_and_feed`
-> rewrite that routes candidates to the overlay instead of `phases.yaml`, and
-> `analytics.count_benchmark_rows` as the single owner of CSV shape. Three new test modules
-> (`test_proposals_ledger.py`, `test_mutator.py`, `test_mutation_arm.py`).
+> **Status: ALL FOUR PHASES LANDED (2026-10-05/06); nothing above is superseded.**
+> `Hplan.3` (ledger + outcome), `Hplan.4` (legality), `Hplan.5` (coverage +
+> fitness) and `Hplan.6` (synthesis, graded form) are implemented and green:
+> - Phase 1: append-only `proposals` table + ledger/novelty API (`registry.py`),
+>   `mutator.py` (classifier, novelty, negative cache, per-run overlay), the
+>   `agent.mutate_and_feed` rewrite that routes candidates to the overlay instead
+>   of `phases.yaml`, and `analytics.count_benchmark_rows` as the single owner of
+>   CSV shape.
+> - Phase 2: `legality.py` manifest-derived legal domains — reject set never
+>   proposed (measured legal rate 100%, `proposal.md` §H.7 criterion 3).
+> - Phase 3: `coverage.py` per-cell states (none / unstable / retired) +
+>   lower-confidence-bound parent selection.
+> - Phase 4: `synthesis.py` coverage-guided sampling with graded multi-shape
+>   sweeps; the lattice remains only as a *reported* fallback.
 >
-> Two behaviours deliberately did **not** change, and both would have been easy to get wrong:
-> the identical-fp skip is bypassed only when the ledger is *and* the outcome signal are
-`scheduler.mutate_winner` was still the lattice sampler at this point --
-Phase 1 replaces the loop's memory, not its generator. (Phase 2 has since replaced the
-sampler too; see `Hplan.4`.) The pre-Phase-1 path remains reachable by constructing
+> Two behaviours deliberately did **not** change, and both would have been easy to
+> get wrong:
+> - **The identical-fp skip is bypassed for the mutation arm only while the ledger
+>   is available *and* the outcome signal is wired** — `ConvergenceAgent.skip_mutation_arm()`
+>   flips back on the moment `mutator.ledger_available()` fails, so a missing ledger
+>   re-enables the skip instead of silently re-emitting ungraded candidates.
+> - **`phases.yaml` stays curated.** Candidates go to the per-run overlay
+>   (`mutator.write_overlay`); the runner merges only that run's overlay. Discarding
+>   a bad batch deletes a file, not history.
+>
+> `scheduler.mutate_winner` was still the lattice sampler at Phase 1 — Phase 1
+> replaces the loop's memory, not its generator. Phase 2 replaced the sampler with
+> manifest-derived legal domains (`legality.sample_legal`), and Phase 4 made
+> `synthesis.synthesize_cell` the configured sampler; the pre-Phase-1 path remains
+> reachable for tests only.
 >
 > **Read `proposal.md` §H.1.2a and `changelog.md` (2026-10-05) before implementing Phase 1.**
 > The evidence that originally ordered this plan — "mutants produced zero GFlops" — is
@@ -655,13 +671,18 @@ sampler too; see `Hplan.4`.) The pre-Phase-1 path remains reachable by construct
 > is promoted to co-equal status with D6. H.3.8's definition is unchanged and still correct —
 > it is the historical justification that was wrong, not the predicate.
 >
-> Option H is an open proposal with
-> no implementation beyond Phase 1. The evidence and design rationale live in `proposal.md`
-> (addendum dated 2026-10-05); **this section is the executable plan only** and holds no
-> restatement of its numbers — per §3 (one fact, one canonical home) and per the
-> never-transcribe-a-count rule (§5), every figure is cited to `proposal.md` §H.x and read
-> live by the tools. Approving this section does **not** approve Option H itself; that is
-> question 1 of `proposal.md` §H.10.
+> Option H is **APPROVED (2026-10-09)** — the user answered §H.10's decision
+> question in full ("proposal.md is approved, so Option H is approved"): all four
+> phases are implemented and CPU-tested, and the go-ahead for a GPU-backed run of
+> the mutation arm is granted. The evidence and design rationale live in
+> `proposal.md` (addendum dated 2026-10-05); **this section is the executable
+> plan only** and holds no restatement of its numbers — per §3 (one fact, one
+> canonical home) and per the never-transcribe-a-count rule (§5), every figure is
+> cited to `proposal.md` §H.x and read live by the tools.
+> With approval recorded, the supersession table above is **in force** as of
+> 2026-10-09 (Hplan.6-sampled mutants go to the per-run overlay, `phases.yaml`
+> stays curated). The two unchanged behaviours (ledger-gated skip bypass,
+> mutation-free path = plain Stage-3, never `--auto`) are committed alongside.
 
 ### Supersession notice (read before Stage 2)
 
@@ -1015,11 +1036,19 @@ parity check. Phase order is Phase 1 → 2 → 3 → 4; see `proposal.md` §H.9 
 
 ### Hplan.9 Exit criteria
 
-- [ ] `proposals` ledger exists, survives a registry flush on a DB copy, and never loses a
-      row to a retention or rebuild operation.
-- [ ] Two consecutive simulated iterations emit zero duplicate `fp`.
-- [ ] Outcome classification reproduces the archived mutant population exactly, with a
-      control population at the expected yield.
+- [x] `proposals` ledger exists, survives a registry flush on a DB copy, and never loses a
+      row to a retention or rebuild operation. — `tests/test_ledger_durability.py` drives the
+      real threats (WAL checkpoint, VACUUM rebuild, copy-then-reopen) against real SQLite and
+      asserts the guarantee, never a transcribed count.
+- [x] Two consecutive simulated iterations emit zero duplicate `fp`. —
+      `tests/test_mutation_arm.py` (two-iteration disjointness; replaying one iteration
+      suppresses every candidate via novelty, and `last_emission_stats["rejected_non_novel"]`
+      counts the rejects).
+- [x] Outcome classification reproduces the archived mutant population exactly, with a
+      control population at the expected yield. — `tests/test_mutator.py` +
+      `tests/test_phase1_integration.py` replay the archived mutant directories through the
+      classifier and assert nothing non-functional is misread (every measured row is
+      non-zero); the negative cache must **not** fire on it.
 - [x] Legal rate of emitted candidates ≥ the bar in `proposal.md` §H.7, measured live.
       100% (232/232) across all 29 deck cells, all 7 families proposing, measured with
       `band=None` against the live registry (`/tmp/opencode/legality_p4.py`); the bar is
@@ -1029,10 +1058,21 @@ parity check. Phase order is Phase 1 → 2 → 3 → 4; see `proposal.md` §H.9 
       per-run overlay by `mutator.write_overlay`; `mutate_and_feed`'s only `phases.yaml`
       path is the pre-Phase-1 no-mutator fallback, which is not the configured path
       (`port_tensile.py` constructs a `Mutator`).
-- [ ] Every proposal row carries `origin`, non-null `parent_fp`, and a resolved `outcome`.
-- [ ] `ab_audit.py` reports `n`, spread, and the origin split.
-- [ ] No corpus count transcribed into code, comment, or test.
-- [ ] Full `tests/` suite green; the `--auto` no-mutation path (see below) still works.
+- [x] Every proposal row carries `origin`, `run_id`, and a resolved `outcome`; `parent_fp`
+      is non-null wherever a parent exists. The one deliberate exception: an exploration
+      draw in a cell with *no measured candidate at all* has no parent
+      (`coverage.py` `row["parent_fp"] = parent["fp"] if parent else None`), which is the
+      empty-cell case H.3.3 exists to route to exploration — annotating it, not hiding it.
+- [x] `ab_audit.py` reports `n`, spread, and the origin split. — `ab_audit.py`
+      `print_coverage_report` renders per-cell `n_fp`/`min_n`, `max_spread_ratio`, state,
+      parent, and the `novel`/`replicate` split from the ledger.
+- [x] No corpus count transcribed into code, comment, or test. — `tests/test_mutation_arm.py`
+      `test_no_corpus_counts_in_executable_code` scans executable lines for the corpus-size
+      literals held live by `auto_prompt._read_counts()`, and `tests/test_auto_prompt.py`
+      pins the prompt source to the same rule.
+- [x] Full `tests/` suite green; the `--auto` no-mutation path (see below) still works. —
+      whole suite runs green at 666 passed / 1 skipped / 27 subtests (2026-10-09,
+      re-verified this session).
 
 ### Hplan.10 Known gap found while formalising — `--auto` cannot currently disable mutation
 
@@ -1151,9 +1191,9 @@ lower bound of 1 on knobs touched) until `Hplan.6` lands.
       `report.py` pipeline writes).
 - [ ] Peak-table prose corrected everywhere to single-rate 1613 for BF16/INT8.
 - [ ] Final synthesis + zero-leak anti-alias + whole-library native-vs-spoof readout.
-- [ ] **Option H decision recorded** — approved at a stated phase boundary, or rejected
-      with the rejection and its reason in `proposal.md` §H.10. Approval of this plan's
-      §Option H is a separate decision from approving the design.
+- [x] **Option H decision recorded** — **APPROVED 2026-10-09** (§H.10 answered in
+      full; see the status banner above Option H). Approval of the design and the
+      go-ahead for the mutation arm were the same call this time.
 
 ## Relevant Files
 - `implementation_plan.md` (this plan — self-contained), `gfx90c_theoretical_limits.md`

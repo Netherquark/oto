@@ -10,6 +10,9 @@ Covers the structural invariants of the generated candidate pool:
   `--with-probes` is passed (the §6.1 parity rule pins overlay rows to the
   shipped grid);
 * no fp collision with the committed deck or the curated seed rows.
+* beat-the-spoof invariants (2026-10-09): banned families never carry GSU>1,
+  the decided PLAN_BATCH rows emit (pads / PGR / PLR / NLCA / CC WGM8), and
+  the HH/DD targets span side 256 (§14.5 Group A).
 """
 
 from __future__ import annotations
@@ -211,3 +214,60 @@ class TestRoundRobinPrune:
     def test_noop_below_cap(self):
         rows = list(iter_candidates())
         assert _round_robin_prune(rows, 10000) is rows
+
+
+class TestBeatTheSpoofInvariants:
+    """2026-10-09 decided-config batch: banned rows stay out, decided rows
+    actually emit (see potential_configs.md §14.5 and the PLAN_BATCH comment)."""
+
+    def test_banned_families_never_carry_gsu(self):
+        gsu_rows = [r for r in _rows()
+                    if r.get("config", {}).get("GlobalSplitU", 1) != 1]
+        fams = {str(r["config"].get("FamilyLabel", "")).upper() for r in gsu_rows}
+        assert not (fams & {"HH", "CC", "ZZ", "HH_HPA", "HS_HPA"}), fams
+
+    def test_ss_gsu4_wave_fill_emits(self):
+        g4 = [r for r in _rows()
+              if r["config"].get("FamilyLabel") == "SS"
+              and r["config"].get("GlobalSplitU") == 4]
+        assert g4, "SS GSU4 wave-fill rows must emit (§14.5 item 2)"
+
+    def test_plan_batch_pad_rows_emit(self):
+        pads = [r for r in _rows()
+                if r["config"].get("LdsPadA") == 2 or r["config"].get("LdsPadB") == 2]
+        fams = {str(r["config"].get("FamilyLabel", "")).upper() for r in pads}
+        assert {"CC", "ZZ"} <= fams, fams
+
+    def test_plan_batch_residency_rows_emit(self):
+        pgr = [r for r in _rows() if r["config"].get("PrefetchGlobalRead") == 0]
+        plr = [r for r in _rows() if r["config"].get("PrefetchLocalRead") == 0]
+        nlca = [r for r in _rows() if r["config"].get("NLCA") == 3]
+        wgm8_cc = [r for r in _rows()
+                   if r["config"].get("FamilyLabel") == "CC"
+                   and r["config"].get("WorkGroupMapping") == 8]
+        assert pgr and plr, "PGR/PLR residency rows must emit (§14.3/§14.5)"
+        assert nlca, "NLCA=3 rows must emit on the 3-load 96x96 tile"
+        assert wgm8_cc, "CC WGM8 steal-adapt rows must emit (§14.5 item 3)"
+
+    def test_hh_and_dd_targets_span_256(self):
+        hh = [r for r in _rows() if r["config"].get("FamilyLabel") == "HH"]
+        dd = [r for r in _rows() if r["config"].get("FamilyLabel") == "DD"]
+        assert any("256x256x256" in r["shapes"] for r in hh)
+        assert any("256x256x256" in r["shapes"] for r in dd)
+
+    def test_knob_variants_get_distinct_phase_ids(self):
+        """Pads/PGR/NLCA variants share every id-encoded knob; the fp tail must
+        keep their phase_ids unique (regression for the 2026-10-09 batch)."""
+        target = [
+            r for r in _rows()
+            if r["config"].get("FamilyLabel") == "CC"
+            and r["config"].get("MacroTile") == "64x64x8"
+            and (r["config"].get("LdsPadA") or r["config"].get("LdsPadB")
+                 or r["config"].get("PrefetchGlobalRead") == 0
+                 or r["config"].get("WorkGroupMapping") == 8)
+        ]
+        assert len(target) >= 2, "expected several CC steal-adapt variants"
+        ids = [r["phase_id"] for r in target]
+        fps = [r["fp"] for r in target]
+        assert len(ids) == len(set(ids)) == len(target)
+        assert len(fps) == len(set(fps)) == len(target)

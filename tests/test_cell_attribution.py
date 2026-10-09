@@ -192,10 +192,25 @@ def test_ldspad_feasible_stagger_and_af0em_rejects():
     from scheduler import ldspad_feasible
     base = {"MacroTile": "64x64x8", "ThreadTile": "4x4",
             "DataType": "C", "DepthU": 32}
-    # C (8 B) * DepthU 32 = 256; StaggerUStride 256 is NOT < 256 -> reject
+    # C (8 B) * DepthU 32 = 256; SUS=256 > 0.5*256 -> legal swizzle.
     ok, reason = ldspad_feasible({**base, "StaggerUStride": 256})
-    assert not ok and "StaggerUStride" in reason
-    ok, reason = ldspad_feasible({**base, "StaggerUStride": 255})
     assert ok, reason
+    # SUS=0 with default StaggerU=32 -> coupling reject (SUS=0 only valid if SU=0).
+    ok, reason = ldspad_feasible({**base, "StaggerUStride": 0})
+    assert not ok and "StaggerU" in reason
+    # SUS>0 but below the 0.5*DepthU*bpe floor -> reject.
+    ok, reason = ldspad_feasible({**base, "StaggerUStride": 16})
+    assert not ok and "StaggerUStride" in reason
+    # SU=0 forces SUS=0: SU=0 with SUS=256 -> reject.
+    ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUStride": 256})
+    assert not ok and "StaggerU" in reason
+    # SU=0 with SUM=1 -> reject (mapping requires SU>0).
+    ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUMapping": 1})
+    assert not ok and "StaggerUMapping" in reason
+    # Out-of-domain values -> reject.
+    ok, reason = ldspad_feasible({**base, "StaggerU": 3})
+    assert not ok and "StaggerU" in reason
+    ok, reason = ldspad_feasible({**base, "StaggerUStride": 100})
+    assert not ok and "StaggerUStride" in reason
     ok, reason = ldspad_feasible({**base, "AssertFree0ElementMultiple": 0})
     assert not ok and "AssertFree0ElementMultiple" in reason

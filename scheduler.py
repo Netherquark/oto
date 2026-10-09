@@ -1311,19 +1311,78 @@ def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
                 f"be dropped or the phase rejected by Tensile"
             )
 
+    # --- Swizzle (StaggerU) legality — Group C forwarded RCT knobs ---
+    # Tensile source (SolutionStructs:3326-3342, Common.py:945-947, 1599-1601):
+    #   * StaggerUStride=0 is only valid if StaggerU=0.
+    #   * StaggerU=0 forces StaggerUMapping=0 and StaggerUStride=0.
+    #   * StaggerUStride>0 requires staggerStrideShift = ceil(log2(SUS/(DU*bpe)))
+    #     >= 0, i.e. SUS > 0.5*DepthU*bpeAB (the ":3342" reject). Tensile then
+    #     internally raises SUS to a whole multiple of DepthU*bpe.
+    #   * Legal domains: SU in {0,2,4,8,16,32,64}, SUM in {0..4},
+    #     SUS in {0,16,32,64,128,256,512,1024,2048}. Defaults SU=32, SUM=0,
+    #     SUS=256. SU requires BufferLoad==1 and is silently ignored otherwise.
+    #
+    # NOTE: an earlier revision of this gate had the SUS bound BACKWARDS
+    # (it rejected SUS >= DepthU*bpe, i.e. exactly the legal swizzle values),
+    # which is why Group C swizzle forwarding was blocked: every legal
+    # StaggerUStride was refused at the launch boundary. Corrected 2026-10-09
+    # against the pinned checkout (Tensile commit e8a8999e).
+    stagger_u = config.get("StaggerU")
+    stagger_mapping = config.get("StaggerUMapping")
     su = config.get("StaggerUStride")
+
+    STAGGER_U_DOMAIN = (0, 2, 4, 8, 16, 32, 64)
+    STAGGER_MAPPING_DOMAIN = (0, 1, 2, 3, 4)
+    STAGGER_STRIDE_DOMAIN = (0, 16, 32, 64, 128, 256, 512, 1024, 2048)
+
+    if stagger_u is not None:
+        try:
+            su_val = int(stagger_u)
+        except (TypeError, ValueError):
+            return False, f"StaggerU must be an integer (have {stagger_u!r})"
+        if su_val not in STAGGER_U_DOMAIN:
+            return False, (f"StaggerU={su_val} outside Tensile domain "
+                           f"{STAGGER_U_DOMAIN} (Common.py:945)")
+    if stagger_mapping is not None:
+        try:
+            sum_val = int(stagger_mapping)
+        except (TypeError, ValueError):
+            return False, f"StaggerUMapping must be an integer (have {stagger_mapping!r})"
+        if sum_val not in STAGGER_MAPPING_DOMAIN:
+            return False, (f"StaggerUMapping={sum_val} outside Tensile domain "
+                           f"{STAGGER_MAPPING_DOMAIN} (Common.py:946)")
     if su is not None:
         try:
             stride = int(su)
         except (TypeError, ValueError):
             return False, f"StaggerUStride must be an integer (have {su!r})"
-        if stride < 0:
-            return False, f"StaggerUStride must be >= 0 (have {stride})"
-        if stride > 0 and ku > 0 and bpe and stride >= ku * bpe:
+        if stride < 0 or stride not in STAGGER_STRIDE_DOMAIN:
+            return False, (f"StaggerUStride={stride} outside Tensile domain "
+                           f"{STAGGER_STRIDE_DOMAIN} (Common.py:947)")
+
+    # Coupling. Tensile defaults SU=32 (so an absent SU behaves as >0); treat
+    # an absent SU as "stagger on" for the coupling checks.
+    su_effective = 32 if stagger_u is None else int(stagger_u)
+    stride_effective = 256 if su is None else int(su)
+    mapping_effective = 0 if stagger_mapping is None else int(stagger_mapping)
+
+    if su_effective == 0:
+        # StaggerU=0 forces StaggerUMapping=0 and StaggerUStride=0.
+        if mapping_effective != 0:
+            return False, (f"StaggerUMapping={mapping_effective} requires "
+                           f"StaggerU>0 (SolutionStructs:3333-3334)")
+        if stride_effective != 0:
+            return False, (f"StaggerUStride={stride_effective} requires "
+                           f"StaggerU>0 (SolutionStructs:3326-3327)")
+    else:
+        if stride_effective == 0:
+            return False, (f"StaggerUStride=0 is only valid if StaggerU is 0 "
+                           f"(have StaggerU={su_effective}; SolutionStructs:3326-3327)")
+        if ku > 0 and bpe and stride_effective < ku * bpe:
             return False, (
-                f"StaggerUStride={stride} >= DepthU({ku}) * {bpe}B; Tensile "
-                f"requires StaggerUStride < DepthU * BytesPerElement "
-                f"(SolutionStructs:3342)"
+                f"StaggerUStride={stride_effective} < DepthU({ku})*{bpe}B; "
+                f"Tensile requires StaggerUStride >= DepthU*BytesPerElement "
+                f"when StaggerU>0 (staggerStrideShift >= 0, SolutionStructs:3336-3342)"
             )
 
     af0em = config.get("AssertFree0ElementMultiple")
@@ -1364,9 +1423,12 @@ def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
       3. GlobalSplitU > 1 on half Assembly — legal only if
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
-      4. DepthU * BytesPerElement > StaggerUStride (default 256) — illegal
-         (complex DepthU>=32 -> 512 > 256; also LDS > 64KB on gfx90c;
-         SolutionStructs:3342).
+      4. When StaggerU > 0, StaggerUStride must be >= DepthU*BytesPerElement
+         (the staggerStrideShift >= 0 floor, SolutionStructs:3336-3342; Tensile
+         raises SUS to a whole multiple of DepthU*bpe internally). When
+         StaggerU == 0, StaggerUStride is 0 by Tensile's own forcing
+         (:3333-3334) and is legal — an earlier revision of this rule applied
+         the floor unconditionally and so refused every swizzle-off config.
     """
     dtype_upper = str(config.get("DataType", "S")).upper()
     gsu = int(config.get("GlobalSplitU", 1))
@@ -1396,9 +1458,11 @@ def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
 
     bpe = _ASSEMBLY_DTYPE_ELEM_BYTES.get(dtype_upper, 4)
     stagger = int(config.get("StaggerUStride", 256))
-    if depth_u * bpe > stagger:
+    stagger_u = int(config.get("StaggerU", 32))  # Tensile default SU=32
+    if stagger_u > 0 and depth_u * bpe > stagger:
         return False, (f"DepthU={depth_u} * {bpe}B = {depth_u*bpe} > "
-                       f"StaggerUStride={stagger}: complex DepthU>=32 illegal "
-                       "on gfx90c (SolutionStructs:3342)")
+                       f"StaggerUStride={stagger}: StaggerUStride must be >= "
+                       "DepthU*BytesPerElement when StaggerU>0 "
+                       "(SolutionStructs:3336-3342)")
 
     return True, ""

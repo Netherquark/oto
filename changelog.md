@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-09 (night #2) — DB-hooked mutator overhaul, Group C swizzle complete, 10+ h overnight sizing, proposal rewrite.**
+  The Option H mutator overhaul landed: `db_mutator.py` hooks synthesis to
+  `kernel_db.json`, emitting wide + narrow + direction mutants for every active
+  (below-ceiling) cell. Mutants carry `bypass_identical_skip` (the auto-skip
+  never applies to a mutation) and are novelty-checked before emission, so the
+  arm never re-measures a tried config and never decays to a trickle. The
+  Group C (LdsPad/Swizzle) status is now fully implemented: the backwards
+  `StaggerUStride` gate in `scheduler.py` was fixed, the trio is forwarded in
+  `_write_phase_config`, and 9 swizzle probe rows are in the seed overlay
+  (phases.seed.overlay.yaml: 5 curated + 290 in-grid with CC/ZZ pads, PGR/PLR/GLVW/NLCA,
+  SS GSU4 wave-fill, HH:256/DD:256 targets, Group C swizzle probes). The planned
+  overnight run is ~15-20 h packed (iteration 1 = deck 40 + seed 295 = 335 phases
+  ≈ 6.5 h; 10 iterations → ~15-20 h total). The proposal was rewritten with
+  old-mutation evidence from archives, backups, registries (H addendum: decay
+  171→20/iter, CC+ZZ = 93/522 mutants, 30 % wasted, zero forward knobs on mutants,
+  last auto run starved CC/ZZ entirely) and the new DB mutator design replacing
+  the stubby manifest-only sampler. The `proposal.md` addendum (Option H2) and
+  `gfx90c_tuning_guide.md` §9/§10 have been updated accordingly. Seed overlay
+  rebuilt: prune 277 → archive → regenerate 295 rows (5 curated + 290 in-grid).
 - **2026-10-09 — Cross-contamination eliminated, measurement hygiene + Group C land, tuning cookbook formalized.**
   Closes `potential_configs.md` §13.2/§13.4 Groups C+D and the entire CPU-only queue
   (`implementation_plan.md`): (1) **typecode-first cell attribution** — root cause of §13.2 was
@@ -38,7 +57,68 @@ and NOT the experimental data (that is `results.md`).
   `phase_cand_*` from the seed overlay; keeps `probe_*`). (8) New canonical doc
   **`gfx90c_tuning_guide.md`** (caveman, full) formalizes the knob surface, M1–M4, measured
   patterns, floor legality, knob deltas and the overnight-run rules; acceptance bar unchanged
-  (`gfx90c_theoretical_limits.md` §5). Suite: 634+green (full run, see below).
+  (`gfx90c_theoretical_limits.md` §5). (9) **Option H APPROVED** — user decision on `proposal.md`
+  §H.10: all four phases landed; go-ahead for GPU-backed mutation-arm runs (unchanged behaviours
+  and `--auto` semantics per Hplan.10 stand). (10) **CC/ZZ "closed as model" closure REJECTED →
+  REOPENED as deficit-worthy** (`potential_configs.md` §8.6/§13.5): the ≈20 %-of-roof "cap" did
+  not survive a Tensile-suite read — the complex MAC loop is exactly 4 `v_mac_f32`
+  (`KernelWriterAssembly.py:14975-14978`), so the shortfall is memory/occupancy, and all 90 gfx900
+  complex ships sit on a 4-variable corner (MT/TT/VW/WGM) with GSU=1, LdsPad=0, PGR=1, GRVW=VW —
+  never sampling the pad/GSU/PGR axes other families ship. Ranked resolution plan tabled
+  (pads {1,2,4} → GSU>1 MultipleBuffer → PGR=0 → NLCA=3 → split-complex fallback); walls stay
+  open until those probes land in a TTY run. Suite: **669 passed / 1 skipped / 27 subtests**
+  (full run, 540.97 s).
+
+- **2026-10-09 (night) — beat-the-spoof batch implemented + decked; overnight-ready pool regenerated.**
+  Implements `potential_configs.md` §14.5 items 1–5 as *emitted* candidates so the overnight
+  `--auto` run benchmarks every decided config in one pass. (1) **Generator fixes** — SS wide tier
+  now sweeps GlobalSplitU {1,2,4} (Group A wave-fill: SS:256/512 GSU{2,4} + 64x64 alternates,
+  incl. the §14.5 item-1 SS:512 VW4+GSU2 correction); **HH is pinned to GSU=1 everywhere** — the
+  wide-tier `(1,2)` leak and the narrow-tier GSU neighbours are both closed (the §13.4 HH GSU2
+  ban is now structural and test-locked); `TARGET_CELLS` grew **DD:256** and **HH:256** (§14.5
+  Group A: DD:192/256 GSU probes, HH:256/512 64x64 alternates only). (2) **PLAN_BATCH (29 rows,
+  tier `auto`, all gate-verified)** — Group C pads `LdsPadA/B ∈ {1,2,4}` on the CC `64x64x8/4x4/
+  VW2/DU8` (the §8.6 S3 steal tile) and ZZ `32x32x8/2x2/VW1/DU8` winner geometries; CC steal-adapt
+  variants (WGM8, WGM8+padA2, PGR=0, padA2+PGR=0, GLVW=1, all-three); PGR=0 residency rows on
+  SS/HH wide tiles + ZZ winners (dual LDS+VGPR relief, §14.3); single-buffer LDS (PLR=0) reserve
+  on the wide SS tile (§14.5 item 5); NLCA=3 rows on the only 3-load tile in the ladder
+  (96x96x16/6x6/VW2, SS and HH). (3) **Two decided levers gate-refused → documented supersessions**
+  (§8.6/§13.5 dated markers): **complex GSU>1** is not deckable — Tensile passes complex only via
+  `_GlobalAccumulation` (SolutionStructs:3543-3553) and the local gate refuses it (`scheduler:
+  1379-1382`), so the "MultipleBuffer wave-fill" rung-2 row is withdrawn (complex ladder is now
+  pads → PGR=0 → NLCA → split-complex); **NLCA=3 needs NumLoads=3 side-wise** (128-width VW4 has
+  NumLoads=1) — scoped to the 96x96 tile. Also corrected the `v_mac_f32` citation home to
+  `MAC_F32C.py:55/73/90/107` (research doc §5; `KernelWriterAssembly.py:14975-14978` is the beta
+  epilogue). (4) **Seed overlay rebuilt** by prune-then-regenerate (2026-10-09 16:24 mirror): 5
+  curated + 290 in-grid candidates = **295 rows, all fps unique, zero GSU>1 on any banned family,
+  parity + deck-legality green**; `command.txt`/guide §9-§10 updated for the new pool. (5) **6 new
+  regression tests** (`TestBeatTheSpoofInvariants`: banned-GSU, SS-GSU4, pad/PGR/NLCA/WGM8 rows,
+  HH/DD:256 span, knob-variant phase-id uniqueness); phase-ids now carry an fp tail so pad/PGR/NLCA
+  variants can never collide. `kernel_tuning_research.md` (background subagent) landed in the docs
+  ecosystem (§14.6 pointers + §8.6 citation already aligned). Suite: **675 passed / 1 skipped /
+  27 subtests** (full run, 720.67 s).
+
+- **2026-10-09 (evening) — beat-the-spoof analysis pass: verdict anatomy, occupancy audit, all-around plan.**
+  (1) **Native-vs-floor verdict anatomy** (`harness/cell_knob_diff.py` on the rebuild): the |Δ| ≤ 2 %
+  band tally is **17 native / 8 tie / 5 loss** — SS:512 (+3.8), SS:1365 (+3.2), HH:1024 (+4.0),
+  HH:2048 (+6.6), CC:256 (+13.8). Dissected into four classes (`potential_configs.md` §14.1/§14.2):
+  two clock artifacts (SS:1365, HH:1024 — native medians from the 1.175 GHz-suppressed
+  `run_20261008_030033`, nothing clock-normalized), one same-kernel cross-run noise row (HH:2048,
+  byte-identical kernel both arms), one suboptimal VW2 pick (SS:512 vs floor VW4 on the same tile),
+  and one real direction+residency deficit (CC:256 — the sanctioned steal). The old §13.6 "single
+  outside-band LOSS" phrase gets a dated supersession marker. (2) **The "occupancy ≤3" investigation**
+  (**new `harness/occupancy_audit.py`**): 25/34 cells genuinely sit at ≤3 resident wg/CU (median 3,
+  min 2, max 10; 8–24 of 40 wave slots) — physical, not a model bug; **VGPR file binds 21 cells**,
+  LDS 13. The spoof floor is equally non-resident (26/30 ≤3), so occupancy is *not* where the floor
+  wins; and a single-buffer LDS probe barely moves the count (VGPR becomes the wall for 33/34 cells)
+  → **residency levers must free VGPRs (GSU > PGR=0/GLVW ↓ > TT ↓ > LDS-side)**, which re-derives
+  the M2 wave-fill agenda with numbers behind it. (3) **All-around plan** (`potential_configs.md`
+  §14.5): clock-pinned head-to-head re-measurement as the M4 prerequisite, SS:512 VW4@same-tile+GSU2,
+  Group A wave-fill (SS/HH/DD small squares), the CC:256 gfx900→gfx90c steal-adapt with adaptation
+  documentation (tile ports; LdsPadA=2 + WGM8/4 + GSU2 + PGR0), and the ranked Group C probe order.
+  (4) **Web-research pass** landed `kernel_tuning_research.md` (GCN5/gfx90c model, LDS bank math,
+  occupancy theory, Tensile knobs, complex-GEMM incl. split-complex, SOTA cross-SKU porting — all
+  URL-cited), cross-referenced from §14.6.
 
 - **2026-10-08 — overnight-run deep triage: why the ceiling "didn't move" (potential_configs.md §13).**
   `run_20261008_030033` (6h 9m, PROVISIONAL FLOOR, 22 WIN / 15 TIE / 1 LOSS) dissected per

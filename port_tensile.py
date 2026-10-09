@@ -995,8 +995,17 @@ class TensileDriver:
         # reference kernels carrying pads benchmarked with pads stripped to 0).
         # ldspad_feasible above refuses an illegal value pre-launch, so what
         # reaches Tensile is exactly what the candidate proposed.
+        #
+        # The swizzle axis (StaggerU / StaggerUMapping / StaggerUStride) is
+        # forwarded as a COUPLED TRIO: Tensile rejects StaggerUStride=0 unless
+        # StaggerU=0 (SolutionStructs:3326-3327) and forces StaggerUMapping=0 +
+        # StaggerUStride=0 when StaggerU=0 (:3333-3334), so forwarding
+        # StaggerUStride alone (the pre-2026-10-09 state) silently benchmarked
+        # every swizzle candidate at the defaults. ldspad_feasible enforces the
+        # coupling + the SUS > 0.5*DepthU*bpe floor before this point.
         for _k in ("LdsPadA", "LdsPadB", "AssertFree0ElementMultiple",
-                   "StaggerUStride", "StoreCInUnroll"):
+                   "StaggerU", "StaggerUMapping", "StaggerUStride",
+                   "StoreCInUnroll"):
             if _k in config:
                 fork_params[_k] = [config[_k]]
 
@@ -1409,6 +1418,14 @@ class TensileDriver:
                 bypass_identical_skip = (
                     from_overlay and self.agent is not None
                     and not self.agent.skip_mutation_arm())
+                # A mutant phase carries an explicit per-phase bypass (agent
+                # mutate_and_feed sets bypass_identical_skip): the auto-skip
+                # must never apply to a mutation, so it is measured even when an
+                # identical config was tested before. This is the structural
+                # form of the user directive; the agent-level skip_mutation_arm
+                # remains as a second, independent gate.
+                if phase.get("bypass_identical_skip"):
+                    bypass_identical_skip = True
                 if (phase.get("overlay_run_id") == "seed"
                         and self.run_dir is not None
                         and self.registry.has_run_benchmarked(

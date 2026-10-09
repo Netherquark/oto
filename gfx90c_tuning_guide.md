@@ -14,8 +14,8 @@
 
 The deck controls **geometry and residency**, not the pipe. Large squares are
 already pinned to the ALU wall (M1). The real headroom is the **small cells**
-(M2: the machine idles below 25 % residency) and the **complex codegen wall**
-(M3: the only axis with a mechanism is LDS bank conflicts). Everything else is
+(M2: the machine idles below 25 % residency) and the **complex cells**
+(M3: shortfall is memory/occupancy — pads/GSU/PGR axes, reopened 2026-10-09). Everything else is
 measurement hygiene (M4: suppressed clock), not tuning.
 
 ## 1. Knob surface — what the deck actually controls
@@ -56,11 +56,14 @@ Per-family ceilings @1800 MHz / realistic bar (L §2/§5, the acceptance source)
 | DD | 101 | **98.6** (95 %) | 97.0 @2048 |
 | HH | 3226 | **2461** (72 %) | 2664.9 @4096 |
 | HH_HPA / HS_HPA | 1613 | **1118.7** | 1441 @1024 (above the derived bar — f16 input halves traffic) |
-| CC | 1613 | **1118.7** derived | **318.0 @512 — complex codegen wall (M3), not the roof** |
-| ZZ | 101 | **98.6** derived | **24.0 @1024 — same wall** |
+| CC | 1613 | **1118.7** derived | 318.0 @512 (4-real-MAC floor; gap under investigation — P §8.6 REOPENED) |
+| ZZ | 101 | **98.6** derived | 24.0 @1024 (same) |
 
-CC/ZZ read permanently orange until the model adds a "complex codegen cap ≈ 20 %
-of roof" term (P §8.6 closed as **model**, not deck deficit).
+CC/ZZ are **not** "permanently orange by construction". The four-`v_mac_f32`
+per-complex-MAC ALU cost is irreducible (`KernelWriterAssembly.py:14975-14978`),
+so the shortfall is memory/occupancy; the gfx900 complex corpus (64 CC + 26 ZZ
+ships) never sampled pads, GSU>1 or PGR≠1, so those axes are the resolution
+path (P §8.6 note / §13.5, reopened 2026-10-09).
 
 ## 3. Typecode = ground truth (attribution rule)
 
@@ -91,7 +94,7 @@ the old `phase_auto_1_hh` rows are gone from SS:1024. Unit tests:
 | DepthU | 8 for S/D/C/Z, 16 for H/HPA | family-locked, not a sweep knob |
 | WorkGroupMapping | 4 everywhere; **8 is a real CC lever** | CC:512 WGM8 > WGM4 within-run |
 | GlobalSplitU | 1 in all winners so far | the single untested wave-fill axis (Group A) |
-| register hygiene | real families saturate; complex caps at the codegen wall | M1/M3 |
+| register hygiene | real families saturate; complex cap at the throughput wall (under investigation) | M1/M3 |
 
 ## 5. Why "nothing moved": the four mechanisms
 
@@ -117,14 +120,18 @@ SS:256 makes 412/1613 while SS:1024 makes 1135/1613 at ~91 % residency — **the
 gap IS the residency gap.** The lever: smaller tiles keeping ≥4 waves/thread in
 flight, or GlobalSplitU to turn waves over K (Group A).
 
-**M3 — the Tensile complex codegen wall (CC/ZZ).** Oversubscribed residency
-(91 %→1463 %) yet CC caps ≈290–318 and ZZ ≈21–24; the gfx900 ships hit the same
-plateau (CC:512 317.8, ZZ:1024 22.6). Cause: complex MAC = 4–6 real
-instructions, 2× register footprint, 8/16-B LDS elements amplifying bank
-conflicts 2–4×, Z stuck at VW1. **No tile/pattern/GSU mutation crosses it.** The
-only mechanism: the LDS-conflict knobs now forwarded (LdsPadA/B, StaggerUStride
-— Group C). Swizzle/layout options remain unforwarded; that is the remaining
-M3 experiment.
+**M3 — the Tensile complex throughput wall (CC/ZZ).** CC caps ≈290–318 and ZZ
+≈21–24; the gfx900 ships hit the same plateau (CC:512 317.8, ZZ:1024 22.6).
+The 4-real-MAC-per-complex-MAC ALU cost is irreducible — the complex MAC loop
+is exactly four `v_mac_f32`, `KernelWriterAssembly.py:14975-14978` — so the
+shortfall is **memory/occupancy**, not instruction count (P §8.6 note, reopened
+2026-10-09). Working mechanisms, in order of confidence: 8/16-B LDS elements at
+LdsPad=0 (bank conflicts — small pads {1,2,4} never benchmarked); the 2×
+register footprint under PGR=1 everywhere (PGR=0 never shipped on complex);
+GSU=1 everywhere (complex GSU>1 is validator-legal via MultipleBuffer,
+`SolutionStructs.py:2958-2976/3543-3553`); Z stuck at VW1. Resolution path:
+Group C pads → GSU wave-fill → PGR/NLCA — the wall is **open** until those land,
+not "by construction".
 
 **M4 — suppressed clock.** The newest run measured at 1.175 GHz
 (`native_clock_coverage: 0.53`) ≈ **1.53× slow** vs 1.8 GHz reference. Its
@@ -159,6 +166,12 @@ Invariant (tested): **gate-legal ⇔ measured total < 256**. Z 8x4/8x8 objects a
 absent from the corpus exactly because Tensile refused to emit them — the model
 and reality agree on every observed outcome. Regression:
 `tests/test_occupancy_gate.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`.
+
+> 2026-10-09: for the physical per-cell **resident-workgroup** audit (the
+> "occupancy ≤3 everywhere" question, incl. the VGPR-vs-LDS binder split and
+> the single-buffer probe), see `potential_configs.md` §14.3 +
+> `python3 harness/occupancy_audit.py`. `occupancy_feasible` gates legality;
+> the audit answers residency.
 
 ## 7. Floor deck: gate-legality of the steal (todo 3 DONE)
 
@@ -198,13 +211,22 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 
 ## 9. Open levers + Group status
 
-| group | plan (P §13.4) | status (2026-10-09) |
+| group | plan (P §13.4) | status (2026-10-09, night) |
 |---|---|---|
-| **A** wave-fill small cells (SS:256/512, HH:256/512 via GSU2/4 + 64x64 alternates; DD probes) | TTY benchmark only | CPU-gated ready; **GNOME — no GPU stress here** |
-| **B** CC:256 steal (NT direction + WGM8/WGM4 + 64x32/32x64 alternates) | TTY | CPU-gated ready |
-| **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | next TTY experiment |
+| **A** wave-fill small cells (SS:256/512 GSU{2,4} + 64x64 alternates; HH:256/512 via 64x64 alternates **only** — HH GSU2 banned; DD:192/256 GSU probes) | TTY benchmark only | **DECKED** — SS wide tier sweeps GSU {1,2,4}; HH GSU>1 structurally banned (wide + narrow, test-locked); HH:256 + DD:256 joined `TARGET_CELLS`; **GNOME — no GPU stress here** |
+| **B** CC:256 steal (NT direction + WGM8/WGM4 + LdsPadA=2 + PGR=0) | TTY | **DECKED** — pads A/B {1,2,4} + WGM8 + PGR=0 + GLVW=1 variants emit on the §8.6 S3 steal tile (generator `PLAN_BATCH`); ~~GSU2+workspace~~ **withdrawn 2026-10-09** (gate-refused on this port, §13.5) |
+| **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | **DECKED** — CC/ZZ pad rows (A/B {1,2,4}) on the winner geometries in the seed; ZZ pads on the du8 tile only (32x32x16 winner is budget-full at 16 B/element); TTY benchmark next |
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
-| swizzle/layout LDS options | not forwarded yet | remaining M3 axis, after C probes |
+| **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `_write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
+| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `db_mutator.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
+
+Complex-GSU note (supersedes the earlier "MultipleBuffer wave-fill" lever):
+GlobalSplitU>1 on complex is **gate-refused on gfx90c** (scheduler:1379-1382;
+Tensile passes complex only via `_GlobalAccumulation`, SolutionStructs:3543-3555)
+and the port does not forward `GlobalSplitUAlgorithm`/workspace — no complex
+GSU rows are decked. The complex residency ladder is **pads → PGR=0 →
+NLCA (3-load tiles only, i.e. 96x96x16/6x6/VW2) → split-complex**. NLCA=3 on
+128-width tiles is refused (NumLoads=1).
 
 Legacy auto-pool audit (todo 6 DONE): 560 `phase_auto_*` dirs across runs; the
 auto pool is NOT marginal — it holds the native best in **13/34 cells** (38 %),
@@ -216,12 +238,27 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
 
 1. Real benchmarks run in the USER's TTY — never from a GUI session
    (GNOME constraint; CPU-only PoCs are safe).
-2. Generator deck: seed overlay ships 282 rows (277 in-grid); prune
-   `phase_cand_*` ids (mirror already says so) to keep future runs light —
-   `harness/generate_candidates.py --prune-candidates` (archives first).
-3. Judge within-run only; ≥3 seeds; median; ±2 % tie band; walls are ties
+2. Generator deck: seed overlay ships **295 rows (5 curated + 290 in-grid
+   candidates, regenerated 2026-10-09 night — incl. the beat-the-spoof batch:
+   CC/ZZ pads, PGR/PLR/GLVW/NLCA, CC WGM8 steal-adapt, SS GSU4 wave-fill,
+   HH:256/DD:256 targets, Group C swizzle probes)**. Keep the pool for the run;
+   strip `phase_cand_*` ids AFTER the run to keep later runs light (mirror
+   preserves them) — `harness/generate_candidates.py --prune-candidates`
+   (archives first).
+3. Mutations are **DB-hooked** (`db_mutator.py`): every iteration synthesises
+   novel wide (DB tile donors × forward draws) + narrow (single-knob deltas on
+   pads/PGR/PLR/NLCA/WGM/StaggerU/GLVW) + direction (floor-steal) mutants for
+   every **active** cell (below-ceiling winners only — settled cells are
+   skipped). Mutants **bypass the identical-fp skip** (the auto-skip never
+   applies to a mutation) and are gated + novelty-checked before emission, so
+   the arm never re-measures a tried config and never decays. The old sampler
+   (tile+split only, manifest-only) is the fallback when the DB is unavailable.
+4. Judge within-run only; ≥3 seeds; median; ±2 % tie band; walls are ties
    (M1), not failures.
-4. Acceptance = ceiling model (L §5); parity CLI exits 0; kernel_db rebuilt
+5. Acceptance = ceiling model (L §5); parity CLI exits 0; kernel_db rebuilt
    before any verdict quote.
-5. New numbers must be kernel-typecode-attributable (ground-truth §3) and
+6. New numbers must be kernel-typecode-attributable (ground-truth §3) and
    clock-flagged (M4).
+7. **Sizing (10+ h, packed):** iteration 1 = deck(40) + seed(295) = 335 phases
+   ≈ 6.5 h; `--budget 10` → ~15-20 h. The DB mutator's novelty throttle keeps
+   each mutation iteration ~1-2 h without starving the wall families.

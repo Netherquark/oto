@@ -11,6 +11,7 @@ The deterministic convergence engine for oto:
   `phases.yaml`; see mutate_and_feed for the fallback that still can do that.
 """
 
+import random
 import yaml
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -54,6 +55,18 @@ class ConvergenceAgent:
         # is not a soft degradation -- it flips `skip_mutation_arm` back on.
         self.mutator = mutator
         self.ledger_enabled = bool(mutator and mutator.ledger_available())
+        # DB-hooked synthesis (Option H overhaul, 2026-10-09). The manifest
+        # sampler alone decays to a trickle and never touches the wall
+        # families; the DB mutator re-combines measured tile donors with the
+        # forward-knob space so every iteration emits novel mutants. Built
+        # only when a ledger-backed mutator exists (it delegates to it).
+        self.db_mutator = None
+        if mutator is not None:
+            try:
+                from db_mutator import DBMutator
+                self.db_mutator = DBMutator(self.base_dir, mutator)
+            except Exception:
+                self.db_mutator = None
         # Outcome feedback (H.3.8) is a separate capability from novelty. Kept as
         # its own flag so Hplan.3 step 11 ("revert the skip-bypass claim if phase 1
         # lands partially") is a one-line change rather than an audit.
@@ -433,6 +446,7 @@ class ConvergenceAgent:
         rejected_non_novel = 0
         replayed: List[Dict[str, Any]] = []
         retired_cells: List[str] = []
+        settled_cells: List[str] = []
         lattice_fallbacks: List[str] = []
         ungraded_cells: List[str] = []
 
@@ -442,6 +456,16 @@ class ConvergenceAgent:
                 family, str(winner_info.get("dtype", "S")).upper())
             shape = winner_info["shape"]
             winner_config = winner_info.get("config", {})
+
+            # Active-cell filter (Option H overhaul, 2026-10-09). Only mutate
+            # cells whose winner is still BELOW the realistic ceiling: a cell at
+            # or above the bar has converged, and re-drawing its neighbourhood
+            # is how the old arm spent its budget re-measuring noise. Cells
+            # with no is_below_ceiling flag (older analytics) are mutated, so
+            # the filter never silently starves a cell that lacks the signal.
+            if winner_info.get("is_below_ceiling") is False:
+                settled_cells.append(cell_key)
+                continue
 
             # Sampler. Phase 4 (Hplan.6): coverage-guided constrained synthesis.
             # The prior (Phase 2) makes draws legal by construction; this adds
@@ -458,20 +482,31 @@ class ConvergenceAgent:
                 if cell_state == coverage.STATE_RETIRED:
                     retired_cells.append(cell_key)
                     continue
-                synth = self.mutator.sample_cell_synthesized(
-                    family,
-                    base_config=winner_config,
-                    cell=self._cell_coverage(family, shape),
-                    groups=mutation_budget,
-                    seed=f"{self.iteration}:{cell_key}",
-                    band_pct=self.band(),
-                    shape=shape,
-                    sweeps=self._shape_sweeps(),
-                )
-                sweep_shapes = synth.get("shapes") or []
-                if synth.get("source") == "lattice":
-                    lattice_fallbacks.append(cell_key)
-                mutants = [c["knobs"] for c in synth.get("candidates", [])]
+                # DB-hooked synthesis first (Option H overhaul): wide (DB tile
+                # donors) + narrow (forward knobs) + direction (floor steal),
+                # guaranteed novel by construction. Falls back to the manifest
+                # sampler when the DB is unavailable.
+                if self.db_mutator is not None and self.db_mutator.has_db():
+                    mutants = self.db_mutator.synthesize_mutants(
+                        family, winner_config, shape,
+                        random.Random(f"{self.iteration}:{cell_key}"),
+                        n=8)
+                    sweep_shapes = self._shape_sweeps().get(family, [shape])
+                else:
+                    synth = self.mutator.sample_cell_synthesized(
+                        family,
+                        base_config=winner_config,
+                        cell=self._cell_coverage(family, shape),
+                        groups=mutation_budget,
+                        seed=f"{self.iteration}:{cell_key}",
+                        band_pct=self.band(),
+                        shape=shape,
+                        sweeps=self._shape_sweeps(),
+                    )
+                    sweep_shapes = synth.get("shapes") or []
+                    if synth.get("source") == "lattice":
+                        lattice_fallbacks.append(cell_key)
+                    mutants = [c["knobs"] for c in synth.get("candidates", [])]
             else:
                 mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
 
@@ -544,6 +579,13 @@ class ConvergenceAgent:
                         "origin": "novel",
                         "graded": len(shapes) >= 2,
                         "coverage_state": cell_state,
+                        # Mutations are never auto-skipped (Option H, user
+                        # directive 2026-10-09): the identical-fp skip must not
+                        # apply to a mutant, so a mutation is measured even when
+                        # an identical config was tested before. Novelty is the
+                        # mutator's job (it guarantees a novel fp by
+                        # construction), not the runner's skip.
+                        "bypass_identical_skip": True,
                     }
                     # One transaction for the ledger row and the phase. Two
                     # writes would let a crash leave a proposal with no phase
@@ -585,6 +627,7 @@ class ConvergenceAgent:
             # or that emitted mutants with no shape sweep, looks identical to one
             # that did neither unless it is reported.
             "retired_cells": retired_cells,
+            "settled_cells": sorted(set(settled_cells)),
             "lattice_fallback_cells": lattice_fallbacks,
             "ungraded_cells": sorted(set(ungraded_cells)),
             "graded_cells": len({r["phase_id"] for r in replayed
