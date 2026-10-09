@@ -26,10 +26,10 @@ probe-only rows (graded false, phase_id prefixed `probe_`); they may never be
 shipped to the produced TensileLibrary. The parity gate is untouched.
 
 Knobs that `_write_phase_config` does not forward to Tensile are stripped here
-(LdsPadA/B, AssertFree0ElementMultiple, StaggerUStride, StoreCInUnroll are
-forwarded only once port_tensile forwards them; never emit a row that silently
-no-ops). Idempotent: already-present fps are excluded, so re-running appends
-nothing.
+(Group C, 2026-10-09: LdsPadA/B, AssertFree0ElementMultiple, StaggerUStride and
+StoreCInUnroll ARE forwarded now, behind the ldspad_feasible legality gate, so
+candidates may carry them; the strip set is empty). Idempotent: already-present
+fps are excluded, so re-running appends nothing.
 
 Usage:
     python3 harness/generate_candidates.py [--dry-run] [--max-fp N]
@@ -58,14 +58,16 @@ _FORWARDED = {
     "MacroTile", "ThreadTile", "WorkGroup", "WorkGroupMapping", "GlobalSplitU",
     "DepthU", "VectorWidth", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
     "GlobalReduceVectorWidth", "NLCA", "PrefetchGlobalRead", "PrefetchLocalRead",
-}
-# builder keys we know are legal Tensile knobs but NOT forwarded by the writer
-# yet — emitting a row that silently no-ops wastes GPU time and pollutes the
-# ledger, so these are refused unless the caller forces them.
-_NOT_FORWARDED_YET = {
+    # Group C (2026-10-09): _write_phase_config now forwards these verbatim
+    # behind the ldspad_feasible legality gate, so candidates may carry them.
     "LdsPadA", "LdsPadB", "AssertFree0ElementMultiple", "StaggerUStride",
     "StoreCInUnroll",
 }
+# builder keys that are still stripped — the writer does NOT forward them yet,
+# so emitting a row that silently no-ops wastes GPU time and pollutes the
+# ledger. Group C moved the pad/RCT set into _FORWARDED; anything still here is
+# refused unless the caller forces it.
+_NOT_FORWARDED_YET = {}
 
 FAMILY_DTYPE = FAMILY_DTYPE_CHAR  # S/H/C/Z char per family
 
@@ -580,6 +582,44 @@ def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
     return len(seed_list)
 
 
+def _prune_candidates_from_seed(dry_run: bool = False) -> Tuple[int, int]:
+    """Strip `phase_cand_*` rows from the persistent seed overlay (todo hygiene).
+
+    The mirror note already instructs this after every candidate run: candidate
+    pools grow without bound under `--auto` and their knob-encoded ids can drift
+    from the `config` that is ground truth. Proven winners / accepted rows and
+    `probe_*` rows are kept. State is preserved into a timestamped archive copy
+    of the seed before stripping, so the action is reversible by diffing the two
+    files. Returns (stripped, kept)."""
+    payload = __yaml_load(OVERLAY_PATH, fallback={"phases": []})
+    if not isinstance(payload, dict):
+        payload = {"phases": []}
+    kept, stripped = [], []
+    for p in payload.get("phases", []):
+        if str(p.get("phase_id", "")).startswith("phase_cand_"):
+            stripped.append(p)
+        else:
+            kept.append(p)
+    if not stripped:
+        return 0, len(kept)
+    if dry_run:
+        return len(stripped), len(kept)
+    import yaml
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive = OVERLAY_PATH.parent / f"phases.cand_archive.{stamp}.overlay.yaml"
+    yaml.safe_dump({"note": f"phase_cand_* rows stripped from the seed by "
+                            f"--prune-candidates at {stamp}",
+                    "phases": stripped},
+                   open(archive, "w"), sort_keys=False, default_flow_style=False)
+    payload["phases"] = kept
+    payload["note"] = (payload.get("note", "") +
+                       f"\nStripped {len(stripped)} phase_cand_* rows "
+                       f"(archived: {archive.name}) at {stamp}")
+    yaml.safe_dump(payload, open(OVERLAY_PATH, "w"),
+                   sort_keys=False, default_flow_style=False)
+    return len(stripped), len(kept)
+
+
 def _round_robin_prune(rows: List[Dict[str, Any]], cap: int) -> List[Dict[str, Any]]:
     """Keep a fair (family, cell) share when the pool overshoots the run budget.
 
@@ -635,7 +675,18 @@ def main() -> int:
                     help="append off-grid probe rows to the seed overlay too "
                          "(breaks the §6.1 parity test until the rule is amended; "
                          "probes are always mirrored regardless)")
+    ap.add_argument("--prune-candidates", action="store_true",
+                    help="strip phase_cand_* rows from the seed overlay "
+                         "(archive first, keep probe_*/accepted rows); "
+                         "overrides all generation")
     args = ap.parse_args()
+
+    if args.prune_candidates:
+        stripped, kept = _prune_candidates_from_seed(dry_run=args.dry_run)
+        print(f"{'[dry-run] would strip' if args.dry_run else 'stripped'} "
+              f"{stripped} phase_cand_* rows; {kept} rows kept in "
+              f"{OVERLAY_PATH.name}")
+        return 0
 
     rows: List[Dict[str, Any]] = list(iter_candidates())
     rows = _round_robin_prune(rows, args.max_fp)

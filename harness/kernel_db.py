@@ -35,9 +35,26 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+# Repo-root import for the canonical typecode->family resolver (single source of
+# truth in gfx90c_common). kernel_db runs as `python3 harness/kernel_db.py`,
+# where sys.path[0] is the harness dir, so the repo root must be inserted first.
+_HERE = Path(__file__).resolve().parent.parent
+for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):
+    if _p and _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from gfx90c_common import (            # noqa: E402  (path set up above)
+    FAMILY_DTYPE_CHAR,
+    family_from_kernel_name,
+    kernel_typecode,
+)
+
 ENUM_TO_DTYPE = {0: "S", 1: "D", 2: "C", 3: "Z", 4: "H"}
-FAMILY_RE = re.compile(r"^phase_(ss|dd|hh|cc|zz)(?:_\w+)*?")
+# Family token immediately after the phase / probe / auto-pool prefix, so
+# `phase_ss_...`, `phase_auto_3_hh_...` and `probe_dd_...` all resolve.
+FAMILY_RE = re.compile(r"^(?:phase|probe)_(?:auto_\d+_)?(ss|dd|hh|cc|zz)(?:_\w+)*?")
 _DEFAULT_DTYPE = {"ss": "S", "dd": "D", "hh": "H", "cc": "C", "zz": "Z"}
+_REVERSE_DEFAULT_DTYPE = {v: k for k, v in _DEFAULT_DTYPE.items()}
 
 CONFIG_KEYS = [
     "MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU", "VectorWidth",
@@ -190,12 +207,27 @@ def phase_survey(phase_dir: str, phase_id: str,
         med = (vals[n // 2] + vals[(n - 1) // 2]) / 2.0
         cfg = cfgset[0] if cfgset else {}
         dt_enum = cfg.get("DataTypeEnum")
-        if dt_enum is None:
-            m = FAMILY_RE.match(phase_id)
-            dt = _DEFAULT_DTYPE.get(m.group(1), "?") if m else "?"
-            dt_enum = -1
+        # Family attribution: the kernel's own typecode is the ground truth
+        # (SB/DB/HB/CB/ZB, HHS/HSS -> HH). phase_id text and the config enum can
+        # both lie about family — the `phase_auto_*` pool used to resolve to 'S'
+        # through its 'auto' prefix (the §13.2 contamination). Never derive a
+        # cell family from text when the kernel name is available.
+        tc_family = family_from_kernel_name(kc)
+        tc_code = kernel_typecode(kc)
+        if tc_family:
+            family = tc_family
+            dt = FAMILY_DTYPE_CHAR.get(family, "?")
         else:
-            dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}")
+            m = FAMILY_RE.match(phase_id)
+            family = _DEFAULT_DTYPE.get(m.group(1), "") if m else ""
+            if family:
+                family = _REVERSE_DEFAULT_DTYPE.get(family, "")
+            dt_enum = cfg.get("DataTypeEnum")
+            if dt_enum is None:
+                dt = family or "?"
+                dt_enum = -1
+            else:
+                dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}")
         entry: Dict[str, Any] = {
             "phase": phase_id,
             "kernel": kc,
@@ -205,6 +237,8 @@ def phase_survey(phase_dir: str, phase_id: str,
             "n_seeds": n,
             "dtype": dt,
             "dtype_enum": dt_enum,
+            "family": family,
+            "typecode": tc_code,
         }
         for kk in ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                    "VectorWidth", "DepthU", "GlobalLoadVectorWidthA",
@@ -227,7 +261,8 @@ def build_kernel_db(base_dir: str,
         if not os.path.isdir(run_dir):
             cache[run_id] = []
             continue
-        phases = sorted(glob.glob(os.path.join(run_dir, "phase_*")))
+        phases = sorted(glob.glob(os.path.join(run_dir, "phase_*"))
+                        + glob.glob(os.path.join(run_dir, "probe_*")))
         acc: List[Dict[str, Any]] = []
         for pd in phases:
             acc.extend(phase_survey(pd, os.path.basename(pd), kind == "spoof"))

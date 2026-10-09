@@ -113,6 +113,26 @@ pinned as held`.
 **To close:** run the 127 in a TTY, confirm the floor completes, then decide
 whether T2 is worth its day. No code work is outstanding.
 
+**2026-10-09 update — measurement-hygiene items that touch this tier land done:**
+- kernel_db rebuilt with all runs folded (`harness/kernel_db.py --rebuild`): the
+  locked-floor run contributes 14 019 kernel-shape rows; 19608 rows total.
+- **Zero-contamination verified** on the rebuilt DB: 0 rows where the stored
+  family disagrees with the kernel typecode (SB/DB/HB/CB/ZB → SS/DD/HH/CC/ZZ;
+  HHS/HSS → HH); the `phase_auto_1_hh_*` rows that used to win SS:1024 at
+  2142.55 are gone — honest SS:1024 is 1135.1. Root cause pinned and fixed in
+  `analytics.py` (the `'auto'` FAMILY_TO_DTYPE entry) + `gfx90c_common.py`
+  typecode resolvers (single source of truth), 28 unit tests
+  (`tests/test_cell_attribution.py`).
+- **Floor winner gate-legality proven** (`check_candidates.py --floor`): all 30
+  per-cell floor winners pass all 4 legality gates natively; the 21 % whole-deck
+  residue is generator-rule artifacts on non-winners plus 72 genuine
+  occupancy-LDS entries (64-KB-LDS gfx900 kernels the APU's 16-KB-WG budget
+  rejects — none ever won a cell).
+- Real VGPR counts measured corpus-wide (`harness/measure_vgprs.py`) and the
+  occupancy model's calibration is now measurement-ratified
+  (`scheduler.MEASURED_VGPR_BY_DTYPE`).
+- Full story: `gfx90c_tuning_guide.md`.
+
 
 **Mechanism:** `port_tensile.py` + `phases.yaml` manifest + 7 modules (`registry.py`, `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`, `gfx90c_common.py`) fully implemented and unit-tested. `--auto` convergence loop operational with deterministic mutate-≤2-knobs candidate generation.
 

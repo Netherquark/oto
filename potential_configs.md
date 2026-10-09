@@ -903,3 +903,248 @@ the LDS-bound residency view, see `results.md`/`knowledge_base.md`.)
   candidates include a pattern-overlap with deck favourites only via `[:2]`
   wide patterns — deck's other patterns remain deck-only. Runtime: full suite
   not re-run; generator unit coverage lives in `tests/test_generate_candidates.py`.
+
+---
+
+## 13. run_20261008_030033 triage: why "nothing moved towards the ceiling" (2026-10-08)
+
+Ground truth for this section, all verified locally:
+
+* acceptance report: `gfx90c_runs/run_20261008_030033/acceptance_report.json`
+  (`PROVISIONAL FLOOR`, reference re-measurement declined; 22 WIN / 15 TIE / 1 LOSS).
+* native per-kernel medians: `harness/kernel_db.py` over `kernel_db.json` (note:
+  **it does not contain `run_20261008_005217` or `run_20261008_030033`**; those
+  two were scanned ad hoc in §12 triage. Rebuild it with `--rebuild` before the
+  next verdict so every run participates).
+* spoof per-cell bests + knobs: the locked floor `gfx900_ref_locked_52149f315d`
+  rows in `kernel_db.json`, typecode-filtered (`SB/DB/HB/CB/ZB` only).
+* newest-run per-candidate medians: extracted per-phase from
+  `run_20261008_030033/phase_*/2_BenchmarkData/*.csv` with `phase_survey`.
+* hardware/occupancy model: `gfx90c_theoretical_limits.md` §6 and the web-sourced
+  occupancy rules (session 2026-10-08): 7 CUs = 28 SIMDs = 280 wave slots; per
+  SIMD dependent on per-thread VGPRs (≤24→10, 32→8, 48→5, 64→4, 256→1 waves);
+  LDS 64 KB/CU budgeted as WG=256thr→≤64 KB/WG, WG=128thr→≤32 KB/WG.
+
+### 13.1 Four mechanisms, one headline
+
+**M1 — ceiling saturation (ties that are walls).** On the large squares the
+machine is ALU/pipe-bound and the deck already reaches (or crosses) the
+occupancy-corrected realistic ceilings, exactly like the gfx900 ships. SS 768+
+native ≈ **1046–1135** vs realistic ceiling **1118.7** (93–102 %); HH 1024+
+native ≈ **2368–2665** vs **2461** (96–108 %); DD 768+ native ≈ **89–97** vs
+**98.6** (90–98 %); HPA/HS 512+ native ≈ **773–1441** vs the derived **1118**
+bar (HPA sits *above* 100 % because the f16 input footprint halves
+LDS/VGPR traffic — the derived ceiling intentionally under-states it). Native
+and spoof land within ±5 % of each other on every one of these cells:
+SS:768 **-0.5 %**, SS:1365 **-2.9 %**, DD:768 **+1.5 %**, DD:2048 **+0.4 %**,
+H:1024 **-3.9 %**, H:2048 **-3.1 %**, H:4096 **+0.1 %**, HPA:1024 **+0.1 %**.
+**These ties are not tuning failures and no config mutation moves them.** The
+"bunch of ties" the user saw is mostly this: both arms pinned to the same wall.
+
+**M2 — wave quantization ("lack of work") on the small cells.** For a
+cube of side N with tile MT, total waves = (N/MT0·N/MT1)·threads-per-WG/64.
+Practical counts on 28 SIMDs (full table below):
+
+| cell | winning tile (tt) | total waves | waves/SIMD | ~residency |
+|---|---|---|---|---|
+| SS:256 | 96x96/6x6 | 36 | 1.29 | 13 % |
+| SS:512 | 128x128/8x8 | 64 | 2.29 | 23 % |
+| HH:256 | 32x64/4x4 | 64 | 2.29 | 23 % |
+| HH:512 | 128x128/8x8 | 64 | 2.29 | 23 % |
+| CC:256 | 64x64/4x4 | 64 | 2.29 | 23 % |
+| CC:192 | 32x32/4x4 | 36 | 1.29 | 13 % |
+| DD:192 | 32x32/4x4 | 36 | 1.29 | 13 % |
+| ZZ:128 | 32x32/2x2 | 64 | 2.29 | 23 % |
+
+A 192/256 cube with sensible tiles simply cannot *produce* ≥~40 waves — the
+machine idles below 25 % residency. SS:256 makes 412/1613 while SS:1024 makes
+1135/1613 with 91 % residency — **the gap between them IS the residency gap.**
+These small cells are the real "headroom", and the lever here is not the tile
+shape but **filling the 7 CUs**: smaller tiles that still keep ≥4 waves per
+thread in flight, or GlobalSplitU to turn waves over K. §7's `256 → GSU8`
+note is exactly this.
+
+**M3 — the Tensile complex codegen wall (CC and ZZ).** At 512..2048 the CC
+kernels are *oversubscribed* (91 %→1463 % residency) yet cap at **≈290–318**
+GFlops, and ZZ caps at **≈21–24**, while the gfx900 ships hit the SAME plateau
+(spoof CC:512 317.8, ZZ:1024 22.6). So complex is not residency-limited; it is
+limited by the kernel's own shape: (a) a complex MAC compiles to 4–6 real
+instructions (FMA + cross-term adds), ~1.5–2× instruction cost per flop; (b)
+complex A/B/C double the register footprint per element, shrinking fragments
+and the squeeze on the load pipe; (c) 8-byte (C) / 16-byte (Z) LDS elements
+amplify bank conflicts by 2–4× versus 4-byte elements; (d) Z is forced to
+VW1 (16-B cap), so C-reg and addressing overhead per flop is the worst of any
+family. **No tile/pattern/GSU mutation crosses this wall** — that is why the
+whole pool's CC/ZZ rows sit in a ±3 % band, and why CC:512 ties at 317.8
+regardless of WGM, TT, MT, DU. The only levers with a mechanism against it are
+the LDS-conflict knobs **that `_write_phase_config` currently strips
+silently** (`LdsPadA/LdsPadB`, the swizzle layouts, `StaggerUStride`): the
+swizzle/pad axis changes the LDS addressing, not the tile geometry, and is the
+one axis never benchmarked in any run (see 13.4 Group C). The rest of this
+wall is Tensile codegen and is out of reach of a config deck.
+
+**M4 — the run itself was measured at a suppressed clock.** The newest run's
+samples carry `native_clock_coverage: 0.53` and `native_clock_sclk_hz:
+1175000000` against `sclk_ref_hz: 1800000000` → **≈1.53× slower than the
+reference clock**. Its absolute GFlops look "flat" partly because they are
+~50 % lower than any full-clock run would produce (CC:256 pool rows ≈55 while
+the old full-clock deck did 188; SS pool rows ≈130 while 412 was known).
+Crucially: **its wins are within-run-relative and valid** (CC WGM8 315.4 >
+WGM4 300.9 at 512 within the same clock), but its absolute values and any
+verdict delta against the 1.8-GHz locked floor are **not comparable**. Apollo
+DVFS on a 6-hour TTY-less iGPU soak drifts 1.2–1.8 GHz; either the bench must
+pin sclk (e.g. `sclk=1400MHz`) or verdicts must be clock-normalized before
+grading. Also note the acceptance `native_value` is best-of-bests across runs
+→ it mixes clock regimes cell by cell; the report already stores the clock
+fields, we just don't consume them.
+
+### 13.2 Contamination that already affects the published verdicts
+
+Three classes, all reproducible in-place — **this report is not reportable
+until report.py/analytics are audited**:
+
+1. **S cells "won" by H-family phases.** `S 512 native_value=1419.93`
+   (`phase_auto_1_hh_4096x4096x4096_2`), `S 1024=2142.55`
+   (`phase_auto_1_hh_1024x1024x1024_3`), `S 2048=2092.51`
+   (`phase_auto_2_hh_512x512x512_1`), `S 4096=2068.03`
+   (`phase_auto_1_hh_1024x1024x1024_3`) — every one an `hh`-prefixed phase.
+   Typecode-filtered, the honest SS cells are **1135 / 1098 / 1091**
+   (native) vs **1100 / 1121 / 1110** (spoof) = ties at the ceiling.
+2. **Same-phase cross-shape attribution.** `H 512 native_value=1564.07` comes
+   from `phase_auto_2_hh_1024x1024x1024_2` (a 1024-phase) and `H 256
+   763.38` from `phase_auto_0_hh_256x256x256_4`, whose 256-shape samples in
+   the kernel_db runs sit at ~180–206. The 763 value comes from the *two runs
+   absent from kernel_db*; it may be a true full-clock measurement, but right
+   now it is **not reproducible from the corpus** and should not be quoted.
+   (Fix = fold 005217/030033 into `kernel_db.json`, then every number in the
+   verdict table is re-derivable.)
+3. **Newest run undercounted.** See M4 — absolute numbers need the ≈1.53×
+   clock factor before they can be compared with the floor at all.
+
+Fair re-tally of the 38 cells **before** any tuning: the four S-cell "WIN"s
+reclassify as TIE; that gives roughly **18 WIN / 19 TIE / 1 LOSS** (HPA/HS,
+DD, H:256/512 and ZZ wins stand; CC:256 remains the single honest LOSS). 36 of
+38 cells either sit at a wall (M1/M3) or are measurement artefacts (M4/M2).
+
+### 13.3 Kernel-type patterns (all runs, all families) — what actually wins
+
+| lever | winner | evidence |
+|---|---|---|
+| direction | `Ailk_Bjlk` (**NT**) dominates | the only non-NT winners are the DD:192 `Alik_Bljk` (TT) and the DD/Z 1024 pocket `64x32` TN tiles; spoof is NT-everywhere too |
+| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | every family's whole range is served by ONE tile at the large end + one at the small end (§11) |
+| VectorWidth | pinned to the 16-B load cap, not free | S vw4=16B, H vw8=16B, C vw2=16B, D vw1-2=16B, Z vw1=16B, HPA vw4 |
+| DepthU | 8 for S/D/C/Z, 16 for H/HPA (+ SS:256 96-tile = du16) | pattern is family-locked, not a knob to sweep |
+| WorkGroupMapping | 4 everywhere; **8 is a real CC lever** | CC 512 WGM8 315.4 > WGM4 300.9, CC 1024/2048 WGM8 wins the cells (within-run, M4-safe) |
+| GlobalSplitU | 1 in *all* winners | GSU never validated for fills; the only untested large-winning axis (see 13.4) |
+| register hygiene | widest scale: real families saturate; complex families cap at the codegen wall | M1/M3 |
+
+### 13.4 Candidate plan (CPU-gated legality PoCs here; TTY-only benchmark)
+
+**Group A — wave-fill the small cells (M2).** These have residency headroom
+and GSU is the cheapest way to add waves without rarefying the tile. All
+patterns NT unless noted; run at 3+ seeds, judge within-run.
+
+* **SS:256** — currently 412 (96x96/6x6/du16/GSU1, 36 waves). Add the same
+  tile at **GSU {2, 4}**, plus **64x64x8/4x4/vw4/GSU {2,4}** and
+  **64x64x16/4x4/vw4/GSU2** (each 64-waves base). Target ≥550 (35 % res on
+  the 1118 realistic).
+* **SS:512** — 772 at 128x128 (64 waves). Add GSU{2,4} on 128x128 and on
+  64x64x16/4x4/vw4. Target ≥900.
+* **HH:256** — 763 (32x64/4x4/vw4/du16 = 64 waves). Add **GSU2** (half
+  GSU>1 requires AF0EM≥2 — legality gate must enforce) on the same tile and
+  on 64x64x16/8x8/vw8. Target ≥1200 (i.e. ~1.6×).
+* **HH:512** — 1564 (128x128, 64 waves). GSU{2,4} variants.
+* **DD:192/256/512** — already WIN; a GSU{2,4} probe on the 32x32/2x2 winner
+  is cheap and may push 192 past 60.
+
+**Group B — fix the single honest LOSS: CC:256 (−11.4 %).**
+The spoof's winner IS `Cijk_Ailk_Bjlk_CB_MT64x64x8` / tt4x4 / vw2 / du8 /
+GSU1 (measured 214). Native best for the cell is the same geometry in the
+`Alik_Bljk` (NK) direction at 188. The sanctioned spoof-steal here is exact:
+benchmark **`Ailk_Bjlk` + WGM8 and WGM4`** at 256 with ≥3 seeds (WGM8 on this
+kernel already wins 512+), plus the wave-fill alternates **64x32x8/4x2** and
+**32x64x8/2x4**. The delta to beat is ~14 %, likely clock + direction + WGM
+combined; no other cell needs a steal.
+
+**Group C — the CC/ZZ codegen lever (M3), the only axis with a mechanism.**
+`_write_phase_config` silently drops `LdsPadA/LdsPadB` (+ `StaggerUStride`,
+and there are no `swizzle/layout` options forwarded either). Before any
+complex micro-tuning, **forward those knobs through the writer + a legality
+gate in `scheduler.validate_config`/`occupancy_feasible`** (CPU-side, one
+session), then propose CC/ZZ variants on the current winners:
+MT64x64x8 (CC), MT64x32x8 / 32x32x16 (ZZ) with LdsPadA/B ∈ {0,16,32} and,
+if Tensile accepts local swizzle, the conflict-free M/N layouts. This is a
+hypothesis: 8/16-B LDS elements bank-conflict the current kernels into the
+~20 % cap; padding/swizzle is the documented Tensile remedy. Cost is small
+(2 families × ~6 phases).
+
+**Group D — measurement hygiene (do this before trusting any verdict again).**
+1. Fold `run_20261008_005217` + `run_20261008_030033` into `kernel_db.json`
+   (`--rebuild`) so every number is corpus-reproducible. 2. Re-derive every
+   cell with the **typecode filter** (SB/DB/HB/CB/ZB only) — §13.2 shows four
+   S cells and at least one H cell flip. 3. Clock-normalize or pin sclk
+   (~1.4 GHz) so run deltas are meaningful; at minimum surface
+   `native_clock_coverage < 0.8` as a warning in the acceptance report.
+4. Regenerate the verdict table once 1–3 land: **expect ~18 WIN / 19 TIE /
+   1 LOSS**, with the "19 ties" being ≥10 genuine wall ties (M1) + 2–3 M2
+   cells that Group A can convert + the CC/ZZ wall (M3) awaiting Group C.
+
+### 13.5 Ceiling-model caveat (documented, unchanged)
+
+The realistic ceilings for CC (**1118.7**) and ZZ (**98.6**) are derived from
+the f32/f64 roof and do NOT subtract the Tensile-complex codegen penalty
+(§13.1 M3). On gfx90c no Tensile complex kernel — ours or gfx900's — comes
+within 5× of those numbers; they will read as permanent orange regardless of
+deck effort until either the model is amended with a "complex codegen cap ≈
+20 % of roof" term, or a non-Tensile complex kernel exists. §8.6 remains open
+on this; it should be closed as *model*, not as *deficit*.
+
+### 13.6 Post-fix results (2026-10-09) — the contamination fixes + measurement hygiene land
+
+All four Group D items are done and verified on the REBUILT kernel_db (both
+missing runs folded → 19 608 rows, 8 runs with data):
+
+1. **Typecode-attributed cells, zero contamination.** `FAMILY_TO_DTYPE["auto"]`
+   was the root cause (§13.2): `phase_auto_*` ids matched the greedy 4-char
+   pool prefix → family `'auto'` → dtype `'S'` → HH/CC/DD kernels tallied into
+   the SS cells. Removed; `gfx90c_common.kernel_typecode()/
+   family_from_kernel_name()` are now the single resolvers (layout-suffix-aware:
+   `HHS_BH`, `ZB_GB`), `resolve_cell_family()` is typecode-first with
+   `[contamination]` warnings, `aggregate_by_cell_typecode()` partitions rows by
+   kernel. Rebuilt-DB audit: **0 family↔typecode disagreements, 0 HH-ish kernels
+   in any SS cell, 0 `phase_auto_1_hh` rows in SS:1024**. Honest SS cells:
+   256 412.1 / 512 801.5 / 768 1094.9 / 1000 1107.4 / **1024 1135.1** / 1365
+   1073.0 / 2048 1120.7 / 4096 1123.0. (256/1024 match the §13.2 audit exactly;
+   the rest rose because the newest run's rows now participate.)
+2. **Floor winner gate-legality proven.** `check_candidates.py --floor` sweeps
+   the 6 855-kernel manifest rebuilt into configs: **all 30 per-cell floor
+   winners pass all 4 gates**; whole-deck residue 1 464 (21 %) = GLVW/VW
+   divisibility artifacts (738) + assembly-class (357) on non-winning shipped
+   entries + 72 genuine occupancy-LDS (64-KB-LDS gfx900 kernels the APU
+   rejects — never won a cell).
+3. **VGPR model measurement-ratified.** `harness/measure_vgprs.py` reads real
+   per-thread totals from Tensile-emitted objects (1144 scanned, 605 mapped);
+   invariant (gate-legal ⇔ measured < 256) holds for every (dtype, TT) —
+   table in `scheduler.MEASURED_VGPR_BY_DTYPE`.
+4. **Auto-pool is NOT marginal (audit resolves the todo-6 hypothesis).** The
+   auto phases win **13/34** cells natively (38 %), incl. HH:256 763.4, SS:1024
+   1135.1, SS:256 412.1, DD:768 93.0, CC:192 113.8; the legacy
+   `phase_auto_0_{S,Z}_*` pool (117 dirs) wins 10 cells by typecode attribution.
+   Keep them; rename the single-letter tokens at hygiene time.
+
+Also landed: **Group C forwarding** — `_write_phase_config` now forwards
+LdsPadA/B, AssertFree0ElementMultiple, StaggerUStride, StoreCInUnroll behind
+the CPU-only `scheduler.ldspad_feasible` gate (padded-LDS footprint ≤ 16 384,
+StaggerUStride < DepthU·bpe, AF0EM ≥ 1), and the generator's `_FORWARDED` set
+keeps them on candidates; 4 Group C tests. Tooling: `harness/cell_knob_diff.py`
+(per-cell native-vs-floor winner knob deltas: 30 cells shared, 22 native /
+8 floor — CC:256 188.1 vs 214.0 is the single outside-band LOSS and the only
+sanctioned steal), `--prune-candidates` on the generator, occupancy-margin
+output in `check_candidates.py` (`wg/cu=N acc=…vgpr …% of 64K file`).
+
+### 13.7 The tuning cookbook
+
+All of the above, formalized with the knob surface, the M1–M4 mechanisms, the
+measured patterns, and the overnight-run rules, lives in
+**`gfx90c_tuning_guide.md`** (caveman, full). The acceptance bar remains
+`gfx90c_theoretical_limits.md` §5.

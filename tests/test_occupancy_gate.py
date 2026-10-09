@@ -43,7 +43,8 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
         sys.path.insert(0, _p)
 
 from scheduler import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,  # noqa: E402
-                       MAX_VGPR_PER_THREAD, MEASURED_VGPR, VGPR_PER_ELEMENT,
+                       MAX_VGPR_PER_THREAD, MEASURED_VGPR,
+                       MEASURED_VGPR_BY_DTYPE, VGPR_PER_ELEMENT,
                        VGPR_BUDGET, VGPR_PER_CU, occupancy_feasible,
                        occupancy_workgroups_per_cu)
 
@@ -117,6 +118,23 @@ class TestMeasuredRule(unittest.TestCase):
 
     def test_measured_table_matches_observation(self):
         self.assertEqual(MEASURED_VGPR, OBSERVED)
+
+    def test_corpus_measured_totals_agree_with_gate(self):
+        """Corpus code-object measurements (harness/measure_vgprs.py) must
+        agree with the gate for every dtype: totals of gate-passing configs are
+        < 256 VGPRs, totals of gate-failing ones are >= 256. This is the
+        empirical link between the accVGPR model and emitted reality."""
+        for ch, table in MEASURED_VGPR_BY_DTYPE.items():
+            weight = VGPR_PER_ELEMENT[ch]
+            for (t0, t1), total in table.items():
+                acc = t0 * t1 * weight
+                gate_ok = acc <= ACCVGPR_BUDGET
+                legal = total <= MAX_VGPR_PER_THREAD
+                self.assertEqual(
+                    gate_ok, legal,
+                    f"{ch} TT {t0}x{t1}: acc model {acc} vs budget "
+                    f"{ACCVGPR_BUDGET}, measured {total} VGPRs",
+                )
 
     def test_budget_sits_between_last_pass_and_first_fail(self):
         last_ok = max(t0 * t1 * VGPR_PER_ELEMENT["Z"]

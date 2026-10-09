@@ -1050,6 +1050,24 @@ MEASURED_VGPR = {
     (2, 8): 171, (8, 4): 271, (8, 8): 519,
 }
 
+# Measured TOTAL per-thread VGPRs (kernarg + operand + accumulator), read
+# 2026-10-09 from the run corpus' emitted code objects with
+# `python3 harness/measure_vgprs.py` (llvm-readelf on the Tensile assembly
+# .o metadata, CPU-only). Prefer the dtype-keyed table over MEASURED_VGPR
+# (which is the weight-8 complex table used when no dtype is in hand).
+MEASURED_VGPR_BY_DTYPE = {
+    "S": {(2, 2): 26, (2, 4): 43, (4, 2): 43, (4, 4): 47, (4, 6): 65,
+          (4, 8): 77, (6, 4): 65, (6, 6): 83, (8, 4): 79, (8, 8): 119,
+          (8, 16): 199, (16, 8): 199},
+    "D": {(2, 2): 39, (2, 4): 53, (4, 2): 53, (4, 4): 79, (4, 8): 131,
+          (8, 4): 131, (8, 8): 215},
+    "H": {(2, 2): 21, (4, 4): 35, (4, 8): 57, (6, 6): 48, (8, 4): 57,
+          (8, 8): 65, (8, 16): 105, (16, 8): 105},
+    "C": {(2, 2): 39, (2, 4): 59, (4, 2): 59, (4, 4): 79, (4, 8): 134,
+          (8, 4): 134},
+    "Z": {(2, 2): 71, (2, 4): 99, (4, 2): 99, (2, 8): 171, (4, 4): 167},
+}
+
 
 def _measured_accvgpr(tt0: int, tt1: int, weight: int) -> int:
     """Accumulator VGPRs per thread for a thread tile and dtype weight."""
@@ -1206,7 +1224,9 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     ku = _depth_u(config)
     acc = _measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
-        observed = MEASURED_VGPR.get((tt0, tt1))
+        observed = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt0, tt1))
+        if observed is None:
+            observed = MEASURED_VGPR.get((tt0, tt1))
         seen = f"; measured {observed} VGPRs" if observed else ""
         return False, (
             f"ThreadTile {tt0}x{tt1} needs {acc} accumulator VGPRs/thread "
@@ -1235,6 +1255,90 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
             f"the phase yields zero solutions. Reduce MacroTile area or DepthU "
             f"(keep (MT0+MT1)*DepthU <= {LDS_BUDGET // BYTES_PER_ELEMENT[ch]})."
         )
+    return True, ""
+
+
+def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+    """Group C legality gate for the forwarded LDS-pad / RCT knobs.
+
+    `_write_phase_config` forwards LdsPadA/B, AssertFree0ElementMultiple,
+    StaggerUStride and StoreCInUnroll only when this CPU-only gate passes:
+
+    * LdsPad pads every LDS row of A (MT0 wide) / B (MT1 wide) by that many
+      elements, so the padded footprint is (MT0+padA+MT1+padB) * BPE * DepthU
+      and must fit LDS_BUDGET — the same budget occupancy_feasible enforces
+      for the unpadded tile, extended by the pads.
+    * StaggerUStride must satisfy the Tensile rule
+      StaggerUStride < DepthU * BytesPerElement (SolutionStructs:3342, which
+      also governs the default 256).
+    * AssertFree0ElementMultiple >= 1 (1 = disabled); half Assembly with
+      GlobalSplitU > 1 additionally requires >= 2 (SolutionStructs:3616,
+      enforced by validate_config — this gate only sanity-checks the value).
+    * StoreCInUnroll must be a bool / 0-1 int.
+
+    Configs that carry none of these keys trivially pass — the gate exists so
+    the FORWARDED value is never what kills a phase silently as an opaque
+    Tensile rejection.
+    """
+    mt_raw = config.get("MacroTile")
+    ku = _depth_u(config)
+    ch = _dtype_char(config)
+    bpe = BYTES_PER_ELEMENT.get(ch)
+
+    pad_a = config.get("LdsPadA", 0)
+    pad_b = config.get("LdsPadB", 0)
+    try:
+        pad_a, pad_b = int(pad_a or 0), int(pad_b or 0)
+    except (TypeError, ValueError):
+        return False, f"LdsPadA/B must be integers (have {pad_a!r}/{pad_b!r})"
+    if pad_a < 0 or pad_b < 0:
+        return False, f"LdsPadA/B must be >= 0 (have {pad_a}/{pad_b})"
+    if pad_a or pad_b:
+        if not mt_raw or ku <= 0 or not bpe:
+            return False, (
+                "LdsPad requires a resolvable MacroTile, DepthU and dtype to "
+                "prove the padded LDS footprint"
+            )
+        dims = _tile_dims(config)
+        if not dims:
+            return False, "LdsPad requires a resolvable ThreadTile"
+        mt0, mt1, _, _ = dims
+        footprint = (mt0 + pad_a + mt1 + pad_b) * bpe * ku
+        if footprint > LDS_BUDGET:
+            return False, (
+                f"padded LDS footprint {footprint} > budget {LDS_BUDGET} with "
+                f"LdsPadA={pad_a} LdsPadB={pad_b} at DepthU {ku}; the pads would "
+                f"be dropped or the phase rejected by Tensile"
+            )
+
+    su = config.get("StaggerUStride")
+    if su is not None:
+        try:
+            stride = int(su)
+        except (TypeError, ValueError):
+            return False, f"StaggerUStride must be an integer (have {su!r})"
+        if stride < 0:
+            return False, f"StaggerUStride must be >= 0 (have {stride})"
+        if stride > 0 and ku > 0 and bpe and stride >= ku * bpe:
+            return False, (
+                f"StaggerUStride={stride} >= DepthU({ku}) * {bpe}B; Tensile "
+                f"requires StaggerUStride < DepthU * BytesPerElement "
+                f"(SolutionStructs:3342)"
+            )
+
+    af0em = config.get("AssertFree0ElementMultiple")
+    if af0em is not None:
+        try:
+            av = int(af0em)
+        except (TypeError, ValueError):
+            return False, f"AssertFree0ElementMultiple must be an int (have {af0em!r})"
+        if av < 1:
+            return False, f"AssertFree0ElementMultiple must be >= 1 (have {av})"
+
+    sci = config.get("StoreCInUnroll")
+    if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
+        return False, f"StoreCInUnroll must be a bool (have {sci!r})"
+
     return True, ""
 
 

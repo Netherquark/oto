@@ -9,6 +9,65 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-09 — Cross-contamination eliminated, measurement hygiene + Group C land, tuning cookbook formalized.**
+  Closes `potential_configs.md` §13.2/§13.4 Groups C+D and the entire CPU-only queue
+  (`implementation_plan.md`): (1) **typecode-first cell attribution** — root cause of §13.2 was
+  `FAMILY_TO_DTYPE["auto"] = "S"` in `analytics.py` (the greedy 4-char `phase_auto_*` id match →
+  family `'auto'` → dtype `'S'` dumped HH/CC/DD kernels into SS cells; SS:1024 reported **2142.55**
+  was honest **1135.1**). Removed; `gfx90c_common.kernel_typecode()`/`family_from_kernel_name()` are
+  now the single resolvers (layout-suffix-aware: `HHS_BH`→HH, never SS; `ZB_GB`→ZZ), with
+  `resolve_cell_family()` (typecode wins over a contradicting stamp; HPA stamps preserved) +
+  `aggregate_by_cell_typecode()`; kernel_db and both port_tensile loaders consume it per row.
+  Rebuilt `kernel_db.json` (folds `run_20261008_005217`+`run_20261008_030033`; 19 608 rows):
+  **0 family↔typecode disagreements, 0 HH-ish kernels in any SS cell**. 28 new tests
+  (`tests/test_cell_attribution.py`). (2) **Group C forwarding** — `_write_phase_config` forwards
+  LdsPadA/B, AssertFree0ElementMultiple, StaggerUStride, StoreCInUnroll behind the CPU-only
+  `scheduler.ldspad_feasible` gate (padded-LDS ≤ 16 384 B/WG, StaggerUStride < DepthU·bpe,
+  AF0EM ≥ 1); generator `_FORWARDED` keeps them on candidates (was silently stripped — 167/167
+  reference kernels carried pads). (3) **Floor winner gate-legality proven** — `check_candidates.py
+  --floor` + `--quiet`: all **30/30 per-cell floor winners pass all 4 gates natively** (whole-deck
+  residue 1 464/6 855 = GLVW/VW/assembly generator-rule artifacts + 72 genuine occupancy-LDS on
+  non-winners); new occupancy-margin output `wg/cu=N acc=…%.` (4) **VGPR model measurement-ratified**
+  — `harness/measure_vgprs.py` reads real totals from Tensile-emitted objects (1144 scanned, 605
+  mapped); invariant gate-legal ⇔ measured < 256 holds for every (dtype, TT); table in
+  `scheduler.MEASURED_VGPR_BY_DTYPE`. (5) **cell_knob_diff** — `harness/cell_knob_diff.py`: 30 shared
+  cells, 22 native / 8 floor; CC:256 188.1 vs 214.0 is the single outside-±2 % LOSS and the only
+  sanctioned steal (Group B). (6) **auto-pool audit** — 560 `phase_auto_*` dirs; the pool wins
+  13/34 cells natively (38 %), NOT marginal; legacy `phase_auto_0_{S,Z}_*` (117) wins 10 via
+  typecode attribution. (7) **`--prune-candidates`** on the generator (archives then strips
+  `phase_cand_*` from the seed overlay; keeps `probe_*`). (8) New canonical doc
+  **`gfx90c_tuning_guide.md`** (caveman, full) formalizes the knob surface, M1–M4, measured
+  patterns, floor legality, knob deltas and the overnight-run rules; acceptance bar unchanged
+  (`gfx90c_theoretical_limits.md` §5). Suite: 634+green (full run, see below).
+
+- **2026-10-08 — overnight-run deep triage: why the ceiling "didn't move" (potential_configs.md §13).**
+  `run_20261008_030033` (6h 9m, PROVISIONAL FLOOR, 22 WIN / 15 TIE / 1 LOSS) dissected per
+  dtype/family/shape against the locked gfx900 floor, `kernel_db.json`, and the occupancy model.
+  Finding: ties are mostly **walls, not tuning failures** — (M1) SS/HH/DD/HPA large-squares sit at
+  the realistic ceilings (SS 768+ 93–102 % of 1118.7; HH 1024+ 96–108 % of 2461; DD 768+ 90–98 %
+  of 98.6; HPA *above* its derived bar), native and spoof within ±5 % (SS:768 -0.5 %, DD:2048
+  +0.4 %, H:4096 +0.1 %); (M2) the 192/256/512 small cells are **wave-quantization-starved**
+  (36–64 waves on 28 SIMDs = 13–23 % residency — real headroom via GSU/wave-fill, e.g. SS:256 412
+  vs 1135@1024 is exactly the residency gap); (M3) CC/ZZ cap at **290–318 / 21–24 GFlops at
+  91–1463 % residency** — a Tensile complex-codegen wall (4–6 instr/MAC, 2× reg footprint, 2–4×
+  LDS bank-conflict amplification on 8/16-B elements) that the gfx900 ships hit too, so no
+  tile/pattern mutation crosses it: the only lever with a mechanism is `LdsPadA/B` + swizzle, the
+  knobs `_write_phase_config` currently strips silently — flagged as Group C candidate;
+  (M4) the run measured at **1.175 GHz vs 1.8 GHz reference (≈1.53× suppressed,
+  native_clock_coverage 0.53)** so its absolute numbers are flat by construction and its verdict
+  deltas vs the full-clock floor are not comparable (its wins are within-run-relative only).
+  §13.2 exposes report-level contamination: 4 S cells "won" by `phase_*_hh_*` phases
+  (honest SS = ties at the ~1100 plateau), `H 512`/`H 256` values referenced from non-matching
+  phases and from the two runs missing from `kernel_db.json` (fold via `--rebuild`), giving a
+  fair re-tally ≈ **18 WIN / 19 TIE / 1 LOSS** (CC:256 -11.4 % the sole honest loss). §13.3
+  pattern wins (NT everywhere; VW pinned to the 16-B load cap; WGM8 is a real CC lever;
+  GSU unused in all winners). §13.4 candidate plan: Group A wave-fill (SS/HH/DD 192–512 via
+  GSU{2,4}), Group B CC:256 = sanctioned spoof-steal (`Ailk_Bjlk`+WGM4/8, wave-fill alternates),
+  Group C LdsPad/Swizzle forwarding + legality gate for CC/ZZ, Group D hygiene (kernel_db
+  rebuild, typecode-filtered cell derivation, clock-normalisation). §13.5 records the CC/ZZ
+  ceiling-model caveat (derived ceilings don't subtract the complex codegen cap → permanent
+  orange regardless of deck). Doc-only change; no code touched.
+
 - **2026-10-08 — Generated seed candidate pool (proposal D4) implemented + triage of the short run.**
   Triage of `run_20261008_005217` (~22 min, 16 phases, 0 proposals): the executed command was the
   manual one-shot `--stage 3` (`command.txt:19`), not the overnight `--auto` loop (`command.txt:53`);

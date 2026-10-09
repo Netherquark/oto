@@ -590,23 +590,33 @@ before merging.
 These are the only remaining items that do **not** need a TTY. Everything else in
 the route portfolio is measurement-bound (`potential_configs.md` §8.2).
 
-1. **Measure real per-thread VGPRs** for the tile families, via `roc-obj-ls` /
-   `llvm-mc` on Tensile-emitted assembly (build only, no benchmark). Replaces the
-   calibrated `VGPR_PER_ELEMENT` table in `scheduler.py` with a measurement, which
-   is the only way to retire the 2× headroom assumption (`potential_configs.md`
-   §5.8). Highest-value item outstanding.
-2. **Set `PrintSolutionRejectionReason`** on ZZ phases so the next run's rejection
-   reason is logged instead of inferred from `overflowedResources`.
-3. **Sweep the floor reference deck through `check_candidates.py`** to *prove* the
-   floor's winning configs are natively gate-legal, rather than assuming they are
-   because both arms emit `TensileLibrary_gfx90c.co.raw`.
-4. **Fingerprint-diff native vs floor winner sets per cell** — turns "floor wins at
-   128-bit" into an exact per-cell knob delta, which is what §9 candidates are
-   derived from.
-5. **Report the occupancy margin** (not just pass/fail) in `check_candidates.py`
-   output so near-boundary configs are visible.
-6. **Audit the 117 legacy `auto` phases** — they are the largest single block in the
-   deck and are all dtype-char mutants, so their marginal value is unproven.
+**Status 2026-10-09 — all six items complete:**
+
+1. ✅ **Measure real per-thread VGPRs** — `harness/measure_vgprs.py`
+   (llvm-readelf on Tensile's emitted assembly `.o` metadata, corpus-wide,
+   CPU-only). Measured medians per (dtype, TT) now in
+   `scheduler.MEASURED_VGPR_BY_DTYPE`; invariant test
+   (`test_occupancy_gate.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`)
+   proves gate-legal ⇔ measured < 256 VGPRs. The occupancy model (§5.7) is now
+   measurement-ratified, not calibrated.
+2. ✅ **Set `PrintSolutionRejectionReason`** — already present in GlobalParameters
+   (`port_tensile.py:1052`).
+3. ✅ **Sweep the floor deck through `check_candidates.py`** — `--floor` mode:
+   **all 30 per-cell floor winners pass all 4 gates**; whole-deck residue
+   1 464/6 855 (21 %) is generator-rule artifacts on non-winners (GLVW/VW,
+   assembly) + 72 genuine occupancy-LDS (never-won entries, gfx900-64K-LDS
+   kernels the APU rejects).
+4. ✅ **Fingerprint-diff native vs floor winners per cell** —
+   `harness/cell_knob_diff.py`: 30 cells shared, 22 native / 8 floor
+   (SS:512/768/1365/2048, HH:1024/2048/4096, CC:256); CC:256 is the single
+   outside-band LOSS and the only sanctioned steal.
+5. ✅ **Occupancy margin in `check_candidates.py`** — `_occupancy_margin()`
+   prints `wg/cu=N acc=…vgpr …% of 64K file`.
+6. ✅ **Audit the 117 legacy auto phases** — 560 `phase_auto_*` dirs total; the
+   auto pool wins 13/34 cells natively (38 %), incl. HH:256 763.4 and SS:1024
+   1135.1 — **not marginal**; keep them (rename S/Z tokens at hygiene time).
+
+Full write-up: `gfx90c_tuning_guide.md` (the tuning cookbook).
 
 ### Known hazards — must never regress
 - **APU wedge at sustained 2048³-style benchmarks** (HW-Exception, exit 134). Rule:

@@ -48,6 +48,8 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
 from scheduler import (CandidateGenerator, assembly_class_valid,   # noqa: E402
                        occupancy_feasible, occupancy_workgroups_per_cu)
 
+from tensile_library import shipped_kernel_config  # noqa: E402
+
 def _divisibility(gen, cfg):
     return gen.validate_config(cfg)
 
@@ -57,6 +59,34 @@ GATES = (
     ("assembly", assembly_class_valid),
     ("occupancy", occupancy_feasible),
 )
+
+
+def _occupancy_margin(cfg) -> str:
+    """Human-readable register-file margin for a legal config.
+
+    occupancy_workgroups_per_cu returns the modelled number of workgroups that
+    fit the 64K file; the register-pressure % is the complementary view (how
+    much of the file one workgroup's threads consume). Near-boundary configs —
+    the ones that PASS today and die tomorrow when Tensile grows one
+    instruction — show up here as high pressure %, not just pass/fail.
+    """
+    from scheduler import (VGPR_PER_CU, VGPR_PER_ELEMENT,
+                           _measured_accvgpr, _tile_dims)
+    wg = occupancy_workgroups_per_cu(cfg)
+    if wg <= 0:
+        return "wg/cu=0"
+    dims = _tile_dims(cfg)
+    if not dims:
+        return f"wg/cu={wg}"
+    mt0, mt1, tt0, tt1 = dims
+    ch = str(cfg.get("DataType") or cfg.get("dtype") or "").upper()
+    r = VGPR_PER_ELEMENT.get(ch)
+    if not r or not tt0 or not tt1:
+        return f"wg/cu={wg}"
+    acc = _measured_accvgpr(tt0, tt1, r)
+    threads = (mt0 // tt0) * (mt1 // tt1)
+    pct = 100.0 * threads * acc / VGPR_PER_CU if threads else 0.0
+    return f"wg/cu={wg} acc={acc}vgpr {pct:.0f}% of 64K file"
 
 
 def _fams(cfg) -> str:
@@ -126,45 +156,83 @@ def main() -> int:
     ap.add_argument("--deck", type=Path, default=BASE / "phases.yaml")
     ap.add_argument("--base-dir", type=Path, default=BASE)
     ap.add_argument("--family", help="only check this family label")
+    ap.add_argument("--floor", action="store_true",
+                    help="sweep the shipped gfx900 floor deck (gfx900_shipped_manifest.json "
+                         "kernel names rebuilt into configs) instead of --deck")
     ap.add_argument("--quiet", action="store_true", help="print only failures")
     ap.add_argument("--json", type=Path)
     args = ap.parse_args()
 
     gen = CandidateGenerator(args.base_dir.resolve())
-    deck = yaml.safe_load(args.deck.read_text())
+
+    if args.floor:
+        deck, source = _floor_deck(args.base_dir)
+        if args.family:
+            deck = [d for d in deck if d.get("family", "").upper() == args.family.upper()]
+    else:
+        source = args.deck
+        deck = yaml.safe_load(args.deck.read_text())
 
     checked = skipped = 0
     fails: list[tuple[str, list]] = []
     fam_total: Counter = Counter()
     for phase in deck:
         cfg = phase.get("config") or {}
-        fam = _fams(cfg)
+        fam = _fams(cfg) or str(phase.get("family", "")).upper()
         if args.family and fam != args.family.upper():
             skipped += 1
             continue
         checked += 1
         fam_total[fam or "?"] += 1
         bad = check_config(gen, cfg)
-        bad = list(bad) + self_inconsistencies(phase)
+        if "phase_id" in phase:
+            bad = list(bad) + self_inconsistencies(phase)
         if bad:
-            fails.append((phase.get("phase_id", "?"), bad))
+            fails.append((phase.get("phase_id") or phase.get("kernel", "?"), bad))
         elif not args.quiet:
-            wg = occupancy_workgroups_per_cu(cfg)
-            print(f"  ok   {phase.get('phase_id','?')[:60]:60} wg/cu={wg}")
+            print(f"  ok   {str(phase.get('phase_id') or phase.get('kernel', '?'))[:60]:60} "
+                  f"{_occupancy_margin(cfg)}")
 
-    print(f"\n{args.deck}: {checked} checked, {skipped} skipped, {len(fails)} illegal")
+    print(f"\n{source}: {checked} checked, {skipped} skipped, {len(fails)} illegal")
     if fam_total:
         print("  per family: " + ", ".join(f"{k}={v}" for k, v in sorted(fam_total.items())))
     for pid, bad in fails:
         for name, why in bad:
-            print(f"  FAIL {pid[:60]:60} [{name}] {why}")
+            print(f"  FAIL {str(pid)[:60]:60} [{name}] {why}")
 
     if args.json:
         args.json.write_text(json.dumps(
-            {"deck": str(args.deck), "checked": checked, "illegal": len(fails),
-             "failures": {p: dict(b) for p, b in fails}}, indent=1, default=str))
+            {"deck": str(source), "checked": checked, "illegal": len(fails),
+             "failures": {str(p): dict(b) for p, b in fails}}, indent=1, default=str))
         print(f"wrote {args.json}")
     return 1 if fails else 0
+
+
+def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
+    """Rebuild phase-shaped configs for every shipped gfx900 floor kernel.
+
+    The floor's winning configs must be natively gate-legal — both arms emit
+    `TensileLibrary_gfx90c.co.raw`, and a floor kernel that violates the Model's
+    gates would be a proof the Model over-rejects, not an excuse to skip the
+    gate. Sweeping the pinned manifest through the same GATES makes that
+    explicit instead of assumed.
+    """
+    manifest_path = base_dir / "gfx90c_results" / "gfx900_shipped_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    deck: list[dict] = []
+    for entry in manifest.get("dat_files", []):
+        family = str(entry.get("family", "")).upper()
+        for name in entry.get("kernels", []):
+            try:
+                cfg = shipped_kernel_config(name, family)
+            except Exception as exc:  # pragma: no cover — defensive
+                deck.append({"phase_id": f"floor-{name[:40]}", "kernel": name,
+                             "family": family, "config": {}, "parse_error": str(exc)})
+                continue
+            cfg["FamilyLabel"] = family
+            deck.append({"phase_id": f"floor-{family}-{name}", "kernel": name,
+                         "family": family, "config": cfg})
+    return deck, manifest_path
 
 
 if __name__ == "__main__":

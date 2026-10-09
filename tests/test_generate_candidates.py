@@ -110,12 +110,18 @@ class TestPoolInvariants:
 
 
 class TestStripNotForwarded:
-    def test_not_forwarded_knobs_are_stripped(self):
+    def test_group_c_knobs_are_kept(self):
+        # Group C (2026-10-09): LdsPadA/B, AF0EM, StaggerUStride and
+        # StoreCInUnroll are forwarded by _write_phase_config behind the
+        # ldspad_feasible gate, so the generator keeps them on the candidate.
         cfg, dropped = _strip_not_forwarded(
-            {"MacroTile": "128x128x8", "LdsPadA": 1, "StaggerUStride": 1,
-             "StoreCInUnroll": 1, "AssertFree0ElementMultiple": 1})
-        assert set(cfg) == {"MacroTile"}
-        assert "LdsPadA" in dropped and "StoreCInUnroll" in dropped
+            {"MacroTile": "128x128x8", "LdsPadA": 1, "LdsPadB": 2,
+             "StaggerUStride": 1, "StoreCInUnroll": 1,
+             "AssertFree0ElementMultiple": 1})
+        assert cfg == {"MacroTile": "128x128x8", "LdsPadA": 1, "LdsPadB": 2,
+                       "StaggerUStride": 1, "StoreCInUnroll": 1,
+                       "AssertFree0ElementMultiple": 1}
+        assert not dropped
 
     def test_forwarded_knobs_are_kept(self):
         src = {"MacroTile": "128x128x8", "ThreadTile": "8x8",
@@ -140,6 +146,53 @@ class TestWriteOverlayScoping:
         grid = [self._row("g1", "a"), self._row("g2", "b")]
         probes = [self._row("p", "c")]
         assert _write_overlay(grid, probes, dry_run=True, with_probes=True) == 3
+
+
+class TestPruneCandidatesFromSeed:
+    """--prune-candidates strips phase_cand_* rows, archives them first, and
+    keeps probe_*/accepted rows. The seed must never silently lose state."""
+
+    def _seed(self, tmp_path):
+        import yaml
+        p = tmp_path / "phases.seed.overlay.yaml"
+        p.write_text(yaml.safe_dump({"phases": [
+            {"phase_id": "phase_cand_ss_1", "fp": "a"},
+            {"phase_id": "phase_cand_hh_hpa_2", "fp": "b"},
+            {"phase_id": "probe_N1_SS_64x64x8_8x8_vw4", "fp": "c"},
+            {"phase_id": "phase_accepted_cc_192_1", "fp": "d"},
+        ]}))
+        return p
+
+    def test_dry_run_counts_only(self, tmp_path, monkeypatch):
+        import harness.generate_candidates as gen
+        monkeypatch.setattr(gen, "OVERLAY_PATH", self._seed(tmp_path))
+        stripped, kept = gen._prune_candidates_from_seed(dry_run=True)
+        assert (stripped, kept) == (2, 2)
+
+    def test_strip_archives_and_keeps_rest(self, tmp_path, monkeypatch):
+        import harness.generate_candidates as gen
+        import yaml
+        seed = self._seed(tmp_path)
+        monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
+        stripped, kept = gen._prune_candidates_from_seed(dry_run=False)
+        assert (stripped, kept) == (2, 2)
+        after = yaml.safe_load(seed.read_text())["phases"]
+        assert [p["phase_id"] for p in after] == [
+            "probe_N1_SS_64x64x8_8x8_vw4", "phase_accepted_cc_192_1"]
+        archives = list(tmp_path.glob("phases.cand_archive.*.overlay.yaml"))
+        assert len(archives) == 1
+        archived = yaml.safe_load(archives[0].read_text())["phases"]
+        assert len(archived) == 2 and all(
+            p["phase_id"].startswith("phase_cand_") for p in archived)
+
+    def test_noop_when_nothing_to_strip(self, tmp_path, monkeypatch):
+        import harness.generate_candidates as gen
+        import yaml
+        seed = tmp_path / "phases.seed.overlay.yaml"
+        seed.write_text(yaml.safe_dump({"phases": [
+            {"phase_id": "probe_N1_SS_64x64x8", "fp": "c"}]}))
+        monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
+        assert gen._prune_candidates_from_seed(dry_run=False) == (0, 1)
 
 
 class TestRoundRobinPrune:

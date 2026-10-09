@@ -796,7 +796,7 @@ class TensileDriver:
         Pattern inferred from label if 'contraction_pattern' field absent.
         """
         from scheduler import (parse_tensile_shape, assembly_class_valid,
-                               occupancy_feasible)
+                               occupancy_feasible, ldspad_feasible)
 
         phase_id = phase.get("phase_id", "phase_unknown")
         label = phase.get("label", "")
@@ -879,6 +879,15 @@ class TensileDriver:
                         depth_u_from_macro = int(mt_parts[2])
                 except ValueError:
                     pass
+
+        # --- Group C: forwarded-knob legality gate (LdsPad / StaggerUStride / AF0EM) ---
+        # CPU-only, runs after the MacroTile parse so the padded-LDS footprint is
+        # computable. Refuses BEFORE a config file is written, so a forwarded pad
+        # can never surface as an opaque Tensile "error 4" mid-run.
+        pad_ok, pad_reason = ldspad_feasible(gate_config)
+        if not pad_ok:
+            print(f"Skipping {phase_id}: forwarded-knob illegal ({pad_reason})")
+            return False, f"forwarded-knob illegal: {pad_reason}"
 
         # --- Parse ThreadTile (string "T0xT1" or list [T0, T1]) ---
         thread_tile = config.get("ThreadTile")
@@ -978,6 +987,18 @@ class TensileDriver:
             fork_params["PrefetchGlobalRead"] = [bool(config["PrefetchGlobalRead"])]
         if "PrefetchLocalRead" in config:
             fork_params["PrefetchLocalRead"] = [bool(config["PrefetchLocalRead"])]
+
+        # --- Group C: LDS-pad / RCT knobs forwarded verbatim (gated above) ---
+        # LdsPadA/B, AssertFree0ElementMultiple, StaggerUStride and
+        # StoreCInUnroll used to be silently dropped here; candidates carrying
+        # them benchmarked WITHOUT the knob (marginal-value audit showed 167/167
+        # reference kernels carrying pads benchmarked with pads stripped to 0).
+        # ldspad_feasible above refuses an illegal value pre-launch, so what
+        # reaches Tensile is exactly what the candidate proposed.
+        for _k in ("LdsPadA", "LdsPadB", "AssertFree0ElementMultiple",
+                   "StaggerUStride", "StoreCInUnroll"):
+            if _k in config:
+                fork_params[_k] = [config[_k]]
 
         # Remove deprecated MacroTile0/MacroTile1 keys if they exist (Tensile doesn't accept them)
         fork_params.pop("MacroTile0", None)
@@ -2101,23 +2122,25 @@ class TensileDriver:
         all_analytics = []
         if not run_dir:
             return all_analytics
-        csv_files = list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
+        csv_files = (list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
+                     + list(run_dir.glob("probe_*/2_BenchmarkData/*.csv")))
+
+        from analytics import extract_family_from_phase_id
 
         for csv_file in csv_files:
             # Extract phase_id and family from CSV file path
             phase_dir = csv_file.parent.parent
             phase_id = phase_dir.name
 
-            from analytics import extract_family_from_phase_id
-            family = extract_family_from_phase_id(phase_id)
-
-            # Get dtype from phase_id using analytics helper
-            dtype = self.analytics.extract_dtype_from_phase_id(phase_id)
-
+            # Family + dtype are resolved PER ROW from the kernel typecode
+            # (SB/DB/HB/CB/ZB, HHS/HSS -> HH), never from phase_id text alone:
+            # the `phase_auto_*` pool used to resolve to family 'auto' -> dtype
+            # 'S', which dumped HH/CC/DD kernels into the SS cells (§13.2).
+            phase_family = extract_family_from_phase_id(phase_id)
             records = self.analytics.load_benchmark_csv(csv_file)
-            cell_map = self.analytics.aggregate_by_cell(records, dtype_override=dtype)
+            cell_map = self.analytics.aggregate_by_cell_typecode(records, phase_family)
 
-            for (cell_dtype, shape, fp), seeds in cell_map.items():
+            for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 analytics_obj = self.analytics.compute_cell_analytics(
                     dtype=cell_dtype,
                     shape=shape,
@@ -2158,13 +2181,15 @@ class TensileDriver:
             by_phase.setdefault((src_run, str(rec.get("phase_id", ""))), []).append(rec)
 
         for (src_run, phase_id), phase_records in by_phase.items():
-            dtype = phase_records[0].get("dtype") or self.analytics.extract_dtype_from_phase_id(phase_id)
-            family = extract_family_from_phase_id(phase_id)
-            cell_map = self.analytics.aggregate_by_cell(phase_records, dtype_override=dtype)
-            for (cell_dtype, shape, fp), seeds in cell_map.items():
+            # Family per-row from the kernel typecode (see aggregate_by_cell_typecode);
+            # the phase-level family from phase_id text is the fallback only.
+            phase_family = extract_family_from_phase_id(phase_id)
+            cell_map = self.analytics.aggregate_by_cell_typecode(
+                phase_records, phase_family)
+            for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 all_analytics.append(self.analytics.compute_cell_analytics(
-                    dtype=cell_dtype, shape=shape, fp=fp, seeds=seeds, family=family,
-                    source_run=src_run))
+                    dtype=cell_dtype, shape=shape, fp=fp, seeds=seeds,
+                    family=family, source_run=src_run))
 
         return all_analytics
 
@@ -2859,7 +2884,8 @@ class TensileDriver:
         phases_by_id = {str(p.get("phase_id", "")): p
                         for p in self.load_phases_manifest()}
 
-        for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
+        for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")
+                               + list(run_dir.glob("probe_*/2_BenchmarkData/*.csv"))):
             phase_id = csv_file.parent.parent.name
             # Resolve arm: config Architecture gfx900 == spoof, else native
             phase = phases_by_id.get(phase_id)
@@ -2871,10 +2897,15 @@ class TensileDriver:
                 is_spoof = False
             elif force_arm == "spoof":
                 is_spoof = True
-            dtype = self.analytics.extract_dtype_from_phase_id(phase_id)
+            # Family/dtype per row from the kernel typecode (ground truth), with
+            # the phase-level family from phase_id text as fallback — never the
+            # reverse. This is the fix for the phase_auto_* pool resolving to
+            # family 'auto' -> dtype 'S' and dumping HH/CC/DD kernels into SS
+            # cells (§13.2).
+            phase_family = extract_family_from_phase_id(phase_id)
             records = self.analytics.load_benchmark_csv(csv_file)
-            cell_map = self.analytics.aggregate_by_cell(records, dtype_override=dtype)
-            for (cell_dtype, shape, fp), seeds in cell_map.items():
+            cell_map = self.analytics.aggregate_by_cell_typecode(records, phase_family)
+            for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 agg = aggregate_cell(seeds)
                 rec = {
                     "DataType": cell_dtype,
@@ -2882,9 +2913,10 @@ class TensileDriver:
                     "fingerprint": fp,
                     "GFLOPS": agg.median,
                     "phase_id": phase_id,
+                    "family": family,
                 }
                 rec.update(self._named_cell_stamps(
-                    phase or {"config": {}, "shapes": [shape], "family": ""},
+                    phase or {"config": {}, "shapes": [shape], "family": family.lower()},
                     arm="spoof" if is_spoof else "native"))
                 if is_spoof:
                     spoof_records.append(rec)

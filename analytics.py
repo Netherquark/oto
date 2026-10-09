@@ -30,6 +30,8 @@ from gfx90c_common import (
     REALISTIC_CEILINGS,
     DTYPE_TO_FAMILY,
     cube_side,
+    family_from_kernel_name,
+    kernel_typecode,
 )
 from policy import aggregate_cell
 
@@ -44,7 +46,14 @@ CLOCK_MIN_COVERAGE = 0.5
 FAMILY_TO_DTYPE = {
     k.lower(): v for k, v in FAMILY_DTYPE_CHAR.items()
 }
-FAMILY_TO_DTYPE["auto"] = "S"
+# NOTE: 'auto' is deliberately NOT in FAMILY_TO_DTYPE. The auto candidate pool
+# names its phases `phase_auto_<n>_<family>_<shape>_<i>`; with 'auto' in the
+# token table, extract_family_from_phase_id greedily matched the 4-char 'auto'
+# prefix (before 'hh'/'cc'...') and every phase_auto_* phase resolved to family
+# 'auto' -> dtype 'S'. That single bug landed HH/CC/DD kernels in the SS cells
+# (the §13.2 contamination: 4 S cells "won" by phase_*_hh_* phases, CC/ZZ auto
+# phases counted as SS too). The pool prefix is a generator namespace, never a
+# family; the family token always follows it.
 
 # Known family prefixes (longest first for greedy matching).
 # Note: family tokens are matched against lowercase phase_id segments, so the
@@ -57,6 +66,10 @@ def extract_family_from_phase_id(phase_id: str) -> str:
 
     Matches the longest known family token sequence anywhere on a token boundary,
     so prefix tokens (e.g. 'draft_SS_...', 'draft_HH_HPA_...') still resolve.
+
+    Last resort: a bare single-letter dtype token ('phase_auto_0_S_256...'),
+    mapped through FAMILY_DTYPE_CHAR ('S' -> 'ss'). 'auto'/'phase' namespace
+    tokens never count as families.
     """
     parts = [p for p in str(phase_id).replace('phase_', '').replace('phase', '').split('_') if p]
     best = ''
@@ -70,7 +83,71 @@ def extract_family_from_phase_id(phase_id: str) -> str:
                 best = fam
                 best_len = len(fam_tokens)
                 break
+    if not best:
+        for tok in parts:
+            fam = DTYPE_TO_FAMILY.get(tok.upper(), "")
+            if fam:
+                return fam.lower()
     return best
+
+
+# Canonical cell families (upper-case, HPA variants separate).
+_KNOWN_CELL_FAMILIES = ("SS", "DD", "HH", "CC", "ZZ", "HH_HPA", "HS_HPA")
+
+
+def _hpa_variant(stamp: str) -> bool:
+    """True when a family stamp is an HPA variant ('HH_HPA'/'HS_HPA').
+
+    HPA cells are distinguished by their explicit FamilyLabel/config stamp, and
+    by nothing else — their kernel typecode reads 'HH' (leading 'H'), which is
+    why typecode resolution must never collapse them into HH.
+    """
+    return str(stamp).upper().endswith("_HPA")
+
+
+def resolve_cell_family(rec: Dict[str, Any]) -> str:
+    """Cell (family) attribution for one benchmark record — the anti-contamination resolver.
+
+    Precedence (first hit wins), per the §13.2 typecode-filter rule:
+
+      1. kernel typecode of the record's own kernel name (``kernel`` / ``fp`` /
+         ``phase_id`` fallback): SB/DB/HB/CB/ZB + HHS/HSS -> family. This is the
+         ground truth of what the kernel actually computes, and overrides a
+         lying or missing phase-level stamp — the vector that put
+         ``phase_auto_1_hh_1024x1024x1024_3`` into the SS:1024 cell was exactly
+         a phase_id text ('auto' prefix) overriding the kernel's real family.
+      2. the record's explicit ``family`` stamp, UNLESS it contradicts (1);
+         HPA stamps are always kept (see _hpa_variant).
+      3. family parsed from ``phase_id``.
+      4. DataType char via DTYPE_TO_FAMILY.
+      5. '' (record is unattributable; callers skip it).
+    """
+    kernel_name = str(rec.get("kernel") or rec.get("kernel_name")
+                      or rec.get("fingerprint") or rec.get("fp") or "")
+    tcode_fam = family_from_kernel_name(kernel_name)
+    stamp = str(rec.get("family") or rec.get("cell_key", "").split(":")[0] or "").upper()
+
+    if stamp in _KNOWN_CELL_FAMILIES and _hpa_variant(stamp):
+        return stamp
+
+    if tcode_fam:
+        if stamp in _KNOWN_CELL_FAMILIES and stamp != tcode_fam:
+            print(f"[contamination] {str(rec.get('phase_id', ''))} carries "
+                  f"family stamp {stamp} but its kernel typecode is "
+                  f"{kernel_typecode(kernel_name)} ({tcode_fam}) — attributing "
+                  f"to {tcode_fam} (typecode wins)")
+            return tcode_fam
+        return tcode_fam
+
+    if stamp in _KNOWN_CELL_FAMILIES:
+        return stamp
+
+    fam = extract_family_from_phase_id(str(rec.get("phase_id", ""))).upper()
+    if fam in _KNOWN_CELL_FAMILIES:
+        return fam
+
+    fam = DTYPE_TO_FAMILY.get(str(rec.get("DataType") or rec.get("dtype") or "").upper(), "")
+    return fam if fam in _KNOWN_CELL_FAMILIES else ""
 
 
 class CellAnalytics:
@@ -338,6 +415,37 @@ class AnalyticsEngine:
                 cell_map[(dtype, shape, fp)].append(gflops)
         return cell_map
 
+    def aggregate_by_cell_typecode(
+        self,
+        records: List[Dict[str, Any]],
+        phase_family: str = ""
+    ) -> Dict[Tuple[str, str, str, str], List[float]]:
+        """Aggregate benchmark records by (dtype, shape, fp, family) with the
+        typecode-first family filter.
+
+        Each record's family is resolved by its OWN kernel typecode
+        (``resolve_cell_family``) — the §13.2 rule: SB/DB/HB/CB/ZB decide the
+        cell, and HHS/HSS kernels (fp16-family) never land in SS cells. The
+        per-phase family (from phase_id text) is the fallback only, never the
+        primary signal. Returns cells keyed (dtype, shape, fp, family) so the
+        caller's CellAnalytics carries the resolved family, not a text guess.
+        """
+        cell_map = defaultdict(list)
+        for rec in records:
+            if not rec.get("family"):
+                rec = dict(rec)
+                rec["family"] = phase_family
+            fam = resolve_cell_family(rec)
+            if not fam:
+                continue
+            shape = rec.get("ProblemType", rec.get("shape", "Unknown"))
+            fp = rec.get("fingerprint", rec.get("fp", "unknown"))
+            gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
+            if gflops > 0:
+                dtype = FAMILY_DTYPE_CHAR.get(fam, rec.get("DataType", ""))
+                cell_map[(dtype, shape, fp, fam)].append(gflops)
+        return cell_map
+
     def compute_cell_analytics(
         self,
         dtype: str,
@@ -499,16 +607,8 @@ class AnalyticsEngine:
                 Dict keyed by (dtype, shape, cell_label) to cell stats + winner,
                 with n_kernels/n_samples/n_runs provenance for citation.
             """
-            known = ("SS", "DD", "HH", "CC", "ZZ", "HH_HPA", "HS_HPA")
-
-            def _cell_family(rec: Dict[str, Any]) -> str:
-                fam = str(rec.get("family") or rec.get("cell_key", "").split(":")[0] or "").upper()
-                if fam not in known:
-                    fam = extract_family_from_phase_id(rec.get("phase_id", "")).upper()
-                if fam not in known:
-                    fam = DTYPE_TO_FAMILY.get(
-                        str(rec.get("DataType") or rec.get("dtype") or "").upper(), "")
-                return fam if fam else "?"
+            # (cell-family resolver is module-level resolve_cell_family — the
+            # §13.2 typecode-filter rule applied uniformly, see its docstring)
 
             def _collect(records: List[Dict[str, Any]],
                          sclk_by_gkey: Optional[Dict[Tuple[str, str], float]] = None,
@@ -523,7 +623,9 @@ class AnalyticsEngine:
                 meta: Dict[Tuple[str, str, str], Tuple[str, str, str]] = {}
                 throttled: Dict[Tuple[str, int], List[float]] = defaultdict(list)
                 for rec in records:
-                    fam = _cell_family(rec)
+                    fam = resolve_cell_family(rec)
+                    if not fam:
+                        continue
                     side = cube_side(rec.get("ProblemType") or rec.get("shape") or "")
                     if not side:
                         continue

@@ -11,6 +11,8 @@ ISA: (9,0,12) — GFX9/GCN5 "Vega 7"
 Max clock: 1800 MHz (DVFS pins at level-2 under load)
 """
 
+import re
+
 # Single-source PEAK_GFLOPS table @1800 MHz
 # Values are absolute; callers scale by actual sclk if needed
 PEAK_GFLOPS = {
@@ -126,6 +128,69 @@ L2_SIZE_KB = 1024
 DTYPE_TO_FAMILY = {}
 for _fam, _ch in FAMILY_DTYPE_CHAR.items():
     DTYPE_TO_FAMILY.setdefault(_ch, _fam)
+
+
+# ---------------------------------------------------------------------------
+# Kernel-name typecode -> family. Tensile kernel columns / shipped gfx900
+# names carry the data-type token immediately before "_MT":
+#
+#   Cijk_Ailk_Bjlk_SB_MT32x64x16_SN_K1        -> SB      -> SS
+#   Cijk_Ailk_Bljk_HHS_BH_MT32x32x16_SN_K1    -> HHS_BH  -> HH   (fp16 family!)
+#   Cijk_Ailk_Bljk_ZB_GB_MT32x32x16_SN_...    -> ZB_GB   -> ZZ
+#   Cijk_Ailk_Bjlk_DB_... / CB_... / HB_...   -> DB/CB/HB
+#
+# The FIRST operand letter is the family class. SB/DB/HB/CB/ZB are the corpus's
+# canonical single-typed kernels; HHS/HSS (fp16-in, fp16/fp32 mixed) belong to
+# the HH family and MUST never be tallied into the SS cells (the §13.2
+# typecode-filter rule). This is the single resolver every cell-attribution
+# consumer (analytics, harness/kernel_db, port_tensile) uses, so a family is
+# decided exactly once, by the kernel's own name, not by phase_id text.
+# ---------------------------------------------------------------------------
+
+# Tokens that precede "_MT" but are NOT the dtype typecode (Tensile layout /
+# schedule markers such as HHS_BH's "BH", ZB_GB's "GB", "SN"/"SE" stream).
+_KERNEL_LAYOUT_TOKENS = frozenset({
+    "SN", "SE", "NN", "NT", "TN", "TT", "TC", "NC",
+    "BH", "HN", "HT", "GB", "NB",
+})
+
+_TYPECODE_TO_FAMILY = {"S": "SS", "D": "DD", "H": "HH", "C": "CC", "Z": "ZZ"}
+
+
+def kernel_typecode(kernel_name: object) -> str:
+    """Raw dtype token of a Tensile kernel name ('' when unparseable).
+
+    Reads the last non-layout token before ``_MT``, so ``HHS_BH`` and ``ZB_GB``
+    resolve to ``HHS`` / ``ZB`` rather than the layout marker. Uppercased; the
+    token must open with a dtype letter (S/D/H/C/Z) or it is rejected (the
+    token before ``_MT`` is only meaningful on a real Tensile kernel name).
+    """
+    name = str(kernel_name or "").split("_MT")[0]
+    if not name:
+        return ""
+    for tok in reversed(name.split("_")):
+        if not tok:
+            continue
+        u = tok.upper()
+        if u in _KERNEL_LAYOUT_TOKENS:
+            continue
+        if u[:1] in _TYPECODE_TO_FAMILY:
+            return u
+        return ""
+    return ""
+
+
+def family_from_kernel_name(kernel_name: object) -> str:
+    """Canonical family of a kernel by its typecode ('' when unparseable)."""
+    code = kernel_typecode(kernel_name)
+    if not code:
+        return ""
+    return _TYPECODE_TO_FAMILY.get(code[0], "")
+
+
+def dtype_from_kernel_name(kernel_name: object) -> str:
+    """Canonical DataType char of a kernel by its typecode ('' when unknown)."""
+    return FAMILY_DTYPE_CHAR.get(family_from_kernel_name(kernel_name), "")
 
 
 def cube_side(shape: object) -> "int | None":
