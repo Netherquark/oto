@@ -41,11 +41,14 @@ run (`run_20261009_205427`, ~7 h 41 m, 351 phases + 5 swizzle probes) is folded
 through the report verdicts but is not yet in `kernel_db` — rebuild it before the
 next grading run (`harness/kernel_db.py --rebuild`).
 
-Evidence machinery (all in `/tmp/opencode` until formalised): `resolve_cells.py`
-resolves every cell's native winner from the registry `phases` table + per-run
-`configs/*.yaml`, and the floor's best kernel per cell from the locked-floor
-rows; full dump `/tmp/opencode/cells_resolved.json` (6129 run yamls, 8480
-resolver keys, 1113 registry phases). Ground truth for §2/§3/§4.
+Evidence machinery (repo-homed in `harness/`): `harness/resolve_cells.py` resolves
+every cell's native winner from the registry `phases` table + per-run
+`configs/*.yaml` (winner-run-first), and the floor's best kernel per cell from
+the locked-floor `kernel_db` rows. Caches: `gfx90c_results/analysis/cells_resolved.json`
+(machine) + `cells_resolved.full.txt` (this section's evidence table, reproduced
+from 6129 run yamls, 8480 resolver keys, 1113 registry phases). Ground truth for
+§2/§3/§4. Re-run with `python3 harness/resolve_cells.py`; supersedes the
+pre-formalisation `/tmp/opencode` dump.
 
 ---
 

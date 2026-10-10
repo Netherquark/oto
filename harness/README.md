@@ -1,7 +1,7 @@
 # harness — agentic kernel-tuning harness (CPU-only)
 
 Polished, repo-homed home of the candidate-generation machinery that was built
-ad-hoc in `/tmp` (now deleted as a source of truth). Two read-only tools plus
+ad-hoc in `/tmp` (now deleted as a source of truth). The read-only tools plus
 this runbook give an agent (or a human) the ground truth needed to propose a
 defensible candidate without re-reading the raw corpora. Nothing here ever
 benchmarks or touches a GPU — the measurement corpus is fixed until a TTY run
@@ -12,9 +12,12 @@ lands (see `command.txt`).
 ```
 harness/kernel_db.py          # kernel_db.json builder (ground truth)
 harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
+harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
 harness/README.md             # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt, byte-identical to §12)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
+gfx90c_results/analysis/cells_resolved.json     # cache (38-cell winner map; resolve_cells)
+gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_configs.md §2)
 ```
 
 Both tools resolve families/shapes/dtype from the repo's canonical sources
@@ -59,7 +62,30 @@ material finding**: HH_HPA:4096's stranded iteration-9 winner
 `phase_auto_1_hh_hpa_2048x2048x2048_4` (−4.0% at the median) should be shipped
 as a D-row (probe N7).
 
-### 3. Propose a candidate — the gates that apply
+### 3. Resolve per-cell native-vs-floor winners (full knob surface)
+
+`resolve_cells` turns "regression_matrix says CC:256 is a loss" into the exact
+winning native phase / run / config and the floor kernel to beat — the input
+the per-cell triage (potential_configs.md §2/§4) and any spoof-steal
+(§7: **configure, never copy**) are argued from:
+
+```bash
+python3 harness/resolve_cells.py                      # table + caches (JSON, full.txt)
+python3 harness/resolve_cells.py --tsv verdicts.tsv   # + tabular verdict dump
+```
+
+For every acceptance-gradeable cell it reports: verdict, delta %, % of
+realistic ceiling and % of theoretical peak; the **native winner** — phase,
+run, and the phase's full structural config, resolved winner-run-first from
+the run dirs' `configs/*.yaml`, then registry `phases.data.config`, then the
+kernel_db structural row; and the **floor's best kernel** for the same cell
+(median-primary, best-seed secondary — the same `_best` predicate as
+regression_matrix). It never measures anything; it reads acceptance_report.json
++ registry.db + kernel_db.json + the run config yamls only, and regenerates
+`gfx90c_results/analysis/cells_resolved.json` / `.full.txt` (gitignored build
+caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table.
+
+### 4. Propose a candidate — the gates that apply
 
 1. **Coverage parity (the hard rule).** The produced `tensilelibrary.dat`
    must address exactly the 38 shipped cells (no contraction, no extension).
@@ -81,7 +107,7 @@ as a D-row (probe N7).
    `port_tensile.py --preflight` and `consolidate.py all --commit` refuse a
    deck that breaks the grid.
 
-### 4. Ship the S:512 / HH_HPA:4096 probes
+### 5. Ship the S:512 / HH_HPA:4096 probes
 
 Authoritative green-lighted next step (user runs in a TTY):
 `python3 port_tensile.py --auto --yes --budget 10 --mutation-budget 2 --live off`

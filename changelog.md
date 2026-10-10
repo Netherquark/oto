@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-10 — agentic harness: `harness/resolve_cells.py` formalised (repo-homed).**
+  The per-cell winner resolver that generated potential_configs.md §2's evidence
+  table was polished out of `/tmp/opencode/resolve_cells.py` + verdicts dump and
+  integrated as `harness/resolve_cells.py` (read-only CPU tool; `--base-dir`,
+  `--json/--text/--tsv`, module-style like kernel_db/regression_matrix). Additions
+  over the ad-hoc version: winner-run-first phase-config resolution (winner run's
+  `configs/*.yaml` → registry `phases` → any-run yaml → kernel_db row — no more
+  reliance on alphabetic glob order), floor winners under the standing
+  median-primary `_best` predicate, per-cell % of ceiling + % of theoretical,
+  provenance metadata, and stable caches committed at
+  `gfx90c_results/analysis/cells_resolved.{json,full.txt}` (byte-identical
+  winners/values/knob surface to the §2 table: 6129 yamls / 8480 keys / 1113
+  phases / 38 cells). `harness/__init__.py` → v1.1.0 with resolve_cells in
+  `__all__`; README workflow gains a "resolve per-cell winners" step;
+  `tests/test_resolve_cells.py` guards deck parity, report agreement, winner
+  resolution and HPA-floor tolerance. potential_configs.md's "evidence machinery
+  in /tmp until formalised" note now points at the repo-homed tool + caches.
+
 - **2026-10-10 — potential_configs.md comprehensive rewrite: BLAS-8 complex frame, resolver-final winners, priority re-sequence.**
   The candidate-deck document was rewritten end-to-end (old 1429-line version
   archived at `archive/potential_configs.pre_rewrite_20261010.md`). Three
