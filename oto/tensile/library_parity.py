@@ -1,0 +1,213 @@
+"""Coverage-parity rule: what the produced TensileLibrary may address.
+
+The rule (canonical home: `knowledge_base.md` §6.1) is:
+
+  The `tensilelibrary.dat` this pipeline produces must address **exactly** the
+  same (family, shape) cells the shipped gfx900 TensileLibrary addresses —
+  the canonical contract grid `gfx90c_common.shipped_cells()`. Two clauses:
+
+  * **no contraction** — every shipped cell must have >= 1 gfx90c phase;
+  * **no extension** — no phase may address a cell outside the shipped grid.
+
+This module is the single implementation of that rule:
+
+* :func:`phase_family` — resolve a phase's family (config ``FamilyLabel`` is
+  canonical; the ``phase_id`` token fallback keeps pre-FamilyLabel rows and
+  overlay probes resolvable).
+* :func:`phase_cells` / :func:`phases_cells` — the (family, shape) cells a
+  phase / a manifest addresses. Non-cube shapes (GEMV probes such as
+  ``32x4096x1``) have no cell by design (`gfx90c_common.cube_side`) and are
+  reported separately, never counted as cells.
+* :func:`parity_report` — missing / extra / non-cube-shape report.
+* :func:`load_pipeline_phases` — deck + current overlays in the order
+  `port_tensile.load_phases_manifest` merges them, so preflight and the
+  standalone `check_library_parity.py` measure the same set.
+
+Enforcement points (all CPU-only): `check_library_parity.py` CLI (exit 1 on
+divergence), the `--preflight` check in `port_tensile`, and `consolidate.py`
+``all --commit`` (refuses to install a deck that breaks parity). Tests:
+`tests/test_library_parity.py`.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+
+from oto.device.peaks import (
+    FAMILY_DTYPE_CHAR,
+    FAMILY_SHAPES,
+    cube_side,
+    shipped_cell_set,
+)
+
+#: Family-name normalisation for the `phase_id` fallback path.
+_FAMILY_ALIASES = {
+    "ss": "SS",
+    "dd": "DD",
+    "hh": "HH",
+    "cc": "CC",
+    "zz": "ZZ",
+    "hh_hpa": "HH_HPA",
+    "hs_hpa": "HS_HPA",
+}
+
+
+def _family_from_tokens(phase_id: str) -> str:
+    """Token-scan fallback: longest known family token, case-insensitive.
+
+    Not delegated to `analytics.extract_family_from_phase_id` because that
+    resolver is token-case-sensitive ('SS' != 'ss'), so overlay probes named
+    `probe_N1_SS_...` resolve to '' there. Both hooks converge on the same
+    FAMILY_SHAPES keys; the config `FamilyLabel` (canonical) needs neither.
+    """
+    parts = [p for p in re.split(r"[^A-Za-z0-9]+", str(phase_id)) if p]
+    for fam, canonical in sorted(_FAMILY_ALIASES.items(), key=lambda kv: -len(kv[0])):
+        tokens = fam.split("_")
+        for i in range(len(parts) - len(tokens) + 1):
+            if [p.lower() for p in parts[i:i + len(tokens)]] == tokens:
+                return canonical
+    return ""
+
+
+def phase_family(phase: Dict[str, Any]) -> str:
+    """Resolve a phase's canonical family name ('' when unresolvable).
+
+    ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
+    so HH / HH_HPA / HS_HPA never collapse — see `gfx90c_common.cell_key`).
+    Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
+    rows and overlay probes.
+    """
+    cfg = phase.get("config")
+    if isinstance(cfg, dict):
+        label = cfg.get("FamilyLabel")
+        if label in FAMILY_SHAPES:
+            return label
+        up = str(label or "").upper()
+        if up in FAMILY_SHAPES:
+            return up
+    return _family_from_tokens(str(phase.get("phase_id") or ""))
+
+
+def phase_cells(phase: Dict[str, Any]) -> Set[Tuple[str, str]]:
+    """The (family, cube-shape) cells one phase addresses, as shipped-grid keys.
+
+    Non-cube shapes are not cells and are dropped here (they surface in
+    :func:`parity_report` under ``non_cube_shapes``). A phase whose family
+    cannot be resolved contributes nothing and appears in ``unresolved``.
+    """
+    fam = phase_family(phase)
+    out: Set[Tuple[str, str]] = set()
+    for shape in phase.get("shapes") or ():
+        side = cube_side(shape)
+        if side is None:
+            continue
+        if fam:
+            out.add((fam, f"{side}x{side}x{side}"))
+    return out
+
+
+def phases_cells(phases: Iterable[Dict[str, Any]]) -> Set[Tuple[str, str]]:
+    """Union of :func:`phase_cells` over a manifest."""
+    out: Set[Tuple[str, str]] = set()
+    for phase in phases:
+        out |= phase_cells(phase)
+    return out
+
+
+def parity_report(phases: Sequence[Dict[str, Any]],
+                  grid: Optional[Set[Tuple[str, str]]] = None) -> Dict[str, Any]:
+    """Missing / extra cells of `phases` vs the shipped grid.
+
+    Returns a dict with `parity_ok` (True only when missing and extra are both
+    empty), `shipped_cells`, `deck_cells`, `missing`, `extra`,
+    `non_cube_shapes`, and `unresolved` ph-id families.
+    """
+    grid = grid if grid is not None else shipped_cell_set()
+    covered = phases_cells(phases)
+    missing = sorted(grid - covered, key=lambda c: c[0] + c[1])
+    extra = sorted(covered - grid, key=lambda c: c[0] + c[1])
+
+    non_cube: Set[str] = set()
+    unresolved: Set[str] = set()
+    for phase in phases:
+        fam = phase_family(phase)
+        if not fam:
+            unresolved.add(str(phase.get("phase_id") or "?"))
+        for shape in phase.get("shapes") or ():
+            try:
+                a, b, cc = str(shape).split("x")
+                if int(a) != int(b) or int(b) != int(cc):
+                    non_cube.add(f"{phase.get('phase_id', '?')} ({shape})")
+            except ValueError:
+                non_cube.add(f"{phase.get('phase_id', '?')} ({shape})")
+    return {
+        "parity_ok": not missing and not extra,
+        "shipped_cells": len(grid),
+        "deck_cells": len(covered),
+        "missing": missing,
+        "extra": extra,
+        "non_cube_shapes": sorted(non_cube),
+        "unresolved_families": sorted(unresolved),
+    }
+
+
+def load_pipeline_phases(base_dir: Optional[str] = None,
+                         run_id: Optional[str] = None,
+                         include_seed: bool = True) -> List[Dict[str, Any]]:
+    """Deck + current overlays, merged in the manifest order the run uses.
+
+    Mirrors `port_tensile.load_phases_manifest`'s merge order (deck, then the
+    live run's overlay when one is active, then the persistent seed overlay)
+    so a preflight parity verdict covers the exact manifest a run would build.
+    Reads only files, never the registry or a GPU. Pass `run_id` to also fold
+    in that run's per-run overlay (phases.<run_id>.overlay.yaml).
+    """
+    import glob
+    import yaml as _yaml
+
+    from pathlib import Path
+
+    base = Path(base_dir or Path(__file__).resolve().parents[2])
+    deck: List[Dict[str, Any]] = []
+    deck_path = base / "phases.yaml"
+    if deck_path.exists():
+        deck = _yaml.safe_load(deck_path.read_text()) or []
+
+    merged: List[Dict[str, Any]] = list(deck)
+
+    if run_id:
+        for ov_path in sorted(_glob.glob(str(base / "gfx90c_results" / "overlays" / f"phases.{run_id}.overlay.yaml"))):
+            _merge(merged, _yaml.safe_load(_read(ov_path)), f"run_overlay:{run_id}")
+
+    if include_seed:
+        seed_path = base / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        if seed_path.exists():
+            doc = _yaml.safe_load(seed_path.read_text())
+            _merge(merged, doc, "seed_overlay")
+    return merged
+
+
+def _read(path: str) -> str:
+    with open(path) as f:
+        return f.read()
+
+
+def _merge(into: List[Dict[str, Any]],
+           doc: Optional[Dict[str, Any]],
+           src: str) -> None:
+    if not isinstance(doc, dict):
+        return
+    entries = doc.get("phases")
+    if isinstance(entries, dict):
+        entries = list(entries.values())
+    if not isinstance(entries, list):
+        return
+    seen = {p.get("phase_id") for p in into}
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("phase_id") in seen:
+            continue
+        entry = dict(entry)
+        entry["_origin"] = src
+        into.append(entry)
+        seen.add(entry.get("phase_id"))
