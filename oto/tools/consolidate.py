@@ -1,46 +1,31 @@
 #!/usr/bin/env python3
-"""Consolidate the corpus into a locked floor and a best-effort convergence deck.
+"""Deck consolidation: mine the corpus, build the locked floor, install one deck.
 
-Why this exists
----------------
-The corpus cannot currently be graded against itself. The gfx900 floor was
-measured with phases that sweep a family's problem sizes; the latest native
-overnight measured one size per phase; `report.py` puts both in one pool. The
-`ab_audit.py` band measurement puts a number on what that costs: cells where the
-two arms disagree on invocation form scatter over +/-181% with a median ratio of
-0.824, so every verdict derived from them is noise. Cells compared under the same
-form sit at a median ratio of 1.0005.
-
-Two consequences drive this script:
-
-1. **The floor is locked, never re-measured.** It is rebuilt as one logical run
-   from the three completed resume runs, selecting per phase the run that
-   measured it most completely. GFLOPS are copied verbatim from those CSVs --
-   nothing is rescaled, interpolated or re-aggregated.
-2. **The next native deck sweeps sizes like the floor does.** That is what makes
-   the next run protocol-matched, which is the whole point. The deck is built by
-   copying existing phase entries verbatim; no config is invented, retuned or
-   renamed. Cells with no measured candidate still get the best existing legal
-   multi-shape phase for that cell, marked as needing measurement.
-
-Protocol matching is the reason the deck is multi-shape rather than the form that
-happens to hold each cell's best number. Picking per cell by best GFLOPS across
-protocols is what produced the current situation.
-
-    python3 consolidate.py mine --json mine.json      # read-only, safe
-    python3 consolidate.py all --dry-run             # stage, print the plan
-    python3 consolidate.py all --commit              # install
+Owns: ``main`` and the four responsibilities behind the ``mine`` / ``all``
+subcommands it dispatches to -- target-cell resolution (targets), the
+measurement inventory and deck selection (deck), the locked-floor materialisation
+(floor), and installation with archiving (install).
+Does NOT own: the legality gate it consults (oto.tensile.gates), the A/B verdicts
+it reports alongside (oto.metrics.ab_audit), or the Tensile dtype table (read on
+demand).
+Public API: main, and the names the other tools import: target_cells,
+manifest_cells, native_runs, floor_chain, source_chain, dtype_bytes, _is_legal,
+load_deck, select_deck, plan_floor, locked_run_id, build_floor, build_db,
+write_deck, install, phantom_runs, explain_archive, cmd_mine, cmd_all, _fam,
+_stamp, _median, _form_rank, measured_index, LIVE_DB, PREFERRED_FORMS,
+SINGLE_FORM_ONLY_RUNS, BASE, _TENSILE_ROOT.
 
 Every subcommand is read-only except ``--commit``. ``--dry-run`` stages into
 ``archive/consolidate_<stamp>/`` and reports; ``--commit`` additionally installs.
 """
+
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import sqlite3
-import hashlib
 import statistics
 import sys
 from collections import defaultdict
@@ -48,29 +33,35 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+BASE = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(BASE))
 
 from oto.metrics.ab_audit import (  # noqa: E402
-    BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records, audit,
-    phase_records, verdict,
+    BASE as _AB_BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records,
+    audit, phase_records, verdict,
 )
 from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 
-LIVE_DB = BASE / "gfx90c_results" / "registry.db"
+BASE = _AB_BASE
 
 #: Read-only use of Tensile: dtype byte widths are read from its tables.
 _TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
 
-# The floor is a multi-shape sweep; the next native run has to match it.
-PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
+#: The locked floor, expressed in one registry db.
+LIVE_DB = BASE / "gfx90c_results" / "registry.db"
 
-# Runs whose CSVs are single-shape-only. They are real measurements and are kept,
-# but they are archived out of the live loader path so they cannot be graded
-# against a swept floor. See --explain-archive.
+#: Runs whose only form is a single shape: not a sweep, so they cannot be the
+#: floor. Recorded so the archive explains them rather than silently dropping
+#: them (see explain_archive).
 SINGLE_FORM_ONLY_RUNS = ("run_20261002_021805",)
 
+#: The floor is a multi-shape sweep; the next native run has to match it.
+PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
 
+#: Runs whose only form is a single shape: not a sweep, so they cannot be the
+#: floor. Recorded so the archive explains them rather than silently dropping
+#: them (see explain_archive).
 def _stamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -113,6 +104,11 @@ def manifest_cells() -> set:
     except Exception:
         return set()
     return set(fam)
+
+
+# ---------------------------------------------------------------------------
+# measurement inventory + deck selection
+# ---------------------------------------------------------------------------
 
 
 # --------------------------------------------------------------------------
@@ -398,6 +394,11 @@ def select_deck(base: Path = BASE) -> Dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# locked floor
+# ---------------------------------------------------------------------------
+
+
 # --------------------------------------------------------------------------
 # locked floor
 # --------------------------------------------------------------------------
@@ -546,6 +547,11 @@ def build_db(base: Path, lock: Dict[str, Any], out: Path,
     dst.close()
     return {"out": out, "before": before, "after": after, "integrity": integrity}
 
+
+
+# ---------------------------------------------------------------------------
+# installation + archiving
+# ---------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
 # install
@@ -712,7 +718,7 @@ def cmd_all(args) -> int:
     # (which becomes the produced TensileLibrary) must address exactly the
     # shipped gfx900 cell grid. Refuse to install a deck that diverges.
     try:
-        from oto.tensile.library_parity import parity_report
+        from library_parity import parity_report
         pr = parity_report(sel["phases"])
         parity_ok = pr["parity_ok"]
         print(f"  library parity: {'OK' if parity_ok else 'FAIL'} "

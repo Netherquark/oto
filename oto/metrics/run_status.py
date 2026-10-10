@@ -1,40 +1,18 @@
 #!/usr/bin/env python3
-"""run_status.py -- progress, ETA and thermals for a run, derived not hardcoded.
+"""Run status: the cost/ETA report, its text rendering, and the live panel.
 
-Replaces the ad-hoc sqlite3 query that was used to watch a run over ssh. Every
-number is computed from the registry, the audited tier manifest, the run's own
-metadata and the observed throughput of comparable runs, so it stays correct as
-the corpus is re-triaged and as runs are added.
-
-    python3 run_status.py                       # newest run (native or reference)
-    python3 run_status.py --run <run_id>        # one specific run
-    python3 run_status.py --plan rerun_illegal=yes rerun_unreproducible=no \\
-                           iterations=10 mutations=3
-    python3 run_status.py --watch 30            # refresh every 30s
-    python3 run_status.py --json
-
-WHY THE ETA IS PLAN-DRIVEN
---------------------------
-"What is 20% of?" has no single answer: the denominator is whatever the run was
-actually asked to do. `--plan` takes the same AutoPlan fields the prompt asks
-for, and the estimate is built from the units each choice implies:
-
-    reference phases  = phases in the tiers the plan released
-    tuning phases     = iterations x (deck size + mutations per winner)
-
-Units are costed at the *observed* minutes-per-decided-phase of comparable
-reference runs (see `PhaseCost.sample`), not a constant, and the sample is
-reported so a bogus ETA is visibly bogus. A phase that takes 1.3 min to decide
-is 0.8 min if this machine is slower, and the ETA has to say so.
-
-THROTTLE-AWARE
---------------
-`--thermals` prints the temperature envelope the run was measured under. A
-throughput number is only comparable to another one taken at the same edge
-temperature: the corpus reference phases hit 84 C while a cool run sits at 44 C,
-and the clock-normalized A/B in port_tensile.py scales by sclk, not by heat.
-This tool surfaces the envelope so a suspicious delta can be checked against it.
+Owns: ``build_report`` (the whole status dict for a run/plan/chain), the text
+renderings of it (``render_compact``, ``render``, ``bar``), and ``LiveStatus``
+(the background-threaded TTY repainter) with ``_PanelStdout``, the stdout proxy
+that erases the panel before any other write.
+Does NOT own: the plan it prices (oto.metrics.run_plan), the thermal envelope
+it cites (oto.metrics.read_thermals), or the driver that starts it
+(oto.runners.driver).
+Public API: RunPlan (re-exported), PhaseCost (re-exported), Estimate
+(re-exported), build_report, bar, render_compact, render, LiveStatus,
+_PanelStdout, fmt_duration, bucket, _parse_ts, _jittery.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -57,10 +35,23 @@ if str(ROOT) not in sys.path:
 
 import oto.tensile.library as tlib  # noqa: E402
 
+# Re-exported for the pre-split import surface; the implementations live in
+# oto.metrics.read_thermals / oto.metrics.run_plan.
+from oto.metrics.read_thermals import read_thermals
+from oto.metrics.run_plan import (PhaseCost, RunPlan, Estimate,
+                                  _reference_unit_count, _tuning_unit_count)
+
+#: The registry's path relative to the project root.
 DB_REL = Path("gfx90c_results") / "registry.db"
 
 #: A run is "in flight" while it is the newest one and has no completed_at.
 ACTIVE_STATES = ("started", "interrupted")
+
+__all__ = ["RunPlan", "PhaseCost", "Estimate", "build_report", "bar",
+           "render_compact", "render", "LiveStatus", "_PanelStdout",
+           "fmt_duration", "bucket", "_parse_ts", "_jittery",
+           "read_thermals"]
+
 
 
 # ---------------------------------------------------------------------------
@@ -112,278 +103,6 @@ def bucket(status: str, result: Optional[str]) -> str:
     if status in ("started", "running"):
         return "active"
     return "other"
-
-
-# ---------------------------------------------------------------------------
-# plan
-# ---------------------------------------------------------------------------
-@dataclass
-class RunPlan:
-    """What the user asked for. Every field defaults to the --auto defaults.
-
-    The defaults are the module constants in auto_prompt, never literals
-    repeated here, so changing a default cannot leave the ETA describing a plan
-    the driver will not run.
-    """
-
-    rerun_illegal: bool = False
-    rerun_underspecified: bool = False
-    rerun_unreproducible: bool = False
-    iterations: int = 10
-    mutations: int = 3
-    deck_size: int = 0          # 0 -> read from phases.yaml
-    #: minutes per decided phase; None -> measured from comparable runs
-    minutes_per_phase: Optional[float] = None
-
-    @classmethod
-    def from_auto_prompt_defaults(cls) -> "RunPlan":
-        """Mirror --auto's own defaults so the ETA cannot describe a plan the
-        driver will not run.
-
-        Instantiating AutoPlan() rather than restating its fields: the first
-        draft hardcoded rerun_illegal=True while the driver's default is False,
-        so a bare `run_status.py` promised 111 phases of work -- about two days
-        of GPU time -- that --auto would never schedule.
-        """
-        import oto.runners.auto_prompt as auto_prompt
-        driver = auto_prompt.AutoPlan()
-        return cls(rerun_illegal=driver.rerun_illegal,
-                   rerun_underspecified=driver.rerun_underspecified,
-                   rerun_unreproducible=driver.rerun_unreproducible,
-                   iterations=auto_prompt.DEFAULT_ITERATIONS,
-                   mutations=auto_prompt.DEFAULT_MUTATIONS)
-
-    @classmethod
-    def from_args(cls, pairs: Sequence[str]) -> "RunPlan":
-        plan = cls.from_auto_prompt_defaults()
-        for pair in pairs:
-            if "=" not in pair:
-                raise SystemExit(f"--plan expects key=value, got {pair!r}")
-            key, _, raw = pair.partition("=")
-            key = key.strip()
-            if key in ("rerun_illegal", "rerun_underspecified",
-                       "rerun_unreproducible"):
-                setattr(plan, key, raw.strip().lower() in ("1", "y", "yes", "true"))
-            elif key in ("iterations", "mutations", "deck_size"):
-                try:
-                    setattr(plan, key, int(raw))
-                except ValueError:
-                    raise SystemExit(f"--plan {key} must be an integer, got {raw!r}")
-            elif key == "minutes_per_phase":
-                try:
-                    plan.minutes_per_phase = float(raw)
-                except ValueError:
-                    raise SystemExit(f"--plan {key} must be a number, got {raw!r}")
-            else:
-                raise SystemExit(
-                    f"unknown --plan key {key!r}; expected one of "
-                    "rerun_illegal, rerun_underspecified, rerun_unreproducible, "
-                    "iterations, mutations, deck_size, minutes_per_phase")
-        return plan
-
-
-# ---------------------------------------------------------------------------
-# per-phase cost, measured rather than assumed
-# ---------------------------------------------------------------------------
-class PhaseCost:
-    """Observed minutes per decided phase, from comparable completed runs.
-
-    Comparability matters: a reference run decides ~1.3 min/phase while a
-    full-deck convergence run that spends 6 h in Tensile's compile step per
-    phase is an order of magnitude slower, and averaging the two would
-    understate a reference ETA by 10x. So only `gfx900_ref_*` runs feed a
-    reference estimate, and the sample size is always reported.
-    """
-
-    def __init__(self, db: Path):
-        self.db = db
-
-    def sample(self, min_success: int = 20) -> Tuple[Optional[float], int, List[str]]:
-        if not self.db.exists():
-            return None, 0, []
-        rates: List[float] = []
-        used: List[str] = []
-        try:
-            conn = sqlite3.connect(f"file:{self.db}?mode=ro", uri=True,
-                                   timeout=30.0)
-            conn.row_factory = sqlite3.Row
-            try:
-                rows = conn.execute(
-                    "SELECT run_id, started_at, completed_at, status, metadata "
-                    "FROM runs WHERE run_id LIKE 'gfx900_ref%' "
-                    "AND completed_at IS NOT NULL AND status = 'completed' "
-                    "ORDER BY id DESC").fetchall()
-                for row in rows:
-                    rid = str(row["run_id"])
-                    decided = 0
-                    for (data,) in conn.execute(
-                            "SELECT data FROM records WHERE run_id = ? "
-                            "AND record_type = 'general'", (rid,)):
-                        try:
-                            o = json.loads(data)
-                        except ValueError:
-                            continue
-                        status = o.get("status")
-                        result = (o.get("result") or {}).get("status")
-                        if status == "completed" and result == "success":
-                            decided += 1
-                        elif status == "failed" and result != "skipped_by_user":
-                            decided += 1
-                    if decided < min_success:
-                        continue
-                    start, end = _parse_ts(row["started_at"]), _parse_ts(row["completed_at"])
-                    if not start or not end or end <= start:
-                        continue
-                    hours = (end - start).total_seconds() / 3600.0
-                    rates.append(hours * 60.0 / decided)
-                    used.append(f"{rid}:{hours:.1f}h/{decided}={rates[-1]:.2f}m")
-            finally:
-                conn.close()
-        except sqlite3.Error:
-            return None, 0, []
-        if not rates:
-            return None, 0, []
-        return statistics.median(rates), len(rates), used
-
-
-# ---------------------------------------------------------------------------
-# the estimate
-# ---------------------------------------------------------------------------
-@dataclass
-class Estimate:
-    units: int = 0
-    minutes_per_unit: Optional[float] = None
-    decided: int = 0
-    done_minutes: float = 0.0
-    remaining: int = 0
-    eta_minutes: Optional[float] = None
-    source: str = ""
-    breakdown: List[Tuple[str, int]] = field(default_factory=list)
-    rate_sample: List[str] = field(default_factory=list)
-
-    @property
-    def percent(self) -> Optional[float]:
-        if not self.units:
-            return None
-        return 100.0 * min(self.decided, self.units) / self.units
-
-    @property
-    def elapsed_minutes(self) -> float:
-        return self.done_minutes
-
-    @property
-    def rate_per_hour(self) -> Optional[float]:
-        if self.minutes_per_unit and self.minutes_per_unit > 0:
-            return 60.0 / self.minutes_per_unit
-        if self.done_minutes > 0 and self.decided:
-            return self.decided / (self.done_minutes / 60.0)
-        return None
-
-
-def _reference_unit_count(plan: RunPlan, manifest: Dict[str, Any],
-                          corpus: Dict[str, str]) -> Tuple[int, List[Tuple[str, int]]]:
-    """How many reference phases this plan will decide.
-
-    Counts only tiers the plan released, over the union of the reference chain's
-    phases, so a tier that was re-triaged moves the number instead of the code.
-    """
-    wanted = {tlib.TIER_FIRST: plan.rerun_illegal,
-              tlib.TIER_HELD: plan.rerun_underspecified,
-              tlib.TIER_LAST: plan.rerun_underspecified,
-              tlib.TIER_DROP: plan.rerun_unreproducible}
-    counts: Dict[str, int] = {}
-    for tier in corpus.values():
-        if wanted.get(tier):
-            counts[tier] = counts.get(tier, 0) + 1
-    label = {tlib.TIER_FIRST: "ILLEGAL", tlib.TIER_HELD: "UNDER-SPECIFIED",
-             tlib.TIER_LAST: "UNDER-SPECIFIED (legacy)", tlib.TIER_DROP: "UNREPRODUCIBLE"}
-    breakdown = [(label.get(t, t), n) for t, n in sorted(counts.items())]
-    return sum(counts.values()), breakdown
-
-
-def _tuning_unit_count(plan: RunPlan, deck_size: int) -> int:
-    """Native tuning work: each iteration re-runs the deck, then mutates.
-
-    Each of the `deck_size` candidates is re-decided once per iteration, and
-    each surviving candidate may be retried `mutations` times, so the cost model
-    is deck * (1 + mutations) per iteration.
-
-    Mutations are per-candidate, not per-deck: an iteration over a 10-candidate
-    deck with 1 mutation is 20 decided phases, not 11. Reading the mutation
-    count as a flat deck-wide surcharge would have understated small-deck plans
-    by 4x (it computed 40 for a deck that costs 20).
-    """
-    if plan.iterations <= 0:
-        return 0
-    per_iteration = max(deck_size, 0) * (1 + max(plan.mutations, 0))
-    return per_iteration * plan.iterations
-
-
-# ---------------------------------------------------------------------------
-# thermals
-# ---------------------------------------------------------------------------
-def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
-    """Temperature/power/clock envelope from one run's telemetry CSV.
-
-    Only gpu-busy samples, matching the filter port_tensile uses for its clock
-    normalization: idle samples read the idle clock and a cool die, so folding
-    them in would report a cooler run than the one that was actually measured.
-    """
-    path = run_dir / "logs" / "telemetry.csv"
-    if not path.is_file():
-        return None
-    import csv as _csv
-
-    temp: List[int] = []
-    power: List[int] = []
-    sclk: List[int] = []
-    busy = 0
-    try:
-        with path.open(newline="") as fh:
-            rd = _csv.DictReader(fh)
-            if not rd.fieldnames or "phase_id" not in rd.fieldnames:
-                return None
-            for row in rd:
-                try:
-                    if int(row.get("gpu_busy_percent") or 0) <= 50:
-                        continue
-                except (TypeError, ValueError):
-                    continue
-                busy += 1
-                for col, sink in (("temp_mc", temp), ("power_uw", power),
-                                  ("sclk_hz", sclk)):
-                    try:
-                        v = int(row.get(col) or 0)
-                    except (TypeError, ValueError):
-                        continue
-                    if v > 0:
-                        sink.append(v)
-    except OSError:
-        return None
-    if not temp and not power and not sclk:
-        return None
-
-    def stat(vals: List[int], scale: float, unit: str) -> str:
-        if not vals:
-            return "n/a"
-        s = sorted(vals)
-        return (f"{s[0]/scale:.0f}-{s[-1]/scale:.0f}{unit} "
-                f"(mean {statistics.mean(s)/scale:.0f}{unit}, "
-                f"p95 {s[min(len(s)-1, int(len(s)*0.95))]/scale:.0f}{unit})")
-
-    # Samples above the sustained-clock cap are thermally or power capped, and
-    # are the ones that make a throughput number unreproducible. Count them
-    # rather than silently averaging them in.
-    hot = [t for t in temp if t >= 80_000]
-    return {
-        "busy_samples": busy,
-        "temp": stat(temp, 1e3, "C"),
-        "temp_max_c": (max(temp) / 1e3) if temp else None,
-        "power": stat(power, 1e6, "W"),
-        "sclk": stat(sclk, 1e6, "MHz"),
-        "samples_over_80c": len(hot),
-        "throttled_frac": (len(hot) / len(temp)) if temp else 0.0,
-    }
 
 
 # ---------------------------------------------------------------------------
