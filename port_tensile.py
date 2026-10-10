@@ -3586,13 +3586,22 @@ def main():
         return 0 if result.get("converged") else 1
 
     elif args.auto:
-        # Ask first. The plan owns the four decisions; the CLI flags, when
-        # given, only override the numeric half.
+        # Determine budget/mutation_budget source.
+        # CLI flags always take precedence; if given, they override the interactive
+        # prompts with clear communication. The plan owns the four decisions; the
+        # CLI flags only affect the numeric half (iterations / mutations).
+        cli_budget = args.budget
+        cli_mut_budget = args.mutation_budget
+
+        # Ask first, but be aware of CLI-provided values.
         plan = ask(base_dir=driver.base_dir, assume_yes=args.yes)
-        if args.budget is not None:
-            plan.iterations = args.budget
-        if args.mutation_budget is not None:
-            plan.mutations = args.mutation_budget
+
+        # Apply CLI overrides (they win over interactive prompts for the numeric half).
+        if cli_budget is not None:
+            plan.iterations = cli_budget
+        if cli_mut_budget is not None:
+            plan.mutations = cli_mut_budget
+
         # The --release-* flags are the non-interactive spelling of questions 2
         # and 3. They are one-directional: a flag can say yes, the prompt (or
         # its absence) decides otherwise.
