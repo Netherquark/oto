@@ -3,7 +3,7 @@
 ## How this relates to the project
 
 - This doc is **research only** — hardware model, literature, and Tensile source mechanics. It contains no benchmark numbers of its own; all measured values live in `potential_configs.md` and `knowledge_base.md` and are referenced, never copied.
-- Companions: `gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `potential_configs.md` §8.6/§13.1–§13.7 defines the ranked experiment groups (A/B/C/D) and the resolution ladder (pads → GSU>1 → PGR=0 → NLCA=3 → split-complex). Section 7 below maps each research finding onto that existing plan; it does not add new experiment cells.
+- Companions: `gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `potential_configs.md` §6 (Groups A/B/C), §7 (steal), §8 (other routes incl. §8.2 split-complex) and §10 (next-run queue) define the ranked experiment groups and the resolution ladder (occupancy/tile levers → split-complex). Section 7 below maps each research finding onto that existing plan; it does not add new experiment cells.
 - `gfx90c_theoretical_limits.md` remains the authority for performance ceilings; this doc only explains *why* those ceilings exist.
 - Cite conventions: repo files as `path.py:line` against the local Tensile checkout at `TENSILE_ROOT` (per `.env`); web sources inline as `(site, URL)`; full list in **Sources**. Claims I could not fully verify are marked **check**.
 
@@ -164,6 +164,11 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - BLIS 1m (SISC): https://www.cs.utexas.edu/~flame/pubs/blis6_sisc_rev0.pdf ; flame/blis: https://github.com/flame/blis
 - GEMMFIP — arXiv:2302.08417: https://arxiv.org/abs/2302.08417
 - rocBLAS programming guide (Tensile complex problem types): https://rocm.docs.amd.com/projects/rocblas/
+- **First-party companion brief:** `complex_gemm_research_brief.md` (repo root) —
+  BLAS-8 accounting, the four-FMA complex MAC (MAC_F32C.py/MAC_F64C.py), 3M/4M
+  instruction counts, MAGMA/Fermi + Ozaki routes. The single citation anchor for
+  the corrected complex-ceiling frame and the split-complex estimate in
+  `potential_configs.md` §1/§8.2
 
 **Autotuning / portability**
 - Kernel Tuner: https://kerneltuner.github.io
@@ -182,4 +187,4 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - `Tensile/docs/src/conceptual/kernel-parameters.rst` (official knob reference); `Tensile/tuning_docs/tensile_tuning.tex:1430` (`NLCA` = `NumLoadsCoalescedA`)
 
 **Project files**
-- `gfx90c_tuning_guide.md` (M1–M4 vocabulary, knob surface), `potential_configs.md` §8.6/§13.1–§13.7 (experiment groups, resolution ladder), `gfx90c_theoretical_limits.md` (ceilings), `knowledge_base.md` §7/§10/§11 (data law, measured context), `scheduler.py:31-36/:1039/:1106/:1186/:1261` (gates, LDS/VGPR budgets, `BYTES_PER_ELEMENT` Z issue), `changelog.md`
+- `gfx90c_tuning_guide.md` (M1–M4 vocabulary, knob surface), `potential_configs.md` §6/§7/§8/§10 (experiment groups, steal, split-complex, queue), `gfx90c_theoretical_limits.md` (ceilings), `knowledge_base.md` §7/§10/§11 (data law, measured context), `scheduler.py:31-36/:1039/:1106/:1186/:1261` (gates, LDS/VGPR budgets, `BYTES_PER_ELEMENT` Z issue), `complex_gemm_research_brief.md` (complex-MAC accounting + split routes), `changelog.md`

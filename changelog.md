@@ -9,6 +9,51 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-10 — potential_configs.md comprehensive rewrite: BLAS-8 complex frame, resolver-final winners, priority re-sequence.**
+  The candidate-deck document was rewritten end-to-end (old 1429-line version
+  archived at `archive/potential_configs.pre_rewrite_20261010.md`). Three
+  load-bearing changes: **(1) Complex accounting corrected to BLAS-8.** The old
+  file's "÷4 ALU wall" (CC 403.25 / ZZ 25.25, "81%/96% of wall") counted 2 flops
+  per complex MAC, but Tensile's complex MAC is four real FMAs = 8 BLAS flops
+  (`MAC_F32C.py`/`MAC_F64C.py`). Under BLAS-8 the honest ceilings are the FP32
+  peak (CC 1613) and FP64 peak (ZZ 101); the user's CC/ZZ complaint numbers are
+  correct and CC/ZZ are genuinely M3-undertuned at 20–24 % theo with ~3.5–4×
+  in-deck headroom (→ SS/DD-class issue ≈ CC 1187 / ZZ 95–98) — not near a wall.
+  **(2) Split-complex corrected:** reported split = (4/3)·R_real → CC ≈1513,
+  ZZ ≈127–131 (was "÷3 → ≈378"). 3M wins the GEMM count (4→3) with an
+  O(MN+MK+KN) combine, not the per-MAC instruction count. **(3) Winner configs
+  re-resolved per cell** from the registry (`resolve_cells.py`: 6129 yamls, 8480
+  keys) — 19 WIN / 18 TIE / 1 LOSS confirmed; corrections incl. CC:512 winner
+  WGM4+NLCA1 (not WGM8), CC:256 native best = small MT32x32 (193.8) vs floor
+  MT64x64 (212.3, sanctioned steal §7, bar ≥214), SS:512 VW4 landed (WIN +10.4),
+  SS:4096 = DU16, ZZ:512/1024 = DU16+PGR=False, HH:256 = MT32x64. Corpus line
+  fixed: 10 native runs + 2 locked floor runs (kernel_db 11 runsets; overnight
+  20261009 folded via report verdicts only). Research anchors updated:
+  `kernel_tuning_research.md` Sources now point to `complex_gemm_research_brief.md`
+  (the citation anchor for §1/§8.2). `command.txt` re-sequenced: CC/ZZ M3 campaign
+  first, then CC:256 steal, SS GSU, HH alternates, DD GSU, WGM probe, split-complex
+  escalation. Any later doc quoting "81–96% of an ALU wall" for CC/ZZ, "WGM8 is
+  the CC lever", "≈378 split", the ÷4 ceilings, or an "8 native runs" corpus is
+  stale — see the rewrite's §1/§2/§3.
+- **2026-10-10 — Overnight-run triage: report crash + false "HPA above ceiling".**
+  Fixes from the first post-overnight triage after the DB-hooked overnight run
+  (`run_20261009_205427`, ~7 h 41 m, 351 phases + 5 swizzle probes): (1) **report
+  generation crash** — `_ab_records_from_csv` concatenated a `Path.glob`
+  generator with a `list` when the probe_* 2_BenchmarkData scan was added
+  (`TypeError` at 04:35; report now regenerates: 19 WIN / 18 TIE / 1 LOSS,
+  7333 cells, 8 runs); regression test `tests/test_report_probe_glob.py`.
+  (2) **false HPA anomaly** — the acceptance report showed HH_HPA/HS_HPA at
+  230-246% of their FP32-rate 1613 ceiling with byte-identical bodies. Root
+  cause: `_compute_family_coverage` matched `a.family == fam_lower`, but the
+  Oct 9 typecode-first attribution stores the family UPPERCASE, so both HPA
+  buckets fell through to the dtype fallback ('H') and reported the **packed-FP16
+  HH** kernel median (2749.285, healthy at 85% of HH's real 3226 ceiling) as HPA
+  "performance" — physically impossible for `v_fma_f32`. Match is now
+  case-insensitive: HH_HPA 1447.0 (89.7%), HS_HPA 1441.2 (89.3%); regression
+  tests `tests/test_report_family_case.py`. (3) **main-transcript capture** —
+  the harness writes no main log by design (`logs/telemetry.csv` + per-phase
+  logs only); `command.txt` now shows the piped invocation
+  (`… --live off | tee overnight_$(date +%Y%m%d_%H%M).log`).
 - **2026-10-09 (night #2) — DB-hooked mutator overhaul, Group C swizzle complete, 10+ h overnight sizing, proposal rewrite.**
   The Option H mutator overhaul landed: `db_mutator.py` hooks synthesis to
   `kernel_db.json`, emitting wide + narrow + direction mutants for every active
