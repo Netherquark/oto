@@ -18,11 +18,12 @@ HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
           "vram_used_bytes,vram_total_bytes,phase_id")
 
 class TelemetrySampler:
-    def __init__(self, log_path: Path, interval_s: float = 0.1):
+    def __init__(self, log_path: Path, interval_s: float = 0.5):
         self.log_path = Path(log_path)
         self.interval_s = interval_s
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._fh = None
         self._current_phase = ""
         self._warned_missing_busy = False
         self.device_dir, self.hwmon_dir = self._discover_amdgpu()
@@ -157,18 +158,35 @@ class TelemetrySampler:
             with open(self.log_path, "a") as f:
                 f.write(HEADER + "\n")
 
-        def _loop():
+        def _loop(fh):
+            n = 0
             while not self._stop_event.is_set():
                 row = self.sample_row()
-                with open(self.log_path, "a") as f:
-                    f.write(f"{row['ts']},{row['sclk']},{row['mclk']},{row['pwr']},{row['temp']},{row['busy']},{row['vram_u']},{row['vram_t']},{row['phase']}\n")
+                fh.write(f"{row['ts']},{row['sclk']},{row['mclk']},{row['pwr']},{row['temp']},{row['busy']},{row['vram_u']},{row['vram_t']},{row['phase']}\n")
+                # Buffered: flush every 10 samples (~5 s at the 0.5 s
+                # interval) instead of open/append/close per row — the old
+                # per-sample open+write+close was a real CPU/IO competitor
+                # during benchmark phases.
+                n += 1
+                if n % 10 == 0:
+                    fh.flush()
                 time.sleep(self.interval_s)
 
         self._stop_event.clear()
-        self._thread = threading.Thread(target=_loop, daemon=True)
+        # Open once for the sampler's lifetime (append mode never truncates,
+        # preserving the restart-safe semantics).
+        self._fh = open(self.log_path, "a")
+        self._thread = threading.Thread(target=_loop, args=(self._fh,), daemon=True)
         self._thread.start()
 
     def stop(self):
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=1.0)
+        if self._fh is not None:
+            try:
+                self._fh.flush()
+                self._fh.close()
+            except Exception:
+                pass
+            self._fh = None

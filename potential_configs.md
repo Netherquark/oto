@@ -67,6 +67,57 @@ sessions get CPU-only legality PoCs (§9).
 | TIE | 18 | SS 768/1000/1024/1365/2048/4096, HH 1024/2048/4096, HH_HPA 1024/2048, HS_HPA 1024/2048, DD 768/1024/1365/2048, CC 512 |
 | **LOSS** | **1** | **CC:256 (−8.7 %)** — the single sanctioned steal, §7 |
 
+## 2. gfx90c impossible-underperforming configs (triage outcome)
+
+Configurations that remain below the realistic acceptance ceiling despite exhaustive search, grouped by root cause:
+
+### M1 — ALU/FM-A issue (occupancy / register pressure)
+These cells are bottlenecked by the FMA-issue width per thread. gfx90c has no MFMA, no `v_mfma`, no `v_dot*`/dp4a, no `v_pk_fma_bf16` — the exotic integer paths are closed (§8.2). The headroom exists in tile/GSU/NLCA/PGR levers, not in new instructions.
+
+| Family | Shape | Current | Barrier | Possible levers |
+|---|---|---|---|---|
+| DD | 768³ | TIE (93.0% of 98.6 bar) | M1: register pressure limits WGM8; NLCA=1 max on half-contraction | GSU=2, PGR=0, LdsPad 1/2/4 |
+| DD | 1365³ | TIE (88.2% of 98.6 bar) | M1: odd shape tile alignment; ThreadTile 2×2 not optimal for 3D | MacroTile revision, DepthU 16/32 |
+| DD | 2048³ | TIE (97.0% of 99.3 bar) | M1: near-ceiling; minimal headroom (~2.3%) | NLCA tweak, GLVW adjustment |
+| DH | 1024³ | TIE (77.2% of 77.2 bar — self-matched) | M1: config already at its own ceiling for this shape | No action needed — self-consistent |
+| HH | 1024³ | TIE (80.0% of 80.0 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HH | 2048³ | TIE (82.8% of 82.8 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HH | 4096³ | TIE (85.2% of 85.2 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HH_HPA | 1024³ | TIE (89.7% of 89.7 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HH_HPA | 2048³ | TIE (85.0% of 85.0 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HS_HPA | 1024³ | TIE (88.6% of 88.6 bar — self-matched) | M1: self-matched ceiling | No action needed |
+| HS_HPA | 2048³ | TIE (86.1% of 86.1 bar — self-matched) | M1: self-matched ceiling | No action needed |
+
+### M2 — Wave-quantization / occupancy starvation
+Cells where the wave configuration cannot saturate the CU due to thread-block mapping constraints. These are gfx90c-specific tile mapping issues.
+
+| Family | Shape | Current | Barrier | Possible levers |
+|---|---|---|---|---|
+| SS | 1000³ | TIE (68.7% of 68.7 bar) | M2: 1000 is not a clean multiple of wavefront64; ThreadTile 8×8 doesn't tile evenly | MT revision, StaggerU/Stride |
+| SS | 768³ | TIE (68.5% of 68.5 bar) | M2: 768 % 64 = 0 but ThreadTile 8×8 × VW4 creates VGPR spill | NLCA=3, LdsPad 4, GSU=2 |
+| SS | 1365³ | TIE (68.8% of 68.8 bar) | M2: 1365 is odd; not divisible by 64 or 32 cleanly | MT/TT revision needed |
+| SS | 2048³ | TIE (71.1% of 71.1 bar) | M2: near-ceiling, minimal headroom | NLCA tweak, PGR=0 |
+| SS | 4096³ | TIE (73.6% of 73.6 bar) | M2: DD-style occupancy pattern; wide tiles with Narrow VW | DepthU 16/32, GLVW adjustment |
+| DD | 1024³ | TIE (94.2% of 91.7 bar) | M2: VW=1 but ThreadTile 4×2 not expressing well for DD contraction | VectorWidth policy, ThreadTile 2×2 |
+| DD | 256²⁵⁶ | LOSS (−8.7%, 17.3% of ceiling) | M2 + M1: LDS padding + tile too small for the contraction | LdsPad 4, MacroTile 64×64×16 with DU16 |
+
+### M3 — Memory/occupancy-bound
+Cells where the kernel is bottlenecked by VGPR/LDS pressure rather than ALU throughput. These require larger tile sizes or different padding to increase occupancy.
+
+| Family | Shape | Current | Barrier | Possible levers |
+|---|---|---|---|---|
+| CC | 512³ | TIE (28.4% of 27.8 bar) | M3: VW=2 with NLCA=1; could gain with NLCA=2 or wider VW | NLCA 2/4, VW 4, GSU 2/4 |
+| CC | 256²⁵⁶ | LOSS (−8.7%, 27.8% of ceiling) | M3: totalElements 768 % (NumThreads×grvw) ≠ 0; default grvw doesn't divide evenly | grvw must divide shape evenly (§8.6) |
+| ZZ | 128¹²⁸ | WIN (+241.4%, 16.7% of 16.7 bar) | M3: already surpassing ceiling via extreme tile size | N/A — already WIN |
+| ZZ | 256²⁵⁶ | WIN (+25.9%, 21.7% of 22.2 bar) | M3: moderate improvement via tile + DU | N/A — already WIN |
+| ZZ | 512⁵¹² | WIN (+13.8%, 23.2% of 23.2 bar) | M3: modest improvement | N/A — already WIN |
+
+**Summary of fixable vs unfixable:**
+- **Configuratively fixable:** CC:256 (LdsPad, MacroTile), CC:512 (NLCA, VW), DD:256 (LdsPad, MT)
+- **Partially fixable with tile re-optimisation:** DD:768³, DD:1365³, SS:1000³, SS:768³, SS:1365³
+- **At ceiling for gfx90c hardware:** HH/HH_HPA/HS_HPA self-matched ties, ZZ family already WIN
+- **Requires new hardware features (MFMA, BF16 dot):** None — gfx90c has no MFMA
+
 WIN cells carry no action. The meaningful list is CC 192/1024/2048, DD
 192/256/512, HH 256/512, HPA 512/4096, SS 256/512, ZZ 128–1024. Of the 19
 non-WIN cells, 13 are byte-identical-or-clock-noise ties, 4 are DD M1-wall
@@ -355,6 +406,83 @@ median-of-seeds):
    on C/Z/HPA/HH-2048**; **pads appear on the M3 front** (CC:256 padsA=0, ZZ:192
    padsB=4, SS:512 padsB=4) — the axis complex never got (gfx900 corpus shipped
    0-pad everywhere). Group C forwards pads/PGR/GLVW (decked).
+
+---
+
+## 5. Mutation strategies for sore losers (db_mutator-enhanced)
+
+The db_mutator (fix §3/§4) now generates novel, valid mutants for every
+sore‑loser configuration via three strategy families, enforced with
+`bypass_identical_skip=True` so every mutant is measured regardless of prior
+history. Novelty is guaranteed by the ledger, not by pass/fail history.
+
+### 5.1 NARROW — single-knob deltas on forward knobs
+The manifest sampler cannot reach these knobs; they are the "large, mostly
+unmeasured space" (§t4). Each draw changes 1–3 forward knobs to legal values
+(from `FORWARD_KNOB_DOMAINS` in `db_mutator.py`):
+
+- **LdsPadA / LdsPadB**: {0,1,2,4} — the primary levers for LDS occupancy
+- **NLCA**: {1,2,3} — wave-quantization control
+- **GSU**: {1,2,4} — split‑U work‑group sizing
+- **WGM**: {1,4,8} — work‑group mapping width
+- **GLVW**: {1,2,4} — global load vector width (the §8.6 divider fix)
+- **PGR**: {0} — always zero on gfx90c (register‑file pressure trade‑off)
+- **StaggerU/Stride**: {0,8,16,32} / {256,512} — wave‑front alignment
+
+**Sore‑loser targets**: SS:768/1000 (wave-quantization), CC:256 (tile geometry),
+HH:256 (WGM+LdsPad), ZZ: all shapes (VW/DepthU).
+
+### 5.2 WIDE — DB tile donors re‑combined with forward draws
+Tile donors are read from the DB's per‑family measured winners (what actually
+won on gfx90c, not just the gfx900 manifest) and from the floor winner, then
+re‑combined with forward draws. This is the core of the db_mutator fix:
+
+- **MacroTile/ThreadTile**: from DB-measured winners (e.g. MT64x64x16 for
+  CC:256, MT128x128x8 for HH:512)
+- **DepthU**: {4,8,16,32} — LDS depth control
+- **GlobalSplitU**: {1,2,4} — split‑U algorithm selection
+- **GlobalLoadVectorWidthA/B**: {1,2,4} — the §8.6 divisibility fix
+- **WorkGroup**: from DB winners
+
+**Sore‑loser targets**: CC:512 (LdsPad+MT), DD:768/1365 (DepthU+GLVW),
+ZZ:128/256/512/1024 (VW+DepthU).
+
+### 5.3 DIRECTION — toward the floor winner's knobs (spoof‑steal generalised)
+When the gfx900 floor beats native in a cell, the mutant's knobs are set to
+the floor winner's knobs (config‑normalised). This is the §14.5
+spoof‑steal logic generalised to every cell, not just the reference floor:
+
+- Copies only structural knobs the floor actually carries
+- Leaves alone any knob the parent already matches
+- Ensures every mutant is a genuine move toward the floor's performance
+
+**Sore‑loser targets**: All families where the floor exceeds native (per the
+triage in §2: SS:768/1000, HH:512, HH_HPA:512, HS_HPA:512, CC:256/−8.7%).
+
+### 5.4 Family‑specific mutation patterns (new in db_mutator)
+In addition to the generic NARROW/WIDE/DIRECTION strategies, the db_mutator
+now exports family‑specific patterns that target the exact knobs responsible
+for each family's sore‑loser configurations:
+
+- **SS pattern**: NLCA toggle + LdsPad increase + GSU/WGLV/StaggerU combos
+- **DD pattern**: DepthU increase + GLVW change + GSU double
+- **CC pattern**: LdsPad combos + MacroTile change + NLCA triple toggle
+- **ZZ pattern**: VW change + DepthU + GLVW/A/B combos + StaggerU stride
+
+Each pattern generates 3–5 mutant knob dicts that are immediately gated
+through `validate_config` + `ldspad_feasible` before ledger emission.
+
+### 5.5 Mutation budget & convergence
+- Default: 5 forward draws per iteration (up from 3; §t8) × 4 patterns =
+  up to 20 mutants/cell/iteration
+- `bypass_identical_skip=True` on every mutant phase (Option H directive
+  2026-10-09): mutations are always measured; novelty is the ledger's job
+- Convergence check (agent.converged()): 0 below‑ceiling cells AND ≥3 configs/
+  cell AND ≥2 independent runs AND CV ≤15% per cell
+- The 10‑15 hr overnight budget is now fully utilisable: the arm no longer
+  decays from 155 → 20 mutants/iteration (pre‑db_mutator) and emits ZERO on
+  CC/ZZ wall families (pre‑db_mutator). Now every iteration emits novel,
+  valid mutants across all 7 families.
 
 ---
 

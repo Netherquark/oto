@@ -6,7 +6,7 @@ number is computed from the registry, the audited tier manifest, the run's own
 metadata and the observed throughput of comparable runs, so it stays correct as
 the corpus is re-triaged and as runs are added.
 
-    python3 run_status.py                       # newest gfx900 reference chain
+    python3 run_status.py                       # newest run (native or reference)
     python3 run_status.py --run <run_id>        # one specific run
     python3 run_status.py --plan rerun_illegal=yes rerun_unreproducible=no \\
                            iterations=10 mutations=3
@@ -426,18 +426,19 @@ def build_report(base: Path, run_id: Optional[str],
             except ValueError:
                 meta_by_run[rid] = {}
 
-        # "Newest" means newest by started_at, not highest row id. Resumes are
-        # not always inserted in the order they started (a run can be backfilled
-        # or re-registered), and picking by id would then report a stale
-        # ancestor as the head -- showing its old elapsed time and hiding the
-        # run actually in progress. Ties fall back to id so the order is total.
-        ref_ids = sorted(
-            (rid for rid in status_by_run if rid.startswith("gfx900_ref_")),
+        # All runs, newest by started_at first (ties fall back to id so the
+        # order is total). The default head is the newest run of ANY kind --
+        # native tuning runs are the primary workflow now; the gfx900_ref_*
+        # floor chain is just one kind of run. Resumes are not always inserted
+        # in the order they started, so picking by id would report a stale
+        # ancestor as the head.
+        all_ids = sorted(
+            status_by_run,
             key=lambda r: (started_by_run.get(r) or datetime.min.replace(
                 tzinfo=timezone.utc), row_id[r]),
             reverse=True)
 
-        # The chain: newest gfx900_ref_* run, plus its resume_of ancestors.
+        # The chain: newest run, plus its resume_of ancestors.
         if run_id:
             if run_id not in status_by_run:
                 raise SystemExit(f"unknown run {run_id!r}")
@@ -455,7 +456,7 @@ def build_report(base: Path, run_id: Optional[str],
         else:
             # Precedence, highest first:
             #   1. a run still in flight (no completed_at)
-            #   2. the newest *completed* chain -- the authoritative floor
+            #   2. the newest *completed* run -- authoritative, not resumable
             #   3. the newest finished-but-interrupted run
             #
             # In flight is decided by completed_at, not by the status label. An
@@ -466,17 +467,17 @@ def build_report(base: Path, run_id: Optional[str],
             # eight, so the default view described a stale chain and every tier
             # count and ETA it printed came from the wrong corpus.
             chain = []
-            for cand in ([rid for rid in ref_ids
+            for cand in ([rid for rid in all_ids
                           if completed_by_run.get(rid) is None],
-                         [rid for rid in ref_ids
+                         [rid for rid in all_ids
                           if status_by_run[rid] == "completed"],
-                         [rid for rid in ref_ids
+                         [rid for rid in all_ids
                           if status_by_run[rid] in ACTIVE_STATES]):
                 if cand:
-                    chain = [cand[0]]  # ref_ids is newest started_at first
+                    chain = [cand[0]]  # all_ids is newest started_at first
                     break
-            if not chain and ref_ids:
-                chain = [ref_ids[0]]
+            if not chain and all_ids:
+                chain = [all_ids[0]]
             seen = set(chain)
             cur = chain[0] if chain else None
             while cur:
@@ -603,7 +604,7 @@ def build_report(base: Path, run_id: Optional[str],
     head = chain[-1] if chain else ""
     head_start = started_by_run.get(head) if head else None
     head_end = completed_by_run.get(head) if head else None
-    if head_start and head_end and head_end > head_start:
+    if head_start and head_end and head_end >= head_start:
         elapsed = (head_end - head_start).total_seconds() / 60.0
     elif head_start:
         clock = now if now is not None else datetime.now(head_start.tzinfo)
@@ -669,6 +670,11 @@ def build_report(base: Path, run_id: Optional[str],
             ref_done += done
     ref_remaining = ref_total - ref_done
 
+    # Jitter check: too few samples for a stable median ETA.
+    # When decided < 3 the per-phase median is unstable and the ETA must
+    # carry a visible bogus indicator so the user knows not to trust it.
+    jitter = _jittery(decided) if decided is not None else False
+
     est = Estimate(
         units=ref_total + tune_units,
         minutes_per_unit=minutes,
@@ -683,6 +689,10 @@ def build_report(base: Path, run_id: Optional[str],
         est.eta_minutes = est.remaining * minutes
     elif elapsed and decided:
         est.eta_minutes = (elapsed / decided) * est.remaining
+
+    # Flag when ETA is based on an unstable median (fewer than 3 decided phases)
+    if jitter:
+        est.eta_minutes = None  # type: ignore[assignment]
 
     thermals = read_thermals(base / "gfx90c_runs" / head) if head else None
     started_live = status_by_run.get(head) == "started"
@@ -1014,7 +1024,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                "rerun_underspecified=yes iterations=4 --thermals\n")
     ap.add_argument("--base", default=str(ROOT),
                     help="repository root (default: this file's directory)")
-    ap.add_argument("--run", help="run_id to report on (default: newest reference run)")
+    ap.add_argument("--run", help="run_id to report on (default: newest run)")
     ap.add_argument("--plan", nargs="*", default=[],
                     metavar="KEY=VALUE",
                     help="project a plan: rerun_illegal, rerun_underspecified, "

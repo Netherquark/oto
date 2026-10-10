@@ -328,6 +328,34 @@ class TestChainAndClock(StatusFixture):
         rep = self.report()
         self.assertEqual(rep["head"], "gfx900_ref_live")
 
+    def test_newer_native_run_outranks_older_reference(self):
+        """Default head must span ALL runs, not just gfx900_ref_* chains.
+
+        Regression: the standalone default was hard-scoped to the gfx900_ref_
+        prefix, so it locked onto the newest reference run (a zero-duration
+        floor marker) and reported a reference-only 0/1600 progress while the
+        real native overnight run sat unused. Native tuning runs are the primary
+        workflow; the newest completed run of ANY kind is the head.
+        """
+        self.add_run("gfx900_ref_old", "completed", [],
+                      started="2026-10-03T10:00:00",
+                      completed="2026-10-03T12:00:00")
+        self.add_run("run_20261009_205427", "completed", [],
+                      started="2026-10-09T20:54:00",
+                      completed="2026-10-10T04:35:00")
+        rep = self.report()
+        self.assertEqual(rep["head"], "run_20261009_205427")
+        self.assertEqual(rep["chain"], ["run_20261009_205427"])
+
+    def test_zero_duration_completed_run_reports_zero_elapsed(self):
+        """A completed run that started and stopped at the same instant has
+        elapsed 0, not its wall-clock age."""
+        self.add_run("gfx900_ref_zero", "completed", [],
+                      started="2026-10-03T10:00:00",
+                      completed="2026-10-03T10:00:00")
+        rep = self.report()
+        self.assertEqual(rep["elapsed_minutes"], 0.0)
+
     def test_elapsed_is_head_run_not_chain_span(self):
         """Two days of ancestor runs must not inflate this run's elapsed."""
         self.add_run("gfx900_ref_r1", "completed", [], started="2026-09-20T10:00:00",

@@ -282,7 +282,7 @@ class TensileDriver:
         self._last_run_status = ""
         self._live_status = None
         self._live_enabled = True
-        self._live_interval = 15.0
+        self._live_interval = 30.0
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
@@ -3373,9 +3373,9 @@ def main():
     parser.add_argument(
         "--live-interval",
         type=float,
-        default=15.0,
+        default=30.0,
         metavar="SECONDS",
-        help="Seconds between live status repaints (default: 15)"
+        help="Seconds between live status repaints (default: 30)"
     )
     parser.add_argument(
         "--dry-run",

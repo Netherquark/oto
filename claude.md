@@ -142,8 +142,10 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   telemetry as proof of behavior.
 - Do not use a mathematically or physically unjustified normalization just because it
   improves presentation. Revalidate derived conclusions when methodology changes.
-- Every change to `port_tensile.py` / its modules is PoC'd in `/tmp` and
-  tested before landing.
+- **/tmp-PoC-first default.** Every code change — not only `port_tensile.py` /
+  its modules — is prototyped in `/tmp` and tested there before landing;
+  in-tree files are edited only after the PoC passes. Throwaway scripts never
+  land in the repo root.
 - LLM output is hypothesis input, not architecture authority. HW decides. DB remembers.
 - **Every family deck must be able to reach the 16 B global-load cap.** The
   classic path caps a contiguous load at `GLVW * bytesPerElement <= 16`. A tile
@@ -199,9 +201,24 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   phases, no marathon/deck runs. Code/DB/doc work only. The agent may build, validate,
   test, generate decks, dry-run and inspect results — never launch full runs.
 - **`todo.txt` is a USER-ONLY file. The agent never reads, writes, greps, renames,
-  or touches it — in any context, for any reason.** (Cross-ref §8.1.) Its contents
-  are not part of the agent-visible state; treat its non-existence from the agent
-  perspective as required.
+  touches, or commits it — in any context, for any reason.** (Cross-ref above
+  and the commit-discipline rule below.) Its contents are not part of the
+  agent-visible state; treat its non-existence from the agent perspective as
+  required. Do not access, modify, or reference todo.txt during agent execution.
+- **Commit discipline — never pollute the pristine repo.** The agent never
+  commits or stages a file that is not already tracked unless the user
+  explicitly sanctions it. `git add -A` / `git add .` are strictly forbidden.
+  Stage explicit paths only. The user working files `proposal.md`, `todo.txt`,
+  and `command.txt` are intentionally untracked (and NOT in `.gitignore`), so a
+  blanket add would sweep them into a commit. Before committing, verify
+  `git status --porcelain` shows no untracked user file staged. Never add
+  random untracked files, proposal.md, todo.txt, or command.txt to the repo.
+- Convergence claims need the agent gate: ≥3 distinct configs tested, ≥2 independent
+  runs (≥6 seeds), CV ≤ 15% per cell, and 0 RED contract cells. The ≤1% run-to-run
+  drift bar applies to retirement eligibility, not to convergence.
+  `command.txt` are intentionally untracked (and NOT in `.gitignore`), so a
+  blanket add would sweep them into a commit. Before committing, verify
+  `git status --porcelain` shows no untracked user file staged.
 - Convergence claims need the agent gate: ≥3 distinct configs tested, ≥2 independent
   runs (≥6 seeds), CV ≤ 15% per cell, and 0 RED contract cells. The ≤1% run-to-run
   drift bar applies to retirement eligibility, not to convergence.
