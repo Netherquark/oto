@@ -182,12 +182,19 @@ class AcceptanceReporter:
             # Match by explicit family prefix first (distinguishes HH / HH_HPA / HS_HPA),
             # fall back to single-letter dtype / family name for cells that carry
             # no family tag (older runs / aggregate_by_cell path).
+            # Case-insensitive: CellAnalytics.family is canonical UPPERCASE
+            # (analytics.aggregate_by_cell_typecode uppercases the typecode
+            # family), while older runs carry lowercase families. Comparing
+            # `a.family == fam_lower` silently emptied the HH_HPA / HS_HPA
+            # buckets, whose dtype fallback then grabbed every packed-FP16 HH
+            # cell and reported 2749 GFLOPS as "170% of the HPA ceiling".
             family_cells = [a for a in all_analytics
-                            if a.family == fam_lower]
+                            if str(a.family or "").upper() == family]
             if not family_cells:
                 short = FAMILY_TO_DTYPE.get(fam_lower)
                 family_cells = [a for a in all_analytics
-                                if a.dtype == short or a.dtype == family]
+                                if str(a.dtype or "").upper() == str(short or "").upper()
+                                or str(a.dtype or "").upper() == family]
 
             ceiling = REALISTIC_CEILINGS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
             theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
