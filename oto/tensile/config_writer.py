@@ -16,14 +16,15 @@ FORWARDED_GROUP_C_KNOBS, _TENSILE_VALID_PARAMS (re-exported from driver).
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from oto.tensile.candidate import parse_tensile_shape
 from oto.tensile.gates.assembly import assembly_class_valid
-from oto.tensile.gates.occupancy import ldspad_defasible
+from oto.tensile.gates.occupancy import (ldspad_defasible,
+                                         occupancy_feasible)
 
 #: Contraction pattern -> (TransposeA, TransposeB). Verified against Tensile
 #: index notation and the corpus' own kernel names:
@@ -318,7 +319,7 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
     dtype = phase.get("dtype", "S").lower()
     gate_config = {**config, "DataType": dtype, "label": label}
     for gate_name, gate in (("assembly-class", assembly_class_valid),
-                            ("occupancy", _occupancy)):
+                            ("occupancy", occupancy_feasible)):
         gate_ok, gate_reason = gate(gate_config)
         if not gate_ok:
             print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
@@ -331,13 +332,6 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
               f"forwarded-knob illegal ({pad_reason})")
         return f"forwarded-knob illegal: {pad_reason}"
     return None
-
-
-def _occupancy(config: Dict[str, Any]) -> Tuple[bool, str]:
-    """The occupancy gate, imported lazily so this module stays import-cheap."""
-    from oto.tensile.gates.occupancy import occupancy_feasible
-
-    return occupancy_feasible(config)
 
 
 def write_phase_config(driver, path: Path,
@@ -424,3 +418,45 @@ def write_phase_config(driver, path: Path,
     with open(path, "w") as f:
         yaml.safe_dump(tensile_yaml, f, default_flow_style=False, sort_keys=False)
     return True, ""
+
+
+# ---------------------------------------------------------------- shapes
+
+def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
+    """
+    Parse Tensile shape string into M, N, B, K components.
+    Handles formats:
+    - 1024x1024x1024 (M x N x K)
+    - 64x4096x1_K4096 or 64x4096x1 (M x N x B with K)
+    - 4x2048x64 (M x N x K or M x N x B)
+    """
+    result = {"M": 1024, "N": 1024, "B": 1, "K": 1024}
+    clean = str(shape_str).strip()
+    
+    # Check for explicit K specification (e.g. _K4096)
+    k_match = re.search(r'[_xX]K(\d+)', clean, re.IGNORECASE)
+    if k_match:
+        result["K"] = int(k_match.group(1))
+        clean = re.sub(r'[_xX]K\d+', '', clean, flags=re.IGNORECASE)
+
+    # Check for explicit batch specification (e.g. _B16 or B16_)
+    b_match = re.search(r'[_xX]B(\d+)', clean, re.IGNORECASE)
+    if b_match:
+        result["B"] = int(b_match.group(1))
+        clean = re.sub(r'[_xX]B\d+', '', clean, flags=re.IGNORECASE)
+
+    parts = re.findall(r'\d+', clean)
+    if len(parts) >= 3:
+        result["M"] = int(parts[0])
+        result["N"] = int(parts[1])
+        # If 3 parts and no explicit K/B, third is K if B was 1
+        p3 = int(parts[2])
+        if k_match:
+            result["B"] = p3
+        else:
+            result["K"] = p3
+    elif len(parts) == 2:
+        result["M"] = int(parts[0])
+        result["N"] = int(parts[1])
+
+    return result
