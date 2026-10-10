@@ -2901,7 +2901,7 @@ class TensileDriver:
         phases_by_id = {str(p.get("phase_id", "")): p
                         for p in self.load_phases_manifest()}
 
-        for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")
+        for csv_file in sorted(list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
                                + list(run_dir.glob("probe_*/2_BenchmarkData/*.csv"))):
             phase_id = csv_file.parent.parent.name
             # Resolve arm: config Architecture gfx900 == spoof, else native
