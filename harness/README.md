@@ -28,6 +28,16 @@ grid (knowledge_base.md §6.1).
 
 ### 1. Rebuild / refresh ground truth
 
+**Automatic (the normal path).** `kernel_db.json` self-refreshes whenever a run
+reaches a data-producing terminal status (`completed` / `interrupted`): the
+registry's `update_run_status` choke point calls the rebuild best-effort, so the
+cache is always fresh for the next mutation without a manual step. It is
+disabled with `OTO_NO_AUTO_KERNEL_DB_REBUILD=1` (seq runners that manage their
+own timing) or the `SQLiteRegistry(..., auto_rebuild_kernel_db=False)` flag
+(tests). A failed refresh is logged to stderr and never fails the run.
+
+**Manual (when needed):**
+
 ```bash
 python3 -m harness.kernel_db --base-dir . --rebuild     # rescan gfx90c_runs/
 python3 -m harness.regression_matrix --base-dir .       # rebuild matrix from cache

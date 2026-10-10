@@ -250,8 +250,13 @@ def phase_survey(phase_dir: str, phase_id: str,
 
 def build_kernel_db(base_dir: str,
                     run_ids: Optional[Sequence[str]] = None,
-                    all_ref: bool = False) -> Dict[str, List[Dict[str, Any]]]:
-    """Rebuild the full kernel DB from run directories (CPU-only)."""
+                    all_ref: bool = False,
+                    quiet: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+    """Rebuild the full kernel DB from run directories (CPU-only).
+
+    `quiet=True` suppresses the per-run progress lines (used by the automatic
+    post-run refresh in registry.SQLiteRegistry).
+    """
     runs = discover_runs(base_dir, all_ref=all_ref)
     if run_ids:
         runs = [(rid, kind) for rid, kind in runs if rid in set(run_ids)]
@@ -267,19 +272,23 @@ def build_kernel_db(base_dir: str,
         for pd in phases:
             acc.extend(phase_survey(pd, os.path.basename(pd), kind == "spoof"))
         cache[run_id] = acc
-        sys.stderr.write(f"{run_id}: {len(phases)} phase dirs "
-                         f"-> {len(acc)} kernel-shape rows\n")
+        if not quiet:
+            sys.stderr.write(f"{run_id}: {len(phases)} phase dirs "
+                             f"-> {len(acc)} kernel-shape rows\n")
     return cache
 
 
 def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
                    rebuild: bool = False,
                    run_ids: Optional[Sequence[str]] = None,
-                   all_ref: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+                   all_ref: bool = False,
+                   quiet: bool = False) -> Dict[str, List[Dict[str, Any]]]:
     """Load the cached kernel DB, rebuilding when missing/forced.
 
     `base_dir` (default: repo root) enables a lazy rebuild when the cache is
     absent, so a fresh checkout can regenerate without a prior artifact.
+    The rebuild writes the cache atomically (temp file + rename), so a reader
+    that opens the cache mid-rebuild never sees a torn JSON blob.
     """
     if not rebuild and Path(cache_path).is_file():
         try:
@@ -289,10 +298,12 @@ def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
             pass
     if base_dir is None:
         base_dir = str(Path(__file__).resolve().parent.parent)
-    db = build_kernel_db(base_dir, run_ids=run_ids, all_ref=all_ref)
+    db = build_kernel_db(base_dir, run_ids=run_ids, all_ref=all_ref, quiet=quiet)
     Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(cache_path, "w") as f:
+    tmp = f"{cache_path}.tmp.{os.getpid()}"
+    with open(tmp, "w") as f:
         json.dump(db, f)
+    os.replace(tmp, cache_path)
     return db
 
 

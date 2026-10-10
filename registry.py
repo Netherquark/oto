@@ -8,20 +8,35 @@ All records append-only; database schema supports evolution.
 
 import sqlite3
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
 from datetime import datetime
 
+# Run-terminal statuses that imply benchmark data may have landed and the
+# kernel_db cache should be refreshed. `skipped` / `smoke` / `failed`
+# (gfx900-ref with zero executions) produce no new corpus, so they do not
+# trigger a rebuild.
+_KERNEL_DB_REBUILD_STATUSES = {"completed", "interrupted"}
+
 
 class SQLiteRegistry:
     """SQLite-based append-only registry with ACID guarantees."""
 
-    def __init__(self, base_dir: Path, read_only: bool = False):
+    def __init__(self, base_dir: Path, read_only: bool = False,
+                 auto_rebuild_kernel_db: bool = True):
         self.base_dir = Path(base_dir)
         self.results_dir = self.base_dir / "gfx90c_results"
         self.runs_dir = self.base_dir / "gfx90c_runs"
         self.read_only = read_only
+        # Refresh gfx90c_results/analysis/kernel_db.json automatically when a
+        # run reaches a terminal data-producing status, so any later mutation /
+        # regression_matrix / resolve_cells read always sees the freshest
+        # corpus. Tests pass False; `OTO_NO_AUTO_KERNEL_DB_REBUILD=1` disables
+        # it for seq runners that manage their own timing.
+        self.auto_rebuild_kernel_db = auto_rebuild_kernel_db
         self._ensure_dirs()
         self.db_path = self.results_dir / "registry.db"
         if read_only:
@@ -360,6 +375,45 @@ class SQLiteRegistry:
                     """,
                     (status, datetime.now().isoformat(), run_id)
                 )
+        if self._should_rebuild_kernel_db(status):
+            self._rebuild_kernel_db_after_run(run_id, status)
+
+    def _should_rebuild_kernel_db(self, status: str) -> bool:
+        """True when a terminal status implies fresh corpus data and the
+        auto-rebuild is enabled (constructor flag, env opt-out)."""
+        if self.read_only or not self.auto_rebuild_kernel_db:
+            return False
+        if os.environ.get("OTO_NO_AUTO_KERNEL_DB_REBUILD") == "1":
+            return False
+        return status in _KERNEL_DB_REBUILD_STATUSES
+
+    def _rebuild_kernel_db_after_run(self, run_id: str, status: str) -> None:
+        """Refresh gfx90c_results/analysis/kernel_db.json from the run dirs.
+
+        Best-effort: a cache refresh must never fail a run finalisation, so any
+        exception is logged (stderr) and swallowed. Rebuild is ~seconds and is
+        idempotent — later reads (mutations, regression_matrix, resolve_cells)
+        then always see the freshest corpus, including resumed/interrupted
+        partial data.
+        """
+        try:
+            base = str(self.base_dir)
+            if base not in sys.path:
+                sys.path.insert(0, base)
+            # Lazy import: harness.kernel_db imports gfx90c_common only, so
+            # there is no cycle back into registry/port_tensile.
+            from harness.kernel_db import load_kernel_db
+            cache = str(self.results_dir / "analysis" / "kernel_db.json")
+            db = load_kernel_db(cache, base_dir=base, rebuild=True, quiet=True)
+            n_runs = sum(1 for v in db.values() if v)
+            n_rows = sum(len(v) for v in db.values())
+            sys.stderr.write(
+                f"[kernel_db] auto-rebuilt after {run_id} ({status}): "
+                f"{n_runs} runs, {n_rows} rows -> {cache}\n")
+        except Exception as exc:  # never break run finalisation
+            sys.stderr.write(
+                f"[kernel_db] auto-rebuild after {run_id} FAILED "
+                f"(cached kernel_db.json untouched): {exc}\n")
 
     def append_phase(self, phase_id: str, fingerprint: str, phase_data: Dict[str, Any]) -> int:
         """
@@ -835,7 +889,14 @@ class SQLiteRegistry:
                 """,
                 (datetime.now().isoformat(),)
             )
-            return cursor.rowcount
+            cleaned = cursor.rowcount
+        # A hard-crashed run (SIGKILL / power loss) never reached the SIGINT
+        # finaliser, so its on-disk data is folded into the cache only here —
+        # refresh once so the run that follows starts from a fresh kernel_db.
+        if cleaned and self._should_rebuild_kernel_db("interrupted"):
+            self._rebuild_kernel_db_after_run(
+                f"{cleaned} stale run(s)", "interrupted")
+        return cleaned
 
 
 def fingerprint_config(config: Dict[str, Any]) -> str:

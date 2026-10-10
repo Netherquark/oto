@@ -9,6 +9,26 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-10 — kernel_db auto-refresh on run completion (mutations always read fresh).**
+  `kernel_db.json` is now rebuilt automatically whenever a run reaches a
+  data-producing terminal status, so candidate generation / regression_matrix /
+  resolve_cells never read a stale corpus. Hook is the single run-finalisation
+  choke point `SQLiteRegistry.update_run_status` (covers the run loop, SIGINT,
+  gfx900-reference and `--auto` driver): on `completed`/`interrupted` it calls
+  `harness.kernel_db.load_kernel_db(rebuild=True)` best-effort (~4 s, logged to
+  stderr, never fails the run), `skipped`/`smoke` produce no corpus so they do
+  not. The hard-crash gap (SIGKILL / power loss never reaches the SIGINT
+  finaliser) is covered too: `cleanup_stale_runs` — invoked at port_tensile
+  startup to terminalise orphaned `started` runs — refreshes once when it
+  cleans any. Opt-outs: `OTO_NO_AUTO_KERNEL_DB_REBUILD=1` (seq runners) and
+  `SQLiteRegistry(..., auto_rebuild_kernel_db=False)` (tests). Cache writes are
+  now atomic (temp + `os.replace`) so a concurrent reader never sees torn JSON.
+  The standing "rebuild before the next grading run" item is closed:
+  `kernel_db.json` now folds 12 runsets (11 native + locked floor; 21 352 rows),
+  including the 2026-10-09 overnight run. Tests:
+  `tests/test_registry_kernel_db_auto.py` (status semantics, stale-run cleanup,
+  opt-outs, read-only guard, failure-swallow).
+
 - **2026-10-10 — agentic harness: `harness/resolve_cells.py` formalised (repo-homed).**
   The per-cell winner resolver that generated potential_configs.md §2's evidence
   table was polished out of `/tmp/opencode/resolve_cells.py` + verdicts dump and

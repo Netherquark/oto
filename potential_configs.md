@@ -36,10 +36,12 @@ M4 | measurement artifact (clock, DVFS, L2 residency, tie bandwidth)
 Corpus: **10 executed native runs** (2026-09-20 → 2026-10-09;
 `run_20261007` = 0 phases, skipped) + the **locked gfx900 floor chain**
 (`gfx900_ref_20260925` + resume → 2 locked runs, 2194 phases each).
-`kernel_db.json` folds 11 runsets (10 native + floor); the 2026-10-09 overnight
-run (`run_20261009_205427`, ~7 h 41 m, 351 phases + 5 swizzle probes) is folded
-through the report verdicts but is not yet in `kernel_db` — rebuild it before the
-next grading run (`harness/kernel_db.py --rebuild`).
+`kernel_db.json` folds **12 runsets** (11 native + locked floor; 21 352 rows),
+including the 2026-10-09 overnight run (`run_20261009_205427`, ~7 h 41 m,
+351 phases + 5 swizzle probes). The cache **self-refreshes on run completion**
+(registry `update_run_status` → rebuild; `harness/README.md` step 1) so
+mutations always read the freshest corpus; manual refresh is
+`harness/kernel_db.py --rebuild`.
 
 Evidence machinery (repo-homed in `harness/`): `harness/resolve_cells.py` resolves
 every cell's native winner from the registry `phases` table + per-run
