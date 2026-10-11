@@ -9,8 +9,8 @@ checks and the absence of a fourth "empty" state are asserted.
 import statistics
 import unittest
 
-import ab_audit
-import coverage
+import oto.metrics.ab_audit as ab_audit
+import oto.metrics.coverage as coverage
 
 
 def _proposal(family, shape, fp, outcome="functional", **kw):
@@ -204,7 +204,7 @@ class TestRegistryIntegration(unittest.TestCase):
         import shutil
         import tempfile
         from pathlib import Path
-        from registry import SQLiteRegistry
+        from oto.ledger.registry import SQLiteRegistry
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_cov_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.registry = SQLiteRegistry(self.tmp)

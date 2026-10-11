@@ -26,9 +26,17 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import port_tensile as pt  # noqa: E402
+# `_read_key` lives in the phase-execution mixin; the skip policy it feeds
+# lives in the phase-runner mixin; the option surface lives in the CLI module.
+# Patch each where the implementation looks it up.
+import oto.runners.benchmark as bench_mod  # noqa: E402
+import oto.runners.driver as pt  # noqa: E402
+import oto.runners.phases as phases_mod  # noqa: E402
 
-DRIVER_SRC = ROOT / "port_tensile.py"
+# The parser and the option wiring live in the CLI module; the entrypoint the
+# operator actually runs is the repo-root port_tensile.py.
+DRIVER_SRC = ROOT / "oto" / "runners" / "cli.py"
+CLI_ENTRYPOINT = ROOT / "port_tensile.py"
 
 
 class FakeStdin:
@@ -59,29 +67,29 @@ class TestReadKey(unittest.TestCase):
 
     def test_returns_empty_when_stdin_is_not_a_tty(self):
         d = self._driver()
-        with mock.patch.object(pt.sys, "stdin", FakeStdin(tty=False)):
-            with mock.patch.object(pt.time, "sleep") as slept:
+        with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(tty=False)):
+            with mock.patch.object(bench_mod.time, "sleep") as slept:
                 self.assertEqual(d._read_key(), "")
                 self.assertTrue(slept.called, "spin-wait loop must not busy-spin")
 
     def test_block_false_does_not_sleep(self):
         """A skip loop does real work per phase; it must not pay a poll interval."""
         d = self._driver()
-        with mock.patch.object(pt.sys, "stdin", FakeStdin(tty=False)):
-            with mock.patch.object(pt.time, "sleep") as slept:
+        with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(tty=False)):
+            with mock.patch.object(bench_mod.time, "sleep") as slept:
                 self.assertEqual(d._read_key(block=False), "")
                 slept.assert_not_called()
 
     def test_reads_and_lowercases_a_key(self):
         d = self._driver()
-        with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=["Q"])):
-            with mock.patch.object(pt.select, "select", return_value=([0], [], [])):
+        with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["Q"])):
+            with mock.patch.object(bench_mod.select, "select", return_value=([0], [], [])):
                 self.assertEqual(d._read_key(), "q")
 
     def test_no_key_ready_returns_empty(self):
         d = self._driver()
-        with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=[])):
-            with mock.patch.object(pt.select, "select", return_value=([], [], [])):
+        with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=[])):
+            with mock.patch.object(bench_mod.select, "select", return_value=([], [], [])):
                 self.assertEqual(d._read_key(), "")
 
     def test_closed_stdin_does_not_raise(self):
@@ -89,8 +97,8 @@ class TestReadKey(unittest.TestCase):
         d = self._driver()
         broken = FakeStdin(keys=["q"])
         broken.fileno = mock.Mock(side_effect=OSError("detached"))
-        with mock.patch.object(pt.sys, "stdin", broken):
-            with mock.patch.object(pt.select, "select", side_effect=OSError("detached")):
+        with mock.patch.object(bench_mod.sys, "stdin", broken):
+            with mock.patch.object(bench_mod.select, "select", side_effect=OSError("detached")):
                 self.assertEqual(d._read_key(), "")
 
 
@@ -125,7 +133,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             d.run_dir = run_dir
             d.base_dir = Path(td)
             # Policy rejects every phase -> the all-skipped path.
-            with mock.patch.object(pt, "should_run",
+            with mock.patch.object(phases_mod, "should_run",
                                    return_value=(False, "identical fp already passed")):
                 return d.run_phases(phases_path=deck)
 
@@ -135,8 +143,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             # 'q' delivered on the first skip; every later phase must not run.
-            with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=["q"])):
-                with mock.patch.object(pt.select, "select",
+            with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["q"])):
+                with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
             self.assertTrue(d._stop_requested, "'q' was ignored during skips")
@@ -148,8 +156,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             run_dir = Path(td) / "gfx90c_runs" / "run_x"
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
-            with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=["e"])):
-                with mock.patch.object(pt.select, "select",
+            with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["e"])):
+                with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
             self.assertTrue(d._finish_after_iteration, "'e' was ignored during skips")
@@ -161,8 +169,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             # 's' has nothing to skip here; the deck must still drain.
-            with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=["s"])):
-                with mock.patch.object(pt.select, "select",
+            with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["s"])):
+                with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(3))
             self.assertFalse(d._stop_requested)
@@ -179,8 +187,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             run_dir = Path(td) / "gfx90c_runs" / "run_x"
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
-            with mock.patch.object(pt.sys, "stdin", FakeStdin(keys=["q"])):
-                with mock.patch.object(pt.select, "select",
+            with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["q"])):
+                with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
             self.assertEqual(d._last_run_status, "interrupted")
@@ -227,7 +235,7 @@ class TestCliOptionSurface(unittest.TestCase):
     def test_options_actually_reach_the_parser(self):
         """--help must list the options; catches a flag added outside argparse."""
         res = subprocess.run(
-            [sys.executable, str(DRIVER_SRC), "--help"],
+            [sys.executable, str(CLI_ENTRYPOINT), "--help"],
             capture_output=True, text=True, timeout=180)
         self.assertEqual(res.returncode, 0, res.stderr)
         declared, _ = self._declared_and_read()

@@ -42,11 +42,15 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scheduler import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,  # noqa: E402
-                       MAX_VGPR_PER_THREAD, MEASURED_VGPR,
-                       MEASURED_VGPR_BY_DTYPE, VGPR_PER_ELEMENT,
-                       VGPR_BUDGET, VGPR_PER_CU, occupancy_feasible,
-                       occupancy_workgroups_per_cu)
+# The VGPR model tables and the occupancy gates are separate modules since the
+# gate split; the candidate generator imports them rather than owning them.
+from oto.tensile.gates.occupancy import (occupancy_feasible,  # noqa: E402
+                                         occupancy_workgroups_per_cu)
+from oto.tensile.gates.vgpr_model import (ACCVGPR_BUDGET,  # noqa: E402
+                                          BYTES_PER_ELEMENT, LDS_BUDGET,
+                                          MAX_VGPR_PER_THREAD, MEASURED_VGPR,
+                                          MEASURED_VGPR_BY_DTYPE, VGPR_BUDGET,
+                                          VGPR_PER_CU, VGPR_PER_ELEMENT)
 
 # Ground truth: per-thread VGPR totals Tensile's kernel writer reported on
 # gfx90c for complex (Z, weight 8) thread tiles.
@@ -154,12 +158,12 @@ class TestVectorWidthCap(unittest.TestCase):
     """
 
     def setUp(self):
-        from scheduler import CandidateGenerator
+        from oto.tensile.candidate import CandidateGenerator
         g = CandidateGenerator.__new__(CandidateGenerator)
         self.decks = g._load_family_decks()
 
     def test_cap_vector_width_reproduces_the_floor_winners(self):
-        from scheduler import cap_vector_width
+        from oto.tensile.candidate import cap_vector_width
         # The floor's winning widths, read off the completed reference chain.
         for fam, mt, tt, want in (
             ("SS", "128x128x16", "8x8", 4),
@@ -169,21 +173,22 @@ class TestVectorWidthCap(unittest.TestCase):
             self.assertEqual(cap_vector_width(fam, mt, tt), want, fam)
 
     def test_cap_vector_width_never_exceeds_the_hardware_cap(self):
-        from scheduler import (cap_vector_width, FAMILY_BYTES_PER_ELEMENT,
-                               GLOBAL_LOAD_BYTE_CAP)
+        from oto.tensile.gates.loads import cap_vector_width
+        from oto.tensile.gates.vgpr_model import (FAMILY_BYTES_PER_ELEMENT,
+                                                  GLOBAL_LOAD_BYTE_CAP)
         for fam, bpe in FAMILY_BYTES_PER_ELEMENT.items():
             for vw in (1, 2, 4, 8):
                 v = cap_vector_width(fam, "128x128x16", "8x8")
                 self.assertLessEqual(v * bpe, GLOBAL_LOAD_BYTE_CAP, fam)
 
     def test_cap_vector_width_respects_tile_divisibility(self):
-        from scheduler import cap_vector_width
+        from oto.tensile.candidate import cap_vector_width
         # vw may not exceed the per-thread extent of a macro-tile dimension.
         self.assertLessEqual(cap_vector_width("SS", "32x32x16", "4x4"), 8)
         self.assertLessEqual(cap_vector_width("SS", "16x16x16", "8x8"), 2)
 
     def test_every_wide_family_deck_reaches_the_cap(self):
-        from scheduler import FAMILY_BYTES_PER_ELEMENT
+        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT  # noqa: E402
         for fam in ("SS", "DD", "HH"):
             bpe = FAMILY_BYTES_PER_ELEMENT[fam]
             best = 0
@@ -197,7 +202,8 @@ class TestVectorWidthCap(unittest.TestCase):
                 f"and this family cannot win a large cell")
 
     def test_added_candidates_pass_the_dual_resource_gate(self):
-        from scheduler import occupancy_feasible, FAMILY_DTYPE_CHAR
+        from oto.tensile.gates.occupancy import occupancy_feasible
+        from oto.device.peaks import FAMILY_DTYPE_CHAR
         checked = 0
         for fam, cfgs in self.decks.items():
             for c in cfgs:
@@ -223,15 +229,16 @@ class TestVectorWidthCap(unittest.TestCase):
         closed, which drops the whole family from generation rather than
         reporting a bad config.
         """
-        from scheduler import _dtype_char, VGPR_PER_ELEMENT
+        from oto.tensile.gates.occupancy import dtype_char
+        from oto.tensile.gates.vgpr_model import VGPR_PER_ELEMENT
         for fam in self.decks:
-            ch = _dtype_char({"DataType": fam, "FamilyLabel": fam})
+            ch = dtype_char({"DataType": fam, "FamilyLabel": fam})
             self.assertIn(ch, VGPR_PER_ELEMENT,
                           f"{fam} resolves to dtype {ch!r}, absent from "
                           f"VGPR_PER_ELEMENT; its candidates would all be dropped")
 
     def test_widened_variants_do_not_duplicate_an_existing_tile(self):
-        from scheduler import cap_vector_width
+        from oto.tensile.candidate import cap_vector_width
         for fam in ("SS", "DD", "HH"):
             seen = set()
             for c in self.decks[fam]:
@@ -471,7 +478,7 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
     def _generated(self, family, pattern="Ailk_Bjlk", shape="256x256x256"):
         import tempfile
         from pathlib import Path
-        from scheduler import CandidateGenerator
+        from oto.tensile.candidate import CandidateGenerator
         with tempfile.TemporaryDirectory() as tmp:
             gen = CandidateGenerator(Path(tmp))
             cands = gen.generate_family_phases(family, [pattern], [shape])
@@ -479,7 +486,7 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
             return cands
 
     def test_every_family_emits_a_resolvable_cell_key(self):
-        from gfx90c_common import FAMILY_SHAPES, cell_key
+        from oto.device.peaks import FAMILY_SHAPES, cell_key
         for family, sides in FAMILY_SHAPES.items():
             with self.subTest(family=family):
                 shape = f"{sides[0]}x{sides[0]}x{sides[0]}"
@@ -495,7 +502,7 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
 
     def test_family_label_is_not_derivable_from_dtype(self):
         """'H' covers three families, so DataType cannot stand in for it."""
-        from gfx90c_common import FAMILY_DTYPE_CHAR
+        from oto.device.peaks import FAMILY_DTYPE_CHAR
         by_dtype = {}
         for fam, dt in FAMILY_DTYPE_CHAR.items():
             by_dtype.setdefault(dt, set()).add(fam)

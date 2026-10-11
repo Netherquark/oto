@@ -27,8 +27,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from analytics import CellAnalytics  # noqa: E402
-from report import AcceptanceReporter  # noqa: E402
+from oto.metrics.analytics import CellAnalytics  # noqa: E402
+from oto.metrics.report import AcceptanceReporter  # noqa: E402
 
 
 def cell(family: str, shape: str, median: float) -> CellAnalytics:

@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import pytest
 
-from analytics import (
+from oto.metrics.analytics import (
     extract_family_from_phase_id,
     resolve_cell_family,
 )
-from gfx90c_common import (
+from oto.device.peaks import (
     FAMILY_DTYPE_CHAR,
     dtype_from_kernel_name,
     family_from_kernel_name,
@@ -144,7 +144,7 @@ def test_unattributable_returns_empty() -> None:
 
 def test_aggregate_by_cell_typecode_partitions_by_kernel() -> None:
     from pathlib import Path
-    from analytics import AnalyticsEngine
+    from oto.metrics.analytics import AnalyticsEngine
 
     engine = AnalyticsEngine(registry=None, base_dir=Path("."))
     records = [
@@ -161,56 +161,56 @@ def test_aggregate_by_cell_typecode_partitions_by_kernel() -> None:
     assert len(keys) == 2
 
 # ---------------------------------------------------------------------------
-# Group C: ldspad_feasible legality gate (scheduler)
+# Group C: ldspad_defasible legality gate (scheduler)
 # ---------------------------------------------------------------------------
 
-def test_ldspad_feasible_passes_without_pads():
-    from scheduler import ldspad_feasible
-    ok, reason = ldspad_feasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
+def test_ldspad_defasible_passes_without_pads():
+    from oto.tensile.candidate import ldspad_defasible
+    ok, reason = ldspad_defasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
                                   "DataType": "Z", "DepthU": 8})
     assert ok, reason
 
 
-def test_ldspad_feasible_padded_ok_and_rejects_blowout():
-    from scheduler import ldspad_feasible
+def test_ldspad_defasible_padded_ok_and_rejects_blowout():
+    from oto.tensile.candidate import ldspad_defasible
     # 64x64x8 Z at DepthU 8: base footprint (64+64)*8*8 = 8192; pads 2+2 ->
     # (64+2+64+2)*8*8 = 8448 <= 16384 -> ok
-    ok, reason = ldspad_feasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
+    ok, reason = ldspad_defasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
                                   "DataType": "Z", "DepthU": 8,
                                   "LdsPadA": 2, "LdsPadB": 2})
     assert ok, reason
     # Same tile with absurd pads blows the 16384 budget:
     # (64+128+64+128)*8*8 = 24576 > 16384
-    ok, reason = ldspad_feasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
+    ok, reason = ldspad_defasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
                                   "DataType": "Z", "DepthU": 8,
                                   "LdsPadA": 128, "LdsPadB": 128})
     assert not ok
     assert "footprint" in reason
 
 
-def test_ldspad_feasible_stagger_and_af0em_rejects():
-    from scheduler import ldspad_feasible
+def test_ldspad_defasible_stagger_and_af0em_rejects():
+    from oto.tensile.candidate import ldspad_defasible
     base = {"MacroTile": "64x64x8", "ThreadTile": "4x4",
             "DataType": "C", "DepthU": 32}
     # C (8 B) * DepthU 32 = 256; SUS=256 > 0.5*256 -> legal swizzle.
-    ok, reason = ldspad_feasible({**base, "StaggerUStride": 256})
+    ok, reason = ldspad_defasible({**base, "StaggerUStride": 256})
     assert ok, reason
     # SUS=0 with default StaggerU=32 -> coupling reject (SUS=0 only valid if SU=0).
-    ok, reason = ldspad_feasible({**base, "StaggerUStride": 0})
+    ok, reason = ldspad_defasible({**base, "StaggerUStride": 0})
     assert not ok and "StaggerU" in reason
     # SUS>0 but below the 0.5*DepthU*bpe floor -> reject.
-    ok, reason = ldspad_feasible({**base, "StaggerUStride": 16})
+    ok, reason = ldspad_defasible({**base, "StaggerUStride": 16})
     assert not ok and "StaggerUStride" in reason
     # SU=0 forces SUS=0: SU=0 with SUS=256 -> reject.
-    ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUStride": 256})
+    ok, reason = ldspad_defasible({**base, "StaggerU": 0, "StaggerUStride": 256})
     assert not ok and "StaggerU" in reason
     # SU=0 with SUM=1 -> reject (mapping requires SU>0).
-    ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUMapping": 1})
+    ok, reason = ldspad_defasible({**base, "StaggerU": 0, "StaggerUMapping": 1})
     assert not ok and "StaggerUMapping" in reason
     # Out-of-domain values -> reject.
-    ok, reason = ldspad_feasible({**base, "StaggerU": 3})
+    ok, reason = ldspad_defasible({**base, "StaggerU": 3})
     assert not ok and "StaggerU" in reason
-    ok, reason = ldspad_feasible({**base, "StaggerUStride": 100})
+    ok, reason = ldspad_defasible({**base, "StaggerUStride": 100})
     assert not ok and "StaggerUStride" in reason
-    ok, reason = ldspad_feasible({**base, "AssertFree0ElementMultiple": 0})
+    ok, reason = ldspad_defasible({**base, "AssertFree0ElementMultiple": 0})
     assert not ok and "AssertFree0ElementMultiple" in reason

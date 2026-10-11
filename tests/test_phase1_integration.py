@@ -17,9 +17,10 @@ from pathlib import Path
 
 import yaml
 
-from analytics import AnalyticsEngine
-from mutator import Mutator
-from registry import SQLiteRegistry
+from oto.metrics.analytics import AnalyticsEngine
+from oto.ledger.mutator import Mutator
+from oto.ledger.registry import SQLiteRegistry
+from oto.runners.driver import TensileDriver
 
 HEADER = (" SizeI , SizeJ , SizeL , Cijk_A , WinnerFreq \n"
           " 128 , 128 , 128 , 12.5 , 3 \n")
@@ -31,8 +32,8 @@ class _StubScheduler:
     family_decks = {"SS": [{"MacroTile": "64x64x16", "ThreadTile": "4x4"}]}
 
     def emit_candidate(self, phase_id, label, dtype, shapes, template, knobs):
-        from scheduler import CandidateConfig
-        from registry import fingerprint_config
+        from oto.tensile.candidate import CandidateConfig
+        from oto.ledger.registry import fingerprint_config
         full = {**template, **knobs}
         return CandidateConfig(
             phase_id=phase_id, label=label, dtype=dtype, shapes=list(shapes),
@@ -80,10 +81,10 @@ class Harness(unittest.TestCase):
 
 class OverlayMergeTests(Harness):
     def _driver(self, run_id):
-        import port_tensile
+        import oto.runners.cli
         # Build only what the merge reads, so the test does not depend on Tensile
         # being installed for an unrelated reason.
-        driver = port_tensile.TensileDriver.__new__(port_tensile.TensileDriver)
+        driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.run_dir = self.registry.create_run_dir(run_id)
         driver.mutator = self.mutator
@@ -211,7 +212,7 @@ class OverlayMergeTests(Harness):
 
 class ProposalRunIdTests(Harness):
     def test_emit_candidate_phase_carries_the_run_id(self):
-        from mutator import Proposal
+        from oto.ledger.mutator import Proposal
         self.mutator.emit_candidate_phase(
             Proposal(fp="fpR", family="SS", shape="128x128x128", run_id="run_7"),
             phase_id="phase_auto_r", phase_data={"config": {}})
@@ -219,7 +220,7 @@ class ProposalRunIdTests(Harness):
         self.assertEqual(row["run_id"], "run_7")
 
     def test_agent_run_id_is_stamped_on_emission(self):
-        from agent import ConvergenceAgent
+        from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         agent.run_id = "run_99"
@@ -246,7 +247,7 @@ class ProposalRunIdTests(Harness):
             self.assertEqual(r["run_id"], "run_99")
 
     def test_overlay_is_written_for_this_run(self):
-        from mutator import Proposal
+        from oto.ledger.mutator import Proposal
         path = self.mutator.write_overlay(
             [{"phase_id": "phase_auto_o", "fp": "fpO", "config": {}}],
             run_id="run_explicit")
@@ -296,7 +297,7 @@ class AtomicEmissionTests(Harness):
         self.assertEqual(len(self.registry.get_phases()), 2)
 
     def test_mutator_exposes_the_atomic_path(self):
-        from mutator import Proposal
+        from oto.ledger.mutator import Proposal
         self.mutator.emit_candidate_phase(
             Proposal(fp="fpE", family="SS", shape="1x1x1", run_id="r"),
             phase_id="phase_e", phase_data={"config": {}})
@@ -425,9 +426,9 @@ class NegativeCacheDurabilityTests(Harness):
 
 class SkipBypassTests(Harness):
     def _driver(self, run_id="run_skip"):
-        import port_tensile
-        from agent import ConvergenceAgent
-        driver = port_tensile.TensileDriver.__new__(port_tensile.TensileDriver)
+        import oto.runners.cli
+        from oto.ledger.agent import ConvergenceAgent
+        driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
         driver.run_dir = self.registry.create_run_dir(run_id)
@@ -443,26 +444,26 @@ class SkipBypassTests(Harness):
         return driver
 
     def test_bypass_is_off_without_a_ledger(self):
-        from agent import ConvergenceAgent
+        from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=None)
         self.assertTrue(agent.skip_mutation_arm())
 
     def test_bypass_is_on_with_ledger_and_outcomes(self):
-        from agent import ConvergenceAgent
+        from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         self.assertFalse(agent.skip_mutation_arm())
 
     def test_bypass_is_off_when_outcomes_cannot_be_written(self):
-        from agent import ConvergenceAgent
+        from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         agent.has_outcome_signal = False
         self.assertTrue(agent.skip_mutation_arm())
 
     def test_identical_fp_skip_is_overridden_for_overlay_phases(self):
-        from policy import should_run
+        from oto.metrics.policy import should_run
         driver = self._driver()
         self.registry.append_record(
             {"type": "benchmark_result", "fp": "fpPassed", "GFLOPS": 12.0,
@@ -492,7 +493,7 @@ class SkipBypassTests(Harness):
             {"type": "benchmark_result", "fp": "fpCur", "GFLOPS": 12.0,
              "status": "completed"},
             run_id="prior")
-        from policy import should_run
+        from oto.metrics.policy import should_run
         allowed, reason = should_run(
             "phase_curated_0", "fpCur", registry=self.registry,
             opt_in_identical_skip=True)
@@ -549,8 +550,8 @@ class SkipBypassTests(Harness):
 
 class OutcomeWriteBackTests(Harness):
     def _driver(self, run_id="run_resolve"):
-        import port_tensile
-        driver = port_tensile.TensileDriver.__new__(port_tensile.TensileDriver)
+        import oto.runners.cli
+        driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
         driver.run_dir = self.registry.create_run_dir(run_id)
@@ -617,9 +618,9 @@ class LoopActuallyCallsTheResolverTests(Harness):
     """
 
     def _driver(self, run_id="run_loop"):
-        import port_tensile
-        from agent import ConvergenceAgent
-        driver = port_tensile.TensileDriver.__new__(port_tensile.TensileDriver)
+        import oto.runners.cli
+        from oto.ledger.agent import ConvergenceAgent
+        driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
         driver.analytics = self.analytics
@@ -781,18 +782,18 @@ class ReadOnlyRegistryTests(Harness):
                          "functional")
 
     def test_the_audit_path_is_read_only(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         seen = {}
 
         def spy(base, read_only=False):
             seen["read_only"] = read_only
             return SQLiteRegistry(base, read_only=True)
-        import registry as reg_mod
+        import oto.ledger.registry as reg_mod
         original = ab_audit.SQLiteRegistry if hasattr(ab_audit, "SQLiteRegistry") \
             else None
         # ab_audit imports SQLiteRegistry inside the function; patch the module.
         import unittest.mock as mock
-        with mock.patch("registry.SQLiteRegistry", spy):
+        with mock.patch("oto.ledger.registry.SQLiteRegistry", spy):
             ab_audit._proposal_coverage(self.tmp, band_pct=10.0)
         self.assertTrue(seen.get("read_only"))
 
@@ -805,6 +806,6 @@ class ReadOnlyRegistryTests(Harness):
         reg = SQLiteRegistry(base)
         reg.create_run_dir("run_ro")
         before = reg.db_path.read_bytes()
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         ab_audit.audit(base)          # an empty corpus must not raise
         self.assertEqual(reg.db_path.read_bytes(), before)

@@ -32,8 +32,10 @@ import signal
 
 import yaml
 
-import port_tensile
-from port_tensile import NOT_A_TENSILE_PARAM, TensileDriver, _TENSILE_VALID_PARAMS
+from oto.runners.driver import (DEFAULT_TENSILE_ROOT,  # noqa: E402
+                                NOT_A_TENSILE_PARAM, TensileDriver,
+                                _TENSILE_VALID_PARAMS, _require_tensile_root)
+from oto.tensile import config_writer  # noqa: E402
 
 failures = []
 
@@ -46,8 +48,8 @@ def check(name, ok, detail=""):
 
 def live_tensile_params():
     try:
-        root = Path(port_tensile._require_tensile_root(
-            None, port_tensile.DEFAULT_TENSILE_ROOT))
+        root = Path(_require_tensile_root(
+            None, DEFAULT_TENSILE_ROOT))
     except SystemExit:
         return None
     sys.path.insert(0, str(root))
@@ -103,7 +105,7 @@ with tempfile.TemporaryDirectory() as td:
     out = Path(td) / "p.yaml"
     bad_seen = {}
     for p in phases:
-        wrote, why = d._write_phase_config(out, p)
+        wrote, why = config_writer.write_phase_config(d, out, p)
         if not wrote:
             continue
         names = set(re.findall(r"^\s{4}- (\w+):", out.read_text(), re.M)) - SPECIAL
@@ -126,7 +128,7 @@ with tempfile.TemporaryDirectory() as td:
         except Exception:
             continue
         for p in ref:
-            wrote, why = d._write_phase_config(out, p)
+            wrote, why = config_writer.write_phase_config(d, out, p)
             checked_ref += 1
             if not wrote:
                 continue

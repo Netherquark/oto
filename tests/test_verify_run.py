@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import verify_run as vr  # noqa: E402
+import oto.tools.verify_run as vr  # noqa: E402
 
 TELEMETRY_HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
                     "vram_used_bytes,vram_total_bytes,phase_id")

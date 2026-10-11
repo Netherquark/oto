@@ -28,11 +28,11 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent import ConvergenceAgent
-from analytics import AnalyticsEngine
-from mutator import Mutator
-from registry import SQLiteRegistry
-from scheduler import CandidateConfig
+from oto.ledger.agent import ConvergenceAgent
+from oto.metrics.analytics import AnalyticsEngine
+from oto.ledger.mutator import Mutator
+from oto.ledger.registry import SQLiteRegistry
+from oto.tensile.candidate import CandidateConfig
 
 CURATED = """\
 - phase_id: phase_curated_a
@@ -317,15 +317,15 @@ class NoCorpusLiteralsTests(unittest.TestCase):
         return found
 
     def test_no_corpus_counts_in_executable_code(self):
-        for name in ("mutator.py", "test_mutator.py", "test_proposals_ledger.py",
-                     "test_mutation_arm.py"):
-            path = Path(__file__).parent.parent / (
-                name if name == "mutator.py" else f"tests/{name}")
+        for rel in ("oto/ledger/mutator.py", "tests/test_mutator.py",
+                    "tests/test_proposals_ledger.py",
+                    "tests/test_mutation_arm.py"):
+            path = Path(__file__).parent.parent / rel
             for lineno, word in self._executable_lines(path):
                 for bad in self.FORBIDDEN:
                     self.assertNotEqual(
                         word, bad,
-                        f"{name}:{lineno} uses the literal {bad} in executable code; "
+                        f"{rel}:{lineno} uses the literal {bad} in executable code; "
                         "corpus counts must be read from the registry at runtime")
 
     def test_scanner_sees_identifiers_and_numeric_literals(self):
@@ -335,7 +335,7 @@ class NoCorpusLiteralsTests(unittest.TestCase):
         NAME-only scanner. The ledger's own methods and its numeric columns
         (INTEGER, PRAGMA timeout, index arity) are what must be visible.
         """
-        path = Path(__file__).parent.parent / "registry.py"
+        path = Path(__file__).parent.parent / "oto" / "ledger" / "proposals.py"
         words = {w for _, w in self._executable_lines(path)}
         for expected in ("record_proposal", "resolve_proposal", "coverage_view"):
             self.assertIn(expected, words,

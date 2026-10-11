@@ -24,8 +24,8 @@ from unittest import mock
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import auto_prompt  # noqa: E402
-from auto_prompt import (DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan,  # noqa: E402
+import oto.runners.auto_prompt as auto_prompt  # noqa: E402
+from oto.runners.auto_prompt import (DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan,  # noqa: E402
                          ask)
 
 
@@ -50,7 +50,7 @@ class TestDefaults(unittest.TestCase):
         self.assertNotEqual(DEFAULT_MUTATIONS, 2)
 
     def test_prompt_asks_five_questions_in_order(self):
-        src = (BASE / "auto_prompt.py").read_text()
+        src = (BASE / "oto" / "runners" / "auto_prompt.py").read_text()
         order = [m for m in re.findall(r'"\s*([1-5])\. [^"]+"', src)]
         self.assertEqual(order, ["1", "2", "3", "4", "5"],
                          "the questions must be numbered 1-5 in order")
@@ -64,14 +64,12 @@ class TestDefaults(unittest.TestCase):
         self.assertFalse(p.reruns_any_reference)
 
     def test_cli_no_longer_defaults_to_100(self):
-        import port_tensile
-        src = (BASE / "port_tensile.py").read_text()
+        src = (BASE / "oto" / "runners" / "cli.py").read_text()
         self.assertIn('"--budget"', src)
         # the argparse default must be None so the prompt owns it
         idx = src.index('"--budget"')
         window = src[idx:idx + 260]
         self.assertIn("default=None", window)
-        del port_tensile
 
 
 class TestNonInteractive(unittest.TestCase):
@@ -186,7 +184,7 @@ class TestCountReading(unittest.TestCase):
         test is that nothing in the codebase pins the corpus size.
         """
         import json
-        import tensile_library as tlib
+        import oto.tensile.library as tlib
 
         counts = auto_prompt._read_counts(BASE)
         manifest = tlib.load_rerun_manifest(BASE)
@@ -219,7 +217,7 @@ class TestCountReading(unittest.TestCase):
         The banner and the three questions are phrased from _read_counts. This
         keeps the module free of the corpus size so the two cannot diverge.
         """
-        src = (BASE / "auto_prompt.py").read_text()
+        src = (BASE / "oto" / "runners" / "auto_prompt.py").read_text()
         body = src.split('"""', 2)[-1]  # drop the module docstring
         for literal in ("2285", "1881"):
             self.assertNotIn(

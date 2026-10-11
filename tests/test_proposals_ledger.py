@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from registry import SQLiteRegistry, fingerprint_config
+from oto.ledger.registry import SQLiteRegistry, fingerprint_config
 
 
 def _record_data(fp, status="completed"):

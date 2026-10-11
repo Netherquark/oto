@@ -33,15 +33,15 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import coverage
-from analytics import AnalyticsEngine
-from mutator import (
+import oto.metrics.coverage as coverage
+from oto.metrics.analytics import AnalyticsEngine
+from oto.ledger.mutator import (
     OUTCOME_FUNCTIONAL,
     OUTCOME_LEGAL_SLOW,
     Mutator,
     classify_outcome,
 )
-from registry import SQLiteRegistry
+from oto.ledger.registry import SQLiteRegistry
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -84,7 +84,7 @@ class ReferenceThresholdTests(unittest.TestCase):
         coverage._REFERENCE_BUILDING = self._building
 
     def test_an_unmeasurable_reference_yields_no_band_and_no_bars(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         with mock.patch.object(ab_audit, "arm_record_sets",
                                side_effect=RuntimeError("no runs")):
             got = coverage.reference_thresholds(REPO)
@@ -95,7 +95,7 @@ class ReferenceThresholdTests(unittest.TestCase):
     def test_the_band_is_read_not_invented(self):
         # An empty corpus still yields the shipped floor, and says so; it never
         # yields a number with no provenance.
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         with mock.patch.object(ab_audit, "arm_record_sets",
                                return_value=([], [], [])):
             got = coverage.reference_thresholds(REPO)
@@ -103,7 +103,7 @@ class ReferenceThresholdTests(unittest.TestCase):
         self.assertGreater(got["band_pct"], 0)
 
     def test_a_bar_is_the_reference_less_the_band(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         deltas = {("S", "256x256x256", "SS"): {"spoof_median": 100.0,
                                                "n_spoof_kernels": 5}}
         with mock.patch.object(ab_audit, "arm_record_sets",
@@ -116,7 +116,7 @@ class ReferenceThresholdTests(unittest.TestCase):
                                100.0 * (1 - band), places=6)
 
     def test_a_zero_reference_gets_no_bar(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         deltas = {("S", "256x256x256", "SS"): {"spoof_median": 0.0,
                                                "n_spoof_kernels": 0}}
         with mock.patch.object(ab_audit, "arm_record_sets",
@@ -126,7 +126,7 @@ class ReferenceThresholdTests(unittest.TestCase):
         self.assertEqual(got["bars"], {})
 
     def test_the_scan_is_cached_not_repeated(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         calls = []
         with mock.patch.object(ab_audit, "arm_record_sets",
                                side_effect=lambda *a, **k: calls.append(1) or
@@ -140,7 +140,7 @@ class ReferenceThresholdTests(unittest.TestCase):
     def test_an_explicit_band_is_cached_separately(self):
         # Otherwise a caller's override would be handed to the next default
         # lookup, and two callers would grade against two different bands.
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         calls = []
         with mock.patch.object(ab_audit, "arm_record_sets",
                                side_effect=lambda *a, **k: calls.append(1) or
@@ -163,7 +163,7 @@ class ReferenceThresholdTests(unittest.TestCase):
         self.assertEqual(got["bars"], {})
 
     def test_slow_bar_lookup_is_case_insensitive_and_safe(self):
-        import ab_audit
+        import oto.metrics.ab_audit as ab_audit
         deltas = {("S", "256x256x256", "SS"): {"spoof_median": 100.0,
                                                "n_spoof_kernels": 5}}
         with mock.patch.object(ab_audit, "arm_record_sets",
@@ -347,7 +347,8 @@ class MutatorSlowBarTests(unittest.TestCase):
                   [row(0, size=256, kernel=1.0)])
         mut = Mutator(self.reg, self.tmp, reference_slow=True)
         mut._slow_bars = {("S", "256x256x256"): bar(80.0, 100.0)}
-        mut.emit(__import__("mutator").Proposal(fp="fp1", family="SS",
+        mut.emit(__import__("oto.ledger.mutator",
+                                 fromlist=["Proposal"]).Proposal(fp="fp1", family="SS",
                                                shape="256x256x256"))
         outcome, _ = mut.resolve_phase_dir("fp1", phase)
         self.assertEqual(outcome, OUTCOME_LEGAL_SLOW)

@@ -25,8 +25,8 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import harness.kernel_db as kernel_db_mod  # noqa: E402
-from registry import SQLiteRegistry  # noqa: E402
+import oto.harness.kernel_db as kernel_db_mod  # noqa: E402
+from oto.ledger.registry import SQLiteRegistry  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

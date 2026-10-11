@@ -28,8 +28,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from analytics import AnalyticsEngine
-from mutator import (
+from oto.metrics.analytics import AnalyticsEngine
+from oto.ledger.mutator import (
     DEFAULT_NEGATIVE_CACHE_K,
     ORIGIN_REPLICATE,
     OUTCOME_FUNCTIONAL,
@@ -42,7 +42,7 @@ from mutator import (
     Proposal,
     classify_outcome,
 )
-from registry import SQLiteRegistry
+from oto.ledger.registry import SQLiteRegistry
 
 REPO = Path(__file__).resolve().parent.parent
 

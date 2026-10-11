@@ -29,7 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ab_audit import (  # noqa: E402
+from oto.metrics.ab_audit import (  # noqa: E402
     _CP_RE, _norm_macro_tile, norm_config, reproducible_band, verdict,
 )
 

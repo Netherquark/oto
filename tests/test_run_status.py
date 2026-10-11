@@ -38,8 +38,8 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import run_status as rs  # noqa: E402
-import tensile_library as tl  # noqa: E402
+import oto.metrics.run_status as rs  # noqa: E402
+import oto.tensile.library as tl  # noqa: E402
 
 
 def _phase(tag: str, kernel: str) -> dict:
@@ -442,7 +442,7 @@ class TestRunPlan(unittest.TestCase):
         to False, so a bare run_status.py promised ~2 days of GPU work that
         --auto would never schedule.
         """
-        import auto_prompt
+        import oto.runners.auto_prompt as auto_prompt
         driver = auto_prompt.AutoPlan()
         for field in ("rerun_illegal", "rerun_underspecified",
                       "rerun_unreproducible"):
@@ -539,8 +539,8 @@ class TestExecutionTiming(StatusFixture):
     """Execution time in the acceptance report."""
 
     def _driver(self):
-        from port_tensile import TensileDriver
-        from registry import SQLiteRegistry
+        from oto.runners.cli import TensileDriver
+        from oto.ledger.registry import SQLiteRegistry
         d = TensileDriver.__new__(TensileDriver)
         d.base_dir = self.base
         d._last_run_status = "completed"
@@ -587,7 +587,7 @@ class TestExecutionTiming(StatusFixture):
         self.assertEqual(t["native_run"]["elapsed_human"], "unknown")
 
     def test_summary_includes_execution_time(self):
-        from report import AcceptanceReporter, ABVerdict
+        from oto.metrics.report import AcceptanceReporter, ABVerdict
         r = AcceptanceReporter(self.base)
         v = [ABVerdict(dtype="S", shape="1024x1024x1024", fp="f",
                        native_median=1.0, spoof_median=1.0, delta_pct=0.0,
@@ -603,7 +603,7 @@ class TestExecutionTiming(StatusFixture):
 
     def test_timing_is_serialised_into_the_report_json(self):
         """family_timing used to be computed and then dropped on the floor."""
-        from report import AcceptanceReporter
+        from oto.metrics.report import AcceptanceReporter
         r = AcceptanceReporter(self.base)
         timing = {"native_run": {"elapsed_human": "3h", "elapsed_minutes": 180.0,
                                  "in_flight": False}}

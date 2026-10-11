@@ -10,9 +10,9 @@ import random
 import unittest
 from pathlib import Path
 
-import legality
-import tensile_library as tlib
-from gfx90c_common import FAMILY_DTYPES
+import oto.tensile.legality as legality
+import oto.tensile.library as tlib
+from oto.device.peaks import FAMILY_DTYPES
 
 BASE = Path(__file__).resolve().parent.parent
 HALF_FAMILIES = ("HH", "HH_HPA", "HS_HPA")

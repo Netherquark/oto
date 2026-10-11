@@ -26,10 +26,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from consolidate import (  # noqa: E402
+from oto.tools.consolidate import (  # noqa: E402
     _fam, _is_legal, dtype_bytes, load_deck, target_cells,
 )
-from gfx90c_common import FAMILY_SHAPES, cell_key  # noqa: E402
+from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 
 
 class TestFamilyCase(unittest.TestCase):
@@ -195,7 +195,7 @@ class TestDeckIsVerbatim(unittest.TestCase):
                 self.assertIn(p["phase_id"], self.old)
 
     def test_entries_are_byte_identical(self):
-        from registry import fingerprint_config
+        from oto.ledger.registry import fingerprint_config
         for p in self.new:
             if self._is_d1(p):
                 # D1 rows are provenance transplants: the config's own

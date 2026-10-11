@@ -29,8 +29,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from db_mutator import DBMutator, FORWARD_KNOB_DOMAINS  # noqa: E402
-from scheduler import CandidateGenerator, ldspad_feasible  # noqa: E402
+from oto.tensile.candidate import CandidateGenerator  # noqa: E402
+from oto.tensile.gates.occupancy import ldspad_defasible  # noqa: E402
+from oto.tensile.synthesis.db import DBMutator, FORWARD_KNOB_DOMAINS  # noqa: E402
 
 
 class _StubMutator:
@@ -57,9 +58,9 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         cfg = {**self.db._template(family), **knobs}
         ok, why = self.sched.validate_config(cfg)
         self.assertTrue(ok, f"{knobs}: {why}")
-        ok, why = ldspad_feasible(cfg)
+        ok, why = ldspad_defasible(cfg)
         self.assertTrue(ok, f"{knobs}: {why}")
-        from registry import fingerprint_config
+        from oto.ledger.registry import fingerprint_config
         self.assertTrue(self.mutator.is_novel(fingerprint_config(cfg)))
 
     def test_wall_families_get_mutants(self):
@@ -113,7 +114,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         forward-knob space is large enough that the arm never has to repeat."""
         parent = {"MacroTile": "64x64x8", "ThreadTile": "4x4",
                   "VectorWidth": 2, "GlobalSplitU": 1, "DepthU": 8}
-        from registry import fingerprint_config
+        from oto.ledger.registry import fingerprint_config
         seen = set()
         for seed in ("a", "b", "c", "d"):
             for mut in self.db.synthesize_mutants(

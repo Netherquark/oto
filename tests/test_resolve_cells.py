@@ -28,8 +28,8 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from gfx90c_common import shipped_cell_set  # noqa: E402
-from harness import resolve_cells  # noqa: E402
+from oto.device.peaks import shipped_cell_set  # noqa: E402
+from oto.harness import resolve_cells  # noqa: E402
 
 
 @pytest.fixture(scope="module")

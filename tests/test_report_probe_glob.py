@@ -29,8 +29,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import port_tensile  # noqa: E402
-from port_tensile import TensileDriver  # noqa: E402
+import oto.runners.cli  # noqa: E402
+from oto.runners.cli import TensileDriver  # noqa: E402
 
 
 class _FakeAnalytics:

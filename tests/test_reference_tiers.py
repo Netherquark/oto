@@ -23,8 +23,9 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import port_tensile as pt  # noqa: E402
-import tensile_library as tl  # noqa: E402
+import oto.runners.auto_prompt as ap  # noqa: E402
+import oto.runners.driver as pt  # noqa: E402
+import oto.tensile.library as tl  # noqa: E402
 
 T1 = ["p_t1_a", "p_t1_b", "p_t1_c"]
 T2 = ["p_t2_a", "p_t2_b"]
@@ -166,7 +167,7 @@ class TestCallSitePlumbing(unittest.TestCase):
              mock.patch.object(pt.TensileDriver, "generate_acceptance_report",
                                return_value=None):
             pt.TensileDriver.run_auto(drv, budget=0, release_held=True,
-                                      plan=pt.AutoPlan(rerun_illegal=True))
+                                      plan=ap.AutoPlan(rerun_illegal=True))
         self.assertTrue(mref.call_args.kwargs.get("release_held"))
 
     def test_run_auto_default_does_not_release(self):
@@ -181,7 +182,7 @@ class TestCallSitePlumbing(unittest.TestCase):
              mock.patch.object(pt.TensileDriver, "generate_acceptance_report",
                                return_value=None):
             pt.TensileDriver.run_auto(drv, budget=0,
-                                      plan=pt.AutoPlan(rerun_illegal=True))
+                                      plan=ap.AutoPlan(rerun_illegal=True))
         self.assertFalse(mref.call_args.kwargs.get("release_held"))
 
 
@@ -240,7 +241,7 @@ class TestManifestIsPinned(unittest.TestCase):
 
     def test_prompt_numbers_agree_with_the_manifest(self):
         """The banner the user reads is built from the same tiers."""
-        import auto_prompt
+        import oto.runners.auto_prompt as auto_prompt
         counts = auto_prompt._read_counts(ROOT)
         held, first, drop = self._tier_counts()
         self.assertEqual(counts["illegal"], first)

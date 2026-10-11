@@ -23,8 +23,8 @@ sys.path.insert(0, str(REPO))
 
 import yaml  # noqa: E402
 
-from gfx90c_common import FAMILY_DTYPE_CHAR, FAMILY_SHAPES, cube_side  # noqa: E402
-from library_parity import (  # noqa: E402
+from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES, cube_side  # noqa: E402
+from oto.tensile.library_parity import (  # noqa: E402
     phase_cells,
     phase_family,
     phases_cells,
@@ -54,7 +54,7 @@ class TestShippedGrid:
         assert GRID_TOTAL == 38
 
     def test_grid_uses_cube_shapes(self):
-        from gfx90c_common import shipped_cell_set
+        from oto.device.peaks import shipped_cell_set
         for family, shape in shipped_cell_set():
             assert cube_side(shape) is not None
             assert int(shape.split("x")[0]) in FAMILY_SHAPES[family]
@@ -76,7 +76,7 @@ class TestDeckParity:
         assert len(phases_cells(DECK)) == GRID_TOTAL
 
     def test_families_carry_correct_dtype_char(self):
-        from gfx90c_common import shipped_cell_set
+        from oto.device.peaks import shipped_cell_set
         grid = shipped_cell_set()
         for family, shape in phases_cells(DECK):
             assert (family, shape) in grid

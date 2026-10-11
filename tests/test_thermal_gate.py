@@ -41,7 +41,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import port_tensile as pt  # noqa: E402
+import oto.runners.cli as pt  # noqa: E402
 
 HEADER = ["timestamp", "sclk_hz", "mclk_hz", "power_uw", "temp_mc",
           "gpu_busy_percent", "vram_used_bytes", "vram_total_bytes",
@@ -286,7 +286,7 @@ class TestNoDoubleCounting(unittest.TestCase):
     def _delta(self, native, spoof, sclk_by_gkey, sclk_ref):
         import tempfile
 
-        from analytics import AnalyticsEngine
+        from oto.metrics.analytics import AnalyticsEngine
         # registry/base_dir are only used by the analysis passes above this one;
         # the delta comparison reads nothing from either.
         with tempfile.TemporaryDirectory() as tmp:
@@ -358,7 +358,7 @@ class TestNoDoubleCounting(unittest.TestCase):
         """
         import inspect
 
-        from analytics import AnalyticsEngine
+        from oto.metrics.analytics import AnalyticsEngine
         params = inspect.signature(
             AnalyticsEngine.compute_native_vs_spoof_delta).parameters
         self.assertIn("sclk_by_phase", params)

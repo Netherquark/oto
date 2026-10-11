@@ -28,8 +28,8 @@ sys.path.insert(0, str(REPO / "harness"))
 
 import yaml  # noqa: E402
 
-from gfx90c_common import FAMILY_SHAPES  # noqa: E402
-from generate_candidates import (  # noqa: E402
+from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
+from oto.harness.generate_candidates import (  # noqa: E402
     _round_robin_prune,
     _strip_not_forwarded,
     _write_overlay,
@@ -86,7 +86,7 @@ class TestPoolInvariants:
         assert not (graded & probes)
 
     def test_every_target_and_probe_cell_is_covered(self):
-        from generate_candidates import PROBE_CELLS, TARGET_CELLS
+        from oto.harness.generate_candidates import PROBE_CELLS, TARGET_CELLS
         found = {}
         for r in _rows():
             fam = str(r["config"].get("FamilyLabel", "")).upper()
@@ -167,13 +167,13 @@ class TestPruneCandidatesFromSeed:
         return p
 
     def test_dry_run_counts_only(self, tmp_path, monkeypatch):
-        import harness.generate_candidates as gen
+        import oto.harness.generate_candidates as gen
         monkeypatch.setattr(gen, "OVERLAY_PATH", self._seed(tmp_path))
         stripped, kept = gen._prune_candidates_from_seed(dry_run=True)
         assert (stripped, kept) == (2, 2)
 
     def test_strip_archives_and_keeps_rest(self, tmp_path, monkeypatch):
-        import harness.generate_candidates as gen
+        import oto.harness.generate_candidates as gen
         import yaml
         seed = self._seed(tmp_path)
         monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
@@ -189,7 +189,7 @@ class TestPruneCandidatesFromSeed:
             p["phase_id"].startswith("phase_cand_") for p in archived)
 
     def test_noop_when_nothing_to_strip(self, tmp_path, monkeypatch):
-        import harness.generate_candidates as gen
+        import oto.harness.generate_candidates as gen
         import yaml
         seed = tmp_path / "phases.seed.overlay.yaml"
         seed.write_text(yaml.safe_dump({"phases": [

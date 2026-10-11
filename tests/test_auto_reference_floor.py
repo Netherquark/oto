@@ -26,9 +26,9 @@ from unittest import mock
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import port_tensile  # noqa: E402
-from port_tensile import TensileDriver  # noqa: E402
-from auto_prompt import AutoPlan  # noqa: E402
+import oto.runners.cli  # noqa: E402
+from oto.runners.cli import TensileDriver  # noqa: E402
+from oto.runners.auto_prompt import AutoPlan  # noqa: E402
 
 
 #: Stand-in for "the reference floor still owes work". The value is opaque to
@@ -211,7 +211,7 @@ class TestProvisionalFloorIsLabelled(unittest.TestCase):
     """An unfinished floor must not produce a report that reads as final."""
 
     def test_summary_is_marked_provisional(self):
-        from report import AcceptanceReporter
+        from oto.metrics.report import AcceptanceReporter
         rep = AcceptanceReporter(Path("/tmp/opencode/autofloor"))
         report = rep.generate_acceptance_report(
             run_id="r1", ab_verdicts=[], all_analytics=[], red_list=[],
@@ -224,7 +224,7 @@ class TestProvisionalFloorIsLabelled(unittest.TestCase):
         self.assertFalse(report.reference_floor_authoritative)
 
     def test_complete_floor_summary_is_unchanged(self):
-        from report import AcceptanceReporter
+        from oto.metrics.report import AcceptanceReporter
         rep = AcceptanceReporter(Path("/tmp/opencode/autofloor"))
         report = rep.generate_acceptance_report(
             run_id="r1", ab_verdicts=[], all_analytics=[], red_list=[],
@@ -256,7 +256,7 @@ class TestAbSubjectIsNotTheFloor(unittest.TestCase):
     """
 
     def _registry(self, tmp):
-        from registry import SQLiteRegistry
+        from oto.ledger.registry import SQLiteRegistry
         reg = SQLiteRegistry(Path(tmp))          # creates the schema for us
         import sqlite3
         with sqlite3.connect(str(reg.db_path)) as conn:
