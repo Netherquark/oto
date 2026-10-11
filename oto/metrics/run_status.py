@@ -104,32 +104,43 @@ def bucket(status: str, result: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 # main report
 # ---------------------------------------------------------------------------
-def build_report(base: Path, run_id: Optional[str],
-                 plan: RunPlan,
-                 now: Optional[datetime] = None) -> Dict[str, Any]:
-    """Build the status report for a run.
+# ---------------------------------------------------------------------------
+# status-report sub-builders
+# ---------------------------------------------------------------------------
 
-    `now` overrides the wall clock used to age a still-running head run. It
-    exists so callers (and tests) can pin the clock: a head run with no
-    completed_at is aged against real time, so a fixture pinned to a literal
-    timestamp silently starts failing once the calendar moves past it.
-    Defaults to the system clock, so production behavior is unchanged.
+
+def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
+    """Every run row and its general verdicts, in one read of the registry.
+
+    Returns the per-run indexes (`status_by_run`, `started_by_run`,
+    `completed_by_run`, `meta_by_run`, `all_ids`), the resolved `chain`, the
+    chain's `latest` per-phase verdict map, the `unkeyed` ids that carry no
+    corpus identity, and the chain's `first_start` / `last_event` span.
+
+    The chain rule is the whole reason this is a helper: the head is the newest
+    run still in flight (decided by `completed_at`, not the status label), else
+    the newest completed run, else the newest finished-but-interrupted run --
+    then its `resume_of` ancestors. Treating every 'interrupted' run as active
+    walked straight past a floor locked days later and reported a stale chain,
+    so every tier count and ETA it printed came from the wrong corpus.
     """
-    db = base / DB_REL
-    if not db.exists():
-        raise SystemExit(f"no registry at {db}")
-
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    out: Dict[str, Any] = {
+        "status_by_run": {}, "started_by_run": {}, "completed_by_run": {},
+        "meta_by_run": {}, "row_id": {}, "all_ids": [], "chain": [],
+        "latest": {}, "unkeyed": set(), "first_start": None,
+        "last_event": None,
+    }
+    status_by_run = out["status_by_run"]
+    started_by_run = out["started_by_run"]
+    completed_by_run = out["completed_by_run"]
+    meta_by_run = out["meta_by_run"]
+    row_id = out["row_id"]
     try:
         rows = conn.execute(
             "SELECT id, run_id, status, started_at, completed_at, metadata "
             "FROM runs ORDER BY id DESC").fetchall()
-        meta_by_run: Dict[str, Dict[str, Any]] = {}
-        status_by_run: Dict[str, str] = {}
-        started_by_run: Dict[str, Optional[datetime]] = {}
-        completed_by_run: Dict[str, Optional[datetime]] = {}
-        row_id: Dict[str, int] = {}
         for r in rows:
             rid = str(r["run_id"])
             status_by_run[rid] = str(r["status"])
@@ -152,6 +163,7 @@ def build_report(base: Path, run_id: Optional[str],
             key=lambda r: (started_by_run.get(r) or datetime.min.replace(
                 tzinfo=timezone.utc), row_id[r]),
             reverse=True)
+        out["all_ids"] = all_ids
 
         # The chain: newest run, plus its resume_of ancestors.
         if run_id:
@@ -203,6 +215,7 @@ def build_report(base: Path, run_id: Optional[str],
                 chain.append(str(parent))
                 cur = str(parent)
             chain.reverse()
+        out["chain"] = chain
 
         # Latest state per phase across the chain: a phase decided in an
         # ancestor counts even if a resume re-listed it, and a phase re-run in a
@@ -252,48 +265,190 @@ def build_report(base: Path, run_id: Optional[str],
                         key = "pid:" + str(o["phase_id"])
                 latest[str(key)] = (str(o.get("status") or ""),
                                     (o.get("result") or {}).get("status"))
+        out["latest"] = latest
+        out["unkeyed"] = unkeyed
+        out["first_start"] = first_start
+        out["last_event"] = last_event
     finally:
         conn.close()
+    return out
 
+
+def _resolve_corpus(base: Path) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """The phase_key -> tier map for the reference corpus, and its tag map.
+
+    The tag map resolves records written before `phase_key` existed (both
+    2026-09-25/26 reference runs) to the name they are now spelled with.
+    Resolving before tallying matters: counting first read 2298 decided
+    against a 2285-cell corpus, because 158 phase_ids are pre-fix spellings
+    of keys already counted under their current name.
+    """
     manifest = tlib.load_rerun_manifest(base)
-    shipped = tlib.load_shipped_manifest(base, refresh=False)
     corpus: Dict[str, str] = {}
     #: phase_id trailing tag -> phase_key, for records that predate phase_key
     tag_to_key: Dict[str, str] = {}
-    if shipped:
-        for phase in tlib.emit_spoof_phases(shipped):
-            key = tlib.phase_key(phase)
-            corpus[key] = tlib.tier_for(phase, manifest)
-            pid = str(phase.get("phase_id") or "")
-            if pid:
-                tag_to_key[pid.rsplit("-", 1)[-1]] = key
+    shipped = tlib.load_shipped_manifest(base, refresh=False)
+    if not shipped:
+        return corpus, tag_to_key
+    for phase in tlib.emit_spoof_phases(shipped):
+        key = tlib.phase_key(phase)
+        corpus[key] = tlib.tier_for(phase, manifest)
+        pid = str(phase.get("phase_id") or "")
+        if pid:
+            tag_to_key[pid.rsplit("-", 1)[-1]] = key
+    return corpus, tag_to_key
 
-    # Records written before phase_key existed (both 2026-09-25/26 reference
-    # runs) still carry the tag in phase_id, and every one of them resolves
-    # through the emitted deck. Resolve before tallying: counting first read
-    # 2298 decided against a 2285-cell corpus, because 158 phase_ids are
-    # pre-fix spellings of keys already counted under their current name.
-    if tag_to_key:
-        for key in list(latest):
-            if not key.startswith("pid:"):
-                continue
-            tag = key.rsplit("-", 1)[-1]
-            if tag in tag_to_key:
-                latest[tag_to_key[tag]] = latest.pop(key)
-                unkeyed.discard(str(key)[4:])
 
+def _resolve_latest_tags(latest: Dict[str, Any], unkeyed: set,
+                         tag_to_key: Dict[str, str]) -> None:
+    """Fold pre-phase_key records onto their current key, in place.
+
+    Also drops the folded ids from `unkeyed`: they are no longer stale, they
+    are accounted for under the key they were resolved to.
+    """
+    for key in list(latest):
+        if not key.startswith("pid:"):
+            continue
+        tag = key.rsplit("-", 1)[-1]
+        if tag in tag_to_key:
+            latest[tag_to_key[tag]] = latest.pop(key)
+            unkeyed.discard(str(key)[4:])
+
+
+def _tally_chain(latest: Dict[str, Tuple[str, Optional[str]]],
+                 unkeyed: set) -> Tuple[Dict[str, int], int, int]:
+    """Bucket the chain's per-phase verdicts; count what is decided.
+
+    An unresolved pid is skipped, not counted as decided: it has no corpus
+    identity, so counting it would let a record that cannot be placed inflate
+    the numerator above the corpus size -- the exact failure this tool is
+    meant to rule out. It is surfaced as `stale_records` instead.
+    """
     tally = {k: 0 for k in ("success", "failed", "skipped", "active", "other")}
     for key, (status, result) in latest.items():
-        # An unresolved pid: key has no corpus identity, so it cannot be
-        # attributed to a tier. Counting it in the global tally would let a
-        # record we cannot place inflate the numerator above the corpus size --
-        # the exact failure this tool is meant to rule out. It is surfaced as
-        # stale_records instead.
         if key.startswith("pid:"):
             continue
         tally[bucket(status, result)] += 1
     decided = tally["success"] + tally["failed"]
     stale_ids = len(unkeyed)
+    return tally, decided, stale_ids
+
+
+def _tier_rows(corpus: Dict[str, str],
+               latest: Dict[str, Tuple[str, Optional[str]]],
+               plan: RunPlan
+               ) -> Tuple[List[Tuple[str, int, int]], int, int, int]:
+    """Per-tier (label, done, total) rows, and the plan's released counts.
+
+    Progress is per-tier, not "decided over everything": the chain has already
+    decided the whole corpus, so dividing that by the plan's released units
+    would report >100%. What the user asked is: of the tiers this plan
+    released, how many still owe a verdict. So count decided per tier and
+    subtract within the tier.
+
+    Returns:
+        ``(tier_rows, ref_done, ref_total, ref_remaining)``.
+    """
+    tier_total: Dict[str, int] = {}
+    for tier in corpus.values():
+        tier_total[tier] = tier_total.get(tier, 0) + 1
+    tier_decided: Dict[str, int] = {}
+    for key, (status, result) in latest.items():
+        tier = corpus.get(key)
+        if not tier:
+            continue
+        if bucket(status, result) in ("success", "failed"):
+            tier_decided[tier] = tier_decided.get(tier, 0) + 1
+
+    released = {tier for tier, on in (
+        (tlib.TIER_FIRST, plan.rerun_illegal),
+        (tlib.TIER_HELD, plan.rerun_underspecified),
+        (tlib.TIER_LAST, plan.rerun_underspecified),
+        (tlib.TIER_DROP, plan.rerun_unreproducible)) if on}
+    ref_total = 0
+    ref_done = 0
+    tier_rows: List[Tuple[str, int, int]] = []
+    label = {tlib.TIER_FIRST: "ILLEGAL", tlib.TIER_HELD: "UNDER-SPECIFIED",
+             tlib.TIER_LAST: "UNDER-SPECIFIED (legacy)",
+             tlib.TIER_DROP: "UNREPRODUCIBLE"}
+    for tier in (tlib.TIER_FIRST, tlib.TIER_HELD, tlib.TIER_LAST, tlib.TIER_DROP):
+        total = tier_total.get(tier, 0)
+        if not total:
+            continue
+        done = min(tier_decided.get(tier, 0), total)
+        tier_rows.append((label.get(tier, tier), done, total))
+        if tier in released:
+            ref_total += total
+            ref_done += done
+    return tier_rows, ref_done, ref_total, ref_total - ref_done
+
+
+def _price_plan(plan: RunPlan, minutes: Optional[float],
+                elapsed: Optional[float], decided: int, units: int,
+                breakdown: Dict[str, Any], used: int, ref_remaining: int,
+                tune_units: int, ref_done: int) -> Estimate:
+    """The ETA estimate, with the jitter guard on its rate.
+
+    Jitter check: when decided < 3 the per-phase median is unstable, so the ETA
+    is set to None rather than printed as if it meant something. A confident
+    number built on three samples is how a run gets budgeted wrongly.
+    """
+    # Jitter check: too few samples for a stable median ETA.
+    # When decided < 3 the per-phase median is unstable and the ETA must
+    # carry a visible bogus indicator so the user knows not to trust it.
+    jitter = _jittery(decided) if decided is not None else False
+
+    est = Estimate(
+        units=units,
+        minutes_per_unit=minutes,
+        decided=ref_done,
+        done_minutes=elapsed or 0.0,
+        remaining=ref_remaining + tune_units,
+        source=("measured" if plan.minutes_per_phase is None else "override") if minutes else "unknown",
+        breakdown=breakdown,
+        rate_sample=used,
+    )
+    if minutes and minutes > 0:
+        est.eta_minutes = est.remaining * minutes
+    elif elapsed and decided:
+        est.eta_minutes = (elapsed / decided) * est.remaining
+
+    # Flag when ETA is based on an unstable median (fewer than 3 decided phases)
+    if jitter:
+        est.eta_minutes = None  # type: ignore[assignment]
+    return est
+
+
+def build_report(base: Path, run_id: Optional[str],
+                 plan: RunPlan,
+                 now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Build the status report for a run.
+
+    `now` overrides the wall clock used to age a still-running head run. It
+    exists so callers (and tests) can pin the clock: a head run with no
+    completed_at is aged against real time, so a fixture pinned to a literal
+    timestamp silently starts failing once the calendar moves past it.
+    Defaults to the system clock, so production behavior is unchanged.
+    """
+    db = base / DB_REL
+    if not db.exists():
+        raise SystemExit(f"no registry at {db}")
+
+    ledger = _load_ledger(db, run_id)
+    chain = ledger["chain"]
+    status_by_run = ledger["status_by_run"]
+    started_by_run = ledger["started_by_run"]
+    completed_by_run = ledger["completed_by_run"]
+    latest = ledger["latest"]
+    unkeyed = ledger["unkeyed"]
+    first_start = ledger["first_start"]
+    last_event = ledger["last_event"]
+
+    manifest = tlib.load_rerun_manifest(base)
+    corpus, tag_to_key = _resolve_corpus(base)
+    if tag_to_key:
+        _resolve_latest_tags(latest, unkeyed, tag_to_key)
+    tally, decided, stale_ids = _tally_chain(latest, unkeyed)
 
     deck_size = plan.deck_size
     if not deck_size:
@@ -346,68 +501,10 @@ def build_report(base: Path, run_id: Optional[str],
         if starts and max(starts) > min(starts):
             chain_span = ((max(starts) - min(starts)).total_seconds() / 60.0)
 
-    # Progress must be per-tier, not "decided over everything". The chain has
-    # already decided the whole corpus, so dividing that by the plan's 111
-    # ILLEGAL units would report >100%, and dividing the plan's unit count by
-    # the chain's decided count would understate what is left to do. What the
-    # user asked is: of the tiers this plan released, how many still owe a
-    # verdict. So count decided per tier and subtract within the tier.
-    tier_total: Dict[str, int] = {}
-    for tier in corpus.values():
-        tier_total[tier] = tier_total.get(tier, 0) + 1
-    tier_decided: Dict[str, int] = {}
-    for key, (status, result) in latest.items():
-        tier = corpus.get(key)
-        if not tier:
-            continue
-        if bucket(status, result) in ("success", "failed"):
-            tier_decided[tier] = tier_decided.get(tier, 0) + 1
-
-    released = {tier for tier, on in (
-        (tlib.TIER_FIRST, plan.rerun_illegal),
-        (tlib.TIER_HELD, plan.rerun_underspecified),
-        (tlib.TIER_LAST, plan.rerun_underspecified),
-        (tlib.TIER_DROP, plan.rerun_unreproducible)) if on}
-    ref_total = 0
-    ref_done = 0
-    tier_rows: List[Tuple[str, int, int]] = []
-    label = {tlib.TIER_FIRST: "ILLEGAL", tlib.TIER_HELD: "UNDER-SPECIFIED",
-             tlib.TIER_LAST: "UNDER-SPECIFIED (legacy)",
-             tlib.TIER_DROP: "UNREPRODUCIBLE"}
-    for tier in (tlib.TIER_FIRST, tlib.TIER_HELD, tlib.TIER_LAST, tlib.TIER_DROP):
-        total = tier_total.get(tier, 0)
-        if not total:
-            continue
-        done = min(tier_decided.get(tier, 0), total)
-        tier_rows.append((label.get(tier, tier), done, total))
-        if tier in released:
-            ref_total += total
-            ref_done += done
-    ref_remaining = ref_total - ref_done
-
-    # Jitter check: too few samples for a stable median ETA.
-    # When decided < 3 the per-phase median is unstable and the ETA must
-    # carry a visible bogus indicator so the user knows not to trust it.
-    jitter = _jittery(decided) if decided is not None else False
-
-    est = Estimate(
-        units=ref_total + tune_units,
-        minutes_per_unit=minutes,
-        decided=ref_done,
-        done_minutes=elapsed or 0.0,
-        remaining=ref_remaining + tune_units,
-        source=("measured" if plan.minutes_per_phase is None else "override") if minutes else "unknown",
-        breakdown=breakdown,
-        rate_sample=used,
-    )
-    if minutes and minutes > 0:
-        est.eta_minutes = est.remaining * minutes
-    elif elapsed and decided:
-        est.eta_minutes = (elapsed / decided) * est.remaining
-
-    # Flag when ETA is based on an unstable median (fewer than 3 decided phases)
-    if jitter:
-        est.eta_minutes = None  # type: ignore[assignment]
+    tier_rows, ref_done, ref_total, ref_remaining = _tier_rows(
+        corpus, latest, plan)
+    est = _price_plan(plan, minutes, elapsed, decided, ref_total + tune_units,
+                      breakdown, used, ref_remaining, tune_units, ref_done)
 
     thermals = read_thermals(base / "gfx90c_runs" / head) if head else None
     started_live = status_by_run.get(head) == "started"
