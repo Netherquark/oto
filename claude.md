@@ -76,9 +76,40 @@ A phase dying with `Generating kernel source resulted in error 4` is a
 | `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md` | Frozen prior conclusions (read-only reference; results only) |
 | `README.md` | General repository orientation |
 | `changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
+| `docs/README.md` | The boundary between the MD docs ecosystem and the docstrings |
+| `docs/docstrings.md` | The module/function docstring convention (owns/does-not-own/public API) |
+| `docs/audit.md` | Proposals for whittling the MD tree (not yet applied) |
+| `docs/design_language.md` | The visual contract of the HTML acceptance report |
+| `plans/REFACTOR_*.md` | The refactor plans + their executable equivalence proofs |
 
 One fact, one canonical home. When information belongs in one owner, update that
 owner; do not copy it into several MDs.
+
+### 3.1 The two documentation systems
+
+There are two, and they are not interchangeable:
+
+* **The MD docs ecosystem** (root `*.md` + `docs/`) — higher-level context for
+  an agent deciding *what to do*. Author: a human/agent reasoning about the
+  project. Lifespan: months. Stated in `docs/README.md`.
+* **Docstrings** (inside `oto/**/*.py`) — lower-level context for a maintainer
+  reading *one module*. Author: whoever last touched that function. Lifespan:
+  days. Convention in `docs/docstrings.md`.
+
+The test is in `docs/README.md`: **if the fact would still be true after the code
+were rewritten in another language, it belongs in an MD. If it is a fact about
+this function's contract, it belongs in the docstring.**
+
+Three rules that follow from it:
+
+* **The MD tree never quotes a line number.** A line number is a fact about a
+  file, and files move. A docstring may cite `file:line` because it is pinned to
+  the same commit as the code it describes.
+* **The MD tree never restates a code path.** "The driver does X, then Y" is a
+  docstring's job; an MD says why X then Y and what evidence made that the order.
+* **A docstring never carries a corpus count.** The counts move every time a
+  cell is re-triaged; a number transcribed anywhere — MD or docstring — is wrong
+  the moment that happens. This is the §5 rule applied to both systems.
 
 ## 4. Authority / freshness
 
@@ -259,6 +290,14 @@ checks are demonstrated and remaining gaps are stated.
 - One fact, one canonical home. Fix stale docs in the owner + dependent generated
   artifacts; do not create competing summaries. Do not inflate this file with project
   history that belongs elsewhere.
+- **When you move code, its docstring moves with it** — in the same commit. A
+  module that moved without its docstring is a module whose "owns" clause is now
+  describing someone else's code. The `Does NOT own` clause that names it is then
+  wrong too, and only the next reader finds out.
+- **A docstring is not the place for a decision.** If you find yourself writing
+  "we chose X because Y" in a docstring, ask whether Y is still true after the
+  code is rewritten in another language. If it is, it belongs in the owner MD;
+  if not, it is a contract and keep one line of it, not a paragraph.
 
 ## 9. Task routing
 

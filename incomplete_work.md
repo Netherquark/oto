@@ -200,4 +200,140 @@ whether T2 is worth its day. No code work is outstanding.
 - Multi-threaded assembly compilation enabled by setting `CpuThreads: min(os.cpu_count(), 16)` in generated YAMLs and `make -j`.
 - Fixed Tensile `ForkParameters` emission from `MacroTile0`/`MacroTile1` to valid schema `MacroTile: [[M0, M1, DepthU]]` fixing CC/DD configuration parsing.
 - Integrated non-blocking `select.select()` listener in `_apply_cooldown()` so `'s'` skips cooldown sleep and `'q'` quits immediately.
-- Ensured `acceptance_report.json` and `acceptance_report.html` are generated and persisted to `gfx90c_results/` even on early termination via `'q'` or interruption.
+- Ensured `acceptance_report.json` and `acceptance_report.html` are generated and persisted to `gfx90c_results/` even on early termination via `'q'` or interruption.## 5.1 Refactor 1 (codebase organisation) — PARTIAL (2026-10-11)
+
+Shipped: the flat root moved into an `oto/` package by responsibility, the three
+gate families extracted from `scheduler.py` into `oto/tensile/gates/`, the
+god-module (`port_tensile.py`, 3626 lines) split into
+`oto/runners/{driver,benchmark,phases,reference,auto,reporting,analytics_loaders,
+clocks,timing,synthesis,cli,toolchain,flags}` plus `oto/tensile/config_writer.py`,
+and the remaining oversized modules split per
+`plans/REFACTOR_1_CODEBASE_ORG.md` section 3.
+
+No behaviour change. Proven five ways against the pre-refactor commit
+(`python3 plans/verify_all.py`):
+
+* `verify_gate_differential.py` — 128,032 comparisons of every scheduler
+  gate/function over an exhaustive config corpus, all equal.
+* `verify_method_equivalence.py` — all 57 TensileDriver methods that moved into
+  a mixin have an identical AST body.
+* `verify_config_writer.py` — 6,037 live phases, old vs new config writer agree on
+  (ok, reason) AND on the exact YAML bytes: 5,693 written, 344 refused, 0
+  mismatches.
+* `verify_report_html.py` — the rendered acceptance dashboard is byte-identical
+  (99,287 bytes). This is the proof that the A/B delta arithmetic is unchanged.
+* `verify_ast_equivalence.py` — every public symbol of every pre-split module
+  still exists with the same body; 0 unexplained differences.
+
+### PENDING — functions still over 60 lines (51 of them, 5,237 lines total)
+
+Acceptance criterion 2 of the plan ("no function over 60 lines") is **not yet
+met**. The file-level criterion (no file over 600 lines) *is* met: the largest
+file is `oto/tensile/legality.py` at 561 lines.
+
+Print the current list before starting (this table is a snapshot):
+
+```python
+import ast
+from pathlib import Path
+for f in sorted(Path('oto').rglob('*.py')):
+    for n in ast.walk(ast.parse(f.read_text())):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if n.end_lineno - n.lineno + 1 > 60:
+                print(n.end_lineno - n.lineno + 1, f, n.lineno, n.name)
+```
+
+| # | function | location | lines | the seam to cut at |
+|---|---|---|---|---|
+| 1 | `mutate_and_feed` | oto/ledger/agent.py:248 | 227 | harvest -> filter -> emit |
+| 2 | `run_auto` | oto/runners/auto.py:23 | 189 | floor-establish / tuning-loop / convergence |
+| 3 | `iter_candidates` | oto/harness/candidate_pool.py:98 | 174 | wide / narrow / auto tiers |
+| 4 | `run_phases` | oto/runners/phases.py:205 | 170 | skip/bypass policy vs the execution loop |
+| 5 | `_load_ledger` | oto/metrics/run_status.py:112 | 163 | run-row read / chain resolve / record fold |
+| 6 | `execute_phase` | oto/runners/benchmark.py:111 | 156 | record-pre / launch / record-post |
+| 7 | `run_gfx900_reference` | oto/runners/reference.py:183 | 147 | run-dir swap vs delegation |
+| 8 | `_compute_ab_verdicts` | oto/runners/reporting.py:123 | 140 | arm assembly / clock coverage / verdict build |
+| 9 | `_run_tensile_benchmark` | oto/runners/benchmark.py:285 | 133 | argv+env / launch / poll / CSV collect |
+| 10 | `_collect` | oto/metrics/ab_delta.py:45 | 131 | record fold vs per-cell statistics |
+| 11 | `build_report` | oto/metrics/run_status.py:422 | 130 | report-dict assembly |
+| 12 | `classify_outcome` | oto/ledger/mutator_outcomes.py:71 | 129 | outcome classification from on-disk CSVs |
+| 13 | `_init_db` | oto/ledger/registry_core.py:103 | 127 | one `executescript` per table |
+| 14 | `generate_family_phases` | oto/tensile/candidate_emission.py:158 | 124 | phase-id build vs width-clamp retry |
+| 15 | `probe_phase_config` | oto/checks/tensile_build.py:157 | 121 | Tensile solution vs kernel-writer |
+| 16 | `build` | oto/harness/resolve_cells.py:196 | 119 | per-cell resolution table build |
+| 17 | `phase_survey` | oto/harness/kernel_db.py:134 | 115 | DB survey |
+| 18 | `build_matrix` | oto/harness/regression_matrix.py:76 | 110 | matrix build |
+| 19 | `_resume_deck` | oto/runners/reference.py:28 | 109 | rebuild vs reuse vs triage |
+| 20 | `_pair_cells` | oto/metrics/ab_delta.py:247 | 101 | per-cell pairing (already partly cut) |
+| 21 | `audit` | oto/metrics/ab_audit.py:110 | 101 | classification vs certainty grading |
+| 22 | `main` | oto/tools/allruns.py:191 | 99 | one handler per subcommand, as in cli.py |
+| 23 | `generate_acceptance_report` | oto/runners/reporting.py:263 | 98 | analytics vs timing vs verdicts |
+| 24 | `converged` | oto/ledger/agent.py:149 | 98 | per-gate checks |
+| 25 | `main` | oto/checks/tensile_build.py:455 | 98 | one handler per subcommand |
+| 26 | `render` | oto/metrics/render_status.py:219 | 93 | section renderers |
+| 27 | `main` | oto/tools/verify_run.py:306 | 91 | one handler per subcommand |
+| 28 | `append_candidates_batch` | oto/tensile/candidate_emission.py:63 | 88 | collide/dedupe/append |
+| 29 | `write_phase_config` | oto/tensile/config_writer.py:337 | 84 | gate / fork params / YAML dump |
+| 30 | `synthesize_library` | oto/runners/synthesis.py:27 | 84 | emit / build / anti-alias / gate |
+| 31 | `mutate_winner` | oto/tensile/candidate.py:91 | 80 | 1-knob vs 2-knob neighbours |
+| 32 | `__init__` | oto/runners/driver.py:136 | 80 | wiring vs run-dir setup |
+| 33 | `_compute_family_coverage` | oto/metrics/report.py:103 | 80 | per-family vs by-size |
+| 34 | `main` | oto/harness/measure_vgprs.py:78 | 80 | one handler per subcommand |
+| 35 | `reference_thresholds` | oto/metrics/coverage.py:49 | 78 | band vs bars |
+| 36 | `_scan_dat_library` | oto/tensile/library.py:52 | 76 | scan vs assemble |
+| 37 | `coverage_cells` | oto/metrics/coverage.py:161 | 74 | evidence vs state |
+| 38 | `classify_cell_status` | oto/metrics/cell_status.py:24 | 74 | red vs orange vs graded |
+| 39 | `_offer` | oto/harness/candidate_pool.py:115 | 74 | one row per tier |
+| 40 | `_swizzle_defasible` | oto/tensile/gates/occupancy.py:322 | 73 | domain checks vs coupling |
+| 41 | `select_deck` | oto/tools/consolidate_deck.py:210 | 70 | best vs sweep |
+| 42 | `write_report` | oto/metrics/report.py:272 | 70 | JSON vs HTML delegation |
+| 43 | `_family_matrix_rows` | oto/metrics/report_html.py:125 | 69 | family row vs size rows |
+| 44 | `harvest` | oto/ledger/harvest.py:27 | 69 | score vs pick |
+| 45 | `_reference_remaining` | oto/runners/reference.py:419 | 67 | universe vs newest-record scan |
+| 46 | `load_phases_manifest` | oto/runners/phases.py:28 | 64 | deck vs overlay merge |
+| 47 | `_fork_params` | oto/tensile/config_writer.py:177 | 63 | one block per knob family |
+| 48 | `load_benchmark_csv` | oto/metrics/analytics.py:231 | 63 | parse vs validate |
+| 49 | `read_thermals` | oto/metrics/read_thermals.py:29 | 62 | read vs summarise |
+| 50 | `telemetry` | oto/tools/verify_run.py:173 | 61 | filter stages |
+| 51 | `_coverage_matrix_section` | oto/metrics/report_sections.py:227 | 61 | header vs body |
+
+Approach per function: cut where a sub-result first becomes available — the same
+cut that was proved safe for the 12+ functions already decomposed this round —
+then re-run `python3 plans/verify_all.py`, which is the guard that the cut did
+not change behaviour.
+
+### PENDING — known slop observed during the move
+
+* **`oto/checks/db.py`, `oto/checks/retirement.py`** — two throwaway ad-hoc
+  sqlite scripts that used to execute at *import* time (no `main()` guard).
+  Wrapped in `main()` this round so importing the package is side-effect free,
+  but the bodies are still one linear script each; they are not real checks and
+  should either become proper checks or be deleted.
+* **`oto/tools/consolidate_deck.py:119`** — its docstring still cites
+  `scheduler.FAMILY_BYTES_PER_ELEMENT`, a module that no longer exists under
+  that name (it is `oto.tensile.gates.vgpr_model`).
+* **`oto/ledger/harvest.py:136`** — same: a comment cites "scheduler family
+  decks"; the module is now `oto.tensile.decks`.
+* **`oto/tensile/candidate.py:51`** — `_ = (depth_u, dtype_char, tile_dims,
+  FAMILY_DTYPE_CHAR, NUM_CUS)` exists purely to keep linters quiet about
+  re-exports. The `__all__` list already does that job; the throwaway tuple
+  should go.
+* **`oto/tensile/candidate.py` `parse_tensile_shape`** — a lazily-delegated
+  re-export for the pre-split import surface. Its only caller is the test suite;
+  once the tests import from `config_writer` it can be deleted.
+* **`oto/harness/candidate_pool.py`** — `fingerprint_config` is imported but the
+  module has its own `_fingerprint`; one of the two is dead.
+* **duplicated dark-palette CSS** in `oto/metrics/report_css.py`
+  (`DASHBOARD_CSS` declares the same 23 custom properties twice: once as
+  `[data-theme="dark"]`, once inside `prefers-color-scheme`). Deliberate, and
+  only because collapsing it changes which theme wins when an operator has
+  explicitly pinned a light theme. If that precedence is ever worked out, this
+  is the one place to do it.
+
+### NOT ATTEMPTED (deliberate)
+
+* `oto/device/profile.py` and `oto/device/profile_registry.py` were **not**
+  created. The plan marks them as the Refactor 2 seam; creating stubs now would
+  be scaffolding with no caller.
+* `harness/` moved to `oto/harness/`, but `tests/` stays at the repo root —
+  the plan says tests move last.
