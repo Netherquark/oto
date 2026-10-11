@@ -1,40 +1,16 @@
 #!/usr/bin/env python3
-"""db_mutator.py — DB-hooked mutator (Option H overhaul, 2026-10-09).
+"""DB-hooked candidate synthesis: wide + narrow + direction mutants.
 
-The manifest sampler (`legality.sample_legal`) can only combine gfx900-shipped
-knob values across the tile/split groups. It cannot touch the forward knobs
-(LdsPadA/B, PGR, PLR, NLCA, WGM, the StaggerU trio, GLVW) and it cannot see
-what actually WON on gfx90c. Measured consequences (proposal.md H.1 + the
-live registry, 506 proposals over 10 iterations):
-
-  * the arm decays 155 -> 20 mutants/iteration (novelty exhausted);
-  * by iteration 9 it emits 21 mutants on 3 families (HH_HPA/HS_HPA/SS) and
-    ZERO on the CC/ZZ wall families the campaign exists to fix;
-  * no mutant ever carries a forward knob — the exact axes §8.6/§14.5
-    identified as the untried levers;
-  * 31% of mutants are wasted (legal_rejected + legal_slow).
-
-This module hooks the mutator to the measured `kernel_db.json` so every
-iteration synthesises NOVEL mutations:
-
-  * WIDE      — new (MacroTile, ThreadTile, VW, GSU, DepthU, GLVW, WG) combos.
-                Tile donors are read from the DB's per-family measured winners
-                (what actually won on gfx90c, not just the gfx900 manifest) and
-                from the floor winner, then re-combined with forward knobs.
-  * NARROW    — single-knob deltas on the forward knobs the manifest sampler
-                cannot reach. This is the large, mostly-unmeasured space that
-                guarantees novelty across many iterations.
-  * DIRECTION — toward the floor winner's knobs when the floor beats native in
-                a cell (the §14.5 steal-adapt logic, generalised to every cell).
-
-Every mutant is gated (`validate_config` + `ldspad_defasible`) and novelty-
-checked (ledger + already-decided set) before emission, so the loop cannot
-re-emit a config it has already measured. Novelty is guaranteed by
-construction across the forward-knob space — which is what lets the arm run
-for many iterations instead of converging to a trickle.
-
-The class wraps the existing `mutator.Mutator` (composition) for the ledger,
-novelty, outcome and overlay behaviour; it only owns synthesis.
+Owns: ``DBMutator`` -- donors read out of the analysis kernel_db.json
+(``load_db``, ``_tile_donors``, ``_template``), the three filters a mutant must
+survive (``_scheduler``/``ldspad_feasible`` CPU gate + novelty) and the per-family
+mutation patterns (``_ss_``, ``_dd_``, ``_cc_``, ``_zz_``) plus the
+floor-direction walk that moves a parent toward the shipped winner.
+Does NOT own: the forward-knob domains it draws from
+(oto.tensile.synthesis.db_knobs), the manifest-driven synthesis
+(oto.tensile.synthesis.manifest), or the ledger that records what it emits
+(oto.ledger.mutator).
+Public API: DBMutator, FORWARD_KNOB_DOMAINS (re-exported).
 """
 
 from __future__ import annotations
@@ -45,46 +21,15 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR
-
-#: Forward knobs the manifest sampler cannot reach, with their legal domains.
-#: Values are the Tensile-legal value sets (Common.py) intersected with what
-#: the gfx90c gates admit. This is the NARROW mutation space.
-FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
-    "LdsPadA": (0, 1, 2, 4),
-    "LdsPadB": (0, 1, 2, 4),
-    "PrefetchGlobalRead": (0, 1),
-    "PrefetchLocalRead": (0, 1),
-    "GlobalLoadVectorWidthA": (1, 2, 4),
-    "GlobalLoadVectorWidthB": (1, 2, 4),
-    "NLCA": (1, 2, 3),
-    "WorkGroupMapping": (1, 4, 8),
-    "StaggerU": (0, 8, 16, 32),
-    "StaggerUMapping": (0, 1, 2),
-    "StaggerUStride": (0, 256, 512),
-    "DepthU": (4, 8, 16, 32),
-    "GlobalSplitU": (1, 2, 4),
-    "AssertFree0ElementMultiple": (1, 2),
-}
-
-#: Knobs that make up a "tile donor" (the wide axes the DB carries).
-_TILE_KNOBS = ("MacroTile", "ThreadTile", "VectorWidth", "GlobalSplitU",
-               "DepthU", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-               "WorkGroup")
-
-#: Default ContractionPattern per family (matches the deck/first pattern).
-_DEFAULT_PATTERN = {
-    "SS": "Ailk_Bjlk", "DD": "Ailk_Bjlk", "HH": "Ailk_Bjlk",
-    "CC": "Ailk_Bjlk", "ZZ": "Alik_Bjlk",
-    "HH_HPA": "Ailk_Bjlk", "HS_HPA": "Ailk_Bjlk",
-}
-
-#: How many tile donors / forward draws to try per cell before gating.
-_DONOR_POOL = 6
-_FORWARD_DRAWS = 5  # increased from 3 to cover more knob combinations
+from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
+                                            _DONOR_POOL, _FORWARD_DRAWS,
+                                            _TILE_KNOBS, FAMILY_DTYPE_CHAR,
+                                            FORWARD_KNOB_DOMAINS)
+from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 
 
-class DBMutator:
+class DBMutator(DbPatternsMixin):
+
     """DB-hooked synthesis on top of the ledger-backed Mutator.
 
     Parameters
@@ -295,284 +240,6 @@ class DBMutator:
 
     # -- forward-knob draws ---------------------------------------------
 
-    def _forward_draws(self, rng: random.Random) -> List[Dict[str, Any]]:
-        """Small random combos of forward knobs (the NARROW/WIDE surface).
-
-        Each draw changes 1-3 forward knobs to a legal value, so a donor tile
-        re-combined with a forward draw is a genuinely new config, not a
-        re-measure of a shipped vector. Increased from 3 to 5 draws per
-        iteration to cover more of the forward-knob space.
-
-        Diagonal combinations (2-3 knobs simultaneously) are preferred over
-        single-knob changes to escape local optima faster.
-        """
-        knobs = list(FORWARD_KNOB_DOMAINS)
-        out: List[Dict[str, Any]] = []
-        for _ in range(_FORWARD_DRAWS):
-            n_knobs = rng.randint(1, 3)  # 1-3 knobs per draw
-            draw: Dict[str, Any] = {}
-            for k in rng.sample(knobs, n_knobs):
-                draw[k] = rng.choice(FORWARD_KNOB_DOMAINS[k])
-            out.append(draw)
-        return out
-
-    # -- family-specific mutation patterns -------------------------------
-
-    def _ss_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
-        """SS-family-specific mutations targeting sore losers.
-
-        SS family suffers from wave-quantization and occupancy starvation.
-        These patterns target the exact knobs that improve wave coverage:
-        NLCA, WGM, GSU, StaggerU, LdsPad, GLVW.
-        """
-        patterns: List[Dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: NLCA toggle (1→3 or 3→1) + LdsPad increase
-        for nlca_val in [1, 3]:
-            for lspad_val in [2, 4]:
-                d = {}
-                for k in rng.sample(knobs, rng.randint(1, 2)):
-                    if k == "NLCA":
-                        d["NLCA"] = nlca_val
-                    elif k == "LdsPadA":
-                        d["LdsPadA"] = lspad_val
-                    elif k == "LdsPadB":
-                        d["LdsPadB"] = lspad_val
-                    elif k == "GSU":
-                        d["GSU"] = rng.choice(FORWARD_KNOB_DOMAINS["GSU"])
-                    elif k == "GlobalLoadVectorWidthA":
-                        d["GlobalLoadVectorWidthA"] = rng.choice(
-                            FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
-                if d:
-                    patterns.append(d)
-
-        # Pattern 2: WGM change + GSU double
-        for wgm_val in [4, 8]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "WorkGroupMapping":
-                    d["WorkGroupMapping"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["WorkGroupMapping"])
-                elif k == "GSU":
-                    d["GSU"] = wgm_val // 32  # GSU=1,2,4 maps to wgm 32,64,128
-                elif k == "StaggerU":
-                    d["StaggerU"] = rng.choice(FORWARD_KNOB_DOMAINS["StaggerU"])
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: GLVW quadruple + StaggerU stride
-        for glvw_val in [1, 2, 4]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = glvw_val
-                elif k == "StaggerUStride":
-                    d["StaggerUStride"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["StaggerUStride"])
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _dd_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
-        """DD-family-specific mutations targeting sore losers.
-
-        DD family suffers from register pressure and VGPR bottlenecks.
-        These patterns target DepthU, GLVW, and GSU to improve occupancy.
-        """
-        patterns: List[Dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: DepthU increase + GLVW change
-        for depthu_val in [8, 16, 32]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "DepthU":
-                    d["DepthU"] = depthu_val
-                elif k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
-                elif k == "GlobalLoadVectorWidthB":
-                    d["GlobalLoadVectorWidthB"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthB"])
-            if d:
-                patterns.append(d)
-
-        # Pattern 2: GSU double + NLCA change
-        for gsu_val in [2, 4]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GSU":
-                    d["GSU"] = gsu_val
-                elif k == "NLCA":
-                    d["NLCA"] = rng.choice(FORWARD_KNOB_DOMAINS["NLCA"])
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: GLVW quadruple alone
-        for glvw_val in [1, 2, 4]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = glvw_val
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _cc_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
-        """CC-family-specific mutations targeting sore losers.
-
-        CC family suffers from total-elements divisibility and LDS padding.
-        These patterns target LdsPad, MacroTile, and NLCA to fix the
-        totalElements 768 % (NumThreads*grvw) ≠ 0 issue.
-        """
-        patterns: List[Dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: LdsPad combination + NLCA change
-        for lspad_a_val in [1, 2, 4]:
-            for lspad_b_val in [0, 1, 2]:
-                for nlca_val in [1, 2, 3]:
-                    d = {}
-                    for k in rng.sample(knobs, rng.randint(1, 3)):
-                        if k == "LdsPadA":
-                            d["LdsPadA"] = lspad_a_val
-                        elif k == "LdsPadB":
-                            d["LdsPadB"] = lspad_b_val
-                        elif k == "NLCA":
-                            d["NLCA"] = nlca_val
-                    if d:
-                        patterns.append(d)
-
-        # Pattern 2: MacroTile change + GlobalSplitU
-        for mt_val in ["32x32x16", "64x64x16", "96x96x16"]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GlobalSplitU":
-                    d["GlobalSplitU"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalSplitU"])
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: NLCA triple toggle
-        for nlca_val in [1, 2, 3]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "NLCA":
-                    d["NLCA"] = nlca_val
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _zz_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
-        """ZZ-family-specific mutations targeting sore losers.
-
-        ZZ family (complex double) has the lowest ceilings and requires
-        different VW/ThreadTile/MacroTile combinations.
-        """
-        patterns: List[Dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: VW change + DepthU
-        for vw_val in [1, 2]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "VectorWidth":
-                    d["VectorWidth"] = vw_val
-                elif k == "DepthU":
-                    d["DepthU"] = rng.choice(FORWARD_KNOB_DOMAINS["DepthU"])
-            if d:
-                patterns.append(d)
-
-        # Pattern 2: GlobalLoadVectorWidthA/B change
-        for glvwa_val in [1, 2, 4]:
-            for glvwb_val in [1, 2, 4]:
-                d = {}
-                for k in rng.sample(knobs, rng.randint(1, 2)):
-                    if k == "GlobalLoadVectorWidthA":
-                        d["GlobalLoadVectorWidthA"] = glvwa_val
-                    elif k == "GlobalLoadVectorWidthB":
-                        d["GlobalLoadVectorWidthB"] = glvwb_val
-                if d:
-                    patterns.append(d)
-
-        # Pattern 3: StaggerU stride change
-        for stride_val in [256, 512]:
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "StaggerUStride":
-                    d["StaggerUStride"] = stride_val
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    # -- direction -------------------------------------------------------
-
-    # -- direction -------------------------------------------------------
-
-    def _floor_direction(self, parent_config: Dict[str, Any],
-                         floor: Dict[str, Any]) -> Dict[str, Any]:
-        """Knob deltas that move the parent toward the floor winner.
-
-        Only structural knobs the floor actually carries are copied (in
-        config-normalized form); anything the parent already matches is left
-        alone.
-        """
-        norm = self._normalize_tile(floor)
-        out: Dict[str, Any] = {}
-        for k in _TILE_KNOBS:
-            if norm.get(k) is not None and norm.get(k) != parent_config.get(k):
-                out[k] = norm[k]
-        return out
-
-    # -- synthesis --------------------------------------------------------
-
-    def _normalize_parent_config(self, parent_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize tile knobs in parent_config from DB format to config format.
-
-        The kernel_db stores tile knobs as lists (e.g. MacroTile=[64, 64]),
-        but candidate configs expect strings (e.g. MacroTile="64x64"). This
-        method converts the tile format so that downstream validate_config works.
-        """
-        out = dict(parent_config)
-        # Normalize MacroTile
-        mt = self._parse_dims(out.get("MacroTile"))
-        if mt and len(mt) >= 2:
-            du = out.get("DepthU")
-            du_str = ""
-            if du is not None:
-                try:
-                    du_str = f"x{int(du)}"
-                except (TypeError, ValueError):
-                    pass
-            out["MacroTile"] = f"{mt[0]}x{mt[1]}{du_str}"
-        # Normalize ThreadTile
-        tt = self._parse_dims(out.get("ThreadTile"))
-        if tt and len(tt) >= 2:
-            out["ThreadTile"] = f"{tt[0]}x{tt[1]}"
-        # Normalize WorkGroup
-        wg = self._parse_dims(out.get("WorkGroup"))
-        if wg and len(wg) >= 2:
-            out["WorkGroup"] = "x".join(str(x) for x in wg[:3])
-        # Ensure other knobs are int where expected
-        for k in ("VectorWidth", "GlobalSplitU", "DepthU",
-                  "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-                  "WorkGroupMapping"):
-            v = out.get(k)
-            if v is not None:
-                try:
-                    out[k] = int(v)
-                except (TypeError, ValueError):
-                    pass
-        return out
 
     def synthesize_mutants(self, family: str, parent_config: Dict[str, Any],
                           shape: str, rng: random.Random,

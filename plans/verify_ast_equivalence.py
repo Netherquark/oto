@@ -50,12 +50,16 @@ MOVES = [
     ("library_parity.py", ["oto/tensile/library_parity.py"]),
     ("legality.py", ["oto/tensile/legality.py"]),
     ("scheduler.py", ["oto/tensile/candidate.py",
+                      "oto/tensile/candidate_config.py",
+                      "oto/tensile/candidate_emission.py",
                       "oto/tensile/gates/assembly.py",
                       "oto/tensile/gates/loads.py",
                       "oto/tensile/gates/occupancy.py",
                       "oto/tensile/gates/vgpr_model.py"]),
     ("synthesis.py", ["oto/tensile/synthesis/manifest.py"]),
-    ("db_mutator.py", ["oto/tensile/synthesis/db.py"]),
+    ("db_mutator.py", ["oto/tensile/synthesis/db.py",
+                      "oto/tensile/synthesis/db_knobs.py",
+                      "oto/tensile/synthesis/db_patterns.py"]),
     ("registry.py", ["oto/ledger/registry.py", "oto/ledger/registry_core.py",
                      "oto/ledger/queries.py", "oto/ledger/proposals.py"]),
     ("mutator.py", ["oto/ledger/mutator.py", "oto/ledger/mutator_outcomes.py"]),
@@ -97,7 +101,10 @@ MOVES = [
     ("check_db.py", ["oto/checks/db.py"]),
     ("check_retirement.py", ["oto/checks/retirement.py"]),
     ("harness/cell_knob_diff.py", ["oto/harness/cell_knob_diff.py"]),
-    ("harness/generate_candidates.py", ["oto/harness/generate_candidates.py"]),
+    ("harness/generate_candidates.py", ["oto/harness/generate_candidates.py",
+                                      "oto/harness/candidate_rows.py",
+                                      "oto/harness/candidate_pool.py",
+                                      "oto/harness/candidate_overlay.py"]),
     ("harness/kernel_db.py", ["oto/harness/kernel_db.py"]),
     ("harness/measure_vgprs.py", ["oto/harness/measure_vgprs.py"]),
     ("harness/occupancy_audit.py", ["oto/harness/occupancy_audit.py"]),
@@ -113,7 +120,7 @@ DECOMPOSED = (
     "harness/generate_candidates.py", "harness/kernel_db.py",
     "harness/measure_vgprs.py", "harness/regression_matrix.py",
     "analytics.py", "run_status.py", "ab_audit.py", "consolidate.py",
-    "tensile_library.py",
+    "tensile_library.py", "harness/generate_candidates.py",
 )
 
 #: Private helpers this refactor gave a public name.
@@ -136,6 +143,20 @@ PROMOTED = {
     "analytics.py::AnalyticsEngine.classify_cell_status",
     "agent.py::ConvergenceAgent.harvest",
     "mutator.py::Mutator.classify_outcome",
+    # CandidateGenerator methods moved into the emission mixin and compared
+    # individually by the gate differential.
+    "scheduler.py::CandidateGenerator.generate_fingerprint",
+    "scheduler.py::CandidateGenerator.emit_candidate",
+    "scheduler.py::CandidateGenerator.append_candidates_batch",
+    "scheduler.py::CandidateGenerator.append_to_phases",
+    "scheduler.py::CandidateGenerator.generate_family_phases",
+    # DBMutator methods moved into the pattern mixin.
+    "db_mutator.py::DBMutator._forward_draws",
+    "db_mutator.py::DBMutator._ss_mutation_pattern",
+    "db_mutator.py::DBMutator._dd_mutation_pattern",
+    "db_mutator.py::DBMutator._cc_mutation_pattern",
+    "db_mutator.py::DBMutator._zz_mutation_pattern",
+    "db_mutator.py::DBMutator._floor_direction",
 }
 
 #: Report renderer methods, proved by verify_report_html.py.

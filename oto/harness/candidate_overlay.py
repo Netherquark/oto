@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""The candidate overlay: what is written, pruned and mirrored.
+
+Owns: ``_write_overlay`` (merge rows into the seed overlay, mirror the prunable phase_ids), ``_prune_candidates_from_seed`` (strip ``phase_cand_*`` rows while keeping winners, accepted rows and ``probe_*`` rows -- with a timestamped archive copy so the action is reversible), ``_round_robin_prune`` and ``_summarise``.
+Does NOT own: the rows being written (oto.harness.candidate_rows) or their generation (oto.harness.candidate_pool).
+Public API: _write_overlay, _prune_candidates_from_seed, _round_robin_prune, _summarise, OVERLAY_PATH."""
+
+from __future__ import annotations
+
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Set, Tuple
+
+import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from oto.harness.candidate_pool import (iter_candidates,  # noqa: E402
+                                        _deck_rows_by_family, _deck_winner_for,
+                                        _narrow_row_gen, _pattern_for,
+                                        _strip_not_forwarded)
+from oto.harness.candidate_pool import __yaml_load  # noqa: E402
+from oto.harness.candidate_rows import (PROBE_CELLS, TARGET_CELLS,  # noqa: E402
+                                        _pad_rows)
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+
+
+def _overlay_path() -> Path:
+    """The seed overlay path, resolved at call time.
+
+    Read through the CLI module's binding so a caller that rebinds
+    ``generate_candidates.OVERLAY_PATH`` is honoured rather than shadowed by
+    this module's own copy. The tests use exactly that seam.
+    """
+    import oto.harness.generate_candidates as cli
+    return cli.OVERLAY_PATH
+
+
+def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
+                   dry_run: bool, with_probes: bool = False) -> int:
+    """Append in-grid candidate rows to the persistent seed overlay.
+
+    Probe rows (off-grid cells, graded False) are deliberately NOT appended to
+    the seed overlay: the tied §6.1 parity rule
+    (tests/test_library_parity.py, seed-only-extends-within-grid) pins every
+    overlay row to the shipped grid, and probe cells are outside it. They are
+    always recorded in the timestamped mirror, and `with_probes` opts them into
+    the seed (which WILL fail the parity tests until the rule is amended).
+    """
+    payload = __yaml_load(_overlay_path(), fallback={"phases": []})
+    if not isinstance(payload, dict):
+        payload = {"phases": []}
+    existing_ids = {str(p.get("phase_id", "")) for p in payload.get("phases", [])}
+    existing_fps = {str(p.get("fp", "")) for p in payload.get("phases", [])}
+    added = [r for r in rows
+             if r["phase_id"] not in existing_ids and r["fp"] not in existing_fps]
+    seed_probes = probe_rows if with_probes else []
+    seed_list = added + seed_probes
+    if dry_run:
+        return len(seed_list)
+    if not seed_list:
+        return 0
+    payload.setdefault("phases", []).extend(seed_list)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    payload["note"] = (payload.get("note", "") +
+                       f"\nAppended {len(seed_list)} generated candidates "
+                       f"({len(added)} in-grid, {len(seed_probes)} probe) at "
+                       f"{stamp} by harness/generate_candidates.py")
+    import yaml
+    with open(_overlay_path(), "w") as f:
+        yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
+    # Timestamped standalone mirror (provenance / easy seed-file pruning).
+    mirror = _overlay_path().parent / f"phases.candidates.{stamp}.overlay.yaml"
+    mirror_payload = {
+        "run_id": f"candidates-{stamp}",
+        "created_at": stamp,
+        "note": ("Candidate pool emitted by harness/generate_candidates.py; "
+                 "probe rows (graded: false) are off-grid and must NOT be "
+                 "merged into the seed overlay without amending the parity "
+                 "rule. Safe to load as a run overlay, or archive after the "
+                 "run and strip these phase_ids from "
+                 "phases.seed.overlay.yaml to keep future runs light."),
+        "phases": added,
+        "probes": probe_rows,
+    }
+    with open(mirror, "w") as f:
+        yaml.safe_dump(mirror_payload, f, sort_keys=False, default_flow_style=False)
+    print(f"mirror written: {mirror.relative_to(_overlay_path().parent.parent.parent)}")
+    return len(seed_list)
+
+
+def _prune_candidates_from_seed(dry_run: bool = False) -> Tuple[int, int]:
+    """Strip `phase_cand_*` rows from the persistent seed overlay (todo hygiene).
+
+    The mirror note already instructs this after every candidate run: candidate
+    pools grow without bound under `--auto` and their knob-encoded ids can drift
+    from the `config` that is ground truth. Proven winners / accepted rows and
+    `probe_*` rows are kept. State is preserved into a timestamped archive copy
+    of the seed before stripping, so the action is reversible by diffing the two
+    files. Returns (stripped, kept)."""
+    payload = __yaml_load(_overlay_path(), fallback={"phases": []})
+    if not isinstance(payload, dict):
+        payload = {"phases": []}
+    kept, stripped = [], []
+    for p in payload.get("phases", []):
+        if str(p.get("phase_id", "")).startswith("phase_cand_"):
+            stripped.append(p)
+        else:
+            kept.append(p)
+    if not stripped:
+        return 0, len(kept)
+    if dry_run:
+        return len(stripped), len(kept)
+    import yaml
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive = _overlay_path().parent / f"phases.cand_archive.{stamp}.overlay.yaml"
+    yaml.safe_dump({"note": f"phase_cand_* rows stripped from the seed by "
+                            f"--prune-candidates at {stamp}",
+                    "phases": stripped},
+                   open(archive, "w"), sort_keys=False, default_flow_style=False)
+    payload["phases"] = kept
+    payload["note"] = (payload.get("note", "") +
+                       f"\nStripped {len(stripped)} phase_cand_* rows "
+                       f"(archived: {archive.name}) at {stamp}")
+    yaml.safe_dump(payload, open(_overlay_path(), "w"),
+                   sort_keys=False, default_flow_style=False)
+    return len(stripped), len(kept)
+
+
+def _round_robin_prune(rows: List[Dict[str, Any]], cap: int) -> List[Dict[str, Any]]:
+    """Keep a fair (family, cell) share when the pool overshoots the run budget.
+
+    Round-robin across buckets so the biggest family (SS) cannot starve the
+    HPA families at the cap; removes the least-valuable rows (probe -> narrow ->
+    wide, per bucket) first.
+    """
+    if len(rows) <= cap:
+        return rows
+    buckets: Dict[Tuple[str, int], List[Dict[str, Any]]] = {}
+    for r in rows:
+        fam = str(r["config"].get("FamilyLabel", "")).upper() or "?"
+        side = int(r["shapes"][0].split("x")[0])
+        buckets.setdefault((fam, side), []).append(r)
+    for lst in buckets.values():
+        lst.sort(key=lambda r: {"probe": 0, "narrow": 1, "auto": 0, "wide": 2}.get(r["tier"], 3))
+    kept: List[Dict[str, Any]] = []
+    keys = list(buckets)
+    while len(kept) < cap and buckets:
+        for k in keys:
+            if not buckets[k]:
+                continue
+            kept.append(buckets[k].pop(0))
+            if len(kept) >= cap:
+                break
+    return kept
+
+
+def _summarise(rows: List[Dict[str, Any]]) -> None:
+    by_family: Dict[str, Dict[str, int]] = {}
+    for r in rows:
+        fam = str(r["config"].get("FamilyLabel", "")).upper() or "?"
+        by_family.setdefault(fam, {}).setdefault(r["tier"], 0)
+        by_family[fam][r["tier"]] += 1
+    total = [0]
+    for fam in sorted(by_family):
+        counts = by_family[fam]
+        line = "  " + fam.ljust(8) + " " + "  ".join(
+            f"{k}={counts[k]}" for k in sorted(counts))
+        print(line)
+        total[0] += sum(counts.values())
+    print(f"  TOTAL  candidates={total[0]}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--dry-run", action="store_true",
+                    help="validate + count only; do not write the overlay")
+    ap.add_argument("--max-fp", type=int, default=300,
+                    help="cap total emitted candidates (round-robin across "
+                         "family/cell buckets; default 300)")
+    ap.add_argument("--with-probes", action="store_true",
+                    help="append off-grid probe rows to the seed overlay too "
+                         "(breaks the §6.1 parity test until the rule is amended; "
+                         "probes are always mirrored regardless)")
+    ap.add_argument("--prune-candidates", action="store_true",
+                    help="strip phase_cand_* rows from the seed overlay "
+                         "(archive first, keep probe_*/accepted rows); "
+                         "overrides all generation")
+    args = ap.parse_args()
+
+    if args.prune_candidates:
+        stripped, kept = _prune_candidates_from_seed(dry_run=args.dry_run)
+        print(f"{'[dry-run] would strip' if args.dry_run else 'stripped'} "
+              f"{stripped} phase_cand_* rows; {kept} rows kept in "
+              f"{_overlay_path().name}")
+        return 0
+
+    rows: List[Dict[str, Any]] = list(iter_candidates())
+    rows = _round_robin_prune(rows, args.max_fp)
+    probes = [r for r in rows if not r["graded"]]
+    grid_rows = [r for r in rows if r["graded"]]
+    _summarise(rows)
+    written = _write_overlay(grid_rows, probes, dry_run=args.dry_run,
+                             with_probes=args.with_probes)
+    print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
+          f"{written} candidate(s) to {OVERLAY_PATH.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
