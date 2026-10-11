@@ -56,7 +56,9 @@ HEAD_METHODS = [
 # The three that were deliberately restructured (verified by other means).
 RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                 "validate_config": "verified differentially (128k cases)",
-                "main": "decomposed into the stage handlers in cli.py"}
+                "main": "decomposed into the stage handlers in cli.py",
+                "run_gfx900_reference": "_resume_deck + _fresh_deck; proved by "
+                                     "test_reference_tiers/test_auto_reference_floor"}
 
 # Modules to normalise: replace these substrings before comparing so the moved
 # module paths do not read as differences.
