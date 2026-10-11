@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""The measurement inventory and the deck selected from it.
+
+Owns: ``measured_index`` (every measured (phase, cell) with its stability count), ``load_deck`` (the whole solution universe: live deck + archived decks), ``dtype_bytes`` (read from Tensile itself), ``_is_legal`` (the three pre-run gates) and ``select_deck`` (best + sweep phase per target cell).
+Does NOT own: the cells it selects for (consolidate_targets) or the installation of what it selected (consolidate_install).
+Public API: measured_index, load_deck, dtype_bytes, _is_legal, select_deck, _median, _form_rank, _candidates."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import sqlite3
+import statistics
+import sys
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
+from oto.metrics.ab_audit import (  # noqa: E402
+    BASE as _AB_BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records,
+    audit, phase_records, verdict,
+)
+from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
+
+BASE = _AB_BASE
+
+#: Read-only use of Tensile: dtype byte widths are read from its tables.
+_TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
+
+def _median(vals: List[float]) -> float:
+    return statistics.median(vals) if vals else 0.0
+
+
+def measured_index(base: Path = BASE) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Every (phase_id, cell_key) native measurement, with stability counts.
+
+    GFLOPS for one phase/cell is the median across every run that measured it, so
+    a phase that got lucky once does not outrank one that reproduced.
+    """
+    drv = _driver(base)
+    per: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for run in native_runs(base):
+        for rec in phase_records(drv, base / "gfx90c_runs" / run, "native"):
+            key = rec.get("cell_key") or cell_key(
+                extract_family_from_phase_id(rec["phase_id"]), rec["ProblemType"])
+            if not key:
+                continue
+            rec["cell_key"] = key
+            per[(rec["phase_id"], key)].append(rec)
+    # Registry-only rows have no phase directory; they are indexed too so a
+    # draft-imported solution is not invisible, but they can never win a cell
+    # that a real measured phase covers.
+    for rec in _registry_records(drv, base, want_arm="native"):
+        key = rec.get("cell_key") or ""
+        if key:
+            per[(rec["phase_id"], key)].append(rec)
+
+    out: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for (phase_id, ckey), recs in per.items():
+        forms = sorted({r["shapes_per_phase"] for r in recs})
+        out[(phase_id, ckey)] = {
+            "phase_id": phase_id,
+            "cell_key": ckey,
+            "dtype": recs[0]["DataType"],
+            "gflops": _median([r["GFLOPS"] for r in recs]),
+            "best_single_run": max(r["GFLOPS"] for r in recs),
+            "runs": sorted({r["source_run"] for r in recs if r["source_run"]}),
+            "n_obs": len(recs),
+            "forms": forms,
+            "from_registry": all(r.get("from_registry") for r in recs),
+            "family": _fam(phase_id),
+        }
+    return out
+
+
+def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
+    """Every phase solution ever written to this repo, live deck included.
+
+    Selection has to draw from the whole solution universe, not just the live
+    deck. Reading only ``phases.yaml`` makes the pipeline non-idempotent: the
+    consolidation writes a 45-phase deck, and re-running then has only those 45
+    candidates to choose from, so the next pass collapses to 17 and cannot recover
+    the solutions it just dropped. The archived decks under ``archive/`` are the
+    record of everything that came before, so they are part of the pool. Live
+    entries win on phase_id collision.
+    """
+    import yaml
+    pool: Dict[str, Dict[str, Any]] = {}
+    archived = sorted((base / "archive").glob("phases.yaml.*"))
+    for path in archived + [base / "phases.yaml"]:
+        if not path.is_file():
+            continue
+        try:
+            entries = yaml.safe_load(path.read_text()) or []
+        except Exception:
+            continue
+        for p in entries:
+            if isinstance(p, dict) and p.get("phase_id"):
+                pool[str(p["phase_id"])] = p
+    return list(pool.values())
+
+
+def _form_rank(forms: List[int]) -> int:
+    """Lower is better: prefer the widest sweep, matching the floor."""
+    known = [f for f in forms if f in PREFERRED_FORMS]
+    if known:
+        return min(known, key=lambda f: (PREFERRED_FORMS.index(f), -f))
+    return len(PREFERRED_FORMS) + (min(forms) if forms else 0)
+
+
+def dtype_bytes(char: str) -> Optional[int]:
+    """Bytes per element for a dtype char, read from Tensile itself.
+
+    Tensile.DataType.DataType.properties is the authority: numBytes() is
+    reg * 4. It is read here rather than from scheduler.FAMILY_BYTES_PER_ELEMENT
+    because that table lists ZZ as 8 bytes, and complex double is 16. That single
+    wrong number is what let VectorWidth 2 through for ZZ and produced the
+    ``GlobalLoadVectorWidthA * DataType.numBytes() > 16`` assembly rejects.
+    """
+    try:
+        import sys as _s
+        root = _TENSILE_ROOT
+        if root and str(root) not in _s.path:
+            _s.path.insert(0, str(root))
+        from Tensile.DataType import DataType
+    except Exception:
+        return None
+    want = str(char).upper()[:1]
+    for props in getattr(DataType, "properties", []):
+        if str(props.get("char", "")).upper()[:1] == want:
+            reg = props.get("reg")
+            return int(reg * 4) if reg is not None else None
+    return None
+
+
+def _is_legal(phase: Dict[str, Any]) -> Tuple[bool, str]:
+    """Full pre-run legality gate for a deck phase.
+
+    All three seams the scheduler enforces, because each has caught a real
+    failure in this corpus and none is redundant:
+
+    * ``occupancy_feasible``  -- LDS footprint / VGPR budget
+    * ``assembly_class_valid`` -- the four SolutionStructs classes
+    * the global-load byte cap -- ``GLVW * bytesPerElement <= 16``
+
+    The third is checked here against Tensile's own dtype table because
+    ``occupancy_feasible`` and ``assembly_class_valid`` both pass ZZ VectorWidth 2,
+    which Tensile rejects at assembly time with 20 empty phases and a wasted
+    overnight run. ``check_candidates.py`` still misses it for the same reason.
+    """
+    cfg = phase.get("config") or {}
+    try:
+        from oto.tensile.gates.assembly import assembly_class_valid
+        from oto.tensile.gates.occupancy import occupancy_feasible
+        from oto.tensile.gates.vgpr_model import GLOBAL_LOAD_BYTE_CAP
+    except Exception as exc:                       # pragma: no cover
+        return True, f"gate unavailable ({exc})"
+    try:
+        ok, why = occupancy_feasible(cfg)
+        if not ok:
+            return False, f"occupancy: {why}"
+        ok, why = assembly_class_valid(cfg)
+        if not ok:
+            return False, f"assembly: {why}"
+    except Exception as exc:
+        return False, f"gate error: {exc}"
+
+    vw = cfg.get("VectorWidth")
+    dt = cfg.get("DataType") or phase.get("dtype")
+    if vw is not None and dt:
+        b = dtype_bytes(str(dt))
+        if b is not None and int(vw) * b > GLOBAL_LOAD_BYTE_CAP:
+            return False, (
+                f"reject: GlobalLoadVectorWidthA * DataType.numBytes() > 16 "
+                f"(VectorWidth={vw} x {b}B for {dt} > {GLOBAL_LOAD_BYTE_CAP})")
+    return True, ""
+
+
+def _candidates(deck: List[Dict[str, Any]], fam: str, shape: str,
+                idx: Dict[Tuple[str, str], Dict[str, Any]]
+                ) -> List[Dict[str, Any]]:
+    out = []
+    for p in deck:
+        if _fam(str(p.get("phase_id", ""))) != fam.upper():
+            continue
+        if shape not in (p.get("shapes") or []):
+            continue
+        pid = str(p.get("phase_id"))
+        m = idx.get((pid, f"{fam.upper()}:{shape.split('x')[0]}"))
+        shapes = list(p.get("shapes") or [])
+        out.append({
+            "phase_id": pid,
+            "shapes": shapes,
+            "dtype": p.get("dtype"),
+            "fp": p.get("fp"),
+            "measured": m is not None,
+            "gflops": m["gflops"] if m else None,
+            "runs": m["runs"] if m else [],
+            "n_obs": m["n_obs"] if m else 0,
+            "forms": m["forms"] if m else [len(shapes)],
+            "is_sweep": len(shapes) in PREFERRED_FORMS,
+        })
+    return out
+
+
+def select_deck(base: Path = BASE) -> Dict[str, Any]:
+    """Build the deck from existing phases only.
+
+    Two phases are kept per cell, because they answer different questions:
+
+    * ``best`` -- the highest measured GFLOPS at this cell, whatever form it was
+      measured in. This is the solution worth keeping, and it is what the user
+      asked to retain even where it currently loses.
+    * ``sweep`` -- the widest phase covering this cell. A sweep times every size
+      in the family in one Tensile invocation, which is the form the locked
+      floor was measured in, so including it is what makes the next run
+      comparable.
+
+    Keeping only ``best`` would rebuild the current problem: it is usually a
+    one-size phase, so the next run stays ungradable against a swept floor.
+    Keeping only ``sweep`` would throw away the best solutions found so far.
+    Illegal phases are dropped on both paths.
+    """
+    deck = load_deck(base)
+    idx = measured_index(base)
+    by_pid = {str(p.get("phase_id")): p for p in deck}
+    legality: Dict[str, str] = {}
+
+    picks: Dict[str, Dict[str, Any]] = {}
+    for fam, shape, ckey in target_cells():
+        cands = _candidates(deck, fam, shape, idx)
+        legal = []
+        for c in cands:
+            if c["phase_id"] not in legality:
+                ok, why = _is_legal(by_pid.get(c["phase_id"], {}))
+                legality[c["phase_id"]] = why if not ok else ""
+            if not legality[c["phase_id"]]:
+                legal.append(c)
+            else:
+                c["illegal"] = legality[c["phase_id"]]
+
+        measured = [c for c in legal if c["measured"]]
+        best = max(measured, key=lambda c: (c["gflops"], len(c["runs"]),
+                                            c["phase_id"])) if measured else None
+        sweeps = [c for c in legal if c["is_sweep"]]
+        sweep = max(sweeps, key=lambda c: (c["measured"], c["gflops"] or 0.0,
+                                           len(c["runs"]), c["phase_id"])
+                    ) if sweeps else None
+
+        picks[ckey] = {
+            "cell_key": ckey, "family": fam.upper(), "shape": shape,
+            "best": best, "sweep": sweep,
+            "n_candidates": len(cands), "n_legal": len(legal),
+            "n_illegal": len(cands) - len(legal),
+            "reason": ("measured best" if best else
+                       "sweep only" if sweep else
+                       "no legal candidate"),
+        }
+
+    chosen, seen = [], set()
+    for ckey in sorted(picks):
+        for slot in ("best", "sweep"):
+            pid = (picks[ckey].get(slot) or {}).get("phase_id")
+            if pid and pid not in seen and pid in by_pid:
+                seen.add(pid)
+                chosen.append(by_pid[pid])
+    return {
+        "picks": picks,
+        "phases": chosen,
+        "illegal_dropped": {k: v for k, v in legality.items() if v},
+        "uncovered": [k for k, v in picks.items()
+                      if not (v.get("best") or v.get("sweep"))],
+        "no_measurement": [k for k, v in picks.items()
+                           if v.get("sweep") and not v["sweep"]["measured"]],
+    }
+
+
+# --------------------------------------------------------------------------

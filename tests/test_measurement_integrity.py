@@ -4,7 +4,7 @@
 Three seams that silently corrupted results before, and whose failure mode is
 invisible in the output:
 
-1. ``scheduler.FAMILY_BYTES_PER_ELEMENT`` listed ZZ as 8 bytes. Complex double is
+1. ``vgpr_model.FAMILY_BYTES_PER_ELEMENT`` listed ZZ as 8 bytes. Complex double is
    16, so the 16 B global-load cap admitted VectorWidth 2 and Tensile rejected
    those configs at assembly time.
 2. ``ab_audit.phase_family`` decides whether two measurements are comparable at
@@ -23,10 +23,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import ab_audit
-import scheduler
-from consolidate import _TENSILE_ROOT, dtype_bytes
-from telemetry import HEADER, TelemetrySampler
+import oto.metrics.ab_audit as ab_audit
+import oto.tensile.gates.vgpr_model as vgpr_model  # noqa: E402
+import oto.tensile.candidate as candidate  # noqa: E402
+from oto.metrics.telemetry import HEADER, TelemetrySampler  # noqa: E402
+from oto.tools.consolidate import _TENSILE_ROOT, dtype_bytes  # noqa: E402
 
 if _TENSILE_ROOT and str(_TENSILE_ROOT) not in sys.path:
     sys.path.insert(0, str(_TENSILE_ROOT))
@@ -46,38 +47,38 @@ class TestDtypeByteTable(unittest.TestCase):
                 self.assertIsNotNone(
                     dtype_bytes(char), f"Tensile has no dtype for char {char}")
                 self.assertEqual(
-                    scheduler.FAMILY_BYTES_PER_ELEMENT[family], dtype_bytes(char),
+                    vgpr_model.FAMILY_BYTES_PER_ELEMENT[family], dtype_bytes(char),
                     f"{family}: scheduler table disagrees with Tensile numBytes()")
 
     def test_complex_double_is_16_bytes(self):
         """The exact defect: ZZ was 8, which let VectorWidth 2 through."""
         self.assertEqual(dtype_bytes("Z"), 16)
-        self.assertEqual(scheduler.FAMILY_BYTES_PER_ELEMENT["ZZ"], 16)
+        self.assertEqual(vgpr_model.FAMILY_BYTES_PER_ELEMENT["ZZ"], 16)
 
     def test_zz_vector_width_capped_at_one(self):
         for mt, tt in (("64x64x16", "4x4"), ("128x128x16", "8x8")):
             with self.subTest(macro=mt):
                 self.assertLessEqual(
-                    scheduler.cap_vector_width("ZZ", mt, tt), 1,
+                    candidate.cap_vector_width("ZZ", mt, tt), 1,
                     "complex double must not admit VectorWidth 2")
 
     def test_mixed_precision_families_governed_by_widest_operand(self):
         """HS/HS_HPA load a single alongside a half; HH_HPA loads half."""
         self.assertEqual(
-            scheduler.FAMILY_BYTES_PER_ELEMENT["HS"],
+            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS"],
             dtype_bytes("S"), "HS is governed by its single operand")
         self.assertEqual(
-            scheduler.FAMILY_BYTES_PER_ELEMENT["HS_HPA"],
+            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS_HPA"],
             dtype_bytes("S"), "HS_HPA is governed by its single operand")
         self.assertEqual(
-            scheduler.FAMILY_BYTES_PER_ELEMENT["HH_HPA"],
+            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HH_HPA"],
             dtype_bytes("H"), "HH_HPA is governed by its half operand")
 
     def test_allruns_shares_the_same_table(self):
         """allruns.py carried its own copy and drifted to the same wrong ZZ."""
-        import allruns
+        import oto.tools.allruns as allruns
         self.assertEqual(allruns.DTYPE_BYTES["Z"], dtype_bytes("Z"))
-        for family, byte_width in scheduler.FAMILY_BYTES_PER_ELEMENT.items():
+        for family, byte_width in vgpr_model.FAMILY_BYTES_PER_ELEMENT.items():
             with self.subTest(family=family):
                 self.assertEqual(
                     allruns.DTYPE_BYTES[allruns.FAMILY_CHAR[family]], byte_width,
@@ -133,7 +134,7 @@ class TestTelemetryIsAppendOnly(unittest.TestCase):
 
 class TestRunDirIsNotSilentlyReused(unittest.TestCase):
     def _registry(self, root: Path):
-        from registry import SQLiteRegistry
+        from oto.ledger.registry import SQLiteRegistry
         return SQLiteRegistry(root)
 
     def test_populated_run_dir_is_refused(self):
@@ -164,7 +165,7 @@ class TestRunDirIsNotSilentlyReused(unittest.TestCase):
 
 class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
     def test_rerun_refuses_existing_benchmark_csvs(self):
-        import port_tensile
+        import oto.runners.benchmark as _bench  # noqa: E402
 
         with tempfile.TemporaryDirectory() as d:
             phase_out = Path(d) / "phase_test"
@@ -176,11 +177,11 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
                 tensile_root = Path(d)
 
             with self.assertRaises(FileExistsError):
-                port_tensile.TensileDriver._run_tensile_benchmark(
+                _bench.BenchmarkMixin._run_tensile_benchmark(
                     _Stub(), Path(d) / "cfg.yaml", phase_out, 60)
 
     def test_empty_phase_dir_is_allowed(self):
-        import port_tensile
+        import oto.runners.benchmark as _bench  # noqa: E402
 
         with tempfile.TemporaryDirectory() as d:
             phase_out = Path(d) / "phase_fresh"
@@ -197,7 +198,7 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
 
             # No Tensile binary present, so it returns a failure result rather
             # than raising; the point is that the guard did not fire.
-            result = port_tensile.TensileDriver._run_tensile_benchmark(
+            result = _bench.BenchmarkMixin._run_tensile_benchmark(
                 _Stub(Path(d)), Path(d) / "cfg.yaml", phase_out, 5)
             self.assertIsInstance(result, dict)
 
@@ -206,7 +207,7 @@ class TestLockedFloorIsSwappedNotDeleted(unittest.TestCase):
     def test_install_does_not_delete_the_live_lock(self):
         """A rebuild must never rmtree the locked floor in place."""
         src = (Path(__file__).resolve().parent.parent
-               / "consolidate.py").read_text()
+               / "oto" / "tools" / "consolidate_install.py").read_text()
         body = src.split("def install(", 1)[1]
         self.assertNotIn("rmtree(live_lock)", body,
                          "install() must archive the old lock, not delete it")
