@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
-"""
-agent.py — Convergence Agent (harvest → mutate → loop)
+"""The convergence loop: harvest, mutate, decide, repeat.
 
-The deterministic convergence engine for oto:
-- Harvest winning configs from analytics results
-- Mutate candidates (≤2 knobs) for below-ceiling or non-converged cells (via scheduler)
-- Check convergence: no below-ceiling cells AND per-cell stability gates
-- Record candidates in the append-only proposals ledger and route them to a
-  per-run overlay (Option H Phase 1). Before Phase 1 these were appended to
-  `phases.yaml`; see mutate_and_feed for the fallback that still can do that.
+Owns: ``ConvergenceAgent`` -- the composition root over the convergence verdict
+(:class:`ConvergenceMixin`), parent selection (harvest) and the mutation loop
+(:class:`MutateLoopMixin`), plus the band it grades against and the mutation-arm
+gate that decides whether novelty is verifiable.
+Does NOT own: the ledger-backed mutation (oto.ledger.mutator), the gates that
+judge a candidate (oto.tensile.gates), or the phase runner (oto.runners).
+Public API: ConvergenceAgent, ConvergenceVerdict.
 """
 
-import random
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
+
 import yaml
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass
 
-import oto.metrics.coverage as coverage
-from oto.tensile.candidate import CandidateGenerator, CandidateConfig
-from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
 from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.ledger.agent_coverage import CoverageMixin
+from oto.ledger.harvest import HarvestMixin
 from oto.ledger.mutator import Mutator, Proposal
+from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
+import oto.metrics.coverage as coverage
+from oto.metrics.coverage import (STATE_REPLICATE, STATE_RETIRED,  # noqa: E402
+                                decide_state)
+from oto.tensile.candidate import CandidateGenerator, CandidateConfig
 
 
 @dataclass
@@ -34,8 +39,13 @@ class ConvergenceVerdict:
     budget_remaining: int
 
 
-class ConvergenceAgent:
-    """Deterministic convergence agent for oto."""
+class ConvergenceAgent(HarvestMixin, CoverageMixin):
+    """The one-shot convergence loop.
+
+    Harvest a winner, mutate it by at most two knobs, re-measure, repeat until
+    the convergence verdict or the budget says stop. Deterministic: the driver
+    decides the next candidate with no LLM in the loop.
+    """
 
     def __init__(
         self,
@@ -63,7 +73,7 @@ class ConvergenceAgent:
         self.db_mutator = None
         if mutator is not None:
             try:
-                from oto.tensile.synthesis.db import DBMutator
+                from db_mutator import DBMutator
                 self.db_mutator = DBMutator(self.base_dir, mutator)
             except Exception:
                 self.db_mutator = None
@@ -234,181 +244,6 @@ class ConvergenceAgent:
             iterations=self.iteration,
             budget_remaining=budget_remaining
         )
-
-    def harvest(
-        self,
-        all_analytics: List[CellAnalytics],
-        parent_by: str = "lcb"
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        Harvest one parent config per (family, shape) cell.
-
-        **Parent choice is by lower confidence bound, not raw winner**
-        (`Hplan.5` step 3). `max(median_gflops)` is how a noise-level win becomes
-        the parent of the next batch: a config whose median is high because one
-        seed landed well outranks a config that is merely good. The LCB ranks by
-        the lower bound, which demotes exactly that config. `parent_by="median"`
-        remains available so the old rule can be compared, and the choice is
-        recorded on every winner so a run's parent policy is visible after the
-        fact.
-
-        The family tag travels with the winner so downstream mutation rebuilds the
-        correct Tensile DataType.
-        """
-        if parent_by not in ("lcb", "median"):
-            raise ValueError(f"parent_by must be 'lcb' or 'median', got {parent_by!r}")
-
-        winners = {}
-        by_cell: Dict[str, List[CellAnalytics]] = {}
-
-        for a in all_analytics:
-            fam = a.family or a.dtype.lower()
-            key = f"{fam}_{a.shape}"
-            if key not in by_cell:
-                by_cell[key] = []
-            by_cell[key].append(a)
-
-        for key, cell_analytics in by_cell.items():
-            if parent_by == "median":
-                best = max(cell_analytics, key=lambda a: a.median_gflops)
-                score = best.median_gflops
-            else:
-                scored = [
-                    (a, coverage.lower_confidence_bound(
-                        a.seeds or self._cell_samples(a)))
-                    for a in cell_analytics
-                ]
-                # Ties break on sample count, then on median: a well-measured
-                # config is preferred over a lucky one even at equal bound.
-                best, score = max(
-                    scored,
-                    key=lambda pair: (pair[1], pair[0].num_seeds,
-                                      pair[0].median_gflops),
-                )
-            by_median = max(cell_analytics, key=lambda a: a.median_gflops)
-            winners[key] = {
-                "family": best.family,
-                "dtype": best.dtype,
-                "shape": best.shape,
-                "fp": best.config_fp,
-                "median_gflops": best.median_gflops,
-                "pct_of_ceiling": best.pct_of_ceiling,
-                "is_below_ceiling": best.is_below_ceiling,
-                "bound_class": best.bound_class,
-                "parent_score": score,
-                "parent_by": parent_by,
-                "n_seeds": best.num_seeds,
-                "selected_by_lcb": best.config_fp != by_median.config_fp,
-                "config": self._reconstruct_config(best)
-            }
-
-        self.harvested_winners = winners
-        return winners
-
-    def _cell_samples(self, analytics: CellAnalytics) -> List[float]:
-        """Recover a cell's seed values when a caller built it without them.
-
-        `compute_cell_analytics` attaches the seeds, so this is a fallback for
-        cells assembled by hand. Returns an empty list rather than guessing,
-        which degrades the LCB to the median instead of inventing a variance.
-        """
-        seed_reader = getattr(self.analytics, "seed_values", None)
-        if seed_reader is None:
-            return []
-        try:
-            return seed_reader(fingerprint=analytics.config_fp,
-                               shape=analytics.shape)
-        except Exception:
-            return []
-
-    def _reconstruct_config(self, analytics: CellAnalytics) -> Dict[str, Any]:
-        """
-        Reconstruct a Tensile config from registry, phases.yaml, or family-specific deck.
-        """
-        # 1. Search phases.yaml
-        phases_path = self.base_dir / "phases.yaml"
-        if phases_path.exists():
-            try:
-                with open(phases_path, "r") as f:
-                    phases = yaml.safe_load(f) or []
-                for p in phases:
-                    if isinstance(p, dict) and p.get("fp") == analytics.config_fp:
-                        return p.get("config", {})
-            except Exception:
-                pass
-
-        # 2. Search SQLite records
-        if hasattr(self.analytics, "registry") and self.analytics.registry is not None:
-            records = self.analytics.registry.read_records()
-            for r in records:
-                if r.get("fp") == analytics.config_fp and "config" in r:
-                    return r["config"]
-
-        # 3. Family-aware default fallback tile from scheduler family decks
-        fam = str(analytics.family or "").upper()
-        deck = self.scheduler.family_decks.get(fam, self.scheduler.family_decks.get("SS", []))
-        if deck:
-            return dict(deck[0])
-
-        return {
-            "MacroTile": "64x64x16",
-            "ThreadTile": "4x4",
-            "NLCA": 1,
-        }
-
-    def _shape_sweeps(self) -> Dict[str, List[str]]:
-        """Per-family shape sweeps, read once from the curated deck.
-
-        The deck is the authority on what a *graded* config looks like, so the
-        sweep is read from there rather than constructed. Cached because the deck
-        does not change within a run and this sits on the per-cell path.
-        """
-        if self._shape_sweeps_cache is None:
-            import oto.tensile.synthesis.manifest as synthesis
-            path = self.base_dir / "phases.yaml"
-            phases = []
-            if path.exists():
-                try:
-                    with open(path) as f:
-                        phases = yaml.safe_load(f) or []
-                except Exception:
-                    phases = []
-            self._shape_sweeps_cache = synthesis.family_shape_sweeps(phases)
-        return self._shape_sweeps_cache
-
-    def _cell_coverage(self, family: str, shape: str) -> Optional[Dict[str, Any]]:
-        """This cell's coverage evidence from the ledger, or None if unknown."""
-        if self._coverage_cells_cache is None:
-            self._coverage_cells_cache = self._load_coverage_cells()
-        return self._coverage_cells_cache.get((str(family).upper(), str(shape)))
-
-    def _cell_coverage_state(self, family: str, shape: str) -> Optional[str]:
-        """The cell's coverage state, or None when the cell is not yet known."""
-        cell = self._cell_coverage(family, shape)
-        if cell is None:
-            return None
-        return coverage.decide_state(cell, band_pct=self.band())
-
-    def _load_coverage_cells(self) -> Dict[Tuple[str, str], Dict[str, Any]]:
-        """Coverage evidence keyed by `(family, shape)`, for synthesis guidance.
-
-        Failures yield an empty map, which means "no guidance available" and every
-        cell stays `explore`. Guessing coverage from partial data would be worse
-        than having none: an unknown cell must be searched, not retired.
-        """
-        if self.mutator is None:
-            return {}
-        try:
-            reg = self.mutator.registry
-            summary = coverage.coverage_summary(
-                reg.all_proposals(),
-                coverage.samples_by_fingerprint(
-                    reg.read_records(record_type="benchmark_result")),
-                band_pct=self.band(),
-            )
-        except Exception:
-            return {}
-        return {(c["family"], c["shape"]): c for c in summary["cells"]}
 
     def mutate_and_feed(
         self,

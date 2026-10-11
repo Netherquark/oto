@@ -1,30 +1,13 @@
 #!/usr/bin/env python3
-"""mutator.py — Option H Phase 1: proposal ledger, outcome, novelty.
+"""The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay.
 
-Three things live here, in the order the pipeline needs them:
-
-  1. `classify_outcome`  — what a candidate actually did (H.3.8), as a pure
-     function over a phase's on-disk CSVs.
-  2. `Mutator`            — emits candidates into the ledger, decides novelty,
-     and remembers which neighbourhoods have proven unproductive.
-
-What is deliberately NOT here: legality sampling (Phase 2), coverage-guided
-parent selection and replication (Phase 3), and synthesis (Phase 4). Phase 1 is
-the ledger and the outcome signal; `scheduler.mutate_winner` remains the
-sampler until Hplan.6 replaces it.
-
-Two rules this module exists to enforce:
-
-  **One CSV reader.** Every read of a benchmark CSV goes through
-  `analytics.AnalyticsEngine` — `load_benchmark_csv` for values,
-  `count_benchmark_rows` for shape. Neither indexes the column headed
-  `GFlops` to decide anything: in these files that column is a problem index,
-  not a throughput. Reading it is what made an entire mutant population look
-  zero-yield when it was productive (retracted; see changelog 2026-10-05).
-
-  **The ledger is append-only.** `registry.resolve_proposal` advances
-  `pending -> terminal` exactly once and silently no-ops thereafter. There is no
-  delete path here or in the registry.
+Owns: ``Mutator`` -- the composition root over the outcome classifier
+(:class:`MutatorOutcomesMixin`), plus its own sampling, emission, outcome
+write-back, negative cache and per-run overlay read/write.
+Does NOT own: the convergence loop that drives it (oto.ledger.agent), the
+candidate sampler that produces knobs (oto.tensile.synthesis), or the registry
+it writes to (oto.ledger.registry).
+Public API: Mutator, Proposal, classify_outcome (re-exported).
 """
 
 from __future__ import annotations
@@ -32,14 +15,33 @@ from __future__ import annotations
 import csv
 import json
 import random
+import re
+import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Set
 
-import oto.tensile.legality as legality
-from oto.metrics.analytics import AnalyticsEngine
+import yaml
+
 from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.ledger.mutator_outcomes import (OUTCOME_FUNCTIONAL,  # noqa: E402
+                                        OUTCOME_LEGAL_REJECTED,
+                                        OUTCOME_LEGAL_SLOW,
+                                        OUTCOME_NON_FUNCTIONAL,
+                                        OUTCOME_PENDING, TERMINAL_OUTCOMES,
+                                        MutatorOutcomesMixin,
+                                        _per_cell_medians, classify_outcome)
+from oto.metrics.analytics import AnalyticsEngine
+from oto.tensile.candidate import CandidateGenerator
+from oto.tensile.legality import TEMPLATE_KEYS
+
+__all__ = ["Mutator", "Proposal", "classify_outcome",
+           "OUTCOME_PENDING", "OUTCOME_FUNCTIONAL", "OUTCOME_NON_FUNCTIONAL",
+           "OUTCOME_LEGAL_REJECTED", "OUTCOME_LEGAL_SLOW", "TERMINAL_OUTCOMES",
+           "ORIGIN_NOVEL", "ORIGIN_REPLICATE",
+           "DEFAULT_NEGATIVE_CACHE_K", "DEFAULT_DRAWS_PER_CELL",
+           "slow_bars", "slow_threshold_for"]
 
 #: Knobs owned by the caller's phase template. The sampler returns only the
 #: Re-exported from `legality`, the single owner: this module assembles nothing,
@@ -48,191 +50,17 @@ from oto.tensile.legality import TEMPLATE_KEYS  # noqa: E402,F401
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted
 #: 59 mutants from one winner, ~25 of which collided on fingerprints; novelty
-#: filtering makes an extra draw cost an RNG step rather than a phase, so this is
-#: deliberately generous and tunable rather than tuned.
+#: filtering makes an extra draw cost an RNG step rather than a phase, so this
+#: is deliberately generous and tunable rather than tuned.
 DEFAULT_DRAWS_PER_CELL = 8
 
-# Outcome vocabulary. Terminal values may only be written to a pending row.
-OUTCOME_PENDING = "pending"
-OUTCOME_FUNCTIONAL = "functional"
-OUTCOME_NON_FUNCTIONAL = "non_functional"
-OUTCOME_LEGAL_REJECTED = "legal_rejected"
-OUTCOME_LEGAL_SLOW = "legal_slow"
-
-TERMINAL_OUTCOMES = frozenset({
-    OUTCOME_FUNCTIONAL,
-    OUTCOME_NON_FUNCTIONAL,
-    OUTCOME_LEGAL_REJECTED,
-    OUTCOME_LEGAL_SLOW,
-})
-
+#: Where a candidate came from: a novel draw or a replicate of a shipped config.
 ORIGIN_NOVEL = "novel"
 ORIGIN_REPLICATE = "replicate"
 
-# Default consecutive-failure count before a neighbourhood is down-weighted.
-# Named here (not buried in a call site) because H.3.8 makes it a parameter.
+#: Default consecutive-failure count before a neighbourhood is down-weighted.
+#: Named here (not buried in a call site) because H.3.8 makes it a parameter.
 DEFAULT_NEGATIVE_CACHE_K = 3
-
-
-def _per_cell_medians(analytics: AnalyticsEngine,
-                      records: List[Dict[str, Any]],
-                      dtype_override: Optional[str] = None) -> Dict[tuple, float]:
-    """Median throughput per `(dtype, shape)` for one phase's records.
-
-    Uses the same `aggregate_by_cell` + `aggregate_cell` path as the report, so
-    the per-cell numbers compared against the reference bars are the numbers the
-    report itself would show. Re-aggregating here by some cheaper rule would let
-    the verdict and the report disagree about the same measurement.
-
-    `dtype_override` is not optional in practice: without it every key comes back
-    `(dtype='Unknown', shape)`, no bar ever matches, and `legal_slow` silently
-    never fires. The dtype lives in the phase id (or the deck entry for it), not
-    in the CSV, exactly as `ab_audit.phase_records` already handles.
-    """
-    from oto.metrics.policy import aggregate_cell
-    out: Dict[tuple, float] = {}
-    try:
-        cell_map = analytics.aggregate_by_cell(records,
-                                               dtype_override=dtype_override)
-    except Exception:
-        return out
-    for (dtype, shape, _fp), seeds in cell_map.items():
-        try:
-            out[(str(dtype).upper(), str(shape))] = aggregate_cell(seeds).median
-        except Exception:
-            continue
-    return out
-
-
-def classify_outcome(
-    phase_dir: Path,
-    analytics: AnalyticsEngine,
-    slow_threshold: Optional[float] = None,
-    slow_bars: Optional[Dict[tuple, Dict[str, Any]]] = None,
-) -> tuple:
-    """Decide what a candidate did, from its on-disk output alone.
-
-    Pure function, CPU-only, no registry access. Returns
-    `(outcome, detail)` where detail is a small dict for the ledger/report and
-    never for a verdict.
-
-      functional       at least one benchmark record with non-zero throughput
-      legal_slow       functional, but materially below how the reference ran
-      non_functional   a CSV exists and has rows, all of them non-positive
-      legal_rejected   no CSV at all, or CSVs present but with no rows
-
-    The functional/non_functional split is decided *solely* by
-    `analytics.load_benchmark_csv`. `count_benchmark_rows` only distinguishes
-    "rows that did not survive the loader" from "no rows", which the loader
-    cannot express because it drops non-positive rows by design.
-
-    **`legal_slow` is relative to the gfx900 reference, never an absolute
-    constant.** Two bars exist, and neither is a literal:
-
-    * `slow_threshold` — an absolute GFlops bar. Retained for tests and for a
-      caller that genuinely wants one, but it is the wrong instrument for real
-      use: cells here span 4 to 857 GFlops, so any single absolute number either
-      condemns every small cell or none of them.
-    * `slow_bars` — per-cell bars from `coverage.reference_thresholds`, each
-      `reference_median * (1 - band/100)`, i.e. "how much slower than the
-      shipped floor is too slow, given how noisily this corpus measures".
-
-    A candidate is `legal_slow` only when *every* measured cell it produced is
-    below its bar. That is the same all-or-nothing reading the absolute bar has
-    always had, and it is the right one for a multi-shape sweep: a sweep is
-    useful if *any* shape is competitive, so one good cell rescues the batch.
-
-    Cells with no reference bar are **not** treated as slow. "The floor never ran
-    here" is an absence of evidence, and inferring slowness from it would
-    manufacture `legal_slow` verdicts for exactly the unexplored cells most worth
-    exploring. Those cells are counted in `slow_unmatched_cells` instead.
-
-    With neither bar supplied the verdict is `functional`, which is the honest
-    answer: nothing has been justified as slow, so nothing is labelled slow.
-    """
-    phase_dir = Path(phase_dir)
-    bench_dir = phase_dir / "2_BenchmarkData"
-    csvs = sorted(bench_dir.glob("*.csv")) if bench_dir.exists() else []
-
-    detail = {
-        "csv_count": len(csvs),
-        "record_count": 0,
-        "row_count": 0,
-        "max_gflops": None,
-        "median_gflops": None,
-        "winner_freq": None,
-        "winner_freq_positive": False,
-        "slow_bars_applied": 0,
-        "slow_unmatched_cells": 0,
-        "slow_reference_median": None,
-    }
-
-    if not csvs:
-        return OUTCOME_LEGAL_REJECTED, detail
-
-    records: List[Dict[str, Any]] = []
-    rows = 0
-    for csv_path in csvs:
-        records.extend(analytics.load_benchmark_csv(csv_path))
-        rows += analytics.count_benchmark_rows(csv_path)
-
-    detail["record_count"] = len(records)
-    detail["row_count"] = rows
-
-    if not records:
-        # Loader found nothing. Rows present => they were all non-positive.
-        return (OUTCOME_NON_FUNCTIONAL if rows else OUTCOME_LEGAL_REJECTED), detail
-
-    values = [float(r.get("GFLOPS", 0.0)) for r in records]
-    values.sort()
-    mid = len(values) // 2
-    median = values[mid] if len(values) % 2 else (values[mid - 1] + values[mid]) / 2.0
-    detail["max_gflops"] = values[-1]
-    detail["median_gflops"] = median
-
-    # WinnerFreq is recorded alongside the verdict, as H.3.8 requires. It is
-    # observed, never decisive: a kernel that ran but never won its own
-    # internal comparison is still functional. Read through
-    # `AnalyticsEngine.read_column`/`winner_freq`, the canonical owner of
-    # Tensile CSV column reading -- a second reader here would be a second set of
-    # format assumptions, and it fails quietly: a mis-read column yields zeros,
-    # which reads as "no kernel won".
-    freq = analytics.winner_freq(csvs)
-    if freq["max"] is not None:
-        detail["winner_freq"] = freq["max"]
-        detail["winner_freq_positive"] = freq["positive"]
-        detail["winner_freq_n"] = freq["n"]
-
-    if slow_threshold is not None and median < slow_threshold:
-        return OUTCOME_LEGAL_SLOW, detail
-
-    # Reference-relative slowness, per cell. Evaluated after the absolute bar so
-    # a caller supplying both keeps the cheaper, stricter test's behaviour.
-    if slow_bars:
-        dtype = None
-        try:
-            dtype = analytics.extract_dtype_from_phase_id(phase_dir.name)
-        except Exception:
-            dtype = None
-        per_cell = _per_cell_medians(analytics, records, dtype_override=dtype)
-        judged: List[tuple] = []
-        unmatched = 0
-        for cell, med in sorted(per_cell.items()):
-            bar = slow_bars.get(cell)
-            if not bar or not bar.get("bar_gflops"):
-                unmatched += 1
-                continue
-            judged.append((med, float(bar["bar_gflops"]),
-                           float(bar.get("reference_median") or 0.0)))
-        detail["slow_bars_applied"] = len(judged)
-        detail["slow_unmatched_cells"] = unmatched
-        if judged:
-            # The reference the slowest cell was judged against, for the report.
-            detail["slow_reference_median"] = judged[0][2]
-            if all(med < bar for med, bar, _ref in judged):
-                return OUTCOME_LEGAL_SLOW, detail
-
-    return OUTCOME_FUNCTIONAL, detail
 
 
 @dataclass
@@ -251,7 +79,7 @@ class Proposal:
     detail: Dict[str, Any] = field(default_factory=dict)
 
 
-class Mutator:
+class Mutator(MutatorOutcomesMixin):
     """Ledger-backed mutator for the convergence loop.
 
     Emits through `registry.record_proposal`, never through
