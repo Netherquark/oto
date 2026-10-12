@@ -50,12 +50,12 @@ from oto.tensile.gates.vgpr_model import (  # noqa: E402
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,
+    VGPR_PER_CU,
 )
 
 KERNEL_DB = "gfx90c_results/analysis/kernel_db.json"
 
 LDS_PER_CU = LDS_PER_CU_KB * 1024          # 64 KiB
-VGPR_PER_CU = 65536                        # 64K VGPRs per CU
 FAMILY_CHAR = {                            # typecode -> dtype character
     "SS": "S", "DD": "D", "HH": "H", "HS": "S",
     "CC": "C", "ZZ": "Z", "FF": "S",
