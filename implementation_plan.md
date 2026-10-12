@@ -100,7 +100,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 ### D. Measurement discipline (carried, fixed, non-negotiable)
 - Winner = **median-of-seeds** (NumBenchmarks ≥3); max = reference only.
 - Comparisons = **throttle-ADJUSTED** per (datatype, bound_class) ruler; missing
-  controls reported, never inferred (`gfx90c_common.py`).
+  controls reported, never inferred (`oto/device/peaks.py`).
 - Envelope: raw cross-run ±23–31% ALU / ±6–19% DDR. Ties at ±5% = parity.
 - Retirement is the evidence-gated single Tier-2 path
   (`policy.check_retirement_eligibility`); the spoof/peak floor is never a
@@ -170,7 +170,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - Instrumentation gap **closed and measured** (2026-10-05 native trial,
   `run_20261005_170141`): Tensile's own CSVs carry no telemetry
   (`WinnerFreq`/`Power`/`Temperature` are 0 in all 8113 files), so clocks live
-  only in per-run `logs/telemetry.csv`. `telemetry.py` samples at 10 Hz with a
+  only in per-run `logs/telemetry.csv`. `oto/metrics/telemetry.py` samples at 10 Hz with a
   **`phase_id`** column (not `phase`), and the trial confirmed it end to end:
   1,916 of 1,950 rows phase-tagged, and the phase now resolves to a real clock
   base of **1787 MHz @ 76 °C (max 82 °C)**.
@@ -230,7 +230,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 **Key files:** phases.yaml (data-only manifest), TensileCreateLibrary/TensileBenchmark CLI.
 **Mechanics:** For each manifest row, shell out to Tensile with dtype/shapes/ScheduleName/NumBenchmarks; collect 2_BenchmarkData/*.csv, library, telemetry; persist `json.dumps` payloads via SQLite `records` INSERT (knowledge_base.md §10).
 
-### Stage 2 — Candidate Generation (scheduler.py + agent.py)
+### Stage 2 — Candidate Generation (scheduler.py + oto/ledger/agent.py)
 **Scope:** Emit candidate configs for benchmarking; occupancy-aware GSU/WGM/MT/TT sizing.
 **Key files:** potential_configs.md (candidate deck), mapping.md (family decks).
 **Mechanics:** From mapping.md family decks + harvested winners, mutate by ≤2 knobs (neighbour search); validate LDS fit on 64KB/CU, 7-CU occupancy ≥ floor, config-valid (no AssertSizeMultiple: [1]), fp unique.
@@ -254,9 +254,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
 
 ### Stage 5 — Analytics & Append-Only Registry
 **Scope:** APPEND-ONLY data registry; per-cell analytics; native-vs-spoof deltas; feed seeds to Stage 2, verdicts to Stage 6/7.
-**Key files:** Suite v7 PHASE 29 block, gfx90c_common.py (PEAK_GFLOPS), gfx90c_theoretical_limits.md (§5 ceilings).
+**Key files:** Suite v7 PHASE 29 block, oto/device/peaks.py (PEAK_GFLOPS), gfx90c_theoretical_limits.md (§5 ceilings).
 **Mechanics:**
-- Load raw records from 2_BenchmarkData/*.csv via analytics.py/registry
+- Load raw records from 2_BenchmarkData/*.csv via oto/metrics/analytics.py/registry
 - Per-cell analytics: winner via N8 median-of-seeds, spread ratio, CV, % of family-realistic ceiling (with decode DDR exemption), and cell-status classification (RED = missing contract cell, ORANGE = measured <50% ceiling, GREEN = at/above)
 - Native-vs-spoof per-cell deltas: spoof arm = recalled `gfx900_ref_*` chain
   (cross-run, never re-run; `--resume` continuations fold in); withhold when no reference floor
@@ -277,7 +277,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 
 ### Stage 7 — Acceptance A/B & Final Report
 **Scope:** Per-cell native-vs-spoof A/B vs the recalled gfx900 floor; final per-family acceptance report.
-**Key files:** `tensile_library.py` (dat parse + manifest + `reference_chain`), `_compute_ab_verdicts`, report.py.
+**Key files:** `oto/tensile/library.py` (dat parse + manifest + `reference_chain`), `_compute_ab_verdicts`, oto/metrics/report.py.
 **Mechanics:**
 - Floor = dedicated `gfx900_ref_*` chain (ScheduleName "vega10"); `--gfx900-reference
   --resume` continues it, retrying failed phases once and reusing decided base phases
@@ -285,7 +285,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
   delta_pct=(nat−spoof)/spoof; |Δ|≤5% TIE=parity
 - Throttle variance ruled out via spread_ratio=(max−med)/med
 - Cross-run pairs withheld; pairs split across base/resume are reconciled via the chain
-- Acceptance REPORT: per-family coverage vs the pinned shipped-dat manifest (2,285 kernels); per-cell native-vs-spoof WIN/TIE/LOSS vs the **recalled gfx900 reference floor** (`gfx900_ref_*`, via `tensile_library.py` + `_compute_ab_verdicts`); %-of-§5-ceiling per cell; RED (missing) / ORANGE (<50% ceiling) cell lists; overall PASS/FAIL
+- Acceptance REPORT: per-family coverage vs the pinned shipped-dat manifest (2,285 kernels); per-cell native-vs-spoof WIN/TIE/LOSS vs the **recalled gfx900 reference floor** (`gfx900_ref_*`, via `oto/tensile/library.py` + `_compute_ab_verdicts`); %-of-§5-ceiling per cell; RED (missing) / ORANGE (<50% ceiling) cell lists; overall PASS/FAIL
 
 ### Stage Flow & Convergence Loops (ASCII Flowchart)
 
@@ -446,9 +446,9 @@ The driver uses only existing solvers:
 | Ledger records | `json.dumps(dict)` in SQLite `records.data` | stdlib `json` + `sqlite3` |
 | Concurrency safety | one writer process; WAL; INSERT-only `records` | stdlib `sqlite3` |
 | Run/skip decisions | `policy.should_run(phase, fp) -> bool` + unit tests | Python |
-| Analysis + report | `analytics.py` / `report.py` modules | stdlib `csv`, `statistics` |
+| Analysis + report | `oto/metrics/analytics.py` / `oto/metrics/report.py` modules | stdlib `csv`, `statistics` |
 | Telemetry | python `pathlib` sysfs reads | kernel sysfs |
-| Peak authority | `from gfx90c_common import PEAK_GFLOPS` | existing module |
+| Peak authority | `from oto.device.peaks import PEAK_GFLOPS` | existing module |
 | CLI | `argparse` + one `port_tensile.yaml` | stdlib `argparse` |
 | Manifest order asserts | python `assert`/`pytest` on manifest order | pytest |
 | Error trail | top-level try/except → one record | python |
@@ -457,20 +457,20 @@ The driver uses only existing solvers:
 1. **Manifest first.** Write `phases.yaml` from the phase table captured in
    `potential_configs.md` / `mapping.md` (mechanical transcription). A test asserts
    manifest order matches the documented order **during migration only**.
-2. **`registry.py`** — one `append_record()` (sqlite3 INSERT), one `read_records()`
+2. **`oto/ledger/registry.py`** — one `append_record()` (sqlite3 INSERT), one `read_records()`
    iterator, queries `phase_retired`, `config_retired(phase,fp)`,
    `first_benchmarked(phase,fp)`. Never UPDATE/DELETE `records`. `phases.yaml`
    stays the manifest (a `phases` table is not the source of truth).
-3. **`report.py`** — renders the per-run/per-cell report → `write_report(...)`.
-4. **`analytics.py`** — adaptive CV/top-2 scan, winner synthesis, per-cell delta,
+3. **`oto/metrics/report.py`** — renders the per-run/per-cell report → `write_report(...)`.
+4. **`oto/metrics/analytics.py`** — adaptive CV/top-2 scan, winner synthesis, per-cell delta,
    ceiling util vs `gfx90c_theoretical_limits.md`.
-5. **`policy.py`** — `should_run(phase, fp)` in order: scope check → tier-1 retired
+5. **`oto/metrics/policy.py`** — `should_run(phase, fp)` in order: scope check → tier-1 retired
    (fp-less) → tier-2 retired (phase,fp) → identical-fp skip (opt-in). Unit-test the
    matrix (mirror of the prior policy cases).
-6. **`scheduler.py` + `agent.py`** — cooldown latch (first-GPU-phase exempt),
+6. **`scheduler.py` + `oto/ledger/agent.py`** — cooldown latch (first-GPU-phase exempt),
     `--targets`/`--family`/`--pattern`/`--shape` scope, adaptive NumBenchmarks bump,
     **occupancy-aware GSU/WGM sizing**;
-   `agent.py` reads `report.py` → harvest / mutate (≤2 knobs) / tie → append rows →
+   `oto/ledger/agent.py` reads `oto/metrics/report.py` → harvest / mutate (≤2 knobs) / tie → append rows →
    return subset to re-run.
 7. **`port_tensile.py`** — preflight (arch, device, tensileness); per-manifest-row run
    Tensile, collect, register, cooldown; at end write report; `--auto` loops 2↔6 until
@@ -500,17 +500,17 @@ retirement signal**.
   agent.converged(): break; agent.feed(manifest)`.
 
 ### 6. Migration order (don't rewrite blind)
-1. `registry.py` + `report.py` extracted, unit-tested, still fed by the existing
+1. `oto/ledger/registry.py` + `oto/metrics/report.py` extracted, unit-tested, still fed by the existing
    data layout.
 2. `phases.yaml` transcribed (mechanical).
-3. `policy.py` + `scheduler.py` extracted; gate-matrix re-run.
+3. `oto/metrics/policy.py` + `scheduler.py` extracted; gate-matrix re-run.
 4. `port_tensile.py` takes over phase-by-phase-group; `--targets` scoping parity
    checked against the reference-floor chain.
 5. Agent loop + `--auto`; convergence budget configurable.
 6. Single entrypoint: the python driver.
 
-### 7. Statistics/HTML tooling (report.py pipeline)
-The reporting surface is `analytics.py` → `report.py` → `acceptance_report.json` +
+### 7. Statistics/HTML tooling (oto/metrics/report.py pipeline)
+The reporting surface is `oto/metrics/analytics.py` → `oto/metrics/report.py` → `acceptance_report.json` +
 self-contained `acceptance_report.html` (single-file dashboard, Carbon design
 language). The driver feeds an append-only data layout (per `knowledge_base.md` §10):
 - `gfx90c_runs/run_YYYYMMDD_HHMMSS/` with `configs/phase<N>_*.yaml`,
@@ -535,17 +535,17 @@ before merging.
    invocation; under 77% winner instability, require **≥2 independent runs** per
    trusted shared cell (incomplete_work §4.6).
 5. **Peak-table prose drift** — stale prose still claims BF16/INT8 = 3226. gfx90c is
-   single-rate (1613). `gfx90c_common.PEAK_GFLOPS` is the single source; regenerate
+   single-rate (1613). `oto.device.peaks.PEAK_GFLOPS` is the single source; regenerate
    dependent artifacts.
 
 ### Known-fixed states (do not regress)
 | Finding | Correct form |
 |---|---|
-| Ruler shape strings `"MxNxK"` vs dataset `"MxNxB"+SizeL` | `gfx90c_common.py` rulers + `bound_class()` |
+| Ruler shape strings `"MxNxK"` vs dataset `"MxNxB"+SizeL` | `oto/device/peaks.py` rulers + `bound_class()` |
 | `adj_cells()` no-op (dt key not `(dt,cls)`) | keyed `(dt,cls)`; missing = None |
 | geo-mean fallback inferring missing rulers | removed; missing reported |
 | Phantom `("BF16","DDR")` ruler → nonexistent phase | deleted |
-| report dtype `extract_dtype_from_phase_id` | restored via token-based family parse (report.py; legacy regex produced 'unknown') |
+| report dtype `extract_dtype_from_phase_id` | restored via token-based family parse (oto/metrics/report.py; legacy regex produced 'unknown') |
 | `AssertSizeMultiple: [1]` crash (scalar int vs dict) | `[{}]`/fixed keys: config-validation gate |
 | Toolchain — `hipconfig --version` on stderr | try/except + explicit ROCM_PATH |
 | HardwareMonitor `stoi` on APU | `HardwareMonitor: False` in configs |
@@ -556,7 +556,7 @@ before merging.
 | Acceptance native arm scoped to one run → all-zero report | whole-db arm (`_native_records_all_runs` / `_native_analytics_all_runs`); winners may come from an older run |
 | A/B delta from max raw sample while columns showed medians | all stats per-kernel-median-first; kernel medians keyed by (run, phase, fp) |
 | A/B columns hard-wired to one basis, re-breaking the delta | columns render `native_value`/`spoof_value` (the operands actually divided) under basis-aware headers |
-| Occupancy gate unable to fire (no `MacroTile`, no VGPR count) | `scheduler.occupancy_feasible`; `validate_config` + `_estimate_occupancy` both delegate |
+| Occupancy gate unable to fire (no `MacroTile`, no VGPR count) | `oto.tensile.gates.occupancy.occupancy_feasible`; `validate_config` + `_estimate_occupancy` both delegate |
 
 ### Open defects (triaged 2026-09-27, resume/candidate evidence)
 1. **`_write_phase_config` early-returns without writing the file.**
@@ -574,7 +574,7 @@ before merging.
    gate hole, not a bad tile choice: `CandidateGenerator._estimate_occupancy` inferred
    threads from `ThreadTile` with a `64 // tt` heuristic, **ignored `MacroTile`, and
    never counted VGPRs**, so it could never fire.
-   Landed: `scheduler.occupancy_feasible` + `VGPR_PER_ELEMENT` / `VGPR_BUDGET`, wired
+   Landed: `oto.tensile.gates.occupancy.occupancy_feasible` + `VGPR_PER_ELEMENT` / `VGPR_BUDGET`, wired
    into `validate_config` and `_estimate_occupancy`; fails closed on an unmodelled
    dtype (a wrong guess picks the wrong weight and would re-admit the failure).
    Verified: reproduces all 9 observed pass/fail cases, rejects exactly the 8 dead
@@ -592,7 +592,7 @@ the route portfolio is measurement-bound (`potential_configs.md` §8.2).
 
 **Status 2026-10-09 — all six items complete:**
 
-1. ✅ **Measure real per-thread VGPRs** — `harness/measure_vgprs.py`
+1. ✅ **Measure real per-thread VGPRs** — `oto/harness/measure_vgprs.py`
    (llvm-readelf on Tensile's emitted assembly `.o` metadata, corpus-wide,
    CPU-only). Measured medians per (dtype, TT) now in
    `scheduler.MEASURED_VGPR_BY_DTYPE`; invariant test
@@ -607,7 +607,7 @@ the route portfolio is measurement-bound (`potential_configs.md` §8.2).
    assembly) + 72 genuine occupancy-LDS (never-won entries, gfx900-64K-LDS
    kernels the APU rejects).
 4. ✅ **Fingerprint-diff native vs floor winners per cell** —
-   `harness/cell_knob_diff.py`: 30 cells shared, 22 native / 8 floor
+   `oto/harness/cell_knob_diff.py`: 30 cells shared, 22 native / 8 floor
    (SS:512/768/1365/2048, HH:1024/2048/4096, CC:256); CC:256 is the single
    outside-band LOSS and the only sanctioned steal.
 5. ✅ **Occupancy margin in `check_candidates.py`** — `_occupancy_margin()`
@@ -633,8 +633,8 @@ Full write-up: `gfx90c_tuning_guide.md` (the tuning cookbook).
 > **Status: ALL FOUR PHASES LANDED (2026-10-05/06); nothing above is superseded.**
 > `Hplan.3` (ledger + outcome), `Hplan.4` (legality), `Hplan.5` (coverage +
 > fitness) and `Hplan.6` (synthesis, graded form) are implemented and green:
-> - Phase 1: append-only `proposals` table + ledger/novelty API (`registry.py`),
->   `mutator.py` (classifier, novelty, negative cache, per-run overlay), the
+> - Phase 1: append-only `proposals` table + ledger/novelty API (`oto/ledger/registry.py`),
+>   `oto/ledger/mutator.py` (classifier, novelty, negative cache, per-run overlay), the
 >   `agent.mutate_and_feed` rewrite that routes candidates to the overlay instead
 >   of `phases.yaml`, and `analytics.count_benchmark_rows` as the single owner of
 >   CSV shape.
@@ -718,9 +718,9 @@ D1–D6 as enumerated and evidenced in `proposal.md` §H.2. In plan terms:
 
 | artefact | kind | owner doc |
 |---|---|---|
-| `mutator.py` | new module: legality, novelty, coverage, outcome, synthesis | this section |
-| `registry.py` | `proposals` table + `json_extract` expression index | this section |
-| `agent.py` | `mutate_and_feed` delegates to `mutator.py`; stops calling `append_to_phases` | this section |
+| `oto/ledger/mutator.py` | new module: legality, novelty, coverage, outcome, synthesis | this section |
+| `oto/ledger/registry.py` | `proposals` table + `json_extract` expression index | this section |
+| `oto/ledger/agent.py` | `mutate_and_feed` delegates to `oto/ledger/mutator.py`; stops calling `append_to_phases` | this section |
 | `scheduler.py` | lattice retained as a fallback sampler; `mutate_winner` unchanged | this section |
 | `ab_audit.py` | report `origin` split, per-cell `n`/spread, outcome histogram | this section |
 | `tests/test_mutator.py`, `tests/test_proposals_ledger.py` | new tests | this section |
@@ -757,13 +757,13 @@ and it is independently useful even if nothing later is approved.
    problem index, not a throughput — deriving the predicate from it is precisely the error
    retracted above. If the classifier needs something the loader does not expose (row count, to
    separate "rows present but all zero" from "no rows"), that accessor is added to
-   `analytics.py` as the single owner of CSV shape, not reimplemented here.
+   `oto/metrics/analytics.py` as the single owner of CSV shape, not reimplemented here.
 6. **Durability regression** (`proposal.md` §H.3.2): on a DB **copy**, delete every native
    row and assert the ledger and novelty still hold. Never run this against the live DB.
 7. **Overlay** (step 7 above): candidates route to a per-run overlay the runner reads
    and the curator never sees. `phases.yaml` stays curated and reviewable; discarding a bad
    batch deletes an overlay, never edits history.
-8. **Wire the mutation arm** to emit through `mutator.py`, bypassing
+8. **Wire the mutation arm** to emit through `oto/ledger/mutator.py`, bypassing
    `opt_in_identical_skip` **only because** novelty is now structural. If this table is
    ever disabled or lost, the skip must be re-enabled for the mutation arm — the bypass is
    a correctness dependency on the ledger, not an optimisation.
@@ -976,7 +976,7 @@ decisions, and what forced them:
   parsed knob, `grvw`, is deliberately excluded: it is not a Tensile parameter, and
   `BenchmarkStructs` calls `printExit()` on unrecognised names. So "extend beyond the
   lattice's six" is met by covering every legal knob, not by inventing parameters.
-- **`TEMPLATE_KEYS` moved to `legality.py`** and is re-exported by `mutator.py`. It was
+- **`TEMPLATE_KEYS` moved to `legality.py`** and is re-exported by `oto/ledger/mutator.py`. It was
   defined in `mutator`, but it names the keys `legality` *assembles*, so the definition
   belongs with the module that produces them; two copies would be two answers to one
   question.
@@ -1085,7 +1085,7 @@ Today **no flag turns mutation off**:
   single-knob mutants unconditionally; the budget only gates the two-knob block
   (`scheduler.py:379`). Zero yields a one-knob sweep, not no sweep.
 - `--budget 1` does **not** avoid it either. The loop body runs the manifest, then
-  evaluates convergence, then calls `mutate_and_feed` (`agent.py:400`) — and only
+  evaluates convergence, then calls `mutate_and_feed` (`oto/ledger/agent.py:400`) — and only
   *then* increments the iteration counter and re-tests the budget. So a single-iteration
   `--auto` still harvests and mutates. (Since Phase 1 the candidates go to the per-run
   overlay, not `phases.yaml` — the original "polluting the curated deck" wording predates
@@ -1117,13 +1117,13 @@ lower bound of 1 on knobs touched) until `Hplan.6` lands.
 ## Next Move — Steps 1–6
 
 ### Step 1 — Approve + build the driver (`port_tensile.py`), per the architecture above
-- Python driver + `phases.yaml` data-only manifest. `policy.py` `should_run(phase,fp)`
+- Python driver + `phases.yaml` data-only manifest. `oto/metrics/policy.py` `should_run(phase,fp)`
   encodes tier-1 → tier-2 → phase-1-first-only → identical-fp skip. All evidence
   writes via `json.dumps` + SQLite `records` INSERT. `--auto` loops
   run→report→harvest→mutate. Harvest **appends `phases.yaml`**, never a DB-only
   manifest.
 - **Do-not-reinvent + PoC gate**: argparse, stdlib `json`/`csv`/`statistics`/`sqlite3`,
-  git for diffs, sysfs for monitoring, `PEAK_GFLOPS` imported from `gfx90c_common.py`,
+  git for diffs, sysfs for monitoring, `PEAK_GFLOPS` imported from `oto/device/peaks.py`,
   ceilings imported from `gfx90c_theoretical_limits.md`. **Every module is PoC'd and
   fully functional in `/tmp/opencode/` before it lands.** No change lands without a PoC
   + a scoped parity run. `/tmp/opencode` currently contains analysis scratch
@@ -1149,7 +1149,7 @@ lower bound of 1 on knobs touched) until `Hplan.6` lands.
   RED = below both.
 
 ### Step 4 — Deterministic agent loop (`--auto`)
-- `agent.py` harvests per-cell winners (median-of-seeds, ruler-adjusted) → for RED or
+- `oto/ledger/agent.py` harvests per-cell winners (median-of-seeds, ruler-adjusted) → for RED or
   non-converged cells, `candidates.spawn_neighbours(winner, ≤2 knobs,
   occupancy-aware)` → append rows to `phases.yaml` → re-run the subset. Budget:
   configurable wall-time/GPU-minutes + finite per-phase timeout default.
@@ -1188,7 +1188,7 @@ lower bound of 1 on knobs touched) until `Hplan.6` lands.
       ceilings (GSU/WGM/MT/TT right-sizing recorded as a first-class knob campaign).
 - [ ] Statistics/HTML tooling intact end-to-end after the refactor (Verify by inspecting the
       live `gfx90c_results/acceptance_report.json` + `acceptance_report.html` that the current
-      `report.py` pipeline writes).
+      `oto/metrics/report.py` pipeline writes).
 - [ ] Peak-table prose corrected everywhere to single-rate 1613 for BF16/INT8.
 - [ ] Final synthesis + zero-leak anti-alias + whole-library native-vs-spoof readout.
 - [x] **Option H decision recorded** — **APPROVED 2026-10-09** (§H.10 answered in
@@ -1206,8 +1206,8 @@ lower bound of 1 on knobs touched) until `Hplan.6` lands.
 - `command.txt` — the current user-run invocation (native deck, single iteration,
   no mutations). Its header records why `--auto` cannot express that today
   (§Option H, `Hplan.10`).
-- Live repo: `gfx90c_common.py`, `tensile_library.py` (gfx900 dat parse + reference
-  chain), `report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
+- Live repo: `oto/device/peaks.py`, `oto/tensile/library.py` (gfx900 dat parse + reference
+  chain), `oto/metrics/report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
   native gfx90c patch (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile
   tree), `gfx90c_results/registry.db`, `gfx90c_runs/` (`gfx900_ref_*` + `run_*`).
 - Sanctioned prior conclusions: `prior_INSIGHTS_CAVEMAN_ULTRA.md`,

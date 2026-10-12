@@ -10,7 +10,7 @@
 
 - **Acceptance sourcing:** every oto family ceiling in `potential_configs.md` /
   `implementation_plan.md` / `mapping.md` derives from the per-family ceilings in §5 —
-  the same way `gfx90c_common.PEAK_GFLOPS` is the single peak authority. Squaring a
+  the same way `oto.device.peaks.PEAK_GFLOPS` is the single peak authority. Squaring a
   family's best median against its §5 ceiling is how "approach the theoretical limit"
   is scored, per (datatype, bound_class).
 - **No re-derivation:** never re-derive these ceilings from model memory. Extend only
@@ -43,7 +43,7 @@
   Tensile rejects the kernel at assembly. Getting `Z` from a "complex is 2× a
   double" intuition gives 8 and silently admits `VW=2`. This is now read from
   `DataType.properties` rather than a hand-kept table — see
-  `scheduler.FAMILY_BYTES_PER_ELEMENT`, which still lists `ZZ: 8` and is wrong.
+  `oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT`, which still lists `ZZ: 8` and is wrong.
   Worst legal `VectorWidth` per dtype under the cap: S 4, H 8, D 2, C 2, **Z 1**.
 
 - ISA oracle (compile-only, clang-19): `v_pk_fma_f16` OK; `v_pk_fma_bf16` **absent on
@@ -85,7 +85,7 @@ complexDouble** (FP64 lane class) — matching CBLAS c/z convention.
    the shipped gfx900 i8 kernels do) → pragmatic bound ≈ half; measured 881.
 3. **FP64 ratio? Exactly 1/16** of FP32 → 100.8 GFLOPS. Empirically vindicated:
    the measured prior FP64 best 98.6 = 98% of 100.8 (a 1/8 or 1/32 part would read
-   197% / 49%). `gfx90c_common.PEAK_GFLOPS['FP64']` stores the rounded **101**
+   197% / 49%). `oto.device.peaks.PEAK_GFLOPS['FP64']` stores the rounded **101**
    (matches the §2 table); §5 ceilings use the measured 98.6.
 4. **Complex real-FMA cost?** An FMA counts once; a complex MAC = 4 real FMAs. CC (C =
    complex single) @ SS rate, ZZ (Z = complex double) @ DD rate, when counting BLAS-8
@@ -142,7 +142,7 @@ Measured-empirical on this box: FP32 best 1118.7 → **69%** of 1613; FP16 2461 
 of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6 → **98%**
 (saturated). ZZ/CC/HH_HPA/HS_HPA have no prior measurement → derived-analytical
 (lane-class efficiency × §2 roof). Exact values below are canonical in
-`gfx90c_common.REALISTIC_CEILINGS`; this table quotes them:
+`oto.device.peaks.REALISTIC_CEILINGS`; this table quotes them:
 
 | family | theoretical @1800 | realistic ceiling | basis |
 |---|---|---|---|

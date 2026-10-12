@@ -17,7 +17,7 @@ outcome (occupancy_feasible, ldspad_feasible, the swizzle StaggerU rules).
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* table (oto.tensile.gates.vgpr_model), or any device constant
 (oto.device.peaks).
-Public API: occupancy_feasible, ldspad_defasible.
+Public API: occupancy_feasible, ldspad_feasible.
 """
 ```
 
@@ -67,7 +67,8 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
 
     Why fail closed on an unknown dtype: a wrong guess would pick the wrong
     VGPR weight (Z is 8, S is 1) and silently admit a config the gate must
-    reject. See scheduler.py:1220 for the measured boundary.
+    reject. See ``oto/tensile/gates/vgpr_model.MEASURED_VGPR_BY_DTYPE`` for
+    the measured boundary.
     """
 ```
 

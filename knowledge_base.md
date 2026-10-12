@@ -9,7 +9,7 @@
 (tracked in-tree checkout holding the **minimal native gfx90c support**: the 2-file
 `Common.py` + `AsmCaps.py` patch, landed 2026-09-19 — not pristine, no shim)
 **Date:** 2026-09-13 (mechanism updated 2026-09-19)
-**Numeric source:** `gfx90c_common.PEAK_GFLOPS` — the single source for every peak figure in this ecosystem
+**Numeric source:** `oto.device.peaks.PEAK_GFLOPS` — the single source for every peak figure in this ecosystem
 
 This file is the **WHAT** layer of the oto ecosystem: the baseline repository and
 code architecture — what Tensile is, what the gfx90c port path is, and what a library
@@ -78,7 +78,7 @@ folder is docs + the new python **driver**. It does not contain Tensile.
 ├── Tensile/bin/Tensile              benchmark CLI  (TENSILE_BIN)
 ├── Tensile/bin/TensileCreateLibrary library CLI
 ├── Tensile/                         python package (import Tensile)
-├── gfx90c_common.py                 PEAK_GFLOPS authority
+├── oto/device/peaks.py              PEAK_GFLOPS authority
 ├── gfx90c_runs/                     live per-run artifacts
 ├── gfx90c_results/                  live ledgers (jsonl today; registry.db next)
 ├── configs/                         vendor YAML problem sets
@@ -98,16 +98,16 @@ python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
 This project's driver source (outside that tree, still **calls into** it):
 
 - `port_tensile.py` — the oto driver (phases from `phases.yaml`; specification in
-  `implementation_plan.md` §The Driver Architecture); plus its modules `registry.py`,
-  `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`,
-  `telemetry.py` (run-wide sysfs sampler), `tensile_library.py` (gfx900 dat parser +
+  `implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
+  `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/agent.py`,
+  `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
   reference-floor chain).
-- `gfx90c_common.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
+- `oto/device/peaks.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
   card, dtype tables)
-- `report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
+- `oto/metrics/report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
   (single-file HTML dashboard; inline SVG/CSS, Carbon design language)
-- `registry.py` — append-only SQLite registry (`gfx90c_results/registry.db`, WAL)
-- `analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing, ORANGE = below ceiling)
+- `oto/ledger/registry.py` — append-only SQLite registry (`gfx90c_results/registry.db`, WAL)
+- `oto/metrics/analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing, ORANGE = below ceiling)
 
 The gfx90c delta (the entire change vs upstream — see section 3):
 
@@ -271,7 +271,7 @@ Translation constraint:
 > **The `tensilelibrary.dat` this pipeline produces must map EXACTLY to the
 > shipped gfx900 TensileLibrary in the (shape, dtype) combinations addressed —
 > no contraction, no extension.** "Addressed" cells are the canonical contract
-> grid `gfx90c_common.shipped_cells()`: per family, the cube shapes in
+> grid `oto.device.peaks.shipped_cells()`: per family, the cube shapes in
 > `FAMILY_SHAPES`, family → dtype char via `FAMILY_DTYPE_CHAR` (38 cells, the
 > same deck the acceptance report classifies RED/ORANGE/GREEN against).
 
@@ -301,8 +301,8 @@ check, never a restatement):
   overlay to exact parity (38/38 today), so a future D1-style edit that breaks
   the grid fails CI before any GPU time is spent.
 
-The grid's single source is `gfx90c_common.shipped_cells()`; family keys,
-shape lists and dtype chars live in `gfx90c_common.FAMILY_*` and are imported,
+The grid's single source is `oto.device.peaks.shipped_cells()`; family keys,
+shape lists and dtype chars live in `oto.device.peaks.FAMILY_*` and are imported,
 never transcribed, anywhere else. Non-cube probe shapes (e.g. `32x4096x1`)
 have no cell and are excluded from the check by construction — they are
 reported separately, never counted as coverage.
@@ -316,7 +316,7 @@ every function of the 28-family footprint (section 6). The levers below are the
 measured truths (frozen prior conclusions in `prior_INSIGHTS_CAVEMAN_ULTRA.md`
 §5.1) that make coverage cheap and correct on gfx90c.
 
-Rate card (peaks @ 1800 MHz; single source `gfx90c_common.PEAK_GFLOPS`; ceiling
+Rate card (peaks @ 1800 MHz; single source `oto.device.peaks.PEAK_GFLOPS`; ceiling
 authority `gfx90c_theoretical_limits.md`):
 
 - FP32 — 1613 GFLOPS (448 FP32 lanes)
@@ -410,7 +410,7 @@ kernel-generation time. The four gates, all CPU-side:
 1. **divisibility** — `GLVW % mv/pv == 0` and `% lpv == 0` (`validate_config`)
 2. **assembly class** — MT/TT/DepthU/Threads/StaggerU/FP16 clamp (`assembly_class_valid`)
 3. **LDS** — per-thread LDS in VGPR-equivalent registers
-4. **register-file occupancy** — `scheduler.occupancy_feasible`
+4. **register-file occupancy** — `oto.tensile.gates.occupancy.occupancy_feasible`
 
 Gate 4 is the one that was silently absent. Tensile sets
 `overflowedResources = 4` ("Occupancy limit", user-visible as
@@ -428,10 +428,10 @@ calibration table and the evidence for the 2× headroom rule: `potential_configs
 
 Pipeline (in order):
 
-1. `port_tensile.py` + `registry.py` — persist raw benchmark records to SQLite
+1. `port_tensile.py` + `oto/ledger/registry.py` — persist raw benchmark records to SQLite
    (`gfx90c_results/registry.db`, append-only `records`).
-2. `analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
-3. `report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
+2. `oto/metrics/analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
+3. `oto/metrics/report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
    (single-file dashboard). Report dtype extraction is token-based
    (`extract_dtype_from_phase_id`), no longer regex-dependent.
 4. `run_status.py` — progress/ETA accounting, and the live TTY panel
@@ -476,7 +476,7 @@ bar, elapsed, ETA, tally) into the terminal while a run executes:
   the reason a run dies.
 
 Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
-`python3 run_status.py --watch` remains the standalone full-panel view.
+`python3 -m oto.metrics.run_status --watch` remains the standalone full-panel view.
 
 Acceptance ceilings: per-family bars come from `gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK
@@ -546,18 +546,18 @@ overwrite, or rewrite **benchmark evidence**.
   always reversible by a later append.
 - Phase-number reservations and run-order are asserted (order self-check) so a
   run can never silently skip or reorder intended work.
-- Stats/analytics pipeline (`analytics.py` → `report.py`) reads derived data from the
+- Stats/analytics pipeline (`oto/metrics/analytics.py` → `oto/metrics/report.py`) reads derived data from the
   SQLite `records` table (via the registry). The driver may **also** append a jsonl
   *export* of new `records` (dual-write). Dual-write is export, not a second
   source of truth. Canonical ledger = `records`.
 
 ### 10.3 Derived artifacts
 
-- `report.py` `write_report()` writes `acceptance_report.json` and its `.html`
+- `oto/metrics/report.py` `write_report()` writes `acceptance_report.json` and its `.html`
   dashboard wholesale from the registry data.
 - Legacy `make_results_md.py`-style `results.md` `<!-- DERIVED:* -->` marker-block
   regeneration no longer exists; `results.md` hand prose is append-only.
-- The single peak authority is `gfx90c_common.PEAK_GFLOPS` (see section 7); derived
+- The single peak authority is `oto.device.peaks.PEAK_GFLOPS` (see section 7); derived
   prose that contradicts it is regenerated, not hand-patched.
 
 ### 10.4 Consequences of a change

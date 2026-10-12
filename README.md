@@ -23,61 +23,59 @@ key handling — a re-run of an already-passed deck is still interruptible.
 The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages deterministically:
 
 ```
-                  ┌─────────────────────────────────────┐
-                  │          phases.yaml (Manifest)     │
-                  │   (434 phases: SS 105 · HH 40 ·     │
-                  │    HH_HPA 20 · HS_HPA 20 · DD 44 ·  │
-                  │    CC 32 · ZZ 47 · AUTO 9 · ? 117)  │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 1: Manifest & Target Match    │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 2: Candidate Generation       │
-                  │ (scheduler.py: family decks/mutants)│
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 3: Benchmark Execution        │
-                  │ (Parallel clang + setsid + telemetry│
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 4: Adaptive Repeat & Policy   │
-                  │ (policy.py: N8 median, CV stability)│
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 5: Analytics & SQLite Ledger  │
-                  │ (analytics.py: ceiling utilization) │
-                  └──────────────────┬──────────────────┘
-                                     │
-                   ┌─────────────────┴─────────────────┐
-│ CONVERGENCE LOOP (agent.py)       │
-                    │ - Gate: >=3 configs, >=2 runs/    │
-                    │   >=6 seeds, CV<=15%, 0 RED cells │
-                   │ - If unconverged: harvest ->      │
-                   │   mutate <=2 knobs -> append      │
-                   └─────────────────┬─────────────────┘
-                                     │ Converged
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 6: Synthesis / Build          │
-                  │ (TensileCreateLibrary + anti-alias) │
-                  └──────────────────┬──────────────────┘
-                                     │
-                                     ▼
-                  ┌─────────────────────────────────────┐
-                  │ STAGE 7: Acceptance A/B & HTML Rep  │
-                  │ (report.py: native vs spoof A/B)    │
-                  └─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│          phases.yaml (Manifest)              │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 1: Manifest & Target Match             │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 2: Candidate Generation                │
+│ (oto/tensile: family decks / mutants)        │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 3: Benchmark Execution                 │
+│ (parallel clang + setsid + telemetry)        │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 4: Adaptive Repeat & Policy            │
+│ (oto/metrics: N8 median, CV stability)       │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 5: Analytics & SQLite Ledger           │
+│ (oto/metrics: ceiling utilization)           │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ CONVERGENCE LOOP (oto/ledger/agent.py)       │
+│ - Gate: >=3 configs, >=2 runs, >=6 seeds,    │
+│   CV<=15%, 0 RED cells                       │
+│ - If unconverged: harvest -> mutate <=2      │
+│   knobs -> append                            │
+└──────────────────────────────────────────────┘
+                       │ Converged
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 6: Synthesis / Build                   │
+│ (TensileCreateLibrary + anti-alias)          │
+└──────────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────┐
+│ STAGE 7: Acceptance A/B & HTML Report        │
+│ (oto/metrics: native vs spoof A/B)           │
+└──────────────────────────────────────────────┘
 ```
 
 ---
@@ -218,17 +216,17 @@ python3 port_tensile.py --synthesize
 
 | Module | Purpose |
 |---|---|
-| [`port_tensile.py`](port_tensile.py) | Suite CLI, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
-| [`scheduler.py`](scheduler.py) | Stage 2 candidate generation, family tile decks, legal knob mutation, shape parsing, and the **dual measured resource gate**: `TT0*TT1*dtype_weight <= 128` accumulator VGPRs/thread and `(MT0+MT1)*DepthU*bytesPerElement <= 16384` LDS. Unknown dtype or unresolvable depth fails closed. `cap_vector_width()` derives each family's 16 B global-load-cap variant. |
-| [`policy.py`](policy.py) | Median-of-seeds aggregation, CV≤15% stability gating, evidence-gated Tier-2 retirement (`check_retirement_eligibility`), and `should_run`/`should_repeat` policy gates. |
-| [`analytics.py`](analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and per-cell native-vs-spoof deltas (workload cells via `cell_key`). |
-| [`agent.py`](agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
-| [`registry.py`](registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
-| [`report.py`](report.py) | Acceptance report generation, per-family coverage vs the pinned shipped-dat manifest, A/B verdict synthesis (`WIN`, `TIE`, `LOSS`) vs the recalled gfx900 reference floor, and rich HTML dashboard generation. |
-| [`tensile_library.py`](tensile_library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
-| [`auto_prompt.py`](auto_prompt.py) | The five `--auto` questions, live corpus counts read from the registry, and the `AutoPlan` they resolve to. Non-TTY defaults are explicit and reported. |
-| [`gfx90c_common.py`](gfx90c_common.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
-| [`verify_run.py`](verify_run.py) | Append-only checker: corpus `snapshot`/`diff` (proves a run only appended, nothing was rewritten or lost), per-run `telemetry` funnel (how many rows survive each clock filter, so a filter cannot silently zero the data), and `cheapest` legal phase for a cheap smoke run. |
+| [`port_tensile.py`](port_tensile.py) | Suite CLI (thin wrapper over [`oto/runners/cli.py`](oto/runners/cli.py)): multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
+| [`oto/tensile/candidate.py`](oto/tensile/candidate.py) + [`oto/tensile/gates/`](oto/tensile/gates/) | Stage 2 candidate generation, family tile decks, legal knob mutation, shape parsing, and the **dual measured resource gate**: `TT0*TT1*dtype_weight <= 128` accumulator VGPRs/thread and `(MT0+MT1)*DepthU*bytesPerElement <= 16384` LDS. Unknown dtype or unresolvable depth fails closed. `cap_vector_width()` derives each family's 16 B global-load-cap variant. |
+| [`oto/metrics/policy.py`](oto/metrics/policy.py) | Median-of-seeds aggregation, CV≤15% stability gating, evidence-gated Tier-2 retirement (`check_retirement_eligibility`), and `should_run`/`should_repeat` policy gates. |
+| [`oto/metrics/analytics.py`](oto/metrics/analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and per-cell native-vs-spoof deltas (workload cells via `cell_key`). |
+| [`oto/ledger/agent.py`](oto/ledger/agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
+| [`oto/ledger/registry.py`](oto/ledger/registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
+| [`oto/metrics/report.py`](oto/metrics/report.py) | Acceptance report generation, per-family coverage vs the pinned shipped-dat manifest, A/B verdict synthesis (`WIN`, `TIE`, `LOSS`) vs the recalled gfx900 reference floor, and rich HTML dashboard generation. |
+| [`oto/tensile/library.py`](oto/tensile/library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
+| [`oto/runners/auto_prompt.py`](oto/runners/auto_prompt.py) | The five `--auto` questions, live corpus counts read from the registry, and the `AutoPlan` they resolve to. Non-TTY defaults are explicit and reported. |
+| [`oto/device/peaks.py`](oto/device/peaks.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
+| [`verify_run.py`](verify_run.py) | Append-only checker (thin wrapper over [`oto/tools/verify_run.py`](oto/tools/verify_run.py)): corpus `snapshot`/`diff` (proves a run only appended, nothing was rewritten or lost), per-run `telemetry` funnel (how many rows survive each clock filter, so a filter cannot silently zero the data), and `cheapest` legal phase for a cheap smoke run. |
 
 ---
 
@@ -251,9 +249,9 @@ python3 check_library_parity.py --json out.json  # machine-readable verdict
 
 # Ground-truth candidate machinery for agents (CPU-only). Builds the per-kernel
 # measurement DB and the deck-vs-floor-vs-all-time regression matrix (median
-# basis, per-family shipped grid). See harness/README.md for the runbook.
-python3 -m harness.kernel_db --base-dir . --rebuild
-python3 -m harness.regression_matrix --base-dir .
+# basis, per-family shipped grid). See oto/harness/README.md for the runbook.
+python3 -m oto.harness.kernel_db --base-dir . --rebuild
+python3 -m oto.harness.regression_matrix --base-dir .
 
 # Ask Tensile itself to generate and compile kernels for every phase, and report
 # any reject() reason. Proves solution generation and kernel resource legality --
@@ -279,8 +277,9 @@ python3 verify_run.py telemetry run_20261005_170141
 python3 verify_run.py cheapest --family ZZ
 ```
 
-Current state: `check_candidates` reports 434 checked, 0 illegal; the last full
-`check_tensile_build` run was 434 passed, 0 failed.
+Current state is reported live by each tool: `check_candidates.py` prints the
+checked/illegal counts it finds, and `check_tensile_build.py` prints the
+pass/fail counts it computes. Neither number is transcribed here.
 ---
 
 ## 6. Key Documentation & System Authority

@@ -5,9 +5,9 @@
 > actually wins, why "nothing moved", and what to try next. Read
 > `gfx90c_theoretical_limits.md` first — its §5 ceilings are the acceptance bar.
 > Cite keys: **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
-> **K**=kernel_db.json (`harness/kernel_db.py`), **O**=gfx90c_common.py,
-> **D**=implementation_plan.md, **M**=harness/measure_vgprs.py,
-> **C**=harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
+> **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/peaks.py,
+> **D**=implementation_plan.md, **M**=oto/harness/measure_vgprs.py,
+> **C**=oto/harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.
 
 ## 0. The one-line truth
@@ -150,7 +150,7 @@ band — the single honest LOSS and the only sanctioned spoof-steal target.
 `occupancy_feasible` models accVGPR = TT0·TT1·weight, budget 128 (weight-8
 complex: TT 4x4 = 128 pass → measured 154–167; TT 8x4 = 256 fail → measured
 271 = Tensile's dead byte-identical rejection). Verified 2026-10-09 over the
-whole run corpus with `harness/measure_vgprs.py`
+whole run corpus with `oto/harness/measure_vgprs.py`
 (llvm-readelf on Tensile's emitted assembly objects — CPU only, no GPU). Median
 measured totals per (dtype, TT):
 
@@ -170,7 +170,7 @@ and reality agree on every observed outcome. Regression:
 > 2026-10-09: for the physical per-cell **resident-workgroup** audit (the
 > "occupancy ≤3 everywhere" question, incl. the VGPR-vs-LDS binder split and
 > the single-buffer probe), see `potential_configs.md` §14.3 +
-> `python3 harness/occupancy_audit.py`. `occupancy_feasible` gates legality;
+> `python3 -m oto.harness.occupancy_audit`. `occupancy_feasible` gates legality;
 > the audit answers residency.
 
 ## 7. Floor deck: gate-legality of the steal (todo 3 DONE)
@@ -192,7 +192,7 @@ TTY. Only cell in scope: **CC:256**.
 
 ## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
 
-`harness/cell_knob_diff.py` prints, per cell, winner kernels + differing knobs.
+`oto/harness/cell_knob_diff.py` prints, per cell, winner kernels + differing knobs.
 Findings (same kernel name almost everywhere; the deltas are the subtle ones):
 
 - **CC:256** — the steal: native `Alik_Bjlk` (TT direction) MT64x64/4x4 vs the
@@ -218,7 +218,7 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 | **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | **DECKED** — CC/ZZ pad rows (A/B {1,2,4}) on the winner geometries in the seed; ZZ pads on the du8 tile only (32x32x16 winner is budget-full at 16 B/element); TTY benchmark next |
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
 | **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `_write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
-| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `db_mutator.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
+| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/db.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
 
 Complex-GSU note (supersedes the earlier "MultipleBuffer wave-fill" lever):
 GlobalSplitU>1 on complex is **gate-refused on gfx90c** (scheduler:1379-1382;
@@ -243,9 +243,9 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    CC/ZZ pads, PGR/PLR/GLVW/NLCA, CC WGM8 steal-adapt, SS GSU4 wave-fill,
    HH:256/DD:256 targets, Group C swizzle probes)**. Keep the pool for the run;
    strip `phase_cand_*` ids AFTER the run to keep later runs light (mirror
-   preserves them) — `harness/generate_candidates.py --prune-candidates`
+   preserves them) — `oto/harness/generate_candidates.py --prune-candidates`
    (archives first).
-3. Mutations are **DB-hooked** (`db_mutator.py`): every iteration synthesises
+3. Mutations are **DB-hooked** (`oto/tensile/synthesis/db.py`): every iteration synthesises
    novel wide (DB tile donors × forward draws) + narrow (single-knob deltas on
    pads/PGR/PLR/NLCA/WGM/StaggerU/GLVW) + direction (floor-steal) mutants for
    every **active** cell (below-ceiling winners only — settled cells are

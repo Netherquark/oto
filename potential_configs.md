@@ -41,15 +41,15 @@ including the 2026-10-09 overnight run (`run_20261009_205427`, ~7 h 41 m,
 351 phases + 5 swizzle probes). The cache **self-refreshes on run completion**
 (registry `update_run_status` → rebuild; `harness/README.md` step 1) so
 mutations always read the freshest corpus; manual refresh is
-`harness/kernel_db.py --rebuild`.
+`oto/harness/kernel_db.py --rebuild`.
 
-Evidence machinery (repo-homed in `harness/`): `harness/resolve_cells.py` resolves
+Evidence machinery (repo-homed in `oto/harness/`): `python3 -m oto.harness.resolve_cells` resolves
 every cell's native winner from the registry `phases` table + per-run
 `configs/*.yaml` (winner-run-first), and the floor's best kernel per cell from
 the locked-floor `kernel_db` rows. Caches: `gfx90c_results/analysis/cells_resolved.json`
 (machine) + `cells_resolved.full.txt` (this section's evidence table, reproduced
 from 6129 run yamls, 8480 resolver keys, 1113 registry phases). Ground truth for
-§2/§3/§4. Re-run with `python3 harness/resolve_cells.py`; supersedes the
+§2/§3/§4. Re-run with `python3 -m oto.harness.resolve_cells`; supersedes the
 pre-formalisation `/tmp/opencode` dump.
 
 ---
@@ -401,7 +401,7 @@ median-of-seeds):
    artifact that all-run resolution rejected.
 6. **GSU1 everywhere native** — the untested wave-fill axis (Group A; SS decked
    to GSU{1,2,4}, HH/complex/HPA banned by `assembly_class_valid` gates,
-   scheduler.py:1408–1457).
+   oto/tensile/gates/assembly.py).
 7. **PGR=False lands on big blocks** (ZZ 512/1024, HH 2048/4096); **NLCA1 lands
    on C/Z/HPA/HH-2048**; **pads appear on the M3 front** (CC:256 padsA=0, ZZ:192
    padsB=4, SS:512 padsB=4) — the axis complex never got (gfx900 corpus shipped
@@ -419,7 +419,7 @@ history. Novelty is guaranteed by the ledger, not by pass/fail history.
 ### 5.1 NARROW — single-knob deltas on forward knobs
 The manifest sampler cannot reach these knobs; they are the "large, mostly
 unmeasured space" (§t4). Each draw changes 1–3 forward knobs to legal values
-(from `FORWARD_KNOB_DOMAINS` in `db_mutator.py`):
+(from `FORWARD_KNOB_DOMAINS` in `oto/tensile/synthesis/db.py`):
 
 - **LdsPadA / LdsPadB**: {0,1,2,4} — the primary levers for LDS occupancy
 - **NLCA**: {1,2,3} — wave-quantization control
@@ -490,7 +490,7 @@ through `validate_config` + `ldspad_feasible` before ledger emission.
 
 Bans honored (do not re-propose): **HH GSU>1**, **SS `96x96x8/6x6/VW2`**
 (banned by prior campaign), **complex/HPA GSU>1** (workspace/
-`GlobalSplitUAlgorithm` never forwarded; refused `scheduler.py:1408–1457`),
+`GlobalSplitUAlgorithm` never forwarded; refused `oto/tensile/gates/assembly.py`),
 **DirectToVgpr** (not forwarded), **NLCA=3 on 128-width VW4 tiles**
 (NumLoads=1 there; only the 96x96x16/6x6/VW2 tile has NumLoads=3).
 
@@ -581,7 +581,7 @@ direction cross is their remaining un-tested axis).
 
 ### 8.1 GlobalSplitU wave-fill — SS only (and only at small shapes)
 GSU splits K across workgroups for wave-fill (M2). Legality is dtype-locked
-(`scheduler.assembly_class_valid:1408–1457`): **complex/HPA GSU>1 illegal** (no
+(`oto.tensile.gates.assembly.assembly_class_valid:1408–1457`): **complex/HPA GSU>1 illegal** (no
 MFMA on the reachable writer paths; this port never forwards
 `GlobalSplitUAlgorithm`/workspace, so only SingleBuffer-atomic is reachable),
 **HH GSU>1 banned** (AF0EM≥2 not shipped). **SS is the only GSU-legal family**
@@ -709,4 +709,4 @@ performance runs live in TTY/overnight. Concretely:
   DDR4 ~30–40 GB/s, FP64 1/16).
 - Local Tensile/knob ground truth: `kernel_tuning_research.md` Sources
   (`Common.py`, `SolutionStructs.py`, `KernelWriterAssembly.py`, tuning docs);
-  scheduler gates: `scheduler.py:1408–1457`.
+  scheduler gates: `oto/tensile/gates/assembly.py`.

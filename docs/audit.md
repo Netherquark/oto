@@ -1,8 +1,10 @@
 # Docs ecosystem audit — what to whittle, remove, or move to docstrings
 
-**Status: PROPOSAL. Nothing here has been applied.** Each item names a file, a
-line range, the fact it currently states, and what should happen to it. The
-boundary being applied is `docs/README.md`:
+**Status: PROPOSAL. Nothing here has been applied — except the factual
+corrections listed in §7**, which were made on 2026-10-12 while finishing
+Refactor 1 (stale module names/paths and forbidden corpus counts; no structural
+whittling). Each item names a file, a line range, the fact it currently states,
+and what should happen to it. The boundary being applied is `docs/README.md`:
 
 > If the fact would still be true after the code were rewritten in another
 > language, it belongs here. If it is a fact about *this* function's
@@ -168,6 +170,84 @@ a source file and a line range in prose. `L639` describes compiler codegen.
 * **Proposal: DOCSTRING.** The line range is not just stale, it is now wrong
   (the function moved to `oto/tensile/gates/assembly.py`). The legality rule it
   points at is already that module's docstring. Replace with a pointer.
+  *(Module name corrected on 2026-10-12, line range dropped; §7.)*
+
+### 1.11 `oto/harness/README.md` — a runbook in neither system
+
+`claude.md` §3's ownership table does not list it, and `docs/README.md` defines
+the ecosystem as "this directory + the root `*.md` files", so a hand-written MD
+under `oto/` is owned by nothing. Paragraph by paragraph:
+
+* **L1–8 intro** — "the machinery that was built ad-hoc in `/tmp` (now deleted
+  as a source of truth)". The `/tmp` history is **ARCHIVE** (→ `changelog.md`);
+  the "CPU-only, never benchmarks" contract restates `claude.md` §5 — **TRIM to
+  a pointer**.
+* **`## Layout` (L10–25)** — a hand-maintained module inventory plus cache
+  paths. This is exactly what `oto/README.md` now generates and what §1.2 moved.
+  **DOCSTRING/TRIM**: module list → `oto/README.md`; keep only the cache paths
+  (data artifacts, not code facts).
+* **`### 1`–`### 5` workflow (L27–127)** — a genuine operator runbook with no
+  code-file home. **Keep**, after the 2026-10-12 path fix.
+* **L68–72 "Published state (2026-10-07): 16 wins / 13 ties / 9 losses …"** —
+  dated measured state, which `results.md` owns. **ARCHIVE → `results.md` /
+  `changelog.md`**, leave a pointer.
+* **L19 / L101 "38-cell" / "38 shipped cells"** — a corpus count; `results.md`
+  §12 owns the number. **TRIM to a pointer.**
+* **L110 "45/45 rows pass today"** — a live count. **Delete.**
+* **Ownership: either move this file under `docs/`** (and add it to
+  `docs/README.md`), or extend `claude.md` §3 to name it as the harness package's
+  runbook. Today it is an orphan.
+
+### 1.12 `incomplete_work.md` — history in the open-work register
+
+`claude.md` §3 names this file's sole purpose as "Open-work register
+(status-keyed)", but §4.3–§4.13 are *RESOLVED* dated post-mortems. `claude.md`
+§8.1 puts history in `changelog.md`.
+
+* **Proposal: ARCHIVE §4.3–§4.13 to `changelog.md`.** Keep §4.14–§4.16 (still
+  cited by the floor/hold decisions) and §5.1 (live Refactor 1 status and the
+  function-length backlog). The file then means "open work" again.
+* These historic blocks also carry deleted module names (`scheduler.py`,
+  `gfx90c_common.py`, `telemetry.py`, `registry.py`, …). **Archive rather than
+  rename** — renaming keeps dead narrative alive and is churn.
+
+### 1.13 `claude.md` `## 3` — the ownership table is stale
+
+The table *is* the routing contract, so a wrong row routes an agent to the wrong
+home.
+
+* **L73 lists `scratch.md`, which does not exist** in the tree. Delete the row.
+* **The table omits four live MDs** — `gfx90c_tuning_guide.md`,
+  `kernel_tuning_research.md`, `complex_gemm_research_brief.md`,
+  `knowledge_base_final.md` — plus the user-only `todo.txt`/`command.txt` and the
+  intentionally-untracked `proposal.md`. Add a sole purpose for the three that
+  stay (do **not** add `knowledge_base_final.md`; §1.1 archives it).
+* **L82 names `docs/design_language.md` while the file is still at root** —
+  reconcile with §2.5's move.
+* Otherwise **keep the whole file**; §2.1/§3/§5/§8.1 are in §5's do-not-touch
+  list.
+
+### 1.14 `complex_gemm_research_brief.md`
+
+* **§1–§5 (L11–80)** — Tensile complex-MAC instruction counts. **DOCSTRING** into
+  `oto/tensile/gates/assembly.py` (the complex rules); the MD keeps a pointer.
+  (Already a row in §3.)
+* **§6 (L82–91) "Measured gfx90c complex GEMM (first-party, this repo)"** —
+  measured evidence, which `results.md` owns. **TRIM to a pointer.**
+* **§7–§8 (L93–120)** — external 2023–2026 history and "exotic paths against the
+  4-FMA wall". Genuine research with no code home; **keep** (trim the survey to
+  the load-bearing conclusions) or archive if `assembly.py`'s docstring already
+  states them.
+
+### 1.15 `docs/` self-reference — the audit quotes line numbers
+
+`docs/README.md` forbids quoting a line number anywhere in the ecosystem, yet
+this audit keys almost every item to a line range (`L217–233`, `L21–83`, …).
+That is tolerable for a *working* audit, but **every range goes stale the moment
+a section is edited** — this pass moved `README.md` §2 and replaced §4, and §1.2
+/§1.3/§4 now name ranges that no longer match. Before this proposal is actioned,
+replace each `L…` with a section anchor (`## 4 Module Overview`) so the audit can
+survive its own edits.
 
 ---
 
@@ -240,7 +320,7 @@ not project documentation: it is the visual contract of one artifact.
 ### 2.6 `gfx90c_theoretical_limits.md` §1 `DataType` sub-block (L39–47)
 
 `L40-44` quotes `Tensile/DataType.py` directly, and `L46` calls out
-`scheduler.FAMILY_BYTES_PER_ELEMENT` as wrong.
+`oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT` as wrong.
 
 * **Proposal: DOCSTRING + TRIM.** The byte-width table is
   `oto/tensile/gates/vgpr_model.py`'s docstring already (it says "do not
@@ -296,8 +376,8 @@ ones currently in the docs ecosystem:
 
 | File | Line | The number | Disposition |
 |---|---|---|---|
-| `README.md` | 28 | "434 phases: SS 105 · …" | **delete** — live manifest is 418 lines |
-| `README.md` | 250 | "434 checked, 0 illegal" | **delete** — `check_candidates.py` prints it live |
+| `README.md` | 28 | "434 phases: SS 105 · …" | **APPLIED** (§7) — live manifest is 418 lines |
+| `README.md` | 250 | "434 checked, 0 illegal" | **APPLIED** (§7) — `check_candidates.py` prints it live |
 | `impl_plan.md` | 29 | per-family phase counts | delete, point at `allruns.py` |
 | `impl_plan.md` | 84 | "2,285 kernels" | **keep** — `mapping.md` §1 owns it and it is a contract |
 | `impl_plan.md` | 774 | "53-case test" | keep (a test count, not a corpus count) |
@@ -319,7 +399,7 @@ Called out explicitly because each looks deletable and is not:
 2. **`mapping.md` in full** — the replication contract, and `claude.md` §3 names
    it authoritative for what footprint to replicate.
 3. **`gfx90c_theoretical_limits.md` §5** — the acceptance bars.
-4. **`user must never re-derive peaks`** — `gfx90c_common.py`'s comment is the
+4. **`user must never re-derive peaks`** — `oto/device/peaks.py`'s comment is the
    guard; `gfx90c_theoretical_limits.md` §0 states the rule.
 5. **`claude.md` §2.1** — the "don't re-derive what the tooling answers" table.
    It is the single highest-value paragraph in the docs tree.
@@ -334,6 +414,8 @@ Called out explicitly because each looks deletable and is not:
 
 1. ARCHIVE `knowledge_base_final.md` (nothing imports it, highest line saving).
 2. TRIM `README.md` §§2, 4, 5 to pointers + delete the two stale counts.
+   *(The two counts and the §4 link remap are applied; the pointer replacement
+   is not — §7.)*
 3. ARCHIVE `implementation_plan.md` Triaged-fixes + Option H narrative;
    keep Hplan.7/§9 and the ASCII flowchart.
 4. Split `results.md` at the numbers / mechanism seam; root-cause paragraphs to
@@ -345,3 +427,50 @@ Called out explicitly because each looks deletable and is not:
 
 After each step: `python3 plans/verify_all.py` still green, and
 `grep -rn "<deleted fact>" *.md` returns nothing.
+
+---
+
+## 7. Applied 2026-10-12 — factual corrections only
+
+Made while finishing Refactor 1. These are **accuracy fixes**, not the
+structural whittling proposed above; the deleted/duplicated *content* is
+untouched and still lives where §1–§6 say it should be reviewed.
+
+* **Stale flat-module names → package paths** in live docs: `gfx90c_common.*` →
+  `oto.device.peaks.*`; `scheduler.<gate>` → `oto.tensile.gates.*`;
+  `report.py`/`analytics.py`/`policy.py`/`agent.py`/`registry.py`/
+  `tensile_library.py`/`auto_prompt.py`/`telemetry.py`/`mutator.py` →
+  `oto/metrics/*`, `oto/ledger/*`, `oto/tensile/*`, `oto/runners/*`.
+* **Stale CLI invocations**: `python3 run_status.py --watch` →
+  `python3 -m oto.metrics.run_status --watch`; `python3 ab_audit.py` →
+  `python3 -m oto.metrics.ab_audit`; `harness/<tool>.py` and
+  `python3 -m harness.<tool>` → `python3 -m oto.harness.<tool>`.
+* **`README.md` §4 module table** — links remapped from the deleted flat modules
+  to their `oto/` homes. §2's stage boxes re-aligned (the longer package labels
+  overflowed the ASCII frames) and its `"434 phases"` sub-box removed; §5's
+  "434 checked / 434 passed" sentence replaced with a "each tool prints it live"
+  sentence. These are the §1.2/§1.3/§4 TRIM items for `README.md` — **applied**,
+  so §1.2/§1.3 lose only the "replace §4 with a pointer" half.
+* **`docs/docstrings.md`** — the convention's own example cited deleted
+  `scheduler.py:1220`; it now cites
+  `oto.tensile.gates.vgpr_model.MEASURED_VGPR_BY_DTYPE`. (`ldspad_feasible`
+  was checked against `oto/tensile/gates/occupancy.py` and is the real name, so
+  an earlier "typo fix" of it was reverted.)
+* **Corrupted module paths** left by an earlier bulk rewrite, now repaired:
+  doubled `oto/metrics/oto/metrics/*`, `oto/ledger/oto/ledger/*`,
+  `oto/runners/oto/runners/*` and `oto/oto/harness/*` (in `README.md` and
+  `oto/harness/README.md`); `db_oto/ledger/mutator.py` →
+  `oto/tensile/synthesis/db.py` (where `DBMutator`/`FORWARD_KNOB_DOMAINS` live);
+  `test_oto/runners/auto_prompt.py` → `test_auto_prompt.py`;
+  `tests/test_oto/ledger/mutator.py` → `tests/test_mutator.py`; and the bare
+  `scheduler.py` / `report.py` left in `adversarial_review.md` /
+  `design_language.md`.
+* Dead module references in `oto/**/*.py` comments/docstrings (the 12 sites
+  logged in `incomplete_work.md`) corrected to the live names.
+* `oto/__init__.py` module docstring lost its `"~40 importers"` corpus count.
+
+Still **not** applied, deliberately: any file that moves, merges, splits or is
+deleted; the `knowledge_base_final.md` archive; the `results.md` /
+`implementation_plan.md` splits; and every corpus count listed in §4 that is not
+one of the two `README.md` items above.
+

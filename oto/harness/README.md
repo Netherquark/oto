@@ -10,10 +10,10 @@ lands (see `command.txt`).
 ## Layout
 
 ```
-harness/kernel_db.py          # kernel_db.json builder (ground truth)
-harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
-harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
-harness/README.md             # this runbook
+oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
+oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
+oto/harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
+oto/harness/README.md             # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt, byte-identical to §12)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
 gfx90c_results/analysis/cells_resolved.json     # cache (38-cell winner map; resolve_cells)
@@ -21,8 +21,8 @@ gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_c
 ```
 
 Both tools resolve families/shapes/dtype from the repo's canonical sources
-(`gfx90c_common`, `library_parity`) — they can never disagree with the shipped
-grid (knowledge_base.md §6.1).
+(`oto.device.peaks`, `oto.tensile.library_parity`) — they can never disagree with
+the shipped grid (knowledge_base.md §6.1).
 
 ## Workflow
 
@@ -39,8 +39,8 @@ own timing) or the `SQLiteRegistry(..., auto_rebuild_kernel_db=False)` flag
 **Manual (when needed):**
 
 ```bash
-python3 -m harness.kernel_db --base-dir . --rebuild     # rescan gfx90c_runs/
-python3 -m harness.regression_matrix --base-dir .       # rebuild matrix from cache
+python3 -m oto.harness.kernel_db --base-dir . --rebuild     # rescan gfx90c_runs/
+python3 -m oto.harness.regression_matrix --base-dir .       # rebuild matrix from cache
 ```
 
 `kernel_db` walks `gfx90c_runs/`: every `run_*` dir is native, every
@@ -80,8 +80,8 @@ the per-cell triage (potential_configs.md §2/§4) and any spoof-steal
 (§7: **configure, never copy**) are argued from:
 
 ```bash
-python3 harness/resolve_cells.py                      # table + caches (JSON, full.txt)
-python3 harness/resolve_cells.py --tsv verdicts.tsv   # + tabular verdict dump
+python3 -m oto.harness.resolve_cells                      # table + caches (JSON, full.txt)
+python3 -m oto.harness.resolve_cells --tsv verdicts.tsv   # + tabular verdict dump
 ```
 
 For every acceptance-gradeable cell it reports: verdict, delta %, % of
@@ -107,8 +107,8 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    Non-cube probe shapes (`32x4096x1`, …) have no cell: they are fine to
    measure, report them under §12's `non_cube_shapes`, never under coverage.
 2. **Occupancy (CPU gate).** New kernels must pass
-   `scheduler.occupancy_feasible` (45/45 rows pass today; register-file
-   wg/CU 512–8192). No occupancy regression below the floor's.
+   `oto.tensile.gates.occupancy.occupancy_feasible` (45/45 rows pass today;
+   register-file wg/CU 512–8192). No occupancy regression below the floor's.
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or

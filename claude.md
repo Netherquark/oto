@@ -143,7 +143,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
    `Tensile/bin/Tensile` and `Tensile/bin/TensileCreateLibrary` **in that tree**.
     Native gfx90c support = a 2-file minimal Tensile patch (`Tensile/Common.py` +
     `Tensile/AsmCaps.py`) **in that tree**. Run ledgers (`gfx90c_runs/`,
-    `gfx90c_results/`), the peak table (`gfx90c_common.py`) and the driver modules
+    `gfx90c_results/`), the peak table (`oto/device/peaks.py`) and the driver modules
     live in the oto base dir (`--base-dir`, default repo root).
    `PYTHONPATH` = `<TENSILE_ROOT>:…`.
    Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
@@ -154,7 +154,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - Native `gfx90c` is the target. Do not substitute RDNA/Navi/MFMA assumptions.
   rocminfo_output.txt is the golden reference for hardware decisions.
 - Hardware facts come from project evidence (`rocminfo`, source, runtime, logs), not
-  model memory. Do NOT re-derive peak rates (File: `gfx90c_common.py`).
+  model memory. Do NOT re-derive peak rates (File: `oto/device/peaks.py`).
 - `gfx900` spoof is a reference baseline/floor, never target identity, never a signal.
 - Never silently weaken acceptance criteria (subset success ≠ whole-library success;
   one good run ≠ convergence).
@@ -202,7 +202,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   native. Verdicts are authoritative **only** when all mandatory (T1) phases are
   decided.
 - **`--auto` ASKS before it runs; the tiers only classify.** In a TTY every
-  `--auto` asks five questions (see `auto_prompt.py`): (1) re-measure the
+  `--auto` asks five questions (see `oto/runners/auto_prompt.py`): (1) re-measure the
   ILLEGAL reference cells? (2) re-measure the UNDER-SPECIFIED cells? (3)
   re-attempt the UNREPRODUCIBLE cells? (4) how many iterations (default
   **10**)? (5) how many mutations per candidate (default **3**)? The answers
@@ -283,7 +283,7 @@ checks are demonstrated and remaining gaps are stated.
 - **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
   the frozen `prior_*` files. Live docs (this file, `implementation_plan.md`,
   `potential_configs.md`, `knowledge_base*`, `results.md`, `mapping.md`,
-  `README.md`, `gfx90c_common.py` comments, etc.) state current fact only. They
+  `README.md`, `oto/device/peaks.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
 - **`todo.txt` is a USER-ONLY file.** The agent never reads, writes, greps,
   renames, or touches it — in any context, for any reason.

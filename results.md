@@ -3,7 +3,7 @@
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
 > `prior_INSIGHTS_CAVEMAN_ULTRA.md`, also absorbed in `prior_RESEARCH_ARCHIVE.md`).
 > This file's `<!-- DERIVED:* -->` blocks and hand prose are preserved append-only
-> (`knowledge_base.md` §10); live report artifacts are produced by `report.py`
+> (`knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/report.py`
 > (`gfx90c_results/acceptance_report.json/.html`).
 
 ## 1. Run Summary
@@ -189,7 +189,7 @@ from a sampler that predates per-phase tagging. Native clock coverage is therefo
 twin with a printed warning. The spoof arm is well covered (mean 0.74, 1,719 phases
 tagged), so the machinery is real and verified — it simply cannot be applied
 symmetrically until native is re-benchmarked by a sampler that tags `phase_id`
-(`telemetry.py` already writes it; `run_20260920_235815`'s file just predates that
+(`oto/metrics/telemetry.py` already writes it; `run_20260920_235815`'s file just predates that
 change). Adjusting only the spoof arm would deflate the floor and flatter the deck, so
 the gate forbids it.
 
@@ -258,13 +258,13 @@ Tensile's *Occupancy limit* (register-file exhaustion,
 `MT 64x128x8/4x8` across all 4 contraction patterns. This is **not** a launch
 failure and **not** the benign "error 3" (half-store) note.
 
-**Why the preflight missed it.** `scheduler._estimate_occupancy` derived the thread
+**Why the preflight missed it.** `oto.tensile.gates.occupancy._estimate_occupancy` derived the thread
 count from `ThreadTile` via a `64 // tt` heuristic, ignored `MacroTile`, and never
 counted VGPRs — so it returned ≥ 1 for every config and could never fire. The gap was
 in the gate, not the tile choice.
 
 **Proof the new gate is correct, not just stricter.** Running
-`scheduler.occupancy_feasible` over the pre-fix 410-phase manifest rejects **exactly
+`oto.tensile.gates.occupancy.occupancy_feasible` over the pre-fix 410-phase manifest rejects **exactly
 those 8 phases and nothing else** — 402 true negatives, 8 true positives, zero false
 positives. All 9 observed pass/fail calibration cases reproduce. Regression-locked in
 `test_occupancy_gate.py` (18 tests) against the archived
@@ -292,7 +292,7 @@ calibrated to observed outcomes, not derived from a register allocator.
 Post-consolidation state. Floor is locked and no longer being re-measured;
 `reference_chain()` resolves to exactly one run, `gfx900_ref_locked_52149f315d`,
 built by pooling all 3802 CSVs (2194 phases) from the 3-run chain. Reproduce with
-`python3 ab_audit.py`.
+`python3 -m oto.metrics.ab_audit`.
 
 **Reproducible band, measured rather than assumed.** Same-invocation-form pairs
 give `n=26`, median ratio `0.987`, p10 `0.858`, p90 `1.113` → band **±14.2%**,
@@ -300,7 +300,7 @@ and only **53.8%** of those pairs land inside the shipped ±5% default. That
 `n=26` envelope is too small and too kind to the corpus: grouping *repeats* of one
 identical kernel at one identical shape under one identical form (`n=1495`
 groups) gives median CV **8.1%**, p90 **27.8%**, worst single-shape **36.1%**,
-worst multi-shape **75.0%**. `ab_audit.py` now grades against
+worst multi-shape **75.0%**. `oto.metrics.ab_audit` now grades against
 `max(cross-arm band, repeat p90) = ±27.8%`, and a verdict inside that is labelled
 `within_noise`, not a result. Mismatched-form pairs (`n=4`) remain meaningless as
 an A/B: median `1.374`, band ±273.7%.
@@ -402,7 +402,7 @@ cell in the deck):
   `WinnerFreq`, `WinnerPower` and `WinnerTemperature` are 0 in every cell —
   reconfirmed on the trial phase, where all three are 0 across all 40 rows.
   Clocks only exist in the separate per-run `logs/telemetry.csv` written by
-  `telemetry.py`.
+  `oto/metrics/telemetry.py`.
 - **Historical telemetry had no phase attribution; new telemetry does.** The
   existing `telemetry.csv` files predate the **`phase_id`** column (not `phase`),
   so a phase's own clock could only be bounded by run-level windows. The trial
