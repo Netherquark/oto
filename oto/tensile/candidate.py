@@ -29,7 +29,7 @@ from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.candidate_emission import CandidateEmitMixin
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import cap_vector_width, validate_tensile_loads
-from oto.tensile.gates.occupancy import (dtype_char, ldspad_defasible,
+from oto.tensile.gates.occupancy import (dtype_char, ldspad_feasible,
                                          occupancy_feasible,
                                          occupancy_workgroups_per_cu,
                                          tile_dims)
@@ -40,7 +40,7 @@ __all__ = [
     "CandidateGenerator",
     "assembly_class_valid",
     "cap_vector_width",
-    "ldspad_defasible",
+    "ldspad_feasible",
     "occupancy_feasible",
     "occupancy_workgroups_per_cu",
     "validate_tensile_loads",
@@ -180,7 +180,7 @@ class CandidateGenerator(CandidateEmitMixin):
         boundary ask the same question in the same words -- which is what stopped
         a candidate from being accepted by one seam and refused by the other.
 
-        Note that ``ldspad_defasible`` is deliberately NOT part of this
+        Note that ``ldspad_feasible`` is deliberately NOT part of this
         orchestrator: it guards the *forwarded* knobs at the launch boundary and
         is called there, because a candidate drawn from the ledger may carry a
         pad the generator has no opinion about. Adding it here would refuse

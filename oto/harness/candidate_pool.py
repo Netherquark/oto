@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Set, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 import sys
 import yaml
@@ -23,7 +23,7 @@ from oto.device.peaks import (FAMILY_DTYPES, FAMILY_DTYPE_CHAR,  # noqa: E402
                               FAMILY_SHAPES)
 from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.gates.occupancy import ldspad_defasible  # noqa: E402
+from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         AUTO_EXPLICIT, DU_VARIANTS,
                                         FAMILY_DTYPE, LADDER,
@@ -135,10 +135,10 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         ok, why = sched.validate_config(config)
         if not ok:
             return None
-        # Group C gate: pads/swizzle/AF0EM must also survive ldspad_defasible,
+        # Group C gate: pads/swizzle/AF0EM must also survive ldspad_feasible,
         # or the row would be refused at the launch boundary after consuming a
         # generation slot. Same CPU-only gate the writer applies.
-        pad_ok, _pad_why = ldspad_defasible(config)
+        pad_ok, _pad_why = ldspad_feasible(config)
         if not pad_ok:
             return None
         fp = _fingerprint(config)

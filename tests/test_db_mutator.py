@@ -30,7 +30,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.gates.occupancy import ldspad_defasible  # noqa: E402
+from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.tensile.synthesis.db import DBMutator, FORWARD_KNOB_DOMAINS  # noqa: E402
 
 
@@ -58,7 +58,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         cfg = {**self.db._template(family), **knobs}
         ok, why = self.sched.validate_config(cfg)
         self.assertTrue(ok, f"{knobs}: {why}")
-        ok, why = ldspad_defasible(cfg)
+        ok, why = ldspad_feasible(cfg)
         self.assertTrue(ok, f"{knobs}: {why}")
         from oto.ledger.registry import fingerprint_config
         self.assertTrue(self.mutator.is_novel(fingerprint_config(cfg)))

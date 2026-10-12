@@ -10,7 +10,8 @@ Does NOT own: the gates it consults (oto.tensile.gates), the shape parser it
 uses (oto.tensile.candidate.parse_tensile_shape), or the driver that calls it
 (oto.runners.benchmark).
 Public API: write_phase_config, TRANSPOSE_MAP, GLOBAL_LOAD_WIDTH_KEYS,
-FORWARDED_GROUP_C_KNOBS, _TENSILE_VALID_PARAMS (re-exported from driver).
+FORWARDED_GROUP_C_KNOBS. (The driver's private `_TENSILE_VALID_PARAMS` is
+consulted at the launch boundary but is not re-exported here.)
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from oto.tensile.gates.assembly import assembly_class_valid
-from oto.tensile.gates.occupancy import (ldspad_defasible,
+from oto.tensile.gates.occupancy import (ldspad_feasible,
                                          occupancy_feasible)
 
 #: Contraction pattern -> (TransposeA, TransposeB). Verified against Tensile
@@ -326,7 +327,7 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
                   f"{gate_name} illegal ({gate_reason})")
             return f"{gate_name} illegal: {gate_reason}"
 
-    pad_ok, pad_reason = ldspad_defasible(gate_config)
+    pad_ok, pad_reason = ldspad_feasible(gate_config)
     if not pad_ok:
         print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
               f"forwarded-knob illegal ({pad_reason})")
@@ -350,8 +351,7 @@ def write_phase_config(driver, path: Path,
         CPU legality gate refused the phase before any GPU work. Callers MUST
         honour the False: the caller used to ignore the early return, so rejected
         phases still launched Tensile against a config that did not exist, and
-        Tensile then failed with its own rejection reason (121 phases: GSU/AF0EM
-        gate) -- which looked like a kernel problem and buried the real cause.
+        Tensile then failed with its own rejection reason (the GSU/AF0EM gate) -- which looked like a kernel problem and buried the real cause.
     """
     from oto.runners.driver import NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS
 

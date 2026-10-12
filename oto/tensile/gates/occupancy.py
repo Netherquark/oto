@@ -42,6 +42,8 @@ writer (check_tensile_build.py, CPU-only) showed the constraint is the
 per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
 limit, and MacroTile is not in the expression at all. Calibration table now
 lives in oto.tensile.gates.vgpr_model; post-mortem in potential_configs.md.
+Public API: occupancy_feasible, ldspad_feasible, occupancy_workgroups_per_cu,
+dtype_char, tile_dims.
 """
 
 from __future__ import annotations
@@ -274,13 +276,12 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
-def _pads_defasible(config: Dict[str, Any], ku: int,
+def _pads_feasible(config: Dict[str, Any], ku: int,
                     bpe: Optional[int]) -> Tuple[bool, str]:
     """LdsPad legality, including the padded LDS footprint.
 
     Why: `_write_phase_config` used to drop LdsPadA/B silently, so a candidate
-    carrying pads benchmarked with pads stripped to 0 (167/167 reference
-    kernels). The gate exists so the FORWARDED value is never what kills a
+    carrying pads benchmarked with pads stripped to 0 (every reference kernel). The gate exists so the FORWARDED value is never what kills a
     phase quietly.
     """
     pad_a = config.get("LdsPadA", 0)
@@ -319,7 +320,7 @@ def _int_or_reject(value, label: str) -> Tuple[Optional[int], Optional[str]]:
         return None, f"{label} must be an integer (have {value!r})"
 
 
-def _swizzle_defasible(config: Dict[str, Any], ku: int,
+def _swizzle_feasible(config: Dict[str, Any], ku: int,
                        bpe: Optional[int]) -> Tuple[bool, str]:
     """The coupled StaggerU / StaggerUMapping / StaggerUStride domains.
 
@@ -394,7 +395,7 @@ def _swizzle_defasible(config: Dict[str, Any], ku: int,
     return True, ""
 
 
-def _store_knobs_defasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """AssertFree0ElementMultiple and StoreCInUnroll sanity.
 
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
@@ -415,7 +416,7 @@ def _store_knobs_defasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
-def ldspad_defasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Group C legality gate for the forwarded LDS-pad / RCT knobs.
 
     Why: the launch boundary forwards LdsPadA/B, AssertFree0ElementMultiple,
@@ -435,8 +436,8 @@ def ldspad_defasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     ch = dtype_char(config)
     bpe = BYTES_PER_ELEMENT.get(ch)
 
-    for gate in (_pads_defasible, _swizzle_defasible):
+    for gate in (_pads_feasible, _swizzle_feasible):
         ok, reason = gate(config, ku, bpe)
         if not ok:
             return False, reason
-    return _store_knobs_defasible(config)
+    return _store_knobs_feasible(config)

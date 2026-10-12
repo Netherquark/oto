@@ -123,11 +123,11 @@ class DBMutator(DbPatternsMixin):
 
     def _gate(self, config: Dict[str, Any]) -> bool:
         """validate_config + ldspad_feasible, the two CPU-only launch gates."""
-        from oto.tensile.gates.occupancy import ldspad_defasible
+        from oto.tensile.gates.occupancy import ldspad_feasible
         ok, _why = self._scheduler().validate_config(config)
         if not ok:
             return False
-        ok, _why = ldspad_defasible(config)
+        ok, _why = ldspad_feasible(config)
         return ok
 
     # -- donors -----------------------------------------------------------
