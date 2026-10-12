@@ -7,28 +7,20 @@ Public API: target_cells, manifest_cells, native_runs, floor_chain, source_chain
 
 from __future__ import annotations
 
-import argparse
-import hashlib
 import json
-import shutil
 import sqlite3
-import statistics
-import sys
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Tuple
 
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
-from oto.metrics.ab_audit import (  # noqa: E402
-    BASE as _AB_BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records,
-    audit, phase_records, verdict,
-)
+from oto.metrics.ab_audit import BASE as _AB_BASE, _driver  # noqa: E402
 from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
 
 BASE = _AB_BASE
 
-#: Read-only use of Tensile: dtype byte widths are read from its tables.
+#: The locked floor, expressed in one registry db.
+LIVE_DB = BASE / "gfx90c_results" / "registry.db"
 
 
 def _stamp() -> str:

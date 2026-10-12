@@ -7,24 +7,19 @@ Public API: measured_index, load_deck, dtype_bytes, _is_legal, select_deck, _med
 
 from __future__ import annotations
 
-import argparse
-import hashlib
-import json
-import shutil
-import sqlite3
 import statistics
-import sys
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 from oto.metrics.ab_audit import (  # noqa: E402
-    BASE as _AB_BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records,
-    audit, phase_records, verdict,
+    BASE as _AB_BASE, _driver, _registry_records, phase_records,
 )
+from oto.device.peaks import cell_key  # noqa: E402
 from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
+from oto.tools.consolidate_floor import PREFERRED_FORMS  # noqa: E402
+from oto.tools.consolidate_targets import (  # noqa: E402
+    _fam, native_runs, target_cells)
 
 BASE = _AB_BASE
 
@@ -116,7 +111,8 @@ def dtype_bytes(char: str) -> Optional[int]:
     """Bytes per element for a dtype char, read from Tensile itself.
 
     Tensile.DataType.DataType.properties is the authority: numBytes() is
-    reg * 4. It is read here rather than from scheduler.FAMILY_BYTES_PER_ELEMENT
+    reg * 4. It is read here rather than from
+    ``oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT``
     because that table lists ZZ as 8 bytes, and complex double is 16. That single
     wrong number is what let VectorWidth 2 through for ZZ and produced the
     ``GlobalLoadVectorWidthA * DataType.numBytes() > 16`` assembly rejects.
@@ -140,7 +136,7 @@ def dtype_bytes(char: str) -> Optional[int]:
 def _is_legal(phase: Dict[str, Any]) -> Tuple[bool, str]:
     """Full pre-run legality gate for a deck phase.
 
-    All three seams the scheduler enforces, because each has caught a real
+    All three seams the candidate generator enforces, because each has caught a real
     failure in this corpus and none is redundant:
 
     * ``occupancy_feasible``  -- LDS footprint / VGPR budget

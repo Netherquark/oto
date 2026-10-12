@@ -14,32 +14,25 @@ imports them from here.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 from oto.metrics.ab_audit import BASE  # noqa: E402
-from oto.tools.consolidate_deck import (_candidates, _form_rank,  # noqa: E402
-                                        _is_legal, _median, dtype_bytes,
-                                        load_deck, measured_index,
-                                        select_deck)
-from oto.tools.consolidate_floor import (PREFERRED_FORMS,  # noqa: E402
-                                         SINGLE_FORM_ONLY_RUNS, build_db,
-                                         build_floor, locked_run_id, plan_floor)
-from oto.tools.consolidate_install import (LIVE_DB,  # noqa: E402
-                                           explain_archive, install,
-                                           phantom_runs)
-from oto.tools.consolidate_targets import (_fam, _stamp,  # noqa: E402
-                                           manifest_cells, native_runs,
-                                           source_chain, target_cells)
-from oto.tools.consolidate_deck import _TENSILE_ROOT  # noqa: E402
+from oto.tensile.library_parity import parity_report  # noqa: E402
+from oto.tools.consolidate_deck import (  # noqa: E402
+    _TENSILE_ROOT, _is_legal, dtype_bytes, load_deck, select_deck)
+from oto.tools.consolidate_floor import (  # noqa: E402
+    build_db, build_floor, locked_run_id)
+from oto.tools.consolidate_install import (  # noqa: E402
+    explain_archive, install, write_deck)
+from oto.tools.consolidate_targets import (  # noqa: E402
+    _fam, _stamp, source_chain, target_cells)
 
 __all__ = [
-    "main", "_fam", "_stamp", "_is_legal", "_candidates", "_form_rank",
-    "_median", "_TENSILE_ROOT", "BASE", "PREFERRED_FORMS",
-    "SINGLE_FORM_ONLY_RUNS", "LIVE_DB", "target_cells", "manifest_cells",
-    "measured_index", "load_deck", "select_deck", "dtype_bytes",
-    "plan_floor", "locked_run_id", "build_floor", "build_db", "install",
-    "explain_archive", "phantom_runs", "native_runs", "source_chain",
+    "main", "_stamp", "select_deck", "load_deck", "_fam", "_is_legal",
+    "dtype_bytes", "_TENSILE_ROOT", "target_cells",
+    "build_floor", "locked_run_id", "build_db", "install", "write_deck",
+    "explain_archive", "source_chain", "parity_report",
 ]
 
 
@@ -99,16 +92,11 @@ def cmd_all(args) -> int:
     # Coverage-parity rule (knowledge_base.md §6.1): the consolidated deck
     # (which becomes the produced TensileLibrary) must address exactly the
     # shipped gfx900 cell grid. Refuse to install a deck that diverges.
-    try:
-        from library_parity import parity_report
-        pr = parity_report(sel["phases"])
-        parity_ok = pr["parity_ok"]
-        print(f"  library parity: {'OK' if parity_ok else 'FAIL'} "
-              f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
-              f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
-    except Exception as exc:  # pragma: no cover
-        parity_ok = False
-        print(f"  library parity: FAIL (checker error: {exc})")
+    pr = parity_report(sel["phases"])
+    parity_ok = pr["parity_ok"]
+    print(f"  library parity: {'OK' if parity_ok else 'FAIL'} "
+          f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
+          f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
 
     print("\n" + explain_archive(base))
     if not args.commit:

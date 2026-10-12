@@ -3,36 +3,25 @@
 
 Owns: ``plan_floor`` (which runs form one logical floor), ``locked_run_id`` (the deterministic id a chain pins to), ``build_floor`` (pool the chain's CSVs into one run dir) and ``build_db`` (clone the live registry and insert the locked-floor run).
 Does NOT own: the deck selected for the next native run (consolidate_deck) or the cells the floor must cover (consolidate_targets).
-Public API: plan_floor, locked_run_id, build_floor, build_db, LIVE_DB, PREFERRED_FORMS, SINGLE_FORM_ONLY_RUNS."""
+Public API: plan_floor, locked_run_id, build_floor, build_db, PREFERRED_FORMS, SINGLE_FORM_ONLY_RUNS. (``LIVE_DB`` lives in oto.tools.consolidate_targets.)"""
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import shutil
 import sqlite3
-import statistics
-import sys
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
-from oto.metrics.ab_audit import (  # noqa: E402
-    BASE as _AB_BASE, TIE_BAND_PCT, _driver, _registry_records, arm_records,
-    audit, phase_records, verdict,
-)
-from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
+from oto.metrics.ab_audit import BASE as _AB_BASE  # noqa: E402
+from oto.tools.consolidate_targets import source_chain  # noqa: E402
 
 BASE = _AB_BASE
 
 #: Read-only use of Tensile: dtype byte widths are read from its tables.
 _TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
-
-#: The locked floor, expressed in one registry db.
-LIVE_DB = BASE / "gfx90c_results" / "registry.db"
 
 #: The floor is a multi-shape sweep; the next native run has to match it.
 PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
@@ -94,8 +83,8 @@ def build_floor(base: Path, dest: Path, stamp: str) -> Dict[str, Any]:
     native side is judged.
 
     Picking one run per phase was tried first and is wrong: it silently discarded
-    whichever run happened to read high, understating the floor on 17 of 38 cells
-    by up to 11.9% (HH:512 1583.90 -> 1395.55). An understated floor flatters the
+    whichever run happened to read high, understating the floor on the affected
+    cells (e.g. HH:512). An understated floor flatters the
     native side, which is the one direction a reference must not err in.
 
     Only ``2_BenchmarkData/*.csv`` is copied -- that is all the floor arm reads --
