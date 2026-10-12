@@ -195,6 +195,10 @@ class TestRoundRobinPrune:
         rows = list(iter_candidates())
         assert _round_robin_prune(rows, 10000) is rows
 
+    def test_none_cap_keeps_the_whole_pool(self):
+        rows = list(iter_candidates())
+        assert _round_robin_prune(rows, None) is rows
+
 
 class TestBeatTheSpoofInvariants:
     """2026-10-09 decided-config batch: banned rows stay out, decided rows

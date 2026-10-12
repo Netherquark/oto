@@ -385,6 +385,11 @@ python3 check_candidates.py --family CC                # preflight the live deck
 python3 check_candidates.py --floor                    # verify the floor is stealable
 ```
 
+`--max-fp N` is an optional cap (round-robin across family/cell buckets); the
+default is **no cap** — the whole emitted in-grid pool is seeded, so nothing the
+builders produce is silently dropped. The run loop never applies this cap; it
+only governs how many pre-built rows the seed starts with.
+
 **Step 5 — size and run.** One phase spans all of a family's `TARGET_CELLS`
 (deck semantics: one phase, many exact sizes). 40 deck phases + 295 seed rows =
 335 phases ≈ 6.5 h; `--budget 10` → ~15–20 h (§10.7). Run in the TTY, judge

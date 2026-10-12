@@ -7,24 +7,16 @@ Public API: _write_overlay, _prune_candidates_from_seed, _round_robin_prune, _su
 
 from __future__ import annotations
 
-import argparse
-
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from oto.harness.candidate_pool import (iter_candidates,  # noqa: E402
-                                        _deck_rows_by_family, _deck_winner_for,
-                                        _narrow_row_gen, _pattern_for,
-                                        _strip_not_forwarded)
 from oto.harness.candidate_pool import __yaml_load  # noqa: E402
-from oto.harness.candidate_rows import (TARGET_CELLS,  # noqa: E402
-                                        _pad_rows)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
@@ -124,14 +116,16 @@ def _prune_candidates_from_seed(dry_run: bool = False) -> Tuple[int, int]:
     return len(stripped), len(kept)
 
 
-def _round_robin_prune(rows: List[Dict[str, Any]], cap: int) -> List[Dict[str, Any]]:
-    """Keep a fair (family, cell) share when the pool overshoots the run budget.
+def _round_robin_prune(rows: List[Dict[str, Any]],
+                       cap: Optional[int]) -> List[Dict[str, Any]]:
+    """Keep a fair (family, cell) share when the pool overshoots a given cap.
 
-    Round-robin across buckets so the biggest family (SS) cannot starve the
-    HPA families at the cap; removes the least-valuable rows (probe -> narrow ->
-    wide, per bucket) first.
+    ``cap=None`` means no cap: the whole pool is kept unchanged. Otherwise
+    round-robin across buckets so the biggest family (SS) cannot starve the HPA
+    families at the cap; removes the least-valuable rows (narrow -> wide, per
+    bucket) first.
     """
-    if len(rows) <= cap:
+    if cap is None or len(rows) <= cap:
         return rows
     buckets: Dict[Tuple[str, int], List[Dict[str, Any]]] = {}
     for r in rows:
@@ -139,7 +133,7 @@ def _round_robin_prune(rows: List[Dict[str, Any]], cap: int) -> List[Dict[str, A
         side = int(r["shapes"][0].split("x")[0])
         buckets.setdefault((fam, side), []).append(r)
     for lst in buckets.values():
-        lst.sort(key=lambda r: {"probe": 0, "narrow": 1, "auto": 0, "wide": 2}.get(r["tier"], 3))
+        lst.sort(key=lambda r: {"narrow": 1, "auto": 0, "wide": 2}.get(r["tier"], 3))
     kept: List[Dict[str, Any]] = []
     keys = list(buckets)
     while len(kept) < cap and buckets:
@@ -166,36 +160,3 @@ def _summarise(rows: List[Dict[str, Any]]) -> None:
         print(line)
         total[0] += sum(counts.values())
     print(f"  TOTAL  candidates={total[0]}")
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--dry-run", action="store_true",
-                    help="validate + count only; do not write the overlay")
-    ap.add_argument("--max-fp", type=int, default=300,
-                    help="cap total emitted candidates (round-robin across "
-                         "family/cell buckets; default 300)")
-    ap.add_argument("--prune-candidates", action="store_true",
-                    help="strip phase_cand_* rows from the seed overlay "
-                         "(archive first, keep probe_*/accepted rows); "
-                         "overrides all generation")
-    args = ap.parse_args()
-
-    if args.prune_candidates:
-        stripped, kept = _prune_candidates_from_seed(dry_run=args.dry_run)
-        print(f"{'[dry-run] would strip' if args.dry_run else 'stripped'} "
-              f"{stripped} phase_cand_* rows; {kept} rows kept in "
-              f"{_overlay_path().name}")
-        return 0
-
-    rows: List[Dict[str, Any]] = list(iter_candidates())
-    rows = _round_robin_prune(rows, args.max_fp)
-    _summarise(rows)
-    written = _write_overlay(rows, dry_run=args.dry_run)
-    print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
-          f"{written} candidate(s) to {OVERLAY_PATH.name}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

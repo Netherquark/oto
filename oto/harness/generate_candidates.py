@@ -38,9 +38,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true",
                     help="validate + count only; do not write the overlay")
-    ap.add_argument("--max-fp", type=int, default=300,
-                    help="cap total emitted candidates (round-robin across "
-                         "family/cell buckets; default 300)")
+    ap.add_argument("--max-fp", type=int, default=None,
+                    help="optional cap on emitted candidates (round-robin "
+                         "across family/cell buckets); default: no cap "
+                         "(emit the whole pool)")
     ap.add_argument("--prune-candidates", action="store_true",
                     help="strip phase_cand_* rows from the seed overlay "
                          "(archive first, keep probe_*/accepted rows); "

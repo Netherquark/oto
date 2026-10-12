@@ -2638,3 +2638,26 @@ the contract at all" decision, the tier is deleted outright:
 
 The legacy in-grid `probe_N1..N5` seed rows and `probe_*` run-dir globs are
 unaffected (they are inside the grid).
+
+## 2026-10-12 — seed-pool cap removed (`--max-fp` default = no cap); duplicate CLI deleted
+
+`--max-fp` defaulted to a hand-picked `300` with no derivation, and the same
+`main()` (argparse + body) existed in **two** modules — `generate_candidates.py`
+*and* `candidate_overlay.py`. The cap silently dropped 58 of the 358 rows the
+builders emit (`_round_robin_prune`). It never limited the `--auto` convergence
+loop (that is `--budget` iterations / `--mutation-budget` knobs); it only capped
+the pre-built seed pool.
+
+- `--max-fp` now defaults to **no cap**: `_round_robin_prune` takes
+  `Optional[int]` and returns the pool unchanged when the cap is `None`. The
+  whole emitted in-grid pool is seeded; `--max-fp N` remains as an explicit
+  opt-in throttle.
+- The duplicate CLI is gone: `candidate_overlay.py` keeps only the overlay I/O
+  (`_write_overlay` / `_prune_candidates_from_seed` / `_round_robin_prune` /
+  `_summarise`); `generate_candidates.py` is the single CLI.
+- Also dropped the now-impossible `"probe"` priority key in `_round_robin_prune`
+  and the pre-split leftover imports in `candidate_overlay.py`.
+- Tests: added a no-cap no-op case. Focused suite
+  (`test_generate_candidates.py` + `test_library_parity.py`): 38 passed.
+- The dry run now reports the full pool (would append the rows the old cap had
+  been dropping); `--max-fp 300` reproduces the old behaviour exactly.
