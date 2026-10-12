@@ -50,12 +50,12 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 |---|---|
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`) |
-| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §5.7 |
+| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §2 (the M1/M2/M3 triage) |
 
 `knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
 (multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
 A phase dying with `Generating kernel source resulted in error 4` is a
-**legality-gate miss, not bad luck** — see `potential_configs.md` §5.7.
+**legality-gate miss, not bad luck** — see `potential_configs.md` §2.
 
 ## 3. MD ownership — do not duplicate
 

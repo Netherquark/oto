@@ -193,7 +193,7 @@ positives. All 9 observed pass/fail calibration cases reproduce. Regression-lock
 **Deck outcome.** 410 → 418: the 8 dead phases removed, 16 gate-legal ZZ phases added
 (`128x32x8/8x4`, `32x128x8/2x8` as same-aspect replacements; `64x64x8/4x2` and
 `128x32x16/8x4` as new axes) × 4 contraction patterns. Shipped manifest is now
-**418 phases**, all gate-clean. Full derivation: `potential_configs.md` §5.7.
+**418 phases**, all gate-clean. Full derivation: `potential_configs.md` §2 (triage outcome).
 
 **Honest limit — this is a legality result, not a performance result.** No GPU was
 run. ZZ is **legal but unbenchmarked**; whether any of the new tiles actually beats

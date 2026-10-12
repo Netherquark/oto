@@ -152,7 +152,7 @@ Percent-of-theoretical values are read from `acceptance_report.json`
 
 ---
 
-## 3. Per-cell evidence — config-resolved winners (count: `results.md` §12)
+## 3. Per-cell evidence — config-resolved winners (38 cells; snapshot: `results.md` §12)
 
 Every cell below is resolved from the registry/`kernel_db` (6129 run yamls,
 8480 resolver keys). "WIN/TIE/LOSS" is native-vs-floor; `%` = margin over the
@@ -263,7 +263,8 @@ numbers; **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
 5. **The small-shape M2 row is NOT a verdict loss.** SS/HH/HPA k≤512 WIN vs their
    spoofs (SS:256 +231 %, HH:256 +278 %, HPA:512 +103 %): the floor is weaker at
    those shapes. Their 20–50 %-of-theoretical readings are M2 wave-quantization
-   (deck idles at 12–30 % residency, P §14.3), a **coverage target**, not a
+   (deck idles at 12–30 % residency, recorded in the superseded pre‑rewrite
+   version), a **coverage target**, not a
    verdict gap — Group A (decked 2026-10-09) hunts it.
 
 **The user-complaint reconciliation:** the report's %theo for CC (7.06–20.28)
@@ -412,9 +413,82 @@ median-of-seeds):
 
 ## 7. Mutation strategies for sore losers (db_mutator-enhanced)
 
-The NARROW / WIDE / DIRECTION strategy families, the per-family mutation
-patterns, and the `bypass_identical_skip` / budget mechanics are documented in
-`oto/tensile/synthesis/db.py`.
+The db_mutator (fix §4/§5) now generates novel, valid mutants for every
+sore‑loser configuration via three strategy families, enforced with
+`bypass_identical_skip=True` so every mutant is measured regardless of prior
+history. Novelty is guaranteed by the ledger, not by pass/fail history. The
+strategy families, the per-family mutation patterns, and the budget mechanics
+are documented in `oto/tensile/synthesis/db.py`.
+
+### 7.1 NARROW — single-knob deltas on forward knobs
+The manifest sampler cannot reach these knobs; they are the "large, mostly
+unmeasured space". Each draw changes 1–3 forward knobs to legal values (from
+`FORWARD_KNOB_DOMAINS` in `oto/tensile/synthesis/db.py`):
+
+- **LdsPadA / LdsPadB**: {0,1,2,4} — the primary levers for LDS occupancy
+- **NLCA**: {1,2,3} — wave-quantization control
+- **GSU**: {1,2,4} — split‑U work‑group sizing
+- **WGM**: {1,4,8} — work‑group mapping width
+- **GLVW**: {1,2,4} — global load vector width (the divisibility fix; the
+  `GLVW x bytes <= 16` cap lives in `oto/tensile/gates/loads.py`)
+- **PGR**: {0} — always zero on gfx90c (register‑file pressure trade‑off)
+- **StaggerU/Stride**: {0,8,16,32} / {256,512} — wave‑front alignment
+
+**Sore-loser targets**: SS:768/1000 (wave-quantization), CC:256 (tile geometry),
+HH:256 (WGM+LdsPad), ZZ: all shapes (VW/DepthU).
+
+### 7.2 WIDE — DB tile donors re-combined with forward draws
+Tile donors are read from the DB's per-family measured winners (what actually
+won on gfx90c, not just the gfx900 manifest) and from the floor winner, then
+re-combined with forward draws. This is the core of the db_mutator fix:
+
+- **MacroTile/ThreadTile**: from DB-measured winners (e.g. MT64x64x16 for
+  CC:256, MT128x128x8 for HH:512)
+- **DepthU**: {4,8,16,32} — LDS depth control
+- **GlobalSplitU**: {1,2,4} — split‑U algorithm selection
+- **GlobalLoadVectorWidthA/B**: {1,2,4} — the divisibility fix (dtype byte cap
+  in `oto/tensile/gates/loads.py`)
+- **WorkGroup**: from DB winners
+
+**Sore-loser targets**: CC:512 (LdsPad+MT), DD:768/1365 (DepthU+GLVW),
+ZZ:128/256/512/1024 (VW+DepthU).
+
+### 7.3 DIRECTION — toward the floor winner's knobs (spoof-steal generalised)
+When the gfx900 floor beats native in a cell, the mutant's knobs are set to
+the floor winner's knobs (config‑normalised). This generalises the spoof‑steal
+logic (now §9) to every cell, not just the reference floor:
+
+- Copies only structural knobs the floor actually carries
+- Leaves alone any knob the parent already matches
+- Ensures every mutant is a genuine move toward the floor's performance
+
+**Sore-loser targets**: All families where the floor exceeds native (per the
+triage in §2: SS:768/1000, HH:512, HH_HPA:512, HS_HPA:512, CC:256/−8.7%).
+
+### 7.4 Family‑specific mutation patterns (new in db_mutator)
+In addition to the generic NARROW/WIDE/DIRECTION strategies, the db_mutator
+now exports family‑specific patterns that target the exact knobs responsible
+for each family's sore‑loser configurations:
+
+- **SS pattern**: NLCA toggle + LdsPad increase + GSU/WGLV/StaggerU combos
+- **DD pattern**: DepthU increase + GLVW change + GSU double
+- **CC pattern**: LdsPad combos + MacroTile change + NLCA triple toggle
+- **ZZ pattern**: VW change + DepthU + GLVW/A/B combos + StaggerU stride
+
+Each pattern generates 3–5 mutant knob dicts that are immediately gated
+through `validate_config` + `ldspad_feasible` before ledger emission.
+
+### 7.5 Mutation budget & convergence
+- Default: 5 forward draws per iteration × 4 patterns = up to 20 mutants/cell/
+  iteration
+- `bypass_identical_skip=True` on every mutant phase (Option H directive
+  2026-10-09): mutations are always measured; novelty is the ledger's job
+- Convergence check (`agent.converged()`): 0 below‑ceiling cells AND ≥3 configs/
+  cell AND ≥2 independent runs AND CV ≤15% per cell
+- The 10‑15 hr overnight budget is now fully utilisable: the arm no longer
+  decays from 155 → 20 mutants/iteration (pre‑db_mutator) and no longer emitted
+  ZERO on the CC/ZZ wall families (pre‑db_mutator). Now every iteration emits
+  novel, valid mutants across all 7 families.
 
 **Sore-loser targets:** SS:768/1000 (wave-quantization), HH:256 (WGM+LdsPad),
 CC:256/512 (tile geometry / LdsPad+MT), DD:768/1365 (DepthU+GLVW), ZZ: all
@@ -517,22 +591,24 @@ direction cross is their remaining un-tested axis).
 ## 10. Other routes
 
 ### 10.1 GlobalSplitU wave-fill — SS only (and only at small shapes)
-GSU splits K across workgroups for wave-fill (M2). The dtype-locked legality
-rules (complex/HPA and half-Assembly GSU>1 illegal; SS the only GSU-legal
-family, ladder {1,2,4}) live in `oto/tensile/gates/assembly.py`. Use it only
-where M·N-tiles < ~7 waves (k≤512): GSU adds launch + atomic-write overhead and
-on ALU-saturated ≥768 cells it would *cost*. Watch atomic SingleBuffer drift on
-the shared DDR4 bus — a GSU regression vs GSU1 points at that mechanism, not the
-tiling.
+GSU splits K across workgroups for wave-fill (M2). Legality is dtype-locked
+(`oto.tensile.gates.assembly.assembly_class_valid`): **complex/HPA GSU>1
+illegal** (no MFMA on the reachable writer paths; this port never forwards
+`GlobalSplitUAlgorithm`/workspace, so only SingleBuffer-atomic is reachable),
+**HH GSU>1 banned** (AF0EM≥2 not shipped). **SS is the only GSU-legal family**
+(ladder {1,2,4}). Use it only where M·N-tiles < ~7 waves (k≤512): GSU adds
+launch + atomic-write overhead and on ALU-saturated ≥768 cells it would *cost*.
+Watch atomic SingleBuffer drift on the shared DDR4 bus — a GSU regression vs
+GSU1 points at that mechanism, not the tiling.
 
 ### 10.2 Split-complex (the route past the 4-FMA MAC) — corrected quantification
 Complex GEMM on gfx90c has no instruction-level escape hatches (no `v_mfma`,
-no `v_dot*`/dp4a, no `v_pk_fma_bf16` — R §3/§8.2; `complex_gemm_research_brief.md` §4). The four
+no `v_dot*`/dp4a, no `v_pk_fma_bf16` — R §3/§8.2; `complex_gemm_research_brief.md` §8). The four
 real FMAs per complex MAC are irreducible **per MAC**, but the *GEMM count* is
 not: decompose CGEMM into **3 real GEMMs + a combine pass** (Gauss/Karatsuba:
 R = ReA·ReB, I = ImA·ImB, P = (ReA+ImA)(ReB+ImB); Re(C) = R−I, Im(C) = P−R−I) —
 the rocBLAS-pre-MFMA / MAGMA strategy (references: `oto/tensile/gates/assembly.py`
-and `complex_gemm_research_brief.md` §3, with
+and `complex_gemm_research_brief.md` §4–§5, with
 MAGMA at 79 % CGEMM / 71 % ZGEMM peak on Fermi; BLIS 3m/4m: Van Zee & Smith
 TOMS; rocBLAS ships only the fused 4M path —
 [complex_gemm_research_brief.md](complex_gemm_research_brief.md)).
@@ -572,11 +648,12 @@ tiles are visited decides reuse. B6 covers the complex side; keep SS/HH probes
 in the timestamped mirror (`--with-probes`), not the seed.
 
 ### 10.4 Non-temporal loads (new; narrow)
-The `NonTemporalA/B/C/D` lowering (`buffer_load … th:TH_LOAD_NT`) is documented
-in `oto/tensile/gates/assembly.py`. Do **not** use on normal tiled A/B (they
-reuse across K within 1 MB L2 — NT would flush it); use on (a) the C operand
-read-modify-write, (b) the single-K-pass GSU kernels where each tile is read
-once. One legality-checked probe row per case is enough to decide.
+`NonTemporalA/B/C/D` lowers to `buffer_load … th:TH_LOAD_NT` (R §4 finding 11;
+the lowering is documented in `oto/tensile/gates/assembly.py`). Do **not** use
+on normal tiled A/B (they reuse across K within 1 MB L2 — NT would flush it);
+use on (a) the C operand read-modify-write, (b) the single-K-pass GSU kernels
+where each tile is read once. One legality-checked probe row per case is enough
+to decide.
 
 ### 10.5 Measurement hygiene — the prerequisite for trusting ANY delta (M4)
 Set by the report: `clock_adjusted: False` on every cell; native sclk
@@ -633,14 +710,13 @@ performance runs live in TTY/overnight. Concretely:
 ## Sources (all real; full lists in `kernel_tuning_research.md` Sources and
 `complex_gemm_research_brief.md`)
 
-- [complex_gemm_research_brief.md](complex_gemm_research_brief.md) — external
-  complex-GEMM research (MAGMA/Fermi, Ozaki-II, M3XU) and the exotic-paths
-  conclusion. The BLAS-8 accounting, 4-FMA MAC (Tensile
+- [complex_gemm_research_brief.md](complex_gemm_research_brief.md) — BLAS-8
+  accounting, 4-FMA MAC (Tensile
   [MAC_F32C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F32C.py)
   /
-  [MAC_F64C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F64C.py))
-  and 3M/4M instruction counts now live in `oto/tensile/gates/assembly.py`.
-  **The citation for §1 and §10.2.**
+  [MAC_F64C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F64C.py)),
+  3M/4M instruction counts, MAGMA/Fermi, Ozaki-II, M3XU. The accounting is also
+  restated in `oto/tensile/gates/assembly.py`. **The citation for §1 and §10.2.**
 - Hardware ceilings: `gfx90c_theoretical_limits.md`; occupancy/issue:
   `kernel_tuning_research.md` §1–§3 (GCN5 wave64, 4×SIMD-per-CU, 10 waves/SIMD,
   DDR4 ~30–40 GB/s, FP64 1/16).

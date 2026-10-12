@@ -2587,3 +2587,28 @@ This content was preserved from the former harness runbook that referenced `/tmp
 
 - CPU-only, never benchmarks: see `claude.md` §5 (Non-negotiable project guardrails) for the operational constraint.
 - Ecosystem: see `docs/README.md` for the MD-docs-vs-docstrings boundary; layout and ownership now point at `oto/README.md` and `docs/harness_runbook.md`.
+
+## 2026-10-12 — docs restoration after the whittling (and one gate-harness fix)
+
+The whittling pass (`7ef4213`) cut load-bearing detail from the human- and
+agent-facing docs and replaced it with pointers. This restores it, merging the
+pre-whittling content with the refactored structure:
+
+- `README.md` — rebuilt as a self-contained high-level repo overview: a repo
+  layout tree, full root-entry-point + per-package module tables, the complete
+  validation-tool command set, the `.env` table, and the docs index (no longer a
+  pointer chain). All internal links verified to resolve.
+- `gfx90c_tuning_guide.md`, `kernel_tuning_research.md`,
+  `gfx90c_theoretical_limits.md`, `complex_gemm_research_brief.md`,
+  `potential_configs.md`, `knowledge_base.md` — restored to their pre-whittling
+  substance as self-contained starter documents for the tuning agent (knob
+  mechanics + forwarding surface, measured regime tables, the three byte tables,
+  complex-MAC accounting, the occupancy model, mutation strategies, and open
+  research directions). Only provably-wrong facts were corrected (e.g. the
+  `ZZ` byte width is `16`, not `8`; the occupancy rule is `accVGPR = TT0·TT1·weight`).
+- Cross-references re-pointed to the current section numbering — the
+  pre-2026-10-10 `potential_configs.md` `§13.x` / `§14.x` / `§8.6` citations no
+  longer resolved.
+- `oto/harness/occupancy_audit.py` now imports `VGPR_PER_CU` from
+  `oto/tensile/gates/vgpr_model.py` instead of re-declaring it (Refactor-1
+  acceptance criterion 6: no device-constant scatter).

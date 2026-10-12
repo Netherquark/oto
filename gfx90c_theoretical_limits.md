@@ -36,11 +36,18 @@
 | SDMA | 1; CP queues 24 |
 | Global-load byte cap | **16 B** (`GlobalLoadVectorWidthA * DataType.numBytes() <= 16`) |
 
-- **Element byte widths and the 16-B global-load cap.** The per-family
-  bytes-per-element table (`Z` = complex double = 16 B, not 8), the cap itself,
-  and the resulting worst legal `VectorWidth` per dtype are owned by
-  `oto/tensile/gates/vgpr_model.py` (`FAMILY_BYTES_PER_ELEMENT`,
-  `GLOBAL_LOAD_BYTE_CAP`) — read them there, not from a hand-kept table.
+- **Element byte widths are `numBytes() == reg * 4`, and complex double is 16 B,
+  not 8.** From `Tensile/DataType.py`: `S`=4, `H`=2, `D`=8, `C`=8, `Z`=**16**.
+  The 16 B cap therefore bites hardest exactly where it is easiest to get wrong:
+  `Z` at `VectorWidth=1` sits *on* the cap, so `VW=2` needs a 32 B global load and
+  Tensile rejects the kernel at assembly. Getting `Z` from a "complex is 2× a
+  double" intuition gives 8 and silently admits `VW=2`. This is now read from
+  `DataType.properties` rather than a hand-kept table — see
+  `oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT` (with the cap itself,
+  `GLOBAL_LOAD_BYTE_CAP`), which lists `ZZ: 16` and is locked by
+  `tests/test_measurement_integrity.py`
+  (`test_complex_double_is_16_bytes`, `test_zz_vector_width_capped_at_one`).
+  Worst legal `VectorWidth` per dtype under the cap: S 4, H 8, D 2, C 2, **Z 1**.
 
 - ISA oracle (compile-only, clang-19): `v_pk_fma_f16` OK; `v_pk_fma_bf16` **absent on
   all gfx9** (900/90c/906); `v_dot*` **absent on gfx90c** (gfx906+ only);

@@ -17,7 +17,7 @@ docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
 gfx90c_results/analysis/cells_resolved.json     # cache (winner map; resolve_cells)
-gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_configs.md §2)
+gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_configs.md §3)
 ```
 
 Module list and ownership: see [`oto/README.md`](../oto/README.md) for the harness
@@ -74,8 +74,8 @@ published figures (wins/ties/losses and any material findings).
 
 `resolve_cells` turns "regression_matrix says CC:256 is a loss" into the exact
 winning native phase / run / config and the floor kernel to beat — the input
-the per-cell triage (potential_configs.md §2/§4) and any spoof-steal
-(§7: **configure, never copy**) are argued from:
+the per-cell triage (potential_configs.md §3/§5) and any spoof-steal
+(§9: **configure, never copy**) are argued from:
 
 ```bash
 python3 -m oto.harness.resolve_cells                      # table + caches (JSON, full.txt)
@@ -127,7 +127,8 @@ rebuild the matrix (`step 1`) and re-check parity (`step 3`).
 
 ## Why medians, not best seeds
 
-§8.3: best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
+Best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
 41.96 GFlops came from a kernel whose median is 17.67, and the HH:256 floor
 "win" flips sign between bases (best-seed −31% vs median +2.5%). Median-first
-is the standing rule everywhere in this repo (changelog.md, potential_configs.md §12).
+is the standing rule everywhere in this repo (`changelog.md`;
+`potential_configs.md` §6 states the median-of-seeds basis).
