@@ -207,8 +207,8 @@ gate families extracted from `scheduler.py` into `oto/tensile/gates/`, the
 god-module (`port_tensile.py`, 3626 lines) split into
 `oto/runners/{driver,benchmark,phases,reference,auto,reporting,analytics_loaders,
 clocks,timing,synthesis,cli,toolchain,flags}` plus `oto/tensile/config_writer.py`,
-and the remaining oversized modules split per
-`plans/REFACTOR_1_CODEBASE_ORG.md` section 3.
+and the remaining oversized modules split per the refactor's migration order
+(the Refactor 1/2 planning MDs have been removed from the repo; see git history).
 
 No behaviour change. Proven five ways against the pre-refactor commit
 (`python3 plans/verify_all.py`):
