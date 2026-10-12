@@ -517,7 +517,7 @@ order:
 | A3 | SS 256 | `MT64x64x8/4x4/VW4/DU8` + `MT96x96x8/6x6/VW4/DU8` GSU2 | ✅ DECKED |
 | A4 | HH 256/512 | `MT64x64x16/4x4/VW8/DU16`, `MT64x32x16/4x4/VW8/DU16` | ✅ DECKED (GSU banned) |
 | A5 | DD 192/256 | `MT32x32x8/2x2/VW1/DU8` GSU{2,4} | ✅ DECKED |
-| A6 | SS 32/64/128 | 96x96 CANDIDATE v2 (GSU2 + DU16) — legality re-gated | 🔬 probe (kept out of seed; `--with-probes`) |
+| A6 | SS 32/64/128 | 96x96 CANDIDATE v2 (GSU2 + DU16) — off-grid cells | ⛔ out of scope (not in the shipped grid; excluded by the §6.1 no-extension contract) |
 | A7 | wide tiles | **PGR=0** (frees ~8–16 VGPR/thread → +1 wave/SIMD) | ✅ DECKED |
 | A8 | wide tiles | **GLVW=1** (32→48 VGPR, 5 waves/SIMD) | ✅ DECKED (partial) |
 
@@ -546,8 +546,8 @@ CC toward 700–1000, ZZ toward 60–90. Ladders, CPU-gated, TTY-only:
 StaggerU/StaggerUMapping/StaggerUStride probes shipped in the 10-09 seed (5
 swizzle probes, no verdict change on any covered cell). Closed: LDS-bank-swizzle
 does not move a 1-MB-L2-bound iGPU deck. Any future row needs a count.
-Keep the boundary probe rows out of the seed (parity: every overlay row must pin
-to the shipped grid).
+Every overlay row must pin to the shipped grid (no contraction, no extension);
+the generator now emits in-grid candidates only.
 
 ---
 
@@ -642,10 +642,11 @@ broken pipe).
 ### 10.3 L2-rasterized WorkGroupMapping (1-MB L2 retune)
 gfx900's 4-MB L2 ignored rasterization; gfx90c's 1 MB makes WGM the difference
 between L2 hits and DDR round-trips (R §5 finding 16b). CC/ZZ already ship WGM
-{4,8}; probe WGM {2,8,16} on the wide SS/HH tiles at 768–4096 — the 1-MB L2
-(A+B+C working sets: 128×128×8×2 ≈ 256 KB + C 64 KB) fits, but the *order*
-tiles are visited decides reuse. B6 covers the complex side; keep SS/HH probes
-in the timestamped mirror (`--with-probes`), not the seed.
+{4,8}; WGM {2,8,16} on the wide SS/HH tiles at 768–4096 is a follow-up — the
+1-MB L2 (A+B+C working sets: 128×128×8×2 ≈ 256 KB + C 64 KB) fits, but the
+*order* tiles are visited decides reuse. B6 covers the complex side; any such
+SS/HH row must sit on shipped-grid cells (the generator emits in-grid
+candidates only — off-grid probes are not produced).
 
 ### 10.4 Non-temporal loads (new; narrow)
 `NonTemporalA/B/C/D` lowers to `buffer_load … th:TH_LOAD_NT` (R §4 finding 11;

@@ -2612,3 +2612,29 @@ pre-whittling content with the refactored structure:
 - `oto/harness/occupancy_audit.py` now imports `VGPR_PER_CU` from
   `oto/tensile/gates/vgpr_model.py` instead of re-declaring it (Refactor-1
   acceptance criterion 6: no device-constant scatter).
+
+## 2026-10-12 — off-grid probe tier removed (candidate pool is now strictly in-grid)
+
+The generator's only contract-violating arm was the **off-grid probe tier**
+(`PROBE_CELLS`: SS 32/64/128, DD 128, forced DepthU 4, `graded: false`): those
+rows addressed (shape, dtype) cells the shipped gfx900 library does not carry,
+so they could never ship under the no-contraction / no-extension contract
+(`tests/test_library_parity.py`). Per the "no candidates that don't adhere to
+the contract at all" decision, the tier is deleted outright:
+
+- `oto/harness/candidate_rows.py` — `PROBE_CELLS` removed.
+- `oto/harness/candidate_pool.py` — the probe loop, the second (`probe_pool`)
+  sink, the `graded` flag and the `sink`/`graded` params on `_offer` are gone;
+  every emitted row is in-grid.
+- `oto/harness/candidate_overlay.py` — `_write_overlay` no longer takes probe
+  rows or `--with-probes`; the timestamped mirror carries only `phases`.
+- `oto/harness/generate_candidates.py` — `--with-probes` and the `PROBE_CELLS`
+  re-export removed.
+- Tests rewritten (`tests/test_generate_candidates.py`): the probe-specific
+  cases are replaced by a hard invariant — every generated row addresses a
+  shipped-grid cell — and `_write_overlay` counts only newly-scheduled rows.
+- Docs: the `PROBE_CELLS` entry (tuning guide), the A6 off-grid row and the
+  §10.3 "mirror only" note (`potential_configs.md`) now state the exclusion.
+
+The legacy in-grid `probe_N1..N5` seed rows and `probe_*` run-dir globs are
+unaffected (they are inside the grid).

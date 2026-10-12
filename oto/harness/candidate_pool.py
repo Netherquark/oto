@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The candidate loaders and the new module's helpers.
 
-Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows, probes -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable.
+Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable.
 Does NOT own: the row data itself (oto.harness.candidate_rows) or the overlay read/write (oto.harness.candidate_overlay).
 Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for."""
 
@@ -28,7 +28,7 @@ from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         AUTO_EXPLICIT, DU_VARIANTS,
                                         FAMILY_DTYPE, LADDER,
                                         NARROW_NEIGHBOURS, PATTERNS,
-                                        PLAN_BATCH, PROBE_CELLS, TARGET_CELLS,
+                                        PLAN_BATCH, TARGET_CELLS,
                                         WGM_VARIANTS, _pad_rows)
 
 
@@ -107,10 +107,9 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
     seen_fp: Set[str] = set(_load_deck_fps())
     seen_fp.update(_load_seed_fps())
 
-    # fp -> row, one per config. Two sinks so off-grid (graded False) rows are
-    # keyed separately and never lose their off-grid shapes to an in-grid row.
+    # fp -> row, one per config (a row's shapes accumulate from every cell it
+    # addresses, so a config is benchmarked once).
     pool: Dict[str, Dict[str, Any]] = {}
-    probe_pool: Dict[str, Dict[str, Any]] = {}
 
     def _offer(
         fam: str,
@@ -118,11 +117,8 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         pattern: str,
         knobs: Dict[str, Any],
         sides: Tuple[int, ...],
-        graded: bool,
         note: str = "",
-        sink: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, Any]]:
-        sink = sink if sink is not None else pool
         knobs = dict(knobs)
         if "DepthU" not in knobs:
             mt_parts = [int(x) for x in re.split(r"[xX]",
@@ -142,7 +138,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         if not pad_ok:
             return None
         fp = _fingerprint(config)
-        existing = sink.get(fp)
+        existing = pool.get(fp)
         if existing is None:
             if fp in seen_fp:
                 # Already scheduled by the deck or seed this run. The deck row
@@ -156,7 +152,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
             du = knobs.get("DepthU", 16)
             gsu = knobs.get("GlobalSplitU", 1)
             wgm = knobs.get("WorkGroupMapping", 4)
-            prefix = "probe_C" if not graded else "phase_cand"
+            prefix = "phase_cand"
             phase_id = (f"{prefix}_{fam_key}_{side0}_{_tile_key(mt, tt)}"
                         f"_{pattern}_vw{vw}_du{du}_g{gsu}_w{wgm}")
             # Two configs can share every id-encoded knob (e.g. the 2026-10-09
@@ -174,18 +170,17 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                 "config": config,
                 "fp": fp,
                 "origin": "generated_" + tier,
-                "graded": graded,
                 "tier": tier,
             }
             if note:
                 row["note"] = note
-            sink[fp] = row
+            pool[fp] = row
         else:
             existing["shapes"] = sorted(
                 set(existing["shapes"]) | {f"{s}x{s}x{s}" for s in sides})
             if note and not existing.get("note"):
                 existing["note"] = note
-        return sink[fp] if existing is None else None
+        return pool[fp] if existing is None else None
 
     # --- wide tier: ladder tiles x patterns x DU/GSU, one row per config ---
     # A config is shape-agnostic, so it spans every in-grid target cell of its
@@ -209,7 +204,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                             "GlobalSplitU": gsu, "WorkGroupMapping": 4,
                             **(tile.get("extra") or {}),
                         }
-                        row = _offer(fam, "wide", pat, knobs, sides, graded=True)
+                        row = _offer(fam, "wide", pat, knobs, sides)
                         if row:
                             yield row
         # narrow-tier neighbours attach their cell to whatever config wins it
@@ -222,7 +217,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
             knobs = {k: v for k, v in spec_.items()
                      if k not in ("shapes", "pattern", "note")}
             row = _offer(fam, "auto", spec_["pattern"], knobs, (side,),
-                         graded=True, note=spec_.get("note", ""))
+                         note=spec_.get("note", ""))
             if row:
                 yield row
 
@@ -235,40 +230,10 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         knobs = {k: v for k, v in spec_.items()
                  if k not in ("fam", "pattern", "note")}
         row = _offer(fam, "auto", spec_["pattern"], knobs,
-                     tuple(TARGET_CELLS[fam]), graded=True,
+                     tuple(TARGET_CELLS[fam]),
                      note=spec_.get("note", ""))
         if row:
             yield row
-
-    # --- probe tier: off-grid cells (graded False, kept in a separate pool) ---
-    # DepthU is forced to 4 and the DD 64x64x4 / 64x128x4 tiles are excluded so
-    # probe configs are structurally disjoint from the in-grid pool: the wide
-    # tier only ever emits DepthU 8/16, and the two DD tiles the ladder fixes at
-    # DepthU 4 are the only du-4 in-grid rows.
-    for fam in PROBE_CELLS:
-        ladder = LADDER.get(fam, [])
-        if fam == "DD":
-            ladder = [t for t in ladder
-                      if t.get("MacroTile") not in ("64x64x4", "64x128x4")]
-        pat = PATTERNS.get(fam, ("Ailk_Bjlk",))[0]
-        sides = tuple(PROBE_CELLS[fam])
-        for tile in ladder:
-            knobs = {
-                "MacroTile": tile["MacroTile"],
-                "ThreadTile": tile["ThreadTile"],
-                "VectorWidth": tile["VectorWidth"],
-                "DepthU": 4,
-                "GlobalSplitU": 1,
-                "WorkGroupMapping": 4,
-            }
-            row = _offer(
-                fam, "probe", pat, knobs, sides, graded=False,
-                note=("off-grid probe: "
-                      + f"{'/'.join(str(s) for s in sides)} not in FAMILY_SHAPES; "
-                      "measurable, never shipped"),
-                sink=probe_pool)
-            if row:
-                yield row
 
 
 def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
@@ -312,7 +277,7 @@ def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
                     continue
                 row = offer(fam, "narrow",
                             _pattern_for(fam, knobs.get("MacroTile", "")),
-                            knobs, (side,), graded=True)
+                            knobs, (side,))
                 if row:
                     yield row
 

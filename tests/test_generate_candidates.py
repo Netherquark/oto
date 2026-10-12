@@ -3,12 +3,8 @@
 Covers the structural invariants of the generated candidate pool:
 
 * one row per config (fp is shape-independent) with unique phase_ids + fps;
-* graded (in-grid) rows only address cells inside the shipped grid;
-* off-grid probe rows are graded False and structurally disjoint from the
-  in-grid pool;
-* the probe pool never leaks into the persistent seed overlay unless
-  `--with-probes` is passed (the §6.1 parity rule pins overlay rows to the
-  shipped grid);
+* every row addresses a cell inside the shipped grid (§6.1: no contraction,
+  no extension);
 * no fp collision with the committed deck or the curated seed rows.
 * beat-the-spoof invariants (2026-10-09): banned families never carry GSU>1,
   the decided PLAN_BATCH rows emit (pads / PGR / PLR / NLCA / CC WGM8), and
@@ -56,44 +52,25 @@ class TestPoolInvariants:
     def test_rows_carry_required_writer_fields(self):
         for r in _rows():
             for key in ("phase_id", "label", "dtype", "shapes", "config", "fp",
-                        "ScheduleName", "NumBenchmarks", "tier", "graded"):
+                        "ScheduleName", "NumBenchmarks", "tier"):
                 assert key in r, (r["phase_id"], key)
             assert r["shapes"], r["phase_id"]
 
-    def test_graded_rows_only_address_in_grid_cells(self):
+    def test_every_row_only_addresses_in_grid_cells(self):
         grid = _grid_cells()
         for r in _rows():
-            if not r["graded"]:
-                continue
             fam = str(r["config"].get("FamilyLabel", "")).upper()
             for shape in r["shapes"]:
                 assert shape in grid[fam], (r["phase_id"], shape)
 
-    def test_probe_rows_are_off_grid_and_unshipped(self):
-        grid = _grid_cells()
-        probes = [r for r in _rows() if not r["graded"]]
-        assert probes
-        for r in probes:
-            assert r["phase_id"].startswith("probe_C")
-            for shape in r["shapes"]:
-                assert shape not in grid[
-                    str(r["config"].get("FamilyLabel", "")).upper()]
-
-    def test_graded_and_probe_pools_are_fp_disjoint(self):
-        rows = _rows()
-        graded = {r["fp"] for r in rows if r["graded"]}
-        probes = {r["fp"] for r in rows if not r["graded"]}
-        assert not (graded & probes)
-
-    def test_every_target_and_probe_cell_is_covered(self):
-        from oto.harness.generate_candidates import PROBE_CELLS, TARGET_CELLS
-        found = {}
+    def test_every_target_cell_is_covered(self):
+        from oto.harness.generate_candidates import TARGET_CELLS
+        found = set()
         for r in _rows():
             fam = str(r["config"].get("FamilyLabel", "")).upper()
             for shape in r["shapes"]:
-                found.setdefault((fam, int(shape.split("x")[0])), 0)
-                found[(fam, int(shape.split("x")[0]))] += 1
-        for fam, sides in {**TARGET_CELLS, **PROBE_CELLS}.items():
+                found.add((fam, int(shape.split("x")[0])))
+        for fam, sides in TARGET_CELLS.items():
             for side in sides:
                 assert (fam, side) in found, f"no row covers {fam}:{side}"
 
@@ -135,20 +112,23 @@ class TestStripNotForwarded:
 
 
 class TestWriteOverlayScoping:
-    """Probe rows must stay out of the seed overlay unless opted in."""
+    """`_write_overlay` counts only the rows not already scheduled in the seed."""
 
     def _row(self, tag, fp):
         return {"phase_id": f"phase_cand_zz_{tag}", "fp": fp}
 
-    def test_dry_run_default_excludes_probes(self):
-        grid = [self._row("g1", "a"), self._row("g2", "b")]
-        probes = [self._row("p", "c")]
-        assert _write_overlay(grid, probes, dry_run=True) == 2
-
-    def test_with_probes_includes_them(self):
-        grid = [self._row("g1", "a"), self._row("g2", "b")]
-        probes = [self._row("p", "c")]
-        assert _write_overlay(grid, probes, dry_run=True, with_probes=True) == 3
+    def test_dry_run_counts_only_new_rows(self, tmp_path, monkeypatch):
+        import oto.harness.generate_candidates as gen
+        seed = tmp_path / "phases.seed.overlay.yaml"
+        seed.write_text(
+            "phases:\n- phase_id: phase_cand_zz_old\n  fp: z\n")
+        monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
+        fresh = [self._row("g1", "a"), self._row("g2", "b")]
+        assert _write_overlay(fresh, dry_run=True) == 2
+        # a row already present (by phase_id or fp) is not re-counted; the
+        # dry run above did not persist anything, so only `old/z` is in the seed
+        mixed = [self._row("old", "z"), self._row("g3", "c")]
+        assert _write_overlay(mixed, dry_run=True) == 1
 
 
 class TestPruneCandidatesFromSeed:

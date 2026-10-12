@@ -26,12 +26,12 @@ from oto.harness.candidate_overlay import (  # noqa: E402
 from oto.harness.candidate_pool import (__yaml_load,  # noqa: E402
                                         iter_candidates, _narrow_row_gen,
                                         _strip_not_forwarded)
-from oto.harness.candidate_rows import (PROBE_CELLS, TARGET_CELLS,  # noqa: E402
+from oto.harness.candidate_rows import (TARGET_CELLS,  # noqa: E402
                                         _pad_rows)
 
 __all__ = ["main", "iter_candidates", "_round_robin_prune",
            "_strip_not_forwarded", "_write_overlay", "OVERLAY_PATH",
-           "PROBE_CELLS", "TARGET_CELLS", "_pad_rows", "_prune_candidates_from_seed"]
+           "TARGET_CELLS", "_pad_rows", "_prune_candidates_from_seed"]
 
 
 def main() -> int:
@@ -41,10 +41,6 @@ def main() -> int:
     ap.add_argument("--max-fp", type=int, default=300,
                     help="cap total emitted candidates (round-robin across "
                          "family/cell buckets; default 300)")
-    ap.add_argument("--with-probes", action="store_true",
-                    help="append off-grid probe rows to the seed overlay too "
-                         "(breaks the §6.1 parity test until the rule is amended; "
-                         "probes are always mirrored regardless)")
     ap.add_argument("--prune-candidates", action="store_true",
                     help="strip phase_cand_* rows from the seed overlay "
                          "(archive first, keep probe_*/accepted rows); "
@@ -60,11 +56,8 @@ def main() -> int:
 
     rows: List[Dict[str, Any]] = list(iter_candidates())
     rows = _round_robin_prune(rows, args.max_fp)
-    probes = [r for r in rows if not r["graded"]]
-    grid_rows = [r for r in rows if r["graded"]]
     _summarise(rows)
-    written = _write_overlay(grid_rows, probes, dry_run=args.dry_run,
-                             with_probes=args.with_probes)
+    written = _write_overlay(rows, dry_run=args.dry_run)
     print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
           f"{written} candidate(s) to {OVERLAY_PATH.name}")
     return 0

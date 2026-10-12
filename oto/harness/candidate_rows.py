@@ -3,7 +3,7 @@
 
 Owns: the wide tier's data -- the per-family tile ladders, the narrow-mutation knob map (mirroring the generator's neighbour map), the evidence-derived auto rows and the beat-the-spoof batch -- plus ``_pad_rows`` (the label/phase_id encoder they all go through).
 Does NOT own: the deck/seed fingerprint sets (candidate_decks), the overlay read/write (candidate_overlay), or the pruning helpers (candidate_prune).
-Public API: TARGET_CELLS, PROBE_CELLS, NARROW_NEIGHBOURS, PATTERNS, AUTO_EXPLICIT, PLAN_BATCH, _pad_rows."""
+Public API: TARGET_CELLS, NARROW_NEIGHBOURS, PATTERNS, AUTO_EXPLICIT, PLAN_BATCH, _pad_rows."""
 
 from __future__ import annotations
 
@@ -155,12 +155,6 @@ TARGET_CELLS = {
     "ZZ": [128, 192, 256, 512, 1024],
     "HH_HPA": [512, 2048, 4096],
     "HS_HPA": [512, 2048],
-}
-
-# Off-grid probe-only cells (not in FAMILY_SHAPES; cannot ship under §6.1).
-PROBE_CELLS = {
-    "SS": [32, 64, 128],
-    "DD": [128],
 }
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------

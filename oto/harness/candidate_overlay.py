@@ -23,7 +23,7 @@ from oto.harness.candidate_pool import (iter_candidates,  # noqa: E402
                                         _narrow_row_gen, _pattern_for,
                                         _strip_not_forwarded)
 from oto.harness.candidate_pool import __yaml_load  # noqa: E402
-from oto.harness.candidate_rows import (PROBE_CELLS, TARGET_CELLS,  # noqa: E402
+from oto.harness.candidate_rows import (TARGET_CELLS,  # noqa: E402
                                         _pad_rows)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -41,16 +41,13 @@ def _overlay_path() -> Path:
     return cli.OVERLAY_PATH
 
 
-def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
-                   dry_run: bool, with_probes: bool = False) -> int:
+def _write_overlay(rows: List[Dict[str, Any]], dry_run: bool) -> int:
     """Append in-grid candidate rows to the persistent seed overlay.
 
-    Probe rows (off-grid cells, graded False) are deliberately NOT appended to
-    the seed overlay: the tied §6.1 parity rule
-    (tests/test_library_parity.py, seed-only-extends-within-grid) pins every
-    overlay row to the shipped grid, and probe cells are outside it. They are
-    always recorded in the timestamped mirror, and `with_probes` opts them into
-    the seed (which WILL fail the parity tests until the rule is amended).
+    Every generated row addresses a shipped-grid cell (the §6.1 parity rule,
+    tests/test_library_parity.py: no contraction, no extension), so the whole
+    pool is safe to merge. Rows already scheduled (by phase_id or fp) are
+    skipped.
     """
     payload = __yaml_load(_overlay_path(), fallback={"phases": []})
     if not isinstance(payload, dict):
@@ -59,17 +56,14 @@ def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
     existing_fps = {str(p.get("fp", "")) for p in payload.get("phases", [])}
     added = [r for r in rows
              if r["phase_id"] not in existing_ids and r["fp"] not in existing_fps]
-    seed_probes = probe_rows if with_probes else []
-    seed_list = added + seed_probes
     if dry_run:
-        return len(seed_list)
-    if not seed_list:
+        return len(added)
+    if not added:
         return 0
-    payload.setdefault("phases", []).extend(seed_list)
+    payload.setdefault("phases", []).extend(added)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     payload["note"] = (payload.get("note", "") +
-                       f"\nAppended {len(seed_list)} generated candidates "
-                       f"({len(added)} in-grid, {len(seed_probes)} probe) at "
+                       f"\nAppended {len(added)} generated candidates at "
                        f"{stamp} by oto.harness.generate_candidates")
     import yaml
     with open(_overlay_path(), "w") as f:
@@ -80,18 +74,16 @@ def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
         "run_id": f"candidates-{stamp}",
         "created_at": stamp,
         "note": ("Candidate pool emitted by oto.harness.generate_candidates; "
-                 "probe rows (graded: false) are off-grid and must NOT be "
-                 "merged into the seed overlay without amending the parity "
-                 "rule. Safe to load as a run overlay, or archive after the "
-                 "run and strip these phase_ids from "
-                 "phases.seed.overlay.yaml to keep future runs light."),
+                 "every row addresses a shipped-grid cell. Safe to load as a "
+                 "run overlay, or archive after the run and strip these "
+                 "phase_ids from phases.seed.overlay.yaml to keep future runs "
+                 "light."),
         "phases": added,
-        "probes": probe_rows,
     }
     with open(mirror, "w") as f:
         yaml.safe_dump(mirror_payload, f, sort_keys=False, default_flow_style=False)
     print(f"mirror written: {mirror.relative_to(_overlay_path().parent.parent.parent)}")
-    return len(seed_list)
+    return len(added)
 
 
 def _prune_candidates_from_seed(dry_run: bool = False) -> Tuple[int, int]:
@@ -183,10 +175,6 @@ def main() -> int:
     ap.add_argument("--max-fp", type=int, default=300,
                     help="cap total emitted candidates (round-robin across "
                          "family/cell buckets; default 300)")
-    ap.add_argument("--with-probes", action="store_true",
-                    help="append off-grid probe rows to the seed overlay too "
-                         "(breaks the §6.1 parity test until the rule is amended; "
-                         "probes are always mirrored regardless)")
     ap.add_argument("--prune-candidates", action="store_true",
                     help="strip phase_cand_* rows from the seed overlay "
                          "(archive first, keep probe_*/accepted rows); "
@@ -202,11 +190,8 @@ def main() -> int:
 
     rows: List[Dict[str, Any]] = list(iter_candidates())
     rows = _round_robin_prune(rows, args.max_fp)
-    probes = [r for r in rows if not r["graded"]]
-    grid_rows = [r for r in rows if r["graded"]]
     _summarise(rows)
-    written = _write_overlay(grid_rows, probes, dry_run=args.dry_run,
-                             with_probes=args.with_probes)
+    written = _write_overlay(rows, dry_run=args.dry_run)
     print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
           f"{written} candidate(s) to {OVERLAY_PATH.name}")
     return 0

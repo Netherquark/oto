@@ -355,7 +355,7 @@ Three builders exist, all keyed by family/cell:
   `TARGET_CELLS` (SS `[256,512,768,1000,1024,1365,2048,4096]`, DD
   `[192,256,2048]`, HH `[256,512,1024,2048]`, CC `[192,256,512,1024,2048]`, ZZ
   `[128,192,256,512,1024]`, HH_HPA `[512,2048,4096]`, HS_HPA `[512,2048]`),
-  `PROBE_CELLS` (off-grid: SS `[32,64,128]`, DD `[128]`), `NARROW_NEIGHBOURS`
+  `NARROW_NEIGHBOURS`
   (`MacroTile`, `ThreadTile`, `VectorWidth {2:[1,4],1:[2],4:[2]}`,
   `WorkGroupMapping {4:[8,1],8:[4,1],1:[4,8]}`, `GlobalSplitU {1:[2,4],2:[1,4],4:[1,2]}`),
   `PLAN_BATCH` (the 2026-10-09 batch: CC/ZZ pad rows, CC WGM8/PGR0/GLVW1/
