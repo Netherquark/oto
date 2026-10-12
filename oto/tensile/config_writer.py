@@ -12,6 +12,25 @@ uses (oto.tensile.candidate.parse_tensile_shape), or the driver that calls it
 Public API: write_phase_config, TRANSPOSE_MAP, GLOBAL_LOAD_WIDTH_KEYS,
 FORWARDED_GROUP_C_KNOBS. (The driver's private `_TENSILE_VALID_PARAMS` is
 consulted at the launch boundary but is not re-exported here.)
+
+Forwarding surface -- the knobs the deck controls, the CPU gate that governs
+each, and that this writer emits them verbatim ("forwarded" means the key
+reaches Tensile rather than being silently dropped at the launch boundary;
+"Group C" are the knobs in ``FORWARDED_GROUP_C_KNOBS``):
+
+| knob | what it does | legality gate | forwarded |
+|---|---|---|---|
+| MacroTile | tile dims MxN (+DepthU in the string) | occupancy (LDS) + assembly | yes |
+| ThreadTile | accumulators per thread = TT0*TT1*weight VGPRs | occupancy (VGPR) | yes |
+| VectorWidth / GLVW | global-load width; 16-B hardware cap | divisibility | yes |
+| DepthU | K-depth of the LDS tile | LDS budget | yes |
+| GlobalSplitU | waves over K | assembly (complex/no-MFMA) | yes |
+| WorkGroupMapping | CU-tile mapping | -- | yes |
+| contraction pattern | Ailk_Bjlk (NT) vs Alik_Bljk (TT) etc. | -- | yes |
+| LdsPadA/B | bank-conflict pad per LDS row | ``ldspad_feasible`` | yes (Group C) |
+| StaggerU / StaggerUMapping / StaggerUStride | store stagger | ``ldspad_feasible`` | yes (Group C) |
+| AssertFree0ElementMultiple | half Assembly GSU>1 legality | ``ldspad_feasible`` | yes (Group C) |
+| StoreCInUnroll | C-store unrolling | ``ldspad_feasible`` | yes (Group C) |
 """
 
 from __future__ import annotations

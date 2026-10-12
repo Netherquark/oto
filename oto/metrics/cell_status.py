@@ -7,6 +7,18 @@ analytics list.
 Does NOT own: the analytics themselves (oto.metrics.analytics), the ceilings they
 are graded against (oto.device.peaks), or the report layout
 (oto.metrics.report).
+
+Acceptance-report colour mapping (moved here from design_language.md; the report
+renders each status with a Carbon support token, the status itself is decided
+here):
+  RED    -> support-error    no candidate measurement at (family, shape)
+  ORANGE -> support-info     measured but best candidate < 50% of the family
+                             realistic ceiling
+  GREEN  -> support-success  measured at/above the ceiling (reserved; the
+                             report emits RED/ORANGE today)
+`red_list` / `orange_list` in acceptance_report.json carry the same roles so
+status is legible without colour.
+
 Public API: CellStatusMixin.
 """
 

@@ -2,7 +2,7 @@
 
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
 > `prior_INSIGHTS_CAVEMAN_ULTRA.md`, also absorbed in `prior_RESEARCH_ARCHIVE.md`).
-> This file's `<!-- DERIVED:* -->` blocks and hand prose are preserved append-only
+> This file's hand prose is preserved append-only
 > (`knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/report.py`
 > (`gfx90c_results/acceptance_report.json/.html`).
 
@@ -23,6 +23,9 @@
      `run_20260915_001704` (1,652 records) lives in
      `archive/gfx90c_results/registry.db`. Live reports:
      `gfx90c_results/acceptance_report.json/.html`.
+ - Corpus shape (raw counts intentionally omitted — no corpus count in prose,
+   `claude.md` §5): families SS, HH, DD, CC, ZZ, HH_HPA, HS_HPA (+ auto
+   variants); shapes 256³, 512³, 768³, 1000³, 1024³, 1365³, 2048³, 4096³.
 
 ## 2. Per-Phase Winners (carried ceiling bars)
 
@@ -102,105 +105,30 @@ failed again — and 288 were first attempts. No DD/CC/ZZ floor phase failed.
 
 ## 9. Resume failure triage (404, `gfx900_ref_20260926_201843_resume`)
 
-| Bucket | n | rc | Root cause |
-|---|---|---|---|
-| Tensile `0 valid solutions` | 220 | 255 | Config rejected at solution enumeration. 154 `VectorWidth must be >= 2 for half`, 30 `ThreadTile not multiple of VectorWidth`, 25 GLVWA (VW4/1), 5 `totalElements 768 % (NumThreads*grvw) != 0`, 3 GLVWB, 1 GLVWA(VW8), 2 no reject line |
-| Config never written | 121 | 1 | `_write_phase_config` returns early on the assembly-class gate **without writing the file**; `execute_phase` still launches Tensile on the missing path → `FileNotFoundError`. 1,091 configs exist for 1,212 targets; the 121 missing are exactly the rc=1 set |
-| User skip (`'s'` keypress) | 63 | −1 | `skipped_by_user`. Not a config/hardware failure |
+| Bucket | n | rc |
+|---|---|---|
+| Tensile `0 valid solutions` | 220 | 255 |
+| Config never written | 121 | 1 |
+| User skip (`'s'` keypress) | 63 | −1 |
+
+The rc=255 bucket is Tensile rejecting configs at solution enumeration; its
+per-failure breakdown is archived in `changelog.md`. The rc=1 bucket is
+`_write_phase_config` refusing before it writes the file — the mechanism and the
+121-config gap are owned by `oto.tensile.config_writer`. rc=−1 is
+`skipped_by_user`, not a config or hardware failure.
 
 Family split: HS_HPA 204, SS 106, HH+HH_HPA 94. The doubled `phase_phase_*` config
 naming is the consistent convention, not the fault.
 
 ## 10. Acceptance report — native arm re-armed to the whole database
 
-**Symptom.** `run_20260926_201835`'s report was uniformly zero: every family
-`measured_cells=0 / best_median=0 / coverage=0`, `per_cell_verdicts=[]`, and all 38
-deck cells RED/MISSING at 0.0.
-
-**Cause — arm-scope asymmetry.** The spoof arm resolved across the whole reference
-chain (1,881 cells), but the native arm read only the reported run. That run
-executed only 8 non-duplicate phases (`402` were `identical_fp_already_passed`) and
-**all 8 failed** with `Generating kernel source resulted in error 4`, which Tensile
-maps to `overflowedResources == 4` = **Occupancy limit** in the ZZ/double assembly
-kernel writer. Zero native cells in-run → empty analytics → deterministic zeros.
-The real native winners were sitting in older runs the report never consulted.
-**Fix.** The native arm is now the **whole database** — every `run_*` dir's CSVs plus
-every registry `benchmark_result` row — so winners (including prior older winner runs)
-are picked across all history, exactly as the spoof arm already was. Each verdict cites
-the run/phase that produced the winning kernel.
-
-**Delta semantics (corrected twice).**
-
-*First bug.* The original code computed `delta_pct` from the cell's **max raw sample**
-while the table displayed **medians** — the columns never reconciled (CC 192 displayed
-31.4 vs 31.5, a −0.3% ratio, but reported −6.1% from underlying 40.49 vs 43.12). Every
-statistic is now **per-kernel-median-first**, so a single lucky seed cannot decide a
-verdict. Kernel medians are also keyed by source run, so the same
-`(phase_id, fingerprint)` benchmarked by two runs is no longer pooled into one median.
-
-*Second bug.* The two rendered columns were still hard-wired to "Best native median" /
-"Spoof median" regardless of the basis in use, so switching basis re-broke the
-guarantee. The columns now render `native_value` / `spoof_value` — the two operands
-actually divided — under basis-aware headers, so the displayed ratio always equals the
-printed delta (verified: 0 mismatches in JSON and in all 38 HTML rows, residual ≤0.44pp
-= 1-decimal display rounding).
-
-**Comparison bases** (`--native-agg`), per (family, dtype, shape) cell:
-
-| agg | native vs | Question it answers |
-|---|---|---|
-| `winner` **(default)** | **best** vs **best** | does the deck's best kernel beat the floor's best kernel? (drop-in replacement) |
-| `winner_clock` | best vs best, telemetry-adjusted | same, after normalizing each kernel to a common core clock |
-| `median_clock` | median vs median, telemetry-adjusted | central tendency, clock-normalized |
-| `floor_best` | native **median** vs floor **best** | can a *typical* native kernel beat the best kernel the floor ships? |
-| `strict` | native **worst** vs floor **best** | does *every* native kernel beat the floor's best? (per-cell dominance) |
-| `best_median` | native best vs floor **median** | lenient: deck winner vs a typical floor kernel |
-| `median` | both medians | symmetric central tendency |
-| `throttle` / `best` | sclk-stamped feed / max raw sample | legacy; `best` is seed-noisy, reference only |
-
-**`winner` (best vs best) is the default** — it is the drop-in-replacement question:
-you replace one shipped kernel with one native kernel, so the two candidates must be
-each arm's best. Every statistic is per-kernel-median-first, so "best" means the best
-*kernel* measured over its seeds, not the single luckiest seed.
-
-**Telemetry adjustment (`*_clock` bases).** GFLOPS is linear in core clock, so each
-kernel's median is scaled by `sclk_ref / sclk_measured`, where `sclk_measured` is that
-phase's own sustained clock and `sclk_ref` is **one shared corpus-wide constant**
-(1800 MHz, the highest clock the GPU held in this corpus) so neither arm is rescaled in
-its own favour. Two guards make it refuse to lie:
-
-1. **Idle floor is not a measurement.** A phase whose only busy samples sit at the
-   400 MHz idle clock is dropped rather than scaled — scaling it by 1800/400 = 4.5x
-   let a 20.7 GFLOPS kernel "win" a cell at 93.0 GFLOPS. Genuinely throttled phases
-   (0.9-1.2 GHz, 158 of 770 in the resume run) are real and are kept.
-2. **Coverage gate (`CLOCK_MIN_COVERAGE = 0.5`), applied symmetrically.** A clock-adjusted
-   *best* is only comparable if drawn from the same population as the unadjusted best.
-   At 9% coverage (the CC cells) the eligible subset is unrepresentative and its max sat
-   52-67% below the unadjusted max, which flipped CC to native wins. Below the gate both
-   arms fall back together to the unadjusted twin of the requested basis
-   (`winner_clock` -> `winner`, `median_clock` -> `median`) and the cell is reported
-   `clock_adjusted: false`.
-
-**The native arm has no usable clock data, so `*_clock` is currently inert.**
-`run_20260919_213727` (4,896 of the 6,790 native records) has **no telemetry file at
-all**; `run_20260920_235815` has 458 rows, all at the 400 MHz idle clock, 0% busy and
-from a sampler that predates per-phase tagging. Native clock coverage is therefore
-**0.000 on all 38 cells**, and every `*_clock` run correctly degrades to its unadjusted
-twin with a printed warning. The spoof arm is well covered (mean 0.74, 1,719 phases
-tagged), so the machinery is real and verified — it simply cannot be applied
-symmetrically until native is re-benchmarked by a sampler that tags `phase_id`
-(`oto/metrics/telemetry.py` already writes it; `run_20260920_235815`'s file just predates that
-change). Adjusting only the spoof arm would deflate the floor and flatter the deck, so
-the gate forbids it.
-
-The adjustment was verified against an independent recompute from the raw
-`2_BenchmarkData` CSVs plus the telemetry timelines: **38/38 cells match** on both the
-raw best per-kernel median and its clock-normalized twin.
-
-**Assumption to keep in mind:** throughput ∝ core clock holds for ALU-bound kernels but
-over-corrects memory-bound ones (GFM/GEMM small shapes are limited by mclk/DRAM), so a
-clock-adjusted delta on a DDR-bound cell is an extrapolation. Both the adjusted and
-unadjusted statistics are emitted per cell for exactly this reason.
+**Mechanism (archived).** The arm-scope fix (the native arm reads the whole
+database, not one run), the two delta-semantics corrections (per-kernel-median
+first; operand-named columns), the aggregation bases, and the telemetry
+clock-adjustment rules (the `*_clock` twins, the idle-floor guard, and the
+symmetric `CLOCK_MIN_COVERAGE` fallback) are code contracts owned by
+`oto.metrics.ab_delta` (module docstring, `_collect`, `_stat`) and
+`oto.metrics.ab_audit`. The original post-mortem is archived in `changelog.md`.
 
 **Measured result** (report for `run_20260926_201835`, ref
 `gfx900_ref_20260926_201843_resume`), native arm = **6,790 cells from 2 runs**
@@ -242,13 +170,6 @@ question, which is **per-config**: replacing shipped kernel X with native X'. Th
 decisive artifact is a per-fingerprint pairing (native X' vs shipped X), which the
 current per-cell aggregation cannot express — see `implementation_plan.md`.
 
-
-<!-- DERIVED:summary -->
-<!-- /DERIVED -->
-<!-- DERIVED:bests -->
-<!-- /DERIVED -->
-<!-- DERIVED:shared -->
-<!-- /DERIVED -->
 ## 11. ZZ dead tiles replaced — why and what it proves (2026-09-27)
 
 **Measured fact.** All 8 executed `run_20260926_201835` phases failed
@@ -258,10 +179,9 @@ Tensile's *Occupancy limit* (register-file exhaustion,
 `MT 64x128x8/4x8` across all 4 contraction patterns. This is **not** a launch
 failure and **not** the benign "error 3" (half-store) note.
 
-**Why the preflight missed it.** `oto.tensile.gates.occupancy._estimate_occupancy` derived the thread
-count from `ThreadTile` via a `64 // tt` heuristic, ignored `MacroTile`, and never
-counted VGPRs — so it returned ≥ 1 for every config and could never fire. The gap was
-in the gate, not the tile choice.
+**Why the preflight missed it.** The old estimator could never fire — it ignored
+`MacroTile` and counted no VGPRs. The gate that owns this model is
+`oto.tensile.gates.occupancy.occupancy_feasible`.
 
 **Proof the new gate is correct, not just stricter.** Running
 `oto.tensile.gates.occupancy.occupancy_feasible` over the pre-fix 410-phase manifest rejects **exactly
@@ -279,13 +199,6 @@ positives. All 9 observed pass/fail calibration cases reproduce. Regression-lock
 run. ZZ is **legal but unbenchmarked**; whether any of the new tiles actually beats
 the floor is unknown and can only be settled in a TTY session. The weights are
 calibrated to observed outcomes, not derived from a register allocator.
-
-<!-- DERIVED:sclk -->
-<!-- /DERIVED -->
-<!-- DERIVED:candidate -->
-<!-- /DERIVED -->
-<!-- DERIVED:budget -->
-<!-- /DERIVED -->
 
 ## 12. Locked floor + consolidated deck — A/B snapshot (2026-10-03)
 

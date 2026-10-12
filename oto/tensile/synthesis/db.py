@@ -10,6 +10,28 @@ Does NOT own: the forward-knob domains it draws from
 (oto.tensile.synthesis.db_knobs), the manifest-driven synthesis
 (oto.tensile.synthesis.manifest), or the ledger that records what it emits
 (oto.ledger.mutator).
+
+Mutation strategies (moved here from potential_configs.md). Every sore loser
+gets novel, valid mutants from three strategy families, with
+`bypass_identical_skip=True` so each mutant is measured regardless of prior
+history -- novelty is guaranteed by the ledger, not by pass/fail history:
+  * NARROW -- single-knob deltas on the forward knobs the manifest sampler
+    cannot reach (FORWARD_KNOB_DOMAINS): LdsPadA/B {0,1,2,4}, NLCA {1,2,3},
+    GSU {1,2,4}, WGM {1,4,8}, GLVW A/B {1,2,4}, PGR {0}, StaggerU/Stride
+    {0,8,16,32} / {256,512}. Each draw changes 1-3 knobs.
+  * WIDE -- DB tile donors (per-family measured winners and the floor winner)
+    re-combined with forward draws: MacroTile/ThreadTile from DB winners,
+    DepthU {4,8,16,32}, GlobalSplitU {1,2,4}, GLVW A/B {1,2,4}, WorkGroup from
+    DB winners.
+  * DIRECTION -- the parent's knobs moved toward the floor winner's knobs
+    (structural knobs only; knobs the parent already matches are left alone).
+  * Family-specific patterns (DbPatternsMixin) target each family's failure
+    mode: SS wave coverage/occupancy, DD register pressure, CC total-elements
+    divisibility/LdsPad, ZZ vector width/thread tile.
+Budget: 5 forward draws per iteration; each mutant is gated through
+`validate_config` + `ldspad_feasible` before ledger emission. The campaign's
+convergence test lives in oto.ledger.agent.
+
 Public API: DBMutator, FORWARD_KNOB_DOMAINS (re-exported).
 """
 

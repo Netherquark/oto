@@ -16,6 +16,34 @@ escape; Tensile v4.44.0):
                           (half or mixed) precision, or EnableMatrixInstruction"
   SolutionStructs:3616  "Assembly GSU half requires AssertFree0ElementMultiple>=2"
   SolutionStructs:3342  "StaggerUStride < DepthU * BytesPerElement"
+
+Complex-MAC accounting (moved here from complex_gemm_research_brief.md):
+Tensile's complex MAC is exactly four real FMAs, so a complex GEMM is not
+ALU-walled at a quarter of the real pipe:
+  * MAC_F32C emits four `_v_mac_f32` per complex MAC; MAC_F64C emits four
+    `v_fma_f64`; the MFMA path is the same count (`numMfmaPerIter *= 4`).
+  * BLAS charges 8*M*N*K for CGEMM/ZGEMM vs 2*M*N*K for real GEMM -- a 4x
+    cost, i.e. 2 flops per FMA, the real-GEMM ratio. An ALU-bound complex GEMM
+    therefore has the same BLAS-8 ceiling as its real counterpart: on gfx90c
+    CGEMM <= 1613 and ZGEMM <= 101 GFLOPS. The "divide by 4" applies to
+    complex-MAC throughput (~202 / ~12.6 G MAC/s), never to BLAS-8 GFLOPS.
+  * Split schemes: 4M = 4 mul + 2 add, collapsing to 4 instructions with FMA
+    and free negate (what Tensile emits); 3M (Gauss/Karatsuba) = 3 mul + 5 add,
+    about 7-8 scalar ops per MAC but only 3 real GEMMs per GEMM with an
+    O(MK+KN+MN) combine; 2M (Caday) = 2 real GEMMs.
+Instruction-level escape hatches are closed on gfx90c (no `v_mfma`, no
+`v_dot*`/dp4a, no `v_pk_fma_bf16`); the levers are occupancy/register tiling
+and the 3M decomposition.
+
+GlobalSplitU reachability (this port): only the SingleBuffer-atomic path is
+reachable (the config writer never forwards `GlobalSplitUAlgorithm` or a
+reduction workspace), so complex/HPA GSU>1 has no MFMA escape and half
+Assembly GSU>1 stays illegal while the deck ships AF0EM=1. SS is the only
+GSU-legal family (ladder {1,2,4}).
+
+Non-temporal loads: `NonTemporalA/B/C/D` lower to `buffer_load ...
+th:TH_LOAD_NT` -- a load-flavor knob, not a class rule.
+
 Public API: assembly_class_valid, assembly_depth_u, ASSEMBLY_DTYPE_ELEM_BYTES.
 """
 

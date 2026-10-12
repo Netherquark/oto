@@ -20,11 +20,14 @@ key handling — a re-run of an already-passed deck is still interruptible.
 
 ## 2. Driver Architecture
 
-The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages deterministically:
+The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages
+deterministically. The stage names ("Stage 6", "Stage 7") are the shared
+vocabulary these docs use; per-stage module attribution is a code fact and
+lives in the module docstrings of [`oto/runners/`](oto/runners/).
 
 ```
 ┌──────────────────────────────────────────────┐
-│          phases.yaml (Manifest)              │
+│         phases.yaml (Manifest)               │
 └──────────────────────────────────────────────┘
                        │
                        ▼
@@ -35,30 +38,26 @@ The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages de
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 2: Candidate Generation                │
-│ (oto/tensile: family decks / mutants)        │
 └──────────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 3: Benchmark Execution                 │
-│ (parallel clang + setsid + telemetry)        │
 └──────────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 4: Adaptive Repeat & Policy            │
-│ (oto/metrics: N8 median, CV stability)       │
 └──────────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 5: Analytics & SQLite Ledger           │
-│ (oto/metrics: ceiling utilization)           │
 └──────────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
-│ CONVERGENCE LOOP (oto/ledger/agent.py)       │
+│ CONVERGENCE LOOP                             │
 │ - Gate: >=3 configs, >=2 runs, >=6 seeds,    │
 │   CV<=15%, 0 RED cells                       │
 │ - If unconverged: harvest -> mutate <=2      │
@@ -68,13 +67,11 @@ The Python driver ([port_tensile.py](port_tensile.py)) coordinates all stages de
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 6: Synthesis / Build                   │
-│ (TensileCreateLibrary + anti-alias)          │
 └──────────────────────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
 │ STAGE 7: Acceptance A/B & HTML Report        │
-│ (oto/metrics: native vs spoof A/B)           │
 └──────────────────────────────────────────────┘
 ```
 
@@ -214,72 +211,32 @@ python3 port_tensile.py --synthesize
 
 ## 4. Module Overview
 
-| Module | Purpose |
-|---|---|
-| [`port_tensile.py`](port_tensile.py) | Suite CLI (thin wrapper over [`oto/runners/cli.py`](oto/runners/cli.py)): multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, real-time key listeners (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
-| [`oto/tensile/candidate.py`](oto/tensile/candidate.py) + [`oto/tensile/gates/`](oto/tensile/gates/) | Stage 2 candidate generation, family tile decks, legal knob mutation, shape parsing, and the **dual measured resource gate**: `TT0*TT1*dtype_weight <= 128` accumulator VGPRs/thread and `(MT0+MT1)*DepthU*bytesPerElement <= 16384` LDS. Unknown dtype or unresolvable depth fails closed. `cap_vector_width()` derives each family's 16 B global-load-cap variant. |
-| [`oto/metrics/policy.py`](oto/metrics/policy.py) | Median-of-seeds aggregation, CV≤15% stability gating, evidence-gated Tier-2 retirement (`check_retirement_eligibility`), and `should_run`/`should_repeat` policy gates. |
-| [`oto/metrics/analytics.py`](oto/metrics/analytics.py) | Stage 5 analytics, gfx900 contract-cell classification (RED = missing, ORANGE = `<50%` ceiling, GREEN) against realistic ceilings ([gfx90c_theoretical_limits.md §5](gfx90c_theoretical_limits.md#L125)), and per-cell native-vs-spoof deltas (workload cells via `cell_key`). |
-| [`oto/ledger/agent.py`](oto/ledger/agent.py) | Deterministic convergence agent: harvests cell winners, generates candidate mutations, and checks 4-condition convergence. |
-| [`oto/ledger/registry.py`](oto/ledger/registry.py) | Append-only ACID SQLite registry (`gfx90c_results/registry.db`, WAL mode) persisting `json.dumps` payloads. |
-| [`oto/metrics/report.py`](oto/metrics/report.py) | Acceptance report generation, per-family coverage vs the pinned shipped-dat manifest, A/B verdict synthesis (`WIN`, `TIE`, `LOSS`) vs the recalled gfx900 reference floor, and rich HTML dashboard generation. |
-| [`oto/tensile/library.py`](oto/tensile/library.py) | System ROCm gfx900 TensileLibrary.dat parser + locator; pins the shipped-kernel manifest (once), emits the 2,285-kernel one-time reference phase list, and chains `gfx900_ref_*` runs (`reference_chain`). |
-| [`oto/runners/auto_prompt.py`](oto/runners/auto_prompt.py) | The five `--auto` questions, live corpus counts read from the registry, and the `AutoPlan` they resolve to. Non-TTY defaults are explicit and reported. |
-| [`oto/device/peaks.py`](oto/device/peaks.py) | Single source of truth for hardware constants, theoretical peak tables (`PEAK_GFLOPS`), and the family deck shapes (`FAMILY_SHAPES`). |
-| [`verify_run.py`](verify_run.py) | Append-only checker (thin wrapper over [`oto/tools/verify_run.py`](oto/tools/verify_run.py)): corpus `snapshot`/`diff` (proves a run only appended, nothing was rewritten or lost), per-run `telemetry` funnel (how many rows survive each clock filter, so a filter cannot silently zero the data), and `cheapest` legal phase for a cheap smoke run. |
+The package map is generated, not hand-maintained: every module states its own
+ownership (owns / does-not-own / public API) in its docstring, and
+[`oto/README.md`](oto/README.md) is the generated index of them. There is no
+hand-kept module table here — it went stale the moment the package split; no
+corpus count is transcribed here (counts move when cells are re-triaged).
 
 ---
 
 ## 5. Validation Tools (CPU-only, no GPU needed)
 
-None of these runs a benchmark, so they are safe outside a TTY.
+None of these runs a benchmark, so they are safe outside a TTY. Each tool
+documents its own exit contract in its module docstring (see
+[`oto/checks/`](oto/checks/) and [`oto/tools/`](oto/tools/), indexed in
+[`oto/README.md`](oto/README.md)); this section is a pointer, not a copy. The
+two operator entry points, and the live flag list, are answered by argparse at
+runtime:
 
 ```bash
-# Lint a candidate deck. Checks resource legality AND deck self-consistency
-# (an id that embeds MT/TT must match its config; fp must be the hash of the
-# config actually stored). Exits non-zero on any failure, so it can gate a pipeline.
-python3 check_candidates.py --quiet
-python3 check_candidates.py --family ZZ --json out.json
-
-# Enforcement of the coverage-parity rule (knowledge_base.md §6.1): the produced
-# tensilelibrary.dat must address EXACTLY the shipped gfx900 cell grid (38 cells)
-# -- no contraction, no extension. Exits non-zero on divergence.
-python3 check_library_parity.py --quiet          # deck + seed (+ --run-id's overlay)
-python3 check_library_parity.py --json out.json  # machine-readable verdict
-
-# Ground-truth candidate machinery for agents (CPU-only). Builds the per-kernel
-# measurement DB and the deck-vs-floor-vs-all-time regression matrix (median
-# basis, per-family shipped grid). See oto/harness/README.md for the runbook.
-python3 -m oto.harness.kernel_db --base-dir . --rebuild
-python3 -m oto.harness.regression_matrix --base-dir .
-
-# Ask Tensile itself to generate and compile kernels for every phase, and report
-# any reject() reason. Proves solution generation and kernel resource legality --
-# it is NOT a complete code-object or library build.
-python3 check_tensile_build.py --jobs 8 --json build.json
-python3 check_tensile_build.py --family ZZ          # just the ZZ family
-python3 check_tensile_build.py --compare            # cross-check our gate vs Tensile
-
-# Enforce the append-only data law (knowledge_base.md §10). Take a snapshot
-# around any run, then diff: a new run dir and more registry rows is clean;
-# anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
-python3 verify_run.py snapshot --out before.json
-#   ... run the driver ...
-python3 verify_run.py diff before.json after.json
-
-# Is this run's telemetry actually usable? Prints per-phase survival at every
-# clock filter (busy -> sclk range -> thermal), so an over-strict filter is
-# visible instead of reading as "no clock data".
-python3 verify_run.py telemetry run_20261005_170141
-
-# Cheapest LEGAL phase in the live deck, for a smoke run that costs ~nothing.
-# Prints the exact --targets command to drive it.
-python3 verify_run.py cheapest --family ZZ
+python3 port_tensile.py --help
+python3 check_candidates.py --help
 ```
 
-Current state is reported live by each tool: `check_candidates.py` prints the
-checked/illegal counts it finds, and `check_tensile_build.py` prints the
-pass/fail counts it computes. Neither number is transcribed here.
+Current state is reported live by each tool (checked/illegal counts, pass/fail
+counts); no count is transcribed here. No corpus count appears in prose (the
+live tools / `results.md` report current state).
+
 ---
 
 ## 6. Key Documentation & System Authority
@@ -297,18 +254,4 @@ pass/fail counts it computes. Neither number is transcribed here.
 
 ## 7. Configuration (`.env`)
 
-Machine-specific locations are read from a `.env` file in the repo root via
-`python-dotenv` ([`load_dotenv`](https://github.com/theskumar/python-dotenv) —
-industry-standard `.env` loader; precedence: live shell env → `.env`). ROCm
-toolchain locations are discovered by native tools only — `hipconfig` for the
-install root/HIP paths and `shutil.which` for binaries on `PATH` (this handles
-both AMD-installer `/opt/rocm` and Fedora/RHEL RPM `/usr` + `/usr/lib64/rocm`
-layouts without any hand-rolled candidate chains). Explicit overrides below win
-when they point at an existing path; stale values fall back to native discovery.
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `TENSILE_ROOT` | required (set in `.env`) | Tensile checkout root; driver shells out to `Tensile/bin/Tensile` here. The driver errors out at runtime if unset — there is no built-in fallback path |
-
-Optional overrides (native discovery otherwise): `ROCM_PATH`, `ROCM_BIN`,
-`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `TENSILE_ASSEMBLER_FALLBACK`.
+`.env` key table: see the module docstrings of [`oto/runners/toolchain.py`](oto/runners/toolchain.py) (`TENSILE_ROOT` required with no fallback; native ROCm discovery only, no hardcoded candidate chains).

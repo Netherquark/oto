@@ -68,6 +68,10 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
 
 ## 2. What the oto driver must not reintroduce
 
+The code-level architecture prohibitions (no hardcoded retirement lists, no
+hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
+`oto/ledger/registry_core.py`. The four that are policy rather than code stay:
+
 - **No printf-JSON:** every record byte = `json.dumps(dict)` through the single
   append path. Never `"…%s"` interpolation into JSONL (frozen §5.1 — value
   with `"`, `\`, or embedded newline corrupted live records; 2/1283 already
@@ -78,20 +82,10 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCH
 - **No inferred missing controls:** missing (dt,cls) ruler or un-gated telemetry
   window → "not computable / unadjusted", never 1.0 fabrication and never a
   cross-dtype factor leak (v1 §2.3).
-- **No hardcoded retirement lists:** the 3-tier model is evidence-only (registry
-  rows). No `PHASE_RETIRE`-style reserved set compiled into code; spoof / peak
-  are NEVER a retire signal (guardrail: gfx900 = floor).
 - **No self-terminating run-all:** the spoof floor = the dedicated `gfx900_ref_*`
   chain (recalled, never a manifest phase-1 slot); every phase runs from the
   manifest unless `policy.should_run` says otherwise (tier-1 fp-less retire →
   tier-2 (phase,fp) retire → identical-fp skip opt-in).
-- **No hwmon parent-glob:** read `hwmon[0-9]*` paths via pathlib; never
-  `find -name 'hwmon*'` (v2 §5.2 — parent dir matched first → all-NA rows while
-  `gpu_busy_percent` still worked, masking the failure).
-- **No `.hdr` sidecar:** telemetry header written INSIDE telemetry.csv; the v1
-  sidecar was never consumed by any reader — equal-defect junk file.
-- **No power1_average-only:** fallback order `power1_input` → `power1_average`;
-  Cezanne hwmon4 exposes `power1_input` only (v2 §5.2).
 
 ## 3. Audit checklist for port_tensile.py
 

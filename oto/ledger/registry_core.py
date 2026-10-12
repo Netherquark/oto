@@ -9,6 +9,19 @@ status triggers.
 Does NOT own: the registry's read side (oto.ledger.queries), the Option-H proposal ledger
 (oto.ledger.proposals), or the cell policy (oto.metrics.policy).
 
+Code prohibitions the driver must not reintroduce (moved here from
+adversarial_review.md §2):
+  * No hardcoded retirement lists -- the retirement model is evidence-only
+    (registry rows); no PHASE_RETIRE-style reserved set compiled into code, and
+    spoof/peak are never a retire signal (gfx900 = floor).
+  * No hwmon parent-glob -- read `hwmon[0-9]*` paths via pathlib, never
+    `find -name 'hwmon*'`: the parent directory would match first, yielding
+    all-NA rows while `gpu_busy_percent` still worked and masking the failure.
+  * No `.hdr` sidecar -- the telemetry header is written inside telemetry.csv;
+    the v1 sidecar was never consumed by any reader.
+  * No `power1_average`-only -- the fallback order is `power1_input` then
+    `power1_average`; Cezanne hwmon4 exposes `power1_input` only.
+
 Public API: RegistryCore, fingerprint_config, _KERNEL_DB_REBUILD_STATUSES.
 """
 

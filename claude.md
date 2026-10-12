@@ -31,7 +31,6 @@ For every substantive task:
 7. Read `changelog.md` for what changed and why (oto evolution).
 8. Read `potential_configs.md` for the candidate deck, decisions, and search rules.
 9. Read `results.md` for measured evidence (the oto ledger).
-10. Read `incomplete_work.md` / `scratch.md` / `adversarial_review.md` as task/audit registers.
 11. Read `prior_INSIGHTS_CAVEMAN_ULTRA.md` and `prior_RESEARCH_ARCHIVE.md` ONLY when
     you need the frozen prior measured conclusions (bests, verdicts, levers).
     These are the sole sanctioned prior material; do not reference other prior
@@ -70,7 +69,7 @@ A phase dying with `Generating kernel source resulted in error 4` is a
 | `potential_configs.md` | Candidate deck, hypotheses, decisions, convergent-candidate rules |
 | `results.md` | Experimental data, parsed results, comparisons, conclusions |
 | `tensile_tuning_context.md` | Tuning/search philosophy (one-shot; AI as add-only), hardware truth |
-| `scratch.md` | Long-term goal, enumerated task registry, guardrails |
+
 | `incomplete_work.md` | Open-work register (status-keyed) |
 | `adversarial_review.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
 | `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md` | Frozen prior conclusions (read-only reference; results only) |
@@ -78,8 +77,12 @@ A phase dying with `Generating kernel source resulted in error 4` is a
 | `changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
 | `docs/README.md` | The boundary between the MD docs ecosystem and the docstrings |
 | `docs/docstrings.md` | The module/function docstring convention (owns/does-not-own/public API) |
-| `docs/audit.md` | Proposals for whittling the MD tree (not yet applied) |
-| `docs/design_language.md` | The visual contract of the HTML acceptance report |
+
+| `docs/design_language.md` | Design-language spec for the HTML acceptance report |
+| `docs/harness_runbook.md` | Harness runbook (moved from `oto/harness/README.md`) |
+| `gfx90c_tuning_guide.md` | Live tuning guidance for gfx90c (current fact only) |
+| `kernel_tuning_research.md` | Live research notes on kernel tuning (current fact only) |
+| `complex_gemm_research_brief.md` | Live research brief on complex GEMM (current fact only) |
 | `plans/REFACTOR_*.md` | The refactor plans + their executable equivalence proofs |
 
 One fact, one canonical home. When information belongs in one owner, update that

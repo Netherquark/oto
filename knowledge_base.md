@@ -404,23 +404,13 @@ all of them and drives oto's own loaders, so use it instead of hand-parsing.
 
 ### 8.2 Config legality is a 4-gate preflight, not a launch-time surprise
 
-A config can pass divisibility, assembly-class and LDS checks and still die at
-kernel-generation time. The four gates, all CPU-side:
-
-1. **divisibility** — `GLVW % mv/pv == 0` and `% lpv == 0` (`validate_config`)
-2. **assembly class** — MT/TT/DepthU/Threads/StaggerU/FP16 clamp (`assembly_class_valid`)
-3. **LDS** — per-thread LDS in VGPR-equivalent registers
-4. **register-file occupancy** — `oto.tensile.gates.occupancy.occupancy_feasible`
-
-Gate 4 is the one that was silently absent. Tensile sets
-`overflowedResources = 4` ("Occupancy limit", user-visible as
-`Generating kernel source resulted in error 4`) when the register file cannot hold
-one workgroup. Run `python3 check_candidates.py` to sweep a deck; it exits 1 on any
-illegal config, so legality is provable **before** a GPU run. Occupancy is decided
-by MacroTile area and a dtype weight only — `ThreadTile` cancels out — and it is
-the only gate that can kill a whole family through tile width alone. Full model,
-calibration table and the evidence for the 2× headroom rule: `potential_configs.md`
-§5.7.
+A config can clear divisibility, assembly-class and LDS checks and still die at
+kernel-generation time with Tensile `error 4` (register-file occupancy). Gate
+semantics live in `oto/tensile/gates/*` (each gate module documents itself); the
+routing rule — a phase dying with `Generating kernel source resulted in error 4`
+is a legality-gate miss, not bad luck — is `claude.md` §2.1. Run
+`python3 check_candidates.py` to sweep a deck CPU-side; it exits 1 on any
+illegal config, so legality is provable **before** a GPU run.
 
 ---
 
@@ -439,44 +429,18 @@ Pipeline (in order):
 
 ### 9.1 Execution time in the acceptance report
 
-`execution_timing` in the report JSON/HTML is three distinct numbers, never
-collapsed into one "runtime":
-
-| field | meaning |
-|---|---|
-| `native_run.elapsed_minutes` | wall clock of the run being reported — one pass of the deck |
-| `reference_chain.elapsed_minutes` | wall clock summed over the gfx900 chain |
-| `phase_busy.minutes` | sum of per-phase `started`→`ended` spans |
-
-The first two are separate because the floor is usually a *resumed chain*: the
-head run's cost is a fraction of the floor's total, so one combined figure
-would understate the floor by however many resumes it took. `phase_busy` is
-below wall clock by config generation, Tensile build and queueing; a large gap
-means an ETA is timing harness overhead, not the GPU.
-
-A run that is still in flight has no execution time yet. It reports
-`elapsed_minutes: null` and `in_flight: true` rather than `0.0`, so
-"not finished yet" is never read as "instant".
+The semantics of the three `execution_timing` numbers
+(`native_run.elapsed_minutes`, `reference_chain.elapsed_minutes`,
+`phase_busy.minutes`), why the first two are never collapsed, and the in-flight
+`elapsed_minutes: null` / `in_flight: true` rule are the module docstring of
+`oto/metrics/report_models.py` (`AcceptanceReport`).
 
 ### 9.2 Live TTY status
 
-`run_status.LiveStatus` repaints a compact panel (state, decided/total, progress
-bar, elapsed, ETA, tally) into the terminal while a run executes:
-
-- A **background thread** repaints, because the main loop is blocked inside
-  `execute_phase` for minutes at a time — a caller-driven pump would freeze.
-- **stdout is wrapped** in `_PanelStdout`, which erases the panel before any
-  other write. Without it, the run's own `Skipping phase ...` lines land under
-  the panel and the next repaint shreds them.
-- A **non-TTY** (piped log, CI) gets appended plain lines, never ANSI, so logs
-  stay readable.
-- The panel **catches `BaseException`**: `build_report` raises `SystemExit` when
-  the registry does not exist, which is exactly the state a first run starts
-  in, and `SystemExit` is not an `Exception`. A status display must never be
-  the reason a run dies.
-
-Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
-`python3 -m oto.metrics.run_status --watch` remains the standalone full-panel view.
+`run_status.LiveStatus` and its panel/stdout mechanics — the background-repaint
+thread, the `_PanelStdout` wrapping, the non-TTY plain-line fallback, the
+`BaseException` catch, and the `--live` flags — are the module docstring of
+`oto/metrics/render_status.py`.
 
 Acceptance ceilings: per-family bars come from `gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK

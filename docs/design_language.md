@@ -207,18 +207,7 @@ support-info
 focus
 ```
 
-Acceptance-report cell mapping (`oto/metrics/report.py` `_cell_status_section`, gfx900
-contract grid):
-
-```text
-RED    support-error    cell NOT measured in this run (missing (family, shape))
-ORANGE support-info     measured but best candidate < 50% of the family ceiling
-GREEN  support-success  measured at/above the acceptance ceiling (reserved;
-                        `oto/metrics/report.py` currently emits RED/ORANGE only)
-```
-
-`red_list` / `orange_list` in `acceptance_report.json` carry these roles so
-status is understandable without color alone (MISSING / ORANGE / GREEN labels).
+Acceptance-report cell colour mapping: `oto/metrics/cell_status.py`.
 
 Accent is for links, primary actions, active/selected UI, and meaningful
 emphasis. Status must remain understandable without color alone.
@@ -453,11 +442,3 @@ dense data presentation
 ```
 
 Blue + gray + cards alone is insufficient.
-
-## Output
-
-When source HTML is provided, return complete transformed HTML/CSS/JS.
-
-Keep implementation self-contained unless existing architecture requires otherwise.
-Preserve existing JavaScript behavior and data.
-Do not explain design decisions unless asked.

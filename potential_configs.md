@@ -8,10 +8,11 @@ the split-complex estimate in that version are wrong).
 **What this rewrite changes (and why):**
 1. **Complex accounting corrected to BLAS-8.** One complex MAC = four real FMAs
    = 8 BLAS flops (`Tensile/Components/MAC_F32C.py` emits four `_v_mac_f32`,
-   `MAC_F64C.py` four `v_fma_f64`; complex brief §1). Under that counting CC's
+   `MAC_F64C.py` four `v_fma_f64`; complex-MAC accounting:
+   `oto/tensile/gates/assembly.py`). Under that counting CC's
    honest ceiling is the **FP32 peak (1613 GFLOPS)** and ZZ's is the **FP64 peak
    (101 GFLOPS)** — not a "÷4 wall" of 403/25. The `÷4` applies to *complex-MAC
-   throughput*, never to BLAS-8 GFLOPS (complex brief §3). The report's
+   throughput*, never to BLAS-8 GFLOPS (`oto/tensile/gates/assembly.py`). The report's
    `%theo` (CC 7.06→20.28 across k192→2048; ZZ 16.66→24.00 across k128→1024)
    is therefore a **true FMA-issue efficiency**, and the user's complaint about
    CC/ZZ is *honest*: both families are genuinely M3-undertuned with **≈3.5×
@@ -20,7 +21,7 @@ the split-complex estimate in that version are wrong).
    (3 real GEMMs instead of 4, BLAS-8 credits 8 flops/MAC): CC ≈ (4/3)·1135 ≈
    **1513**; ZZ ≈ (4/3)·95–98 ≈ **127–131**. The old draft's "÷3 → ≈378 / +19%"
    was the same mis-accounting.
-3. **Winner configs re-resolved per cell** (38-cell table in §2) — several
+3. **Winner configs re-resolved per cell** (per-cell table in §3) — several
    overnight corrections land here: SS:512 VW4 **(WIN +10.4%)**, CC:512 winner is
    **WGM4+NLCA1** (not WGM8), CC:256 native best is a **small MT32x32** tile
    (not MT64x64), SS:4096 → **DU16**, ZZ:512/1024 → DU16+PGR=False,
@@ -49,7 +50,7 @@ every cell's native winner from the registry `phases` table + per-run
 the locked-floor `kernel_db` rows. Caches: `gfx90c_results/analysis/cells_resolved.json`
 (machine) + `cells_resolved.full.txt` (this section's evidence table, reproduced
 from 6129 run yamls, 8480 resolver keys, 1113 registry phases). Ground truth for
-§2/§3/§4. Re-run with `python3 -m oto.harness.resolve_cells`; supersedes the
+§3/§4/§5. Re-run with `python3 -m oto.harness.resolve_cells`; supersedes the
 pre-formalisation `/tmp/opencode` dump.
 
 ---
@@ -58,21 +59,21 @@ pre-formalisation `/tmp/opencode` dump.
 
 Accepted rules: **never copy a floor binary**; a spoof-steal is legal only for
 the worst native loser and only as a *config adaptation* compiled natively for
-gfx90c (documented §7). Real benchmarks run **only in TTY/overnight**; GUI
-sessions get CPU-only legality PoCs (§9).
+gfx90c (documented §9). Real benchmarks run **only in TTY/overnight**; GUI
+sessions get CPU-only legality PoCs (§11).
 
 | | count | cells |
 |---|---|---|
 | WIN | 19 | CC 192/1024/2048, DD 192/256/512, HH 256/512, HH_HPA 512/4096, HS_HPA 512/4096, SS 256/512, **ZZ 128–1024 (all 5)** |
 | TIE | 18 | SS 768/1000/1024/1365/2048/4096, HH 1024/2048/4096, HH_HPA 1024/2048, HS_HPA 1024/2048, DD 768/1024/1365/2048, CC 512 |
-| **LOSS** | **1** | **CC:256 (−8.7 %)** — the single sanctioned steal, §7 |
+| **LOSS** | **1** | **CC:256 (−8.7 %)** — the single sanctioned steal, §9 |
 
 ## 2. gfx90c impossible-underperforming configs (triage outcome)
 
 Configurations that remain below the realistic acceptance ceiling despite exhaustive search, grouped by root cause:
 
 ### M1 — ALU/FM-A issue (occupancy / register pressure)
-These cells are bottlenecked by the FMA-issue width per thread. gfx90c has no MFMA, no `v_mfma`, no `v_dot*`/dp4a, no `v_pk_fma_bf16` — the exotic integer paths are closed (§8.2). The headroom exists in tile/GSU/NLCA/PGR levers, not in new instructions.
+These cells are bottlenecked by the FMA-issue width per thread. gfx90c has no MFMA, no `v_mfma`, no `v_dot*`/dp4a, no `v_pk_fma_bf16` — the exotic integer paths are closed (§10.2). The headroom exists in tile/GSU/NLCA/PGR levers, not in new instructions.
 
 | Family | Shape | Current | Barrier | Possible levers |
 |---|---|---|---|---|
@@ -107,7 +108,7 @@ Cells where the kernel is bottlenecked by VGPR/LDS pressure rather than ALU thro
 | Family | Shape | Current | Barrier | Possible levers |
 |---|---|---|---|---|
 | CC | 512³ | TIE (28.4% of 27.8 bar) | M3: VW=2 with NLCA=1; could gain with NLCA=2 or wider VW | NLCA 2/4, VW 4, GSU 2/4 |
-| CC | 256²⁵⁶ | LOSS (−8.7%, 27.8% of ceiling) | M3: totalElements 768 % (NumThreads×grvw) ≠ 0; default grvw doesn't divide evenly | grvw must divide shape evenly (§8.6) |
+| CC | 256²⁵⁶ | LOSS (−8.7%, 27.8% of ceiling) | M3: totalElements 768 % (NumThreads×grvw) ≠ 0; default grvw doesn't divide evenly | grvw must divide shape evenly |
 | ZZ | 128¹²⁸ | WIN (+241.4%, 16.7% of 16.7 bar) | M3: already surpassing ceiling via extreme tile size | N/A — already WIN |
 | ZZ | 256²⁵⁶ | WIN (+25.9%, 21.7% of 22.2 bar) | M3: moderate improvement via tile + DU | N/A — already WIN |
 | ZZ | 512⁵¹² | WIN (+13.8%, 23.2% of 23.2 bar) | M3: modest improvement | N/A — already WIN |
@@ -122,7 +123,7 @@ WIN cells carry no action. The meaningful list is CC 192/1024/2048, DD
 192/256/512, HH 256/512, HPA 512/4096, SS 256/512, ZZ 128–1024. Of the 19
 non-WIN cells, 13 are byte-identical-or-clock-noise ties, 4 are DD M1-wall
 ties, 1 is the CC:512 config-delta tie, and exactly 1 (CC:256) is a
-configurably-fixable loss (§3).
+configurably-fixable loss (§4).
 
 ### The headline correction this rewrite makes
 
@@ -131,7 +132,7 @@ resolution (CC 1118.7 / ZZ 98.6), but CC/ZZ were graded at 7–29 % and the draf
 interpreted that as "81 %/96 % of an honest ÷4 ALU wall". That wall is a
 **mis-accounting**. BLAS charges 8 flops per complex MAC and Tensile's complex
 MAC is exactly 4 real FMAs → the ALU-bound complex GEMM has the *same* BLAS-8
-ceiling as its real counterpart (complex brief §2–§3):
+ceiling as its real counterpart (`oto/tensile/gates/assembly.py`):
 
 | family | theo (BLAS-8, honest ceiling) | realistic acceptance bar | measured best | % theo | % of bar |
 |---|---|---|---|---|---|
@@ -144,14 +145,14 @@ give CC ≈ 1187 GFLOPS and ZZ ≈ 95–98 without any algorithm change. The hea
 is **≈3.5× (CC) / ≈4× (ZZ)** and lives in occupancy/register/tile levers
 (WGM/NLCA/pads/PGR=0/GLVW/GSU), not in exotic instruction tricks (gfx90c has no
 `v_mfma`, no `v_dot*`/dp4a, no `v_pk_fma_bf16` — the exotic paths are closed,
-§8.2). **CC/ZZ M3 is now the campaign priority (§6 Group B, §10).**
+§10.2). **CC/ZZ M3 is now the campaign priority (§8 Group B, §12).**
 
 Percent-of-theoretical values are read from `acceptance_report.json`
 `per_family_coverage` (stored ×100: CC 705.53 → 7.06 %, ZZ 2398.99 → 24.00 %).
 
 ---
 
-## 2. Per-cell evidence — config-resolved winners (38 cells)
+## 3. Per-cell evidence — config-resolved winners (count: `results.md` §12)
 
 Every cell below is resolved from the registry/`kernel_db` (6129 run yamls,
 8480 resolver keys). "WIN/TIE/LOSS" is native-vs-floor; `%` = margin over the
@@ -229,7 +230,7 @@ with `+NLCA1`, `padsA=`, `padsB=`, `PGR=False`, `WGMn` marked when set.
 
 ---
 
-## 3. Anatomy of the ties/losses — why each one is (or isn't) a signal
+## 4. Anatomy of the ties/losses — why each one is (or isn't) a signal
 
 Re-measured classification (extends the superseded §14.2 with regenerated
 numbers; **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
@@ -242,7 +243,7 @@ numbers; **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
    `clock_adjusted: False` on every cell; native sclk ran 0.910–1.650 GHz
    depending on the day's DVFS (and the 10-09 overnight ran ~1.175 GHz vs the
    1.8 GHz reference — ~1.53× suppressed). A 3–4 % delta sits inside that
-   envelope → **re-measure with clock hygiene (§8.5), do not re-tune.**
+   envelope → **re-measure with clock hygiene (§10.5), do not re-tune.**
 2. **M1 real-geometry walls (4 DD cells).** DD 768/1024/1365/2048: both arms at
    90–99 % of the 98.6 bar; DD:1024/1365 native even *changes tile* (64x32/32x32)
    to hold the wall. No safe config mutation moves them (L §5 M1).
@@ -258,7 +259,7 @@ numbers; **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
    native 64x64 `Alik_Bjlk` attempts, which topped out at 188.1 pre-overnight).
    So this isn't an occupancy wall (native and floor both run ~3 wg/CU) — it is a
    **tile-geometry choice** the floor got right and the native deck did not.
-   Sanctioned steal: §7.
+   Sanctioned steal: §9.
 5. **The small-shape M2 row is NOT a verdict loss.** SS/HH/HPA k≤512 WIN vs their
    spoofs (SS:256 +231 %, HH:256 +278 %, HPA:512 +103 %): the floor is weaker at
    those shapes. Their 20–50 %-of-theoretical readings are M2 wave-quantization
@@ -268,11 +269,11 @@ numbers; **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
 **The user-complaint reconciliation:** the report's %theo for CC (7.06–20.28)
 and ZZ (16.66–24.00) match the complaint numbers exactly and are *honest*. CC/ZZ
 are genuinely ~3.5× undertuned — the fix is occupancy/tile levers (Group B) and
-algorithmic routes (§8.2), not a re-calibrated ruler.
+algorithmic routes (§10.2), not a re-calibrated ruler.
 
 ---
 
-## 4. Per-family deep triage (hardware-verified)
+## 5. Per-family deep triage (hardware-verified)
 
 Data: regenerated `per_family_coverage` (typecode-correct) + per-cell resolved
 winners. **Best configs = kernel-type patterns** (R §6, confirmed on the
@@ -345,11 +346,11 @@ already past the realistic acceptance bar. Small DD (192/256) WINs handily. No
 knob left; DD GSU{2,4} appears in Group A as the only untested small-shape wave
 lever, but the bars here are essentially closed.
 
-### CC — the M3 campaign (§6 Group B = this family + ZZ)
+### CC — the M3 campaign (§8 Group B = this family + ZZ)
 | k | cells | GFLOPS | %theo(1613) | %bar(1118.7) | winner |
 |---|---|---|---|---|---|
 | 192 | 144 | 113.8 | 7.06 | 10.2 | MT32x32/4x4/VW2/DU8 WGM4 |
-| 256 | 143 | 193.8 | 12.01 | 17.3 | MT32x32/4x4/VW2/DU8 WGM4 padsA=0 (**LOSS**, §7) |
+| 256 | 143 | 193.8 | 12.01 | 17.3 | MT32x32/4x4/VW2/DU8 WGM4 padsA=0 (**LOSS**, §9) |
 | 512 | 143 | 318.0 | 19.71 | 28.4 | MT64x64/4x4/VW2/DU8 WGM4+NLCA1 |
 | 1024 | 146 | 310.9 | 19.27 | 27.8 | MT64x64/4x4/VW2/DU8 WGM8 |
 | 2048 | 147 | 327.0 | 20.28 | 29.2 | MT64x64/4x4/VW2/DU8 WGM4 |
@@ -360,7 +361,7 @@ VGPR-bound, idle FMA issue. Headroom ≈ 3.5× to the SS-family 73.6 % issue rat
 (→ ~1187 GFLOPS in-deck at current configs, no algorithm change). In-deck levers
 for the campaign: **WGMs {4,8} × NLCA {0,1} cross (512 already shows
 WGM4+NLCA1 > plain WGM4), pads {1,2,4}, PGR=0 / GLVW=1 (register pressure),
-LdsPadA=2, GSU is banned for complex.** Above that: split-complex (§8.2).
+LdsPadA=2, GSU is banned for complex.** Above that: split-complex (§10.2).
 
 ### ZZ — same M3 frame at FP64
 | k | cells | GFLOPS | %theo(101) | %bar(98.6) | winner |
@@ -381,14 +382,14 @@ keep, and sweep DU8/DU16 × padsB {1,2,4} × GLVW at the small cells.
 
 ---
 
-## 5. Kernel-type patterns — which kernel types actually win (10-run sweep)
+## 6. Kernel-type patterns — which kernel types actually win (10-run sweep)
 
 Verified across all runs (kernel_db + resolver, typecode-filtered,
 median-of-seeds):
 
 1. **Direction: `Ailk_Bjlk` (NT) dominates every family's large cells.** The
    exceptions are the small CC/ZZ cells (32x32 tiles run Alik) — and that
-   geometry gap is exactly what CC:256 exposes (§7). HPA winners at 4096 switch
+   geometry gap is exactly what CC:256 exposes (§9). HPA winners at 4096 switch
    to `MT128x64/4x8` + WG[32,8,1] — still Ailk.
 2. **One tile per family per size regime; tile ∝ 1/element-size**: S/H 128
    (96 at 256), C/D 64 (32 at small), Z 32.
@@ -409,84 +410,20 @@ median-of-seeds):
 
 ---
 
-## 5. Mutation strategies for sore losers (db_mutator-enhanced)
+## 7. Mutation strategies for sore losers (db_mutator-enhanced)
 
-The db_mutator (fix §3/§4) now generates novel, valid mutants for every
-sore‑loser configuration via three strategy families, enforced with
-`bypass_identical_skip=True` so every mutant is measured regardless of prior
-history. Novelty is guaranteed by the ledger, not by pass/fail history.
+The NARROW / WIDE / DIRECTION strategy families, the per-family mutation
+patterns, and the `bypass_identical_skip` / budget mechanics are documented in
+`oto/tensile/synthesis/db.py`.
 
-### 5.1 NARROW — single-knob deltas on forward knobs
-The manifest sampler cannot reach these knobs; they are the "large, mostly
-unmeasured space" (§t4). Each draw changes 1–3 forward knobs to legal values
-(from `FORWARD_KNOB_DOMAINS` in `oto/tensile/synthesis/db.py`):
-
-- **LdsPadA / LdsPadB**: {0,1,2,4} — the primary levers for LDS occupancy
-- **NLCA**: {1,2,3} — wave-quantization control
-- **GSU**: {1,2,4} — split‑U work‑group sizing
-- **WGM**: {1,4,8} — work‑group mapping width
-- **GLVW**: {1,2,4} — global load vector width (the §8.6 divider fix)
-- **PGR**: {0} — always zero on gfx90c (register‑file pressure trade‑off)
-- **StaggerU/Stride**: {0,8,16,32} / {256,512} — wave‑front alignment
-
-**Sore‑loser targets**: SS:768/1000 (wave-quantization), CC:256 (tile geometry),
-HH:256 (WGM+LdsPad), ZZ: all shapes (VW/DepthU).
-
-### 5.2 WIDE — DB tile donors re‑combined with forward draws
-Tile donors are read from the DB's per‑family measured winners (what actually
-won on gfx90c, not just the gfx900 manifest) and from the floor winner, then
-re‑combined with forward draws. This is the core of the db_mutator fix:
-
-- **MacroTile/ThreadTile**: from DB-measured winners (e.g. MT64x64x16 for
-  CC:256, MT128x128x8 for HH:512)
-- **DepthU**: {4,8,16,32} — LDS depth control
-- **GlobalSplitU**: {1,2,4} — split‑U algorithm selection
-- **GlobalLoadVectorWidthA/B**: {1,2,4} — the §8.6 divisibility fix
-- **WorkGroup**: from DB winners
-
-**Sore‑loser targets**: CC:512 (LdsPad+MT), DD:768/1365 (DepthU+GLVW),
-ZZ:128/256/512/1024 (VW+DepthU).
-
-### 5.3 DIRECTION — toward the floor winner's knobs (spoof‑steal generalised)
-When the gfx900 floor beats native in a cell, the mutant's knobs are set to
-the floor winner's knobs (config‑normalised). This is the §14.5
-spoof‑steal logic generalised to every cell, not just the reference floor:
-
-- Copies only structural knobs the floor actually carries
-- Leaves alone any knob the parent already matches
-- Ensures every mutant is a genuine move toward the floor's performance
-
-**Sore‑loser targets**: All families where the floor exceeds native (per the
+**Sore-loser targets:** SS:768/1000 (wave-quantization), HH:256 (WGM+LdsPad),
+CC:256/512 (tile geometry / LdsPad+MT), DD:768/1365 (DepthU+GLVW), ZZ: all
+shapes (VW/DepthU); plus every family where the floor exceeds native (per the
 triage in §2: SS:768/1000, HH:512, HH_HPA:512, HS_HPA:512, CC:256/−8.7%).
-
-### 5.4 Family‑specific mutation patterns (new in db_mutator)
-In addition to the generic NARROW/WIDE/DIRECTION strategies, the db_mutator
-now exports family‑specific patterns that target the exact knobs responsible
-for each family's sore‑loser configurations:
-
-- **SS pattern**: NLCA toggle + LdsPad increase + GSU/WGLV/StaggerU combos
-- **DD pattern**: DepthU increase + GLVW change + GSU double
-- **CC pattern**: LdsPad combos + MacroTile change + NLCA triple toggle
-- **ZZ pattern**: VW change + DepthU + GLVW/A/B combos + StaggerU stride
-
-Each pattern generates 3–5 mutant knob dicts that are immediately gated
-through `validate_config` + `ldspad_feasible` before ledger emission.
-
-### 5.5 Mutation budget & convergence
-- Default: 5 forward draws per iteration (up from 3; §t8) × 4 patterns =
-  up to 20 mutants/cell/iteration
-- `bypass_identical_skip=True` on every mutant phase (Option H directive
-  2026-10-09): mutations are always measured; novelty is the ledger's job
-- Convergence check (agent.converged()): 0 below‑ceiling cells AND ≥3 configs/
-  cell AND ≥2 independent runs AND CV ≤15% per cell
-- The 10‑15 hr overnight budget is now fully utilisable: the arm no longer
-  decays from 155 → 20 mutants/iteration (pre‑db_mutator) and emits ZERO on
-  CC/ZZ wall families (pre‑db_mutator). Now every iteration emits novel,
-  valid mutants across all 7 families.
 
 ---
 
-## 6. Candidate deck — wide + narrow, ranked (CPU-gated; TTY-only benchmarks)
+## 8. Candidate deck — wide + narrow, ranked (CPU-gated; TTY-only benchmarks)
 
 Bans honored (do not re-propose): **HH GSU>1**, **SS `96x96x8/6x6/VW2`**
 (banned by prior campaign), **complex/HPA GSU>1** (workspace/
@@ -494,7 +431,7 @@ Bans honored (do not re-propose): **HH GSU>1**, **SS `96x96x8/6x6/VW2`**
 **DirectToVgpr** (not forwarded), **NLCA=3 on 128-width VW4 tiles**
 (NumLoads=1 there; only the 96x96x16/6x6/VW2 tile has NumLoads=3).
 
-### 6.1 Group A — wave-fill the M2 small-shape row (decked 2026-10-09)
+### 8.1 Group A — wave-fill the M2 small-shape row (decked 2026-10-09)
 The k≤512 SS/HH/HPA cells sit at 12–30 % residency (25/34 cells ≤3 wg/CU,
 VGPR-bound for wide tiles, LDS-bound for the rest). Residency levers in binding
 order:
@@ -517,21 +454,21 @@ residency — exactly the M2 cell. **Every M2 fix that stays ≤48 VGPR buys 5
 waves/SIMD.** (Caveat: occupancy ≠ speed on ALU-dense loops — these targets
 only make sense at k≤512 where latency-hiding is the binding constraint.)
 
-### 6.2 Group B — CC/ZZ M3 campaign (**top priority, new after this rewrite**)
+### 8.2 Group B — CC/ZZ M3 campaign (**top priority, new after this rewrite**)
 CC 512–2048 + ZZ all-k run 20–24 % of honest theo with **≈3.5–4× in-deck
-headroom** (§1/§4). Target: SS/DD-class FMA issue without algorithm change →
+headroom** (§1/§5). Target: SS/DD-class FMA issue without algorithm change →
 CC toward 700–1000, ZZ toward 60–90. Ladders, CPU-gated, TTY-only:
 
 | candidate | cells | config | status |
 |---|---|---|---|
 | B1 | CC 512/1024/2048 | **WGM {4,8} × NLCA {0,1}** cross on the MT64x64/4x4/VW2/DU8 body (512: expect WGM4+NLCA1 to confirm; 1024: WGM8 shelf) | 🔬 NEW |
-| B2 | CC 512/1024/2048 | **LdsPadA {1,2,4} + LdsPadB {0,1,2}** (LdsPadA=2 on the steal block, §7) | 🔬 NEW |
+| B2 | CC 512/1024/2048 | **LdsPadA {1,2,4} + LdsPadB {0,1,2}** (LdsPadA=2 on the steal block, §9) | 🔬 NEW |
 | B3 | CC 512/1024/2048 | **PGR=0 + GLVW=1** (register-pressure; 3→4-5 wg/CU at 128-VGPR bodies) | 🔬 NEW |
-| B4 | CC 256 | **steal block §7** (Ailk_Bjlk MT64x64x8 native + WGM8/LdsPadA=2/PGR0/GLVW1) | 🔬 NEW (bar ≥214) |
+| B4 | CC 256 | **steal block §9** (Ailk_Bjlk MT64x64x8 native + WGM8/LdsPadA=2/PGR0/GLVW1) | 🔬 NEW (bar ≥214) |
 | B5 | ZZ all-k | **DU8 vs DU16 × padsB {1,2,4} × GLVW {1}** on the MT32x32/2x2/VW1 body; keep PGR=False at 512/1024 | 🔬 NEW |
-| B6 | CC/ZZ | **WGM {2,4,8} sweep at 512–2048** (L2-rasterization, §8.3) | 🔬 NEW |
+| B6 | CC/ZZ | **WGM {2,4,8} sweep at 512–2048** (L2-rasterization, §10.3) | 🔬 NEW |
 
-### 6.3 Group C — swizzle / StaggerU (complete)
+### 8.3 Group C — swizzle / StaggerU (complete)
 StaggerU/StaggerUMapping/StaggerUStride probes shipped in the 10-09 seed (5
 swizzle probes, no verdict change on any covered cell). Closed: LDS-bank-swizzle
 does not move a 1-MB-L2-bound iGPU deck. Any future row needs a count.
@@ -540,7 +477,7 @@ to the shipped grid).
 
 ---
 
-## 7. Spoof-steal route — CC:256 (the only sanctioned steal)
+## 9. Spoof-steal route — CC:256 (the only sanctioned steal)
 
 **Why this is the one cell:** it is the only true vs-spoof LOSS (−8.7 %).
 Native's resolved best at 256 is a **small MT32x32x8 tile** (193.8,
@@ -571,32 +508,31 @@ compile.** Never reuse the floor binary or the floor's code object.
    **Success = ≥214 native** (floor 212.3 + band edge). Anything ≥214 retires
    the only LOSS on the board; a miss teaches whether it was direction or clock.
 
-The steal block is **B4** in §6.2. If it lands, expect the same Ailk_Bjlk
+The steal block is **B4** in §8.2. If it lands, expect the same Ailk_Bjlk
 64×64 body to re-audit CC:512/1024/2048 (those are already 64×64 — the 
 direction cross is their remaining un-tested axis).
 
 ---
 
-## 8. Other routes
+## 10. Other routes
 
-### 8.1 GlobalSplitU wave-fill — SS only (and only at small shapes)
-GSU splits K across workgroups for wave-fill (M2). Legality is dtype-locked
-(`oto.tensile.gates.assembly.assembly_class_valid:1408–1457`): **complex/HPA GSU>1 illegal** (no
-MFMA on the reachable writer paths; this port never forwards
-`GlobalSplitUAlgorithm`/workspace, so only SingleBuffer-atomic is reachable),
-**HH GSU>1 banned** (AF0EM≥2 not shipped). **SS is the only GSU-legal family**
-(ladder {1,2,4}). Use it only where M·N-tiles < ~7 waves (k≤512): GSU adds
-launch + atomic-write overhead and on ALU-saturated ≥768 cells it would *cost*.
-Watch atomic SingleBuffer drift on the shared DDR4 bus — a GSU regression vs
-GSU1 points at that mechanism, not the tiling.
+### 10.1 GlobalSplitU wave-fill — SS only (and only at small shapes)
+GSU splits K across workgroups for wave-fill (M2). The dtype-locked legality
+rules (complex/HPA and half-Assembly GSU>1 illegal; SS the only GSU-legal
+family, ladder {1,2,4}) live in `oto/tensile/gates/assembly.py`. Use it only
+where M·N-tiles < ~7 waves (k≤512): GSU adds launch + atomic-write overhead and
+on ALU-saturated ≥768 cells it would *cost*. Watch atomic SingleBuffer drift on
+the shared DDR4 bus — a GSU regression vs GSU1 points at that mechanism, not the
+tiling.
 
-### 8.2 Split-complex (the route past the 4-FMA MAC) — corrected quantification
+### 10.2 Split-complex (the route past the 4-FMA MAC) — corrected quantification
 Complex GEMM on gfx90c has no instruction-level escape hatches (no `v_mfma`,
-no `v_dot*`/dp4a, no `v_pk_fma_bf16` — R §3/§8.2, complex brief §8). The four
+no `v_dot*`/dp4a, no `v_pk_fma_bf16` — R §3/§8.2; `complex_gemm_research_brief.md` §4). The four
 real FMAs per complex MAC are irreducible **per MAC**, but the *GEMM count* is
 not: decompose CGEMM into **3 real GEMMs + a combine pass** (Gauss/Karatsuba:
 R = ReA·ReB, I = ImA·ImB, P = (ReA+ImA)(ReB+ImB); Re(C) = R−I, Im(C) = P−R−I) —
-the rocBLAS-pre-MFMA / MAGMA strategy (references: complex brief §4–§5, with
+the rocBLAS-pre-MFMA / MAGMA strategy (references: `oto/tensile/gates/assembly.py`
+and `complex_gemm_research_brief.md` §3, with
 MAGMA at 79 % CGEMM / 71 % ZGEMM peak on Fermi; BLIS 3m/4m: Van Zee & Smith
 TOMS; rocBLAS ships only the fused 4M path —
 [complex_gemm_research_brief.md](complex_gemm_research_brief.md)).
@@ -627,7 +563,7 @@ real kernels at real-family efficiency — raising CC/ZZ native issue from 20 % 
 50–70 % first makes the split's 1513 an *additive* prize, not a fix for a
 broken pipe).
 
-### 8.3 L2-rasterized WorkGroupMapping (1-MB L2 retune)
+### 10.3 L2-rasterized WorkGroupMapping (1-MB L2 retune)
 gfx900's 4-MB L2 ignored rasterization; gfx90c's 1 MB makes WGM the difference
 between L2 hits and DDR round-trips (R §5 finding 16b). CC/ZZ already ship WGM
 {4,8}; probe WGM {2,8,16} on the wide SS/HH tiles at 768–4096 — the 1-MB L2
@@ -635,18 +571,18 @@ between L2 hits and DDR round-trips (R §5 finding 16b). CC/ZZ already ship WGM
 tiles are visited decides reuse. B6 covers the complex side; keep SS/HH probes
 in the timestamped mirror (`--with-probes`), not the seed.
 
-### 8.4 Non-temporal loads (new; narrow)
-`NonTemporalA/B/C/D` lowers to `buffer_load … th:TH_LOAD_NT` (R §4 finding 11).
-Do **not** use on normal tiled A/B (they reuse across K within 1 MB L2 — NT
-would flush it); use on (a) the C operand read-modify-write, (b) the
-single-K-pass GSU kernels where each tile is read once. One legality-checked
-probe row per case is enough to decide.
+### 10.4 Non-temporal loads (new; narrow)
+The `NonTemporalA/B/C/D` lowering (`buffer_load … th:TH_LOAD_NT`) is documented
+in `oto/tensile/gates/assembly.py`. Do **not** use on normal tiled A/B (they
+reuse across K within 1 MB L2 — NT would flush it); use on (a) the C operand
+read-modify-write, (b) the single-K-pass GSU kernels where each tile is read
+once. One legality-checked probe row per case is enough to decide.
 
-### 8.5 Measurement hygiene — the prerequisite for trusting ANY delta (M4)
+### 10.5 Measurement hygiene — the prerequisite for trusting ANY delta (M4)
 Set by the report: `clock_adjusted: False` on every cell; native sclk
 0.910–1.650 GHz across runs; the 10-09 overnight measured **~1.175 GHz vs the
 1.8 GHz reference (~1.53× suppressed)** — within-run deltas are safe, cross-run
-deltas are not. CUTLASS-grade methodology for the iGPU (complex brief / R §6):
+deltas are not. CUTLASS-grade methodology for the iGPU (R §6):
 fixed-frequency / zero-fill runs, warm-up until clocks settle (~3 s), ≥1000
 profile iterations on small kernels, **buffer rotation ≥2× L2** to defeat false
 L2 hits, cooldown between tests, `rocm-smi` watch on sclk/temp. **First TTY
@@ -655,12 +591,12 @@ most "ties" are clock noise and should re-resolve to WINs without any knob.
 
 ---
 
-## 9. GUI-safe plan (GNOME constraints)
+## 11. GUI-safe plan (GNOME constraints)
 
-Everything in §6–§8 ships as **CPU-only legality PoCs** from GNOME; real
+Everything in §8–§10 ships as **CPU-only legality PoCs** from GNOME; real
 performance runs live in TTY/overnight. Concretely:
 
-1. `check_candidates.py` / `scheduler` gates accept/reject every row in §6/§7
+1. `check_candidates.py` / `scheduler` gates accept/reject every row in §8/§9
    (assembly-class, occupancy, LDS-fit) — run them; report the pass/fail table.
 2. `port_tensile.py` compiles nothing GPU-heating in GUI sessions: legality PoCs
    are config validation + `Tensile` dry-run, no 2_BenchmarkData under a live
@@ -674,36 +610,37 @@ performance runs live in TTY/overnight. Concretely:
 
 ---
 
-## 10. Next overnight queue (re-sequenced; CC/ZZ M3 first)
+## 12. Next overnight queue (re-sequenced; CC/ZZ M3 first)
 
-1. **CC/ZZ M3 campaign (§6.2 Group B) — highest value.** CC 512–2048 + ZZ
+1. **CC/ZZ M3 campaign (§8.2 Group B) — highest value.** CC 512–2048 + ZZ
    all-k: WGM{4,8}×NLCA{0,1} cross, LdsPadA{1,2,4}/LdsPadB{0,1,2}, PGR=0/GLVW=1,
    DU8×DU16×padsB ladders. Target: CC 327→700+, ZZ 24.2→60+ (SS/DD-class issue,
    not the split — that comes after).
-2. **CC:256 steal block (§7, B4):** native `Ailk_Bjlk` MT64x64x8/4x4/VW2/DU8 +
+2. **CC:256 steal block (§9, B4):** native `Ailk_Bjlk` MT64x64x8/4x4/VW2/DU8 +
    WGM8 + LdsPadA=2 + PGR=0/GLVW=1 (+NLCA1 variant). **Bar ≥214.** Never reuse
    the floor binary.
 3. **SS GSU{1,2,4} on the VW4 winners (A1/A2) + HH 64x64/64x32 alternates (A4) +
    DD GSU{2,4} (A5).**
-4. **WGM probe on wide SS/HH tiles (768–4096, §8.3); NT probes (§8.4).**
-5. **Split-complex Phase-0 legality + first large-K TTY benchmark (§8.2)** once
+4. **WGM probe on wide SS/HH tiles (768–4096, §10.3); NT probes (§10.4).**
+5. **Split-complex Phase-0 legality + first large-K TTY benchmark (§10.2)** once
    Group B is measured — the (4/3)·R_real ≈ 1513/127–131 readout is the
    campaign's escalation prize.
 6. **Clock hygiene first:** same-run pinned-clock A/B of the 30 shared cells
-   before trusting any ±4 % delta (§8.5). Rebuild `kernel_db.json` after the run.
+   before trusting any ±4 % delta (§10.5). Rebuild `kernel_db.json` after the run.
 
 ---
 
 ## Sources (all real; full lists in `kernel_tuning_research.md` Sources and
 `complex_gemm_research_brief.md`)
 
-- [complex_gemm_research_brief.md](complex_gemm_research_brief.md) — BLAS-8
-  accounting, 4-FMA MAC (Tensile
+- [complex_gemm_research_brief.md](complex_gemm_research_brief.md) — external
+  complex-GEMM research (MAGMA/Fermi, Ozaki-II, M3XU) and the exotic-paths
+  conclusion. The BLAS-8 accounting, 4-FMA MAC (Tensile
   [MAC_F32C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F32C.py)
   /
-  [MAC_F64C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F64C.py)),
-  3M/4M instruction counts, MAGMA/Fermi, Ozaki-II, M3XU. **The citation for §1
-  and §8.2.**
+  [MAC_F64C.py](https://github.com/ROCm/Tensile/blob/develop/Tensile/Components/MAC_F64C.py))
+  and 3M/4M instruction counts now live in `oto/tensile/gates/assembly.py`.
+  **The citation for §1 and §10.2.**
 - Hardware ceilings: `gfx90c_theoretical_limits.md`; occupancy/issue:
   `kernel_tuning_research.md` §1–§3 (GCN5 wave64, 4×SIMD-per-CU, 10 waves/SIMD,
   DDR4 ~30–40 GB/s, FP64 1/16).

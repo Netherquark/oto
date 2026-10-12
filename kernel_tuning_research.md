@@ -48,11 +48,14 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 
 ### 2.3 What Tensile actually does
 
-- `getLdsNumElements` adds `LdsPad` **per row** when `padInterval = MacroTile` (`Tensile/SolutionStructs.py:2759-2769`, esp. `:2767-2769`).
-- **Auto-padding** (`ldsPaddingAuto`, `Tensile/SolutionStructs.py:2788`, hardcoded `numBank = 32` at `:2802`): `LdsPad = -1` resolves to **0 when `TLU` and not `UnrollMajorLDS`, else `VectorWidth`** (`:2812-2817`) — i.e. Tensile only pads when a transpose read is required, mirroring its own comment *"Padding only helps when transpose is required"* (`Tensile/Common.py:1360`).
-- Tensile's historical caution: *"in 2016 this didn't seem to help performance, profilers were showing that channel conflicts weren't really hurting"* (`Tensile/Common.py:1358`) — **our context differs**: 2016-era dGPU bandwidth hid LDS stalls behind memory latency; on a DDR-bound APU with 16-B complex elements, VALU-side serialization is more exposed. Hypothesis to test, not a fact.
-- **gfx90c constraint**: our kernels are **VALU (non-MI) mode** — `LdsBlockSizePerPad` (periodic/XOR-style padding) is **rejected outright** (`Tensile/SolutionStructs.py:2891-2892` "didn't support LdsBlockSizePerPad in VALU mode yet"; `UnrollMajorLDS` also rejected `:2889-2890`). **Only plain per-row `LdsPadA/B` is available** → the pad grid above is the whole design space.
-- The 16 B load cap: `GlobalLoadVectorWidth × numBytes > 16` is rejected (`Tensile/SolutionStructs.py:3461`, also `VWA/VWB` `:3488`, `:3491`) → **16-B loads cap GLVW at 1**, which is why `VectorWidth` bounds are `S4/H8/D2/C2/Z1` (see `gfx90c_theoretical_limits.md` and `gfx90c_tuning_guide.md` knob table — not repeated here).
+The knob mechanics cited above — the per-row `LdsPad` accounting, the
+auto-padding rule, the VALU-mode rejection of `LdsBlockSizePerPad` /
+`UnrollMajorLDS`, and the 16-B global-load cap that pins `VectorWidth` — are the
+code contracts of `oto/tensile/gates/*` (`occupancy.ldspad_feasible`,
+`loads.validate_tensile_loads` / `cap_vector_width`,
+`assembly.assembly_class_valid`) and `oto/tensile/config_writer.py` (what is
+forwarded). Read them there; the paragraphs above are the *bank-conflict*
+rationale, not a restatement of that code.
 
 ## 3. Occupancy and wave quantization
 
@@ -74,22 +77,27 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - Above it, extra occupancy buys **latency hiding**, not ALU throughput: *"ALU-bound workloads don't benefit from higher occupancy"* — GPUOpen "Occupancy explained" (https://gpuopen.com/learn/occupancy-explained) and "Optimizing GPU occupancy … large thread groups" (https://gpuopen.com/learn/optimizing-gpu-occupancy-resource-usage-large-thread-groups).
 - **Practical rule for M3**: target `V ≤ 64` (→4 waves) for compute-bound CC/DD/ZZ cells before chasing larger tiles; a macro-tile win that pushes `V` across a 4→3 or 3→2 boundary can be a net loss — this is exactly what the M2 gates are for.
 
-### 3.3 LDS as the second limiter (and the scheduler's model of it)
+### 3.3 LDS as the second limiter
 
-- Workgroups per CU are also capped by **LDS**: `scheduler.py` uses `LDS_BUDGET = 16384` B/CU and gates candidates through `occupancy_feasible` (`scheduler.py:1186`) and `ldspad_feasible` (`scheduler.py:1261`).
-- **Suspected model bug — check**: `BYTES_PER_ELEMENT` (`scheduler.py:1039`) lists `"Z": 8`, but Z (split complex, 2×f64... actually 2×f32×2 = 16 B in this project's convention) is 16 B — contrast `FAMILY_BYTES_PER_ELEMENT` (`scheduler.py:31-36`) which has `ZZ: 16`. If confirmed, `_lds_base_bytes` (`scheduler.py:1106`, consumed at `:1181`/`:1248`) **under-counts ZZ LDS footprint 2×**, making both gates ~2× optimistic for ZZ. Tensile itself computes with `bpe = 16`. Flagged for the owners; not fixed here (docs-only constraint).
-- Deliberate occupancy *limiting* exists too: the `MaxOccupancy` knob *"allocates extra lds to artificially limit occupancy"* when cache thrashing hurts (`Tensile/Common.py:983`) — a reminder that more residency is a hypothesis, not a goal.
+The LDS budget (`oto/tensile/gates/vgpr_model.LDS_BUDGET`), its role as the
+second workgroup-per-CU limiter alongside the register file, and the padded-LDS
+(`ldspad_feasible`) accounting are the module docstrings and constants of
+`oto/tensile/gates/occupancy.py` and `oto/tensile/gates/vgpr_model.py`. The
+`MaxOccupancy` knob's deliberate occupancy-limiting is the reminder that more
+residency is a hypothesis, not a goal (`Tensile/Common.py:983`).
 
 ## 4. Tensile knob mechanics
 
-- Canonical knob reference: `docs/src/conceptual/kernel-parameters.rst` in the Tensile tree (abbreviations `LPA/LPB/GSU/GSUA/PGR/PLR/SU/SUS/WGM/GRVW/NLCA/AF0EM/SCIU/MO/MVN/WS`). Defaults verified in `Tensile/Common.py:1542-1629`: `PrefetchGlobalRead=1` (`:1542`), `PrefetchLocalRead=1` (`:1543`), `StaggerU=32` (`:1597`), `StaggerUStride=256` (`:1598`), `WorkGroupMapping=8` (`:1626`), `MACInstruction=FMA` (`:1628`), `WavefrontSize=64` (`:1629`).
-- **`PrefetchGlobalRead`**: `PGR=1` **requires 2× LDS space and VGPRs for buffering** (`Tensile/Common.py:511-513`); `PGR=2` prefetches during the VGPR→LDS copy (`:515-518`). `1LDSBuffer` forces a single LDS buffer even with PGR (`:551-556`) — trades double-buffering for LDS budget. → PGR=0 is simultaneously a **VGPR and LDS** relief valve (feeds §3.3, Group C).
-- **`StaggerU` / `StaggerUStride`**: `StaggerU` is the max number of "clicks" of `StaggerUStride` bytes by which workgroups stagger their summation start (`Tensile/Common.py:906-917`); rationale: V20 has **16 channels × 256 B** (`:915`), `StaggerUStride=256` lands each click in a fresh channel (`:928-930`); `StaggerUStride` is internally rounded to a multiple of `DepthU·BPE` (`:933`); **`StaggerU` silently requires `BufferLoad=1`** (`:924`); and *"StaggerU and WorkGroupMapping interact and should be tuned together"* (`:921-922`). **check**: 16-channel count is a dGPU-era comment (gfx803/900/906) — iGPU channel/L2 topology differs.
-- **`WorkGroupMapping`**: remaps `wg1` so tiles hit L2 favorably; semantics `wgSerial = wg0 + (wg1 % WorkGroupMapping) * nwg0` (`Tensile/Common.py:980`), *"box width determined by the number of compute units"* (`:975-981`) — **check**: exact formula for 7-CU parts. `WGM=8` is the default (`:1626`) and a proven real lever on this APU (see potential_configs.md §13.x — WGM8 in winners, referenced not copied).
-- **`GlobalSplitU`**: `GSU=1` forces `GlobalSplitUAlgorithm=SingleBuffer` (`Tensile/SolutionStructs.py:3530-3532`). For **`GSU>1` the supported-type gate** (`:3543-3553`) accepts single/8-bit/double+BufferStore/int32/asm-half **or `_GlobalAccumulation` set or MFMA** — **complex (`X`) passes only via `_GlobalAccumulation`**, which is set exactly by `GlobalSplitUAlgorithm=MultipleBuffer` (`:2970-2971`). MultipleBuffer semantics: each GSU group writes its own workspace buffer, a post-GSU kernel does the accumulation (`Tensile/Common.py:570-591`) → **2 kernel launches + workspace allocation** per GEMM. The atomic path is excluded for our setup (`:3064`).
-- **`StreamK` is unavailable on gfx90c**: rejected unless `MIWaveGroup0×MIWaveGroup1 == 4` (`Tensile/SolutionStructs.py:2976`) — MFMA-only → **all StreamK/StreamK++ literature is background, not an experiment** (§6).
-- **MAC plumbing (the complex-GEMM cost)**: `Components/MAC_F32C.py` emits **four `_v_mac_f32` instructions per complex multiply-accumulate** — the real/imag cross terms at `MAC_F32C.py:55` (rr), `:73` (ar), `:90` (ra), `:107` (ai, i.e. the 4-pass loop). The `_v_mac_f32` macro resolves to `v_fmac`/`v_fma`/`v_mac` per `MACInstruction` (`Tensile/KernelWriterAssembly.py:2369-2387`); default is `FMA` (`Common.py:1628`). Note: the campaign doc's older citation (`KernelWriterAssembly.py:14975-14978`) points at the beta/finalSum epilogue, not the MAC loop — **cite `MAC_F32C.py` for the 4× claim**.
-- **`NumLoadsCoalescedA/B` (`NLCA/NLCB`)**: coalesces LDS loads (`tuning_docs/tensile_tuning.tex:1430`, `kernel-parameters.rst:449`); `NLCA=3` fuses LDS-load instructions in our kernel population (see potential_configs.md §13.5, referenced for the counts).
+The per-knob mechanics this campaign depends on — the coupled StaggerU /
+StaggerUMapping / StaggerUStride forwarding, `PrefetchGlobalRead`'s
+double-buffer cost, `WorkGroupMapping`, `GlobalSplitU` /
+`GlobalSplitUAlgorithm` reachability, the StreamK MFMA gate, the four-`v_mac_f32`
+complex MAC and its 3M/4M split schemes, and `NLCA/NLCB` — are the code
+contracts of `oto/tensile/config_writer.py` (what is forwarded) and
+`oto/tensile/gates/*` (`assembly.assembly_class_valid`,
+`occupancy.ldspad_feasible`, `loads.validate_tensile_loads`). Tensile's canonical
+knob reference remains `docs/src/conceptual/kernel-parameters.rst` in the
+`TENSILE_ROOT` tree.
 
 ## 5. Complex GEMM strategies (including split-complex)
 

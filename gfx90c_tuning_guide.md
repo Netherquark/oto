@@ -20,25 +20,10 @@ measurement hygiene (M4: suppressed clock), not tuning.
 
 ## 1. Knob surface — what the deck actually controls
 
-| knob | what it does | legality gate | forwarded by `_write_phase_config` |
-|---|---|---|---|
-| MacroTile | tile dims M×N (+DepthU in the string) | occupancy (LDS) + assembly | yes |
-| ThreadTile | accumulators per thread = TT0·TT1·weight VGPRs | occupancy (VGPR) | yes |
-| VectorWidth / GLVW | global-load width; **16-B hardware cap** | divisibility | yes |
-| DepthU | K-depth of the LDS tile | LDS budget | yes |
-| GlobalSplitU | waves over K (the M2 lever) | assembly (complex/no-MFMA) | yes |
-| WorkGroupMapping | CU–tile mapping | — | yes |
-| contraction pattern | Ailk_Bjlk (NT) vs Alik_Bljk (TT) etc. | — | yes |
-| **LdsPadA/B** | bank-conflict pad per LDS row (M3 lever) | **`ldspad_feasible` (NEW)** | **yes (NEW, Group C)** |
-| **StaggerUStride** | store stagger (M3 lever) | **`ldspad_feasible` (NEW)** | **yes (NEW, Group C)** |
-| **AssertFree0ElementMultiple** | half Assembly GSU>1 legality | **`ldspad_feasible` (NEW)** | **yes (NEW, Group C)** |
-| **StoreCInUnroll** | C-store unrolling | **`ldspad_feasible` (NEW)** | **yes (NEW, Group C)** |
-
-Group C (2026-10-09): the pad/RCT knobs were silently stripped by the writer —
-candidates carrying them benchmarked WITHOUT the knob (167/167 reference kernels
-ship pads). Now forwarded verbatim behind `scheduler.ldspad_feasible`
-(padded-LDS footprint vs 16 384-B/WG budget, StaggerUStride < DepthU·bpe,
-AF0EM ≥ 1). Generator kept them (`_FORWARDED`); tests lock both.
+The knob → Tensile forwarding map (which key `_write_phase_config` emits
+verbatim, and which CPU gate governs it) is a fact about the writer and lives in
+the module docstring of `oto/tensile/config_writer.py`. For the *tuning* read —
+which knob actually matters and in which regime — see §4 and §5 below.
 
 ## 2. Hardware plate book (no re-derivation — see L §1/§2)
 
@@ -145,12 +130,15 @@ shared native-vs-floor (C §tool); **22 native / 8 floor**; of the 8 floor wins
 only CC:256 (−13.8 % … native 188.1 vs floor 214.0) is outside the ±2 % tie
 band — the single honest LOSS and the only sanctioned spoof-steal target.
 
-## 6. Occupancy model vs emitted reality (todo 1 DONE)
+## 6. Occupancy model vs emitted reality
 
-`occupancy_feasible` models accVGPR = TT0·TT1·weight, budget 128 (weight-8
-complex: TT 4x4 = 128 pass → measured 154–167; TT 8x4 = 256 fail → measured
-271 = Tensile's dead byte-identical rejection). Verified 2026-10-09 over the
-whole run corpus with `oto/harness/measure_vgprs.py`
+The register-file model — `accVGPR = TT0·TT1·weight` against the per-thread
+accumulator budget — is the module docstring of
+`oto/tensile/gates/occupancy.py`; its calibration tables are
+`oto/tensile/gates/vgpr_model.py`. Measured reality: weight-8 complex TT 4x4
+passes (measured 154–167 total), while TT 8x4 fails (measured 271 = Tensile's
+dead byte-identical rejection). Verified over the whole run corpus with
+`oto/harness/measure_vgprs.py`
 (llvm-readelf on Tensile's emitted assembly objects — CPU only, no GPU). Median
 measured totals per (dtype, TT):
 
@@ -173,38 +161,23 @@ and reality agree on every observed outcome. Regression:
 > `python3 -m oto.harness.occupancy_audit`. `occupancy_feasible` gates legality;
 > the audit answers residency.
 
-## 7. Floor deck: gate-legality of the steal (todo 3 DONE)
+## 7. Floor deck: gate-legality of the steal
 
-`python3 check_candidates.py --floor` sweeps all 6 855 manifest kernels
-(rebuilt into configs via `tensile_library.shipped_kernel_config`). Results:
-
-- **All 30 per-cell floor WINNERS pass all 4 gates** (divisibility / assembly /
-  occupancy / forwarded-knob) — the floor's winning configs are natively
-  stealable. New `_occupancy_margin()` prints `wg/cu=N acc=…vgpr …% of 64K file`.
-- Whole-deck residue 1 464/6 855 (21 %) is generator-rule artifacts on
-  non-winning shipped entries (GLVW/VW divisibility 738, assembly-class 357,
-  occupancy-LDS 72 — last one genuine: kernels Tensile compiled for 64-KB-LDS
-  gfx900 that the APU's 16-KB-WG budget rejects; those never won a cell).
+`python3 check_candidates.py --floor` sweeps the shipped floor deck through the
+same four gates the deck must pass. Its scope, the per-config occupancy-margin
+accounting, and the generator-rule residue classes are owned by the module
+docstring of `oto/checks/candidates.py`. The load-bearing rule survives here:
 
 Spoof-steal rule (sanctioned): take the floor's winning config per cell, adapt
 for gfx90c (16-B cap / LDS budget — the gate does this), document, benchmark in
 TTY. Only cell in scope: **CC:256**.
 
-## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
+## 8. Knob deltas native vs floor — what actually differs
 
-`oto/harness/cell_knob_diff.py` prints, per cell, winner kernels + differing knobs.
-Findings (same kernel name almost everywhere; the deltas are the subtle ones):
-
-- **CC:256** — the steal: native `Alik_Bjlk` (TT direction) MT64x64/4x4 vs the
-  floor's `Ailk_Bjlk` (NT) same geometry, 188.1 vs 214.0. Direction + WGM is the
-  ~14 % delta. (Group B.)
-- **SS:512/768/1365/2048** — floor wins by VW4 (GLVW4) vs native VW2; same
-  MT128x128/8x8/du8 otherwise: +3.8 / +0.5 / +3.2 / +1.4 %.
-- **HH:1024/2048/4096** — floor VW8-GLVW8 vs native VW8-GLVW8 (identical);
-  +4.0 / +6.6 / +0.1 % — the 2048 delta is clock/margin, 4096 is a wall tie.
-- Native wins the small cells big: SS:256 −69.9 % (412 vs 124 — native geometry
-  96x96 vs floor 32x64), DD:192 −59.4 % (52.6 vs 21.4), ZZ:128 −70.8 % (16.8 vs
-  4.9), CC:192 −62.0 % (113.8 vs 43.2), ZZ:256 −20.0 %, ZZ:512 −11.3 %.
+`oto/harness/cell_knob_diff.py` owns the per-cell output format and the
+winner/knob-diff mechanics (its module docstring). The measured deltas
+themselves are evidence and live in `potential_configs.md` §7 and `results.md`.
+What constrains future proposals:
 
 Never re-propose: SS 96x96x8/6x6/VW2 or HH GSU2 (dropped after prior runs;
 tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
@@ -259,6 +232,9 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    before any verdict quote.
 6. New numbers must be kernel-typecode-attributable (ground-truth §3) and
    clock-flagged (M4).
-7. **Sizing (10+ h, packed):** iteration 1 = deck(40) + seed(295) = 335 phases
-   ≈ 6.5 h; `--budget 10` → ~15-20 h. The DB mutator's novelty throttle keeps
-   each mutation iteration ~1-2 h without starving the wall families.
+7. **Sizing (10+ h, packed):** the per-iteration phase count is read live — the
+   deck from `phases.yaml` and the seed overlay via
+   `oto/harness/generate_candidates.py` / `oto/runners/auto_prompt._read_counts`
+   — never transcribed here; `--budget <hours>` governs the run. The DB mutator's
+   novelty throttle keeps each mutation iteration ~1-2 h without starving the
+   wall families.

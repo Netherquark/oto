@@ -133,74 +133,7 @@ whether T2 is worth its day. No code work is outstanding.
   (`scheduler.MEASURED_VGPR_BY_DTYPE`).
 - Full story: `gfx90c_tuning_guide.md`.
 
-
-**Mechanism:** `port_tensile.py` + `phases.yaml` manifest + 7 modules (`registry.py`, `report.py`, `analytics.py`, `policy.py`, `scheduler.py`, `agent.py`, `gfx90c_common.py`) fully implemented and unit-tested. `--auto` convergence loop operational with deterministic mutate-≤2-knobs candidate generation.
-
-## 4.3 28-family native coverage (RESOLVED — 2026-09-13)
-
-**Mechanism (T3):** 28-family native coverage generated in `phases.yaml` spanning all 7 families `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` across 4   contraction patterns `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}` with anchor problem shapes (304 candidate configs: 232 family + 72 auto; re-derived to **418 phases** 2026-09-27: 410 + 8 gate-legal ZZ replacements, see `changelog.md`.)
-
-## 4.4 Adaptive-repeat finalize (RESOLVED — 2026-09-13)
-
-**Mechanism:** Production adaptive repeat logic implemented in `port_tensile.py` (NumBenchmarks doubling for high-spread cells). Telemetry sampler in `telemetry.py` (`SysfsTelemetrySampler`) guarantees gated sample windows. *(2026-09-25: the `policy.py` `should_repeat`/`classify_stability` helpers were removed — stability is now a CV≤15% gate inside `agent.converged()`.)*
-
-## 4.5 auto-retire trust gate (RESOLVED — 2026-09-13)
-
-**Mechanism:** Implemented in `policy.py` (`check_retirement_eligibility`), gated on ≥2 independent runs/cell before emitting retirement decisions. *(2026-09-25: `classify_retirement_tier` and `apply_d2_4_protection` were removed — retirement is now the single Tier-2 path via `check_retirement_eligibility` + `should_run`/`is_config_retired`.)*
-
-## 4.6 Peak-table prose drift (RESOLVED — 2026-09-13)
-
-**Mechanism (T8):** Sourced strictly from `gfx90c_common.PEAK_GFLOPS` (single import point — BF16: 1613, INT8: 1613). All driver headers, analytics, and reports cite single-rate 1613.
-
-## 4.7 Synthesis evidence gate (RESOLVED — 2026-09-13)
-
-**Mechanism:** Implemented in `port_tensile.py` `synthesize_library()`. Emits per-family logic YAMLs, executes `TensileCreateLibrary --merge-files`, runs anti-alias scan rejecting any `gfx900`/`vega10` leaks, and verifies regression against 28 families.
-
-## 4.8 Occupancy = performance objective (RESOLVED — 2026-09-13)
-
-**Mechanism (T9):** `scheduler.py` candidate generator and `agent.py` convergence engine treat right-sized `GSU`/`WGM`/`MT`/`TT` as first-class objective knobs, scored against realistic ceilings in `gfx90c_theoretical_limits.md` §5.
-
-## 4.9 Driver Implementation & Remediation (RESOLVED — 2026-09-13)
-
-**Remediation audit completed and verified across all modules:**
-- `port_tensile.py`: Added telemetry sampling (via `telemetry.py` `SysfsTelemetrySampler`, canonical units Hz/µW/mC/% logging to `logs/telemetry.csv`), interactive non-blocking `'s'` skip and `'q'` quit key listeners, fixed subprocess buffer deadlocks by piping to disk logs, fixed `run_ab_test` to query native (`ScheduleName="isa"`) and spoof (`ScheduleName="vega10"`) records separately, and implemented Stage 6 library synthesis with YAML logic generation, anti-alias scanning (`0` gfx900/vega10 leaks), and 2,285-kernel regression check (the earlier 3,066 was per-file token counting).
-- `scheduler.py`: Fixed LDS usage calculation to `(M*K + N*K) * elem_size * NLCA / 1024.0`; fixed `parse_tensile_shape` to robustly handle batched (`_B16`) and explicit K (`_K4096`) shapes; improved wave-based occupancy estimation.
-- `agent.py`: Upgraded `converged()` to evaluate full multi-condition convergence (≥2 independent runs, ≥3 distinct configs, ≤1% movement, and no RED cells); replaced hardcoded static fallback in `_reconstruct_config` with family-aware defaults.
-- `registry.py`: Protected `append_phase` with `INSERT OR IGNORE` and duplicate checking.
-- `policy.py` & `analytics.py`: Clean stdlib implementations using realistic ceilings from `gfx90c_theoretical_limits.md` §5.
-
-## 4.10 Ctrl+C signal handler + stale-run cleanup (RESOLVED — 2026-09-13)
-
-**Mechanism:**
-- `_signal_handler` now calls `sys.exit(130)` after `os.killpg` + registry `update_run_status(interrupted)`.
-- `registry.cleanup_stale_runs()` added (bulk UPDATE `started→interrupted`) and called in `TensileDriver.__init__` before creating new run dir.
-- `run_phases()` marks run `interrupted` when `_stop_requested` is set.
-- 3 orphaned runs (run_140507, run_141220, run_143006) corrected in live DB.
-
-## 4.11 Tensile Top-Level YAML Generator & Pipeline Robustness (RESOLVED — 2026-09-13)
-
-**Mechanism:**
-- `port_tensile.py`: Fixed `_write_phase_config` to derive correct `TransposeA`/`TransposeB` per contraction pattern in label (`Ailk_Bljk` $\to$ NN/FF, `Ailk_Bjlk` $\to$ NT/FT, `Alik_Bljk` $\to$ TN/TF, `Alik_Bjlk` $\to$ TT/TT); mapped `MacroTile0`/`MacroTile1` properly from string representation; dynamically calculated `WorkGroup` tile ratios (`MacroTile0/ThreadTile0`, `MacroTile1/ThreadTile1`, 1); set proper HPA / `HS_HPA` mixed precision flags.
-- `scheduler.py`: Added `MacroTile` / `ThreadTile` divisibility check (`MacroTile0 % ThreadTile0 == 0`) and valid thread count constraints ($64 \le \text{threads} \le 1024$, multiple of 64) in `validate_config`.
-- `analytics.py`: Added whitespace-stripped parsing and per-kernel GFlops extraction in `load_benchmark_csv` to handle space-padded CSV headers emitted by Tensile.
-- Verified across unit tests and live benchmark data (`run_20260913_144805`, `run_20260913_150517`, `run_20260913_151227`).
-
-## 4.12 Complete 7-Stage Driver Transition (RESOLVED — 2026-09-13)
-
-**Mechanism:**
-- Abolished reliance on arbitrary numeric phase IDs (0–31); phase identity uses
-  semantic filters.
-- Replaced CLI execution with semantic filters: `--family` (SS, HH, HH_HPA, HS_HPA, DD, ZZ, CC), `--pattern` (Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk), `--shape`, `--stage`, and `--auto`.
-- `phases.yaml` fully populated with 28 native families across 4 contraction patterns (228 clean targets; the live manifest = **418 phases** as of 2026-09-27, see `results.md` §1).
-- Added `--dry-run` to inspect matched candidate targets before hardware execution.
-
-## 4.13 Parallel Clang Build, Cooldown Key Handling & Early Quit Reports (RESOLVED — 2026-09-13)
-
-**Mechanism:**
-- Multi-threaded assembly compilation enabled by setting `CpuThreads: min(os.cpu_count(), 16)` in generated YAMLs and `make -j`.
-- Fixed Tensile `ForkParameters` emission from `MacroTile0`/`MacroTile1` to valid schema `MacroTile: [[M0, M1, DepthU]]` fixing CC/DD configuration parsing.
-- Integrated non-blocking `select.select()` listener in `_apply_cooldown()` so `'s'` skips cooldown sleep and `'q'` quits immediately.
-- Ensured `acceptance_report.json` and `acceptance_report.html` are generated and persisted to `gfx90c_results/` even on early termination via `'q'` or interruption.## 5.1 Refactor 1 (codebase organisation) — PARTIAL (2026-10-11)
+## 5.1 Refactor 1 (codebase organisation) — PARTIAL (2026-10-11)
 
 Shipped: the flat root moved into an `oto/` package by responsibility, the three
 gate families extracted from `scheduler.py` into `oto/tensile/gates/`, the
@@ -228,8 +161,17 @@ No behaviour change. Proven five ways against the pre-refactor commit
 ### PENDING — functions still over 60 lines (49 total; 33 by code line)
 
 Acceptance criterion 2 of the plan ("no function over 60 lines") is **not yet
-met**. The file-level criterion (no file over 600 lines) *is* met: the largest
-file is `oto/tensile/legality.py` at 561 lines.
+met**, and it is the **only** reason Refactor 1 cannot be called "completely
+finished". The file-level criterion (no file over 600 lines) *is* met: the
+largest file is `oto/tensile/legality.py` at 565 lines.
+
+**Decision (2026-10-12).** These cuts are deliberately **not** implemented in
+the run-launch session (they churn the run loop immediately before an overnight
+run). `plans/acceptance.py` criterion 1b measures **total** lines
+(`n.end_lineno - n.lineno + 1`) over `oto/**/*.py`, so the exit set for AC 1b is
+all **49** entries below; the code-only column identifies *which* seam is worth
+cutting, it is not the exit test. The full closing plan is at the end of this
+section.
 
 **Metric note (2026-10-12).** The rule only means "a function too long to
 follow", and several entries below are long because of their *docstring*, not
@@ -333,6 +275,151 @@ functions already decomposed this round -- extracting data literals into module
 constants and cohesive steps into private helpers; then re-run the directly
 affected tests plus `python3 plans/verify_all.py`, which is the guard that the
 cut did not change behaviour.
+
+#### Closing plan (proposed; implement after the overnight run)
+
+**The rule that must actually pass.** `plans/acceptance.py` criterion 1b:
+
+```python
+ln = n.end_lineno - n.lineno + 1        # TOTAL lines, docstring included
+if ln > 60: ...                          # FAIL
+```
+
+over every `FunctionDef`/`AsyncFunctionDef` in `oto/**/*.py`. So the target is
+**all 49 functions <= 60 total lines**. Do not lower a count by deleting a
+docstring -- `docs/docstrings.md` is a separate, higher-priority requirement; a
+docstring-heavy function (`reference_thresholds`, 78 total / 43 code;
+`load_phases_manifest`, 64 / 32) is fixed by splitting its **code**, or, only
+where there is genuinely no code seam, recorded as a justified exception.
+
+**The extraction pattern** (the same one the 13 done cuts used):
+
+1. Find the first point at which a self-contained sub-result exists
+   (`harvest -> filter -> emit`, `argv+env -> launch -> poll -> collect`).
+2. Move that block into a module-private function `_verb_noun(...)` that takes
+   the locals it reads and returns the locals it produces; leave the public
+   function as a sequence of named calls.
+3. Where the block is a data literal (the way `_init_db -> _SCHEMA_DDL` and
+   `write_report -> _VERDICT_FIELDS` were done), hoist it to a module constant
+   and prove the emitted artifact byte-identical.
+4. Never rename a public symbol or change a signature; private helpers may be
+   named freely.
+
+**Per-function plan** (`tot`/`code` from the scan above; risk = blast radius if
+the cut is wrong).
+
+| # | function | location | tot/code | risk | proposed extraction |
+|---|---|---|---|---|---|
+| 1 | `mutate_and_feed` | oto/ledger/agent.py:250 | 227/141 | HIGH | `_filter_settled_cells` (settled/retired gate), `_sample_mutants` (DB -> manifest fallback), `_emit_mutant_phases` (template + sweep build) |
+| 2 | `run_auto` | oto/runners/auto.py:23 | 189/128 | HIGH | `_establish_floor`, `_run_tuning_iteration`, `_converge` |
+| 3 | `iter_candidates` | oto/harness/candidate_pool.py:98 | 174/137 | HIGH | lift nested `_offer` to module level; `_offer_wide`, `_offer_narrow`, `_offer_auto`, `_offer_probes` |
+| 4 | `run_phases` | oto/runners/phases.py:205 | 170/106 | HIGH | `_phase_should_run`, `_phase_skip_reason`, `_execute_one_phase` |
+| 5 | `_load_ledger` | oto/metrics/run_status.py:113 | 163/111 | MED | `_read_run_rows`, `_resolve_run_chain`, `_fold_ledger_records` |
+| 6 | `execute_phase` | oto/runners/benchmark.py:123 | 155/128 | HIGH | `_record_phase_start`, `_launch_phase`, `_record_phase_result` |
+| 7 | `run_gfx900_reference` | oto/runners/reference.py:183 | 147/109 | HIGH | `_swap_to_reference_dir`, `_delegate_reference_phase` |
+| 8 | `_compute_ab_verdicts` | oto/runners/reporting.py:124 | 140/109 | HIGH | `_assemble_arms`, `_clock_coverage`, `_build_verdict` |
+| 9 | `_run_tensile_benchmark` | oto/runners/benchmark.py:296 | 133/105 | HIGH | `_benchmark_argv_env`, `_launch_benchmark`, `_collect_benchmark_csvs` |
+| 10 | `_collect` | oto/metrics/ab_delta.py:45 | 131/82 | MED | `_fold_records`, `_per_cell_statistics` |
+| 11 | `build_report` | oto/metrics/run_status.py:423 | 130/105 | MED | `_run_row`, `_phase_rows`, `_cell_rows` (report-dict parts) |
+| 12 | `classify_outcome` | oto/ledger/mutator_outcomes.py:71 | 129/68 | MED | `_read_outcome_csvs`, `_classify_from_stats` (PROMOTED: verifier skips) |
+| 13 | `generate_family_phases` | oto/tensile/candidate_emission.py:160 | 124/77 | MED | `_phase_id_for`, `_clamp_width_retry` |
+| 14 | `probe_phase_config` | oto/checks/tensile_build.py:146 | 121/102 | MED | `_tensile_solution_ok`, `_kernel_writer_ok` |
+| 15 | `build` | oto/harness/resolve_cells.py:182 | 119/106 | MED | `_resolve_cell_row` (per-cell table build) |
+| 16 | `phase_survey` | oto/harness/kernel_db.py:144 | 115/103 | MED | `_survey_family`, `_survey_cell` |
+| 17 | `build_matrix` | oto/harness/regression_matrix.py:85 | 110/96 | MED | `_matrix_row`, `_matrix_footer` |
+| 18 | `_resume_deck` | oto/runners/reference.py:28 | 109/65 | HIGH | `_deck_rows_done`, `_deck_rows_remaining` |
+| 19 | `audit` | oto/metrics/ab_audit.py:109 | 101/81 | MED | `_audit_one_cell`, `_audit_summary` |
+| 20 | `_pair_cells` | oto/metrics/ab_delta.py:247 | 101/75 | MED | `_pair_key`, `_pair_row` |
+| 21 | `main` | oto/tools/allruns.py:192 | 99/89 | LOW | one `_cmd_<sub>` handler per subcommand |
+| 22 | `main` | oto/checks/tensile_build.py:444 | 98/83 | LOW | `_cmd_build`, `_cmd_probe`, dispatch in `main` |
+| 23 | `converged` | oto/ledger/agent.py:151 | 98/75 | MED | `_converged_coverage`, `_converged_telemetry`, `_converged_ledger` |
+| 24 | `generate_acceptance_report` | oto/runners/reporting.py:264 | 98/66 | MED | `_acceptance_header`, `_acceptance_rows` |
+| 25 | `render` | oto/metrics/render_status.py:219 | 93/86 | LOW | one `_render_<section>` per section |
+| 26 | `main` | oto/tools/verify_run.py:303 | 91/81 | LOW | one `_cmd_<sub>` handler per subcommand |
+| 27 | `append_candidates_batch` | oto/tensile/candidate_emission.py:65 | 88/64 | MED | `_batch_rows`, `_batch_comment` |
+| 28 | `synthesize_library` | oto/runners/synthesis.py:27 | 84/64 | MED | `_manifest_phases`, `_library_phases` |
+| 29 | `write_phase_config` | oto/tensile/config_writer.py:338 | 83/56 | MED | `_config_body`, `_config_problem_type` |
+| 30 | `main` | oto/harness/measure_vgprs.py:76 | 80/73 | LOW | `_measure_one`, `_write_table` |
+| 31 | `mutate_winner` | oto/tensile/candidate.py:91 | 80/62 | MED | `_mutation_plan`, `_apply_mutation` |
+| 32 | `__init__` | oto/runners/driver.py:136 | 80/60 | MED | `_init_paths`, `_init_state` |
+| 33 | `_compute_family_coverage` | oto/metrics/report.py:121 | 80/51 | LOW | `_family_rows`, `_family_totals` |
+| 34 | `reference_thresholds` | oto/metrics/coverage.py:60 | 78/43 | LOW | split the table build into `_reference_table` (docstring-dominated; code seam is the table construction) |
+| 35 | `_scan_dat_library` | oto/tensile/library.py:52 | 76/61 | LOW | `_iter_dat_files`, `_parse_dat_entry` |
+| 36 | `_offer` | oto/harness/candidate_pool.py:115 | 74/66 | LOW | nested; becomes module-level `_offer(row, ...)` returning bool |
+| 37 | `coverage_cells` | oto/metrics/coverage.py:172 | 74/57 | MED | `_cell_state_row`, `_coverage_rollup` |
+| 38 | `classify_cell_status` | oto/metrics/cell_status.py:28 | 74/50 | LOW | `_status_from_deltas`, `_status_from_coverage` (PROMOTED) |
+| 39 | `_swizzle_feasible` | oto/tensile/gates/occupancy.py:323 | 73/48 | LOW | `_swizzle_tiles`, `_swizzle_check` |
+| 40 | `select_deck` | oto/tools/consolidate_deck.py:206 | 70/49 | LOW | `_deck_key`, `_deck_filter` |
+| 41 | `_family_matrix_rows` | oto/metrics/report_html.py:125 | 69/63 | LOW | `_matrix_cell`, `_matrix_row` |
+| 42 | `harvest` | oto/ledger/harvest.py:30 | 69/48 | LOW | `_harvest_winners`, `_harvest_configs` (PROMOTED) |
+| 43 | `_reference_remaining` | oto/runners/reference.py:419 | 67/47 | LOW | `_remaining_rows`, `_remaining_shapes` |
+| 44 | `load_phases_manifest` | oto/runners/phases.py:28 | 64/32 | LOW | `_manifest_rows`, `_manifest_validate` (docstring-dominated) |
+| 45 | `load_benchmark_csv` | oto/metrics/analytics.py:231 | 63/49 | LOW | `_csv_columns`, `_csv_rows` |
+| 46 | `_fork_params` | oto/tensile/config_writer.py:178 | 63/42 | LOW | `_fork_overrides`, `_fork_merge` |
+| 47 | `read_thermals` | oto/metrics/read_thermals.py:29 | 62/50 | LOW | `_thermal_samples`, `_thermal_summary` |
+| 48 | `_coverage_matrix_section` | oto/metrics/report_sections.py:227 | 61/58 | LOW | `_cov_header`, `_cov_rows` |
+| 49 | `telemetry` | oto/tools/verify_run.py:170 | 61/49 | LOW | `_telemetry_stages` |
+
+**Tooling that changes with the cuts.**
+
+* `plans/verify_ast_equivalence.py` -- a body difference in a head module *not*
+  in `DECOMPOSED` is a hard failure. Six head modules are not listed yet and
+  each needs an entry (with the same "proved by ..." justification the list
+  already carries) before its functions are cut:
+  `agent.py` (`mutate_and_feed`, `converged`), `coverage.py`
+  (`reference_thresholds`, `coverage_cells`), `check_tensile_build.py`
+  (`probe_phase_config`, `main`), `harness/resolve_cells.py` (`build`),
+  `allruns.py` (`main`), `verify_run.py` (`main`, `telemetry`).
+  The other 43 functions are already safe: their head module is `DECOMPOSED`
+  (`port_tensile.py`, `scheduler.py`, `analytics.py`, `report.py`,
+  `run_status.py`, `ab_audit.py`, `consolidate.py`, `tensile_library.py`,
+  `db_mutator.py`,
+  `harness/{generate_candidates,kernel_db,measure_vgprs,regression_matrix}.py`)
+  or the symbol is private / `PROMOTED` and therefore skipped (`_offer`,
+  `_collect`, `_pair_cells`, `_family_matrix_rows`, `_scan_dat_library`,
+  `_swizzle_feasible`, `_fork_params`, `_reference_remaining`,
+  `_coverage_matrix_section`, and the `PROMOTED` `classify_outcome`, `harvest`,
+  `classify_cell_status`, `generate_family_phases`, `append_candidates_batch`).
+* `plans/acceptance.py` -- unchanged; 1b is the exit test. (If the team decides
+  the **code-only** metric is the rule instead, change 1b to strip the docstring
+  and the exit set drops to the 33 code-only entries -- make that call once,
+  here.)
+
+**Batch order** (each batch ends green).
+
+1. **LOW -- pure shuffles, no run-loop path (23).** One handler per subcommand
+   for `allruns.main`, `tensile_build.main`, `verify_run.main`+`telemetry`,
+   `measure_vgprs.main` (mirror `runners/cli.py`); section renderers for
+   `render`; plus `select_deck`, `reference_thresholds`,
+   `_compute_family_coverage`, `coverage_cells`, `classify_cell_status`,
+   `harvest`, `_family_matrix_rows`, `_coverage_matrix_section`,
+   `load_phases_manifest`, `load_benchmark_csv`, `read_thermals`,
+   `_reference_remaining`, `_fork_params`, `_swizzle_feasible`,
+   `_scan_dat_library`.
+2. **MED -- data assembly (18).** `_load_ledger`, `build_report`, `_collect`,
+   `_pair_cells`, `audit`, `generate_family_phases`,
+   `append_candidates_batch`, `synthesize_library`, `probe_phase_config`,
+   `build`(resolve_cells), `phase_survey`, `build_matrix`, `write_phase_config`,
+   `mutate_winner`, `driver.__init__`, `generate_acceptance_report`,
+   `classify_outcome`, `converged`.
+3. **HIGH -- the run loop last, one function per commit (9).**
+   `mutate_and_feed`, `run_auto`, `iter_candidates`, `run_phases`,
+   `execute_phase`, `_run_tensile_benchmark`, `run_gfx900_reference`,
+   `_resume_deck`, `_compute_ab_verdicts`. These are plan §7's "subtle
+   skip/reference-floor interaction"; cut `phases.py`/`reference.py` before
+   `auto.py`, exactly as §7 orders it.
+
+**Verification per cut** (the ritual that proved the 13 done cuts):
+
+1. `python3 -m py_compile <file>` + `python3 -c "import oto.<mod>"`.
+2. The directly-affected test module(s) (e.g. `tests/test_runner.py` for
+   `run_auto`, `tests/test_agent*.py` for `agent.py`).
+3. `python3 plans/verify_all.py` (add the head module to `DECOMPOSED` first).
+4. Full suite once per batch: `TENSILE_ROOT=... pytest -q` (~6.5 min).
+5. `python3 plans/acceptance.py` at the end -- "0 functions over 60 lines".
+
+**Exit criteria.** AC 1b passes; `verify_all.py` green; full suite green; every
+new `DECOMPOSED` entry carries its one-line justification.
 
 ### PENDING — known slop observed during the move
 

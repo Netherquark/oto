@@ -6,6 +6,24 @@ Owns: ``ABVerdict`` (one native-vs-spoof comparison) and ``AcceptanceReport``
 report payload.
 Does NOT own: any format (report.py computes, report_html.py renders).
 Public API: ABVerdict, AcceptanceReport.
+
+``execution_timing`` is three distinct numbers, never collapsed into one
+"runtime":
+
+- ``native_run.elapsed_minutes`` -- wall clock of the run being reported (one
+  pass of the deck).
+- ``reference_chain.elapsed_minutes`` -- wall clock summed over the gfx900
+  reference chain.
+- ``phase_busy.minutes`` -- sum of per-phase ``started`` -> ``ended`` spans.
+
+The first two are separate because the floor is usually a *resumed* chain: the
+head run's cost is a fraction of the floor's total, so one combined figure
+would understate the floor by however many resumes it took. ``phase_busy`` sits
+below wall clock by config generation, Tensile build and queueing; a large gap
+means an ETA is timing harness overhead, not the GPU. A run still in flight has
+no execution time yet: it reports ``elapsed_minutes: null`` and
+``in_flight: true`` rather than ``0.0``, so "not finished yet" is never read as
+"instant".
 """
 
 from __future__ import annotations

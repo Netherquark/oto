@@ -44,7 +44,7 @@ Corollaries:
 | `README.md` | Ecosystem | General repository orientation |
 | `docs/README.md` | **This file** — the boundary itself |
 | `docs/docstrings.md` | Ecosystem | The docstring convention (what a module docstring must contain) |
-| `docs/audit.md` | Ecosystem | Paragraph-by-paragraph proposals for whittling the MD tree |
+
 | `implementation_plan.md` | Ecosystem | The current executable plan only |
 | `mapping.md` | Ecosystem | The shipped-footprint replication contract |
 | `gfx90c_theoretical_limits.md` | Ecosystem | Per-family ceilings, the acceptance authority |
@@ -58,6 +58,8 @@ Corollaries:
 | `adversarial_review.md` | Ecosystem | Audit register |
 | `plans/REFACTOR_*.md` | Ecosystem | The refactor plans this package was built against |
 | `plans/verify_*.py` | Ecosystem | The executable equivalence proofs for those plans |
+| `docs/design_language.md` | Ecosystem | Design-language spec for the HTML acceptance report |
+| `docs/harness_runbook.md` | Ecosystem | Harness runbook (moved from `oto/harness/README.md`) |
 | `oto/**/*.py` | **Docstrings** | Everything about one function's contract |
 
 ## Reading order for a new agent

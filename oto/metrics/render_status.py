@@ -8,6 +8,25 @@ any other write, so a print does not leave half a panel on screen).
 Does NOT own: the report dict itself (oto.metrics.run_status) or the plan it
 prices (oto.metrics.run_plan).
 Public API: bar, render_compact, render, LiveStatus, _PanelStdout.
+
+``LiveStatus`` repaints a compact panel into the terminal while a run executes;
+its four non-obvious mechanics:
+
+- A background thread repaints, because the main loop is blocked inside
+  ``execute_phase`` for minutes at a time -- a caller-driven pump would freeze.
+- stdout is wrapped in ``_PanelStdout``, which erases the panel before any
+  other write; without it the run's own ``Skipping phase ...`` lines land under
+  the panel and the next repaint shreds them.
+- A non-TTY (piped log, CI) gets appended plain lines, never ANSI, so logs stay
+  readable.
+- The panel catches ``BaseException``: ``build_report`` raises ``SystemExit``
+  when the registry does not exist (exactly the state a first run starts in),
+  and ``SystemExit`` is not an ``Exception``. A status display must never be
+  the reason a run dies.
+
+Flags: ``--live on|off`` (default on), ``--live-interval SECONDS`` (default 15);
+``python3 -m oto.metrics.run_status --watch`` remains the standalone full-panel
+view.
 """
 
 from __future__ import annotations

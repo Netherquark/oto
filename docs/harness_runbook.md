@@ -1,11 +1,11 @@
 # harness — agentic kernel-tuning harness (CPU-only)
 
-Polished, repo-homed home of the candidate-generation machinery that was built
-ad-hoc in `/tmp` (now deleted as a source of truth). The read-only tools plus
+Polished, repo-homed home of the candidate-generation machinery. The read-only tools plus
 this runbook give an agent (or a human) the ground truth needed to propose a
 defensible candidate without re-reading the raw corpora. Nothing here ever
-benchmarks or touches a GPU — the measurement corpus is fixed until a TTY run
-lands (see `command.txt`).
+benchmarks or touches a GPU (CPU-only, never benchmarks). For the ecosystem
+boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
+[`claude.md`](../claude.md) §5.
 
 ## Layout
 
@@ -13,16 +13,18 @@ lands (see `command.txt`).
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
-oto/harness/README.md             # this runbook
-gfx90c_results/analysis/kernel_db.json          # cache (rebuilt, byte-identical to §12)
+docs/harness_runbook.md            # this runbook
+gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
-gfx90c_results/analysis/cells_resolved.json     # cache (38-cell winner map; resolve_cells)
+gfx90c_results/analysis/cells_resolved.json     # cache (winner map; resolve_cells)
 gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_configs.md §2)
 ```
 
-Both tools resolve families/shapes/dtype from the repo's canonical sources
-(`oto.device.peaks`, `oto.tensile.library_parity`) — they can never disagree with
-the shipped grid (knowledge_base.md §6.1).
+Module list and ownership: see [`oto/README.md`](../oto/README.md) for the harness
+modules (e.g. `oto/harness/*`). Both tools resolve families/shapes/dtype from the
+repo's canonical sources (`oto.device.peaks`, `oto.tensile.library_parity`) — they
+can never disagree with the shipped grid (knowledge_base.md §6.1). Cache paths are
+listed above.
 
 ## Workflow
 
@@ -65,12 +67,8 @@ median, `% vs floor`, and per-cell verdicts:
   by >2% on the same cell (the one place a candidate can still be *proven*
   better without a new run).
 
-Published state (2026-10-07): **16 wins / 13 ties / 9 losses**, 8 loss cells
-config-identical (cross-run variance, re-measure only), **S:512 the only real
-config difference** (deck VW2 771.9 vs floor VW4 801.6 → probe N6), and **one
-material finding**: HH_HPA:4096's stranded iteration-9 winner
-`phase_auto_1_hh_hpa_2048x2048x2048_4` (−4.0% at the median) should be shipped
-as a D-row (probe N7).
+Current state: see [`results.md`](../results.md) for the live benchmark ledger and
+published figures (wins/ties/losses and any material findings).
 
 ### 3. Resolve per-cell native-vs-floor winners (full knob surface)
 
@@ -98,17 +96,19 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 ### 4. Propose a candidate — the gates that apply
 
 1. **Coverage parity (the hard rule).** The produced `tensilelibrary.dat`
-   must address exactly the 38 shipped cells (no contraction, no extension).
+   must address exactly the shipped cells (no contraction, no extension). See
+   [`results.md`](../results.md) §12 for the exact cell count and non-cube shapes.
    After any `phases.yaml` edit:
    ```bash
    python3 check_library_parity.py --quiet && echo "grid-safe"
    python3 -m pytest -q tests/test_library_parity.py
    ```
-   Non-cube probe shapes (`32x4096x1`, …) have no cell: they are fine to
-   measure, report them under §12's `non_cube_shapes`, never under coverage.
+   Non-cube probe shapes have no cell: they are fine to measure, reported as
+   non-cube shapes (never under coverage).
 2. **Occupancy (CPU gate).** New kernels must pass
-   `oto.tensile.gates.occupancy.occupancy_feasible` (45/45 rows pass today;
-   register-file wg/CU 512–8192). No occupancy regression below the floor's.
+   `oto.tensile.gates.occupancy.occupancy_feasible` (register-file wg/CU 512–8192).
+   No occupancy regression below the floor's. Current gate status is reported by
+   the live tools.
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or
