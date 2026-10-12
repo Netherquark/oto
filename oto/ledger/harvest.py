@@ -13,7 +13,10 @@ Public API: HarvestMixin.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from oto.metrics.analytics import CellAnalytics
 
 import yaml
 

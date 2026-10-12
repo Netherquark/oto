@@ -26,6 +26,8 @@ from oto.tensile.candidate_config import CandidateConfig
 from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.tensile.decks import FAMILY_DECKS
 from oto.tensile.gates.loads import cap_vector_width
+from oto.tensile.gates.occupancy import (  # noqa: E402
+    occupancy_feasible, occupancy_workgroups_per_cu)
 
 
 class CandidateEmitMixin:

@@ -11,7 +11,10 @@ Public API: ABVerdict, AcceptanceReport.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from oto.metrics.analytics import CellAnalytics
 
 
 @dataclass

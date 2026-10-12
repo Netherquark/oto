@@ -1,33 +1,38 @@
-"""Coverage-parity rule: what the produced TensileLibrary may address.
+"""The coverage-parity rule: what the produced TensileLibrary may address.
 
-The rule (canonical home: `knowledge_base.md` §6.1) is:
+Owns: the single implementation of the rule -- the produced
+``tensilelibrary.dat`` must address exactly the (family, shape) cells the shipped
+gfx900 library addresses, no contraction and no extension.
 
-  The `tensilelibrary.dat` this pipeline produces must address **exactly** the
-  same (family, shape) cells the shipped gfx900 TensileLibrary addresses —
-  the canonical contract grid `gfx90c_common.shipped_cells()`. Two clauses:
+Does NOT own: the CLI that grades an external deck (oto.checks.library_parity),
+the driver's non-fatal ``--preflight`` check (oto.runners.driver), or the
+install-time refusal (oto.tools.consolidate_install).
 
-  * **no contraction** — every shipped cell must have >= 1 gfx90c phase;
-  * **no extension** — no phase may address a cell outside the shipped grid.
+Public API: phase_family, phase_cells, phases_cells, load_pipeline_phases,
+parity_report. (The CLI ``main`` lives in oto.checks.library_parity.)
 
-This module is the single implementation of that rule:
+The rule, canonically stated in ``knowledge_base.md`` §6.1:
 
-* :func:`phase_family` — resolve a phase's family (config ``FamilyLabel`` is
+  * **no contraction** -- every shipped cell must have at least one gfx90c phase;
+  * **no extension** -- no phase may address a cell outside the shipped grid.
+
+* :func:`phase_family` resolves a phase's family. The config ``FamilyLabel`` is
   canonical; the ``phase_id`` token fallback keeps pre-FamilyLabel rows and
-  overlay probes resolvable).
-* :func:`phase_cells` / :func:`phases_cells` — the (family, shape) cells a
+  overlay probes resolvable.
+* :func:`phase_cells` / :func:`phases_cells` give the (family, shape) cells a
   phase / a manifest addresses. Non-cube shapes (GEMV probes such as
-  ``32x4096x1``) have no cell by design (`gfx90c_common.cube_side`) and are
-  reported separately, never counted as cells.
-* :func:`parity_report` — missing / extra / non-cube-shape report.
-* :func:`load_pipeline_phases` — deck + current overlays in the order
-  `port_tensile.load_phases_manifest` merges them, so preflight and the
-  standalone `check_library_parity.py` measure the same set.
+  ``32x4096x1``) have no cell by design and are reported separately, never counted
+  as cells.
+* :func:`parity_report` is the missing / extra / non-cube report.
+* :func:`load_pipeline_phases` merges deck plus overlays in the same order the
+  driver does, so preflight and the standalone ``check_library_parity.py``
+  measure the same set.
 
-Enforcement points (all CPU-only): `check_library_parity.py` CLI (exit 1 on
-divergence), the `--preflight` check in `port_tensile`, and `consolidate.py`
-``all --commit`` (refuses to install a deck that breaks parity). Tests:
-`tests/test_library_parity.py`.
+Enforcement points, all CPU-only: the ``check_library_parity.py`` CLI (exit 1 on
+divergence), the ``--preflight`` check, and ``consolidate.py all --commit``, which
+refuses to install a deck that breaks parity. Tests: ``tests/test_library_parity.py``.
 """
+
 
 from __future__ import annotations
 
@@ -74,7 +79,7 @@ def phase_family(phase: Dict[str, Any]) -> str:
     """Resolve a phase's canonical family name ('' when unresolvable).
 
     ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
-    so HH / HH_HPA / HS_HPA never collapse — see `gfx90c_common.cell_key`).
+    so HH / HH_HPA / HS_HPA never collapse — see `oto.device.peaks.cell_key`).
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
     """
@@ -177,7 +182,7 @@ def load_pipeline_phases(base_dir: Optional[str] = None,
     merged: List[Dict[str, Any]] = list(deck)
 
     if run_id:
-        for ov_path in sorted(_glob.glob(str(base / "gfx90c_results" / "overlays" / f"phases.{run_id}.overlay.yaml"))):
+        for ov_path in sorted((base / "gfx90c_results" / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
             _merge(merged, _yaml.safe_load(_read(ov_path)), f"run_overlay:{run_id}")
 
     if include_seed:

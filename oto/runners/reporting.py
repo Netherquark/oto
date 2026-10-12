@@ -14,6 +14,7 @@ Public API: ReportingMixin.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto.device.peaks import cell_key, kernel_key

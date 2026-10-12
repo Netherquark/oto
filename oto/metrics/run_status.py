@@ -34,8 +34,9 @@ import oto.tensile.library as tlib  # noqa: E402
 # Re-exported for the pre-split import surface; the implementations live in
 # oto.metrics.read_thermals / oto.metrics.run_plan.
 from oto.metrics.read_thermals import read_thermals
-from oto.metrics.render_status import (LiveStatus, _PanelStdout, bar,
-                                       render, render_compact)
+from oto.metrics.render_status import (  # noqa: E402,F401
+                                       LiveStatus, _PanelStdout, bar,
+                                       main, render, render_compact)
 from oto.metrics.run_plan import (Estimate, PhaseCost, RunPlan,
                                   _reference_unit_count, _tuning_unit_count)
 

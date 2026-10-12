@@ -14,7 +14,7 @@ Public API: TimingMixin.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from oto.metrics.analytics import extract_family_from_phase_id
 

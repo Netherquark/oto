@@ -12,9 +12,13 @@ Public API: CellStatusMixin.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple
 
-from oto.device.peaks import REALISTIC_CEILINGS
+from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
+                              PEAK_GFLOPS, REALISTIC_CEILINGS)
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from oto.metrics.analytics import CellAnalytics
 
 
 class CellStatusMixin:

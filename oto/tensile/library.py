@@ -24,7 +24,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from oto.device.peaks import FAMILY_DTYPES, FAMILY_DTYPE_CHAR
 
@@ -173,8 +173,8 @@ def phase_key(phase: Dict[str, Any]) -> str:
 
     `phase_id` embeds the knobs that `_parse_kernel_knobs` derived, so any fix to
     those parsers renames every phase. Completion was then re-decided from
-    scratch: 1073 of 1212 ids changed between two consecutive runs and only 116
-    matched, i.e. one resume silently re-ran the whole floor.
+    scratch: almost every id changed between two consecutive runs, so one resume
+    silently re-ran the whole floor.
 
     The shipped solution name is the authoritative kernel identity and does not
     depend on our parsing, so hash that instead.

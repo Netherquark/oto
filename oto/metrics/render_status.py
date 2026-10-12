@@ -326,7 +326,7 @@ def _main(argv, build_report) -> int:
                "  python3 run_status.py\n"
                "  python3 run_status.py --plan rerun_illegal=no "
                "rerun_underspecified=yes iterations=4 --thermals\n")
-    ap.add_argument("--base", default=str(ROOT),
+    ap.add_argument("--base", default=str(Path(__file__).resolve().parents[2]),
                     help="repository root (default: this file's directory)")
     ap.add_argument("--run", help="run_id to report on (default: newest run)")
     ap.add_argument("--plan", nargs="*", default=[],

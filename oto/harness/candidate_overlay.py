@@ -7,6 +7,8 @@ Public API: _write_overlay, _prune_candidates_from_seed, _round_robin_prune, _su
 
 from __future__ import annotations
 
+import argparse
+
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -68,7 +70,7 @@ def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
     payload["note"] = (payload.get("note", "") +
                        f"\nAppended {len(seed_list)} generated candidates "
                        f"({len(added)} in-grid, {len(seed_probes)} probe) at "
-                       f"{stamp} by harness/generate_candidates.py")
+                       f"{stamp} by oto.harness.generate_candidates")
     import yaml
     with open(_overlay_path(), "w") as f:
         yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
@@ -77,7 +79,7 @@ def _write_overlay(rows: List[Dict[str, Any]], probe_rows: List[Dict[str, Any]],
     mirror_payload = {
         "run_id": f"candidates-{stamp}",
         "created_at": stamp,
-        "note": ("Candidate pool emitted by harness/generate_candidates.py; "
+        "note": ("Candidate pool emitted by oto.harness.generate_candidates; "
                  "probe rows (graded: false) are off-grid and must NOT be "
                  "merged into the seed overlay without amending the parity "
                  "rule. Safe to load as a run overlay, or archive after the "

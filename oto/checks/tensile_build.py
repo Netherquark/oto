@@ -1,46 +1,35 @@
 #!/usr/bin/env python3
-"""CPU-only Tensile build proof for oto phases.
+"""CPU-only Tensile build proof: does Tensile's own writer accept this phase?
 
-Answers one question with Tensile's own code instead of a heuristic: *does
-Tensile's real kernel writer accept every solution in this phase?*
+Owns: for each phase, driving the same pipeline the real tuner uses minus the GPU
+(``BenchmarkProcess`` -> ``generateForkedSolutions`` ->
+``KernelWriterAssembly.getSourceFileString``) and reporting Tensile's own
+verdict, because the occupancy gate is a calibrated model, not Tensile's truth.
 
-Why this exists
----------------
-`check_candidates.py` enforces oto's four pre-launch gates. One of them --
-the occupancy gate -- is a *calibrated model*, not Tensile's truth: it predicts
-`overflowedResources=4` ("Occupancy limit") from a synthetic per-thread VGPR
-budget. A model that is right for the cases that motivated it is still a
-model, so every phase it blesses is unproven until Tensile agrees.
+Does NOT own: the gates it cross-checks (oto.tensile.gates), the phases it reads
+(oto.tensile.candidate), or any GPU work -- none happens here.
 
-This tool closes that gap. For each phase it drives the same pipeline the real
-tuner uses, minus the GPU:
+Public API: main, probe_phase_config, write_phase_configs, select_phases.
 
-    BenchmarkProcess -> generateForkedSolutions -> KernelWriterAssembly.getSourceFileString
+``getSourceFileString`` is where Tensile decides a kernel is unschedulable: it
+sets ``ko.overflowedResources`` and stamps the body with ``s_endpgm //
+overflowed resources``. The error code returned is Tensile's verdict, not ours,
+which is the whole point of the tool. Because the writer's register pools are
+live at that point, the same pass reports Tensile's real per-thread VGPR / SGPR /
+accVGPR counts -- the measurement that would retire the calibrated model.
 
-`getSourceFileString` is where Tensile decides a kernel is unschedulable: it
-sets `ko.overflowedResources` and stamps the body with
-`s_endpgm // overflowed resources` (KernelWriterAssembly.py:3176). The returned
-error code is Tensile's verdict, not ours.
+No benchmark is ever run: ``BenchmarkProblems`` / ``BenchmarkStructs`` (the part
+that launches GEMMs on the device) is never invoked. The ROCm tools touched are
+the path-locating helpers real runs use (``hipconfig``,
+``rocm_agent_enumerator``), which only print config.
 
-Bonus: because the writer's register pools are live at that point, the same pass
-reports Tensile's *real* per-thread VGPR / SGPR / accVGPR counts, which is the
-measurement that would retire the calibrated occupancy model outright.
-
-CPU-only by construction
-------------------------
-No benchmark is ever run. `BenchmarkProblems`/`BenchmarkStructs` (the part that
-launches GEMMs on the device) is never invoked; we only build solution objects
-and generate kernel source. The ROCm tools touched are the same path-locating
-helpers real runs use (`hipconfig`, `rocm_agent_enumerator`), which print config.
-
-Usage
------
     python3 check_tensile_build.py                 # all phases
     python3 check_tensile_build.py --family ZZ     # just ZZ
     python3 check_tensile_build.py --phase-id <id> # one phase
     python3 check_tensile_build.py --compare       # also check the model
     python3 check_tensile_build.py --json out.json
 """
+
 
 from __future__ import annotations
 
@@ -83,7 +72,7 @@ def _init_tensile(arch: str = "gfx90c") -> None:
     sys.path.insert(0, str(tensile_root))
     os.environ.setdefault("ROCM_PATH", "/usr")
 
-    import Tensile.Common as Tensile
+    import Tensile.Common as Common
     from Tensile.Utilities.Toolchain import ToolchainDefaults, validateToolchain
 
     assembler = shutil.which("clang++") or ""
@@ -124,7 +113,7 @@ def _init_tensile(arch: str = "gfx90c") -> None:
     # Detection reads the device to pick the ISA. This is a path/enumeration
     # query, not a workload, but pin the ISA anyway so the proof is explicitly
     # about the arch we ported and so the tool still works with no GPU present.
-    import Tensile.Common as Tensile
+    import Tensile.Common as Common2
 
     isa = {"gfx900": (9, 0, 0x00), "gfx90c": (9, 0, 0x0C), "gfx906": (9, 0, 0x06)}.get(arch)
     if isa is not None:

@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""
-gfx90c_common.py — Shared constants for gfx90c Tensile port
+"""Hardware peaks and the canonical cell/family vocabulary.
 
-Single source of truth for all peak GFLOPS figures in the ecosystem.
-This file is the authoritative PEAK_GFLOPS reference; all other
-consumers import from here.
+Owns: the peak GFLOPS table, the per-family shape grid, the family <-> Tensile
+DataType-char mapping, the realistic ceilings, the hardware limits, and the
+canonical cell/kernel identity helpers. The only package in oto that may hold a
+numeric hardware constant; this is the authoritative PEAK_GFLOPS reference, so no
+other consumer may re-derive a peak.
 
-Device: AMD Ryzen 5 PRO 5650U (Cezanne-U PRO, Zen 3) iGPU = gfx90c
-ISA: (9,0,12) — GFX9/GCN5 "Vega 7"
-Max clock: 1800 MHz (DVFS pins at level-2 under load)
+Does NOT own: the gates that use those limits (oto.tensile.gates), any measurement
+or statistics (oto.metrics), or the refactor-2 device-profile seam.
+
+Public API: PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
+REALISTIC_CEILINGS, THEORETICAL_PEAKS, kernel_typecode,
+family_from_kernel_name, dtype_from_kernel_name, cube_side, cell_key,
+shipped_cells, shipped_cell_set, kernel_key.
 """
+
+from __future__ import annotations
 
 import re
+from typing import Dict, Set, Tuple
 
 # Single-source PEAK_GFLOPS table @1800 MHz
 # Values are absolute; callers scale by actual sclk if needed
@@ -45,7 +53,7 @@ FAMILY_SHAPES = {
 # DataType C = complexSingle (FP32 pipe), DataType Z = complexDouble (FP64 pipe)
 
 # Family -> Tensile DataType char ('S'/'D'/'H'/'C'/'Z'), single source for
-# scheduler, tensile_library, analytics and report. Char table (how Tensile
+# the candidate pipeline, the library, the metrics and the report. Char table (how Tensile
 # sees the kernel) is distinct from FAMILY_DTYPES (which pipe precision the
 # family runs at). Both are family-keyed and canonical here.
 FAMILY_DTYPE_CHAR = {
@@ -199,7 +207,6 @@ def cube_side(shape: object) -> "int | None":
     Non-cube workloads (GEMV-probe shapes such as 32x4096x1) have no A/B cell
     and are excluded at the pairing boundary, not in production kernels.
     """
-    import re
     m = re.match(r"\s*(\d+)x(\d+)x(\d+)", str(shape))
     if not m:
         return None

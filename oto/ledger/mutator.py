@@ -40,13 +40,12 @@ __all__ = ["Mutator", "Proposal", "classify_outcome",
            "OUTCOME_PENDING", "OUTCOME_FUNCTIONAL", "OUTCOME_NON_FUNCTIONAL",
            "OUTCOME_LEGAL_REJECTED", "OUTCOME_LEGAL_SLOW", "TERMINAL_OUTCOMES",
            "ORIGIN_NOVEL", "ORIGIN_REPLICATE",
-           "DEFAULT_NEGATIVE_CACHE_K", "DEFAULT_DRAWS_PER_CELL",
-           "slow_bars", "slow_threshold_for"]
+           "DEFAULT_NEGATIVE_CACHE_K", "DEFAULT_DRAWS_PER_CELL"]
 
-#: Knobs owned by the caller's phase template. The sampler returns only the
 #: Re-exported from `legality`, the single owner: this module assembles nothing,
 #: it only strips the caller's keys from what `legality` built.
 from oto.tensile.legality import TEMPLATE_KEYS  # noqa: E402,F401
+import oto.tensile.legality as legality  # noqa: E402
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted
 #: 59 mutants from one winner, ~25 of which collided on fingerprints; novelty
