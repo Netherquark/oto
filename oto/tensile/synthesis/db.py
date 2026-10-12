@@ -23,9 +23,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
                                             _DONOR_POOL, _FORWARD_DRAWS,
-                                            _TILE_KNOBS, FAMILY_DTYPE_CHAR,
+                                            FAMILY_DTYPE_CHAR,
                                             FORWARD_KNOB_DOMAINS)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
+from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
 class DBMutator(DbPatternsMixin):
@@ -161,7 +162,7 @@ class DBMutator(DbPatternsMixin):
         return out
 
     def _tile_key(self, knobs: Dict[str, Any]) -> Tuple:
-        return tuple(str(knobs.get(k)) for k in _TILE_KNOBS)
+        return tuple(str(knobs.get(k)) for k in TILE_KNOBS)
 
     @staticmethod
     def _parse_dims(value: Any) -> Optional[List[int]]:

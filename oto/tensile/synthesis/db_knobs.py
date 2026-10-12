@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""The forward-knob domains and tile vocabulary the DB-hooked mutator draws from.
+"""The forward-knob domains the DB-hooked mutator draws from.
 
-Owns: ``FORWARD_KNOB_DOMAINS`` (what a forward knob may take), ``_TILE_KNOBS``
-(which keys make up a tile), ``_DEFAULT_PATTERN`` (the fallback contraction
-pattern) and the donor-pool sizing knobs.
-Does NOT own: the donor loader that pops the pool (oto.tensile.synthesis.db) or
-the per-family mutation patterns that consume these domains.
-Public API: FORWARD_KNOB_DOMAINS, _TILE_KNOBS, _DEFAULT_PATTERN, _DONOR_POOL,
-_FORWARD_DRAWS.
+Owns: ``FORWARD_KNOB_DOMAINS`` (what a forward knob may take), ``_DEFAULT_PATTERN``
+(the fallback contraction pattern) and the donor-pool sizing knobs.
+Does NOT own: the tile vocabulary (``TILE_KNOBS`` lives in
+oto.tensile.synthesis.tile_space, imported by both synthesisers), the donor
+loader that pops the pool (oto.tensile.synthesis.db), or the per-family mutation
+patterns that consume these domains (oto.tensile.synthesis.db_patterns).
+Public API: FORWARD_KNOB_DOMAINS, _DEFAULT_PATTERN, _DONOR_POOL, _FORWARD_DRAWS.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR
@@ -36,11 +36,6 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "GlobalSplitU": (1, 2, 4),
     "AssertFree0ElementMultiple": (1, 2),
 }
-
-#: Knobs that make up a "tile donor" (the wide axes the DB carries).
-_TILE_KNOBS = ("MacroTile", "ThreadTile", "VectorWidth", "GlobalSplitU",
-               "DepthU", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-               "WorkGroup")
 
 #: Default ContractionPattern per family (matches the deck/first pattern).
 _DEFAULT_PATTERN = {

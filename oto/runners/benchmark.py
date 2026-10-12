@@ -22,10 +22,11 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import oto.tensile.library as tlib
 from oto.ledger.registry import fingerprint_config
+from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
 from oto.runners.toolchain import resolve_rocm_paths
 from oto.tensile import config_writer
 
@@ -108,6 +109,17 @@ class BenchmarkMixin:
         self._telemetry = sampler
         self._telemetry_run_id = run_id
         return sampler
+    def _write_phase_config(self, path: Path,
+                            phase: Dict[str, Any]) -> Tuple[bool, str]:
+        """Render one phase's Tensile YAML, refusing illegal configs.
+
+        Kept as a method (the pre-split `TensileDriver._write_phase_config`
+        surface) so `oto.checks.tensile_build.write_phase_configs` and tests can
+        call or patch it on the driver; the ~240-line implementation lives in
+        oto.tensile.config_writer.write_phase_config and is delegated to here.
+        """
+        return config_writer.write_phase_config(self, path, phase)
+
     def execute_phase(
         self,
         phase: Dict[str, Any],
@@ -134,8 +146,7 @@ class BenchmarkMixin:
 
         # Write phase config file
         phase_config_path = self.configs_dir / f"phase_{phase_id}.yaml"
-        wrote, refusal = config_writer.write_phase_config(
-            self, phase_config_path, phase)
+        wrote, refusal = self._write_phase_config(phase_config_path, phase)
         if not wrote:
             # Refused before any GPU work. Record it as a settled verdict so the
             # completeness gate is not blocked forever by a phase that can never

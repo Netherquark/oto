@@ -23,8 +23,9 @@ import random
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN, _DONOR_POOL,
-                                            _FORWARD_DRAWS, _TILE_KNOBS,
+                                            _FORWARD_DRAWS,
                                             FORWARD_KNOB_DOMAINS)
+from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
 class DbPatternsMixin:
@@ -74,6 +75,181 @@ class DbPatternsMixin:
                         d["NLCA"] = nlca_val
                     elif k == "LdsPadA":
                         d["LdsPadA"] = lspad_val
+                    elif k == "LdsPadB":
+                        d["LdsPadB"] = lspad_val
+                    elif k == "GSU":
+                        d["GSU"] = rng.choice(FORWARD_KNOB_DOMAINS["GSU"])
+                    elif k == "GlobalLoadVectorWidthA":
+                        d["GlobalLoadVectorWidthA"] = rng.choice(
+                            FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
+                if d:
+                    patterns.append(d)
+
+        # Pattern 2: WGM change + GSU double
+        for wgm_val in [4, 8]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "WorkGroupMapping":
+                    d["WorkGroupMapping"] = rng.choice(
+                        FORWARD_KNOB_DOMAINS["WorkGroupMapping"])
+                elif k == "GSU":
+                    d["GSU"] = wgm_val // 32  # GSU=1,2,4 maps to wgm 32,64,128
+                elif k == "StaggerU":
+                    d["StaggerU"] = rng.choice(FORWARD_KNOB_DOMAINS["StaggerU"])
+            if d:
+                patterns.append(d)
+
+        # Pattern 3: GLVW quadruple + StaggerU stride
+        for glvw_val in [1, 2, 4]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "GlobalLoadVectorWidthA":
+                    d["GlobalLoadVectorWidthA"] = glvw_val
+                elif k == "StaggerUStride":
+                    d["StaggerUStride"] = rng.choice(
+                        FORWARD_KNOB_DOMAINS["StaggerUStride"])
+            if d:
+                patterns.append(d)
+
+        return patterns
+
+    def _dd_mutation_pattern(self, parent_config: Dict[str, Any],
+                             rng: random.Random) -> List[Dict[str, Any]]:
+        """DD-family-specific mutations targeting sore losers.
+
+        DD family suffers from register pressure and VGPR bottlenecks.
+        These patterns target DepthU, GLVW, and GSU to improve occupancy.
+        """
+        patterns: List[Dict[str, Any]] = []
+        knobs = list(FORWARD_KNOB_DOMAINS)
+
+        # Pattern 1: DepthU increase + GLVW change
+        for depthu_val in [8, 16, 32]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "DepthU":
+                    d["DepthU"] = depthu_val
+                elif k == "GlobalLoadVectorWidthA":
+                    d["GlobalLoadVectorWidthA"] = rng.choice(
+                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
+                elif k == "GlobalLoadVectorWidthB":
+                    d["GlobalLoadVectorWidthB"] = rng.choice(
+                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthB"])
+            if d:
+                patterns.append(d)
+
+        # Pattern 2: GSU double + NLCA change
+        for gsu_val in [2, 4]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "GSU":
+                    d["GSU"] = gsu_val
+                elif k == "NLCA":
+                    d["NLCA"] = rng.choice(FORWARD_KNOB_DOMAINS["NLCA"])
+            if d:
+                patterns.append(d)
+
+        # Pattern 3: GLVW quadruple alone
+        for glvw_val in [1, 2, 4]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 1)):
+                if k == "GlobalLoadVectorWidthA":
+                    d["GlobalLoadVectorWidthA"] = glvw_val
+            if d:
+                patterns.append(d)
+
+        return patterns
+
+    def _cc_mutation_pattern(self, parent_config: Dict[str, Any],
+                             rng: random.Random) -> List[Dict[str, Any]]:
+        """CC-family-specific mutations targeting sore losers.
+
+        CC family suffers from total-elements divisibility and LDS padding.
+        These patterns target LdsPad, MacroTile, and NLCA to fix the
+        totalElements 768 % (NumThreads*grvw) ≠ 0 issue.
+        """
+        patterns: List[Dict[str, Any]] = []
+        knobs = list(FORWARD_KNOB_DOMAINS)
+
+        # Pattern 1: LdsPad combination + NLCA change
+        for lspad_a_val in [1, 2, 4]:
+            for lspad_b_val in [0, 1, 2]:
+                for nlca_val in [1, 2, 3]:
+                    d = {}
+                    for k in rng.sample(knobs, rng.randint(1, 3)):
+                        if k == "LdsPadA":
+                            d["LdsPadA"] = lspad_a_val
+                        elif k == "LdsPadB":
+                            d["LdsPadB"] = lspad_b_val
+                        elif k == "NLCA":
+                            d["NLCA"] = nlca_val
+                    if d:
+                        patterns.append(d)
+
+        # Pattern 2: MacroTile change + GlobalSplitU
+        for mt_val in ["32x32x16", "64x64x16", "96x96x16"]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "GlobalSplitU":
+                    d["GlobalSplitU"] = rng.choice(
+                        FORWARD_KNOB_DOMAINS["GlobalSplitU"])
+            if d:
+                patterns.append(d)
+
+        # Pattern 3: NLCA triple toggle
+        for nlca_val in [1, 2, 3]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 1)):
+                if k == "NLCA":
+                    d["NLCA"] = nlca_val
+            if d:
+                patterns.append(d)
+
+        return patterns
+
+    def _zz_mutation_pattern(self, parent_config: Dict[str, Any],
+                             rng: random.Random) -> List[Dict[str, Any]]:
+        """ZZ-family-specific mutations targeting sore losers.
+
+        ZZ family (complex double) has the lowest ceilings and requires
+        different VW/ThreadTile/MacroTile combinations.
+        """
+        patterns: List[Dict[str, Any]] = []
+        knobs = list(FORWARD_KNOB_DOMAINS)
+
+        # Pattern 1: VW change + DepthU
+        for vw_val in [1, 2]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 2)):
+                if k == "VectorWidth":
+                    d["VectorWidth"] = vw_val
+                elif k == "DepthU":
+                    d["DepthU"] = rng.choice(FORWARD_KNOB_DOMAINS["DepthU"])
+            if d:
+                patterns.append(d)
+
+        # Pattern 2: GlobalLoadVectorWidthA/B change
+        for glvwa_val in [1, 2, 4]:
+            for glvwb_val in [1, 2, 4]:
+                d = {}
+                for k in rng.sample(knobs, rng.randint(1, 2)):
+                    if k == "GlobalLoadVectorWidthA":
+                        d["GlobalLoadVectorWidthA"] = glvwa_val
+                    elif k == "GlobalLoadVectorWidthB":
+                        d["GlobalLoadVectorWidthB"] = glvwb_val
+                if d:
+                    patterns.append(d)
+
+        # Pattern 3: StaggerU stride change
+        for stride_val in [256, 512]:
+            d = {}
+            for k in rng.sample(knobs, rng.randint(1, 1)):
+                if k == "StaggerUStride":
+                    d["StaggerUStride"] = stride_val
+            if d:
+                patterns.append(d)
+
+        return patterns
 
     def _floor_direction(self, parent_config: Dict[str, Any],
                          floor: Dict[str, Any]) -> Dict[str, Any]:
@@ -85,7 +261,7 @@ class DbPatternsMixin:
         """
         norm = self._normalize_tile(floor)
         out: Dict[str, Any] = {}
-        for k in _TILE_KNOBS:
+        for k in TILE_KNOBS:
             if norm.get(k) is not None and norm.get(k) != parent_config.get(k):
                 out[k] = norm[k]
         return out

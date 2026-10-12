@@ -1,25 +1,43 @@
-"""Coverage-guided constrained synthesis (Option H Phase 4, `Hplan.6`).
+"""Coverage-guided candidate synthesis for one cell.
 
-Phase 2 established that a candidate can be *legal by construction* -- knob
-groups are substituted whole from shipped vectors, so the reject set is never
-proposed. This module adds the three things legal sampling alone does not give:
+Owns: ``family_shape_sweeps`` (the sweep read from the deck -- the deck is the
+authority on what a graded config looks like), ``choose_groups`` /
+``_unstable_groups``, and ``synthesize_cell`` / ``synthesize_or_lattice``. The
+tile/group vocabulary and the tile reconciliation it draws in
+(``reconcile_tile`` / ``tile_product_holds`` / ``ALL_GROUPS`` /
+``TEMPLATE_KEYS``) live in oto.tensile.synthesis.tile_space and are re-exported
+here unchanged, so the public names do not move.
 
-1. **Direction.** `legality.sample_legal` samples groups uniformly at random. A
-   cell that has already produced a wide-spread config at one group learns
-   nothing, because the next draw re-rolls the same group with the same
-   probability. `choose_groups` conditions the draw on the cell's coverage state.
-2. **Grading.** A mutant emitted with `shapes=[shape]` is born ungradable
-   against a multi-shape floor (`Hplan.1` item 5): the floor measured five shapes
-   per config and the mutant measured one, so no ratio is comparable.
-   `family_shape_sweep` emits the family's shipped sweep instead.
-3. **The tile product constraint.** `WorkGroup * ThreadTile == MacroTile` is a
-   hard Tensile requirement. `reconcile_tile` derives the missing half rather
-   than hoping a donor supplied a consistent pair.
+Does NOT own: the legality prior it draws inside (oto.tensile.legality), the
+ledger that records the drawn candidate (oto.ledger.mutator), the DB-hooked
+synthesis (oto.tensile.synthesis.db), or the tile/group vocabulary itself
+(oto.tensile.synthesis.tile_space).
 
-Deliberately *not* here: any second CSV reader, fingerprint function, or knob
-parser. Every value comes from the canonical owners (`legality`, `tensile_library`,
-`analytics`, `registry`) per `implementation_plan.md` `Hplan.2`.
+Public API: family_shape_sweeps, sweep_for_family, reconcile_tile,
+tile_product_holds, choose_groups, annotate_drawn_groups, synthesize_cell,
+synthesize_or_lattice, ALL_GROUPS, TEMPLATE_KEYS, MIN_SWEEP_SHAPES.
+
+The prior phase established that a candidate can be *legal by construction* --
+knob groups are substituted whole from shipped vectors, so the reject set is
+never proposed. This module adds the three things legal sampling alone does not
+give:
+
+1. **Direction.** Legal sampling draws groups uniformly at random, so a cell that
+   already produced a wide-spread config at one group learns nothing.
+   ``choose_groups`` conditions the draw on the cell's coverage state.
+2. **Grading.** A mutant emitted with ``shapes=[shape]`` is born ungradable
+   against a multi-shape floor: the floor measured the family sweep and the mutant
+   measured one shape, so no ratio is comparable. ``family_shape_sweeps`` emits
+   the family's shipped sweep instead.
+3. **The tile product constraint.** ``WorkGroup * ThreadTile == MacroTile`` is a
+   hard Tensile requirement, so ``reconcile_tile`` derives the missing half
+   rather than hoping a donor supplied a consistent pair.
+
+Deliberately *not* here: any second CSV reader, fingerprint function or knob
+parser. Every value comes from the canonical owners (``legality``, ``library``,
+``analytics``, ``registry``).
 """
+
 
 from __future__ import annotations
 
@@ -27,18 +45,20 @@ import random
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from oto.tensile import legality
+# ALL_GROUPS / TEMPLATE_KEYS / reconcile_tile / tile_product_holds are imported
+# from tile_space and re-exported here so their public names do not move with the
+# extraction; tile_product_holds is re-exported only (used by callers/tests).
+from oto.tensile.synthesis.tile_space import (ALL_GROUPS, TEMPLATE_KEYS,
+                                             reconcile_tile)
+from oto.tensile.synthesis.tile_space import tile_product_holds  # noqa: F401
 from oto.metrics.coverage import STATE_REPLICATE, STATE_RETIRED, decide_state
 
-#: Knob groups, in a fixed order so a seeded run is reproducible. Sorted by
-#: name rather than declared by importance: the draw is uniform over the groups
-#: `choose_groups` did not exclude, and an order that encoded a preference would
-#: silently bias every uniform draw taken from it.
-ALL_GROUPS: Tuple[str, ...] = tuple(sorted(legality.KNOB_GROUPS))
-
-#: Knobs the caller owns and the sampler must never emit (`Architecture`,
-#: `DataType`, `ProblemType`, `ScheduleName`, `FamilyLabel`). Re-exported from
-#: `legality` so there is one definition, not a second copy to drift.
-TEMPLATE_KEYS = legality.TEMPLATE_KEYS
+__all__ = [
+    "family_shape_sweeps", "sweep_for_family", "choose_groups",
+    "annotate_drawn_groups", "synthesize_cell", "synthesize_or_lattice",
+    "reconcile_tile", "tile_product_holds", "ALL_GROUPS", "TEMPLATE_KEYS",
+    "MIN_SWEEP_SHAPES",
+]
 
 #: A sweep shorter than this is not a sweep. One shape is the defect Hplan.1
 #: item 5 describes, so a "multi-shape" candidate of length 1 would reintroduce
@@ -101,101 +121,6 @@ def sweep_for_family(
     if fallback:
         return list(fallback)
     return list(bucket)
-
-
-# ---------------------------------------------------------------- tile
-
-def reconcile_tile(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Make `WorkGroup * ThreadTile == MacroTile` hold by construction.
-
-    Tensile rejects a config unless, per M/N dimension, the product equals the
-    MacroTile and the workgroup size is a multiple of the wavefront size. Whole
-    group substitution from a shipped donor already satisfies this, so this
-    function is a *check* in the normal path rather than a repair: it returns
-    the config unchanged when the product holds, and only solves for a missing
-    half otherwise.
-
-    The MacroTile is trusted over the ThreadTile when the two disagree, matching
-    `tensile_library._reconcile_knobs`: a MacroTile with no shipped schedule is
-    rejected downstream by `mt_has_shipped_schedule`, whereas a ThreadTile that
-    does not tile it is not independently meaningful.
-    """
-    out = dict(config)
-    macro = out.get("MacroTile")
-    if not isinstance(macro, str) or "x" not in macro:
-        return out
-
-    dims = macro.split("x")
-    # A missing half is the case this function exists to solve, so an absent or
-    # unusable value becomes "unset" rather than a reason to give up.
-    wg = _as_int_triple(out.get("WorkGroup")) or [None, None, None]
-    tt = _as_int_triple(out.get("ThreadTile")) or [None, None, None]
-    if not any(wg) and not any(tt):
-        return out
-
-    mt_m = int(dims[0]) if dims[0].isdigit() else None
-    mt_n = int(dims[1]) if len(dims) > 1 and dims[1].isdigit() else None
-
-    for i, mt in ((0, mt_m), (1, mt_n)):
-        if not mt:
-            continue
-        w, t = wg[i], tt[i]
-        if w and t and w * t == mt:
-            continue
-        if w and not t and mt % w == 0:
-            tt[i] = mt // w
-        elif t and not w and mt % t == 0:
-            wg[i] = mt // t
-        elif w and t and w * t != mt:
-            # Neither is missing: they disagree. Trust the MacroTile and re-solve.
-            if mt % w == 0:
-                tt[i] = mt // w
-            elif mt % t == 0:
-                wg[i] = mt // t
-
-    # An unsolved dimension renders as 1, never `None`: a literal "None" in the
-    # manifest fails parameter parsing at Tensile load time, which is a far worse
-    # outcome than the default it stands in for.
-    out["WorkGroup"] = f"{wg[0] or 1}x{wg[1] or 1}x{wg[2] or 1}"
-    out["ThreadTile"] = f"{tt[0] or 1}x{tt[1] or 1}"
-    return out
-
-
-def _as_int_triple(value: Any) -> Optional[List[Optional[int]]]:
-    """Parse `WxHxD` / `WxH` into `[m, n, k]`, or None if unusable."""
-    if value is None:
-        return None
-    if isinstance(value, (list, tuple)):
-        parts = list(value) + [1] * (3 - len(value))
-    elif isinstance(value, str) and "x" in value:
-        try:
-            parts = [int(p) for p in value.lower().split("x")]
-        except ValueError:
-            return None
-        parts += [1] * (3 - len(parts))
-    else:
-        return None
-    parts = parts[:3]
-    return [p if isinstance(p, int) and p > 0 else None for p in parts]
-
-
-def tile_product_holds(config: Dict[str, Any]) -> bool:
-    """True iff `WorkGroup * ThreadTile == MacroTile` per M/N dimension."""
-    macro = config.get("MacroTile")
-    if not isinstance(macro, str) or "x" not in macro:
-        return True          # nothing to check; not a tile violation
-    dims = macro.split("x")
-    wg = _as_int_triple(config.get("WorkGroup"))
-    tt = _as_int_triple(config.get("ThreadTile"))
-    if not wg or not tt:
-        return False
-    for i in (0, 1):
-        if i >= len(dims) or not dims[i].isdigit():
-            continue
-        w, t, mt = wg[i], tt[i], int(dims[i])
-        if not w or not t or w * t != mt:
-            return False
-    return True
 
 
 # ------------------------------------------------------- coverage guidance
