@@ -56,10 +56,12 @@ MOVES = [
                       "oto/tensile/gates/loads.py",
                       "oto/tensile/gates/occupancy.py",
                       "oto/tensile/gates/vgpr_model.py"]),
-    ("synthesis.py", ["oto/tensile/synthesis/manifest.py"]),
+    ("synthesis.py", ["oto/tensile/synthesis/manifest.py",
+                      "oto/tensile/synthesis/tile_space.py"]),
     ("db_mutator.py", ["oto/tensile/synthesis/db.py",
                       "oto/tensile/synthesis/db_knobs.py",
-                      "oto/tensile/synthesis/db_patterns.py"]),
+                      "oto/tensile/synthesis/db_patterns.py",
+                      "oto/tensile/synthesis/tile_space.py"]),
     ("registry.py", ["oto/ledger/registry.py", "oto/ledger/registry_core.py",
                      "oto/ledger/queries.py", "oto/ledger/proposals.py"]),
     ("mutator.py", ["oto/ledger/mutator.py", "oto/ledger/mutator_outcomes.py"]),
@@ -130,6 +132,22 @@ COMPOSITION_ROOTS = {
     "mutator.py::Mutator", "agent.py::ConvergenceAgent",
     "registry.py::SQLiteRegistry", "analytics.py::AnalyticsEngine",
     "ab_audit.py::", "report.py::",
+}
+
+#: PROMOTED symbols must still exist in the new tree under their new name; a
+#: deleted private helper would otherwise pass silently (the private-symbol skip
+#: at the top of the comparison loop). FOLDED holds the private helpers this
+#: refactor folded *into* a larger function instead of extracting, so they have
+#: no symbol of their own -- verify_gate_differential.py proves their effect.
+FOLDED = {
+    "scheduler.py::CandidateGenerator._estimate_lds_usage",
+    "scheduler.py::CandidateGenerator._estimate_occupancy",
+}
+
+#: PROMOTED entries whose new public name differs from the old private name.
+PROMOTED_AS = {
+    "scheduler.py::CandidateGenerator._validate_tensile_loads":
+        "validate_tensile_loads",
 }
 
 PROMOTED = {
@@ -222,6 +240,21 @@ def collect(path: Path):
     return out, None
 
 
+def new_bare_names(head_rel: str) -> set:
+    """Every symbol name (last component) the new modules for a head define.
+
+    Used to prove a PROMOTED entry still exists somewhere: the comparison loop
+    skips private names, so without this a deleted private helper passes.
+    """
+    names = set()
+    for rel in dict(MOVES)[head_rel]:
+        got, err = collect(ROOT / rel)
+        if err:
+            continue
+        names |= {k.rsplit(".", 1)[-1] for k in got}
+    return names
+
+
 def main():
     all_missing, all_differs, errors, decomposed = [], [], [], []
     for head_rel, new_rels in MOVES:
@@ -282,6 +315,19 @@ def main():
                    if m not in (driver_methods + ledger_methods
                                 + report_methods + analytics_methods)]
 
+    # The private-symbol skip above would hide a deleted helper, so every
+    # PROMOTED entry is checked for existence under its new name (FOLDED, which
+    # has no symbol of its own, is proved by verify_gate_differential.py).
+    promoted_missing = []
+    for entry in sorted(PROMOTED):
+        if entry in FOLDED:
+            continue
+        head, sym = entry.split("::", 1)
+        target = PROMOTED_AS.get(entry, sym.rsplit(".", 1)[-1])
+        if target not in new_bare_names(head):
+            promoted_missing.append(
+                f"{entry} -> no {target!r} in the new tree")
+
     print(f"\nMISSING, classified:")
     print(f"  TensileDriver methods moved to a runner mixin "
           f"(verify_method_equivalence.py): {len(driver_methods)}")
@@ -302,8 +348,12 @@ def main():
     print(f"PARSE ERRORS: {len(errors)}")
     for e in errors:
         print("   ", e)
+    print(f"\nPROMOTED SYMBOLS MISSING IN THE NEW TREE: "
+          f"{len(promoted_missing)}")
+    for p in promoted_missing:
+        print("   ", p)
 
-    if unexplained or all_differs or errors:
+    if unexplained or all_differs or errors or promoted_missing:
         sys.exit(1)
     print("\nAST EQUIVALENCE: OK")
 

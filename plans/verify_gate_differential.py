@@ -61,7 +61,7 @@ FUNCS = [
     ("cap_vector_width", sched_orig.cap_vector_width, new.cap_vector_width),
     ("parse_tensile_shape", sched_orig.parse_tensile_shape, new.parse_tensile_shape),
     ("assembly_class_valid", sched_orig.assembly_class_valid, gasm.assembly_class_valid),
-    ("ldspad_feasible", sched_orig.ldspad_feasible, gocc.ldspad_defasible),
+    ("ldspad_feasible", sched_orig.ldspad_feasible, gocc.ldspad_feasible),
     ("occupancy_feasible", sched_orig.occupancy_feasible, gocc.occupancy_feasible),
     ("occupancy_wg", sched_orig.occupancy_workgroups_per_cu, gocc.occupancy_workgroups_per_cu),
     ("validate_tensile_loads", sched_orig.CandidateGenerator._validate_tensile_loads, gloads.validate_tensile_loads),

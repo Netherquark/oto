@@ -32,7 +32,7 @@ LIFT = {
     "                               occupancy_feasible, ldspad_feasible)":
         "from oto.tensile.candidate import parse_tensile_shape\n"
     "        from oto.tensile.gates.assembly import assembly_class_valid\n"
-    "        from oto.tensile.gates.occupancy import (ldspad_defasible as ldspad_feasible,\n"
+    "        from oto.tensile.gates.occupancy import (ldspad_feasible,\n"
     "                                             occupancy_feasible)",
     "from scheduler import assembly_class_valid":
         "from oto.tensile.gates.assembly import assembly_class_valid",
