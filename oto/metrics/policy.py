@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""
-policy.py — Stage 4: Adaptive Repeat / Convergence & Run Policy
+"""Cell policy: aggregation, the should_run gate, and retirement eligibility.
 
-Handles per-cell aggregation, stability gating, adaptive repeat,
-retirement logic, and the should_run gating matrix.
+Owns: ``aggregate_cell`` (the one median/spread definition every consumer shares),
+``should_run`` (whether a phase may run, including the identical-fp skip
+and its `force` override), and ``check_retirement_eligibility``.
+
+Does NOT own: the run loop (oto.runners.phases), the ledger it reads
+(oto.ledger.registry), or the report it feeds (oto.metrics.report).
+
+Public API: aggregate_cell, should_run, check_retirement_eligibility.
 """
+
 
 import statistics
 from typing import Dict, List, Any, Optional, Tuple

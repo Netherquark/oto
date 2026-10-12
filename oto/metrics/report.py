@@ -26,7 +26,25 @@ from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin
 
+import oto.tensile.library as tlib
+
 __all__ = ["AcceptanceReporter", "ABVerdict", "AcceptanceReport"]
+
+#: The per-cell verdict fields serialized into the JSON report, in order. Each
+#: key equals the attribute name, so the dict is built by lookup rather than by
+#: 34 hand-written lines that could silently drop a field when a verdict grows
+#: one. Order is the JSON key order and is part of the artifact.
+_VERDICT_FIELDS = (
+    "dtype", "shape", "fp", "native_median", "spoof_median", "native_best",
+    "spoof_best", "native_best_median", "spoof_best_median",
+    "native_worst_median", "spoof_worst_median", "agg", "native_value",
+    "spoof_value", "clock_adjusted", "native_clock_coverage",
+    "spoof_clock_coverage", "sclk_ref_hz", "native_clock_sclk_hz",
+    "spoof_clock_sclk_hz", "native_temp_c", "spoof_temp_c",
+    "native_temp_max_c", "spoof_temp_max_c", "family", "delta_pct", "tie",
+    "verdict", "native_runs", "native_winner_run", "native_winner_phase",
+    "n_native_runs", "n_native_kernels", "n_spoof_kernels",
+)
 
 
 class AcceptanceReporter(SectionMixin, HtmlMixin):
@@ -114,7 +132,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         The shipped gfx900 footprint (expected_kernels from the pinned dat
         manifest) is reported separately as an informational `footprint_pct`,
         not as the coverage gate — measuring N deck shapes against thousands of
-        shipped kernels would cap coverage at a meaningless ~1%.
+        shipped kernels would cap coverage at a meaningless fraction.
         """
         shipped = shipped or self._load_shipped_manifest()
         expected_kernels = shipped.get("expected_kernels", {})
@@ -280,42 +298,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             "run_id": report.run_id,
             "per_family_coverage": report.per_family_coverage,
             "per_cell_verdicts": [
-                {
-                    "dtype": v.dtype,
-                    "shape": v.shape,
-                    "fp": v.fp,
-                    "native_median": v.native_median,
-                    "spoof_median": v.spoof_median,
-                    "native_best": v.native_best,
-                    "spoof_best": v.spoof_best,
-                    "native_best_median": v.native_best_median,
-                    "spoof_best_median": v.spoof_best_median,
-                    "native_worst_median": v.native_worst_median,
-                    "spoof_worst_median": v.spoof_worst_median,
-                    "agg": v.agg,
-                    "native_value": v.native_value,
-                    "spoof_value": v.spoof_value,
-                    "clock_adjusted": v.clock_adjusted,
-                    "native_clock_coverage": v.native_clock_coverage,
-                    "spoof_clock_coverage": v.spoof_clock_coverage,
-                    "sclk_ref_hz": v.sclk_ref_hz,
-                    "native_clock_sclk_hz": v.native_clock_sclk_hz,
-                    "spoof_clock_sclk_hz": v.spoof_clock_sclk_hz,
-                    "native_temp_c": v.native_temp_c,
-                    "spoof_temp_c": v.spoof_temp_c,
-                    "native_temp_max_c": v.native_temp_max_c,
-                    "spoof_temp_max_c": v.spoof_temp_max_c,
-                    "family": v.family,
-                    "delta_pct": v.delta_pct,
-                    "tie": v.tie,
-                    "verdict": v.verdict,
-                    "native_runs": v.native_runs,
-                    "native_winner_run": v.native_winner_run,
-                    "native_winner_phase": v.native_winner_phase,
-                    "n_native_runs": v.n_native_runs,
-                    "n_native_kernels": v.n_native_kernels,
-                    "n_spoof_kernels": v.n_spoof_kernels,
-                }
+                {f: getattr(v, f) for f in _VERDICT_FIELDS}
                 for v in report.per_cell_verdicts
             ],
             "red_list": report.red_list,

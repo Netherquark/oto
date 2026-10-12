@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""
-registry_sqlite.py — SQLite-based registry for oto
+"""The ledger engine: connection, schema, transactions and run writes.
 
-Replaces fcntl.flock with proper ACID database for concurrent safety.
-All records append-only; database schema supports evolution.
+Owns: ``RegistryCore`` -- the SQLite connection, the schema, the transaction guard
+that makes a read-only registry refuse to write, the run-row write path
+(create_run_dir, update_run_status) and the kernel-DB rebuild a terminal
+status triggers.
+
+Does NOT own: the registry's read side (oto.ledger.queries), the Option-H proposal ledger
+(oto.ledger.proposals), or the cell policy (oto.metrics.policy).
+
+Public API: RegistryCore, fingerprint_config, _KERNEL_DB_REBUILD_STATUSES.
 """
+
 
 import sqlite3
 import json
@@ -20,6 +27,109 @@ from datetime import datetime
 # (gfx900-ref with zero executions) produce no new corpus, so they do not
 # trigger a rebuild.
 _KERNEL_DB_REBUILD_STATUSES = {"completed", "interrupted"}
+
+#: Table DDL, in creation order (tables before their indexes). Extracted so the
+#: schema reads as data rather than as a 120-line method body.
+_SCHEMA_DDL = (
+    """
+    CREATE TABLE IF NOT EXISTS records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT NOT NULL,
+        record_type TEXT NOT NULL,
+        data JSON NOT NULL,
+        timestamp TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS phases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        phase_id TEXT UNIQUE NOT NULL,
+        fingerprint TEXT NOT NULL,
+        data JSON NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT UNIQUE NOT NULL,
+        status TEXT NOT NULL,
+        metadata JSON,
+        started_at TEXT NOT NULL,
+        completed_at TEXT
+    )
+    """,
+    # Proposals ledger (Option H Phase 1). Append-only: rows are never deleted
+    # and never rewritten, and `outcome` only advances pending -> terminal. A
+    # monotonic status column is not a mutation of history (knowledge_base.md
+    # §10), which is why the write-back is an UPDATE guarded on
+    # outcome='pending' rather than a new row. Created here, alongside the other
+    # tables, so a fresh registry has the ledger from birth; existing databases
+    # pick it up on the next SQLiteRegistry(...) construction, additively.
+    """
+    CREATE TABLE IF NOT EXISTS proposals (
+        fp          TEXT PRIMARY KEY,
+        family      TEXT,
+        shape       TEXT,
+        parent_fp   TEXT,
+        origin      TEXT NOT NULL DEFAULT 'novel',
+        iteration   INTEGER,
+        run_id      TEXT,
+        created_at  TEXT NOT NULL,
+        status      TEXT NOT NULL DEFAULT 'pending',
+        outcome     TEXT NOT NULL DEFAULT 'pending',
+        build_class TEXT,
+        updated_at  TEXT
+    )
+    """,
+    # Per-proposal observations (Option H Phase 1 integration). The `proposals`
+    # row carries the *verdict*; this table carries the *evidence* for it --
+    # including WinnerFreq, which H.3.8 requires be recorded alongside the verdict
+    # but which is a property of the measurement rather than of the verdict.
+    # Separate append-only table rather than more columns on `proposals`, because
+    # a proposal's evidence is re-observable while its verdict is decided once.
+    """
+    CREATE TABLE IF NOT EXISTS proposal_observations (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        fp         TEXT NOT NULL,
+        run_id     TEXT,
+        phase_dir  TEXT,
+        outcome    TEXT,
+        csv_count     INTEGER,
+        record_count  INTEGER,
+        row_count     INTEGER,
+        max_gflops    REAL,
+        median_gflops REAL,
+        winner_freq   REAL,
+        detail     JSON,
+        observed_at TEXT NOT NULL
+    )
+    """,
+)
+
+#: Plain indexes, created after every table exists.
+_INDEX_DDL = (
+    "CREATE INDEX IF NOT EXISTS idx_records_run_id ON records(run_id)",
+    "CREATE INDEX IF NOT EXISTS idx_records_type ON records(record_type)",
+    "CREATE INDEX IF NOT EXISTS idx_phases_fingerprint ON phases(fingerprint)",
+    "CREATE INDEX IF NOT EXISTS idx_proposals_family_shape "
+    "ON proposals(family, shape)",
+    "CREATE INDEX IF NOT EXISTS idx_proposals_outcome ON proposals(outcome)",
+    "CREATE INDEX IF NOT EXISTS idx_proposals_parent ON proposals(parent_fp)",
+    "CREATE INDEX IF NOT EXISTS idx_obs_fp ON proposal_observations(fp)",
+)
+
+#: Expression index on the fingerprint inside records.data JSON. has_fp_passed()
+#: has always scanned every record because fp is buried in a JSON blob; this makes
+#: that lookup an index seek without changing its semantics. Built incrementally,
+#: so it is correct on creation and maintained from then on -- it deliberately
+#: does NOT rewrite existing rows to 'backfill' anything. Optional: a SQLite
+#: built without JSON1 raises OperationalError, which the caller swallows
+#: (novelty still works, it just scans).
+_EXPRESSION_INDEX_DDL = (
+    "CREATE INDEX IF NOT EXISTS idx_records_fp "
+    "ON records(json_extract(data, '$.fp'))",
+)
 
 
 class SQLiteRegistry:
@@ -101,125 +211,22 @@ class RegistryCore:
         finally:
             conn.close()
     def _init_db(self):
-        """Initialize database schema."""
+        """Initialize database schema.
+
+        Idempotent and additive: every statement is ``IF NOT EXISTS``, so this
+        runs on every construction and only ever adds tables/indexes to a
+        pre-existing database -- it never rewrites an existing table or row. The
+        DDL itself lives in the module-level ``_*_DDL`` constants (schema as
+        data); the rationale for each table is documented there.
+        """
         with self._get_conn() as conn:
-            # Records table (append-only ledger)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS records (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    run_id TEXT NOT NULL,
-                    record_type TEXT NOT NULL,
-                    data JSON NOT NULL,
-                    timestamp TEXT NOT NULL
-                )
-            """)
-
-            # Phases table (manifest with deduplication)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS phases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    phase_id TEXT UNIQUE NOT NULL,
-                    fingerprint TEXT NOT NULL,
-                    data JSON NOT NULL,
-                    created_at TEXT NOT NULL
-                )
-            """)
-
-            # Runs table (checkpointing)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS runs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    run_id TEXT UNIQUE NOT NULL,
-                    status TEXT NOT NULL,
-                    metadata JSON,
-                    started_at TEXT NOT NULL,
-                    completed_at TEXT
-                )
-            """)
-
-            # Proposals ledger (Option H Phase 1). Append-only: rows are never
-            # deleted and never rewritten, and `outcome` only advances
-            # pending -> terminal. A monotonic status column is not a mutation
-            # of history (knowledge_base.md §10), which is why the write-back is
-            # an UPDATE guarded on outcome='pending' rather than a new row.
-            #
-            # Created here, alongside the other tables, so a fresh registry has
-            # the ledger from birth. Existing databases pick it up on the next
-            # SQLiteRegistry(...) construction: this is additive and never
-            # rewrites an existing table or row.
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS proposals (
-                    fp          TEXT PRIMARY KEY,
-                    family      TEXT,
-                    shape       TEXT,
-                    parent_fp   TEXT,
-                    origin      TEXT NOT NULL DEFAULT 'novel',
-                    iteration   INTEGER,
-                    run_id      TEXT,
-                    created_at  TEXT NOT NULL,
-                    status      TEXT NOT NULL DEFAULT 'pending',
-                    outcome     TEXT NOT NULL DEFAULT 'pending',
-                    build_class TEXT,
-                    updated_at  TEXT
-                )
-            """)
-
-            # Per-proposal observations (Option H Phase 1 integration). The
-            # `proposals` row carries the *verdict*; this table carries the
-            # *evidence* for it -- including WinnerFreq, which H.3.8 requires to
-            # be recorded alongside the verdict but which is a property of the
-            # measurement rather than of the verdict.
-            #
-            # Separate append-only table rather than more columns on `proposals`,
-            # because a proposal's evidence is re-observable (a re-measurement
-            # produces a new observation) while its verdict is decided once. Adding
-            # columns to `proposals` would invite overwriting the evidence the
-            # verdict was based on.
-            #
-            # Additive and created on construction, exactly like `proposals`: an
-            # existing registry picks it up without rewriting a table or row.
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS proposal_observations (
-                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fp         TEXT NOT NULL,
-                    run_id     TEXT,
-                    phase_dir  TEXT,
-                    outcome    TEXT,
-                    csv_count     INTEGER,
-                    record_count  INTEGER,
-                    row_count     INTEGER,
-                    max_gflops    REAL,
-                    median_gflops REAL,
-                    winner_freq   REAL,
-                    detail     JSON,
-                    observed_at TEXT NOT NULL
-                )
-            """)
-
-            # Create indexes
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_records_run_id ON records(run_id)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(record_type)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_phases_fingerprint ON phases(fingerprint)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_proposals_family_shape "
-                         "ON proposals(family, shape)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_proposals_outcome "
-                         "ON proposals(outcome)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_proposals_parent "
-                         "ON proposals(parent_fp)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_obs_fp "
-                         "ON proposal_observations(fp)")
-
-            # Expression index on the fingerprint inside records.data JSON.
-            # has_fp_passed() has always scanned every record because fp is buried
-            # in a JSON blob; this makes that lookup an index seek without changing
-            # its semantics. The index is built incrementally, so it is correct on
-            # creation and maintained by SQLite from then on -- it deliberately
-            # does NOT rewrite existing rows to 'backfill' anything.
+            for ddl in _SCHEMA_DDL:
+                conn.execute(ddl)
+            for ddl in _INDEX_DDL:
+                conn.execute(ddl)
             try:
-                conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_records_fp "
-                    "ON records(json_extract(data, '$.fp'))"
-                )
+                for ddl in _EXPRESSION_INDEX_DDL:
+                    conn.execute(ddl)
             except sqlite3.OperationalError:
                 # No JSON1 (SQLite built without it): novelty still works, it just
                 # scans. Never fatal -- the ledger must not be unbuildable because
@@ -325,7 +332,7 @@ class RegistryCore:
             base = str(self.base_dir)
             if base not in sys.path:
                 sys.path.insert(0, base)
-            # Lazy import: harness.kernel_db imports gfx90c_common only, so
+            # Lazy import: harness.kernel_db imports oto.device.peaks only, so
             # there is no cycle back into registry/port_tensile.
             from oto.harness.kernel_db import load_kernel_db
             cache = str(self.results_dir / "analysis" / "kernel_db.json")

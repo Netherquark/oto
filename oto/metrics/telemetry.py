@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""telemetry.py: Minimal, non-root, systemd-distro sysfs amdgpu sensor reader.
+"""Telemetry: per-run CSV sampling of the GPU's clocks and power.
 
-Run-wide sampler: one instance is started per run directory and kept alive
-across all phases, so a whole run's timeline survives (no per-phase CSV
-truncation). Each row is tagged with the currently-active `phase_id` via
-`set_phase()`, giving continuous coverage plus per-phase attribution in a
-single CSV. `start()` is restart-safe: it never truncates an existing file
-(headers are appended only when missing).
+Owns: ``TelemetrySampler`` -- the background thread writing `logs/telemetry.csv`,
+the header contract, and the parsing rules a reader relies on.
+
+Does NOT own: the per-phase clock/thermal aggregate (oto.runners.clocks), the sclk
+normalisation in the A/B delta (oto.metrics.ab_delta), or the driver that
+starts a sampler (oto.runners.benchmark).
+
+Public API: TelemetrySampler, HEADER.
 """
+
 import time
 import threading
 from pathlib import Path

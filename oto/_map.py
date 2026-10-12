@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Regenerate oto/README.md from the module docstrings themselves.
 
+Owns: ``main`` -- it reads every module's docstring and writes oto/README.md,
+so the inventory cannot drift from the docstrings it describes.
+Does NOT own: the module docstrings it reads (each module owns its own) or the
+package layout it walks (the ``oto/`` tree itself).
+Public API: main.
+
 A hand-maintained inventory is a stale inventory. This reads each module's
 docstring and writes the file that describes it.
 
@@ -13,6 +19,7 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
+from typing import List
 
 HERE = Path(__file__).resolve().parent
 
@@ -36,6 +43,16 @@ def _first_sentence(text: str) -> str:
     """The first sentence of a docstring's first paragraph."""
     paragraph = text.strip().split("\n\n")[0]
     return " ".join(paragraph.split())
+
+
+def _has_modules(directory: Path) -> bool:
+    """True when a directory holds at least one real module (not plumbing).
+
+    Stray data directories (a ``gfx90c_results/`` or ``gfx90c_runs/`` created by
+    running a tool with a relative base path) must not get a heading with no
+    entries under it.
+    """
+    return any(p.name not in SKIP for p in directory.rglob("*.py"))
 
 
 def _summary(path: Path) -> str:
@@ -62,6 +79,24 @@ def _entry(path: Path) -> str:
     return f"* ``{path.relative_to(HERE)}`` — {summary}\n"
 
 
+def _emit_tree(out: List[str], directory: Path, level: int) -> None:
+    """Emit ``directory``'s modules, then recurse into every real sub-package.
+
+    ``level`` is the ATX heading level (number of ``#``) for a *child*
+    directory; the heading for ``directory`` itself is written by the caller.
+    A "real" sub-package is one ``_has_modules`` accepts, so stray data
+    directories get no empty heading.
+    """
+    for path in sorted(directory.glob("*.py")):
+        if path.name not in SKIP:
+            out.append(_entry(path))
+    for nested in sorted(p for p in directory.iterdir()
+                         if p.is_dir() and not p.name.startswith("__")
+                         and _has_modules(p)):
+        out.append(f"\n{'#' * level} ``{nested.relative_to(HERE)}/``\n\n")
+        _emit_tree(out, nested, level + 1)
+
+
 def main() -> int:
     out = ["# The ``oto/`` package map\n",
            "\n",
@@ -71,60 +106,16 @@ def main() -> int:
            "only way to make this file stale is to delete the docstring. Line\n",
            "counts are never quoted here -- they go wrong the day a file moves.\n",
            "\n"]
+    # One ``##`` section per package, its modules then its nested sub-packages.
+    # The oto/ root holds only __init__.py and _map.py, both in SKIP, so it has
+    # no section of its own.
     for sub, title in PACKAGES:
-        if sub:
-            base = HERE / sub
-            if not base.is_dir():
-                continue
-            out.append(f"## {title}\n\n")
-            for path in sorted(base.glob("*.py")):
-                if path.name not in SKIP:
-                    out.append(_entry(path))
-            for nested in sorted(p for p in base.iterdir() if p.is_dir()
-                                 and not p.name.startswith("__")):
-                out.append(f"\n### ``{nested.relative_to(HERE)}/``\n\n")
-                for path in sorted(nested.glob("*.py")):
-                    if path.name not in SKIP:
-                        out.append(_entry(path))
-                for deeper in sorted(p for p in nested.iterdir() if p.is_dir()
-                                     and not p.name.startswith("__")):
-                    out.append(f"\n#### ``{deeper.relative_to(HERE)}/``\n\n")
-                    for path in sorted(deeper.glob("*.py")):
-                        if path.name not in SKIP:
-                            out.append(_entry(path))
-            out.append("\n")
+        base = HERE / sub
+        if not base.is_dir():
             continue
-
-        # The package root: oto/*.py, then every sub-package at top level under
-        # its own heading, in the order PACKAGES gives.
         out.append(f"## {title}\n\n")
-        for path in sorted(HERE.glob("*.py")):
-            if path.name not in SKIP:
-                out.append(_entry(path))
+        _emit_tree(out, base, level=3)
         out.append("\n")
-        for sub_pkg, pkg_title in PACKAGES:
-            if not sub_pkg:
-                continue
-            pkg = HERE / sub_pkg
-            if not pkg.is_dir():
-                continue
-            out.append(f"### {pkg_title}\n\n")
-            for path in sorted(pkg.glob("*.py")):
-                if path.name not in SKIP:
-                    out.append(_entry(path))
-            for nested in sorted(p for p in pkg.iterdir() if p.is_dir()
-                                 and not p.name.startswith("__")):
-                out.append(f"#### ``{nested.relative_to(HERE)}/``\n\n")
-                for path in sorted(nested.glob("*.py")):
-                    if path.name not in SKIP:
-                        out.append(_entry(path))
-                for deeper in sorted(p for p in nested.iterdir() if p.is_dir()
-                                     and not p.name.startswith("__")):
-                    out.append(f"##### ``{deeper.relative_to(HERE)}/``\n\n")
-                    for path in sorted(deeper.glob("*.py")):
-                        if path.name not in SKIP:
-                            out.append(_entry(path))
-            out.append("\n")
     HERE.joinpath("README.md").write_text("".join(out))
     print(f"wrote {HERE / 'README.md'}")
     return 0
