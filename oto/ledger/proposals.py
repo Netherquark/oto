@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""The Option-H proposal ledger: emitted candidates and their measured outcomes."""
+"""The Option-H proposal ledger: emitted candidates and their measured outcomes.
+
+Owns: one row per emitted candidate and at most one outcome per row -- the
+durable state that makes "novel" and "replicate" decidable. The only place a
+proposal is written or advanced.
+
+Does NOT own: the record log (oto.ledger.queries), the engine that opens the db
+(oto.ledger.registry_core), or the samplers that call it
+(oto.ledger.mutator / oto.tensile.synthesis).
+
+Public API: ProposalMixin.
+"""
+
 
 from __future__ import annotations
 

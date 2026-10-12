@@ -4,7 +4,7 @@ The public API of the project re-exported here so a caller never has to know
 which subpackage a symbol moved to. Names are deliberately the ones the codebase
 used before the package split (``TensileDriver``, ``CandidateGenerator``,
 ``Mutator``, ``ConvergenceAgent``, ``AnalyticsEngine``, ``AcceptanceReporter``,
-``SQLiteRegistry``), so the ~40 importers keep working across the move.
+``SQLiteRegistry``), so existing importers keep working across the move.
 
 Layout -- one responsibility per package, named for it:
 
@@ -20,6 +20,15 @@ Layout -- one responsibility per package, named for it:
 See ``docs/README.md`` for the boundary between this docs ecosystem and the
 docstrings inside the package, and ``docs/docstrings.md`` for the module and
 function docstring convention.
+
+Owns: the public API of the project -- the historical flat names, resolved
+lazily (PEP 562) so ``import oto`` never pays for the whole tree and never
+triggers the driver's ``load_dotenv`` side effect.
+Does NOT own: any of those symbols' implementations (they live in the
+subpackages, and each module's docstring says which), the hardware facts
+(oto.device), or the docs ecosystem (docs/).
+Public API: TensileDriver, CandidateGenerator, Mutator, ConvergenceAgent,
+AnalyticsEngine, AcceptanceReporter, SQLiteRegistry, __version__.
 """
 
 __version__ = "1.0.0"

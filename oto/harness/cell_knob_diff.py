@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
+"""Per-cell native-vs-floor winner knob fingerprint diff.
+
+Owns: turning "the floor wins at 128-bit / WGM8 / GSU1" into an exact, per-cell
+knob delta -- read from the same kernel_db rows the acceptance report grades on,
+never from a benchmark run here.
+
+Does NOT own: producing kernel_db.json (oto.harness.kernel_db), the winner rule
+(oto.harness.regression_matrix), or the acceptance report (oto.metrics.report).
+
+Public API: main.
+
+Per cell it prints one line carrying both winners' short names, their structural
+knob dicts, the GFLOPS delta % and the knob diff (changed / identical). The
+native winner is the native kernel with the best per-cell median in each
+(family, cell-shape) cell, seed-medians already folded; the floor winner is the
+shipped gfx900 kernel with the best per-cell median in the same cell.
+
+CPU only. Reads ``gfx90c_results/analysis/kernel_db.json`` (rebuild with
+``python3 -m oto.harness.kernel_db --rebuild``).
+
+    python3 -m oto.harness.cell_knob_diff                 # all cells
+    python3 -m oto.harness.cell_knob_diff --family SS     # one family
+    python3 -m oto.harness.cell_knob_diff --json out.json
+    python3 -m oto.harness.cell_knob_diff --floor-wins-only
 """
-harness.cell_knob_diff — per-cell native-vs-floor winner knob fingerprint diff.
 
-Turns "the floor wins at 128-bit / WGM8 / GSU1" into an exact, per-cell knob
-delta — the input the §9 candidate deck and the spoof-steal workflow are derived
-from. Never benchmarked numbers, always the SAME data the acceptance report
-grades on (kernel_db.json rows, typecode-filtered families):
 
-  * native winner  = the native kernel with the best per-cell median in each
-    (family, cell-shape) cell (per-{run,phase}, seed-medians already folded);
-  * floor winner   = the shipped gfx900 floor kernel with the best per-cell
-    median in the same cell;
-  * output         = one line per cell: both winners' short names, their
-    structural knob dicts, the GFLOPS delta % and the knob diff (changed /
-    identical), so a "floor wins at WGM8 + VW2 + DU8" claim is exact.
-
-CPU only. Reads gfx90c_results/analysis/kernel_db.json (rebuild with
-`python3 harness/kernel_db.py --rebuild` — same provenance the report cites).
-
-Usage:
-    python3 harness/cell_knob_diff.py                 # all cells
-    python3 harness/cell_knob_diff.py --family SS     # one family
-    python3 harness/cell_knob_diff.py --json out.json
-    python3 harness/cell_knob_diff.py --floor-wins-only
-"""
 from __future__ import annotations
 
 import argparse

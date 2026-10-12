@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
-"""
-check_candidates.py — preflight every candidate config through the 4 legality gates.
+"""Is this deck Tensile-legal? The four-gate preflight.
 
-Complements CandidateGenerator: that class produces candidates and gates
-validate_config; this sweeps an EXTERNAL deck (phases.yaml) or a candidate list
-through the same 4 gates, so a deck that would die mid-run with
-`error 4` / `error 2` / `error 3` is rejected before any GPU work starts.
+Owns: sweeping an EXTERNAL deck (``phases.yaml``, a seed overlay, a candidate
+JSON) through the same gates ``CandidateGenerator.validate_config`` applies to a
+candidate it just produced, so a deck that would die mid-run with Tensile
+``error 4`` / ``error 2`` / ``error 3`` is rejected before any GPU work starts.
 
-  1. divisibility        GLVW % mv/pv == 0 and % lpv == 0   (candidate gen)
-  2. assembly class      MT/TT/DepthU/Threads/StaggerU/FP16 clamp
-  3. LDS                 per-thread LDS in VGPR-equivalent registers
-  4. register-file occupancy
-                         numWorkGroupsPerCU = (65536 // NumThreads) // vgprs
-                         < 1  =>  Tensile error 4  ("Occupancy limit")
+Does NOT own: producing candidates (oto.tensile.candidate), the gates themselves
+(oto.tensile.gates -- assembly, loads, occupancy), or the ledger (oto.ledger).
 
-Gates 1-3 are CandidateGenerator's. Gate 4 is scheduler.occupancy_feasible — the
-model that reproduces every observed gfx90c outcome (see potential_configs.md
-§5.7). Gate 4 is why a deck that passes 1-3 can still kill every ZZ phase.
+Public API: main.
 
-CPU only. No Tensile invocation, no GPU.
+The gates run in the orchestrator's own order (illegal knobs, tile divisibility,
+assembly class, classic-load divisibility, the LDS footprint, then register-file
+occupancy), so a multi-failure config reports the same reason the driver would
+have reported. The occupancy gate is a calibrated model, not Tensile's verdict;
+``check_tensile_build.py`` is the cross-check that asks Tensile itself.
 
-Usage:
     python3 check_candidates.py                      # sweep phases.yaml
     python3 check_candidates.py --family ZZ
     python3 check_candidates.py --deck other.yaml
     python3 check_candidates.py --quiet              # only print failures
     python3 check_candidates.py --json out.json
-Exit code 1 if any config fails, so it can gate a pipeline.
+
+Exit code 1 if any config fails, so it can gate a pipeline. CPU only: no Tensile
+invocation, no GPU.
 """
+
+
 from __future__ import annotations
 
 import argparse

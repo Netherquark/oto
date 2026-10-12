@@ -96,8 +96,8 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
     repeat is allowed to share -- and reports the distribution of within-group
     coefficient of variation. This is the real noise floor, and it is far above
     the shipped default: repeats of an identical kernel at an identical shape
-    reach 36% CV for single-shape phases and 65% for multi-shape ones. A verdict
-    whose margin sits inside that tail is not evidence.
+    can reach a CV comparable to the gap being judged. A verdict whose margin
+    sits inside that tail is not evidence.
     """
     groups: Dict[Tuple[Any, ...], List[float]] = defaultdict(list)
     for r in recs:

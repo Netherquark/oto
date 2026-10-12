@@ -8,8 +8,9 @@ and reference-clock figures the A/B comparison scales by.
 Does NOT own: the telemetry sampler itself (oto.metrics.telemetry), the scaling
 it feeds (oto.metrics.analytics.compute_native_vs_spoof_delta), or the report it
 appears in (oto.metrics.report).
-Public API: ClockMixin, TELEMETRY_BUSY_PCT, TELEMETRY_MIN_SAMPLES, SCLK_MIN_HZ,
-SCLK_MAX_HZ, TELEMETRY_REQUIRE_BUSY, THERMAL_MAX_C.
+Public API: ClockMixin. Its tunables are class constants: TELEMETRY_BUSY_PCT,
+TELEMETRY_MIN_SAMPLES, SCLK_MIN_HZ, SCLK_MAX_HZ, TELEMETRY_REQUIRE_BUSY,
+THERMAL_MAX_C.
 """
 
 from __future__ import annotations

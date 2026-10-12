@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
-"""
-allruns.py — all-runs pattern analysis for oto.
+"""Best config per cell across ALL runs, and the knob reach per family.
 
-Answers, across EVERY run in the database rather than one run:
-  * which cells does each arm have, and what is the best config per cell
-  * which knob values each arm has ever exercised, per family
-  * which knobs are never exercised at all (untried territory)
+Owns: the cross-run view -- winners across every run directory (not just the
+latest), the load width each arm actually reached, and the never-exercised
+knobs, because those are the three questions that decide what to run next.
 
-COMPLEMENTARY BY CONSTRUCTION. This tool owns no parsing and no arithmetic of its
-own: it drives oto's own loaders and aggregators, so it cannot drift from the
-pipeline that produced the ledger.
+Does NOT own: the winners of one run's own phases (oto.metrics.analytics), the
+acceptance verdicts (oto.metrics.ab_audit), or the registry it reads
+(oto.ledger.registry).
 
-  native arm : TensileDriver._native_records_all_runs()
-               (every run CSV + every registry benchmark_result row, deduped)
-  floor arm  : TensileDriver._ab_records_from_csv(dir, force_arm="spoof")
-               over the recalled gfx900_ref_* run chain
-  stats      : analytics.compute_native_vs_spoof_delta(agg="winner") semantics —
-               median per kernel FIRST, then max, so one lucky seed cannot win.
+Public API: main, DTYPE_BYTES, FAMILY_CHAR, GLOBAL_LOAD_CAP_BYTES.
 
-CPU only. Touches no GPU and launches no Tensile run.
+It owns no parsing and no arithmetic of its own, by construction: it drives oto's
+own loaders and aggregators (the driver's all-runs record loaders, and the
+``compute_native_vs_spoof_delta`` median-per-kernel-first semantics), so it cannot
+drift from the pipeline that produced the ledger. Byte widths come from the same
+place as the gate's, which ``tests.test_measurement_integrity`` asserts.
 
-Usage:
     python3 allruns.py                     # tables to stdout
     python3 allruns.py --json out.json     # machine-readable
     python3 allruns.py --family ZZ         # filter tables to one family
+
+CPU only. Touches no GPU and launches no Tensile run.
 """
+
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +32,7 @@ import json
 import os
 import statistics
 import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 import yaml
@@ -49,7 +49,8 @@ from oto.runners.driver import TensileDriver                      # noqa: E402
 
 # bytes per element for the GLOBAL LOAD. Read from Tensile via
 # consolidate.dtype_bytes rather than hardcoded: this table used to be a second
-# copy of scheduler.FAMILY_BYTES_PER_ELEMENT and had already drifted, carrying
+# copy of oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT and had already
+# drifted, carrying
 # the same wrong "Z": 8 (complex double is 16) that let VectorWidth 2 through
 # the cap. tests.test_measurement_integrity asserts the two agree.
 _DTYPE_CHARS = ("S", "D", "H", "C", "Z", "I8", "B")
@@ -69,11 +70,11 @@ def _load_dtype_bytes() -> dict:
 
 DTYPE_BYTES = _load_dtype_bytes()
 # dtype char per family label. Mixed-precision families are governed by their
-# widest loaded operand, matching scheduler.cap_vector_width: HS/HS_HPA load a
+# widest loaded operand, matching oto.tensile.gates.loads.cap_vector_width: HS/HS_HPA load a
 # single, HH_HPA loads a half.
 FAMILY_CHAR = {"SS": "S", "DD": "D", "CC": "C", "ZZ": "Z", "HH": "H",
                "HH_HPA": "H", "HS_HPA": "S", "HS": "S", "HF": "H"}
-# hard cap: scheduler._validate_tensile_loads rejects GLVW * bytes > 16
+# hard cap: the load gate rejects GLVW * bytes > 16
 GLOBAL_LOAD_CAP_BYTES = 16
 
 

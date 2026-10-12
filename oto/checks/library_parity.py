@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
-"""CPU-only enforcement of the TensileLibrary coverage-parity rule.
+"""The coverage-parity rule, as an executable check over an external deck.
 
-The rule (stated once, `knowledge_base.md` §6.1): the `tensilelibrary.dat`
-this pipeline produces must address **exactly** the same (family, shape)
-cells the shipped gfx900 TensileLibrary addresses — the canonical contract
-grid `gfx90c_common.shipped_cells()` (38 cells over the 7 families). No
-contraction, no extension.
+Owns: ``main`` -- grading a manifest (``phases.yaml`` plus the seed overlay, or a
+run's overlay) against the shipped gfx900 contract grid, and exiting non-zero on
+divergence.
 
-This tool grades a manifest (phases.yaml + any overlays) against that grid:
+Does NOT own: the rule itself (oto.tensile.library_parity), the driver's
+non-fatal ``--preflight`` check (oto.runners.driver), or the install-time refusal
+(oto.tools.consolidate_install).
+
+Public API: main.
 
     python3 check_library_parity.py                     # deck + seed overlay
     python3 check_library_parity.py --run-id <run>      # + that run's overlay
     python3 check_library_parity.py --phases deck.yaml --no-seed
     python3 check_library_parity.py --json parity.json
 
-Exit code 0 = parity holds (deck == shipped grid, no missing/extra cells).
-Exit code 1 = divergence: prints the missing (contraction) and extra
-(extension) cells. The other enforcement points are `port_tensile --preflight`
-(non-fatal check) and `consolidate.py all --commit` (refuses to install a
-deck that breaks parity). Pipeline insertions must never ship a cell the
-shipped library does not address — candidate probes stay inside the grid.
+Exit code 0 = parity holds (the deck addresses exactly the shipped cells); exit
+code 1 = divergence, which prints the missing (contraction) and the extra
+(extension) cells. Pipeline insertions must never ship a cell the shipped library
+does not address; candidate probes stay inside the grid. CPU only.
 """
+
+
 from __future__ import annotations
 
 import argparse

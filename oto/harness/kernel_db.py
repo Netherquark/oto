@@ -1,26 +1,35 @@
 #!/usr/bin/env python3
-"""harness.kernel_db — ground-truth per-kernel-per-shape GFLOPS database.
+"""Ground-truth per-kernel-per-shape GFLOPS database.
 
-Walks every run/phase directory under `gfx90c_runs/` and produces, per
-(phase, kernel-shape) row, the per-seed best and median GFlops and the
-structural config (from each folder's `Data/00_Final.yaml`; the gfx900 floor
-config is rebuilt from the solution name when the folder is absent). High-level
-design inherited from the exploration script that produced the published
-matrix (potential_configs.md §12); this is the canonical, repo-homed version.
+Owns: walking every run/phase directory under ``gfx90c_runs/`` and producing, per
+(phase, kernel-shape) row, the per-seed best and median GFlops plus the
+structural config -- the canonical, repo-homed provenance the other harness
+modules cite.
 
-Dtype is resolved from the config's `ProblemType.DataType` enum:
-    0=S(f32) 1=D(f64) 2=C(complex f32) 3=Z(complex f64) 4=H(f16)
+Does NOT own: the verdicts (oto.metrics.ab_audit), the regression rules
+(oto.harness.regression_matrix), or the candidate deck
+(oto.harness.candidate_rows).
 
-Default rules:
+Public API: load_kernel_db, build_kernel_db, main.
 
-* native runs   = every `gfx90c_runs/run_*` directory;
-* spoof floor   = `gfx90c_runs/gfx900_ref_locked_*` only (`--all-ref` also
-  folds in the other completed `gfx900_ref_*` dirs — they were chained
-  rebuilds and are excluded by default so regens stay identical to the
-  published matrix).
+The structural config comes from each folder's ``Data/00_Final.yaml``; the gfx900
+floor config is rebuilt from the solution name when the folder is absent. Dtype
+is resolved from the config's ``ProblemType.DataType`` enum
+(0=S f32, 1=D f64, 2=C complex f32, 3=Z complex f64, 4=H f16).
 
-Output: `gfx90c_results/analysis/kernel_db.json` (run_id -> rows). CPU-only.
+Default scopes: native runs = every ``gfx90c_runs/run_*`` directory; the spoof
+floor = ``gfx90c_runs/gfx900_ref_locked_*`` only. ``--all-ref`` also folds in the
+other completed ``gfx900_ref_*`` directories, which are chained rebuilds and are
+excluded by default so a regeneration stays byte-identical to the published
+matrix.
+
+Output: ``gfx90c_results/analysis/kernel_db.json`` (run_id -> rows). CPU only.
+
+    python3 -m oto.harness.kernel_db --rebuild
+    python3 -m oto.harness.kernel_db --json out.json
+    python3 -m oto.harness.kernel_db --all-ref
 """
+
 
 from __future__ import annotations
 
@@ -36,7 +45,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # Repo-root import for the canonical typecode->family resolver (single source of
-# truth in gfx90c_common). kernel_db runs as `python3 harness/kernel_db.py`,
+# truth in oto/device/peaks.py). kernel_db runs as
+# `python3 -m oto.harness.kernel_db`,
 # where sys.path[0] is the harness dir, so the repo root must be inserted first.
 _HERE = Path(__file__).resolve().parents[2]
 for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):

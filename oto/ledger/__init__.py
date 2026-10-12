@@ -6,4 +6,7 @@ Owns: durable state -- runs, records, phases, proposals, proposal observations
 ``agent.ConvergenceAgent`` (harvest -> mutate -> converge).
 Does NOT own: how a verdict is graded (oto.metrics), how a candidate is made
 legal (oto.tensile), or how a phase is executed (oto.runners).
+Public API: none at import time; this package re-exports nothing, so importing
+it has no side effects. The public names of the three modules are in their own
+docstrings (SQLiteRegistry, Mutator, ConvergenceAgent).
 """

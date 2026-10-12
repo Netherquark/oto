@@ -52,10 +52,9 @@ def phase_family(phase_id: str) -> str:
     the raw prefix instead would call those two the same generator by accident
     and the floor's deck sweeps an unknown one.
 
-    On this corpus the single-shape population is ~94% ``auto`` and the
-    multi-shape population is entirely deck sweeps, so invocation form and
-    generator are confounded. The two also executed in disjoint halves of
-    ``run_20260920_235815`` (``ss`` 00:00-06:44, ``auto`` 06:58-09:28), so
+    Invocation form and generator are confounded: the single-shape population
+    is overwhelmingly ``auto`` while the multi-shape population is entirely
+    deck sweeps, and the two executed in disjoint halves of the same run, so
     thermal state is confounded on top of that.
     """
     pid = phase_id or ""

@@ -11,6 +11,7 @@ GEMM class rules (oto.tensile.gates.assembly), or the tiles of a candidate
 Every rejection cites the SolutionStructs line it mirrors. That is deliberate:
 these rejects read as arbitrary arithmetic ("totalVectorsCoalesced % NLCA != 0")
 unless the operator can see which Tensile branch produced them.
+Public API: validate_tensile_loads, cap_vector_width, LOAD_DTYPE_INFO.
 """
 
 from __future__ import annotations

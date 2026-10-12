@@ -5,6 +5,9 @@ Owns: ``CandidateConfig`` -- what a candidate IS, as opposed to how one is
 generated (oto.tensile.candidate) or how it reaches the deck
 (oto.tensile.candidate_emission). One home, so neither module needs a second
 copy that drifts.
+Does NOT own: the candidate generator (oto.tensile.candidate), the append
+boundary (oto.tensile.candidate_emission), or the ledger that records a
+candidate's outcome (oto.ledger.mutator).
 Public API: CandidateConfig.
 """
 

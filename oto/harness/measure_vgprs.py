@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
+"""Measure real per-thread VGPRs from Tensile-emitted code objects.
+
+Owns: reading the AMDGPU metadata of each phase's compiled ``.o`` and comparing
+the measured VGPR count against the model, which is the only way to retire the
+model's calibration headroom.
+
+Does NOT own: the model itself (oto.tensile.gates.vgpr_model), building the
+objects (the Tensile driver does that), or the audit that consumes the ratio
+(oto.harness.occupancy_audit).
+
+Public API: main.
+
+Every run dir under ``gfx90c_runs/`` carries a phase's compiled kernel objects at
+``<run>/<phase>/1_BenchmarkProblems/<Kernel>/00_Final/source/build_tmp/SOURCE/assembly/<kernel>.o``,
+whose AMDGPU metadata holds the true ``vgpr_count``. This tool parses them with
+``llvm-readelf`` (CPU-only, no GPU) and reports, per (dtype char, ThreadTile), the
+measured per-kernel counts and median, the model's accumulator VGPRs for the same
+ThreadTile, and the measured/model ratio -- the headroom indicator.
+
+    python3 -m oto.harness.measure_vgprs                 # whole corpus
+    python3 -m oto.harness.measure_vgprs --run run_20261008_030033
+    python3 -m oto.harness.measure_vgprs --json out.json
 """
-harness.measure_vgprs — measure real per-thread VGPRs from Tensile-emitted code objects.
 
-Todo-tracker item 1 (implementation_plan.md "CPU-only work queued"): the
-scheduler's register-file model calibrates per-thread accumulator cost with the
-`VGPR_PER_ELEMENT` table; the only way to retire the 2x headroom assumption is
-to read what Tensile actually emitted. Every run dir under gfx90c_runs has the
-compiled kernel objects at
 
-    <run>/<phase>/1_BenchmarkProblems/<Kernel>/00_Final/source/build_tmp/
-        SOURCE/assembly/<kernel>.o
-
-whose AMDGPU metadata carries the true vgpr_count. This tool parses those
-objects (llvm-readelf, CPU-only, no GPU) and reports, per (dtype char, ThreadTile):
-
-    measured vgprs      per-kernel counts and median
-    acc model           scheduler's modelled accumulator VGPRs for the same TT
-    ratio               measured / model — the headroom indicator
-
-Replaces the calibration table in scheduler.py when the sweep shows the model
-is stable (ratio near the expected 1x-2x), or exposes the error when it is not.
-
-Usage:
-    python3 harness/measure_vgprs.py                 # whole corpus
-    python3 harness/measure_vgprs.py --run run_20261008_030033
-    python3 harness/measure_vgprs.py --json out.json
-"""
 from __future__ import annotations
 
 import argparse

@@ -1,22 +1,33 @@
-"""Coverage + fitness: cell states and LCB parent selection (Option H Phase 3).
+"""Coverage: cell evidence, cell states, and fitness for parent selection.
 
-Implements `implementation_plan.md` `Hplan.5`. Two responsibilities, kept
-separate on purpose:
+Owns: ``coverage_cells`` (descriptive evidence, never deciding what to run),
+``decide_state`` (the three states, distinct because collapsing them is the
+defect), ``lower_confidence_bound`` / ``select_parent``, the ledger-wide view,
+and the acceptance band / per-cell slow bars read from the reference chain
+rather than defaulted.
 
-* :func:`coverage_cells` -- what a cell's *evidence* is: distinct
-  fingerprints, sample count, median and spread. This is descriptive; it never
-  decides what to run.
-* :func:`decide_state` -- the three states from `Hplan.5` step 2, kept distinct
-  because collapsing them is the defect: a cell with no candidate is not a cell
-  with a dead candidate, and a retired cell is not an empty one (§H.1.2a).
-* :func:`lower_confidence_bound` / :func:`select_parent` -- parent choice by
-  lower confidence bound rather than raw winner (`Hplan.5` step 3).
+Does NOT own: the A/B arithmetic (oto.metrics.ab_delta), the report layout
+(oto.metrics.report), or the harnesses that read the band.
 
-The acceptance band is *read*, never transcribed: it comes from
-``ab_audit.reproducible_band``, which measures it from cross-arm disagreement on
-identical configs plus raw repeat spread. A caller that does not supply one gets
-the measured value rather than a hardcoded percentage.
+Public API: coverage_cells, decide_state, CELL_STATES, STATE_EXPLORE,
+STATE_REPLICATE, STATE_RETIRED, lower_confidence_bound, select_parent,
+coverage_from_registry, coverage_summary, samples_by_fingerprint,
+measured_band_pct, slow_bar, reference_thresholds.
+
+``coverage_cells`` is deliberately descriptive: it reports a cell's distinct
+fingerprints, sample count, median and spread and never decides what to run.
+``decide_state`` keeps the three states distinct because a cell with no candidate
+is not a cell with a dead candidate, and a retired cell is not an empty one.
+
+Parent choice is the lower confidence bound rather than the raw winner, so a
+cell with thin evidence is preferred over a cell whose single lucky seed is ahead.
+
+The acceptance band is *read*, never transcribed: it comes from the reference
+chain, which measures it from cross-arm disagreement on identical configs plus
+raw repeat spread. A caller that does not supply one gets the measured value
+rather than a hardcoded percentage.
 """
+
 
 from __future__ import annotations
 

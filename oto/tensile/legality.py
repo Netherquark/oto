@@ -1,31 +1,34 @@
-"""Legality prior: manifest-derived legal domain + source-cited hard walls.
+"""The legality prior: manifest-derived legal domain, and source-cited walls.
 
-Option H Phase 2 (`proposal.md` Hplan.4). The prior sits *upstream* of the
-novelty ledger and `validate_config`: a candidate is drawn from the set of
-knob-vectors Tensile actually ships for its `(family, dtype)`, so the reject
-classes are never proposed rather than proposed and then filtered.
+Owns: the hard walls (half Assembly needing VW>=2, the shipped-schedule
+requirement), the shipped support table read from the pinned manifest, the
+co-occurrence check, and ``sample_legal`` / ``sampler_sweep``.
 
-Tensile is pinned at commit ``e8a8999e``. Every predicate below was re-read in
-that checkout at implementation time, and the citation is the *code*, not the
-audit's prose: `reference_integrity_audit.json` is dated 2026-09-27 and its
-`A_half_VW1_assembly` description mis-stated its own condition (it implied a
-GSU interaction that lives on a different predicate). Per Hplan.4 the audit's
-root-cause labels are treated as hints, never as the specification.
+Does NOT own: the four launch gates (oto.tensile.gates), the manifest it reads
+(oto.tensile.library), or the candidate generator (oto.tensile.candidate).
 
-Walls implemented here, and the audit root cause each closes:
+Public API: is_half_input, thread_tile_dimensions, enable_matrix_instruction,
+half_vector_width_floor, assembly_gsu_vector_width, check_hard_walls,
+shipped_support, mt_has_shipped_schedule, cooccurrence_check, sample_legal,
+sampler_sweep, KNOB_GROUPS, TEMPLATE_KEYS, HARD_WALLS, DEFERRED_RULES,
+CITATIONS, TENSILE_COMMIT.
 
-  ``half_vector_width_floor``       A_half_VW1_assembly (largest class)
-  ``assembly_gsu_vector_width``     the GSU case of A_half_VW1_assembly
-  ``mt_has_shipped_schedule``       D_macrotile_schedule
+The prior sits *upstream* of the novelty ledger and of ``validate_config``: a
+candidate is drawn from the set of knob-vectors Tensile actually ships for its
+(family, dtype), so the reject classes are never proposed rather than proposed
+and then filtered.
 
-Root causes B, C and E (knob parse / dropped-knob defects) are unreachable by
-construction here: they were parser bugs, and this module reads shipped values
-through the single canonical parser in `tensile_library` rather than
-re-parsing solution names.
+The walls implemented here are ``half_vector_width_floor`` (a half-precision
+assembly with VectorWidth 1), ``assembly_gsu_vector_width`` (its GSU case) and
+``mt_has_shipped_schedule`` (a macro tile Tensile ships no schedule for).
 
-Legality is never the model's judgement (`AI Must Not Decide`): each predicate
-resolves to either Tensile source or the pinned shipped manifest.
+Legality is never a judgement call: each predicate resolves to either Tensile
+source or the pinned shipped manifest, and the citation is the code rather than an
+audit's prose. Shipped values are read through the single canonical parser in
+``oto.tensile.library`` rather than re-parsed solution names, so a knob-parse
+defect cannot be reintroduced here.
 """
+
 
 from __future__ import annotations
 
@@ -68,8 +71,8 @@ def thread_tile_dimensions(config: Dict[str, Any]) -> List[int]:
     """Normalise ``ThreadTile`` to its dimensions.
 
     Phase configs carry ThreadTile as the string ``"8x4"`` (the form
-    ``tensile_library._config_from_kernel`` emits and ``scheduler.validate_config``
-    accepts), while Tensile's own state holds a two-element list. The
+    ``oto.tensile.library._config_from_kernel`` emits and
+    ``oto.tensile.candidate.validate_config`` accepts), while Tensile's own state holds a two-element list. The
     EnableMatrixInstruction derivation tests ``len(ThreadTile) == 2``, so the
     string form has to be normalised first or every candidate reads as
     undetermined -- which silently disarmed the half VectorWidth wall.
@@ -142,8 +145,8 @@ def assembly_gsu_vector_width(config: Dict[str, Any]) -> Tuple[bool, str]:
 
     An earlier revision of this module modelled the guard naively as
     ``VectorAtomicWidth < 2 -> reject``. A live sweep showed it firing on shipped
-    HS_HPA vectors with GlobalSplitU 2/3/5/7 (116 such kernels ship), i.e. 90 false
-    rejections -- the signature of *modelling* the reject set rather than reading
+    HS_HPA vectors with GlobalSplitU 2/3/5/7 -- every one a false rejection --
+    the signature of *modelling* the reject set rather than reading
     it, which is exactly what Hplan.4 step 1 forbids. Enforcing the reachable GSU
     rules is already ``assembly_class_valid``'s job (rules 2 and 3, both
     source-cited and tested): half with f32 accumulate, and half Assembly GSU with

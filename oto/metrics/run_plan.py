@@ -117,8 +117,8 @@ class RunPlan:
 
         Instantiating AutoPlan() rather than restating its fields: the first
         draft hardcoded rerun_illegal=True while the driver's default is False,
-        so a bare `run_status.py` promised 111 phases of work -- about two days
-        of GPU time -- that --auto would never schedule.
+        so a bare `run_status.py` promised work -- and a GPU-time ETA -- that
+        `--auto` would never schedule.
         """
         from oto.runners import auto_prompt
         driver = auto_prompt.AutoPlan()

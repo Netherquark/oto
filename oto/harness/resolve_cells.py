@@ -1,47 +1,31 @@
 #!/usr/bin/env python3
-"""harness.resolve_cells — per-cell native-vs-floor winner resolution on the
-full knob surface.
+"""Per-cell native-vs-floor winner resolution on the full knob surface.
 
-The authoritative per-cell evidence generator behind potential_configs.md §2
-(the 38-cell deck map). For every cell graded by the acceptance report it
-resolves, from the repo's canonical sources only (CPU-only — nothing here is
-ever measured):
+Owns: for every cell the acceptance report grades, resolving the winning phase,
+its run and its FULL structural knob config, in the documented order (the winner
+run's own configs dir, the registry ``phases.data``, any native run's configs,
+then the kernel_db structural row).
 
-* **acceptance facts** — verdict (WIN/TIE/LOSS), native/floor median + value,
-  delta %, and the cell's % of its realistic ceiling and % of theoretical
-  peak (`per_family_coverage` in acceptance_report.json);
-* **native winner** — the exact winning phase and its run, plus the phase's
-  FULL structural knob config (MacroTile … LoopTail; the surface the docs'
-  per-family triage is argued from). Resolution order is:
-   1. the winner run's own `configs/*.yaml` (the `_write_phase_config`
-      emission for that exact run — the compiled truth),
-   2. the registry `phases.data.config` for the phase_id,
-   3. any native run's `configs/*.yaml` bearing the same phase (newest run
-      wins on tie),
-   4. the kernel_db structural row for the phase (16-knob fallback);
-* **spoof floor winner** — the best gfx900 reference kernel for the same
-  cell under the standing winner rule (median-primary, best-seed secondary;
-  same `_best` predicate as regression_matrix), config from the kernel_db
-  row.
+Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
+report itself (oto.metrics.report), or the kernel_db it falls back to
+(oto.harness.kernel_db).
 
-This supersedes the ad-hoc `/tmp/opencode/resolve_cells.py` + verdicts dump
-that generated the docs' §2 evidence table; its outputs (JSON, full text
-table, TSV) are the repo-homed successors.
+Public API: main, _table, _tsv.
 
-Outputs (defaults under `gfx90c_results/analysis/`):
+The resolution order exists because the compiled emission is the truth: a phase's
+``_write_phase_config`` output for the winning run is authoritative, the registry
+row is what the driver intended, and the kernel_db row is the structural fallback
+when neither is on disk. On a tie between runs the newest run wins.
 
-* `cells_resolved.json`   — machine cache: metadata + one row per cell
-  (surfaces the same slot names the §2 table is curated from);
-* `cells_resolved.full.txt` — the human evidence table (aligned, headers);
-* `--tsv`                 — optional tabular verdicts dump (supersedes the
-  old /tmp verdicts_full.tsv).
+Outputs, under ``gfx90c_results/analysis/``: ``cells_resolved.json`` (machine
+cache: metadata plus one row per graded cell) and ``cells_resolved.full.txt``
+(the aligned human evidence table).
 
-Usage:
-
-    python3 harness/resolve_cells.py                     # table to stdout + caches
-    python3 harness/resolve_cells.py --tsv verdicts.tsv  # + TSV verdict dump
-    python3 harness/resolve_cells.py --no-json --no-text # table only
+    python3 -m oto.harness.resolve_cells                     # table + caches
+    python3 -m oto.harness.resolve_cells --tsv verdicts.tsv  # + verdicts dump
+    python3 -m oto.harness.resolve_cells --no-json --no-text # table only
 """
+
 
 from __future__ import annotations
 
@@ -55,8 +39,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-# Repo-root import (harness runs as `python3 harness/resolve_cells.py`, where
-# sys.path[0] is harness/ — same bootstrap kernel_db.py and friends use).
+# Repo-root import (kept so the module also runs as
+# `python3 oto/harness/resolve_cells.py`; under `python3 -m oto.harness.resolve_cells`
+# the repo root is already on the path, and kernel_db.py and friends bootstrap the
+# same way).
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))

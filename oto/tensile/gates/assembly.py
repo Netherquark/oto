@@ -16,6 +16,7 @@ escape; Tensile v4.44.0):
                           (half or mixed) precision, or EnableMatrixInstruction"
   SolutionStructs:3616  "Assembly GSU half requires AssertFree0ElementMultiple>=2"
   SolutionStructs:3342  "StaggerUStride < DepthU * BytesPerElement"
+Public API: assembly_class_valid, assembly_depth_u, ASSEMBLY_DTYPE_ELEM_BYTES.
 """
 
 from __future__ import annotations

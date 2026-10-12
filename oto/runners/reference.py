@@ -356,7 +356,7 @@ class ReferenceMixin:
                   phase_id as before). Kept so a rollout never *loses* a floor.
 
         phase_id is deliberately not the primary key: it embeds parser-derived
-        knobs, so fixing a parser renamed 1073 of 1212 ids and one resume
+        knobs, so fixing a parser renamed almost every id and one resume
         re-ran the entire floor.
         """
         current_fps = current_fps or {}

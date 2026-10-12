@@ -11,4 +11,8 @@ Owns: ``assembly.py`` (is this GEMM class legal at all), ``occupancy.py``
 Does NOT own: the candidate generator (oto.tensile.candidate), the launch-boundary
 shared vocabulary between gates (see oto.tensile.candidate.validate_config, which
 is the orchestrator), or any device constant (oto.device.peaks).
+Public API: none at import time; this package re-exports nothing, so importing
+it has no side effects. The public names of each gate are in its own docstring:
+``assembly_class_valid``, ``occupancy_feasible`` / ``ldspad_feasible``,
+``validate_tensile_loads`` / ``cap_vector_width``, and the vgpr_model tables.
 """

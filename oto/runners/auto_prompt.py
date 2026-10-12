@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""
-auto_prompt.py -- the questions every --auto run must ask first.
+"""The five --auto questions, and the AutoPlan their answers bind.
 
-The T1/T2/T3 tier machinery decided, without asking, what a re-run would cost:
-which reference cells got re-measured, how long the loop ran, and how much it was
-allowed to mutate. That was three days of GPU time spent on a guess. The tiers
-are still the correct *classification* of the reference corpus, but the decision
-now belongs to the person who owns the GPU.
+Owns: ``ask`` (the TTY prompt, five questions, in answer order), ``AutoPlan``,
+the non-TTY defaults, and ``_read_counts`` (tier counts read live from the audited
+manifest -- never transcribed).
 
-This module asks the questions and returns a plan. It is deliberately
-dependency-free and never imports Tensile, so it is safe to unit-test.
+Does NOT own: what the plan does (oto.runners.auto) or the tier manifest it reads
+(oto.tensile.library).
+
+Public API: AutoPlan, ask, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, _read_counts.
+
+The tier machinery used to decide, without asking, what a re-run would cost:
+which reference cells got re-measured, how long the loop ran and how much it was
+allowed to mutate. The tiers remain the correct *classification* of the reference
+corpus; the decision now belongs to the person who owns the GPU.
 
     1. re-measure the ILLEGAL cells        (measured with a config we got wrong)
     2. re-measure the UNDER-SPECIFIED cells (glvw/grvw left to defaults)
@@ -17,13 +21,14 @@ dependency-free and never imports Tensile, so it is safe to unit-test.
     4. how many ITERATIONS               (default 10)
     5. how many MUTATIONS per candidate  (default 3)
 
-Every count in the banner and in the questions is read live by `_read_counts`
-from the audited tiers -- none of them is written down here or in any doc. A
-number transcribed into a docstring is wrong the moment a cell is re-triaged,
-and a stale number in a question the user answers is worse than no number.
-
-Non-interactive runs (cron, CI, no TTY) take documented defaults and say so.
+Every count in the banner and in the questions is read live by ``_read_counts``
+from the audited tiers; none of them is written down here. A number transcribed
+into a docstring is wrong the moment a cell is re-triaged, and a stale number in
+a question the user is answering is worse than no number. Non-interactive runs
+(cron, CI, no TTY) take the documented defaults and say so.
 """
+
+
 from __future__ import annotations
 
 import sys

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""verify_run.py -- prove a run was additive, and that its telemetry is usable.
+"""Corpus snapshot / diff / telemetry verification.
 
-Two questions that a run leaves behind and that nothing else in the repo
-answers. Both used to be answered with ad-hoc shell one-liners written into
-/tmp, which is how the busy-gate defect below survived: a filter that silently
-discards every sample looks identical to a run that recorded nothing.
+Owns: proving the append-only law held -- a snapshot of run-dir file counts, sizes
+and registry row counts; a diff of two snapshots that flags any reduction or
+in-place rewrite as a violation; the telemetry funnel; and the cheapest LEGAL
+live-deck phases for a smoke run.
+
+Does NOT own: the ledger it counts (oto.ledger.registry) or the clocks it parses
+(oto.runners.clocks).
+
+Public API: snapshot, diff_snapshots, telemetry, cheapest, main.
 
     snapshot --out before.json        # record corpus state
     # ... run the driver ...
@@ -12,30 +17,22 @@ discards every sample looks identical to a run that recorded nothing.
     telemetry <run_id>                # is this run's telemetry actually usable?
     cheapest --family ZZ              # cheapest LEGAL phase, for a cheap smoke run
 
-WHY THIS IS A TOOL AND NOT A SCRIPT
+``diff`` exists because nothing else checks the append-only law: the config and
+generate fingerprints hash kernel CONFIGS and ``PRAGMA integrity_check`` only
+proves the SQLite file is not corrupt, so none of them notice a phase's benchmark
+CSVs being rewritten.
 
-`knowledge_base.md` §10 makes the append-only data law project-blocking if
-violated, and there was no way to *check* it: `registry.config_fingerprint` and
-`scheduler.generate_fingerprint` hash kernel CONFIGS, and consolidate's
-`PRAGMA integrity_check` only proves the SQLite file is not corrupt. None of
-them notice a phase's benchmark CSVs being rewritten. `diff` closes that.
+``telemetry`` exists because clock bases are built from a chain of filters
+(busy -> sclk range -> thermal), and if any filter is too strict the phase reports
+as "unmeasured" -- indistinguishable from a run that never measured it. It
+prints the survival count at every step.
 
-CPU only. Touches no GPU and launches no Tensile run.
-
-WHY `telemetry` EXISTS
-
-Clock bases are built from a chain of filters (busy -> sclk range -> thermal).
-If any filter is too strict the phase reports as "unmeasured", which is
-indistinguishable from a run that never measured it. On 2026-10-05 the
-`gpu_busy_percent > 50` gate kept 1 of 1916 samples from a native run and
-reported no clock at all. `telemetry` prints the survival count at every step,
-so the next one of these is visible immediately instead of after a debugging
-detour.
-
-The gate arithmetic itself is NOT reimplemented here -- it is read through
-`TensileDriver`'s own loaders, so this tool cannot disagree with the pipeline
-that produced the verdict.
+The gate arithmetic itself is NOT reimplemented here: it is read through the
+driver's own loaders, so this tool cannot disagree with the pipeline that produced
+the verdict. CPU only. Touches no GPU and launches no Tensile run.
 """
+
+
 from __future__ import annotations
 
 import argparse
@@ -266,7 +263,7 @@ def cheapest(family: Optional[str] = None, n: int = 5,
     phases = yaml.safe_load(deck_path.read_text()) or []
 
     # Families are labelled "ZZ" but Tensile's DataType is "Z"; the mapping
-    # belongs to gfx90c_common, so accept either and let it resolve.
+    # belongs to oto.device.peaks, so accept either and let it resolve.
     want = FAMILY_DTYPE_CHAR.get(family, family) if family else None
 
     def volume(phase: Dict[str, Any]) -> float:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The candidate row builders: per-family tile ladders and the auto rows.
 
-Owns: the wide tier's data -- the per-family tile ladders, the narrow-mutation knob map (mirroring the scheduler's neighbour map), the evidence-derived auto rows and the 2026-10-09 beat-the-spoof batch -- plus ``_pad_rows`` (the label/phase_id encoder they all go through).
+Owns: the wide tier's data -- the per-family tile ladders, the narrow-mutation knob map (mirroring the generator's neighbour map), the evidence-derived auto rows and the beat-the-spoof batch -- plus ``_pad_rows`` (the label/phase_id encoder they all go through).
 Does NOT own: the deck/seed fingerprint sets (candidate_decks), the overlay read/write (candidate_overlay), or the pruning helpers (candidate_prune).
-Public API: TARGET_CELLS, PROBE_CELLS, NARROW_NEIGHBOURS, AUTO_ROWS, BEAT_THE_SPOOF_ROWS, _pad_rows."""
+Public API: TARGET_CELLS, PROBE_CELLS, NARROW_NEIGHBOURS, PATTERNS, AUTO_EXPLICIT, PLAN_BATCH, _pad_rows."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.
 # --- per-family tile ladders ------------------------------------------------
 # (MacroTile, ThreadTile) pairs are validated by the occupancy gate below; the
 # ones listed are vetted against the gate (complex double caps TT at 4x4, etc).
-# Duplicated here so the generator does not depend on scheduler deck precedence
+# Duplicated here so the generator does not depend on the deck precedence
 # and can add anisotropy the decks never expressed.
 
 LADDER: Dict[str, List[Dict[str, Any]]] = {
@@ -163,7 +163,7 @@ PROBE_CELLS = {
     "DD": [128],
 }
 
-# --- narrow-mutation knob map (mirrors the scheduler neighbour map) ---------
+# --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
 NARROW_NEIGHBOURS: Dict[str, Dict[str, List[Any]]] = {
     "MacroTile": {"96x96x16": ["128x128x16", "64x64x16"],
                   "128x128x16": ["96x96x16", "64x64x16"],
@@ -207,7 +207,7 @@ AUTO_EXPLICIT: Dict[str, List[Dict[str, Any]]] = {
 #   * CC GSU>1 — the old "MultipleBuffer wave-fill" rung (§13.5 rung 2, §14.5
 #     item 3c). Tensile's supported-gate passes complex only via
 #     _GlobalAccumulation (SolutionStructs:3543-3553), which the port never
-#     sets on gfx90c, so the local gate refuses (scheduler:1379-1382).
+#     sets on gfx90c, so the local gate refuses.
 #   * NLCA=3 on 128-width tiles — legal only where NumLoads>=3 side-wise;
 #     96x96x16/6x6/VW2 is the ladder tile with exactly 3 global loads per
 #     K-slice (128x128x8/VW4 has NumLoads=1, so NLCA>1 is refused there).
@@ -303,7 +303,7 @@ for tile, tt, vw, du, kw, note in (
 # break bank/cache conflicts; it is ON by default (SU=32, SUS=256) and was
 # never varied. Probes: disable (SU=0, which forces SUM=0 + SUS=0), and vary
 # the stagger depth (SU) x mapping (SUM) on the CC/ZZ winner geometries + the
-# wide SS tile. SUS>0 must exceed 0.5*DepthU*bpe (ldspad_defasible), so the
+# wide SS tile. SUS>0 must exceed 0.5*DepthU*bpe (ldspad_feasible), so the
 # stride is left at the legal default 256 except where noted.
 for fam, pattern, tile, tt, vw, du, rows in (
     ("CC", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8,

@@ -6,4 +6,6 @@ invocation, config plumbing), the phase runner and its skip/bypass policy
 loop (auto.py), and the argparse stage dispatch (cli.py).
 Does NOT own: candidate legality (oto.tensile), verdicts (oto.metrics), or
 durable state (oto.ledger).
+Public API: none at import time; this package re-exports
+nothing, so importing it has no side effects.
 """

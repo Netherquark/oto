@@ -1,29 +1,38 @@
 #!/usr/bin/env python3
-"""harness.regression_matrix — deck-vs-floor-vs-all-time cell regression matrix.
+"""Deck-vs-floor-vs-all-time cell regression matrix.
 
-The programmatic counterpart of potential_configs.md §12 and of the accepted
-deck's regression list (changelog.md). For every cell of the shipped gfx900
-grid (knowledge_base.md §6.1) it compares:
+Owns: for every cell of the shipped grid, the comparison of what the committed
+deck ships, what the gfx900 floor measured, and the best native kernel ever --
+and the standing loss / material-regression rules that decide which of those
+differences is signal.
 
-* **deck**   — what the committed `phases.yaml` ships for that cell
-  (best per-kernel median, best seed as secondary);
-* **floor**  — the best measured gfx900 reference kernel for that cell
-  (median-primary, best-seed secondary) — the shipped baseline;
-* **all-time** — the best measured native kernel *ever* for that cell,
-  including candidates the deck rejected/that never landed.
+Does NOT own: the winner rule it shares with resolve_cells
+(oto.harness.resolve_cells), the shipped grid itself (oto.tensile.library_parity),
+or the acceptance report (oto.metrics.report).
 
-Material regressions / losses follow the standing rules (median-of-seeds with
-NumBenchmarks/Empirical ≥ 3, ±2% tie band, no best-of-runs vs best-of-history):
-a cell is a **loss** when its deck median is >2% under the floor median, and a
-**material median regression** when any *other* native kernel beats the shipped
-one by >2% for the same cell. Config-identical losses (same structural
-config, different measured GFlops) are flagged as pure cross-run variance.
+Public API: main, build_matrix.
 
-The tool is the recommended entry point for candidate-gap work: `losses` and
-`material_regressions` list the exact cells and configs to attack, and the
-resulting probes (e.g. harness/README.md's N6 §SS:512-vw4 floor) must stay
-inside the shipped grid (`check_library_parity.py` stops anything else).
+Per cell it reports the **deck** (what ``phases.yaml`` ships: best per-kernel
+median, best seed as secondary), the **floor** (best measured gfx900 reference
+kernel: median-primary, best-seed secondary) and the **all-time** best native
+kernel, including candidates the deck rejected or that never landed.
+
+The standing rules are the ones the acceptance report grades on: median-of-seeds
+with NumBenchmarks/Empirical >= 3, a +-2% tie band, and no best-of-runs against
+best-of-history. A cell is a **loss** when its deck median is more than 2% under
+the floor median, and a **material median regression** when any other native
+kernel beats the shipped one by more than 2% for the same cell. Config-identical
+losses (same structural config, different measured GFlops) are reported as pure
+cross-run variance rather than a regression.
+
+``losses`` and ``material_regressions`` are the entry point for candidate-gap
+work: they name the exact cells and configs to attack.
+
+    python3 -m oto.harness.regression_matrix
+    python3 -m oto.harness.regression_matrix --rebuild
+    python3 -m oto.harness.regression_matrix --no-json
 """
+
 
 from __future__ import annotations
 
@@ -78,7 +87,7 @@ def build_matrix(db_path: str, base_dir: str,
     """deck / floor / all-time per shipped grid cell + aggregate verdicts.
 
     The universe of cells is the repo's canonical shipped grid
-    (`gfx90c_common.shipped_cell_set`), so this tool can never report an
+    (`oto.device.peaks.shipped_cell_set`), so this tool can never report an
     out-of-grid cell; non-cube probe shapes have no cell and are excluded by
     construction.
     """

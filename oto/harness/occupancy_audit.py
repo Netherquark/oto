@@ -1,31 +1,34 @@
 #!/usr/bin/env python3
-"""Resident-workgroup audit per (family, shape) cell — the "is occupancy ≤3?" tool.
+"""Resident-workgroup audit per (family, shape) cell.
 
-The kernel metadata's MaxOccupancy and check_candidates' `wg/cu=N` are
-REGISTER-SLOT counts (64K VGPR file / per-thread accumulators), not resident
-workgroups (§8.5 of potential_configs.md warns about this). This tool computes
-the physical residency bounds per cell on the current kernel_db rebuild, using
-scheduler.py's measured-VGPR table as the register-file truth:
+Owns: the physical residency bounds on the current kernel_db rebuild -- LDS-bound,
+VGPR-bound and wave-slot-bound -- and their minimum, because ``MaxOccupancy`` in
+the kernel metadata is a REGISTER-SLOT count, not resident workgroups.
 
-    LDS-bound   = 64 KB/CU / (double-buffered A+B tile footprint)
-    VGPR-bound  = 64 K/CU  / (workgroup threads x measured total VGPR/thread)
-    wave-bound  = 40 wave slots/CU / (waves per workgroup, wave64)
+Does NOT own: the register-file model it takes as truth
+(oto.tensile.gates.vgpr_model), the kernel_db rows it reads
+(oto.harness.kernel_db), or the gate that decides launchability
+(oto.tensile.gates.occupancy).
 
-    resident wg/CU = min(lds, vgpr, wave-slot)    # launch-time reality
+Public API: main.
 
-The double-buffer factor (Tensile prefetches A and B into two LDS buffers) is
-adjustable with --lds-factor so the single-buffer probe (factor 1) can be
-modelled, and --side floor audits the spoof arm instead of the native winners.
+The three bounds per cell are ``LDS-bound = 64 KB/CU / (double-buffered A+B tile
+footprint)``, ``VGPR-bound = 64 K/CU / (workgroup threads x measured total
+VGPR/thread)`` and ``wave-bound = 40 wave slots/CU / (waves per workgroup,
+wave64)``; resident workgroups per CU is their minimum. Tensile prefetches A and
+B into two LDS buffers, so the double-buffer factor is adjustable with
+``--lds-factor`` (1 = single-buffered probe). ``--side floor`` audits the spoof
+arm instead of the native winners.
 
-CPU only. Reads gfx90c_results/analysis/kernel_db.json (typecode-corrected
-rebuild, same provenance cell_knob_diff and the acceptance report cite).
+CPU only. Reads ``gfx90c_results/analysis/kernel_db.json`` (typecode-corrected
+rebuild, the same provenance ``cell_knob_diff`` and the acceptance report cite).
 
-Usage:
-    python3 harness/occupancy_audit.py                 # native winners (default)
-    python3 harness/occupancy_audit.py --side floor    # spoof-floor winners
-    python3 harness/occupancy_audit.py --lds-factor 1  # single-buffered LDS
-    python3 harness/occupancy_audit.py --at-most 3     # just cells at ≤ N wg/CU
+    python3 -m oto.harness.occupancy_audit                 # native winners
+    python3 -m oto.harness.occupancy_audit --side floor    # spoof-floor winners
+    python3 -m oto.harness.occupancy_audit --lds-factor 1  # single-buffered LDS
+    python3 -m oto.harness.occupancy_audit --at-most 3     # cells at <= N wg/CU
 """
+
 
 from __future__ import annotations
 
@@ -43,7 +46,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.device.peaks import LDS_PER_CU_KB, MAX_WAVES_PER_CU, NUM_CUS  # noqa: E402
-from oto.tensile.candidate import (  # noqa: E402
+from oto.tensile.gates.vgpr_model import (  # noqa: E402
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,

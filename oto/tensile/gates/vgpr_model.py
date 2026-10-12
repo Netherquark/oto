@@ -110,12 +110,11 @@ def depth_u(config: Dict) -> int:
     """DepthU (K-dimension tile depth), 0 when it cannot be determined.
 
     Why: Depth lives in two different places depending on who wrote the config:
-    scheduler-generated phases carry it as the third MacroTile field
+    generator-produced phases carry it as the third MacroTile field
     ("128x32x16" -> 16) and omit the DepthU key entirely, while explicit configs
     and tests set DepthU directly. Both must resolve, or the LDS gate silently
     computes a footprint 16x too small and waves through 128x32x16
-    (scheduler.py resolved this before the split; the two readers are the two
-    places a config can legitimately hide DepthU).
+    (the two readers are the two places a config can legitimately hide DepthU).
 
     Args:
         config: A Tensile solution dict.
