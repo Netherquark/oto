@@ -300,7 +300,7 @@ oto/
 ├── gfx90c_results/            # registry.db + emitted reports  (data, append-only)
 ├── gfx90c_runs/               # per-run output directories (telemetry, logs)
 ├── docs/                      # ecosystem docs + the harness runbook (see §7)
-├── plans/                     # untracked working scripts (verification helpers)
+├── plans/                     # tracked verification helpers (verify_*.py)
 └── *.md                       # the live MD docs (see §7)
 ```
 

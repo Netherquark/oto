@@ -205,9 +205,10 @@ largest file is `oto/tensile/legality.py` at 565 lines.
 
 **Decision (2026-10-12).** These cuts are deliberately **not** implemented in
 the run-launch session (they churn the run loop immediately before an overnight
-run). `plans/acceptance.py` criterion 1b measures **total** lines
-(`n.end_lineno - n.lineno + 1`) over `oto/**/*.py`, so the exit set for AC 1b is
-all **49** entries below; the code-only column identifies *which* seam is worth
+run). The `acceptance.py` criterion-1b check (total lines
+`n.end_lineno - n.lineno + 1` over `oto/**/*.py`) was deleted with the other
+untracked `plans/` scripts on 2026-10-14; the rule now lives only in this
+register (AC 1b, 49 entries below). The code-only column identifies *which* seam is worth
 cutting, it is not the exit test. The full closing plan is at the end of this
 section.
 
@@ -316,7 +317,8 @@ cut did not change behaviour.
 
 #### Closing plan (proposed; implement after the overnight run)
 
-**The rule that must actually pass.** `plans/acceptance.py` criterion 1b:
+**The rule that must actually pass.** AC 1b (the deleted `acceptance.py`
+criterion):
 
 ```python
 ln = n.end_lineno - n.lineno + 1        # TOTAL lines, docstring included
@@ -418,7 +420,7 @@ the cut is wrong).
   `_swizzle_feasible`, `_fork_params`, `_reference_remaining`,
   `_coverage_matrix_section`, and the `PROMOTED` `classify_outcome`, `harvest`,
   `classify_cell_status`, `generate_family_phases`, `append_candidates_batch`).
-* `plans/acceptance.py` -- unchanged; 1b is the exit test. (If the team decides
+* `plans/acceptance.py` -- deleted 2026-10-14; 1b is register-enforced only. (If the team decides
   the **code-only** metric is the rule instead, change 1b to strip the docstring
   and the exit set drops to the 33 code-only entries -- make that call once,
   here.)
@@ -454,7 +456,7 @@ the cut is wrong).
    `run_auto`, `tests/test_agent*.py` for `agent.py`).
 3. `python3 plans/verify_all.py` (add the head module to `DECOMPOSED` first).
 4. Full suite once per batch: `TENSILE_ROOT=... pytest -q` (~6.5 min).
-5. `python3 plans/acceptance.py` at the end -- "0 functions over 60 lines".
+5. ~~`python3 plans/acceptance.py`~~ -- deleted; run the full suite instead.
 
 **Exit criteria.** AC 1b passes; `verify_all.py` green; full suite green; every
 new `DECOMPOSED` entry carries its one-line justification.
@@ -603,7 +605,7 @@ Items 1–5 are genuine defects worth a decision; items 6–10 are hygiene.
     byte-identically.
 
 **Fixed this round while finishing Refactor 1** (recorded so the register is
-honest): the two stacked-module-docstring SyntaxErrors (17 files via
+honest): the two stacked-module-docstring SyntaxErrors (17 files via the since-deleted
 `plans/merge_docstrings.py`, plus `oto/device/peaks.py` by hand, which also
 gained its missing `typing` import and lost a shadowed `import re`); the
 `oto.tools.consolidate` re-export façade (`_fam`, `_is_legal`, `dtype_bytes`,
