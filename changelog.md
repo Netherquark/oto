@@ -9,6 +9,52 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-14 — writer forwarded every sweep knob (run-blocking fix found while
+  folding corpus3).** `oto/tensile/config_writer.py::_fork_params` is the only
+  path by which candidate knobs reach Tensile (`BenchmarkCommonParameters`
+  carries just KernelLanguage/EdgeType/LoopTail), and it silently dropped nine
+  sweep knobs — `UseSgprForGRO`, `InnerUnroll`, `NumLoadsCoalescedB`,
+  `MaxOccupancy`, `AggressivePerfMode`, `FractionalLoad`, `NonTemporalA/B`,
+  `AssertFree1ElementMultiple` — while `bool(PrefetchGlobalRead=2)` collapsed
+  to 1 and `WorkGroup[2]` hardcoded `LocalSplitU=1`. ~200 of the 270 emitted
+  sweep/trial candidates would have benchmarked Tensile defaults, including the
+  AF1EM half of the D4 paired widen (without which Tensile refuses the B-side
+  load at solution construction). Fixed: int forwarding for all nine, PGR as
+  int, LSU via `WorkGroup[2]`. Guarded by
+  `tests/test_writer_forwards_sweep_knobs.py` (19: every `KNOB_SWEEPS` value key
+  round-trips into `ForkParameters`). The 310-phase manifest was emitted after
+  the fix; `check_candidates.py` + `test_tensile_params.py` pass over it.
+- **2026-10-14 — decision trials decked: paired CC widen swept, baseline control,
+  D1/D2/D3 trial tiles.** Per the user's "add candidates as trials" instruction,
+  every open decision now owns run candidates and the 10h run decides:
+  `KNOB_SWEEPS` gains the CC-only paired widen (`GLVW=2` +
+  `AssertFree0/1ElementMultiple=2`; `TENSILE_KNOB_DEFAULTS` gains the two AF
+  defaults at 1); `generate_knob_sweep_phases(include_baseline)` + `knob_sweep
+  --baseline` emits each base tile unchanged as the same-run `_base` control
+  (D4); new `DECISION_TRIAL_TILES` + `generate_decision_trial_phases` +
+  `knob_sweep --trials` emits D1 (CC steal geometry at 192/256), D2 (ZZ VW2
+  differentiator + LDS-boundary 64x64x16), D3 (§8.2 ZZ 128x128x8 + 128x64x8).
+  No gate or verdict logic changed. Dry-run: 246 sweep + 14 baselines + 10
+  trials = 270, 0 refusals. Tests: `tests/test_knob_sweep.py` 19→24.
+  Emit: `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`.
+- **2026-10-14 — the harness load gate now models Tensile's shift-ptr `GLVW` rule (the 2026-09-19 "fix (pending)").**
+  `loads.validate_tensile_loads` derives `GlobalLoadVectorWidth` but used to ignore
+  an explicit `GlobalLoadVectorWidthA/B`, so a `GLVW=2` config passed on a
+  `VectorWidth=4` tile and was then dropped by Tensile at solution construction —
+  the `must be == VectorWidth … or == 1` refuses the reference rerun recorded as
+  hashes `7f866dcf` / `a0edeb30`. The gate now reads the explicit value
+  (`loads._glvw_for`) and applies the guard to the pv-reduced effective width
+  (`SolutionStructs.py:2010`, `:4584-4596`), **conditioned** on `bufferLoad` and
+  `GuaranteeNoPartialA` (`:3292`, `:4177-4183`) so the
+  `AssertFree0ElementMultiple` escape hatch is not over-refused — the synthesis
+  `FORWARD_KNOB_DOMAINS` explores `GLVW ∈ {1,2,4} × AssertFree0ElementMultiple ∈
+  {1,2}`, and a blanket guard would have deleted a legal slice of it. Consequence:
+  an unpaired `GLVW=2` is refused for CC/SS/HH/HPA and a no-op for ZZ/DD, so the
+  `GlobalLoadVectorWidth` sweep row is removed (deck 12→11 sweeps, 258→244
+  candidates); the one realizable widen is the CC-only pair
+  `GLVW=2 + AssertFree0ElementMultiple=2` (swept as a trial later the same day —
+  see the entry above). Tests:
+  `tests/test_occupancy_gate.py::TestGlobalLoadVectorWidthRule` (7).
 - **2026-10-10 — kernel_db auto-refresh on run completion (mutations always read fresh).**
   `kernel_db.json` is now rebuilt automatically whenever a run reaches a
   data-producing terminal status, so candidate generation / regression_matrix /
@@ -1114,6 +1160,9 @@ and NOT the experimental data (that is `results.md`).
   two guard-legal parameterizations.
 - **Fix (pending):** scheduler `_validate_tensile_loads` lacks the `GLVW==VW-or-1`
   predicate under which the 64x64x8 deck fails — add it to the mirror.
+  **Done 2026-10-14** on the harness gate (`loads.validate_tensile_loads`), with the
+  `bufferLoad` / `GuaranteeNoPartialA` condition and explicit-`GLVW` reading the
+  original note omitted — see the top entry.
 - Docs updated: `potential_configs.md` §4 + §5.3 item 7, `implementation_plan.md`
   technical findings.
 

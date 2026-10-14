@@ -347,6 +347,107 @@ Schedule label:
 
 - **ScheduleName** `"isa"` vs `"vega10"` — label-level only; no performance effect.
 
+### 7.1 What the base already has: the pinned Tensile defaults
+
+No winner in `cells_resolved.json` names `BufferLoad`, `PrefetchGlobalRead`,
+`AggressivePerfMode`, `MaxOccupancy`, `UseSgprForGRO`, `GlobalLoadVectorWidthA/B`,
+`NumLoadsCoalescedA/B`, `InnerUnroll`, `FractionalLoad`, `NonTemporalA/B`, or the
+`*Read2`/`*Write2` pair. **Unset is not off**: Tensile fills every absent knob
+from `defaultBenchmarkCommonParameters` (`Tensile/Common.py:1507-1670` at the
+pinned commit `e8a8999e`). Read from that checkout:
+
+| knob | default `@ e8a8999e` | consequence |
+|---|---|---|
+| `BufferLoad` / `BufferStore` | `True` | the buffer-load path is already active in every winner |
+| `StaggerU` | `32` | swizzle is already on; `StaggerUStride 256`, `StaggerUMapping 0` |
+| `MaxOccupancy` | `40` | uncapped, as AMD ships |
+| `AggressivePerfMode` | `1` | |
+| `PrefetchGlobalRead` / `PrefetchLocalRead` | `1` | |
+| `UseSgprForGRO` | `-1` | auto/heuristic |
+| `GlobalLoadVectorWidthA/B` | `-1` | resolves to `VectorWidth` |
+| `AssertFree0/1ElementMultiple` | `1` | `GNP` guard fails closed at default; `=2` lifts it for the CC paired widen |
+| `LocalReadVectorWidth` | `-1` | → `VectorWidth` on non-MI (`SolutionStructs:3310-3315`); no VGPR-saving rule follows (corpus3 Q-A) |
+| `StoreVectorWidth` | `-1` | nominally → `VectorWidth`, but non-MI derived `gwvw` takes precedence (`Common:1192-1195`); deprioritized |
+| `DirectToLdsA/B` | `False` | 4-byte guard (`GLVW × bpe == 4`) excludes CC/ZZ/DD; SS/HH-only (corpus3 Q-A) |
+| `NumLoadsCoalescedA/B` | `1` | |
+| `InnerUnroll` | `1` | |
+| `GlobalSplitU` | `1` | |
+| `FractionalLoad` | `0` | |
+| `NonTemporalA/B` | `0` | |
+| `LocalRead2A/B`, `GlobalRead2A/B` | `True` | wiki defaults; the `*Read2` path may be dead (see §7.2) |
+| `LocalSplitU` | `1` (effective) | not in the defaults block; the real default is 1 |
+
+**The rule this gives the deck.** "No winner sets knob X" means *never explicitly
+set*, **not** *never varied*. A candidate whose value equals the default above
+re-measures the baseline; only a non-default value is an experiment. This is why
+`KNOB_SWEEPS`' `BufferLoad: True` row was removed on 2026-10-14 — the default is
+already `True`, so the row tested nothing. `TENSILE_KNOB_DEFAULTS` in
+`oto/tensile/decks.py` is the machine-readable copy of this table, and
+`tests/test_knob_sweep.py` asserts every sweep row offers at least one non-default
+value.
+
+### 7.2 The never-exercised levers, mechanism-verified but unmeasured
+
+From `corpus2.md` (pass 2; raw text `archive/corpus2.pass2_20261014.md`), which is
+source-inspection of upstream Tensile, **not** a gfx90c measurement. Treat the
+mechanisms as verified and any speedup as unmeasured.
+
+- **`UseSgprForGRO`** moves global-read *offset* state from VGPR to SGPR: one VGPR
+  base plus several SGPR offsets, not every address. Requires `BufferLoad=1`
+  (already satisfied, §7.1) and forbids `ShiftPtr`. Trade: fewer VGPR for more
+  SGPR and possibly more scalar address instructions. The historically-quoted
+  "4–8 VGPR saved, 8–16 SGPR spent" is a draft claim, not a local measurement.
+- **`StaggerU` is silently ignored when `BufferLoad=0`** — already encoded in
+  `oto/tensile/gates/occupancy.py` `_swizzle_feasible`. Because `BufferLoad`
+  defaults `True`, the deployed swizzle is live.
+- **`MaxOccupancy=N` pads per-workgroup LDS to `DeviceLDS // N`** (floor), so it is
+  a pure occupancy clamp. One draft had `ceil`; the inspected path is floor.
+- **`AggressivePerfMode=2`'s two-waves/SIMD LDS cap is UNCONFIRMED at the pinned
+  commit** (corpus3 Q-E ii). `Common.py:1310-1313` describes it, but no explicit
+  mode-2 branch was found in the pinned writer/solution-validation path
+  (`beAggressive` is truthy-tested). The deck's APM row still sweeps 1/2 — mode 2
+  may differ via `s_setprio` — but do not call it occupancy-capped until a
+  mode-1-vs-2 LDS allocation diff proves it.
+- **`DirectToLdsA/B` is refused unless `GlobalLoadVectorWidth × bytesPerElement
+  == 4** (`isDirectToLdsDoable`, `SolutionStructs:2358-2415`), plus whole-wave
+  WGs, no `TLU==UnrollMajorLDS`, no `LocalSplitU>1`, and TLU-free needs
+  `TransposeLDS=1` (itself MI-only). Consequence: **illegal for CC/ZZ/DD**
+  (8/16 B elements); SS/HH-only, and it bypasses VGPR *staging* without shrinking
+  the LDS tile. Not decked; gate-hardening is a post-run follow-up.
+- **`ScheduleIterAlg` 2/3 are refused for non-MI Assembly** (`SolutionStructs:
+  2865-2869`); 0/1 need an emitted-ISA diff before any budget. **`StoreRemapVectorWidth`
+  ≠ 0 is refused without matrix instructions** (`:3861-3875`) — remove from any
+  candidate list. **`ScheduleGlobalRead`/`ScheduleLocalWrite` have no direct use
+  in the pinned Assembly writer** — parsed but unproven; ISA-diff preflight
+  before benchmark budget. **`StorePriorityOpt` is real** (`s_setprio` in the
+  store path) but an arbitration effect, not an issue-count reduction —
+  low priority for issue-bound kernels. **`PersistentKernel` is not forwarded by
+  this port's writer** — hold until a forwarding change lands.
+- **`WorkGroupMapping=7/14 is syntactically legal** (domain is the full
+  `range(-1024,1025)`) **but WGM is a J-dimension traversal block height, not a
+  CU count** (`wgSerial = wg0 + (wg1 % WGM) * nwg0`). On grids shorter than 7 in
+  the mapped dimension (e.g. MT128 on 256×192) it may not change traversal at
+  all. Not swept; trial only where the generated mapping differs.
+- **`LocalSplitU`** is `WorkGroup[2]` and splits the summation dimension *inside* a
+  workgroup; it does **not** multiply the output grid (`GlobalSplitU` does). A
+  TensileLite dtype guard might exclude complex, but the project's own
+  `validate_config` accepts it for every family (`potential_configs.md` §8.1), so
+  the local gate at `e8a8999e` is the authority.
+- **`GlobalLoadVectorWidth` ≠ `VectorWidth` and ≠ 1** is rejected by Tensile
+  (`SolutionStructs.py:4584-4596`, "must be == VectorWidth … or == 1") **only when**
+  `not bufferLoad or not GuaranteeNoPartialA`, and `GuaranteeNoPartialA` is
+  `AssertFree0ElementMultiple % GLVW_A == 0` on a `TLUA` operand (`:4177-4183`;
+  `bufferLoad` is true only for `KernelLanguage: Assembly`). With the default
+  `AssertFree0ElementMultiple=1` that reduces to "`GLVW` is `1` or `== VectorWidth`".
+  `setGlobalLoadVectorWidth`'s pv reduction (`:2010`) can also cancel an explicit
+  value back to 1. The gate models all three (`oto/tensile/gates/loads.py::_glvw_for`
+  + `_Operand._restriction_active`), matching the real `Ailk_Bljk` / `VW4` / `GLVWA2`
+  refuses (`failurelogs.txt`; reference-rerun hashes `7f866dcf` / `a0edeb30`). So
+  widening is **not** a free lever — unpaired it is a refusal or a no-op, and the one
+  realizable widen is the CC-only pair `GLVW=2 + AssertFree0ElementMultiple=2`
+  (`potential_configs.md` §8.1, §9 D4) — swept as a trial row since 2026-10-14.
+  Local writer/ISA wins over any general statement.
+
 ---
 
 ## 8. Measurement Science
@@ -419,6 +520,20 @@ kernel-generation time. The four gates, all CPU-side and orchestrated by
 4. **register-file occupancy** — `occupancy_feasible`
    (`oto/tensile/gates/occupancy.py`)
 
+**Bytes per element, per dtype, from Tensile's own writer.** `DataType.numBytes()
+= int(numRegisters * 4)`, so complex double (`'reg': 4`) is **16 bytes**, complex
+single (`'reg': 2`) is 8, `f64` 8, `f32` 4, `f16` 2. Two consequences that are
+easy to get wrong:
+
+- **The repo's LDS gate carries `BYTES_PER_ELEMENT["Z"] = 8`**, which understates
+  the ZZ tile footprint by 2x. It is left at 8 deliberately, because
+  `LDS_BUDGET = 16384` was calibrated against that reading and the two must be
+  decided together. **See `gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ
+  LDS byte count.**
+- §8.1's "complex types are 8 B" refers to the **global-load** element width
+  under the `GLVW x bytes <= 16` cap — a different quantity on a different path.
+  Both can be true at once; they are not a contradiction.
+
 Gate 4 is the one that was silently absent. Tensile sets
 `overflowedResources = 4` ("Occupancy limit", user-visible as
 `Generating kernel source resulted in error 4`) when the register file cannot
@@ -444,6 +559,75 @@ table: `oto/tensile/gates/vgpr_model.py` (`ACCVGPR_BUDGET`, `MEASURED_VGPR`,
 that can kill a whole family through thread-tile width alone.
 
 ---
+
+### 8.3 Clock and thermal protocol for this box
+
+The device's clock is not stable and is **not** pinned by default: idle drops to
+400 MHz, and boost only arrives once the part is warm (measured corpus medians
+~930 MHz at 46–48 °C rising to 1800 MHz at 76–78 °C). So a cold run measures a
+different machine than a warm one, and two arms measured at different
+temperatures are not comparable. `run_20261013_214649`'s sole LOSS is exactly
+this failure: the floor arm has no telemetry at all, so no correction is
+possible (`results.md` §13.4).
+
+Steps, all operator-side (TTY):
+
+1. **Pin the clock** so the level is a chosen number, not a policy outcome:
+   `echo manual > /sys/class/drm/card0/device/power_dpm_force_performance_level`
+   then `echo 7 > /sys/class/drm/card0/device/pp_dpm_sclk` (highest level).
+2. **Warm up to thermal equilibrium** — 25% of the iterations before the
+   measured window. Realistic data, not zeros: all-zero or low-toggle inputs
+   can inflate clocks by >50%.
+3. **Flush L2 between repeats** for memory-bound shapes, so a hit is not
+   measured as a miss.
+4. **Batch short kernels** (150 µs–80 ms) to amortise dispatch overhead.
+5. **Log per phase**: median clock, temperature, and run order, and interleave a
+   fixed reference kernel every N runs to detect drift.
+6. **Acceptance gate**: coefficient of variation < 1.5% before a delta is
+   believed.
+7. **Randomize within blocks** (block by dtype/shape; ref-kernel at block
+   boundaries). Report median **and** MAD/spread with raw repeats kept; re-run
+   a block whose reference drifts (corpus3 Q-F).
+8. **Flush rule**: `flush_count >= 1 + cache_size / problem_footprint`
+   (`Common.py:88-110`); below-1-MB footprints get separate cold/warm-L2
+   variants instead of one mixed number.
+9. **Record schema** (per phase): timestamp, phase, problem_id, dtype, shape,
+   config_id, randomized_position, reference_flag, cache_mode, repeats,
+   raw_times_us, median_us, MAD_us, sclk_source, spoof_clock_sclk_hz,
+   spoof_clock_coverage, observed_sclk min/median/max, temperature min/median/max,
+   power level, LDS_bytes, VGPR/thread, SGPR/thread, scratch_spill_bytes,
+   code_object_id. Telemetry-incomplete floor-arm rows are tagged, never
+   clock-corrected.
+
+Without step 1 and step 6 the run cannot distinguish a kernel improvement from a
+thermal or DVFS difference, which is the single largest confound in this corpus.
+
+### 8.4 Do not cite — unverified claims that circulate in this project
+
+Claims that have been searched for and **not** confirmed. Citing them is a
+defect, not a shortcut. Each names what was actually found, if anything.
+
+| Claim | Status |
+|---|---|
+| "Tile: A Faster Tiling Approach for AMD GPUs" (ASPLOS'20) | Not located in ACM/IEEE libraries. Do not cite. |
+| "MI250-optimal config on A100 drops to ~7% of A100-optimal" | The 7% figure is not in arXiv:2505.03780, which reports ≥20% up to an order of magnitude for Triton flash-attention. Cite the paper's own number. |
+| "142k CLBlast tuples, 5 GPUs, dynamic range 1.8×–13.2×" (arXiv:2507.15277) | The parameterised stats are unverified from the abstract. Cite the paper only for its qualitative portability thesis. |
+| "ISC 2026 CUTLASS FP8, 1.00 waves/SM, 14% achieved occupancy" | Datapoint not located in accessible proceedings. |
+| "PERKS (SC'23) gives 1.15×–1.4× on gfx90c" | PERKS is dGPU/NVIDIA; there is no gfx90c APU data. |
+| "gfx1151 `auto` DPM pinned at 1100 MHz; `profile_peak` gave +37.8%" | No primary source verified for gfx90c. Treat as illustrative of the mechanism only. |
+| COSTA / FASTEST / BASS / BEST / Pyramid / MagicLine / SeerNN / PlanGen / GemmLab / Charo analytical GEMM / Fugerite et al. | Bibliographic ghosts in this corpus — none verified to exist as cited. |
+| A universal "2 waves/SIMD is the right target" rule | Not a law; varies with ILP versus memory latency. |
+| "`AggressivePerfMode=2` caps LDS to 2 waves/SIMD on this commit" | Comment says so (`Common.py:1310-1313`); no explicit mode-2 branch found in the pinned writer/validation. Unconfirmed until a mode-1-vs-2 LDS diff proves it (corpus3 Q-E ii). |
+| "`LocalReadVectorWidth=2` saves VGPRs in CC/ZZ" | Default resolves to `VectorWidth` non-MI; accumulators are unaffected by read width. Judge from emitted VGPR/issue deltas, not the option value. |
+| "DirectToLDS helps CC/ZZ/DD" | Pinned `isDirectToLdsDoable` requires a 4-byte global load; their 8/16 B elements fail it. SS/HH-only. |
+| "WGM=7 is the natural optimum for 7 CUs" | WGM is a J-dimension traversal block height (`wgSerial = wg0 + (wg1 % WGM) * nwg0`), not a CU count. No verified 7-CU raster rule exists. |
+| "`ScheduleGlobalRead`/`ScheduleLocalWrite` tune the non-MI kernel" | No direct use in the pinned Assembly writer. ISA-diff preflight required. |
+
+Full detail, including what each source *does* say, is in `kernel_tuning_research.md`
+§9 — same list, kept in one place, with a per-row "what is actually known" and one
+entry resolved (AMD's shipped library is **not** uniformly small-tiled). The
+pass-1 sweep's own record of the same list is `archive/corpus.pass1_20261014.md`
+§4; cite §9, not the archive.
 
 ## 9. Reporting Toolchain
 

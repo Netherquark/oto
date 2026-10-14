@@ -73,8 +73,9 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - **The code contracts that enforce the above on this port**: the per-row pad
   accounting and the padded-LDS footprint gate are `occupancy.ldspad_feasible`
   (`oto/tensile/gates/occupancy.py`); the load-cap / GLVW divisibility (including
-  `cap_vector_width`, which returns the widest `VectorWidth` satisfying
-  `VW·bytesPerElement ≤ 16` *and* `TT % VW == 0` *and* `VW ≤ MT/TT`) is
+  the shift-ptr `GLVW == VectorWidth or 1` guard, with its `GuaranteeNoPartialA`
+  escape hatch, and `cap_vector_width`, which returns the widest `VectorWidth`
+  satisfying `VW·bytesPerElement ≤ 16` *and* `TT % VW == 0` *and* `VW ≤ MT/TT`) is
   `loads.validate_tensile_loads` / `loads.cap_vector_width`
   (`oto/tensile/gates/loads.py`); the class rules are
   `assembly.assembly_class_valid` (`oto/tensile/gates/assembly.py`); and the
@@ -403,3 +404,108 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 
 **Project files**
 - `gfx90c_tuning_guide.md` (M1–M4 vocabulary, knob surface), `potential_configs.md` §8/§9/§10/§12 (experiment groups, steal, split-complex, queue), `gfx90c_theoretical_limits.md` (ceilings), `knowledge_base.md` §7/§10/§11 (data law, measured context), `oto/tensile/gates/vgpr_model.py` + `oto/tensile/gates/occupancy.py` (gates, LDS/VGPR budgets, the three byte tables), `oto/tensile/gates/loads.py` + `oto/tensile/gates/assembly.py` (load divisibility / 16-B cap / class rules), `oto/tensile/config_writer.py` (`FORWARDED_GROUP_C_KNOBS`), `complex_gemm_research_brief.md` (complex-MAC accounting + split routes), `changelog.md`
+
+**Pass-2 Tensile-source anchors.** The per-knob upstream URLs (Tensile `Common.py`
+line ranges, Debian TensileLite `Solution.py`, PR #10847, release notes) are in the
+raw pass-2 corpus: `archive/corpus2.pass2_20261014.md` Appendix A. Those links point
+at upstream `develop` and version-drift; the authoritative anchors for *this*
+project are the pinned local files, cited inline in §9.2/§9.3 and
+`knowledge_base.md` §7.1–§7.2 (`Tensile/Common.py`, `Tensile/SolutionStructs.py`).
+
+
+## 9. Do not cite — unverified claims (folded from `archive/corpus.pass1_20261014.md` §4, 2026-10-14)
+
+`corpus.md` carried a list of claims its author could not confirm. That list is
+now here, because a "do not cite" list is research content and must live with the
+research, and because `corpus.md` is being reduced to a pointer. **Citing an entry
+here is a defect.** Each row states what was actually found, so a future search
+does not repeat the work.
+
+| Claim that circulates | What is actually known |
+|---|---|
+| *"Tile: A Faster Tiling Approach for AMD GPUs"* (ASPLOS'20) | Not located in ACM DL or IEEE Xplore under that or a near title. The project's own tile search is AMD-specific enough that this paper would be the primary reference if it exists. **Do not cite.** |
+| "MI250-optimal config on A100 drops to ~7% of A100-optimal" | The 7% is not in arXiv:2505.03780. The paper evaluates Triton flash-attention kernels across SKUs and reports **>=20%, up to an order of magnitude**. Cite the paper's own figure. |
+| "142k CLBlast tuples, 5 GPUs, per-device dynamic range 1.8x-13.2x" | The parameterised statistics are not verifiable from arXiv:2507.15277's abstract. The paper's qualitative thesis — that per-device tuning is required — is citable. |
+| "ISC 2026 CUTLASS FP8: 1.00 waves/SM, 14% achieved occupancy" | Datapoint not located in accessible proceedings. |
+| "PERKS (SC'23) gives 1.15x-1.4x on gfx90c" | PERKS is dGPU/NVIDIA persistent-kernel work. **No gfx90c APU data exists for it.** Cite it as a technique, never as a gfx90c measurement. |
+| "gfx1151 `auto` DPM pinned at 1100 MHz; `profile_peak` gave +37.8%" | No primary source verified for gfx90c. It illustrates the DVFS mechanism and nothing more; `knowledge_base.md` §8.3 is the project's own protocol. |
+| COSTA, FASTEST, BASS, BEST, Pyramid, MagicLine, SeerNN, PlanGen, GemmLab, Charo analytical GEMM, Fugerite et al. | Bibliographic ghosts **in this corpus**: none could be verified to exist as cited. Treat as folklore until independently located. |
+| A universal "2 waves/SIMD is the right occupancy target" | Not a law. The project's own measurement puts the corpus **median** at 2 waves/SIMD (`gfx90c_theoretical_limits.md` §7.1), which is a description of what happened, not a target. |
+| "AMD's shipped Vega solutions are systematically small-tiled" | **Resolved, and the answer is no.** AMD's shipped vega10/vega20 solution files contain MT128x16 (FP32), MT064x064 (FP64), MT016x016 (FP16) *in the same library* — there is no uniform small- or large-tile bias. AMD's *rank-1* solutions are small (see `potential_configs.md` §6 Route A), but the library spans three orders of tile area, so "AMD prefers small tiles" is not a supportable generalisation. |
+
+### 9.1 What `corpus.md` contributed that this file did not have
+
+Kept because it is the only recorded evidence, and it is AMD's own tuning for the
+sibling part — the ground truth for the spoof-steal route:
+
+| family | shipped file | rank-1 MacroTile | ThreadTile | DepthU | WorkGroup | VW | BufferLoad | PGR | PLR | APM | MaxOcc |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| FP32 | `vega10_Cijk_Ailk_Bljk_SB.yaml` | 128x016 | 4x4 | 16 | 32x4x2 | 4 | 1 | 0 | 1 | 1 | 40 |
+| FP64 | `vega20_Cijk_Ailk_Bljk_DB.yaml` | 064x064 | 4x4 | 4 | 16x16x1 | 2 | - | - | - | 1 | 40 |
+| FP16 | `vega20_Cijk_Ailk_Bljk_HB.yaml` | 016x016 | 2x2 | 8 | 8x8x1 | 2 | - | - | - | - | 40 |
+
+Read the pattern, not the numbers. AMD's own FP64 rank-1 uses the **smallest**
+accumulator (TT4x4) on a **mid-size** tile with **DepthU 4** and `StaggerU 32`.
+That is the same shape as the project's own measured DD winner (32x32x8/TT2x2,
+28 waves/CU) — two independent tunings of different hardware agreeing on
+"small accumulator, mid tile". The FP32 rank-1's `DepthU 16` with `WG 32x4x2`
+(a `LocalSplitU 2` workgroup) is also notable: **AMD itself uses LocalSplitU**,
+which is the one wave-fill knob legal for this project's complex families
+(`potential_configs.md` §8.1).
+
+### 9.2 Pass-2 additions (`corpus2.md`, folded 2026-10-14)
+
+`corpus2.md` answered a narrower brief (the eleven Tensile knobs the corpus
+never *explicitly* set).
+Its ledger rows that §9 above did not already carry:| Claim that circulates | What is actually known |
+|---|---|
+| ASPLOS'20 *"Tile"* prunes >85% of invalid candidate tiles via GCN inequalities (`LDS ≤ 64 KiB`, `VGPR ≤ 256`) | The paper's existence is unresolved (§9), so the pruning figure is unattributable. The *constraints* are real and already in the project's gates; the 85% is not citable. |
+| OSDI'20 *Ansor* supplies a knob-sensitivity ranking (tile 60–70%, addressing 15–20%, pipeline 10–15%, fine scheduling <5%) | This ranking is not an Ansor result and no ablation of *these* knobs on gfx90c was located. Do not present it as measured sensitivity. |
+| "142,782 CLBlast configurations on 5 GPUs" (arXiv:2507.15277) | The abstract's 142,782 are *device × input × parameter performance measurements*, not unique configurations. Cite the distinction. |
+| A complex `GlobalSplitU>1` is impossible on gfx90c | It is a **Tensile assembly-path policy**, not a hardware limit; complex K-partials are mathematically reducible. The local gate (`potential_configs.md` §8.1) refuses it for C/Z, and that gate is authoritative — but do not state it as a hardware fact. |
+| `NumLoadsCoalescedA/B` follows a simple byte/tile/thread predicate | The inspected path is a **derived-divisibility filter** over Tensile's own counts (`totalVectors`, `NumLoads`, `totalElementsPerp`, `enableGLTrX`), not a byte rule. A raw-input predicate under-approximates legality. |
+| `LocalRead2A/B`, `GlobalRead2A/B`, `1LDSBuffer` have active effect | Upstream `Common.py` comments mark the paired-read path **"not used yet"**. The wiki defaults (`True`, `0`) do not prove emitted code; hold until local ISA confirms. |
+| `NonTemporalA/B` bypasses L2 and eliminates thrashing | Non-temporal lowering is documented for GFX6–GFX9; the exact SLC modifier meaning and any gfx90c gain are unverified. Disabling useful reuse may *raise* DDR traffic. |
+| A seven-CU raster / `WorkGroupMapping=7` maps block IDs to physical CUs | No source derives a non-power-of-two-CU mapping. Grid arithmetic (utilization, tail idle) is descriptive only — it cannot pick the fastest tile or split. |
+
+### 9.3 Resolved by the project's own measurement (supersedes pass-2 caveats)
+
+- **VGPR allocation granule.** The pass-2 sweep (`archive/corpus2.pass2_20261014.md` §3.3/§6) kept "4 vs 8/16" open and told
+  readers to pass `granule` explicitly. The project closed it: granule **4** fits
+  all ten rows of the AMD/ORNL GFX9 table, and
+  `python3 -m oto.harness.asm_occupancy --check-calibration` reports **10/10**.
+  Granule 8/16 mispredicts V = 28/36/84. `oto/harness/asm_occupancy.py` is the
+  home; do not re-open.
+- **Occupancy is not the problem it was framed as.** `corpus2.md` inherited the
+  "low occupancy" framing. Measured over 5,757 emitted kernels: **LDS capacity
+  binds 61.7%**, VGPR 22.4%, and only 2.1% run at ≤3 waves/CU
+  (`gfx90c_theoretical_limits.md` §7.1).
+- **`MaxOccupancy` rounding.** Confirmed floor (`DeviceLDS // N`) — see
+  `knowledge_base.md` §7.2.
+- **The knob "defaults" table.** The pass-2 sweep (`archive/corpus2.pass2_20261014.md` §2) reported wiki defaults with a
+  "check local `Common.py`" caveat for each. Verified against the pinned checkout
+  and recorded in `knowledge_base.md` §7.1.
+
+### 9.4 Pass-3 follow-ups (`corpus3.md`, folded 2026-10-14) — post-run, not decked
+
+`corpus3.md` (raw: `archive/corpus3.pass3_20261014.md`) answered the residual
+brief. Nothing below is in the 310-phase run; each is a bounded trial for the
+pass *after* it, gated on the run's evidence:
+
+- **`DepthU=32` screen.** Legal space per corpus3 Q-D's lower bound
+  (`2·DepthU·T·bpe` + padding + prefetch): DU32 fits one buffer at 64×64 for
+  SS/HH/DD/CC, ZZ only under the project byte/budget pair; DU64 only
+  small-tile/one-buffer SS/HH. Gate on exact LDS/VGPR metadata, start PGR=0,
+  enforce `(DU_lds // LSU) % InnerUnroll == 0` with ≥1 iteration.
+- **`LocalReadVectorWidth=2` bounded differential** (CC/ZZ only, and only if it
+  changes the emitted width). Judge from VGPR/issue deltas, never the option value.
+- **`StaggerU=16 + StaggerUStride=128` pairing** — only if StaggerU itself moves
+  timings and emitted offsets in this run; mapping variants after that, if time.
+- **Gate-hardening** (refuse instead of silently defaulting): `DirectToLdsA/B=True`
+  failing the 4-byte guard, `ScheduleIterAlg ∈ {2,3}`, nonzero
+  `StoreRemapVectorWidth` on non-MI. The writer forwards correctly since
+  2026-10-14; these refusals belong in `validate_config` next.
+- **Do-not-propose additions**: `StoreRemapVectorWidth` (refused w/o MI),
+  `ScheduleGlobalRead`/`ScheduleLocalWrite` (no pinned writer use — ISA-diff
+  preflight first), `PersistentKernel` (unforwarded), `DirectToLds` on CC/ZZ/DD,
+  WGM=7/14 on short grids. Homes: `knowledge_base.md` §7.2 + §8.4.
