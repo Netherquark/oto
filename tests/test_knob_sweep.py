@@ -36,6 +36,7 @@ sys.path.insert(0, str(BASE))
 from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.decks import (  # noqa: E402
+    DECISION_TRIAL_TILES,
     FAMILY_DECKS,
     KNOB_SWEEPS,
     KNOB_SWEEP_BASES,
@@ -342,15 +343,27 @@ def test_emit_honours_phases_and_never_touches_the_live_deck(sandbox, tmp_path):
 
 def test_every_decision_trial_is_gate_legal(gen):
     """A trial must pass the gate everywhere it claims to run, or the decision
-    it answers is untestable."""
-    from oto.tensile.decks import DECISION_TRIAL_TILES
+    it answers is untestable.
+
+    Checked against BOTH gates: ``validate_config`` (the append boundary) and
+    the consolidate deck gate ``_is_legal``, which reads dtype bytes from
+    Tensile itself rather than from ``BYTES_PER_ELEMENT``. They disagree on ZZ's
+    load width, and it is the second one that describes what Tensile will
+    actually build -- a trial only the first accepts is exactly the phase that
+    dies at solution construction.
+    """
+    from oto.tools.consolidate import _is_legal
 
     for trial in DECISION_TRIAL_TILES:
         for shape in trial.get("shapes", [SHAPE]):
-            ok, why = gen.validate_config(
-                {**_template(trial["family"], shape), **trial["knobs"]})
+            cfg = {**_template(trial["family"], shape), **trial["knobs"]}
+            ok, why = gen.validate_config(cfg)
             assert ok, f"{trial['decision']} trial {trial['knobs']} refused " \
                        f"at {shape}: {why}"
+            ok2, why2 = _is_legal(cfg)
+            assert ok2, f"{trial['decision']} trial {trial['knobs']} passes " \
+                        f"validate_config but the Tensile-truth gate refuses " \
+                        f"it at {shape}: {why2}"
 
 
 def test_decision_trials_cover_d1_d2_d3():
@@ -360,11 +373,14 @@ def test_decision_trials_cover_d1_d2_d3():
     covered = {t["decision"] for t in DECISION_TRIAL_TILES}
     assert {"D1", "D2", "D3"} <= covered, \
         f"a decision has no trial: {covered}"
-    # D2's differentiator is the only ZZ trial at VW2.
-    d2_vw2 = [t for t in DECISION_TRIAL_TILES
-              if t["decision"] == "D2"
-              and t["knobs"].get("VectorWidth") == 2]
-    assert len(d2_vw2) == 1, "D2 needs exactly one VW2 differentiator"
+    # D2 carries the LDS-boundary tile only. A ZZ VectorWidth=2 row is NOT a
+    # trial: Tensile refuses it (numBytes 16 x 2 > 16), the archived deck
+    # already measured that refusal, and
+    # tests/test_consolidate.py::TestLegalityGate::
+    # test_gate_catches_a_real_archived_zz_phase locks it.
+    d2 = [t for t in DECISION_TRIAL_TILES if t["decision"] == "D2"]
+    assert all(t["knobs"].get("VectorWidth") != 2 for t in d2), \
+        "D2 must not carry a ZZ VW2 tile -- that refusal is already measured"
     # D1 names the shallow cells, so it never depends on sweep shapes.
     d1 = [t for t in DECISION_TRIAL_TILES if t["decision"] == "D1"]
     assert d1 and all("shapes" in t for t in d1), "D1 must name its cells"
@@ -382,3 +398,37 @@ def test_trial_ids_carry_the_decision_and_never_collide(sandbox):
         families=["CC", "ZZ"], base_shapes=[SHAPE], include_baseline=True)
     sweep_ids = {c.phase_id for c in sweeps}
     assert not (set(ids) & sweep_ids), "trial id collides with sweep/baseline"
+
+
+def test_no_emitted_candidate_passes_only_the_lenient_gate(gen):
+    """Blanket guard: nothing this deck can emit may pass ``validate_config``
+    while the Tensile-truth gate (``consolidate._is_legal``) refuses it.
+
+    ``validate_config`` reads dtype bytes from ``BYTES_PER_ELEMENT``, where ZZ is
+    8; ``_is_legal`` reads them from Tensile's own ``DataType``, where complex
+    double is 16. A ZZ VW2 config passes the first and fails the second, which
+    is precisely the phase Tensile refuses at solution construction after the
+    whole compile budget is spent. The deck must agree with the stricter gate,
+    because that is the one that describes what gets built.
+    """
+    from oto.tools.consolidate import _is_legal
+
+    checks = [(fam, base, sweep.get("width_override", {}).get(fam), value)
+              for fam, bases in KNOB_SWEEP_BASES.items()
+              for base in bases
+              for sweep in KNOB_SWEEPS
+              if fam in sweep.get("families", [])
+              for value in sweep["values"]]
+    for trial in DECISION_TRIAL_TILES:
+        checks.append((trial["family"], trial["knobs"], None, {}))
+    assert len(checks) > 60, len(checks)
+    for family, base, width_override, value in checks:
+        merged = {**base, **value}
+        if width_override is not None:
+            merged["VectorWidth"] = width_override
+        cfg = {**_template(family), **merged}
+        ok_lenient, _why_lenient = gen.validate_config(cfg)
+        ok_truth, why_truth = _is_legal(cfg)
+        assert not (ok_lenient and not ok_truth), (
+            f"{family} {merged} passes validate_config but the Tensile-truth "
+            f"gate refuses it: {why_truth}")

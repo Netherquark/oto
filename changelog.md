@@ -32,10 +32,16 @@ and NOT the experimental data (that is `results.md`).
   defaults at 1); `generate_knob_sweep_phases(include_baseline)` + `knob_sweep
   --baseline` emits each base tile unchanged as the same-run `_base` control
   (D4); new `DECISION_TRIAL_TILES` + `generate_decision_trial_phases` +
-  `knob_sweep --trials` emits D1 (CC steal geometry at 192/256), D2 (ZZ VW2
-  differentiator + LDS-boundary 64x64x16), D3 (§8.2 ZZ 128x128x8 + 128x64x8).
-  No gate or verdict logic changed. Dry-run: 246 sweep + 14 baselines + 10
-  trials = 270, 0 refusals. Tests: `tests/test_knob_sweep.py` 19→24.
+  `knob_sweep --trials` emits D1 (CC steal geometry at 192/256), D2 (ZZ
+  LDS-boundary 64x64x16), D3 (§8.2 ZZ 128x128x8 + 128x64x8). A ZZ VW2 D2
+  "differentiator" was withdrawn the same day: Tensile's complexDouble
+  `numBytes()` is 16, so `GLVWA x 16 > 16` and Tensile refuses the phase at
+  solution construction — `consolidate_deck.dtype_bytes` already reads that
+  value from Tensile and `test_consolidate.py`'s archived-ZZ gate locks the
+  refusal.
+  No gate or verdict logic changed. Dry-run: 246 sweep + 14 baselines + 8
+  trials = 268, 0 refusals. Tests: `tests/test_knob_sweep.py` 19→26, incl.
+  `test_no_emitted_candidate_passes_only_the_lenient_gate`.
   Emit: `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`.
 - **2026-10-14 — the harness load gate now models Tensile's shift-ptr `GLVW` rule (the 2026-09-19 "fix (pending)").**
   `loads.validate_tensile_loads` derives `GlobalLoadVectorWidth` but used to ignore

@@ -5948,42 +5948,6 @@
     ThreadTile: 4x4
     VectorWidth: 2
   fp: 0f03470817d762fd64cb0d083b6a65ee369ff20ebc6add20fae02e2cd76277e2
-- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x16_tt2x2_trialD2
-  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x16_tt2x2_trialD2
-  dtype: Z
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x16
-    ThreadTile: 2x2
-    VectorWidth: 2
-  fp: 76e86049e5dcbfc35fd5d4e68130585c6d1bafd7ad62ce195e22af4705cde022
-- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x16_tt2x2_trialD2
-  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x16_tt2x2_trialD2
-  dtype: Z
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x16
-    ThreadTile: 2x2
-    VectorWidth: 2
-  fp: 5625ca8d2fc4c748b4b42514470cdb6369a149e98a5f496d191d7c3a6a78a45c
 - phase_id: phase_zz_Ailk_Bljk_512x512x512_mt64x64x16_tt4x4_trialD2
   label: ZZ_Ailk_Bljk_512x512x512_mt64x64x16_tt4x4_trialD2
   dtype: Z

@@ -369,26 +369,28 @@ DECISION_TRIAL_TILES: List[Dict[str, Any]] = [
                "the shallow cells, so a same-run floor re-arm can close D1. "
                "Measurement fix, not a kernel deficit.",
     },
-    {
-        "decision": "D2",
-        "family": "ZZ",
-        "knobs": {"MacroTile": "32x32x16", "ThreadTile": "2x2",
-                  "VectorWidth": 2},
-        "why": "The D2 differentiator. ZZ VW2 loads 16 B at the 8-byte reading "
-               "(legal) and 32 B at the truthful 16-byte reading (refused by "
-               "the 16 B global-load cap through `cap_vector_width`). If it "
-               "builds and runs, the 8-byte reading is behaviourally sound; "
-               "if not, D2's 16/32768 pair refuses it. The run decides.",
-    },
+    # D2's differentiator was a ZZ VectorWidth=2 tile, decked here on
+    # 2026-10-14 and then withdrawn the same day: Tensile's own DataType gives
+    # complexDouble numBytes() = 16, so a VW2 ZZ phase loads 32 B and Tensile
+    # refuses it at solution construction. `oto/tools/consolidate_deck.py`
+    # `dtype_bytes` already reads that value from Tensile (its docstring names
+    # the 8-byte table as the bug that let VW2 through and produced the
+    # `GlobalLoadVectorWidthA * DataType.numBytes() > 16` rejects), and
+    # `tests/test_consolidate.py::TestLegalityGate::
+    # test_gate_catches_a_real_archived_zz_phase` locks the refusal against the
+    # archived deck. So the load-width half of D2 is settled by measurement and
+    # admits no new trial; what remains is the LDS-budget half, which the
+    # boundary tile below covers. Do not re-add a ZZ VW2 row.
     {
         "decision": "D2",
         "family": "ZZ",
         "knobs": {"MacroTile": "64x64x16", "ThreadTile": "4x4",
                   "VectorWidth": 1},
         "why": "The LDS-boundary tile: gate footprint 16384 (= budget at "
-               "bpe=8), true single-buffered 32768. The corpus's own ZZ "
-               "winner geometry. If it builds, runs and wins, the current "
-               "budget sits at the right wall and D3's insurance follows.",
+               "bpe=8), true single-buffered 32768 at Tensile's 16 B/element. "
+               "The corpus's own ZZ winner geometry. If it builds, runs and "
+               "wins, the current budget sits at the right wall and D3's "
+               "insurance follows.",
     },
     {
         "decision": "D3",

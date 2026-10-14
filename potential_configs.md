@@ -541,14 +541,23 @@ changes, so they own tiles instead of rows (emitted unchanged, tagged
 - **D1** — CC `64x64x8/4x4/VW2` (the steal geometry) at `192`/`256`, the shallow
   cells the LOSS cell owns. The candidate re-measures; the floor-arm telemetry
   re-run (TTY) closes it.
-- **D2** — ZZ `32x32x16/2x2/VW2` (the differentiator: legal at the 8-byte reading,
-  refused at 16) and ZZ `64x64x16/4x4/VW1` (the LDS-boundary tile). If VW2 builds
-  and runs, the 8-byte reading is behaviourally sound.
+- **D2** — ZZ `64x64x16/4x4/VW1` (the LDS-boundary tile). A ZZ VW2 "differentiator"
+  row was decked and withdrawn the same day: Tensile's own `numBytes()` for
+  complexDouble is 16, so `2 × 16 > 16` and Tensile refuses the phase at solution
+  construction. `consolidate_deck.dtype_bytes` already reads that value from
+  Tensile, and `tests/test_consolidate.py::TestLegalityGate::
+  test_gate_catches_a_real_archived_zz_phase` locks the refusal against the
+  archived deck — so the load-width half of D2 is settled by measurement and
+  admits no trial. The budget half is what the boundary tile tests.
 - **D3** — ZZ `128x128x8/4x4` and `128x64x8/4x4` (§8.2, never generated): the deck
   stays non-empty under either D2 reading.
 
 No gate or verdict logic changed for any of this; the trials are *candidates*,
-and the run decides. Dry-run: 246 sweep + 14 baselines + 10 trials = 270, 0 refusals.
+and the run decides. Dry-run: 246 sweep + 14 baselines + 8 trials = 268, 0 refusals.
+Every candidate must pass **both** the append gate and
+`consolidate_deck._is_legal`, which reads dtype bytes from Tensile itself rather
+than from `BYTES_PER_ELEMENT`; `tests/test_knob_sweep.py::
+test_no_emitted_candidate_passes_only_the_lenient_gate` enforces it.
 
 *Resolved earlier (2026-10-14):* `GLVW=2` is not merely "maybe refused" — the gate now
 models Tensile's shift-ptr rule in full, including the `GuaranteeNoPartialA`
@@ -568,7 +577,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    boundary, so an illegal row costs a rejection, never a crashed run.
    Emit with trials and controls:
    `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`
-   (dry-run default; 246 sweep + 14 baselines + 10 trials = 270, 0 refusals).
+   (dry-run default; 246 sweep + 14 baselines + 8 trials = 268, 0 refusals).
 2. **Dry-run** — `python3 -m oto.tensile.candidate --dry-run` (or
    `check_candidates.py --deck <deck>.yaml`) to confirm the phase count and that
    no entry is silently dropped.
