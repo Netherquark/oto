@@ -140,7 +140,7 @@ wide numbers above are from that model. Three consequences:
 2. **LDS capacity, not VGPR, is what caps residency** for 61.7% of kernels —
    which is why the `LDS_BUDGET` entry (§10) matters and why `LdsPad`/
    LDS-layout angles are deprioritised: bandwidth is ~8× oversupplied at
-   TT4x4 FP32 (`RESEARCH_PROMPT.md` §H.3), but *capacity* still decides how many
+   TT4x4 FP32 (`knowledge_base.md` §1 rate card), but *capacity* still decides how many
    workgroups fit, and `LdsPad` spends that capacity.
 3. **No kernel spills.** Zero kernels carry a private segment. So there is no
    scratch-spill tax to recover, and `MinVgprNumber`/`MaxVgprNumber` tuning has
@@ -369,7 +369,7 @@ entry. Listed so it is not re-proposed as a knob.
 
 Ceasing: **ThreadTile** width ladders for C and Z (F3/F5 — the accumulator cap
 makes every wider tile illegal, so they are pure rejects); `LdsPad`/LDS-layout
-work (`RESEARCH_PROMPT.md` §H.3 — bandwidth ~8× oversupplied, and LDS *capacity*
+work (`knowledge_base.md` §1 rate card — bandwidth ~8× oversupplied, and LDS *capacity*
 is better spent on residency); any `-mllvm -amdgpu-*` or compiler-flag proposal
 (no-op: Tensile emits ISA text to the assembler for ~93% of the shipped
 library); `MaxOccupancy`/`AggressivePerfMode` *assumptions* without a
@@ -590,6 +590,6 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    **2 wins** = look-ahead matters on that shape (not a universal PGR=2 rule).
    APM 1-vs-2 is read through the LDS allocation diff first (cap unconfirmed).
 
-A fresh research prompt for the remaining unresolved questions is in
-`RESEARCH_PROMPT3.md` (supersedes `RESEARCH_PROMPT2.md`; companions mined
-2026-10-14, residual Q-A…Q-F only).
+The pass-3 brief (Q-A…Q-F) is folded; residual follow-ups are §9.4 of
+`kernel_tuning_research.md` and the protocol deltas are `knowledge_base.md`
+§8.3. The prompts themselves are archived at `archive/RESEARCH_PROMPT*.md`.
