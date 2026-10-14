@@ -980,3 +980,5115 @@
     WorkGroupMapping: 4
     ProblemType: Contraction
   fp: aaa1be2aae6e398017b74819873990ec92732ae264cd2dbe3cb4ac23b250a9ed
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_base
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_base
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 4ff8381b00aceafc6f24cf4d0c31ff9846d3db90ee5f7ebbd328d0cb9d915a38
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_base
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_base
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 442d373a1d0eaa4f01a71bfbd88d7e909fdeeac1016dd0aafdadfaacb824f882
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swUseSgprForGRO1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swUseSgprForGRO1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    UseSgprForGRO: true
+  fp: 5d6a1428623bf996058217d7cdecb46583c8cb208a2e713c857a746ed6de9fbb
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swUseSgprForGRO1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swUseSgprForGRO1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    UseSgprForGRO: true
+  fp: 6a6edd0d705fe04a6c255c2d8cdfbccee4307b1fac86fc299942b49acb4192a2
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    GlobalLoadVectorWidthA: 2
+    GlobalLoadVectorWidthB: 2
+    AssertFree0ElementMultiple: 2
+    AssertFree1ElementMultiple: 2
+  fp: 54fefd39aa543dc9aa851d4ecc50068393d150767efbbd1c3da6584c867d5e5f
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    GlobalLoadVectorWidthA: 2
+    GlobalLoadVectorWidthB: 2
+    AssertFree0ElementMultiple: 2
+    AssertFree1ElementMultiple: 2
+  fp: 97c72fabfd38c1023d98f6d0809563777ab4a27e6e978358892354ead760df91
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swInnerUnroll2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swInnerUnroll2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    InnerUnroll: 2
+  fp: 5f49d36c15ba273501822e4403e866c25d07b8d6cbbe318cd04c2ba87c236a2e
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swInnerUnroll2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swInnerUnroll2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    InnerUnroll: 2
+  fp: 276d1e94426246cbcf328783eb07aacc9432d036a0239b0b142574d6ab25f248
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swPrefetchGlobalRead1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swPrefetchGlobalRead1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    PrefetchGlobalRead: 1
+  fp: dae2b058612096815b0374efbe3b4bc04bcf1cfceec9d7264f77501ba2725dfe
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swPrefetchGlobalRead1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swPrefetchGlobalRead1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    PrefetchGlobalRead: 1
+  fp: 595ccb8061be11641d696acd61762fb984141eb343ea96d414c91d1c61c27526
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swPrefetchGlobalRead2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swPrefetchGlobalRead2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    PrefetchGlobalRead: 2
+  fp: 5135b549a9c33b43eb212c0c4bd42f483a6392281bcce1c0cc2659ef72889444
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swPrefetchGlobalRead2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swPrefetchGlobalRead2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    PrefetchGlobalRead: 2
+  fp: 5de3be8e23ec75f2bbc9ca3c2e5a5b493578b94640607a223ac31b6ca712d290
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNumLoadsCoalescedA2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNumLoadsCoalescedA2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NumLoadsCoalescedA: 2
+  fp: 28e67d7f6dd2e104e6969d910fd09e97db2796bc3c776990c100b820ac740b08
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNumLoadsCoalescedA2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNumLoadsCoalescedA2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NumLoadsCoalescedA: 2
+  fp: decfaee5fd41e6380ae03fea001a91a70500ee8a8c00b478a8fe40aef364ab92
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNumLoadsCoalescedB2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNumLoadsCoalescedB2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NumLoadsCoalescedB: 2
+  fp: 8600ac3529d9d7f4110084737a37b86fa51da57dfe714c85b6df806d594e2899
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNumLoadsCoalescedB2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNumLoadsCoalescedB2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NumLoadsCoalescedB: 2
+  fp: 960546cb01373d3a750c645591cba9e43f7fe350b438bb4572ee635eff032ea1
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy8
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy8
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 8
+  fp: 45c3b6ff2386ab19dd64aeda874d109aac7f6d5a0ce615e800129b2459a73e86
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy8
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy8
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 8
+  fp: 4afd9206a6a18cf76ee1ebdddea2327e30559c149670d7e2e731ad31805fe2a4
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy12
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy12
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 12
+  fp: 11a0aa5012ae46ab653b41030132c7d9e2f7590e8a5a9c8c6a6e822c6bfd356c
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy12
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy12
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 12
+  fp: ad2d804beb3a9ba9c91cca75b2b2b6bcb9434a22ef52cd6ad60f5580f3a97c08
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy20
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swMaxOccupancy20
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 20
+  fp: 3d5f40bc7848e21af8b57823c1c76642fc0dd0095932896974180f05b6068355
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy20
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swMaxOccupancy20
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    MaxOccupancy: 20
+  fp: 2bc406b85994534617f67b098bc04902a338c2d1d22a7051e71bc5d7412b2dd5
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    AggressivePerfMode: 1
+  fp: 39bb7317c069869eb74ac3c3a320c242fcd080441c1f4cfdf85091bc1e2b527d
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    AggressivePerfMode: 1
+  fp: 73f5f29635ef26fdd7fe6f88f925db869b65ae527491949c26e4412fcb0530b1
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    AggressivePerfMode: 2
+  fp: 9094a89f4601fbd3705df90de121930ac32727f9ac71b6b8e4ecad7adae82717
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    AggressivePerfMode: 2
+  fp: f5024b2cf5d2caca0795d57dcec91678bc9e0949791ea756bf600d7d0cfcb74c
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swLocalSplitU2
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swLocalSplitU2
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    LocalSplitU: 2
+  fp: 53d3acb3f78246973aed090c06322486cd304f613ab69e1c005387b0b6a5664a
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swLocalSplitU2
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swLocalSplitU2
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    LocalSplitU: 2
+  fp: 36fe6dbeef6b3d70184979ffbd93f543a2b60292429123656ec7ffe1735080bd
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU0
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU0
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 0
+  fp: c19da9ffbfbf04ee4444298bea9e64466249d58968aaf54aa36ae8bd869d0ad9
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU0
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU0
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 0
+  fp: ab484eba8ef6e68b684a42de4cec29cdc34a45b6bb47bb38d04bd90db569917e
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU8
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU8
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 8
+  fp: eb5abc9e334bfa08458206be45e1510a8fa25cc69ba598e0ce1abb00b017472e
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU8
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU8
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 8
+  fp: aba30ca50f7c44d47d78f6959eea80b9061d0b036dbad4f8dc5c757b0b905550
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU16
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swStaggerU16
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 16
+  fp: 23a7f98bcbf75a6ca9d36d8453c174ea055b5b80f7b0ac0e980f3bd840451c69
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU16
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swStaggerU16
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    StaggerU: 16
+  fp: a2a27d597cff4e24d35acf6f7e3cec01bd20cf4735041417d8797464f0a8a25c
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swFractionalLoad1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swFractionalLoad1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    FractionalLoad: 1
+  fp: 2997d82540bab4ecc8106695885d6b0d9795b095a9acfff0cdd6f0bfc13d991b
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swFractionalLoad1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swFractionalLoad1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    FractionalLoad: 1
+  fp: 954124837bb5ed9999b5798076ee2f95cae5b996986ac6cd29e745c9a5eb647b
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNonTemporalA1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNonTemporalA1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NonTemporalA: true
+  fp: a7a0b0b0ac8cc68a9a34839af435142496d09016a71dca36671c818d4ef6ce43
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNonTemporalA1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNonTemporalA1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NonTemporalA: true
+  fp: 3f0ebb0da689820706ea81edb6d2f47782df993f0e0c84bf738b4678f2c5c7b8
+- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNonTemporalB1
+  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swNonTemporalB1
+  dtype: C
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NonTemporalB: true
+  fp: d9b387fca74d489fb1a3584cc506c7e36d2cb732121fa677bc6fd07877680337
+- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNonTemporalB1
+  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swNonTemporalB1
+  dtype: C
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    NonTemporalB: true
+  fp: 46767df5ca1ce99aa8177cb085dbf7a3b9b4446282d3bd1c08ffb3fdecb20d56
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_base
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_base
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+  fp: c421bf87a0a7cf997c0a4e59e75c053abdade180553c7eb5c68c80b05615fa71
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_base
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_base
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+  fp: 1ca409a3847172c24e5898fe06f4ca4eddb71b0da1cf5b4de409e3016f6d9196
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swUseSgprForGRO1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swUseSgprForGRO1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    UseSgprForGRO: true
+  fp: dad554bdf55268cada0ac852e36843976eb38442d9e060c249ffa133b499a41c
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swUseSgprForGRO1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swUseSgprForGRO1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    UseSgprForGRO: true
+  fp: c8909b5e4b5e74b91c65d0f6bd36a4a67bb0c6c77bb609227bc04a17a83301ba
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swInnerUnroll2
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swInnerUnroll2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    InnerUnroll: 2
+  fp: 778988569e655b4249d136c2122c4d953c85c967de6b76df66d81cba6d8ca02c
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swInnerUnroll2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swInnerUnroll2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    InnerUnroll: 2
+  fp: ed167adc0234a113abca2d962b1c104ec7f7242f9790de8dbe2eb7661125e1e8
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    PrefetchGlobalRead: 1
+  fp: da887fd06a34121811e0f36531ca28e344de1e0dc2c9f4bf615668d9e5e8383f
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    PrefetchGlobalRead: 1
+  fp: fd98218d24ef261cd2179957e446300a38b7186070e2b00e77d0782076bdb99e
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    PrefetchGlobalRead: 2
+  fp: 950f5c7bc87f4be51c045507b472aed99cc997ebc945c3192579a458166bbdef
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    PrefetchGlobalRead: 2
+  fp: d5c00f746a3c7746de873f47427d3e6b70c23df3261e5bbfeb73df76bf166ad3
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy8
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy8
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 8
+  fp: 65919bb6781f06ec2cb19ba9cea244ca57b1e786c5754975e6a4fcc454b8db83
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy8
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy8
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 8
+  fp: 33b1d7a82e9883bd8e13571cee7fe8395a2dc9e7ff170f3396ab7e84fc894e2a
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy12
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy12
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 12
+  fp: 0d18f87d0e5380bc9e792b33bf4344023a119001bc5a4ed52491a9e0c8bfa24a
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy12
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy12
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 12
+  fp: 9d7f9d7e30a18846ca0c20d87b90e06e8ced5bbbcc6142259376d52ec724cd38
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy20
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy20
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 20
+  fp: a6a692766ca124501a8817d690859e4f85150f54bea81f5c353d8173192dd734
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy20
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy20
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    MaxOccupancy: 20
+  fp: b670d21de26c1ce6247eb823bf3f5969ff84ad64a82a1694068b2bfdac2fd469
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    AggressivePerfMode: 1
+  fp: 12bac075f84fb98bdf62d5e2964a64d9ef7cbea8224ae603cf467de3e9db96fc
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    AggressivePerfMode: 1
+  fp: d8b282a0147406abaf95118cd0fac7bc4014ea7d100d473289d38308d7e6ae91
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    AggressivePerfMode: 2
+  fp: 83feffae6623ed54f227bbf5bbe8c6897d276fdce827fe80ed8989723761cb26
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    AggressivePerfMode: 2
+  fp: 9dc52b9f6ab67370614392856e73544dd63c49ccdaab1221505d35ae67b6011e
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    LocalSplitU: 2
+  fp: 0b6ed187d3583f8df18df6b255c94611f654e7a0e7fee84e8378a6c0866c06e5
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    LocalSplitU: 2
+  fp: 8509684e4c61f468b75ca76c3e4bfbcdebadf1209a3ece7498637ab8041d92dd
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 0
+  fp: f587430a2e95267557b1c9cfe47506fc1a62482e97f89d8e11fedef3407055a8
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU0
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU0
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 0
+  fp: f03490d7d27e658bacdeec52de7f259bb160903cb8d2e4b4b2a065f112fba303
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU8
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU8
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 8
+  fp: bad96168e663d65a977a8bffc86f3b28caf38eaad6c061fd63f5d186f74becc7
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU8
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU8
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 8
+  fp: 8229dd42bb28dbd63a21e476884b577c9986ca80908b92ea8ee13f27ff45ba46
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU16
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU16
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 16
+  fp: d66929738c066989557d23db8f73268f64c5205334cd965a10855b73bedcd1a1
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU16
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU16
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    StaggerU: 16
+  fp: 164f7969510151a7f815e978ae7d9e4a89a8f40178892b644c56803cc1b7f53a
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swFractionalLoad1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swFractionalLoad1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    FractionalLoad: 1
+  fp: a7ac2adc132f9908664cb31a9d776e26ae77310ee937f13e4ee3a3fb42fd7687
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swFractionalLoad1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swFractionalLoad1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    FractionalLoad: 1
+  fp: 724d591300f6cbdee26ec6ec469d74e7e0bbffe6f2c0af7ee5d978e54811b522
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalA1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalA1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    NonTemporalA: true
+  fp: 5d462df760d6a1bd8e0748a39d5e835f837f3f7c2acf1ac853f222fd737860b1
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalA1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalA1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    NonTemporalA: true
+  fp: e1aa50ad045c83d25166e794d09b74ba027dde5d657654c93961c916fcc19e26
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalB1
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalB1
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    NonTemporalB: true
+  fp: 4bac957748360ad22d28193a92d83faf594c4484820e325fe384eb51a54cffa2
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalB1
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalB1
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 1
+    NonTemporalB: true
+  fp: ed173f954cbc764b71a9043e68180c210c5d69a2856e17ed6a2b786ef8e5d649
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: 7f73c27be27b3cd650040b2bba941c9eb8325b6eed567f6679d37575e233bd0a
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: a4a2e5d48875b45d04a492458185d38a8f6113b43f53f2191d03d8955abde018
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: 515bf46cb2cc69283a61a41a65d50ee6a1f3b462a6b65d5df78840f3b85b13a7
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: 33cb681eabe5fb215dc5c867301635228c826017c904f07fc0858f3d149ce9c2
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: 112e410b5dafd72672d67981020f6fcf628e1ae55ee838d233ae20fec94d53f3
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: 6e250064567e7122da72af752a630d8494bcacea3bff02fc32950e600a649bef
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: c6700264f963c399bb85b9e1fa72ac4068db193ee93b41e61fa45a3a4dc2c653
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: ac70899c0d87a942f926c780875a9e586787f3e60bb897388a392c4a49f48532
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: d9a6f3bc41bc653a34ef0c517a81b99947776b3eba1fbf7fd70170bb857428dd
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: 35c4b2be23131c52e4e59148dc2458b07bc7f2bbb2a4afe588452988ba814bf8
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNumLoadsCoalescedA2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNumLoadsCoalescedA2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 1
+    NumLoadsCoalescedA: 2
+  fp: eabd52683faaed82193b3c87ee90ffb17ac2c375a99eb54334d04ec2f4cee905
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNumLoadsCoalescedA2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNumLoadsCoalescedA2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 1
+    NumLoadsCoalescedA: 2
+  fp: d169b4a8b70bbb87e09073201ddf10d0492a9aba3038346e2d7b5ba929ee83fa
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNumLoadsCoalescedB2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNumLoadsCoalescedB2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 1
+    NumLoadsCoalescedB: 2
+  fp: f58fae4e463318b4ed5a4d302737780a9e5289e9f01457d90e6e390f4a8faaac
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNumLoadsCoalescedB2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNumLoadsCoalescedB2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 1
+    NumLoadsCoalescedB: 2
+  fp: eb24d418ff6c1ee20f35858c8e7a33f73345bfc9044b34c5428b36779aec1563
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: d6b6bfd2a18abda46ff1d488935477f0787ecf7fd98a57556eff6b26599a540f
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: 75892717c33b5bb5cc44f40844d1d5da400afb74e6d621143b34ed18cd04c7e9
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: b985925042967a1b7e891d98628e7095247fbbb3f80976148882d42df95565d1
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: 16cf8a0c690452c10078f338807ed64973ae96c7d77a8b36abf96a783a9ee327
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: a52e71f66933c3fcbb3b39bf7cafa9fef308a895cd683e7b8b254949a96bee5f
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: 531bc571cf004447b437ff9b60973ca8b489c8e9f10cb5033deecbab7d730a19
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: fa081e08ac4813ff61d0158b478cae4656494029574c52fcf11e2100c9dee5eb
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: f3d1f9bbb42c4ee0d8d83137e23984d39ddf2c099879ea5050fcb0fa0783fdc3
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: a285c63ba3ea95d3a8913b3eaa5b6437ff8e1134feb727506d9ba6c6bc89f091
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: 57c908150e073a95d9b4564c0ceb853b85402366d0ca56dd435bdb5100ad599d
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    GlobalSplitU: 2
+  fp: e570f00e7892a9d69d758f91fa17c4b9f3658795a6bbe237af3399139be1b422
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swGlobalSplitU2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swGlobalSplitU2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    GlobalSplitU: 2
+  fp: 4439f374f650aec50f28be8990e3d2a960e6d71976a001a9001de9359f690ff2
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU4
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU4
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    GlobalSplitU: 4
+  fp: c73ddb38f73770ddfccccfdc96a136f4cb742b078ef17a55bc84c3d90caa4ab7
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swGlobalSplitU4
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swGlobalSplitU4
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    GlobalSplitU: 4
+  fp: 9e16e9a627f341822c188e6de57abb9256e1729bbac235d435ded72fbd2ca1e5
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: 9060b8bf7a7cac946c3a29e4e5d5487b9b27a2a8d1475972537657c84625318d
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: 09738a51c9e6ebc63ded5c9def612985ef93b6d8b593714c1351d723b467eb47
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: 1b9522b318fc9b2457434537392051e88b12e6ab99df08a6ecb3b1d23e1fe7a4
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: 9c256cd1228b5e7c41d6c0e0466e50c7930810bd2a09e5bc30f13d1b34f5b2f9
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 9d2dec5c1e9eb29ee349fc782902af5905abd921c5b4a6d78b83d9e0548b4568
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 2789bd838597cc8296600745664653fdfa24be807ee802d381174c3755cb0c95
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: a33e1587992375ec4150cd4ee6b46df2b328f2559efb03507683d1fb4d16ef31
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: 3ead8a2a37a0d04ded4a97ec6f0430c7120863c11f54a9f26059f518f1028756
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 59fac100f259e96b33afd4ad16e7b04e4cd3398689887f2c8ff237a19296a9cd
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 64cafe20dcc50e6d4a11685ea42daf05ac45450cc44367e74cd99e64e749307f
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 6897b914174f1797041ce45d3a1777a22ec0bcce60d7107f13e63f7bae11f7c5
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 1e24824d460812c6aa2bb5923d3435662168cbb2168010c40b83ef459cf70669
+- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: S
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 034c222848f8b4a70785e44bf88ada0038271428c02369612114c6edee900947
+- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: S
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: S
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: SS
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: fb1db79c0292b0858112cbd3cee77fce4badeb87c45e428e73b8712b83ed15ee
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_base
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_base
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: c2b8cf63a938fd3bda63cfdb4d3e46e2e39c6bdd22f0c48b1a96975956a7b1c3
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_base
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_base
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: 8768df23f4e12e60e3a2ee9fb15ae98ed50d96c46e6499ad35bd357be05c7131
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swUseSgprForGRO1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: b04d675af11d5e9d663d1388bd62f38542a9a43c4bfb4134c4f232506af2cea3
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swUseSgprForGRO1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: e5a6ed7432b7f47771b3acc00b8018f2e5e6562b5628fab2c0ff1dd54b024808
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swInnerUnroll2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: e7e6bbb32492cf97ddf14540a54ad07d04ae58a1de1fb15ee0e635fbb8e1ce0d
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swInnerUnroll2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: 09614ec9d4c5b224bf408c835b7e4f88b7825cfd7ba154e7de192cf7e1617f73
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swPrefetchGlobalRead1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: 4b08f9f081abdbd9987d0142f635ccb8dd6249cd26e05f796c145573b15899e9
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swPrefetchGlobalRead1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: f20e7eb313291007651208a8890ac43b7a7f2e6c7579fc7755dac24c11dc086c
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swPrefetchGlobalRead2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: 748ea0c7add0b15de4236b1761d1586feff8f3b97ad4d74fa161a6eac2f9ac2e
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swPrefetchGlobalRead2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: b8d13158cabaf0522b31e0b12182d6085402671747cefd37dc478b8d41f2b88a
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNumLoadsCoalescedA2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNumLoadsCoalescedA2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 2
+    NumLoadsCoalescedA: 2
+  fp: 6b15d30d9ef4e79ff8172c97ebe013047d8bee2b48e81928a5c03ff0bbade1bc
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNumLoadsCoalescedA2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNumLoadsCoalescedA2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 2
+    NumLoadsCoalescedA: 2
+  fp: 8280a0b51b16501d45f72986c76720b6389500cef8f8aabe3e455734693eddaa
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNumLoadsCoalescedB2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNumLoadsCoalescedB2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 2
+    NumLoadsCoalescedB: 2
+  fp: 30befe7f74169b0977550585c91302afc07b60a3bb44ac2e2d2d5632dc5e990c
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNumLoadsCoalescedB2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNumLoadsCoalescedB2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 2
+    NumLoadsCoalescedB: 2
+  fp: 1a853d636c3d18c1fb02dc42edf99d8d1c4caeedc2f6bac06552d65d064b5e8b
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy8
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: 3e859cec27f111e51a2d3e731c8784a669ead9701f5ad1dda35923ceef927a89
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy8
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: b49962c90e304b3f197e63c6f608fb387528a37ea99ede771c69e49da6f788c6
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy12
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: 55739bc1604d711bcaca8be67a1ea1eabc6ed0cbb5f049b3a626926a036ba66c
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy12
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: c1f4c28806d6b2c54bd568770074969e6017c96d74ae1165f8459f64c3a04462
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy20
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: e3764145fa0c5dc5cfedbc43a2d1e3d9c094727d096962adbe167a3220baa194
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy20
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: b39436c4a9403c9d5be7743bf55a81af45f6ef3d1b79aba3a86ed2b4fceb4cb2
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: 9e703b8efd9521eab009036fef7f4c7887a1688ba8478e6ea7f0996bc1bb006d
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: 5bf821d5ff47eb23ac12562a93e66b9aca69fe8b411ee58ed908a620c83d6712
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: fd8596538b26d382ae58db0f0102f4906f1b8eb21642be48d4245504d7fce899
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: bdfea685b3738456e7e9b489cb68cbf7bec784c8d2c2343e8e0a9ff61cd0cd5f
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swLocalSplitU2
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: e19cdcf063507cd7764e18ce6e6cc483ebc6545ba381394dc45f3dd10ed5f37b
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swLocalSplitU2
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: 01c63b187cd1a97b7d7198316e707b6887f5a7c993549ae8273d4e7694ee2cac
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU0
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: ca3c54c68ab711a72d77ee76680c0a7c8bb59811987d2025189bffe6be8635fd
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU0
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: 56d95cb44121afafa18b25a8501edec0ab73e0d65745047229aae0a42cf02c8f
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU8
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 9f2daba999175d2dbf7c64aa43c22b51eb66a5bd4207979bd33456722570cef0
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU8
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: ff952dea02738d6bb0d0bbe9cd1b4ff5a74a080c147c3c14759183dd23305933
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU16
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: aa78d9e2d04ec9409e1cd373608322559eb22d8b0212b401bd0fec8be61a30f3
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU16
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: 1569ec72786e22acf7bb507687b829f77c042a11062400633c33fce51e7664dd
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swFractionalLoad1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 8b93909563c85ab41bcc3fac0d6a7d7f9fca55afd32079ca72ba9bf295c7d688
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swFractionalLoad1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 32d0dfa589265d27b9646e2d26093372eaf686f8e8e6267be57c2ce8163ab04b
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNonTemporalA1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 3a3c58f69ec99b83f93fc71bd4ec12e56b74fe365f3b104cb81de3c9910a4b9b
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNonTemporalA1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 0e1c06dbcbb1a8baef52bc53cea7905e106db784a99e706187876cf79b0e071e
+- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNonTemporalB1
+  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 19a8099826191152c5b7b701abcf310c52aa22a300a5ee74b7638db275110496
+- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNonTemporalB1
+  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH
+    MacroTile: 128x128x16
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 47f0861ffcdc871dcef92dd0f6a31749f280ab3ddde3b83c9e08d9f0795633d6
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_base
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_base
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+  fp: 7e17223b5b09cbd01f0439cf492bb9dbc81fe2230f56289b0aee8c35efbc3e4e
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_base
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_base
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+  fp: 053a072de88107325de855194586e7d3cc8bd8752722aee184f349f9280cc172
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swUseSgprForGRO1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swUseSgprForGRO1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    UseSgprForGRO: true
+  fp: 5a9668aa25e0fd7c7978fabc050fa9f7674a0fdc0bdb5f7f525130a3db49728f
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swUseSgprForGRO1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swUseSgprForGRO1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    UseSgprForGRO: true
+  fp: 38a38961ac0c8f740c92a1a5cb848a41ee18baea311903c60736cd5b30cbbe66
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swInnerUnroll2
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swInnerUnroll2
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    InnerUnroll: 2
+  fp: 0730f21454504a72b111c85c169d35de2d51c4ef7e1c81cc6b4acf72d0c207f9
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swInnerUnroll2
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swInnerUnroll2
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    InnerUnroll: 2
+  fp: 880f5f47dd70559558f3d7621b49b359dc978823ee24a6ea1e745ce0d1dafd13
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    PrefetchGlobalRead: 1
+  fp: abffa4fe777934deab39b64fd47a557bcb20e99965073565ac90f9b0a2f142b5
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    PrefetchGlobalRead: 1
+  fp: 739b587834d8180a2ac605853b1b5bb85666c114a7209cb1480cbf36799302e8
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    PrefetchGlobalRead: 2
+  fp: a26bac573e5b45d9f897b4f7eea421a15b3cc34429909e3327a3216eeda142e8
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swPrefetchGlobalRead2
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    PrefetchGlobalRead: 2
+  fp: e7370384abe5599e300cfbe75d09f194072cce0cab4ae58bf60948d1cc7bfef5
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy8
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy8
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 8
+  fp: 50f87a84ede45f58ac310acaf81ad5e2fa749bf2a17ec55bdf43ef3d2a0b9b6f
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy8
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy8
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 8
+  fp: 6f78266fe3fed53d0aa0f56de7b2dc1f3ccee05a657328398470bf732d525367
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy12
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy12
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 12
+  fp: 4bb7affd98511122819ec0734c04f0a665b06b23b5808805865de2bda9f5ea09
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy12
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy12
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 12
+  fp: c9d8b74523f04d909da1fbb505a2c7598aaac788eb97fba537a5f38af04519b7
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy20
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swMaxOccupancy20
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 20
+  fp: decd846a08ff773d2d3af46c5b61abed1d44882d9057e6506dcb4ba623306177
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy20
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swMaxOccupancy20
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    MaxOccupancy: 20
+  fp: a2dfacec954858d34db35990eca1bbd8f6e59fad574933a823eaeab51fe58b55
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    AggressivePerfMode: 1
+  fp: 599021bd47083f732eac6214c51d506f42f34a1d8282b7c1639a7c2cccc9aeea
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    AggressivePerfMode: 1
+  fp: d9a8ebe5f94245657df23e61f8c65be29f0aa293b93fd2767951f95fcef69d34
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    AggressivePerfMode: 2
+  fp: 697c02e4008c3f6d63265e16047ba370b0ba7c8447c3d09e9e99b0ea3f2bfcef
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    AggressivePerfMode: 2
+  fp: 258d0b891764e9c1eded713ab484db09b9aba87e4635f73c39ab5ff14a2d190f
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU2
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU2
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    GlobalSplitU: 2
+  fp: 3bed8388a19a4b2a2e03af924aeabd7516d4b0f25812f3dd6234baf5c18364f6
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swGlobalSplitU2
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swGlobalSplitU2
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    GlobalSplitU: 2
+  fp: 9134da9b55ae59900e82a2ef562df3acd92f953b039f887d178c82c314f43ba9
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU4
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU4
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    GlobalSplitU: 4
+  fp: 9fab7e24277cf97e3fae979260673ebbc928e3b47c47bc9ffff71cfacf252a95
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swGlobalSplitU4
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swGlobalSplitU4
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    GlobalSplitU: 4
+  fp: 481701abc28f6b80ee66d782622748d63ce4b0f8f479fa9d21e0a52c72952487
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    LocalSplitU: 2
+  fp: 320cacfb9ab114f5644aefc43b3a9f6c2f9910dbe6c27f18c02219fa8ccc7b60
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    LocalSplitU: 2
+  fp: 8066aac43f7fe04fceafeddcdcdd7e8cc537167587042a6b4c99eb7ff2a5b713
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 0
+  fp: 042bd69f0183e4c70458c7b965b49c17512ffebe131db83e8ba548ff48178c50
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU0
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU0
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 0
+  fp: 18f6dae3cca7421e545051782677907cae47d65f6e93a3309fff88b08487797e
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU8
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU8
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 8
+  fp: 56d0172a58fcc19ae7192442b7d012413043328f069c353dcf85361124ae28ff
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU8
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU8
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 8
+  fp: 3889c00af627246910d72993a1f82269de5e2fc445a5d8463c0fc54f7f951ee5
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU16
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU16
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 16
+  fp: 8a90cdf2fb914d3c42453cd496b34fe6263495df9b7a8ef1bd581cb74e8d2ae4
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU16
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swStaggerU16
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    StaggerU: 16
+  fp: 649148a34979e4c805f0b8805defdd5789e5ebc2234a593cff6b6276007ee72b
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swFractionalLoad1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swFractionalLoad1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    FractionalLoad: 1
+  fp: 10f493ea7d97b739d74e8d719b8beedc75c4b7ddf033ed8377bc881db0c3d1b9
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swFractionalLoad1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swFractionalLoad1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    FractionalLoad: 1
+  fp: 952d5ea6d40dbcc839f24d88fcc27ccbd28d5c8a89630d5df9c13da498f9d4f2
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalA1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalA1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    NonTemporalA: true
+  fp: 1e883d205dabf75a4afa5a555f993f90546ef1389b55ae18f81e61c01b50a4ca
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalA1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalA1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    NonTemporalA: true
+  fp: bda60db2e7af417f052741a3e3a9beb70946325b75c581db10fc3248c56810ac
+- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalB1
+  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swNonTemporalB1
+  dtype: D
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    NonTemporalB: true
+  fp: e3e07c7cfa96bd224ebe27b67aefc8313af571331f155b99bb0bc99551b1c9bd
+- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalB1
+  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swNonTemporalB1
+  dtype: D
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: D
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: DD
+    MacroTile: 32x32x8
+    ThreadTile: 2x2
+    VectorWidth: 2
+    NonTemporalB: true
+  fp: 3808e5bdf838b08e1acfe9a34834871de69a1219fb8141727e322f5688e35efb
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: f21b6f645367c574de38a665998aa5d3e11423eb76a5970b42436ccccffd0a07
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: 6e532c0da9eae37d05c28cbfa870c86423ec27d68e3a29298bb7cbab768a891c
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: ec173ba5c11fe2084fe69e3c97b1ffe8d280d0144c9180b923d247bde09c2a39
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: a2495dff08bb7f7d16153aba564b180a9d08bd452e5bf5b3fe3da4f114e359fa
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: 2c69c3b290b388ce3f3e95f2d80103768cd88f9e03ae41395d0e3aa0eedc021b
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: ef7767a7213a620b371a7b444096a73fa0f499ed0ebf23b30aa9e001116126fd
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: 68781aafa636e85f1a9403dd9d723659303c2e84dec10777d4f502c27c906524
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: 2c243bbc52c635aa2c328dbde456749dfaa18c281aa68b73adeebb2a9edc686b
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: 8bb71edddf08ed7759605120b0b5401988a7079a0de0e55b767c63e7edb396bd
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: 20c6dc67ea0808089da279de80cfbe44c95ae08384b22c50d6ca7c344c1158d9
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: 13a386bbe0dc56ae12e8d93d79556e285c99f095eac176599bb85b7ba962f786
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: c9597a87632f72b460457bb8509f4b375d9a254736c3878c238f3b9296f2f872
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: 61750e4c3e6a885e109969a2cb485f4f3680f3b24b6d98c52da1ff8e2f4ac7c3
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: cecd2ed2b319e9d640ba6f866fd4f524230363710ad79c45b68732ea835fecd7
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: 7e6a9e0e0cb58f1120d3ed26f3d8e0d23d01d579d5b8fb8e29688f0105793afd
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: 0a0ed3af6c4b2fd9c1537bee49cd49b95107c2418d9047fd0e0050ddf37fc170
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: bc2582abaca8fa3d96a780cc743a4b67bc9ca20251e55101b778106c64bd8e64
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: fe7571dcda437d643d6a242986cb835587c145ce9e6012318876045807123921
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: 292cb5013cdb9f773fa38e3f79dc463b3522da51be12a6314bd37e9259634b53
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: 8b2d0e12159e2386d669ebb198dd38c93186d0f46b678c12b82d81a5a49e93e3
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: e25008b51dfa2d12160cf446db739b7f9126a3abccaf26e83492c4af4f05c403
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: 9a3c75ee557edac9590adf2e92a6eff58f3332ce8ecf02f2a48fee2e9239696e
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: ef9f0bb5041185ed0c83080410c935c82441abaa0ec8f2066398601257550ee0
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: 6bf97ad817f6255b716bed850565f6464974a0f140b7d66cab3b7b5f63dd0702
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: cb3857d6a52cbeae9cee08a91e132fe60ff1fc6e893872b4c33091a52a6257e2
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 69551df1b58684921b5c357c46131c956d21c22604f3cbb7d70ba8fda33a759e
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: 61c1b56368caf0726769a72252216b276fe4530b78d8a7d7ea26c70cfbdc3442
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: f7d9627f9359e06408d58bae8a80456a0e995bc0955d1ceda900ab085b7b03a1
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 5bf9dbbd98327caa74cc40ee814a23378ac9b57c9c7397567b0082f7150839d8
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: e2d13e02c1a5fdd90564265c24776a22e9b123cb2e5acc78c63a3fce5575149b
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 88c3a23c76cec5aad97a8cc0f43f647e051e4d95568b7c48362cba70cd15b3b3
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 5c526e248c9304bbc7b2cedac559df6c4ca4f416917cccf0f9eeea94169bb22a
+- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 2ddad4446670a84ff13674817750ae7b22aca14829e30cf6bf3080b7950a8c53
+- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HH_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 45367af15203490fdb5f9725fc37c2983369c65a9fa2d5ff3478c8df7bc1c694
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_base
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: 3c83a0ec7e73b6c5f29294e02f634de4c33b4b10ed733d59754b69d78a1b8e47
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_base
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+  fp: fd752416529b584c49b9f28a56a884d46379bbba40733ee910685c749fb729de
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: 8645a560bda0bffb44fba96211c9bfd9e1b6b581e96b2fd8812663fe957fa258
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swUseSgprForGRO1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    UseSgprForGRO: true
+  fp: 97320f776ee82dab2d571b5520458509cea7bda580327f9eeb959bae7bbf3bde
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: de6e4ef0113e2cc230885df1b94d22597db3f64d0a0b545012247c2f7dd1e5f9
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swInnerUnroll2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    InnerUnroll: 2
+  fp: 3333b89f6174e940c4624b4d0a3838f4d1822dd75a7484624704bfc8fa0be36a
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: 8eef72f64bcbdc07843395c545000ed8b69bf54cbc747c9ef7f44a50afee3505
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 1
+  fp: 52479c8f6b5d47f2b1c79a370579566d6f9d641638cbe9605bdb2a9a45c06fe4
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: 375df6b5e7464da1fff19569b8df0dacfcdd2dde01c02fc87f04745b336c0827
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swPrefetchGlobalRead2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    PrefetchGlobalRead: 2
+  fp: bed5c0fe28ef9c7fa278d0fe3c0d447b67632c24e5530a2422c1da230a225257
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: 56ff99a33988bee31cb837fa9eab3b046a5c658c43d1f299b756fc39df8d9b9d
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 8
+  fp: 3961382706a384d2e7ab8a18ccd609de9787bd270e604bf01f21382e38b37ba7
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: 2ba8b60c4684b265293ad766a82a8a3caad8f8d0110b7bf0d07a028a5decabfe
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy12
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 12
+  fp: 045f50b745ef8fc693a516f1cc65ff82ae32361a7035d18ed1e524475be61bfc
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: dc37c65eb5a1f0b11703003efc2f3a489eb629eb2b553088ec46a64253ce0f60
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swMaxOccupancy20
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    MaxOccupancy: 20
+  fp: 8634193b623a1d733147e5cb5f4c8501e241d43b8cf221fdea001b13a896f25b
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: ffe7161f70fff0f3d9a75932f4c940ceec8796d210c16650870b247ddf1e581f
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 1
+  fp: e1c3b1d97d8f3d70822e9fdcfa030e7648609d0c147b84b5097abfb32eef649f
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: a4e1d705947846facb1131b5d46402c019f452b8dbbeb2a7101ba088edbb976e
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    AggressivePerfMode: 2
+  fp: b9eb10bfbaade6a02a76a15a27cc90c375ee0af043ce8e2a28f3c99a1f3c4209
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: def4452fe6627455f1167d3d39fab662a323c83e9ae7dc722c5cc381f53d8756
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    LocalSplitU: 2
+  fp: a43c1f8f3395b34ef12edb7d8ad76e72c6aadeeb2077d77a0aabe5a032987f90
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: e8a571a7b6b5159332fde8437dadbbc8cb16c1e2616f0ba4f9fb7058aa7c8529
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU0
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 0
+  fp: e7cf5b225ff95429c40134e7ec5ee63f05912600b3f70f1723ea2791936d2a69
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 58a096aa217b3ec966a74b70f26f366a77d7efe45f7955c8586b5a1037cc8c3f
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU8
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 8
+  fp: 43d25b05c7b81444e446a5fb618d18cf103d7964c1d45c1ab7018cca02d6e41e
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: 14fa21b9559a9e4a1dbbc44e3152242d70193b7c8dc6c33eb1ca12c13bf0119e
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swStaggerU16
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    StaggerU: 16
+  fp: 6e738138c66e961ecb90f293e3e046e03d46d6925fa852558afc165bac4524aa
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 6cb8da0b33b13bf650954b519b317936332215bd51d2469c0a9d9f52811d569f
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swFractionalLoad1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    FractionalLoad: 1
+  fp: 892e1b9eaa27a2167a27d30becedf1224c7fdf3e06e07b171a690b7939feb335
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: e8bd7d744578e82abb4feb280b4532aa80d7b75b97ecdffc7c16dd12cad28f49
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalA1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalA: true
+  fp: 5505a057b260791dc94ea0b0b4b6a21eb321cd6b861d220b0ffb99219beb8cf5
+- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: 27e7d8aba8fbf8dcf791a431ee29f37747d1a10a71d2d6d10b132c6c3c40ad2d
+- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swNonTemporalB1
+  dtype: H
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: H
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: HS_HPA
+    MacroTile: 128x128x8
+    ThreadTile: 8x8
+    VectorWidth: 4
+    NonTemporalB: true
+  fp: a663e307ff874fd3828381c3c152e240e2e8bf215e54acdc0df755840349ea69
+- phase_id: phase_cc_Ailk_Bljk_192x192x192_mt64x64x8_tt4x4_trialD1
+  label: CC_Ailk_Bljk_192x192x192_mt64x64x8_tt4x4_trialD1
+  dtype: C
+  shapes:
+  - 192x192x192
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 192x192x192
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 2
+  fp: 49f29f46e744219a41cbec2d4f18571d5c9ffa71c76448f34658c95d5328cc45
+- phase_id: phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_trialD1
+  label: CC_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_trialD1
+  dtype: C
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 2
+  fp: 0f03470817d762fd64cb0d083b6a65ee369ff20ebc6add20fae02e2cd76277e2
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x16_tt2x2_trialD2
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x16_tt2x2_trialD2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x16
+    ThreadTile: 2x2
+    VectorWidth: 2
+  fp: 76e86049e5dcbfc35fd5d4e68130585c6d1bafd7ad62ce195e22af4705cde022
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x16_tt2x2_trialD2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x16_tt2x2_trialD2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 32x32x16
+    ThreadTile: 2x2
+    VectorWidth: 2
+  fp: 5625ca8d2fc4c748b4b42514470cdb6369a149e98a5f496d191d7c3a6a78a45c
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt64x64x16_tt4x4_trialD2
+  label: ZZ_Ailk_Bljk_512x512x512_mt64x64x16_tt4x4_trialD2
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 64x64x16
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 67201db87b9f77b28c5a6970881bbe44a4ce1464368d132175fb0d59abaa82c8
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt64x64x16_tt4x4_trialD2
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt64x64x16_tt4x4_trialD2
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 64x64x16
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 07ec3a55e01dcc64dddac1409095983a4589f640e66c1302210569c8fd146543
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt128x128x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_512x512x512_mt128x128x8_tt4x4_trialD3
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 128x128x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 1889f95f171d9b0d31e24b689053f7561417c06503947e43b266ceda61e18406
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt4x4_trialD3
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 128x128x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: cd8cde5a823ca0cc58416cf7ac0706f33a61a0648e3a2d51e306f5ef2685b3de
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt128x64x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_512x512x512_mt128x64x8_tt4x4_trialD3
+  dtype: Z
+  shapes:
+  - 512x512x512
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 512x512x512
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 128x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 37b3f7437b1c368277fe153b9046579779accd9c62ef95e4bac03879a474ac26
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt128x64x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt128x64x8_tt4x4_trialD3
+  dtype: Z
+  shapes:
+  - 1024x1024x1024
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: Z
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 1024x1024x1024
+    ScheduleName: isa
+    FamilyLabel: ZZ
+    MacroTile: 128x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+  fp: 0c99024ffab3c0763df696db8b3db55113445b841226274706aa057d22d32dc2
