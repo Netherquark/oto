@@ -131,7 +131,10 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # and was never generated natively.
             {"MacroTile": "32x32x8", "ThreadTile": "4x4", "NLCA": 1},
             # LADDER: exercise DepthU, which no ZZ entry has varied. Complex
-            # double LDS is 8 B/elem, so DepthU 8 halves the 16 KB footprint.
+            # double is 16 B/elem in Tensile (DataType reg=4, numBytes = 16)
+            # -- see the DECISION REQUIRED in gfx90c_theoretical_limits.md
+            # §6: BYTES_PER_ELEMENT["Z"] still reads 8 here, so this comment
+            # is the only place the 16 B figure is stated until that is decided.
             {"MacroTile": "64x64x4", "ThreadTile": "4x4", "NLCA": 1},
             {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
             # MEASURED floor winner at ZZ:128 is 64x64x16/4x4/VW1, and
@@ -139,6 +142,13 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # the only ZZ knob with measured support; include it.
             {"MacroTile": "64x64x16", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
+            # ---- 2026-10-14 (potential_configs.md F3/§8.2): legal and never
+            # generated. ZZ's largest emitted tile is 128x32x16; 128x128x8 at
+            # TT4x4 is 128 accumulator VGPRs, exactly on the budget, and
+            # gives AI 32 F/B against a 2.4 F/B ridge. Long unroll at the
+            # same width is also unexercised for the 4x4 thread tile.
+            {"MacroTile": "128x128x8", "ThreadTile": "4x4", "NLCA": 1},
+            {"MacroTile": "128x64x8", "ThreadTile": "4x4", "NLCA": 1},
         ],
         # ---- CC: 2.5-19.7% of the FP32 roof on every cell, and the only
         # family where the floor's winning config was already run natively
@@ -146,6 +156,13 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
         # family is data-movement bound long before it is ALU bound: the
         # lever is tile size and LDS padding, not width (VW2 = 16 B is
         # already the cap).
+        # ---- 2026-10-14 additions (potential_configs.md §8.2): the two
+        # legal-and-never-generated corners. The accumulator cap
+        # (ACCVGPR_BUDGET = 128) forbids TT6x6 and TT8x8, so the only way to
+        # raise CC's arithmetic intensity is a BIGGER MacroTile at the same
+        # ThreadTile -- the opposite direction to a ThreadTile ladder.
+        # 128x128x8/8x4 gives AI 64 F/B = 167% of the 38.4 F/B ridge, and it
+        # is legal: validated through validate_config.
         "CC": [
             # MEASURED floor winner on CC:192 -- 32x32x8/4x4/VW2, never run.
             {"MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 2},
@@ -166,6 +183,15 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # to prove that rather than assume it.
             {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
+            # ---- 2026-10-14 (potential_configs.md F3/§8.2): the widest
+            # legal MacroTile at the widest legal accumulator. The corpus's
+            # largest CC tile ever emitted is 128x64, so all three rows below
+            # are unexplored. The accumulator cap is what stops TT going
+            # wider (`Occupancy limit: ThreadTile 6x6 needs 144 accumulator
+            # VGPRs`), so MacroTile is the only remaining axis.
+            {"MacroTile": "128x128x8", "ThreadTile": "8x4"},
+            {"MacroTile": "128x128x8", "ThreadTile": "4x8"},
+            {"MacroTile": "128x96x8", "ThreadTile": "8x4"},
         ],
         # ---- HH_HPA: loses 7.7-9.8% at 2048/4096. The floor wins 4096 at
         # 128x64x8 with **8x4** threads and 2048 at the transposed
@@ -210,3 +236,328 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             {"MacroTile": "64x128x16", "ThreadTile": "4x8", "NLCA": 1},
         ],
 }
+
+# ---------------------------------------------------------------------------
+# The knob sweep deck (added 2026-10-14).
+#
+# `FAMILY_DECKS` is a tile deck. This is a different kind of candidate: one
+# family's *current winner tile*, crossed with a single change to a knob the
+# corpus never explicitly set. It exists because `allruns.py` reports
+# `GlobalSplitU = ['1']` and `StaggerU = ['32']` as the only values ever seen
+# across both arms, and because no winning config in `cells_resolved.json`
+# sets PrefetchGlobalRead, AggressivePerfMode, MaxOccupancy, LocalSplitU,
+# BufferLoad, InnerUnroll, FractionalLoad, UseSgprForGRO, LocalRead2A/B,
+# GlobalRead2A/B, StorePriorityOpt or GlobalLoadVectorWidthA/B. "Never set" is
+# not "never varied" -- see TENSILE_KNOB_DEFAULTS below for what the base
+# already carries. Every tuning conclusion to date is therefore a conclusion
+# about MacroTile x ThreadTile x DepthU x VectorWidth x WorkGroupMapping only
+# -- and those axes are mined out.
+#
+# Why it is a separate table and not more rows in FAMILY_DECKS: a sweep entry
+# is meaningless without the base tile it perturbs, so it needs (family -> base
+# tile) to be a first-class part of the data, and the *same* sweep list is
+# shared by every family. Cross-joining two independent tables is a job for the
+# generator (`generate_knob_sweep_phases`), not for a duplicated block per
+# family.
+#
+# Legality: `potential_configs.md` §8.1 records which of these survive
+# `validate_config` per family (111 of 133). The generator relies on the append
+# boundary to refuse the rest, so an illegal row costs a rejection and not a
+# crashed run -- but the table below is already pruned to the rows that pass on
+# at least one family, so a reader is not shown candidates that cannot run.
+#: Tensile's defaults for the knobs this sweep perturbs, read from
+#: ``Tensile/Common.py:defaultBenchmarkCommonParameters`` (lines 1507-1670) at the
+#: pinned commit ``e8a8999e``. Every absent knob takes its default, so "no winner
+#: sets X" means "X was never *changed*", not "X was never varied": a sweep value
+#: equal to the default re-measures the baseline and is not an experiment.
+#: ``tests/test_knob_sweep.py`` asserts every ``KNOB_SWEEPS`` row offers at least
+#: one non-default value. ``LocalSplitU`` is absent from that Tensile block; its
+#: effective default is 1. Kept here (not in a gate) because it is the table the
+#: sweep below is written against, and the sweep is this module's data.
+TENSILE_KNOB_DEFAULTS: Dict[str, Any] = {
+    "BufferLoad": True,
+    "BufferStore": True,
+    "StaggerU": 32,
+    "StaggerUStride": 256,
+    "StaggerUMapping": 0,
+    "MaxOccupancy": 40,
+    "AggressivePerfMode": 1,
+    "PrefetchGlobalRead": 1,
+    "PrefetchLocalRead": 1,
+    "UseSgprForGRO": -1,
+    "GlobalLoadVectorWidthA": -1,
+    "GlobalLoadVectorWidthB": -1,
+    "AssertFree0ElementMultiple": 1,
+    "AssertFree1ElementMultiple": 1,
+    "NumLoadsCoalescedA": 1,
+    "NumLoadsCoalescedB": 1,
+    "InnerUnroll": 1,
+    "GlobalSplitU": 1,
+    "LocalSplitU": 1,
+    "FractionalLoad": 0,
+    "NonTemporalA": 0,
+    "NonTemporalB": 0,
+    "LocalRead2A": True,
+    "LocalRead2B": True,
+    "GlobalRead2A": True,
+    "GlobalRead2B": True,
+}
+
+KNOB_SWEEP_BASES: Dict[str, List[Dict[str, Any]]] = {
+    # The family's best measured winner tile, from
+    # `python3 -m oto.harness.asm_occupancy`. These are the tiles the corpus
+    # already validated and measured; sweeping knobs on top of them isolates
+    # the knob's effect instead of moving the tile at the same time.
+    "CC": [
+        {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 1},
+    ],
+    "ZZ": [
+        {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 1},
+    ],
+    "SS": [
+        {"MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4},
+    ],
+    "HH": [
+        {"MacroTile": "128x128x16", "ThreadTile": "8x8", "VectorWidth": 4},
+    ],
+    "DD": [
+        {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 2},
+    ],
+    "HH_HPA": [
+        {"MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4},
+    ],
+    "HS_HPA": [
+        {"MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4},
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Decision trials (2026-10-14, the D1/D2/D3 answer to "add candidates as
+# trials").
+#
+# KNOB_SWEEPS can only express "one knob change on a fixed base tile". Three
+# of the open decisions are not knob changes, so they need tiles of their own:
+#
+#   * D1 (CC:256's LOSS is a floor-arm measurement artifact) needs the CC tile
+#     re-measured at the *shallow cells* it owns -- a shape question, not a
+#     knob. The trial names its shapes explicitly so it does not depend on the
+#     sweep's default shapes.
+#   * D2 (`BYTES_PER_ELEMENT["Z"]` 8 vs 16) changes behaviour in exactly one
+#     place: ZZ's load-width cap (`16 // bpe` = 2 vs 1). A ZZ VW2 tile is legal
+#     at the 8-byte reading and refused at 16, so it is the differentiator:
+#     if it builds and runs, 8 is behaviourally sound.
+#   * D3 (the ZZ deck "can empty if D2 lands") needs the boundary/headroom
+#     tiles present under either reading -- the §8.2 tiles that were legal but
+#     never generated.
+#
+# Each entry is emitted unchanged (no knob delta), once per (pattern, shape),
+# tagged `_trialD<n>` by the generator. Seen by
+# `test_every_decision_trial_is_gate_legal` and
+# `test_decision_trials_cover_d1_d2_d3`.
+#: Decision-labelled trial tiles. `shapes`, when present, overrides the sweep's
+#: shape list; otherwise the generator's shapes apply.
+DECISION_TRIAL_TILES: List[Dict[str, Any]] = [
+    {
+        "decision": "D1",
+        "family": "CC",
+        "knobs": {"MacroTile": "64x64x8", "ThreadTile": "4x4",
+                  "VectorWidth": 2},
+        "shapes": ["192x192x192", "256x256x256"],
+        "why": "CC's only LOSS is the :256 small cell, judged against a floor "
+               "arm with no telemetry (`spoof_clock_coverage = 0.0`). The trial "
+               "re-measures the CC winner geometry (the steal tile, VW2) at "
+               "the shallow cells, so a same-run floor re-arm can close D1. "
+               "Measurement fix, not a kernel deficit.",
+    },
+    {
+        "decision": "D2",
+        "family": "ZZ",
+        "knobs": {"MacroTile": "32x32x16", "ThreadTile": "2x2",
+                  "VectorWidth": 2},
+        "why": "The D2 differentiator. ZZ VW2 loads 16 B at the 8-byte reading "
+               "(legal) and 32 B at the truthful 16-byte reading (refused by "
+               "the 16 B global-load cap through `cap_vector_width`). If it "
+               "builds and runs, the 8-byte reading is behaviourally sound; "
+               "if not, D2's 16/32768 pair refuses it. The run decides.",
+    },
+    {
+        "decision": "D2",
+        "family": "ZZ",
+        "knobs": {"MacroTile": "64x64x16", "ThreadTile": "4x4",
+                  "VectorWidth": 1},
+        "why": "The LDS-boundary tile: gate footprint 16384 (= budget at "
+               "bpe=8), true single-buffered 32768. The corpus's own ZZ "
+               "winner geometry. If it builds, runs and wins, the current "
+               "budget sits at the right wall and D3's insurance follows.",
+    },
+    {
+        "decision": "D3",
+        "family": "ZZ",
+        "knobs": {"MacroTile": "128x128x8", "ThreadTile": "4x4",
+                  "VectorWidth": 1},
+        "why": "§8.2 headroom tile (AI 32 F/B at 13x ridge, never generated) "
+               "that keeps the ZZ deck non-empty under either D2 reading. "
+               "Exactly at the gate budget at bpe=8.",
+    },
+    {
+        "decision": "D3",
+        "family": "ZZ",
+        "knobs": {"MacroTile": "128x64x8", "ThreadTile": "4x4",
+                  "VectorWidth": 1},
+        "why": "Asymmetric §8.2 ZZ headroom tile (never generated); survives "
+               "either D2 reading.",
+    },
+]
+
+#: One knob change applied on top of a KNOB_SWEEP_BASES tile. `families` lists
+#: the families this row is legal for; the generator skips it elsewhere rather
+#: than emitting a candidate that the append boundary will refuse. Measured
+#: legality per family is in potential_configs.md §8.1.
+KNOB_SWEEPS: List[Dict[str, Any]] = [
+    # ---- Addressing / issue slots: the knobs that spend non-FMA issue slots.
+    # Complex is issue-bound, not bandwidth-bound (§5 of the deck), so this
+    # group is the highest-yield one.
+    {
+        "knob": "UseSgprForGRO",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"UseSgprForGRO": True}],
+        "why": "Moves global-read offsets out of VGPR into SGPR. ZZ is "
+               "VGPR-bound at 63 VGPR on its winner tile, so this buys "
+               "registers rather than instructions.",
+    },
+    # Paired GLVW widen -- the only realizable form (D4, added 2026-10-14).
+    # An *unpaired* `GLVW=2` is either refused or a no-op on every base here:
+    #   * Tensile refuses GLVW != VectorWidth and != 1 unless bufferLoad and
+    #     GuaranteeNoPartialA (SolutionStructs.py:4584-4595), and with the default
+    #     AssertFree0ElementMultiple=1 GuaranteeNoPartialA is false -- so the legal
+    #     unpaired values are 1 or == VectorWidth. That refused CC/SS/HH/HPA.
+    #   * where it is not refused, `setGlobalLoadVectorWidth`'s pv reduction
+    #     (SolutionStructs.py:2010) cancels the 2 back to 1 (ZZ), or the explicit
+    #     value already equals the derived default (DD) -- a no-op.
+    # The widen is realizable only as a PAIR -- AssertFree0ElementMultiple=2 lifts
+    # GuaranteeNoPartialA -- and only where pv does not cancel it: CC (VW1, pv=1,
+    # 8 B -> 16 B). ZZ's winner tile pv-cancels it; for SS/HH/HPA the pair is a
+    # *narrow*, not a widen. So the row is CC-only, swept as a trial (D4): the
+    # run decides whether the wider global load pays. See §8.1 and §9 D4.
+    {
+        "knob": "GlobalLoadVectorWidth",
+        "families": ["CC"],
+        "values": [{"GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+                    "AssertFree0ElementMultiple": 2,
+                    "AssertFree1ElementMultiple": 2}],
+        "why": "The paired widen: GLVW=2 is refused alone (GuaranteeNoPartialA "
+               "false at the default AssertFree0ElementMultiple=1); pairing it "
+               "with AssertFree0/1ElementMultiple=2 lifts the guard, and only CC "
+               "has pv=1 at VW1 so the width is not cancelled. A real 8 B -> 16 B "
+               "global load. CC is issue-bound, so a wider load is a trial, not "
+               "a known win -- the run decides (D4).",
+    },
+    {
+        "knob": "InnerUnroll",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"InnerUnroll": 2}],
+        "why": "Default 1. Longer unroll cuts loop-control issues as a fraction "
+               "of the inner loop. Only DepthU brackets have ever been tried for "
+               "CC/ZZ.",
+    },
+    {
+        "knob": "PrefetchGlobalRead",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"PrefetchGlobalRead": 1}, {"PrefetchGlobalRead": 2}],
+        "why": "Default 1, so the value-1 phase is the implicit CONTROL and 2 is "
+               "the treatment (deeper pipeline). Two of the five complex winners "
+               "set it to False, so 0 is a real alternative the corpus has seen "
+               "but this row does not sweep.",
+    },
+    # ---- Load coalescing. NLCA is gated by VectorWidth through NumLoads, so
+    # each row carries the width it was validated at; potential_configs.md
+    # §8.1 found NLCA=2 legal at CC vw1, SS vw1/vw2, HH vw2, and nowhere else.
+    {
+        "knob": "NumLoadsCoalescedA",
+        "families": ["CC", "SS", "HH"],
+        "width_override": {"CC": 1, "SS": 1, "HH": 2},
+        "values": [{"NumLoadsCoalescedA": 2}, {"NumLoadsCoalescedB": 2}],
+        "why": "One phase in the entire corpus sets NLCA. Legal only where "
+               "VectorWidth gives NumLoads >= 2, which is why it carries its "
+               "own width.",
+    },
+    # ---- Occupancy as an explicit lever. Default 40 (uncapped); these are all
+    # non-default, so every value is a real treatment.
+    {
+        "knob": "MaxOccupancy",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"MaxOccupancy": 8}, {"MaxOccupancy": 12},
+                   {"MaxOccupancy": 20}],
+        "why": "Default 40 (uncapped), so all three values are treatments. Pads "
+               "per-workgroup LDS to DeviceLDS // N (floor), a pure occupancy "
+               "clamp with no other effect. 100% of shipped gfx900/gfx906 "
+               "solutions set 40. 7 CUs makes wave count scarcer than on the "
+               "60-CU parts AMD tuned for.",
+    },
+    {
+        "knob": "AggressivePerfMode",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"AggressivePerfMode": 1}, {"AggressivePerfMode": 2}],
+        "why": "Default 1, so the value-1 phase is an implicit CONTROL. Mode 2 "
+               "is *described as* an LDS cap to 2 waves/SIMD, but the explicit "
+               "branch is unconfirmed at the pinned commit (corpus3 Q-E ii) — "
+               "the row tests whether mode 2 differs at all. "
+               "gfx90c_theoretical_limits.md §7.1 measures the corpus "
+               "median at 8 waves/CU = 2 waves/SIMD, so a real cap would be a "
+               "free experiment in that direction.",
+    },
+    # ---- K splitting. Legal only for SS and DD on this gate:
+    # `Assembly class: GlobalSplitU=2 on complex C: illegal`, and the same for
+    # every half family. Route C in potential_configs.md therefore applies to
+    # SS and DD only.
+    {
+        "knob": "GlobalSplitU",
+        "families": ["SS", "DD"],
+        "values": [{"GlobalSplitU": 2}, {"GlobalSplitU": 4}],
+        "why": "Pinned at 1 across every run in the corpus. The only lever that "
+               "fixes 7-CU wave quantization for small shapes: G = ceil(M/MT) x "
+               "ceil(N/NT) and GSU multiplies G.",
+    },
+    # ---- M splitting: wave-fill without a reduction kernel, so it is not
+    # blocked by the GlobalSplitU restriction.
+    {
+        "knob": "LocalSplitU",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"LocalSplitU": 2}],
+        "why": "Splits the MacroTile M extent across waves inside one "
+               "workgroup. Wave-fill without a second kernel, which is the "
+               "shape of fix the small-shape rows need.",
+    },
+    # ---- Raster / swizzle. StaggerU is legal at every value with and without
+    # BufferLoad (validated), so this is free to sweep -- and it is currently
+    # pinned at 32 corpus-wide.
+    {
+        "knob": "StaggerU",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"StaggerU": 0}, {"StaggerU": 8}, {"StaggerU": 16}],
+        "why": "Only ever 32. gfx900's dGPU tuning assumed 56-CU raster order; "
+               "7 CUs wants a different swizzle.",
+    },
+    # `BufferLoad` is deliberately NOT a row. Its Tensile default is already
+    # `True` (TENSILE_KNOB_DEFAULTS), so `BufferLoad: True` re-measures the base
+    # tile; the only real change, `False`, also disables the StaggerU path and so
+    # confounds itself against the StaggerU row below. Recorded, not swept.
+    {
+        "knob": "FractionalLoad",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"FractionalLoad": 1}],
+        "why": "The only knob that changes the load shape for non-divisible "
+               "tails, which is what every odd cell size is (256, 192, 1365).",
+    },
+    # ---- Store side. NonTemporalA/B bypass L2; gfx90c has 1 MB of L2 and the
+    # winners sit at 16-25 KB of LDS, so L2 residency is worth an experiment
+    # rather than an assumption.
+    {
+        "knob": "NonTemporal",
+        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "values": [{"NonTemporalA": True}, {"NonTemporalB": True}],
+        "why": "L2 is 1 MB shared with the CPU. Every winner keeps its tile "
+               "resident, so the large-shape rows are the ones that could gain "
+               "from streaming instead.",
+    },
+]

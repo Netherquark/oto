@@ -230,6 +230,15 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §2 (the M1/M2/M3 triage) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
+| Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit`) |
+| Which knobs has the corpus ever actually varied? | `python3 allruns.py` (`--json out.json`; the `never-exercised knobs` block) |
+
+`oto.tensile.knob_sweep` is a **dry run by default** and writes `phases.yaml`
+only with `--emit`; that keeps the read-only contract of stage 2 intact while
+still giving deck generation a one-line entry point. It exists because
+`allruns.py` proves `GlobalSplitU` and `StaggerU` have only ever held one value
+each — see `potential_configs.md` §8 for the deck it emits and §8.1 for the
+measured legality matrix behind it.
 
 The two occupancy tools answer different questions and are not interchangeable:
 `asm_occupancy` reads the emitted `.s` (`amdhsa_next_free_vgpr`,

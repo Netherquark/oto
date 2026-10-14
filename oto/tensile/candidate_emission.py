@@ -4,13 +4,14 @@
 Owns: ``emit_candidate`` (merge template + knobs, fingerprint the result),
 ``append_candidates_batch`` / ``append_to_phases`` (re-validate every candidate,
 resolve phase_id collisions by binding the id to the fingerprint that owns it,
-dedupe, and write the deck) and ``generate_family_phases`` (build one phase per
+dedupe, and write the deck), ``generate_family_phases`` (build one phase per
 (family, pattern, shape, tile), clamping VectorWidth down until the gates accept
-it).
+it) and ``generate_knob_sweep_phases`` (cross-join a family's winner tile with
+the never-varied knob list).
 Does NOT own: the deck it draws from (oto.tensile.decks), the gates that refuse a
 candidate (oto.tensile.gates), or the config writer
 (oto.tensile.config_writer).
-Public API: CandidateEmitMixin.
+Public API: CandidateEmitMixin, generate_knob_sweep_phases.
 """
 
 from __future__ import annotations
@@ -280,6 +281,247 @@ class CandidateEmitMixin:
         if candidates:
             self.append_candidates_batch(candidates)
 
+        return candidates
+
+    @staticmethod
+    def _sweep_value_tag(value: Dict[str, Any]) -> str:
+        """A phase_id suffix that names exactly which knob *value* ran.
+
+        Without this, ``PrefetchGlobalRead`` 1 and 2 collapse onto the same
+        ``_swPrefetchGlobalRead`` id and get separated only by the
+        fingerprint-collision path, which produces ``_h<8 hex>`` ids that a
+        reader cannot parse. The key names are included as well as the values,
+        because a sweep row can carry two keys (``GlobalLoadVectorWidthA`` and
+        ``B``, ``NonTemporalA`` and ``B``) and the knob's *label* is not the
+        key that was actually set: naming the row ``NumLoadsCoalescedA`` while
+        it sets ``NumLoadsCoalescedB`` would produce a phase_id that lies about
+        the config it owns. Booleans render as 1/0 so the id stays path-safe.
+
+        Sorted for determinism, so the same value always yields the same tag.
+        Returns the value keys joined, so ``_swUseSgprForGRO1``,
+        ``_swMaxOccupancy12`` and ``_swGlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2``.
+        """
+        parts = []
+        for key in sorted(value):
+            val = value[key]
+            parts.append(f"{key}{1 if val else 0}" if isinstance(val, bool)
+                         else f"{key}{val}")
+        return "_".join(parts)
+
+    def generate_knob_sweep_phases(
+        self,
+        families: Optional[List[str]] = None,
+        patterns: Optional[List[str]] = None,
+        base_shapes: Optional[List[str]] = None,
+        include_baseline: bool = False,
+        phases_file: Optional[Path] = None
+    ) -> List[CandidateConfig]:
+        """Cross-join each family's winner tile with the never-varied knobs.
+
+        Why this is separate from ``generate_family_phases``: that method
+        iterates one family deck of tiles. This one iterates two independent
+        tables -- ``KNOB_SWEEP_BASES`` (the family's measured winner tile) and
+        ``KNOB_SWEEPS`` (one knob change each) -- and the product is what it
+        emits. Keeping them apart is what makes the sweep legible: a row in
+        ``KNOB_SWEEPS`` says "change exactly this knob", and the base tile is
+        the only thing held constant, so a measured delta is attributable to
+        the knob rather than to a tile move.
+
+        ``width_override`` on a sweep row is honoured before validation, because
+        ``NumLoadsCoalesced`` is gated by ``VectorWidth`` through ``NumLoads``
+        and is illegal at some widths and legal at others (see
+        ``potential_configs.md`` §8.1). Overriding the width here rather than at
+        the gate keeps the illegal combinations out of the deck instead of
+        relying on a rejection to explain them.
+
+        Args:
+            families: Family labels to sweep. Defaults to ``KNOB_SWEEP_BASES``.
+            patterns: Contraction patterns to sweep.
+            base_shapes: Problem shapes to sweep.
+            include_baseline: When true, also emit each ``KNOB_SWEEP_BASES``
+                tile *unchanged*, once per (family, pattern, shape). This is the
+                same-run CONTROL: most sweep rows only carry non-default values,
+                so without it a measured delta has no phase measured under the
+                same clock/temperature conditions to compare against (D4). Tagged
+                ``_base`` so it never collides with a ``_sw<knob>`` id.
+            phases_file: Manifest to append to. Defaults to the generator's own
+                ``phases.yaml``; the ``knob_sweep --phases`` flag sets it, so a
+                dry-run-to-file never touches the live deck.
+
+        Returns:
+            The emitted candidates, already appended to ``phases.yaml``.
+        """
+        from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
+
+        fams = families or list(KNOB_SWEEP_BASES)
+        pats = patterns or ["Ailk_Bljk"]
+        shapes = base_shapes or ["1024x1024x1024"]
+        candidates: List[CandidateConfig] = []
+        refused: List[str] = []
+
+        for family in fams:
+            bases = KNOB_SWEEP_BASES.get(family, [])
+            for pattern in pats:
+                for base in bases:
+                    if include_baseline:
+                        # The same-run control: the base tile with no knob
+                        # change. Emitted before the sweeps so it is appended
+                        # first and a reader sees the baseline it belongs to.
+                        for shape in shapes:
+                            template = {
+                                "Architecture": "gfx90c",
+                                "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                                "ContractionPattern": pattern,
+                                "ProblemType": shape,
+                                "ScheduleName": "isa",
+                                "FamilyLabel": family,
+                            }
+                            ok, why = self.validate_config(
+                                {**template, **base})
+                            if not ok:
+                                refused.append(
+                                    f"{family}/baseline/{shape}: {why}")
+                                continue
+                            tag = (f"_mt{base.get('MacroTile', '')}"
+                                   f"_tt{base.get('ThreadTile', '')}_base")
+                            label = f"{family}_{pattern}_{shape}{tag}"
+                            phase_id = (f"phase_{family.lower()}_{pattern}"
+                                        f"_{shape}{tag}")
+                            candidates.append(self.emit_candidate(
+                                phase_id=phase_id,
+                                label=label,
+                                dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                                shapes=[shape],
+                                template=template,
+                                knobs=dict(base),
+                            ))
+                    for sweep in KNOB_SWEEPS:
+                        if family not in sweep.get("families", []):
+                            continue
+                        for value in sweep["values"]:
+                            # A width override is part of the candidate, not a
+                            # fixup: without it NLCA rows are emitted at a
+                            # width that cannot carry them.
+                            knobs = dict(base)
+                            for over_fam, width in sweep.get(
+                                    "width_override", {}).items():
+                                if over_fam == family:
+                                    knobs["VectorWidth"] = width
+                            knobs.update(value)
+                            for shape in shapes:
+                                template = {
+                                    "Architecture": "gfx90c",
+                                    "DataType": FAMILY_DTYPE_CHAR.get(
+                                        family, "S"),
+                                    "ContractionPattern": pattern,
+                                    "ProblemType": shape,
+                                    "ScheduleName": "isa",
+                                    "FamilyLabel": family,
+                                }
+                                ok, why = self.validate_config(
+                                    {**template, **knobs})
+                                if not ok:
+                                    refused.append(
+                                        f"{family}/{sweep['knob']}/{shape}: "
+                                        f"{why}")
+                                    continue
+                                tag = (f"_mt{base.get('MacroTile', '')}"
+                                       f"_tt{base.get('ThreadTile', '')}"
+                                       f"_sw{self._sweep_value_tag(value)}")
+                                label = f"{family}_{pattern}_{shape}{tag}"
+                                phase_id = (f"phase_{family.lower()}_{pattern}"
+                                            f"_{shape}{tag}")
+                                candidates.append(self.emit_candidate(
+                                    phase_id=phase_id,
+                                    label=label,
+                                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                                    shapes=[shape],
+                                    template=template,
+                                    knobs=knobs,
+                                ))
+
+        if candidates:
+            self.append_candidates_batch(candidates, phases_file)
+        # Refusals are reported, not dropped silently: an operator needs to see
+        # which sweep rows the gate rejects, or the corpus's silence on a knob
+        # looks like a measured negative instead of an unbuilt candidate.
+        for line in refused:
+            print(f"[knob-sweep] refused {line}")
+        return candidates
+
+    def generate_decision_trial_phases(
+        self,
+        families: Optional[List[str]] = None,
+        patterns: Optional[List[str]] = None,
+        base_shapes: Optional[List[str]] = None,
+        phases_file: Optional[Path] = None
+    ) -> List[CandidateConfig]:
+        """Emit the decision-labelled trial tiles, unchanged.
+
+        Why separate from ``generate_knob_sweep_phases``: a trial is a full
+        tile, not a knob delta, so it cannot sit in ``KNOB_SWEEPS`` (whose
+        contract is one knob change on the family's constant winner base).
+        Each ``DECISION_TRIAL_TILES`` entry carries its own decision label and
+        optionally its own shapes (D1 names the shallow cells; the rest use
+        the sweep's). Emitted unchanged and tagged ``_trialD<n>`` so a reader
+        sees which open decision a phase answers.
+
+        Args:
+            families: Trial families to emit. Defaults to the trials' own.
+            patterns: Contraction patterns. Defaults to ``["Ailk_Bljk"]``.
+            base_shapes: Shapes for trials that do not name their own.
+            phases_file: Manifest to append to (see
+                ``generate_knob_sweep_phases``).
+
+        Returns:
+            The emitted trial candidates, appended to ``phases.yaml``.
+        """
+        from oto.tensile.decks import DECISION_TRIAL_TILES
+
+        pats = patterns or ["Ailk_Bljk"]
+        candidates: List[CandidateConfig] = []
+        refused: List[str] = []
+
+        for trial in DECISION_TRIAL_TILES:
+            family = trial["family"]
+            if families and family not in families:
+                continue
+            dec = trial["decision"]
+            knobs = trial["knobs"]
+            for pattern in pats:
+                for shape in trial.get("shapes", base_shapes or
+                                       ["1024x1024x1024"]):
+                    template = {
+                        "Architecture": "gfx90c",
+                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                        "ContractionPattern": pattern,
+                        "ProblemType": shape,
+                        "ScheduleName": "isa",
+                        "FamilyLabel": family,
+                    }
+                    ok, why = self.validate_config({**template, **knobs})
+                    if not ok:
+                        refused.append(f"{family}/trial{dec}/{shape}: {why}")
+                        continue
+                    tag = (f"_mt{knobs.get('MacroTile', '')}"
+                           f"_tt{knobs.get('ThreadTile', '')}"
+                           f"_trial{dec}")
+                    label = f"{family}_{pattern}_{shape}{tag}"
+                    phase_id = (f"phase_{family.lower()}_{pattern}"
+                                f"_{shape}{tag}")
+                    candidates.append(self.emit_candidate(
+                        phase_id=phase_id,
+                        label=label,
+                        dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                        shapes=[shape],
+                        template=template,
+                        knobs=dict(knobs),
+                    ))
+
+        if candidates:
+            self.append_candidates_batch(candidates, phases_file)
+        for line in refused:
+            print(f"[trial] refused {line}")
         return candidates
 
 # ------------------------------------------------- gate helpers (module level)
