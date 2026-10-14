@@ -229,16 +229,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
                 "n": len(values)}
 
     def load_benchmark_csv(self, csv_path: Path) -> List[Dict[str, Any]]:
-        """
-        Load a Tensile benchmark CSV file, stripping field whitespace
-        and extracting per-kernel GFlops measurements.
-
-        Args:
-            csv_path: Path to 2_BenchmarkData/*.csv or 00_Final.csv
-
-        Returns:
-            List of parsed benchmark records
-        """
+        """Load a Tensile benchmark CSV; strip whitespace, extract GFlops."""
         records = []
         if not csv_path.exists():
             return records

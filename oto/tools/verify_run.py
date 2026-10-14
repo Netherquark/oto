@@ -179,15 +179,12 @@ def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
     if not path.is_file():
         return {"run_id": run_id, "ok": False,
                 "error": f"no telemetry at {path.relative_to(base)}"}
-
     with path.open(newline="") as fh:
         rd = csv.DictReader(fh)
         fieldnames = rd.fieldnames or []
         rows = list(rd)
-
     tagged = [r for r in rows if (r.get("phase_id") or "").strip()]
     schema_ok = "phase_id" in fieldnames
-
     per_phase: Dict[str, Dict[str, Any]] = {}
     for r in tagged:
         pid = r["phase_id"].strip()
@@ -206,10 +203,8 @@ def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
                 e["sclk_values"].append(hz)
             else:
                 e["hot"] += 1
-
     d = _driver()
     bases = d._load_telemetry_by_phase(base / "gfx90c_runs" / run_id)
-
     for pid, e in per_phase.items():
         v = sorted(e.pop("sclk_values"))
         e["clock_median_hz"] = v[len(v) // 2] if v else 0

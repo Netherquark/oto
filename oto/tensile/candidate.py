@@ -93,16 +93,7 @@ class CandidateGenerator(CandidateEmitMixin):
         winner_config: Dict[str, Any],
         mutation_budget: int = 2
     ) -> List[Dict[str, Any]]:
-        """
-        Mutate a winner config by ≤2 knobs (neighbour search).
-
-        Args:
-            winner_config: Current winner configuration
-            mutation_budget: Maximum number of knobs to mutate (default 2)
-
-        Returns:
-            List of mutated configurations
-        """
+        """Mutate winner config by ≤2 knobs (neighbour search). Returns list of mutated configs."""
         knob_neighbours = {
             "MacroTile": {
                 "96x96x16": ["128x128x16", "64x64x16"],
@@ -137,10 +128,8 @@ class CandidateGenerator(CandidateEmitMixin):
                 4: [1, 2],
             },
         }
-
         mutants = []
         current_knobs = {k: v for k, v in winner_config.items() if k in knob_neighbours}
-
         # Single-knob mutations
         for knob, value in current_knobs.items():
             if knob in knob_neighbours and value in knob_neighbours[knob]:
@@ -148,7 +137,6 @@ class CandidateGenerator(CandidateEmitMixin):
                     mutant = winner_config.copy()
                     mutant[knob] = neighbour
                     mutants.append(mutant)
-
         # Two-knob mutations (if budget allows)
         if mutation_budget >= 2:
             knob_list = list(current_knobs.items())
@@ -156,17 +144,14 @@ class CandidateGenerator(CandidateEmitMixin):
                 for j in range(i + 1, len(knob_list)):
                     knob1, val1 = knob_list[i]
                     knob2, val2 = knob_list[j]
-
                     if (knob1 in knob_neighbours and val1 in knob_neighbours[knob1] and
                         knob2 in knob_neighbours and val2 in knob_neighbours[knob2]):
-
                         for n1 in knob_neighbours[knob1][val1]:
                             for n2 in knob_neighbours[knob2][val2]:
                                 mutant = winner_config.copy()
                                 mutant[knob1] = n1
                                 mutant[knob2] = n2
                                 mutants.append(mutant)
-
         return mutants
     # ------------------------------------------------------------------ gates
 

@@ -344,54 +344,41 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
     stagger_u = config.get("StaggerU")
     stagger_mapping = config.get("StaggerUMapping")
     su = config.get("StaggerUStride")
-
     if stagger_u is not None:
         su_val, err = _int_or_reject(stagger_u, "StaggerU")
-        if err:
-            return False, err
-        if su_val not in STAGGER_U_DOMAIN:
+        if err or su_val not in STAGGER_U_DOMAIN:
             return False, (f"StaggerU={su_val} outside Tensile domain "
                            f"{STAGGER_U_DOMAIN} (Common.py:945)")
     if stagger_mapping is not None:
         sum_val, err = _int_or_reject(stagger_mapping, "StaggerUMapping")
-        if err:
-            return False, err
-        if sum_val not in STAGGER_MAPPING_DOMAIN:
+        if err or sum_val not in STAGGER_MAPPING_DOMAIN:
             return False, (f"StaggerUMapping={sum_val} outside Tensile domain "
                            f"{STAGGER_MAPPING_DOMAIN} (Common.py:946)")
     if su is not None:
         stride, err = _int_or_reject(su, "StaggerUStride")
-        if err:
-            return False, err
-        if stride < 0 or stride not in STAGGER_STRIDE_DOMAIN:
+        if err or stride < 0 or stride not in STAGGER_STRIDE_DOMAIN:
             return False, (f"StaggerUStride={stride} outside Tensile domain "
                            f"{STAGGER_STRIDE_DOMAIN} (Common.py:947)")
-
-    # Coupling. Tensile defaults SU=32 (so an absent SU behaves as >0); treat
-    # an absent SU as "stagger on" for the coupling checks.
+    # Coupling. Tensile defaults SU=32 (absent SU = >0); absent SU = "stagger on".
     su_effective = STAGGER_U_DEFAULT if stagger_u is None else int(stagger_u)
     stride_effective = STAGGER_STRIDE_DEFAULT if su is None else int(su)
     mapping_effective = (STAGGER_MAPPING_DEFAULT if stagger_mapping is None
                          else int(stagger_mapping))
 
     if su_effective == 0:
-        # StaggerU=0 forces StaggerUMapping=0 and StaggerUStride=0.
         if mapping_effective != 0:
             return False, (f"StaggerUMapping={mapping_effective} requires "
                            f"StaggerU>0 (SolutionStructs:3333-3334)")
         if stride_effective != 0:
             return False, (f"StaggerUStride={stride_effective} requires "
                            f"StaggerU>0 (SolutionStructs:3326-3327)")
-    else:
-        if stride_effective == 0:
-            return False, (f"StaggerUStride=0 is only valid if StaggerU is 0 "
-                           f"(have StaggerU={su_effective}; SolutionStructs:3326-3327)")
-        if ku > 0 and bpe and stride_effective < ku * bpe:
-            return False, (
-                f"StaggerUStride={stride_effective} < DepthU({ku})*{bpe}B; "
-                f"Tensile requires StaggerUStride >= DepthU*BytesPerElement "
-                f"when StaggerU>0 (staggerStrideShift >= 0, SolutionStructs:3336-3342)"
-            )
+    elif stride_effective == 0:
+        return False, (f"StaggerUStride=0 is only valid if StaggerU is 0 "
+                       f"(have StaggerU={su_effective}; SolutionStructs:3326-3327)")
+    elif ku > 0 and bpe and stride_effective < ku * bpe:
+        return False, (f"StaggerUStride={stride_effective} < DepthU({ku})*{bpe}B; "
+                       f"Tensile requires StaggerUStride >= DepthU*BytesPerElement "
+                       f"when StaggerU>0 (staggerStrideShift >= 0, SolutionStructs:3336-3342)")
     return True, ""
 
 

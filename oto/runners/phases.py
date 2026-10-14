@@ -28,26 +28,13 @@ class PhaseMixin:
     def load_phases_manifest(self, phases_path: Optional[Path] = None,
                              include_overlay: bool = True
                              ) -> List[Dict[str, Any]]:
-        """Load phases.yaml manifest (the data manifest), plus this run's overlay.
+        """Load phases.yaml manifest plus this run's overlay.
 
-        `phases.yaml` is the curated deck and is never written to. The mutation
-        arm's candidates live in a per-run overlay
-        (`gfx90c_results/overlays/phases.<run_id>.overlay.yaml`), so they are
-        merged here, after the curated phases, and tagged `origin: overlay`.
-
-        Without this merge the overlay is write-only: candidates were emitted,
-        recorded in the ledger and then never scheduled, so the arm would report
-        progress while measuring nothing.
-
-        The overlay is keyed on the *active* run. Another run's overlay is not
-        applied, because its phases were scored against that run's state and
-        re-running them here would produce measurements attributed to the wrong
-        run. `--dry-run` has no run and therefore no overlay.
-
-        An explicit `phases_path` means the caller owns that deck outright, so no
-        overlay is merged -- `--gfx900-reference` passes the reference run's own
-        phase file, and appending native-arm candidates to the spoof floor would
-        corrupt the comparison the whole A/B rests on.
+        phases.yaml curated deck (never written). Candidates live in per-run
+        overlays (phases.<run_id>.overlay.yaml), merged here after curated
+        phases, tagged origin: overlay. Overlay keyed on active run; another
+        run's overlay isn't applied. Explicit phases_path means caller owns
+        deck outright (no merge).
         """
         if phases_path is None:
             phases_path = self.base_dir / "phases.yaml"
@@ -210,35 +197,18 @@ class PhaseMixin:
     ) -> List[Dict[str, Any]]:
         """
         Run a set of targets with policy filtering (Stage 1-4).
-        target_ids matches against phase_id (with or without 'phase_' prefix),
-        label, or clean target key (e.g. 'ss_Ailk_Bjlk_1024x1024x1024').
-        phases_path overrides the manifest source (used by --gfx900-reference,
-        whose 2k+ phases live in the run dir, not phases.yaml).
+        target_ids matches against phase_id, label, or clean target key.
+        phases_path overrides the manifest source.
         """
         phases = self.load_phases_manifest(phases_path) if phases_path else self.load_phases_manifest()
 
-        # No run directory means nothing was created to benchmark into (--dry-run,
-        # and the reference-floor path, which builds phases in the run dir). Every
-        # registry write and every execute_phase below dereferences self.run_dir,
-        # so report the plan and stop rather than dying on the first skipped
-        # phase with an AttributeError on None.
         if self.run_dir is None:
             print(f"[plan] {len(phases)} phase(s) in the manifest; no run "
                   f"directory, so this is a dry run and nothing is executed.")
             return []
 
-        # Live TTY panel: repaints while phases execute. Started after the
-        # manifest is known to exist so the first frame is not an error.
+        phases = self._filter_target_phases(phases, target_ids)
         self._start_live_status()
-
-        if target_ids:
-            keys = {str(k) for k in target_ids}
-            def _match_target(p):
-                tid = str(p.get("phase_id", ""))
-                lbl = str(p.get("label", ""))
-                clean = tid.replace("phase_", "")
-                return tid in keys or lbl in keys or clean in keys
-            phases = [p for p in phases if _match_target(p)]
 
         results = []
         executed_count = 0
@@ -246,129 +216,157 @@ class PhaseMixin:
         refused_count = 0
         try:
             for phase in phases:
-                if self._stop_requested or self._finish_after_iteration:
-                    print("Stop requested, halting phase execution")
+                if self._check_stop_requested():
                     break
 
                 phase_id = phase.get("phase_id", "")
-                config = phase.get("config", {})
-                fp = phase.get("fp", fingerprint_config(config))
+                fp = phase.get("fp", fingerprint_config(phase.get("config", {})))
 
-                # Identical-fp skip bypass (Hplan.3 step 8), scoped to the
-                # mutation overlay. The bypass exists so a candidate is measured
-                # even when its fp has passed before: novelty and outcome are then
-                # decided by the ledger instead of by pass/fail history. It is
-                # authorised only while `skip_mutation_arm()` is False, i.e. the
-                # ledger is present *and* outcomes can be written back -- with
-                # neither, a bypassed candidate is re-measured forever and the arm
-                # reports progress while learning nothing.
-                #
-                # Scoped to overlay phases deliberately: applying it to the curated
-                # deck would re-benchmark settled phases on every run, which is the
-                # opposite of what the skip is for.
-                from_overlay = bool(phase.get("overlay_run_id")) or \
-                    str(phase.get("origin") or "") in ("overlay", "seed_overlay")
-                bypass_identical_skip = (
-                    from_overlay and self.agent is not None
-                    and not self.agent.skip_mutation_arm())
-                # A mutant phase carries an explicit per-phase bypass (agent
-                # mutate_and_feed sets bypass_identical_skip): the auto-skip
-                # must never apply to a mutation, so it is measured even when an
-                # identical config was tested before. This is the structural
-                # form of the user directive; the agent-level skip_mutation_arm
-                # remains as a second, independent gate.
-                if phase.get("bypass_identical_skip"):
-                    bypass_identical_skip = True
-                if (phase.get("overlay_run_id") == "seed"
-                        and self.run_dir is not None
-                        and self.registry.has_run_benchmarked(
-                            self.run_dir.name, fp)):
-                    # A static seed must not re-benchmark itself every
-                    # iteration. The seed rows are measurement-first *once per
-                    # run*: after this run has produced a completed record for
-                    # the fp, the seed falls back to the ordinary
-                    # identical-fp skip for the rest of the run.
-                    bypass_identical_skip = False
-
-                # Policy check: should_run
-                allowed, reason = should_run(
-                    phase_id=phase_id,
-                    fp=fp,
-                    registry=self.registry,
-                    phase_scope=target_ids,
-                    opt_in_identical_skip=opt_in_identical_skip
-                    and not bypass_identical_skip
-                )
-                if bypass_identical_skip and not allowed \
-                        and reason == "identical_fp_already_passed":
-                    # The ledger, not pass history, decides this one.
-                    allowed, reason = True, "bypassed_identical_fp_via_ledger"
-
-                if not allowed:
-                    print(f"Skipping phase {phase_id} ({reason})")
+                if not self._should_execute_phase(phase, fp, target_ids, opt_in_identical_skip):
                     skipped_count += 1
-                    self.registry.append_record({
-                        "run_id": self.run_dir.name,
-                        "phase_id": phase_id,
-                        "fp": fp,
-                        "timestamp": datetime.now().isoformat(),
-                        "status": "skipped",
-                        "reason": reason
-                    }, run_id=self.run_dir.name)
-                    # A skip does no GPU work, so it used to run with no key
-                    # polling at all: pressing 'q' during a deck whose phases
-                    # were all already-passed did nothing until some phase
-                    # actually launched, which for a fully-skipped deck is never.
-                    # The keys are documented as run-wide, so honour them here
-                    # too. 's' has no meaning (nothing is executing to skip) but
-                    # is consumed rather than left in the buffer.
-                    key = self._read_key(block=False)
-                    if key == 'q':
-                        print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")
-                        self._stop_requested = True
-                        break
-                    elif key == 'e':
-                        print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
-                        self._finish_after_iteration = True
+                    self._record_skip(phase_id, fp, reason="skipped_by_policy")
+                    if self._handle_user_keys_during_skip() == "stop":
                         break
                     continue
 
                 result = self.execute_phase(phase, self.run_dir)
                 results.append(result)
-                # Outcome feedback (H.3.8). Only reached for phases that actually
-                # launched, so a skipped or refused phase is not classified as
-                # non-functional for having produced no output.
+
+                executed_count, refused_count = self._update_counters(
+                    result, executed_count, refused_count
+                )
                 if result.get("status") in ("completed", "failed", "success"):
                     self._resolve_proposal_outcome(phase, self.run_dir)
-                if result.get("status") == "skipped_illegal":
-                    refused_count += 1      # refused pre-launch; nothing was executed
-                elif result.get("status") not in ("interrupted", "skipped_by_user"):
-                    executed_count += 1
 
                 if self._finish_after_iteration:
                     print("End-after-iteration requested, halting phase execution")
                     break
 
-            # Mark run final status in registry
-            if self._stop_requested:
-                final_status = "interrupted"
-            elif executed_count == 0 and (skipped_count + refused_count) > 0:
-                final_status = "skipped"
-            else:
-                final_status = "completed"
-            run_meta: Dict[str, Any] = {
-                "phases_executed": executed_count,
-                "phases_skipped": skipped_count,
-            }
-            if refused_count:
-                run_meta["phases_refused_illegal"] = refused_count
-            if self._finish_after_iteration:
-                run_meta["end_after_iteration"] = True
-            self._last_run_status = final_status
-            self.registry.update_run_status(self.run_dir.name, final_status, run_meta)
+            self._finalize_run_status(executed_count, skipped_count, refused_count)
             return results
         finally:
-            # Always tear the panel down, including on Ctrl-C or an exception
-            # mid-phase, so the terminal is not left with a half-drawn panel
-            # and stdout is restored before the acceptance report prints.
             self._stop_live_status()
+
+    def _filter_target_phases(
+        self,
+        phases: List[Dict[str, Any]],
+        target_ids: Optional[List[str]]
+    ) -> List[Dict[str, Any]]:
+        """Filter phases by target_ids if provided."""
+        if not target_ids:
+            return phases
+        keys = {str(k) for k in target_ids}
+        def _match_target(p):
+            tid = str(p.get("phase_id", ""))
+            lbl = str(p.get("label", ""))
+            clean = tid.replace("phase_", "")
+            return tid in keys or lbl in keys or clean in keys
+        return [p for p in phases if _match_target(p)]
+
+    def _check_stop_requested(self) -> bool:
+        """Check if stop was requested. Returns True if should break."""
+        if self._stop_requested or self._finish_after_iteration:
+            print("Stop requested, halting phase execution")
+            return True
+        return False
+
+    def _should_execute_phase(
+        self,
+        phase: Dict[str, Any],
+        fp: str,
+        target_ids: Optional[List[str]],
+        opt_in_identical_skip: bool
+    ) -> bool:
+        """Determine if a phase should be executed."""
+        phase_id = phase.get("phase_id", "")
+
+        from_overlay = bool(phase.get("overlay_run_id")) or \
+            str(phase.get("origin") or "") in ("overlay", "seed_overlay")
+        bypass_identical_skip = (
+            from_overlay and self.agent is not None
+            and not self.agent.skip_mutation_arm())
+        if phase.get("bypass_identical_skip"):
+            bypass_identical_skip = True
+        if (phase.get("overlay_run_id") == "seed"
+                and self.run_dir is not None
+                and self.registry.has_run_benchmarked(
+                    self.run_dir.name, fp)):
+            bypass_identical_skip = False
+
+        allowed, reason = should_run(
+            phase_id=phase_id,
+            fp=fp,
+            registry=self.registry,
+            phase_scope=target_ids,
+            opt_in_identical_skip=opt_in_identical_skip
+            and not bypass_identical_skip
+        )
+        if bypass_identical_skip and not allowed \
+                and reason == "identical_fp_already_passed":
+            allowed, reason = True, "bypassed_identical_fp_via_ledger"
+
+        if not allowed:
+            print(f"Skipping phase {phase_id} ({reason})")
+            return False
+        return True
+
+    def _record_skip(self, phase_id: str, fp: str, reason: str) -> None:
+        """Record a skipped phase in the registry."""
+        self.registry.append_record({
+            "run_id": self.run_dir.name,
+            "phase_id": phase_id,
+            "fp": fp,
+            "timestamp": datetime.now().isoformat(),
+            "status": "skipped",
+            "reason": reason
+        }, run_id=self.run_dir.name)
+
+    def _handle_user_keys_during_skip(self) -> str:
+        """Handle user key presses during skip. Returns 'stop' if should break."""
+        key = self._read_key(block=False)
+        if key == 'q':
+            print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")
+            self._stop_requested = True
+            return "stop"
+        elif key == 'e':
+            print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+            self._finish_after_iteration = True
+            return "stop"
+        return "continue"
+
+    def _update_counters(
+        self,
+        result: Dict[str, Any],
+        executed_count: int,
+        refused_count: int
+    ) -> tuple[int, int]:
+        """Update execution counters based on result."""
+        if result.get("status") == "skipped_illegal":
+            refused_count += 1
+        elif result.get("status") not in ("interrupted", "skipped_by_user"):
+            executed_count += 1
+        return executed_count, refused_count
+
+    def _finalize_run_status(
+        self,
+        executed_count: int,
+        skipped_count: int,
+        refused_count: int
+    ) -> None:
+        """Finalize run status in registry."""
+        if self._stop_requested:
+            final_status = "interrupted"
+        elif executed_count == 0 and (skipped_count + refused_count) > 0:
+            final_status = "skipped"
+        else:
+            final_status = "completed"
+        run_meta: Dict[str, Any] = {
+            "phases_executed": executed_count,
+            "phases_skipped": skipped_count,
+        }
+        if refused_count:
+            run_meta["phases_refused_illegal"] = refused_count
+        if self._finish_after_iteration:
+            run_meta["end_after_iteration"] = True
+        self._last_run_status = final_status
+        self.registry.update_run_status(self.run_dir.name, final_status, run_meta)

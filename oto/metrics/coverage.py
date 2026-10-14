@@ -59,33 +59,14 @@ _REFERENCE_BUILDING = False
 
 def reference_thresholds(base_dir=None,
                          band_pct: Optional[float] = None) -> Dict[str, Any]:
-    """Acceptance band *and* per-cell "slow" bars, derived from the reference.
+    """Acceptance band and per-cell slow bars from reference scan.
 
-    Both come from the same `arm_record_sets` scan and are cached together,
-    because they are the same measurement: the band says how far two runs of one
-    config disagree, and the bars say how far a candidate may fall below the
-    reference before that gap counts as a real regression rather than noise.
-
-    A bar is ``reference_median * (1 - band/100)`` per cell, where
-    ``reference_median`` is `compute_native_vs_spoof_delta`'s ``spoof_median`` --
-    the shipped gfx900 floor's median of per-kernel medians in that cell. That is
-    the number the report already grades against, so "slow" means "materially
-    worse than the reference ran", not "worse than some constant".
-
-    Two deliberate choices:
-
-    * **Relative, not absolute.** `ZZ` and `SS_HPA` differ by orders of
-      magnitude, so any single absolute GFlops bar either condemns every small
-      cell or none of them.
-    * **The band is subtracted, so ties are not slowness.** A candidate inside
-      the band of the reference is not slow, it is indistinguishable from it.
-      Without this the verdict would fire on measurement noise, which is the
-      failure §H.9 warns about.
-
-    Cells the reference never ran have no bar and are reported in
-    `unmatched_cells` rather than defaulted: no reference means no judgement, and
-    a defaulted bar would quietly manufacture `legal_slow` verdicts for exactly
-    the cells most worth exploring.
+    Band = how far two runs of one config disagree; bars = how far a candidate
+    may fall below reference before it's a real regression.
+    Bar = reference_median * (1 - band/100) per cell.
+    Relative (not absolute) so ZZ/SS_HPA differ by orders of magnitude.
+    Band subtracted so ties aren't slowness; without this, fires on noise.
+    Cells reference never ran have no bar, reported in unmatched_cells.
     """
     global _REFERENCE_BUILDING
 
@@ -175,27 +156,14 @@ def coverage_cells(
     target_cells: Optional[Iterable[Tuple[str, str]]] = None,
 ) -> List[Dict[str, Any]]:
     """Per (family, shape) evidence: distinct fps, n, median, spread.
-
-    `spread_ratio` is ``(max - median) / median``, the same definition
-    `policy.aggregate_cell` uses, so the two are comparable rather than two
-    different notions of spread. `n` counts samples per fingerprint and the cell
-    reports the *minimum* across them: a cell whose worst-measured config has one
-    seed is not a confidently measured cell, and averaging that away is how a
-    noise-level win becomes a verdict.
-
-    `target_cells` are the cells the plan *intends* to cover, as
-    `(family, shape)` pairs. They are included even with zero proposals,
-    because a cell that was targeted and never proposed for is
-    `STATE_EXPLORE` and must be visible: dropping it would make "we never looked"
-    indistinguishable from "not on the list", which is the exact conflation
-    §H.1.2a is about.
+    spread_ratio = (max - median)/median, matching policy.aggregate_cell.
+    n counts samples per fp; cell reports min n (worst-measured config).
+    target_cells = plan's intended (family, shape) pairs, included even with
+    zero proposals (STATE_EXPLORE).
     """
     by_cell: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for family, shape in (target_cells or ()):
-        by_cell.setdefault((str(family), str(shape)), {
-            "family": str(family), "shape": str(shape),
-            "fingerprints": set(), "n_proposed": 0, "outcomes": {},
-        })
+        by_cell.setdefault((str(family), str(shape)), {"family": str(family), "shape": str(shape), "fingerprints": set(), "n_proposed": 0, "outcomes": {}})
     for row in proposals:
         family = str(row.get("family") or "?")
         shape = str(row.get("shape") or "?")
@@ -211,7 +179,6 @@ def coverage_cells(
         entry["fingerprints"].add(row.get("fp"))
         outcome = str(row.get("outcome") or "pending")
         entry["outcomes"][outcome] = entry["outcomes"].get(outcome, 0) + 1
-
     cells: List[Dict[str, Any]] = []
     for (family, shape), entry in by_cell.items():
         fps = [fp for fp in entry["fingerprints"] if fp]

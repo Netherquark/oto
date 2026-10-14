@@ -50,24 +50,18 @@ __all__ = [
 
 
 def _scan_dat_library() -> Dict[str, Any]:
-    """Scan every installed gfx900 TensileLibrary into a manifest dict.
+    """Scan installed gfx900 TensileLibrary into manifest dict.
 
-    Kernels are unioned per (family, pattern) across all installed ROCm
-    prefixes so a family present in only one dist is still fully covered; the
-    per-file provenance (prefix, path, mtime) is preserved.
     """
     active_rocm = _resolve_rocm()
     prefixes = _all_rocm_prefixes()
     scanned: List[Dict[str, Any]] = []
     fam_patterns: Dict[str, Dict[str, Set[str]]] = {}
     total_kernels = 0
-
     for prefix in prefixes:
         for df in find_gfx900_dat_files(prefix):
             parts = df.name.split("_")
             # TensileLibrary_Type_<TYPE>_Contraction_l_<pattern>_Cijk_Dijk_<isa>.dat
-            # TYPE (e.g. HH_HPA) and pattern (Ailk_Bljk) are multi-token, so the
-            # words between Type..Contraction and l..Cijk are underscore-joined.
             try:
                 type_idx = parts.index("Type")
                 end_t = parts.index("Contraction")
@@ -81,7 +75,6 @@ def _scan_dat_library() -> Dict[str, Any]:
                 continue
             if pattern not in CONTRACTION_PATTERNS:
                 continue
-
             kernels = parse_shipped_kernels(df)
             total_kernels += len(kernels)
             scanned.append({
@@ -93,10 +86,8 @@ def _scan_dat_library() -> Dict[str, Any]:
                 "size": df.stat().st_size,
                 "kernels": sorted(kernels),
             })
-
             fam = fam_patterns.setdefault(type_token, {})
             fam.setdefault(pattern, set()).update(kernels)
-
     families: Dict[str, Dict[str, Any]] = {}
     for fam, pats in fam_patterns.items():
         fam_info = {}
@@ -110,12 +101,10 @@ def _scan_dat_library() -> Dict[str, Any]:
                 "sources": sources,
             }
         families[fam] = fam_info
-
     expected_kernels = {
         fam: sum(fam_info.get(p).get("count", 0) for p in CONTRACTION_PATTERNS)
         for fam, fam_info in families.items()
     }
-
     return {
         "generated_at": datetime.now().isoformat(),
         "rocm_path": active_rocm,

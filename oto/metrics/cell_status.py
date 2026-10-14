@@ -42,28 +42,14 @@ class CellStatusMixin:
         all_analytics: List[CellAnalytics],
         red_threshold_pct: float = 50.0
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Classify the gfx900 contract cells (family x deck shape) for the report.
+        """Classify gfx900 contract cells (family x deck shape) for report.
 
-        The contract grid is the shipped gfx900 footprint sampled at each
-        family's canonical deck shapes (FAMILY_SHAPES). A cell is:
-
-          RED    — MISSING: no candidate measurement at (family, shape) at all.
-          ORANGE — measured but the best candidate median < red_threshold_pct
-                   of the family realistic ceiling.
-          GREEN  — measured and at/above the threshold.
-
-        A cell's median is the best candidate median across configs at that
-        shape — the deck winner the shipped floor must be compared against.
+        RED=MISSING, ORANGE=measured < threshold, GREEN=at/above threshold.
         """
         from collections import defaultdict
-
         measured: Dict[str, Set[str]] = defaultdict(set)
         best_per_cell: Dict[Tuple[str, str], float] = {}
-
-        # dtype char -> family fallback for analytics rows missing a family tag.
-        # setdefault keeps the FIRST family per char, so the ambiguous 'H'
-        # (HH / HH_HPA / HS_HPA) resolves to canonical HH; the HPA variants are
-        # only ever distinguished by their phase_id family prefix, never by char.
+        # dtype char -> family fallback; ambiguous 'H' resolves to HH
         dtype_to_family = {}
         for family, ch in FAMILY_DTYPE_CHAR.items():
             dtype_to_family.setdefault(ch, family)

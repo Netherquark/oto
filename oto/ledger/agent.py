@@ -148,24 +148,9 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
             return True
         return not self.has_outcome_signal
 
-    def converged(
-        self,
-        all_analytics: List[CellAnalytics],
-        budget_remaining: int
-    ) -> ConvergenceVerdict:
-        """
-        Check if the campaign has converged.
-
-        Convergence criteria (ALL MUST HOLD for convergence):
-        1. No below-ceiling ALU compute cells vs realistic ceilings.
-        2. Every cell evaluated with >= 3 distinct configs.
-        3. Every cell has >= 2 independent runs (>= 6 seeds).
-        4. Stability: coefficient of variation <= 15% per cell.
-
-        Budget exhaustion is a STOP, not convergence: unmet criteria (or no
-        data) is never reported as converged.
-        """
-        below_ceiling_cells = [
+    def _collect_below_ceiling(self, all_analytics: List[CellAnalytics]) -> List[Dict[str, Any]]:
+        """Collect cells that are below the realistic ceiling."""
+        return [
             {
                 "dtype": a.dtype,
                 "shape": a.shape,
@@ -178,15 +163,8 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
             if a.is_below_ceiling
         ]
 
-        if not all_analytics:
-            return ConvergenceVerdict(
-                converged=False,
-                reason="No analytics data available",
-                below_ceiling_cells=[],
-                iterations=self.iteration,
-                budget_remaining=budget_remaining
-            )
-
+    def _check_budget(self, budget_remaining: int, below_ceiling_cells: List) -> Optional[ConvergenceVerdict]:
+        """Check if budget is exhausted. Returns verdict if exhausted, None otherwise."""
         if budget_remaining <= 0:
             return ConvergenceVerdict(
                 converged=False,
@@ -196,13 +174,11 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
                 iterations=self.iteration,
                 budget_remaining=budget_remaining
             )
+        return None
 
+    def _check_cell_requirements(self, all_analytics: List[CellAnalytics]) -> List[str]:
+        """Check cell requirements: >=3 configs, >=6 seeds, CV <= 15%."""
         unconverged_reasons = []
-        if below_ceiling_cells:
-            unconverged_reasons.append(
-                f"{len(below_ceiling_cells)} below-ceiling cells remain")
-
-        # Group analytics by (dtype, shape)
         cells_by_shape: Dict[Tuple[str, str], List[CellAnalytics]] = {}
         for a in all_analytics:
             key = (a.dtype, a.shape)
@@ -228,6 +204,45 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
                 unconverged_reasons.append(
                     f"Cell ({dt}, {shp}) CV {worst*100:.1f}% > 15% (unstable)")
                 break
+        return unconverged_reasons
+
+    def converged(
+        self,
+        all_analytics: List[CellAnalytics],
+        budget_remaining: int
+    ) -> ConvergenceVerdict:
+        """
+        Check if the campaign has converged.
+
+        Convergence criteria (ALL MUST HOLD):
+        1. No below-ceiling ALU compute cells vs realistic ceilings.
+        2. Every cell evaluated with >= 3 distinct configs.
+        3. Every cell has >= 2 independent runs (>= 6 seeds).
+        4. Stability: coefficient of variation <= 15% per cell.
+
+        Budget exhaustion is a STOP, not convergence.
+        """
+        if not all_analytics:
+            return ConvergenceVerdict(
+                converged=False,
+                reason="No analytics data available",
+                below_ceiling_cells=[],
+                iterations=self.iteration,
+                budget_remaining=budget_remaining
+            )
+
+        below_ceiling_cells = self._collect_below_ceiling(all_analytics)
+
+        budget_verdict = self._check_budget(budget_remaining, below_ceiling_cells)
+        if budget_verdict:
+            return budget_verdict
+
+        unconverged_reasons = []
+        if below_ceiling_cells:
+            unconverged_reasons.append(
+                f"{len(below_ceiling_cells)} below-ceiling cells remain")
+
+        unconverged_reasons.extend(self._check_cell_requirements(all_analytics))
 
         if not unconverged_reasons:
             return ConvergenceVerdict(
@@ -255,29 +270,10 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         """
         Mutate harvested configs and record them in the proposals ledger.
 
-        Two behaviours changed under Option H Phase 1, and both are the point of
-        the phase:
-
-        * **Candidates go to the ledger, not to `phases.yaml`.** The curated deck
-          was previously appended to on every iteration and the mutants then
-          skipped themselves on the next pass (defect D4). They now go to a
-          per-run overlay via `mutator.write_overlay`, which `phases.yaml` is
-          never asked about.
-        * **Novelty is checked before emission.** A candidate whose fingerprint is
-          already in the ledger or already decided by the registry is dropped,
-          which is what stops iteration n+1 from re-proposing iteration n
-          (defect D2).
-
-        With no mutator configured this keeps the old append-to-phases.yaml
-        behaviour, so the pre-Phase-1 path stays reachable for comparison. That
-        fallback is not the default and should not become one.
-
-        Args:
-            winners: Dict of harvested winners from harvest()
-            mutation_budget: Maximum knobs to mutate per candidate (default 2)
-
-        Returns:
-            List of emitted CandidateConfig objects
+        Two behaviours changed under Option H Phase 1:
+        * Candidates go to the ledger, not to `phases.yaml`.
+        * Novelty is checked before emission against ledger/registry fingerprints.
+        With no mutator configured, pre-Phase-1 append-to-phases.yaml fallback is preserved.
         """
         new_candidates: List[CandidateConfig] = []
         rejected_non_novel = 0
@@ -294,175 +290,231 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
             shape = winner_info["shape"]
             winner_config = winner_info.get("config", {})
 
-            # Active-cell filter (Option H overhaul, 2026-10-09). Only mutate
-            # cells whose winner is still BELOW the realistic ceiling: a cell at
-            # or above the bar has converged, and re-drawing its neighbourhood
-            # is how the old arm spent its budget re-measuring noise. Cells
-            # with no is_below_ceiling flag (older analytics) are mutated, so
-            # the filter never silently starves a cell that lacks the signal.
             if winner_info.get("is_below_ceiling") is False:
                 settled_cells.append(cell_key)
                 continue
 
-            # Sampler. Phase 4 (Hplan.6): coverage-guided constrained synthesis.
-            # The prior (Phase 2) makes draws legal by construction; this adds
-            # direction from the cell's coverage state and, critically, the shape
-            # sweep that makes the candidate gradable (Hplan.1 item 5).
-            #
-            # A `retired` cell is skipped rather than sampled: every candidate in
-            # it was non-functional, and re-drawing the same neighbourhood is what
-            # the negative cache exists to stop.
-            sweep_shapes: List[str] = []
-            cell_state = None
-            if self.mutator is not None:
-                cell_state = self._cell_coverage_state(family, shape)
-                if cell_state == coverage.STATE_RETIRED:
-                    retired_cells.append(cell_key)
-                    continue
-                # DB-hooked synthesis first (Option H overhaul): wide (DB tile
-                # donors) + narrow (forward knobs) + direction (floor steal),
-                # guaranteed novel by construction. Falls back to the manifest
-                # sampler when the DB is unavailable.
-                if self.db_mutator is not None and self.db_mutator.has_db():
-                    mutants = self.db_mutator.synthesize_mutants(
-                        family, winner_config, shape,
-                        random.Random(f"{self.iteration}:{cell_key}"),
-                        n=8)
-                    sweep_shapes = self._shape_sweeps().get(family, [shape])
-                else:
-                    synth = self.mutator.sample_cell_synthesized(
-                        family,
-                        base_config=winner_config,
-                        cell=self._cell_coverage(family, shape),
-                        groups=mutation_budget,
-                        seed=f"{self.iteration}:{cell_key}",
-                        band_pct=self.band(),
-                        shape=shape,
-                        sweeps=self._shape_sweeps(),
-                    )
-                    sweep_shapes = synth.get("shapes") or []
-                    if synth.get("source") == "lattice":
-                        lattice_fallbacks.append(cell_key)
-                    mutants = [c["knobs"] for c in synth.get("candidates", [])]
-            else:
-                mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
+            mutants, sweep_shapes, cell_state = self._prepare_mutants(
+                cell_key, family, shape, winner_config, mutation_budget,
+                retired_cells, lattice_fallbacks
+            )
 
             for i, mutant in enumerate(mutants):
                 phase_id = f"phase_auto_{self.iteration}_{cell_key}_{i}"
                 label = f"mutate_{family.lower() or cell_key}_{i}"
 
-                template = {
-                    "Architecture": "gfx90c",
-                    "DataType": data_type,
-                    "ProblemType": "Contraction",
-                    "ScheduleName": "isa",
-                    "FamilyLabel": family,
-                }
-
-                shapes_for_candidate = (sweep_shapes
-                                        if len(sweep_shapes) >= 2
-                                        else [shape])
-                candidate = self.scheduler.emit_candidate(
-                    phase_id=phase_id,
-                    label=label,
-                    dtype=data_type.lower(),
-                    shapes=list(shapes_for_candidate),
-                    template=template,
-                    knobs=mutant
+                result = self._process_mutant(
+                    phase_id, label, family, data_type, shape,
+                    sweep_shapes, cell_state, mutant, winner_info,
+                    new_candidates, replayed, ungraded_cells, cell_key
                 )
-
-                # Keep validate_config as an assertion, not the search
-                # (Hplan.4 step 4): a rejection is recorded with its reason
-                # rather than silently dropped, so the ledger learns it too.
-                is_valid, reason = self.scheduler.validate_config({**template, **mutant})
-                if not is_valid:
-                    if self.mutator:
-                        self.mutator.registry.record_proposal(
-                            fp=candidate.fingerprint,
-                            family=family,
-                            shape=shape,
-                            parent_fp=winner_info.get("fp"),
-                            iteration=self.iteration,
-                            run_id=self.run_id,
-                        )
-                        self.mutator.resolve(
-                            candidate.fingerprint,
-                            "legal_rejected",
-                            build_class=reason[:200],
-                        )
-                    continue
-
-                if self.mutator and self.mutator.is_novel(candidate.fingerprint) is False:
+                if result == "rejected_non_novel":
                     rejected_non_novel += 1
+                elif result == "invalid":
                     continue
-
-                new_candidates.append(candidate)
-                if self.mutator:
-                    # The family sweep, not [shape]. A mutant measured on one
-                    # shape has no comparable ratio against a floor measured on
-                    # several, so it is born ungradable (Hplan.1 item 5). Falls
-                    # back to the single shape when the deck has no sweep, and
-                    # records that in `ungraded_cells` rather than pretending.
-                    shapes = sweep_shapes if len(sweep_shapes) >= 2 else [shape]
-                    if len(shapes) < 2:
-                        ungraded_cells.append(cell_key)
-                    phase_entry = {
-                        "phase_id": phase_id,
-                        "fp": candidate.fingerprint,
-                        "label": label,
-                        "dtype": data_type.lower(),
-                        "shapes": list(shapes),
-                        "config": {**template, **mutant},
-                        "origin": "novel",
-                        "graded": len(shapes) >= 2,
-                        "coverage_state": cell_state,
-                        # Mutations are never auto-skipped (Option H, user
-                        # directive 2026-10-09): the identical-fp skip must not
-                        # apply to a mutant, so a mutation is measured even when
-                        # an identical config was tested before. Novelty is the
-                        # mutator's job (it guarantees a novel fp by
-                        # construction), not the runner's skip.
-                        "bypass_identical_skip": True,
-                    }
-                    # One transaction for the ledger row and the phase. Two
-                    # writes would let a crash leave a proposal with no phase
-                    # that ever ran it -- permanently `pending`, so its `n`
-                    # never grows and the cell is re-routed to `replicate`
-                    # forever, indistinguishable from genuine instability.
-                    self.mutator.emit_candidate_phase(
-                        Proposal(
-                            fp=candidate.fingerprint,
-                            family=family,
-                            shape=shape,
-                            parent_fp=winner_info.get("fp"),
-                            iteration=self.iteration,
-                            run_id=self.run_id,
-                        ),
-                        phase_id=phase_id,
-                        phase_data=phase_entry,
-                    )
-                    replayed.append(phase_entry)
-                else:
-                    # Pre-Phase-1 fallback. Retained only so the old path stays
-                    # testable; note it writes to the curated deck.
-                    self.scheduler.append_to_phases(candidate)
 
         if self.mutator and replayed:
-            # Bound to this agent's run explicitly. Left implicit, the overlay
-            # is keyed on `latest_run_id()`, which during a reference run is a
-            # gfx900 floor run -- so the candidates would be written to an
-            # overlay that `load_phases_manifest` never applies, and the arm
-            # would emit into nothing.
             self.mutator.write_overlay(replayed, run_id=self.run_id)
 
+        self._record_emission_stats(
+            new_candidates, rejected_non_novel, replayed,
+            retired_cells, settled_cells, lattice_fallbacks, ungraded_cells
+        )
+
+        self.iteration += 1
+        return new_candidates
+
+    def _prepare_mutants(
+        self,
+        cell_key: str,
+        family: str,
+        shape: str,
+        winner_config: Dict[str, Any],
+        mutation_budget: int,
+        retired_cells: List[str],
+        lattice_fallbacks: List[str],
+    ) -> tuple[List[Dict], List[str], Optional[str]]:
+        """Prepare mutants and sweep shapes for a cell. Returns (mutants, sweep_shapes, cell_state)."""
+        sweep_shapes: List[str] = []
+        cell_state = None
+        if self.mutator is not None:
+            cell_state = self._cell_coverage_state(family, shape)
+            if cell_state == coverage.STATE_RETIRED:
+                retired_cells.append(cell_key)
+                return [], [], cell_state
+            if self.db_mutator is not None and self.db_mutator.has_db():
+                mutants = self.db_mutator.synthesize_mutants(
+                    family, winner_config, shape,
+                    random.Random(f"{self.iteration}:{cell_key}"),
+                    n=8)
+                sweep_shapes = self._shape_sweeps().get(family, [shape])
+            else:
+                synth = self.mutator.sample_cell_synthesized(
+                    family,
+                    base_config=winner_config,
+                    cell=self._cell_coverage(family, shape),
+                    groups=mutation_budget,
+                    seed=f"{self.iteration}:{cell_key}",
+                    band_pct=self.band(),
+                    shape=shape,
+                    sweeps=self._shape_sweeps(),
+                )
+                sweep_shapes = synth.get("shapes") or []
+                if synth.get("source") == "lattice":
+                    lattice_fallbacks.append(cell_key)
+                mutants = [c["knobs"] for c in synth.get("candidates", [])]
+        else:
+            mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
+        return mutants, sweep_shapes, cell_state
+
+    def _build_template(self, family: str, data_type: str) -> Dict[str, Any]:
+        """Build the candidate template."""
+        return {
+            "Architecture": "gfx90c",
+            "DataType": data_type,
+            "ProblemType": "Contraction",
+            "ScheduleName": "isa",
+            "FamilyLabel": family,
+        }
+
+    def _validate_candidate(
+        self,
+        candidate: CandidateConfig,
+        template: Dict[str, Any],
+        mutant: Dict[str, Any],
+        winner_info: Dict[str, Any],
+    ) -> str:
+        """Validate candidate and record rejection if invalid. Returns 'invalid' or 'ok'."""
+        is_valid, reason = self.scheduler.validate_config({**template, **mutant})
+        if not is_valid and self.mutator:
+            self.mutator.registry.record_proposal(
+                fp=candidate.fingerprint,
+                family=winner_info.get("family", ""),
+                shape=winner_info.get("shape", ""),
+                parent_fp=winner_info.get("fp"),
+                iteration=self.iteration,
+                run_id=self.run_id,
+            )
+            self.mutator.resolve(
+                candidate.fingerprint,
+                "legal_rejected",
+                build_class=reason[:200],
+            )
+            return "invalid"
+        return "ok"
+
+    def _check_novelty(self, candidate: CandidateConfig) -> bool:
+        """Check if candidate is novel. Returns True if novel, False if rejected."""
+        return not (self.mutator and self.mutator.is_novel(candidate.fingerprint) is False)
+
+    def _record_candidate_phase(
+        self,
+        phase_id: str,
+        label: str,
+        family: str,
+        data_type: str,
+        shape: str,
+        sweep_shapes: List[str],
+        cell_state: Optional[str],
+        candidate: CandidateConfig,
+        mutant: Dict[str, Any],
+        winner_info: Dict[str, Any],
+        template: Dict[str, Any],
+        replayed: List[Dict[str, Any]],
+        ungraded_cells: List[str],
+        cell_key: str,
+    ) -> None:
+        """Record candidate phase in mutator or fallback to scheduler."""
+        shapes = sweep_shapes if len(sweep_shapes) >= 2 else [shape]
+        if len(shapes) < 2:
+            ungraded_cells.append(cell_key)
+        phase_entry = {
+            "phase_id": phase_id,
+            "fp": candidate.fingerprint,
+            "label": label,
+            "dtype": data_type.lower(),
+            "shapes": list(shapes),
+            "config": {**template, **mutant},
+            "origin": "novel",
+            "graded": len(shapes) >= 2,
+            "coverage_state": cell_state,
+            "bypass_identical_skip": True,
+        }
+        self.mutator.emit_candidate_phase(
+            Proposal(
+                fp=candidate.fingerprint,
+                family=family,
+                shape=shape,
+                parent_fp=winner_info.get("fp"),
+                iteration=self.iteration,
+                run_id=self.run_id,
+            ),
+            phase_id=phase_id,
+            phase_data=phase_entry,
+        )
+        replayed.append(phase_entry)
+
+    def _process_mutant(
+        self,
+        phase_id: str,
+        label: str,
+        family: str,
+        data_type: str,
+        shape: str,
+        sweep_shapes: List[str],
+        cell_state: Optional[str],
+        mutant: Dict[str, Any],
+        winner_info: Dict[str, Any],
+        new_candidates: List[CandidateConfig],
+        replayed: List[Dict[str, Any]],
+        ungraded_cells: List[str],
+        cell_key: str,
+    ) -> str:
+        """Process a single mutant. Returns status: 'ok', 'rejected_non_novel', or 'invalid'."""
+        template = self._build_template(family, data_type)
+        shapes_for_candidate = sweep_shapes if len(sweep_shapes) >= 2 else [shape]
+        candidate = self.scheduler.emit_candidate(
+            phase_id=phase_id,
+            label=label,
+            dtype=data_type.lower(),
+            shapes=list(shapes_for_candidate),
+            template=template,
+            knobs=mutant
+        )
+
+        if self._validate_candidate(candidate, template, mutant, winner_info) == "invalid":
+            return "invalid"
+
+        if not self._check_novelty(candidate):
+            return "rejected_non_novel"
+
+        new_candidates.append(candidate)
+        if self.mutator:
+            self._record_candidate_phase(
+                phase_id, label, family, data_type, shape,
+                sweep_shapes, cell_state, candidate, mutant, winner_info,
+                template, replayed, ungraded_cells, cell_key
+            )
+        else:
+            self.scheduler.append_to_phases(candidate)
+        return "ok"
+
+    def _record_emission_stats(
+        self,
+        new_candidates: List[CandidateConfig],
+        rejected_non_novel: int,
+        replayed: List[Dict[str, Any]],
+        retired_cells: List[str],
+        settled_cells: List[str],
+        lattice_fallbacks: List[str],
+        ungraded_cells: List[str],
+    ) -> None:
+        """Record emission statistics for this iteration."""
         self.last_emission_stats = {
             "emitted": len(new_candidates),
             "rejected_non_novel": rejected_non_novel,
             "wrote_overlay": bool(self.mutator and replayed),
             "skip_mutation_arm": self.skip_mutation_arm(),
-            # Phase 4 observability. A run that quietly fell back to the lattice,
-            # or that emitted mutants with no shape sweep, looks identical to one
-            # that did neither unless it is reported.
             "retired_cells": retired_cells,
             "settled_cells": sorted(set(settled_cells)),
             "lattice_fallback_cells": lattice_fallbacks,
@@ -471,6 +523,3 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
                                  if len(r.get("shapes") or ()) >= 2}),
             "band_pct": self.band(),
         }
-
-        self.iteration += 1
-        return new_candidates

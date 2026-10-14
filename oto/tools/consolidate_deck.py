@@ -204,23 +204,7 @@ def _candidates(deck: List[Dict[str, Any]], fam: str, shape: str,
 
 
 def select_deck(base: Path = BASE) -> Dict[str, Any]:
-    """Build the deck from existing phases only.
-
-    Two phases are kept per cell, because they answer different questions:
-
-    * ``best`` -- the highest measured GFLOPS at this cell, whatever form it was
-      measured in. This is the solution worth keeping, and it is what the user
-      asked to retain even where it currently loses.
-    * ``sweep`` -- the widest phase covering this cell. A sweep times every size
-      in the family in one Tensile invocation, which is the form the locked
-      floor was measured in, so including it is what makes the next run
-      comparable.
-
-    Keeping only ``best`` would rebuild the current problem: it is usually a
-    one-size phase, so the next run stays ungradable against a swept floor.
-    Keeping only ``sweep`` would throw away the best solutions found so far.
-    Illegal phases are dropped on both paths.
-    """
+    """Build deck from existing phases; keep best + sweep per cell. Illegal dropped."""
     deck = load_deck(base)
     idx = measured_index(base)
     by_pid = {str(p.get("phase_id")): p for p in deck}

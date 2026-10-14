@@ -131,9 +131,6 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         ok, why = sched.validate_config(config)
         if not ok:
             return None
-        # Group C gate: pads/swizzle/AF0EM must also survive ldspad_feasible,
-        # or the row would be refused at the launch boundary after consuming a
-        # generation slot. Same CPU-only gate the writer applies.
         pad_ok, _pad_why = ldspad_feasible(config)
         if not pad_ok:
             return None
@@ -141,23 +138,13 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         existing = pool.get(fp)
         if existing is None:
             if fp in seen_fp:
-                # Already scheduled by the deck or seed this run. The deck row
-                # carries its own shapes, so re-offering adds nothing.
                 return None
-            side0 = sides[0]
-            fam_key = fam.lower()
-            mt = knobs["MacroTile"]
-            tt = knobs["ThreadTile"]
-            vw = knobs.get("VectorWidth", 1)
-            du = knobs.get("DepthU", 16)
-            gsu = knobs.get("GlobalSplitU", 1)
-            wgm = knobs.get("WorkGroupMapping", 4)
+            side0 = sides[0]; fam_key = fam.lower()
+            mt = knobs["MacroTile"]; tt = knobs["ThreadTile"]; vw = knobs.get("VectorWidth", 1)
+            du = knobs.get("DepthU", 16); gsu = knobs.get("GlobalSplitU", 1); wgm = knobs.get("WorkGroupMapping", 4)
             prefix = "phase_cand"
             phase_id = (f"{prefix}_{fam_key}_{side0}_{_tile_key(mt, tt)}"
                         f"_{pattern}_vw{vw}_du{du}_g{gsu}_w{wgm}")
-            # Two configs can share every id-encoded knob (e.g. the 2026-10-09
-            # pad / PGR / NLCA variants of the same tile), so pin uniqueness to
-            # the fingerprint tail. The prefix stays knob-decodeable.
             phase_id = f"{phase_id}_{fp[:8]}"
             row = {
                 "phase_id": phase_id,
@@ -182,9 +169,6 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                 existing["note"] = note
         return pool[fp] if existing is None else None
 
-    # --- wide tier: ladder tiles x patterns x DU/GSU, one row per config ---
-    # A config is shape-agnostic, so it spans every in-grid target cell of its
-    # family (matching deck semantics: one phase, many exact sizes).
     for fam in TARGET_CELLS:
         ladder = LADDER.get(fam, [])
         pats = PATTERNS.get(fam, ("Ailk_Bjlk",))[:2]
@@ -207,10 +191,8 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                         row = _offer(fam, "wide", pat, knobs, sides)
                         if row:
                             yield row
-        # narrow-tier neighbours attach their cell to whatever config wins it
         yield from _narrow_row_gen(sched, fam, sides, seen_fp, pool, _offer)
 
-    # --- auto tier: explicit evidence-derived rows ---------------------------
     for fam, specs in AUTO_EXPLICIT.items():
         for spec_ in specs:
             side = int(spec_["shapes"][0].split("x")[0])
@@ -221,10 +203,6 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
             if row:
                 yield row
 
-    # --- auto tier: 2026-10-09 beat-the-spoof batch (PLAN_BATCH) ----------
-    # Configs span the family's full TARGET_CELLS like the wide tier; every row
-    # carries a knob (pads / PGR / PLR / GLVW / NLCA / WGM8) no other tier
-    # emits, so fp-dedupe never collapses them into a wide row.
     for spec_ in PLAN_BATCH:
         fam = spec_["fam"]
         knobs = {k: v for k, v in spec_.items()

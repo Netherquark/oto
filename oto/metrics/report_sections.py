@@ -225,7 +225,7 @@ class SectionMixin:
         """
 
     def _coverage_matrix_section(self, report) -> str:
-        """Coverage + execution-time table derived from coverage and registry timing."""
+        """Coverage + exec-time matrix from registry timing."""
         timing = report.family_timing or {}
         fam_keys = set(report.per_family_coverage.keys())
         fam_keys |= set(timing.keys())
@@ -265,26 +265,7 @@ class SectionMixin:
                     <td class="num">{total_min}</td>
                     <td><span class="{tag}">{status}</span></td>
                 </tr>"""
-        return f"""
-        <section class="section">
-            <h2 class="section-title">Coverage matrix &amp; execution time</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Family</th>
-                            <th>Completed cells</th>
-                            <th>Mean time / cell (s)</th>
-                            <th>Total time (min)</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>{rows}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        """
+        return f"""<section class="section"><h2 class="section-title">Coverage matrix &amp; execution time</h2><div class="table-wrap"><table><thead><tr><th>Family</th><th>Completed cells</th><th>Mean time / cell (s)</th><th>Total time (min)</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table></div></section>"""
 
     def _load_run_telemetry(self, run_dir) -> Optional[Dict[str, Dict[str, float]]]:
         """Parse logs/telemetry.csv from the run directory (median + peak per metric)."""

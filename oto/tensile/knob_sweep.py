@@ -40,14 +40,7 @@ from oto.tensile.decks import KNOB_SWEEPS, KNOB_SWEEP_BASES  # noqa: E402
 
 
 def main(argv: List[str] | None = None) -> int:
-    """Emit the knob-sweep deck.
-
-    Args:
-        argv: Argument vector, defaulting to ``sys.argv[1:]``.
-
-    Returns:
-        Process exit status: 0 on success, 1 if no candidate could be emitted.
-    """
+    """Emit knob-sweep deck. argv: args vector. Returns: 0 success, 1 no candidates."""
     ap = argparse.ArgumentParser(
         description="Emit each family's winner tile crossed with the knobs "
                     "the corpus never explicitly set (potential_configs.md §8.1).",
@@ -71,10 +64,7 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--phases", default="phases.yaml",
                     help="candidate manifest to write (default: ./phases.yaml)")
     args = ap.parse_args(argv)
-
-    shapes = args.shapes or ["512x512x512", "1024x1024x1024"]
-    gen = CandidateGenerator(Path("."))
-
+    shapes = args.shapes or ["512x512x512", "1024x1024x1024"]; gen = CandidateGenerator(Path("."))
     print(f"knob-sweep deck: {len(KNOB_SWEEPS)} sweeps x "
           f"{len(args.families or KNOB_SWEEP_BASES)} families x "
           f"{len(shapes)} shapes"
@@ -82,7 +72,6 @@ def main(argv: List[str] | None = None) -> int:
           + (" + trials" if args.trials else ""))
     if not args.emit:
         print("DRY RUN -- nothing written. Pass --emit to append.")
-
     if not args.emit:
         # Validate without writing: the generator's sweep method always appends,
         # so a dry run pre-checks each combination through the same gate and
@@ -102,7 +91,6 @@ def main(argv: List[str] | None = None) -> int:
             emitted += gen.generate_decision_trial_phases(
                 families=args.families, patterns=args.patterns,
                 base_shapes=shapes, phases_file=target)
-
     if not emitted:
         print("ERROR: no candidate could be emitted. Check the refusals above.")
         return 1
@@ -121,26 +109,9 @@ def _dry_run(gen: CandidateGenerator, families: List[str],
              patterns: List[str], shapes: List[str],
              include_baseline: bool = False, include_trials: bool = False
              ) -> tuple[List[Dict[str, Any]], List[str]]:
-    """Validate every sweep combination without writing the manifest.
-
-    Args:
-        gen: The generator, used only for ``validate_config`` and the template.
-        families: Family labels to sweep.
-        patterns: Contraction patterns.
-        shapes: Problem shapes.
-        include_baseline: Count each base tile unchanged too (matches
-            ``generate_knob_sweep_phases(include_baseline=True)``).
-        include_trials: Count the decision-trial tiles too (matches
-            ``generate_decision_trial_phases``).
-
-    Returns:
-        ``(emitted, refused)`` where ``emitted`` is a list of the knob dicts
-        that would run and ``refused`` is a list of ``"<why>"`` strings.
-    """
+    """Validate sweep combinations without writing manifest. Returns: (emitted, refused)."""
     from oto.device.peaks import FAMILY_DTYPE_CHAR
-    from oto.tensile.decks import (DECISION_TRIAL_TILES, KNOB_SWEEPS,
-                                   KNOB_SWEEP_BASES)
-
+    from oto.tensile.decks import DECISION_TRIAL_TILES, KNOB_SWEEPS, KNOB_SWEEP_BASES
     emitted: List[Dict[str, Any]] = []
     refused: List[str] = []
     for family in families:

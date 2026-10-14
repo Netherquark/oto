@@ -122,21 +122,12 @@ class HtmlMixin:
                 "marker_left": marker_left, "marker_left_theo": marker_left_theo}
 
 
-    def _family_matrix_rows(self, family_data, size_data, scale, scale_theo,
-                            marker_left, marker_left_theo) -> str:
-        """The family matrix's rows, and the expandable per-size detail rows.
-
-        The bar widget is emitted four times per row (realistic/theoretical x
-        family/size) with the same shape and only four substitutions; that
-        duplication is recorded in incomplete_work.md.
-        """
+    def _family_matrix_rows(self, family_data, size_data, scale, scale_theo, marker_left, marker_left_theo) -> str:
+        """The family matrix's rows, with expandable per-size detail rows."""
         family_rows = ""
         for fam, cov, best, ceil, theo, pct, pct_theo in family_data:
-            bar_width = pct / scale * 100.0
-            bar_width_theo = pct_theo / scale_theo * 100.0
-            expand_id = f"fam-{fam}"
-            sizes = size_data.get(fam, [])
-            detail_html = ""
+            bar_width = pct / scale*100.0; bar_width_theo = pct_theo/scale_theo*100.0
+            expand_id = f"fam-{fam}"; sizes = size_data.get(fam, []); detail_html = ""
             if sizes:
                 size_rows = ""
                 for size_key, s, sb, spct, spct_theo in sizes:

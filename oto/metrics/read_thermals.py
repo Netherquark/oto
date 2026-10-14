@@ -38,10 +38,7 @@ def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
         return None
     import csv as _csv
 
-    temp: List[int] = []
-    power: List[int] = []
-    sclk: List[int] = []
-    busy = 0
+    temp: List[int] = []; power: List[int] = []; sclk: List[int] = []; busy = 0
     try:
         with path.open(newline="") as fh:
             rd = _csv.DictReader(fh)

@@ -50,36 +50,21 @@ def _collect(records: List[Dict[str, Any]],
 
     A workload cell is (family, cube side). Records are grouped by
     (source_run, phase_id, fingerprint) FIRST, and the per-kernel median is
-    taken within that group, because the same (phase_id, fingerprint) is
-    benchmarked by more than one run and pooling those samples would average
-    across runs instead of taking each run's measurement on its own.
+    taken within that group.
 
-    Two non-obvious rules live here:
-
-    * **Per-kernel median first, THEN the cell statistic.** Comparing raw max
-      samples instead would let a single lucky seed decide the verdict, and
-      seed noise dwarfs real config deltas.
-    * **A clock-adjusted figure is only trusted above a coverage floor.** With
-      partial coverage the eligible subset is a different, unrepresentative
-      sample, and its max can sit far below the unadjusted max -- which would
-      silently make the arm with worse coverage look slower. So the clock
-      figures are dropped for the whole cell when coverage is thin, and the
-      cell is graded unadjusted (both arms together, never one-sided).
-
-    ASSUMPTION (reported, not hidden): throughput proportional to core clock.
-    That holds for ALU-bound kernels but OVER-corrects memory-bound ones
-    (GFM/GEMM small shapes, whose ceiling is set by mclk/DRAM, not sclk), so a
-    clock-adjusted delta on a DDR-bound cell is an extrapolation, not a
-    measurement. Both the adjusted and the unadjusted statistic are reported.
+    Key rules:
+    * Per-kernel median first, THEN cell statistic.
+    * Clock-adjusted figures only trusted above coverage floor.
     """
-    samples: Dict[Tuple[str, int], List[float]] = defaultdict(list)
-    # Group key includes the source run: the same (phase_id,
-    # fingerprint) is benchmarked by more than one run, and pooling
-    # those samples into one "kernel median" would average across
-    # runs instead of taking each run's measurement on its own.
-    groups: Dict[Tuple[str, int], Dict[Tuple[str, str, str], List[float]]] = defaultdict(lambda: defaultdict(list))
-    meta: Dict[Tuple[str, str, str], Tuple[str, str, str]] = {}
-    throttled: Dict[Tuple[str, int], List[float]] = defaultdict(list)
+    samples, groups, meta, throttled = _collect_raw_data(records)
+    return _compute_cell_stats(samples, groups, meta, throttled, sclk_by_gkey, sclk_ref)
+
+def _collect_raw_data(records):
+    """Collect raw samples and group by cell and kernel."""
+    samples = defaultdict(list)
+    groups = defaultdict(lambda: defaultdict(list))
+    meta = {}
+    throttled = defaultdict(list)
     for rec in records:
         fam = resolve_cell_family(rec)
         if not fam:
@@ -101,78 +86,85 @@ def _collect(records: List[Dict[str, Any]],
         adj = rec.get("GFLOPS_throttle_adjusted")
         if adj:
             throttled[key].append(float(adj))
-    stats: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    return samples, groups, meta, throttled
+
+def _compute_cell_stats(samples, groups, meta, throttled,
+                         sclk_by_gkey, sclk_ref):
+    """Compute per-cell statistics from grouped data."""
+    stats = {}
     for key, gs in groups.items():
-        # Per-kernel median first, THEN the cell statistic. Comparing
-        # raw max samples instead would let a single lucky seed
-        # decide the verdict (seed noise dwarfs real config deltas).
         kernel_meds = {gk: statistics.median(v) for gk, v in gs.items() if v}
         if not kernel_meds:
             continue
-        # Telemetry-normalized twin of the same per-kernel medians:
-        # GFLOPS is linear in core clock, so a kernel measured at
-        # sclk_meas is scaled to the corpus reference clock by
-        # (sclk_ref / sclk_meas). Per-kernel factor => the scaled
-        # median is exactly median * factor, so no seed is re-used.
-        # Only kernels with real per-phase clock data are eligible,
-        # and coverage is reported so an unadjusted number can never
-        # be presented as an adjusted one.
-        kernel_meds_clock: Dict[Tuple[str, str, str], float] = {}
-        n_samples_cell = sum(len(v) for v in gs.values())
-        n_clock = 0
-        if sclk_by_gkey and sclk_ref:
-            for gk, med in kernel_meds.items():
-                hz = sclk_by_gkey.get((gk[0], gk[1]))
-                if hz and hz > 0:
-                    kernel_meds_clock[gk] = med * (sclk_ref / hz)
-                    n_clock += len(gs[gk])
-        # A clock-adjusted BEST is only meaningful if it is the best
-        # over the same population the unadjusted best is drawn from.
-        # With partial coverage the eligible subset is a different,
-        # unrepresentative sample, and its max can sit far below the
-        # unadjusted max — which would silently make the arm with
-        # worse coverage look slower. So the clock figures are only
-        # trusted above a coverage floor, and the cell is otherwise
-        # graded unadjusted (both arms together, never one-sided).
+
+        kernel_meds_clock, n_clock, n_samples_cell = _compute_clock_medians(
+            gs, kernel_meds, sclk_by_gkey, sclk_ref)
+
         coverage = (n_clock / n_samples_cell) if n_samples_cell else 0.0
         clock_ok = coverage >= _coverage_floor()
         if not clock_ok:
             kernel_meds_clock = {}
-        med = statistics.median(kernel_meds.values())
+
         winner = max(kernel_meds, key=lambda gk: kernel_meds[gk])
+        med = statistics.median(kernel_meds.values())
         src, phase_id, fp = meta[winner]
         runs = sorted({g[0] for g in kernel_meds if g[0]})
         thr = statistics.median(throttled[key]) if throttled[key] else med
+
         clock_winner = (max(kernel_meds_clock, key=lambda gk: kernel_meds_clock[gk])
                         if kernel_meds_clock else None)
-        stats[key] = {
-            "best": max(samples[key]),
-            "best_median": kernel_meds[winner],
-            "worst_median": min(kernel_meds.values()),
-            "best_median_clock": (kernel_meds_clock[clock_winner]
-                                  if clock_winner else 0.0),
-            "median_clock": (statistics.median(kernel_meds_clock.values())
-                             if kernel_meds_clock else 0.0),
-            "clock_coverage": coverage,
-            "clock_ok": bool(clock_ok),
-            "clock_sclk_hz": (sclk_by_gkey.get((clock_winner[0], clock_winner[1]), 0.0)
-                              if clock_winner else 0.0),
-            "clock_kernels": len(kernel_meds_clock),
-            "median": med,
-            "throttle": thr,
-            "throttle_adjusted": bool(throttled[key]),
-            "n_kernels": len(kernel_meds),
-            "n_samples": len(samples[key]),
-            "n_runs": len(runs),
-            "runs": runs,
-            "origin": {
-                "gflops": kernel_meds[winner],
-                "run_id": src,
-                "phase_id": phase_id,
-                "fingerprint": fp,
-            },
-        }
+
+        stats[key] = _build_stat_dict(
+            samples[key], kernel_meds, kernel_meds_clock, winner,
+            clock_winner, med, thr, src, phase_id, fp, runs,
+            coverage, clock_ok, sclk_by_gkey, throttled[key]
+        )
     return stats
+
+def _compute_clock_medians(gs, kernel_meds, sclk_by_gkey, sclk_ref):
+    """Compute clock-adjusted medians for kernels with clock data."""
+    kernel_meds_clock = {}
+    n_clock = 0
+    n_samples_cell = sum(len(v) for v in gs.values())
+    if sclk_by_gkey and sclk_ref:
+        for gk, med in kernel_meds.items():
+            hz = sclk_by_gkey.get((gk[0], gk[1]))
+            if hz and hz > 0:
+                kernel_meds_clock[gk] = med * (sclk_ref / hz)
+                n_clock += len(gs[gk])
+    return kernel_meds_clock, n_clock, n_samples_cell
+
+def _build_stat_dict(samples, kernel_meds, kernel_meds_clock, winner,
+                      clock_winner, med, thr, src, phase_id, fp, runs,
+                      coverage, clock_ok, sclk_by_gkey, throttled_list):
+    """Build the statistics dictionary for a cell."""
+    return {
+        "best": max(samples),
+        "best_median": kernel_meds[winner],
+        "worst_median": min(kernel_meds.values()),
+        "best_median_clock": (kernel_meds_clock[clock_winner]
+                              if clock_winner else 0.0),
+        "median_clock": (statistics.median(kernel_meds_clock.values())
+                         if kernel_meds_clock else 0.0),
+        "clock_coverage": coverage,
+        "clock_ok": bool(clock_ok),
+        "clock_sclk_hz": (sclk_by_gkey.get((clock_winner[0], clock_winner[1]), 0.0)
+                          if clock_winner else 0.0),
+        "clock_kernels": len(kernel_meds_clock),
+        "median": med,
+        "throttle": thr,
+        "throttle_adjusted": bool(throttled_list),
+        "n_kernels": len(kernel_meds),
+        "n_samples": len(samples),
+        "n_runs": len(runs),
+        "runs": runs,
+        "origin": {
+            "gflops": kernel_meds[winner],
+            "run_id": src,
+            "phase_id": phase_id,
+            "fingerprint": fp,
+        },
+    }
 
 
 def _stat(stats: Dict[str, Any], which: str, agg: str) -> float:

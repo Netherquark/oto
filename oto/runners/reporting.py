@@ -126,63 +126,67 @@ class ReportingMixin:
         """Compute native-vs-spoof A/B verdicts for a run.
 
         Native arm = the WHOLE database (every run's CSVs + every registry
-        benchmark_result row), not just the run being reported: a run may
-        execute zero new cells of its own (all phases deduped as
-        identical_fp_already_passed, or all failed) while the historical
-        winners are still the native candidates it is being graded against.
-        Winners are therefore picked across the entire db, including prior
-        older winner runs, and each verdict cites the run that produced the
-        winning sample.
-
-        Spoof arm = the latest completed gfx900 reference run (the
-        once-benchmarked shipped floor), recalled from disk — never re-run.
-        Every spoof entity is compared against the best native value at the
-        same (dtype, shape): deck-winner vs floor. Falls back to same-run
-        records when no reference run exists (legacy merged/draft data).
-
-        agg: comparison basis (see analytics.compute_native_vs_spoof_delta;
-        default 'floor_best' = floor's best per-kernel median vs the deck's
-        median, the "is a typical native kernel better than the floor's best"
-        question).
+        benchmark_result row). Spoof arm = the latest completed gfx900 reference run.
         """
         self._sclk_cache = None
         self._thermal_cache = None
+        native_records = self._load_native_records(run_id, run_dir)
+
+        spoof_records, ref_run_ids = self._load_spoof_records(run_id)
+        if not spoof_records:
+            print("[ab] no completed gfx900 reference floor found -- A/B verdicts "
+                  "deferred. Establish it with `--gfx900-reference` (or --auto, "
+                  "which runs it automatically).")
+            return []
+
+        self._last_ab_reference_run_id = ref_run_ids[0] if ref_run_ids else None
+        sclk_by_phase, sclk_ref = self._compute_sclk_data(native_records, spoof_records, ref_run_ids)
+        native_cov, spoof_cov = self._clock_coverage(native_records, sclk_by_phase),                                 self._clock_coverage(spoof_records, sclk_by_phase)
+
+        thermal = self._thermal_summary(ref_run_ids)
+        self._build_sclk_info(sclk_by_phase, sclk_ref, native_cov, spoof_cov, thermal)
+        self._log_thermal_and_clock_warnings(thermal, native_cov, agg)
+
+        deltas = self.analytics.compute_native_vs_spoof_delta(
+            native_records, spoof_records, agg=agg,
+            sclk_by_phase=sclk_by_phase, sclk_ref=sclk_ref)
+        thermal_by_phase = self._thermal_map(ref_run_ids)
+
+        return self._build_verdicts(deltas, thermal_by_phase, agg)
+
+    def _load_native_records(self, run_id: str, run_dir: Optional[Path]) -> List[Dict]:
+        """Load native records from all runs."""
         self._native_arm_records = self._native_records_all_runs()
         native_records = self._native_arm_records
         if not native_records and run_dir is not None:
-            native_records, _spoof = self._ab_records_from_csv(run_dir, force_arm="native")
+            native_records, _ = self._ab_records_from_csv(run_dir, force_arm="native")
         if not native_records:
-            native_records, _spoof = self._ab_records_from_registry(run_id, force_arm="native")
+            native_records, _ = self._ab_records_from_registry(run_id, force_arm="native")
+        return native_records
 
-        # Spoof floor = recalled completed reference run chain (never re-run).
-        self._last_ab_reference_run_id = None
+    def _load_spoof_records(self, run_id: str) -> tuple:
+        """Load spoof records from reference floor runs."""
         ref_run_ids = self._reference_floor_runs(run_id)
         spoof_records: List[Dict[str, Any]] = []
         for ref in ref_run_ids:
             ref_dir = self.base_dir / "gfx90c_runs" / ref
             if ref_dir.is_dir():
-                _ref_native, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
+                _, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
                 for rec in ref_records:
                     rec["source_run"] = ref
                 spoof_records.extend(ref_records)
-        if ref_run_ids:
-            self._last_ab_reference_run_id = ref_run_ids[0]
-        if not spoof_records:
-            print("[ab] no completed gfx900 reference floor found — A/B verdicts "
-                  "deferred. Establish it with `--gfx900-reference` (or --auto, "
-                  "which runs it automatically).")
-            return []
+        return spoof_records, ref_run_ids
 
-        # Telemetry clocks for BOTH arms, keyed (source_run, phase_id), plus one
-        # shared reference clock. Native runs are loaded too, so a future native
-        # run with phase-tagged telemetry is adjusted automatically.
+    def _compute_sclk_data(self, native_records, spoof_records, ref_run_ids):
+        """Compute SCLK data for both arms."""
         native_runs = [str(r.get("source_run") or "") for r in native_records]
         clock_runs = sorted({r for r in native_runs if r} | set(ref_run_ids))
         sclk_by_phase = self._sclk_map(clock_runs)
         sclk_ref = self._sclk_reference(sclk_by_phase)
-        native_cov = self._clock_coverage(native_records, sclk_by_phase)
-        spoof_cov = self._clock_coverage(spoof_records, sclk_by_phase)
-        thermal = self._thermal_summary(clock_runs)
+        return sclk_by_phase, sclk_ref
+
+    def _build_sclk_info(self, sclk_by_phase, sclk_ref, native_cov, spoof_cov, thermal):
+        """Build and store SCLK info dict."""
         self._sclk_info = {
             "sclk_ref_hz": sclk_ref,
             "native_coverage": native_cov,
@@ -191,6 +195,9 @@ class ReportingMixin:
             "thermal": thermal,
             "thermal_max_c_gate": self.THERMAL_MAX_C,
         }
+
+    def _log_thermal_and_clock_warnings(self, thermal, native_cov, agg):
+        """Log thermal and clock adjustment warnings."""
         if thermal["hot_phases"]:
             print("[report] WARNING: "
                   f"{thermal['hot_phases']} phase(s) hit or exceeded the "
@@ -204,16 +211,13 @@ class ReportingMixin:
             print("[report] WARNING: --native-agg "
                   f"{agg!r} requires per-phase telemetry clocks, but the NATIVE arm "
                   f"has none ({native_cov[0]}/{native_cov[1]} samples covered across "
-                  f"{len(native_runs)} run(s); the largest native run has no telemetry "
+                  f"{len(native_cov[2]) if len(native_cov) > 2 else 0} run(s); the largest native run has no telemetry "
                   "at all). Cells will fall back to UNADJUSTED best-vs-best and are "
-                  "flagged clock_adjusted=false — these numbers are NOT "
+                  "flagged clock_adjusted=false -- these numbers are NOT "
                   "telemetry-adjusted.")
-        deltas = self.analytics.compute_native_vs_spoof_delta(
-            native_records, spoof_records, agg=agg,
-            sclk_by_phase=sclk_by_phase, sclk_ref=sclk_ref)
 
-        thermal_by_phase = self._thermal_map(clock_runs)
-
+    def _build_verdicts(self, deltas, thermal_by_phase, agg):
+        """Build ABVerdict objects from deltas."""
         def _temp(run: str, phase: str) -> Tuple[Optional[float], Optional[float]]:
             d = thermal_by_phase.get((str(run or ""), str(phase or ""))) or {}
             return d.get("temp_c"), d.get("temp_max_c")
@@ -225,8 +229,7 @@ class ReportingMixin:
             s_temp, s_temp_max = _temp(d.get("spoof_winner_run", ""),
                                        d.get("spoof_winner_phase", ""))
             verdicts.append(ABVerdict(
-                dtype=dtype,
-                shape=shape,
+                dtype=dtype, shape=shape,
                 native_median=d["native_median"],
                 spoof_median=d["spoof_median"],
                 delta_pct=d["delta_pct"],

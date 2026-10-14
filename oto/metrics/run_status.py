@@ -113,17 +113,8 @@ def bucket(status: str, result: Optional[str]) -> str:
 def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
     """Every run row and its general verdicts, in one read of the registry.
 
-    Returns the per-run indexes (`status_by_run`, `started_by_run`,
-    `completed_by_run`, `meta_by_run`, `all_ids`), the resolved `chain`, the
-    chain's `latest` per-phase verdict map, the `unkeyed` ids that carry no
-    corpus identity, and the chain's `first_start` / `last_event` span.
-
-    The chain rule is the whole reason this is a helper: the head is the newest
-    run still in flight (decided by `completed_at`, not the status label), else
-    the newest completed run, else the newest finished-but-interrupted run --
-    then its `resume_of` ancestors. Treating every 'interrupted' run as active
-    walked straight past a floor locked days later and reported a stale chain,
-    so every tier count and ETA it printed came from the wrong corpus.
+    Returns the per-run indexes, the resolved chain, the chain's latest
+    per-phase verdict map, the unkeyed ids, and the chain's first_start / last_event span.
     """
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=30.0)
     conn.row_factory = sqlite3.Row
@@ -133,146 +124,132 @@ def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
         "latest": {}, "unkeyed": set(), "first_start": None,
         "last_event": None,
     }
-    status_by_run = out["status_by_run"]
-    started_by_run = out["started_by_run"]
-    completed_by_run = out["completed_by_run"]
-    meta_by_run = out["meta_by_run"]
-    row_id = out["row_id"]
-    try:
-        rows = conn.execute(
-            "SELECT id, run_id, status, started_at, completed_at, metadata "
-            "FROM runs ORDER BY id DESC").fetchall()
-        for r in rows:
-            rid = str(r["run_id"])
-            status_by_run[rid] = str(r["status"])
-            started_by_run[rid] = _parse_ts(r["started_at"])
-            completed_by_run[rid] = _parse_ts(r["completed_at"])
-            row_id[rid] = int(r["id"])
-            try:
-                meta_by_run[rid] = json.loads(r["metadata"]) if r["metadata"] else {}
-            except ValueError:
-                meta_by_run[rid] = {}
+    status_by_run, started_by_run, completed_by_run, meta_by_run, row_id = _load_runs_data(conn, out)
+    out["all_ids"] = _sort_runs_by_started(status_by_run, started_by_run, row_id)
 
-        # All runs, newest by started_at first (ties fall back to id so the
-        # order is total). The default head is the newest run of ANY kind --
-        # native tuning runs are the primary workflow now; the gfx900_ref_*
-        # floor chain is just one kind of run. Resumes are not always inserted
-        # in the order they started, so picking by id would report a stale
-        # ancestor as the head.
-        all_ids = sorted(
-            status_by_run,
-            key=lambda r: (started_by_run.get(r) or datetime.min.replace(
-                tzinfo=timezone.utc), row_id[r]),
-            reverse=True)
-        out["all_ids"] = all_ids
+    if run_id:
+        out["chain"] = _build_chain_from_run_id(run_id, meta_by_run, status_by_run)
+    else:
+        out["chain"] = _build_chain_auto(status_by_run, started_by_run, completed_by_run,
+                                         meta_by_run, out["all_ids"])
 
-        # The chain: newest run, plus its resume_of ancestors.
-        if run_id:
-            if run_id not in status_by_run:
-                raise SystemExit(f"unknown run {run_id!r}")
-            chain = [run_id]
-            seen = {run_id}
-            cur = run_id
-            while True:
-                parent = (meta_by_run.get(cur) or {}).get("resume_of")
-                if not parent or parent in seen:
-                    break
-                seen.add(parent)
-                chain.append(str(parent))
-                cur = str(parent)
-            chain.reverse()
-        else:
-            # Precedence, highest first:
-            #   1. a run still in flight (no completed_at)
-            #   2. the newest *completed* run -- authoritative, not resumable
-            #   3. the newest finished-but-interrupted run
-            #
-            # In flight is decided by completed_at, not by the status label. An
-            # interrupted run that never closed is resumable work and belongs at
-            # the head; one that did close is history. Treating every
-            # 'interrupted' run as active walked straight past the floor locked
-            # five days later and stopped on a run that had been closed for
-            # eight, so the default view described a stale chain and every tier
-            # count and ETA it printed came from the wrong corpus.
-            chain = []
-            for cand in ([rid for rid in all_ids
-                          if completed_by_run.get(rid) is None],
-                         [rid for rid in all_ids
-                          if status_by_run[rid] == "completed"],
-                         [rid for rid in all_ids
-                          if status_by_run[rid] in ACTIVE_STATES]):
-                if cand:
-                    chain = [cand[0]]  # all_ids is newest started_at first
-                    break
-            if not chain and all_ids:
-                chain = [all_ids[0]]
-            seen = set(chain)
-            cur = chain[0] if chain else None
-            while cur:
-                parent = (meta_by_run.get(cur) or {}).get("resume_of")
-                if not parent or parent in seen or parent not in status_by_run:
-                    break
-                seen.add(parent)
-                chain.append(str(parent))
-                cur = str(parent)
-            chain.reverse()
-        out["chain"] = chain
+    _process_chain_records(conn, out["chain"], status_by_run, started_by_run,
+                           completed_by_run, meta_by_run, out)
 
-        # Latest state per phase across the chain: a phase decided in an
-        # ancestor counts even if a resume re-listed it, and a phase re-run in a
-        # resume counts once with the newer verdict.
-        #
-        # Keyed by phase_key, not phase_id. phase_id embeds knobs our parsers
-        # derive, so a parser fix renames every phase; the same kernel then
-        # appears under two ids and a raw phase_id count exceeds the corpus (it
-        # read 2298 decided against a 2285-cell corpus). The records themselves
-        # carry the kernel, so hash that -- the same identity the tier manifest
-        # and the A/B recall use.
-        latest: Dict[str, Tuple[str, Optional[str]]] = {}
-        unkeyed: set = set()
-        first_start: Optional[datetime] = None
-        last_event: Optional[datetime] = None
-        for rid in chain:
-            st = started_by_run.get(rid)
-            if st and (first_start is None or st < first_start):
-                first_start = st
-            # A run's start is itself an event in the chain's timeline. Without
-            # this, a chain whose newest run has not yet written a record ends
-            # at the previous run's last record and the span silently shrinks.
-            if st and (last_event is None or st > last_event):
-                last_event = st
-            for (data, ts) in conn.execute(
-                    "SELECT data, timestamp FROM records WHERE run_id = ? "
-                    "AND record_type = 'general'", (rid,)):
-                try:
-                    o = json.loads(data)
-                except ValueError:
-                    continue
-                if not o.get("phase_id"):
-                    continue
-                when = _parse_ts(ts)
-                if when and (last_event is None or when > last_event):
-                    last_event = when
-                kernel = o.get("kernel") or o.get("solution") or ""
-                key = o.get("phase_key")
-                if not key:
-                    if kernel:
-                        key = tlib.phase_key({"kernel": kernel})
-                    else:
-                        # No identity to key on: count it separately so the
-                        # corpus/decided gap stays visible rather than silently
-                        # inflating the numerator.
-                        unkeyed.add(str(o["phase_id"]))
-                        key = "pid:" + str(o["phase_id"])
-                latest[str(key)] = (str(o.get("status") or ""),
-                                    (o.get("result") or {}).get("status"))
-        out["latest"] = latest
-        out["unkeyed"] = unkeyed
-        out["first_start"] = first_start
-        out["last_event"] = last_event
-    finally:
-        conn.close()
     return out
+
+def _load_runs_data(conn, out: Dict) -> tuple:
+    """Load runs data from database into out dict. Returns tuple of dicts."""
+    rows = conn.execute(
+        "SELECT id, run_id, status, started_at, completed_at, metadata "
+        "FROM runs ORDER BY id DESC").fetchall()
+    for r in rows:
+        rid = str(r["run_id"])
+        out["status_by_run"][rid] = str(r["status"])
+        out["started_by_run"][rid] = _parse_ts(r["started_at"])
+        out["completed_by_run"][rid] = _parse_ts(r["completed_at"])
+        out["row_id"][rid] = int(r["id"])
+        try:
+            out["meta_by_run"][rid] = json.loads(r["metadata"]) if r["metadata"] else {}
+        except ValueError:
+            out["meta_by_run"][rid] = {}
+    return (out["status_by_run"], out["started_by_run"], out["completed_by_run"],
+            out["meta_by_run"], out["row_id"])
+
+def _sort_runs_by_started(status_by_run: Dict, started_by_run: Dict, row_id: Dict) -> List:
+    """Sort all runs by started_at (newest first), tie-break by row_id."""
+    return sorted(
+        status_by_run,
+        key=lambda r: (started_by_run.get(r) or datetime.min.replace(tzinfo=timezone.utc), row_id[r]),
+        reverse=True
+    )
+
+def _build_chain_from_run_id(run_id: str, meta_by_run: Dict, status_by_run: Dict) -> List[str]:
+    """Build chain from explicit run_id and its resume_of ancestors."""
+    if run_id not in status_by_run:
+        raise SystemExit(f"unknown run {run_id!r}")
+    chain = [run_id]
+    seen = {run_id}
+    cur = run_id
+    while True:
+        parent = (meta_by_run.get(cur) or {}).get("resume_of")
+        if not parent or parent in seen:
+            break
+        seen.add(parent)
+        chain.append(str(parent))
+        cur = str(parent)
+    chain.reverse()
+    return chain
+
+def _build_chain_auto(
+    status_by_run: Dict, started_by_run: Dict, completed_by_run: Dict,
+    meta_by_run: Dict, all_ids: List[str]
+) -> List[str]:
+    """Auto-detect chain: in-flight > completed > interrupted, then ancestors."""
+    chain = []
+    # Priority: 1) in-flight (no completed_at), 2) completed, 3) interrupted
+    for cand in ([rid for rid in all_ids if completed_by_run.get(rid) is None],
+                 [rid for rid in all_ids if status_by_run[rid] == "completed"],
+                 [rid for rid in all_ids if status_by_run[rid] in ACTIVE_STATES]):
+        if cand:
+            chain = [cand[0]]
+            break
+    if not chain and all_ids:
+        chain = [all_ids[0]]
+    seen = set(chain)
+    cur = chain[0] if chain else None
+    while cur:
+        parent = (meta_by_run.get(cur) or {}).get("resume_of")
+        if not parent or parent in seen or parent not in status_by_run:
+            break
+        seen.add(parent)
+        chain.append(str(parent))
+        cur = str(parent)
+    chain.reverse()
+    return chain
+
+def _process_chain_records(
+    conn, chain: List[str], status_by_run: Dict, started_by_run: Dict,
+    completed_by_run: Dict, meta_by_run: Dict, out: Dict
+) -> None:
+    """Process records for all runs in the chain."""
+    latest: Dict[str, Tuple[str, Optional[str]]] = {}
+    unkeyed: set = set()
+    first_start: Optional[datetime] = None
+    last_event: Optional[datetime] = None
+
+    for rid in chain:
+        st = started_by_run.get(rid)
+        if st and (first_start is None or st < first_start):
+            first_start = st
+        if st and (last_event is None or st > last_event):
+            last_event = st
+        for (data, ts) in conn.execute(
+                "SELECT data, timestamp FROM records WHERE run_id = ? "
+                "AND record_type = 'general'", (rid,)):
+            try:
+                o = json.loads(data)
+            except ValueError:
+                continue
+            if not o.get("phase_id"):
+                continue
+            when = _parse_ts(ts)
+            if when and (last_event is None or when > last_event):
+                last_event = when
+            kernel = o.get("kernel") or o.get("solution") or ""
+            key = o.get("phase_key")
+            if not key:
+                if kernel:
+                    key = tlib.phase_key({"kernel": kernel})
+                else:
+                    unkeyed.add(str(o["phase_id"]))
+                    key = "pid:" + str(o["phase_id"])
+            latest[str(key)] = (str(o.get("status") or ""),
+                                (o.get("result") or {}).get("status"))
+    out["latest"] = latest
+    out["unkeyed"] = unkeyed
+    out["first_start"] = first_start
+    out["last_event"] = last_event
 
 
 def _resolve_corpus(base: Path) -> Tuple[Dict[str, str], Dict[str, str]]:
@@ -425,11 +402,7 @@ def build_report(base: Path, run_id: Optional[str],
                  now: Optional[datetime] = None) -> Dict[str, Any]:
     """Build the status report for a run.
 
-    `now` overrides the wall clock used to age a still-running head run. It
-    exists so callers (and tests) can pin the clock: a head run with no
-    completed_at is aged against real time, so a fixture pinned to a literal
-    timestamp silently starts failing once the calendar moves past it.
-    Defaults to the system clock, so production behavior is unchanged.
+    `now` overrides the wall clock used to age a still-running head run.
     """
     db = base / DB_REL
     if not db.exists():
@@ -451,69 +424,29 @@ def build_report(base: Path, run_id: Optional[str],
         _resolve_latest_tags(latest, unkeyed, tag_to_key)
     tally, decided, stale_ids = _tally_chain(latest, unkeyed)
 
-    deck_size = plan.deck_size
-    if not deck_size:
-        deck_path = base / "phases.yaml"
-        if deck_path.is_file():
-            import yaml
-            try:
-                doc = yaml.safe_load(deck_path.read_text()) or []
-                deck_size = len(doc) if isinstance(doc, list) else 0
-            except Exception:
-                deck_size = 0
-
+    deck_size = _get_deck_size(base, plan)
     ref_units, breakdown = _reference_unit_count(plan, manifest, corpus)
     tune_units = _tuning_unit_count(plan, deck_size)
 
     rate, n_samples, used = PhaseCost(db).sample()
     minutes = plan.minutes_per_phase if plan.minutes_per_phase else rate
 
-    # Elapsed is scoped to the head run, not the chain. The chain is three runs
-    # and two days old in the current corpus, and reporting "3d elapsed" against
-    # a plan the user is starting now makes the rate nonsense. The chain span is
-    # reported separately as context.
-    head = chain[-1] if chain else ""
-    head_start = started_by_run.get(head) if head else None
-    head_end = completed_by_run.get(head) if head else None
-    if head_start and head_end and head_end >= head_start:
-        elapsed = (head_end - head_start).total_seconds() / 60.0
-    elif head_start:
-        clock = now if now is not None else datetime.now(head_start.tzinfo)
-        elapsed = max((clock - head_start).total_seconds() / 60.0, 0.0)
-    else:
-        elapsed = None
-    chain_span = ((last_event - first_start).total_seconds() / 60.0
-                  if first_start and last_event and last_event > first_start
-                  else None)
-    if chain_span is None and first_start and len(chain) > 1:
-        # A run with no records at all leaves last_event unset. Fall back to the
-        # newest completed_at in the chain so the span is still reported.
-        ends = [completed_by_run.get(r) for r in chain]
-        ends = [e for e in ends if e]
-        if ends:
-            newest = max(ends)
-            if newest > first_start:
-                chain_span = (newest - first_start).total_seconds() / 60.0
-    if chain_span is None and len(chain) > 1:
-        # Still nothing recorded: bound the span by the chain's own start times,
-        # which exist for every run by construction.
-        starts = [started_by_run.get(r) for r in chain]
-        starts = [s for s in starts if s]
-        if starts and max(starts) > min(starts):
-            chain_span = ((max(starts) - min(starts)).total_seconds() / 60.0)
+    elapsed = _calculate_elapsed(chain, started_by_run, completed_by_run, now)
+    chain_span = _calculate_chain_span(chain, first_start, last_event,
+                                       started_by_run, completed_by_run)
 
     tier_rows, ref_done, ref_total, ref_remaining = _tier_rows(
         corpus, latest, plan)
     est = _price_plan(plan, minutes, elapsed, decided, ref_total + tune_units,
                       breakdown, used, ref_remaining, tune_units, ref_done)
 
-    thermals = read_thermals(base / "gfx90c_runs" / head) if head else None
-    started_live = status_by_run.get(head) == "started"
+    thermals = read_thermals(base / "gfx90c_runs" / (chain[-1] if chain else "")) if chain else None
+    started_live = status_by_run.get(chain[-1] if chain else "") == "started"
 
     return {
         "chain": chain,
-        "head": head,
-        "head_status": status_by_run.get(head, "unknown"),
+        "head": chain[-1] if chain else "",
+        "head_status": status_by_run.get(chain[-1] if chain else "", "unknown"),
         "in_flight": started_live,
         "corpus": len(corpus),
         "tally": tally,
@@ -526,27 +459,90 @@ def build_report(base: Path, run_id: Optional[str],
         "elapsed_minutes": elapsed,
         "chain_span_minutes": chain_span,
         "stale_records": stale_ids,
-        "estimate": {
-            "units": est.units,
-            "decided": est.decided,
-            "remaining": est.remaining,
-            "percent": est.percent,
-            "minutes_per_unit": est.minutes_per_unit,
-            "rate_per_hour": est.rate_per_hour,
-            "eta_minutes": est.eta_minutes,
-            "source": est.source,
-            "breakdown": breakdown,
-            "tuning_units": tune_units,
-            "deck_size": deck_size,
-            "rate_sample": est.rate_sample,
-            "rate_sample_n": n_samples,
-        },
-        "plan": {
-            "rerun_illegal": plan.rerun_illegal,
-            "rerun_underspecified": plan.rerun_underspecified,
-            "rerun_unreproducible": plan.rerun_unreproducible,
-            "iterations": plan.iterations,
-            "mutations": plan.mutations,
-        },
+        "estimate": _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples),
+        "plan": _build_plan_dict(plan),
         "thermals": thermals,
+    }
+
+def _get_deck_size(base: Path, plan: RunPlan) -> int:
+    """Get deck size from plan or phases.yaml."""
+    deck_size = plan.deck_size
+    if not deck_size:
+        deck_path = base / "phases.yaml"
+        if deck_path.is_file():
+            import yaml
+            try:
+                doc = yaml.safe_load(deck_path.read_text()) or []
+                deck_size = len(doc) if isinstance(doc, list) else 0
+            except Exception:
+                deck_size = 0
+    return deck_size
+
+def _calculate_elapsed(
+    chain: List[str],
+    started_by_run: Dict,
+    completed_by_run: Dict,
+    now: Optional[datetime]
+) -> Optional[float]:
+    """Calculate elapsed minutes for the head run."""
+    head = chain[-1] if chain else ""
+    head_start = started_by_run.get(head) if head else None
+    head_end = completed_by_run.get(head) if head else None
+    if head_start and head_end and head_end >= head_start:
+        return (head_end - head_start).total_seconds() / 60.0
+    elif head_start:
+        clock = now if now is not None else datetime.now(head_start.tzinfo)
+        return max((clock - head_start).total_seconds() / 60.0, 0.0)
+    return None
+
+def _calculate_chain_span(
+    chain: List[str],
+    first_start: Optional[datetime],
+    last_event: Optional[datetime],
+    started_by_run: Dict,
+    completed_by_run: Dict
+) -> Optional[float]:
+    """Calculate chain span in minutes with multiple fallbacks."""
+    if first_start and last_event and last_event > first_start:
+        return (last_event - first_start).total_seconds() / 60.0
+    if first_start and len(chain) > 1:
+        ends = [completed_by_run.get(r) for r in chain]
+        ends = [e for e in ends if e]
+        if ends:
+            newest = max(ends)
+            if newest > first_start:
+                return (newest - first_start).total_seconds() / 60.0
+    if len(chain) > 1:
+        starts = [started_by_run.get(r) for r in chain]
+        starts = [s for s in starts if s]
+        if starts and max(starts) > min(starts):
+            return ((max(starts) - min(starts)).total_seconds() / 60.0)
+    return None
+
+def _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples) -> Dict:
+    """Build the estimate dictionary."""
+    return {
+        "units": est.units,
+        "decided": est.decided,
+        "remaining": est.remaining,
+        "percent": est.percent,
+        "minutes_per_unit": est.minutes_per_unit,
+        "rate_per_hour": est.rate_per_hour,
+        "eta_minutes": est.eta_minutes,
+        "source": est.source,
+        "breakdown": breakdown,
+        "tuning_units": tune_units,
+        "deck_size": deck_size,
+        "rate_sample": est.rate_sample,
+        "rate_sample_n": n_samples,
+    }
+
+def _build_plan_dict(plan: RunPlan) -> Dict:
+    """Build the plan dictionary."""
+    return {
+        "rerun_illegal": plan.rerun_illegal,
+        "rerun_underspecified": plan.rerun_underspecified,
+        "rerun_unreproducible": plan.rerun_unreproducible,
+        "iterations": plan.iterations,
+        "mutations": plan.mutations,
     }

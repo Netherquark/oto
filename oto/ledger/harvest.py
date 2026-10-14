@@ -32,20 +32,10 @@ class HarvestMixin:
         all_analytics: List[CellAnalytics],
         parent_by: str = "lcb"
     ) -> Dict[str, Dict[str, Any]]:
-        """
-        Harvest one parent config per (family, shape) cell.
+        """Harvest one parent config per (family, shape) cell.
 
-        **Parent choice is by lower confidence bound, not raw winner**
-        (`Hplan.5` step 3). `max(median_gflops)` is how a noise-level win becomes
-        the parent of the next batch: a config whose median is high because one
-        seed landed well outranks a config that is merely good. The LCB ranks by
-        the lower bound, which demotes exactly that config. `parent_by="median"`
-        remains available so the old rule can be compared, and the choice is
-        recorded on every winner so a run's parent policy is visible after the
-        fact.
-
-        The family tag travels with the winner so downstream mutation rebuilds the
-        correct Tensile DataType.
+        Parent choice by lower confidence bound (Hplan.5); parent_by='median'
+        retains old rule. Family tag travels with the winner.
         """
         if parent_by not in ("lcb", "median"):
             raise ValueError(f"parent_by must be 'lcb' or 'median', got {parent_by!r}")

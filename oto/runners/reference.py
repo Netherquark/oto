@@ -181,63 +181,82 @@ class ReferenceMixin:
         return phases
 
     def run_gfx900_reference(self, refresh: bool = False, limit: Optional[int] = None,
-                             ref_shapes: Optional[List[str]] = None,
-                             resume: bool = False,
-                             resume_base: Optional[str] = None,
-                             release_held: bool = False,
-                             release_drop: bool = False) -> Dict[str, Any]:
+                              ref_shapes: Optional[List[str]] = None,
+                              resume: bool = False,
+                              resume_base: Optional[str] = None,
+                              release_held: bool = False,
+                              release_drop: bool = False) -> Dict[str, Any]:
         """
         One-time benchmark of every shipped gfx900 kernel from the system dat.
 
         Refreshes the pinned manifest when refresh=True, emits one reference
         phase per shipped kernel, and runs them all in a dedicated
-        gfx900_ref_* run (ScheduleName=vega10 → spoof arm). Once completed,
-        future A/B comparisons recall this run — never re-run — forever.
+        gfx900_ref_* run (ScheduleName=vega10 -> spoof arm). Once completed,
+        future A/B comparisons recall this run -- never re-run -- forever.
 
         resume=True targets ONLY the phases of the base run's deck that have no
-        definite verdict yet (unattempted + previously-started-without-end).
-        The base is the newest completed non-smoke reference run (or
-        resume_base); the completed base phases are reused as-is, and a new
+        definite verdict yet. The base is the newest completed non-smoke reference
+        run (or resume_base); the completed base phases are reused as-is, and a new
         gfx900_ref_*_resume run is created that records resume_of=<base>, so
         the reference_chain() fixture spans base+resume as one logical floor.
         smoke/limit/ref_shapes are ignored in resume mode.
 
-        release_held=False (the default, and the only thing --auto passes) keeps
-        the audited-but-under-specified T2 kernels pinned out of the deck.
-        Pass --release-under-specified to finally measure them; see
-        incomplete_work.md section 4.16.
+        release_held=False keeps the audited-but-under-specified T2 kernels pinned
+        out of the deck. Pass --release-under-specified to finally measure them.
         """
         manifest = tlib.load_shipped_manifest(
             self.base_dir, refresh=(not resume and refresh))
-        resume_meta: Dict[str, Any] = {}
+        
         if resume:
-            chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
-            base = resume_base or (chain_ids[0] if chain_ids else None)
-            if not base:
-                return {"status": "failed",
-                        "reason": "resume requires an existing completed "
-                                  "gfx900 reference run"}
-            base_dir = self.base_dir / "gfx90c_runs" / base
-            base_yaml = base_dir / "phases_reference.yaml"
-            if not base_yaml.is_file():
-                return {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
-            with open(base_yaml) as f:
-                deck = yaml.safe_load(f) or []
-
-            phases, resume_meta = self._resume_deck(base, base_dir, release_held)
+            phases, resume_meta = self._get_resume_phases(
+                manifest, resume_base, release_held)
             if not phases:
-                print("[gfx900-reference] reference deck already fully completed — "
-                      "nothing to resume")
-                return {"status": "noop", "run_id": base,
+                return {"status": "noop", "run_id": resume_meta.get("resume_of"),
                         "phases_targeted": 0, "phases_executed": 0, "results": 0}
         else:
             phases = self._fresh_deck(manifest, ref_shapes, limit)
+            resume_meta = {}
 
-        # Audited re-run triage: T3 (Tensile cannot derive) dropped, T1 hoisted,
-        # T2 deferred to the very end. The resume branch above has already made
-        # the manifest authoritative (T1 always staged, T3 never staged), so
-        # this call only fixes the order — and drops the pinned T2 unless the
-        # caller released it.
+        phases = self._apply_triage(phases, release_held, release_drop)
+
+        if not phases:
+            return {"status": "failed", "reason": "no eligible shipped phases emitted"}
+
+        run_id = self._create_reference_run_dir(resume, resume_meta)
+        
+        phases_path = self.run_dir / "phases_reference.yaml"
+        with open(phases_path, "w") as f:
+            yaml.safe_dump(phases, f, default_flow_style=False)
+
+        return self._execute_reference_phases(phases, phases_path, run_id,
+                                               limit, resume, resume_meta)
+
+    def _get_resume_phases(self, manifest, resume_base: Optional[str],
+                           release_held: bool) -> tuple:
+        """Get phases for resume mode. Returns (phases, resume_meta)."""
+        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        base = resume_base or (chain_ids[0] if chain_ids else None)
+        if not base:
+            return [], {"status": "failed",
+                        "reason": "resume requires an existing completed "
+                                  "gfx900 reference run"}
+        base_dir = self.base_dir / "gfx90c_runs" / base
+        base_yaml = base_dir / "phases_reference.yaml"
+        if not base_yaml.is_file():
+            return [], {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
+        with open(base_yaml) as f:
+            deck = yaml.safe_load(f) or []
+
+        phases, resume_meta = self._resume_deck(base, base_dir, release_held)
+        if not phases:
+            print("[gfx900-reference] reference deck already fully completed -- "
+                  "nothing to resume")
+            return [], {"status": "noop", "run_id": base,
+                        "phases_targeted": 0, "phases_executed": 0, "results": 0}
+        return phases, {"resume_of": base, "resume_meta": resume_meta}
+
+    def _apply_triage(self, phases, release_held: bool, release_drop: bool):
+        """Apply audited re-run triage to phase list."""
         _rerun = tlib.load_rerun_manifest(self.base_dir)
         if _rerun:
             _before = len(phases)
@@ -256,15 +275,10 @@ class ReferenceMixin:
                      if n_held and not release_held else "")
                   + (", T2 released to the back" if release_held else "")
                   + ")")
+        return phases
 
-        if not phases:
-            return {"status": "failed", "reason": "no eligible shipped phases emitted"}
-
-        print(f"[gfx900-reference] {len(phases)} shipped phase(s) from "
-              f"{'+'.join(manifest.get('rocm_prefixes') or [])} "
-              f"({manifest.get('total_shipped_kernels', 0)} kernels)"
-              + (f" [RESUME of {resume_meta.get('resume_of')}]" if resume_meta else ""))
-
+    def _create_reference_run_dir(self, resume: bool, resume_meta: dict) -> str:
+        """Create reference run directory and sync agent."""
         run_id = f"gfx900_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if resume:
             run_id = f"{run_id}_resume"
@@ -276,15 +290,13 @@ class ReferenceMixin:
         self.configs_dir.mkdir(exist_ok=True)
         self.client_build_dir = self.run_dir / "client_build"
         self.client_build_dir.mkdir(exist_ok=True)
-        # The reference run replaces the active run dir; keep the agent's
-        # run_id bound to whatever run is current, or every candidate emitted
-        # during it would be attributed to the previous run.
         self._sync_agent_run_id()
+        return run_id, prev_run_dir, prev_configs, prev_client
 
-        phases_path = self.run_dir / "phases_reference.yaml"
-        with open(phases_path, "w") as f:
-            yaml.safe_dump(phases, f, default_flow_style=False)
-
+    def _execute_reference_phases(self, phases, phases_path: Path, run_id: str,
+                                   limit: Optional[int], resume: bool,
+                                   resume_meta: dict) -> Dict[str, Any]:
+        """Execute reference phases and return result dict."""
         try:
             results = self.run_phases(
                 [p["phase_id"] for p in phases],
@@ -296,14 +308,12 @@ class ReferenceMixin:
             if self._stop_requested:
                 status = "interrupted"
             elif limit is not None and not resume:
-                # Limited runs are smokes: they must NEVER become the recalled
-                # floor. Only an unlimited full --gfx900-reference is the floor.
                 status = "smoke"
             else:
                 status = "completed" if executed > 0 else "failed"
             run_meta = {
                 "gfx900_reference": True,
-                "shipped_kernels": manifest.get("total_shipped_kernels", 0),
+                "shipped_kernels": resume_meta.get("manifest", {}).get("total_shipped_kernels", 0),
                 "phases_targeted": len(phases),
                 "phases_executed": executed,
                 "smoke": limit is not None and not resume,
@@ -312,7 +322,7 @@ class ReferenceMixin:
             run_meta.update(resume_meta)
             self.registry.update_run_status(run_id, status, run_meta)
             if status == "smoke":
-                print("[gfx900-reference] smoke run marked 'smoke' — NOT recalled as "
+                print("[gfx900-reference] smoke run marked 'smoke' -- NOT recalled as "
                       "the A/B floor. Run `--gfx900-reference` WITHOUT --limit to "
                       "establish the permanent floor.")
             return {"run_id": run_id, "status": status,
@@ -323,16 +333,23 @@ class ReferenceMixin:
                 self._telemetry.stop()
                 self._telemetry = None
                 self._telemetry_run_id = None
-            self.run_dir, self.configs_dir, self.client_build_dir = (
-                prev_run_dir, prev_configs, prev_client
-            )
+            if hasattr(self, '_run_dir_backup'):
+                self.run_dir, self.configs_dir, self.client_build_dir = (
+                    self._run_dir_backup, self._configs_dir_backup, self._client_build_dir_backup
+                )
             self._sync_agent_run_id()
+        """Most recently completed gfx900 reference run (recall floor for A/B)."""
+        ref = tlib.latest_reference_run_id(self.registry)
+        if ref and exclude and ref == exclude:
+            return None
+        return ref
     def _latest_reference_run(self, exclude: Optional[str] = None) -> Optional[str]:
         """Most recently completed gfx900 reference run (recall floor for A/B)."""
         ref = tlib.latest_reference_run_id(self.registry)
         if ref and exclude and ref == exclude:
             return None
         return ref
+
     def _reference_floor_runs(self, run_id: Any) -> List[str]:
         """Full resume chain of the recalled reference floor, newest first,
         excluding the candidate run itself when it is a reference run."""
@@ -417,20 +434,11 @@ class ReferenceMixin:
                     decided.add(str(rec["phase_id"]))
         return completed, decided
     def _reference_remaining(self) -> int:
-        """Phases the reference floor still owes, per the audited triage.
+        """Phases the reference floor still owes per audited triage.
 
-        Only T1 blocks. T1 is the set that previously ran with a config our own
-        extractors got wrong, so it must be re-measured before anything is trusted
-        downstream. T2 is under-specified (measured with glvw/grvw left to
-        Tensile's defaults) and is HELD: not staged by default, opt-in only, and
-        it must never hold --auto open. T3 is unbuildable by construction and
-        stays failed. Held and dropped tiers are both invisible to this gate, so
-        pinning T2 cannot deadlock --auto.
-
-        A T1 phase is owed until the newest record for it is a completion whose
-        config_fingerprint matches the one computed from the phase as it would run
-        now. Without the fingerprint term this gate would see the old verdicts
-        under stale phase_ids and skip the reference entirely.
+        Only T1 blocks. T1 needs re-measurement; T2 held (opt-in, never
+        blocks --auto); T3 unbuildable, stays failed. A T1 phase is owed
+        until newest record's config_fingerprint matches current phase's.
         """
         chain = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
         if not chain:

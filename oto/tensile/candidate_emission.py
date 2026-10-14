@@ -64,78 +64,15 @@ class CandidateEmitMixin:
         )
 
     def append_candidates_batch(self, candidates: List[CandidateConfig], phases_file: Optional[Path] = None) -> int:
-        """
-        Append a list of candidates to phases.yaml in a single batch write.
+        """Append a list of candidates to phases.yaml in a single batch write.
 
         Every candidate is re-validated here, at the append boundary, not left to
-        the caller. This is the last point before a config becomes a launchable
-        phase, and it used to trust its input: a caller that skipped validation
-        could inject a config that dies mid-run as Tensile "error 4"
-        (overflowedResources=4, Occupancy limit) — the exact failure that killed
-        all 8 native ZZ phases. Validation is CPU-only, so refusing here costs
-        nothing and never touches the GPU. Duplicate fingerprints are still
-        skipped, and rejections are counted and reported.
+        the caller. Duplicate fingerprints are skipped, and rejections are reported.
         """
         target_yaml = phases_file or (self.base_dir / "phases.yaml")
-        existing_phases = []
-        if target_yaml.exists():
-            with open(target_yaml, "r") as f:
-                existing_phases = yaml.safe_load(f) or []
-
-        existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
-        existing_ids = {
-            p.get("phase_id"): p.get("fp") for p in existing_phases if isinstance(p, dict)
-        }
-        added = 0
-        renamed = 0
-        rejected: List[str] = []
-        for cand in candidates:
-            merged = {**cand.template, **cand.knobs}
-            ok, why = self.validate_config(merged)
-            if not ok:
-                rejected.append(f"{cand.phase_id}: {why}")
-                continue
-            # A phase_id already bound to a DIFFERENT fingerprint means two configs
-            # would share one output directory, and the second would silently
-            # overwrite the first's results. phase_id is built from MT/TT (plus, on
-            # a repeated tile, the width/pad/mapping tags), which cannot capture
-            # every knob -- a deck entry that leaves VectorWidth unset and a sibling
-            # that sets it to 2 both land on `..._mt32x32x16_tt2x2` with different
-            # configs. Rather than drop a legal candidate or silently corrupt the
-            # corpus, bind the id to the fingerprint that owns it.
-            phase_id = cand.phase_id
-            renamed_this = False
-            if existing_ids.get(phase_id) not in (None, cand.fingerprint):
-                phase_id = f"{cand.phase_id}_h{cand.fingerprint[:8]}"
-                if existing_ids.get(phase_id) not in (None, cand.fingerprint):
-                    rejected.append(
-                        f"{cand.phase_id}: phase_id collision could not be resolved "
-                        f"(fp {cand.fingerprint[:12]})"
-                    )
-                    continue
-                cand.phase_id = phase_id
-                cand.label = f"{cand.label}_h{cand.fingerprint[:8]}"
-                renamed_this = True
-            if cand.fingerprint not in existing_fps:
-                phase_entry = {
-                    "phase_id": phase_id,
-                    "label": cand.label,
-                    "dtype": cand.dtype,
-                    "shapes": cand.shapes,
-                    "ScheduleName": "isa",
-                    "NumBenchmarks": 8,
-                    "config": merged,
-                    "fp": cand.fingerprint
-                }
-                existing_phases.append(phase_entry)
-                existing_fps.add(cand.fingerprint)
-                existing_ids[phase_id] = cand.fingerprint
-                added += 1
-                if renamed_this:
-                    renamed += 1
-
-                if self.registry is not None:
-                    self.registry.append_phase(phase_id, cand.fingerprint, phase_entry)
+        existing_phases, existing_fps, existing_ids = self._load_existing_phases(target_yaml)
+        added, renamed, rejected = self._process_candidates(
+            candidates, existing_phases, existing_fps, existing_ids)
 
         if renamed:
             print(
@@ -151,6 +88,79 @@ class CandidateEmitMixin:
         with open(target_yaml, "w") as f:
             yaml.safe_dump(existing_phases, f, sort_keys=False, default_flow_style=False)
         return added
+
+    def _load_existing_phases(self, target_yaml: Path) -> tuple:
+        """Load existing phases and build fingerprint/id lookup sets."""
+        existing_phases = []
+        if target_yaml.exists():
+            with open(target_yaml, "r") as f:
+                existing_phases = yaml.safe_load(f) or []
+        existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
+        existing_ids = {
+            p.get("phase_id"): p.get("fp") for p in existing_phases if isinstance(p, dict)
+        }
+        return existing_phases, existing_fps, existing_ids
+
+    def _process_candidates(self, candidates, existing_phases, existing_fps, existing_ids):
+        """Process candidates: validate, check collisions, add to phases."""
+        added = 0
+        renamed = 0
+        rejected: List[str] = []
+        for cand in candidates:
+            merged = {**cand.template, **cand.knobs}
+            ok, why = self.validate_config(merged)
+            if not ok:
+                rejected.append(f"{cand.phase_id}: {why}")
+                continue
+            phase_id, renamed_this = self._resolve_phase_id(
+                cand, existing_ids, existing_fps)
+            if phase_id is None:
+                rejected.append(
+                    f"{cand.phase_id}: phase_id collision could not be resolved "
+                    f"(fp {cand.fingerprint[:12]})"
+                )
+                continue
+            if self._add_phase_entry(cand, phase_id, merged, existing_phases,
+                                      existing_fps, existing_ids):
+                added += 1
+            if renamed_this:
+                renamed += 1
+        return added, renamed, rejected
+
+    def _resolve_phase_id(self, cand, existing_ids, existing_fps):
+        """Resolve phase_id collision by binding to fingerprint."""
+        phase_id = cand.phase_id
+        renamed_this = False
+        if existing_ids.get(phase_id) not in (None, cand.fingerprint):
+            phase_id = f"{cand.phase_id}_h{cand.fingerprint[:8]}"
+            if existing_ids.get(phase_id) not in (None, cand.fingerprint):
+                return None, False
+            cand.phase_id = phase_id
+            cand.label = f"{cand.label}_h{cand.fingerprint[:8]}"
+            renamed_this = True
+        return phase_id, renamed_this
+
+    def _add_phase_entry(self, cand, phase_id, merged, existing_phases,
+                          existing_fps, existing_ids) -> bool:
+        """Add phase entry to lists if fingerprint is new."""
+        if cand.fingerprint in existing_fps:
+            return False
+        phase_entry = {
+            "phase_id": phase_id,
+            "label": cand.label,
+            "dtype": cand.dtype,
+            "shapes": cand.shapes,
+            "ScheduleName": "isa",
+            "NumBenchmarks": 8,
+            "config": merged,
+            "fp": cand.fingerprint
+        }
+        existing_phases.append(phase_entry)
+        existing_fps.add(cand.fingerprint)
+        existing_ids[phase_id] = cand.fingerprint
+        if self.registry is not None:
+            self.registry.append_phase(phase_id, cand.fingerprint, phase_entry)
+        return True
 
     def append_to_phases(self, candidate: CandidateConfig, phases_file: Optional[Path] = None) -> str:
         """
@@ -170,118 +180,91 @@ class CandidateEmitMixin:
 
         for pattern in patterns:
             for tile_config in family_deck:
-                # Include the tile variant in the identity so distinct tiles in a
-                # family deck never share a phase_id (shared ids previously caused
-                # silent overwrite of configs/output dirs).
-                mt = tile_config.get("MacroTile", "").replace("x", "x")
-                tt = tile_config.get("ThreadTile", "").replace("x", "x")
-                tile_tag = f"_mt{mt}_tt{tt}"
-                # ...and when a family deck repeats the same MT/TT (optionally at
-                # different widths) it must also carry the knobs that actually
-                # differ, otherwise two configs land on one phase_id and one
-                # silently overwrites the other's output directory. MT/TT alone is
-                # not unique: 64x64x8/4x4 appears both plain and with LdsPadA=2, and
-                # 64x64x16/4x4 appears at both VW2 and VW4. Only disambiguated when
-                # the tile actually repeats, so every unique-tile entry keeps its
-                # historical phase_id and its already-benchmarked run dir.
-                tile_key = (
-                    tile_config.get("MacroTile"),
-                    tile_config.get("ThreadTile"),
-                    tile_config.get("VectorWidth"),
-                )
-                tile_uses = sum(
-                    1 for e in family_deck
-                    if (
-                        e.get("MacroTile"),
-                        e.get("ThreadTile"),
-                        e.get("VectorWidth"),
-                    ) == tile_key
-                )
+                tile_tag = self._build_tile_tag(tile_config)
+                tile_key = (tile_config.get("MacroTile"),
+                            tile_config.get("ThreadTile"),
+                            tile_config.get("VectorWidth"))
+                tile_uses = self._count_tile_uses(family_deck, tile_key)
+
                 for shape in base_shapes:
-                    template = {
-                        "Architecture": "gfx90c",
-                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
-                        "ContractionPattern": pattern,
-                        "ProblemType": shape,
-                        "ScheduleName": "isa",
-                        # FamilyLabel is the workload-cell identity the driver
-                        # stamps each record with (cell_key = FAMILY:SIDE). A
-                        # generated phase without it gets cell_key None, is
-                        # recorded with no cell stamp, and analytics cannot group
-                        # it into any acceptance cell -- the run burns its full
-                        # duration and the report shows no new coverage. It also
-                        # has to be the real family name, not the dtype: H
-                        # covers both HH and HH_HPA, so DataType cannot
-                        # disambiguate the HPA variants.
-                        "FamilyLabel": family,
-                    }
-
-                    is_valid, reason = self.validate_config({**template, **tile_config})
-                    rel = tile_config
-                    if not is_valid and tile_config.get("NLCA", 1) > 1:
-                        # NLCA as configured is not Tensile-valid for this pattern
-                        # (e.g. NLCA=3 on a TLU side whose coalesced vector count is
-                        # not a multiple of 3, or where NLCA exceeds NumLoads).
-                        # Fall back to NLCA=1 (Tensile auto search) so the generated
-                        # phase is always runnable.
-                        rel = {**tile_config, "NLCA": 1}
-                        is_valid, reason = self.validate_config({**template, **rel})
-                    if not is_valid and rel.get("VectorWidth"):
-                        # Width rejected for this tile. Do not drop the phase: step
-                        # the width down to the widest value the gate actually
-                        # accepts and emit that. The gate is the only legality
-                        # oracle (see cap_vector_width), and the usual causes are
-                        # structural rather than fatal -- a TLU contraction side
-                        # forces the post-reduction GLVW, so the `GLVW == VW or 1`
-                        # guard caps HH_HPA 128x64x8/8x4 at VW2 even though the
-                        # divisibility bound allows 4. Emitting the clamped width
-                        # keeps the tile in the search instead of silently losing
-                        # it, which is how a whole family of candidates went
-                        # missing from the deck before.
-                        vw = int(rel["VectorWidth"])
-                        while vw > 1 and not is_valid:
-                            vw //= 2
-                            rel = {**rel, "VectorWidth": vw}
-                            is_valid, reason = self.validate_config({**template, **rel})
-                        if is_valid:
-                            self._clamped_widths.append(
-                                (family, tile_config.get("MacroTile"),
-                                 tile_config.get("ThreadTile"),
-                                 tile_config.get("VectorWidth"), vw))
-                    if not is_valid:
+                    template = self._build_family_template(family, pattern, shape)
+                    rel = self._validate_tile_config(template, tile_config, family)
+                    if rel is None:
                         continue
-
-                    # Build the id from the knobs that were actually EMITTED, not
-                    # from the deck request, so a clamped width is named for what
-                    # will actually run. Only disambiguated when the tile repeats,
-                    # which preserves historical ids for unique tiles.
-                    tag = tile_tag
-                    if tile_uses > 1:
-                        if rel.get("VectorWidth"):
-                            tag += f"_vw{rel['VectorWidth']}"
-                        if rel.get("LdsPadA"):
-                            tag += f"_pa{rel['LdsPadA']}"
-                        if rel.get("LdsPadB"):
-                            tag += f"_pb{rel['LdsPadB']}"
-                        if rel.get("WorkGroupMapping"):
-                            tag += f"_wgm{rel['WorkGroupMapping']}"
+                    tag = self._build_phase_tag(tile_tag, rel, tile_uses)
                     label = f"{family}_{pattern}_{shape}{tag}"
                     phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
 
                     candidate = self.emit_candidate(
-                        phase_id=phase_id,
-                        label=label,
+                        phase_id=phase_id, label=label,
                         dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
-                        shapes=[shape],
-                        template=template,
-                        knobs=rel
+                        shapes=[shape], template=template, knobs=rel
                     )
                     candidates.append(candidate)
 
         if candidates:
             self.append_candidates_batch(candidates)
-
         return candidates
+
+    def _build_tile_tag(self, tile_config: Dict[str, Any]) -> str:
+        """Build the base tile tag from MT/TT."""
+        mt = tile_config.get("MacroTile", "").replace("x", "x")
+        tt = tile_config.get("ThreadTile", "").replace("x", "x")
+        return f"_mt{mt}_tt{tt}"
+
+    def _count_tile_uses(self, family_deck: List[Dict], tile_key: tuple) -> int:
+        """Count how many times this tile key appears in the deck."""
+        return sum(1 for e in family_deck if (e.get("MacroTile"),
+                e.get("ThreadTile"), e.get("VectorWidth")) == tile_key)
+
+    def _build_family_template(self, family: str, pattern: str, shape: str) -> Dict:
+        """Build candidate template for family phases."""
+        return {
+            "Architecture": "gfx90c",
+            "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+            "ContractionPattern": pattern,
+            "ProblemType": shape,
+            "ScheduleName": "isa",
+            "FamilyLabel": family,
+        }
+
+    def _validate_tile_config(self, template: Dict, tile_config: Dict, family: str) -> Optional[Dict]:
+        """Validate tile config with fallbacks (NLCA, VectorWidth)."""
+        is_valid, reason = self.validate_config({**template, **tile_config})
+        rel = tile_config
+
+        if not is_valid and tile_config.get("NLCA", 1) > 1:
+            rel = {**tile_config, "NLCA": 1}
+            is_valid, reason = self.validate_config({**template, **rel})
+
+        if not is_valid and rel.get("VectorWidth"):
+            vw = int(rel["VectorWidth"])
+            while vw > 1 and not is_valid:
+                vw //= 2
+                rel = {**rel, "VectorWidth": vw}
+                is_valid, reason = self.validate_config({**template, **rel})
+            if is_valid:
+                self._clamped_widths.append(
+                    (family, tile_config.get("MacroTile"),
+                     tile_config.get("ThreadTile"),
+                     tile_config.get("VectorWidth"), vw))
+        if not is_valid:
+            return None
+        return rel
+
+    def _build_phase_tag(self, tile_tag: str, rel: Dict, tile_uses: int) -> str:
+        """Build the phase_id tag with disambiguating knobs."""
+        tag = tile_tag
+        if tile_uses > 1:
+            if rel.get("VectorWidth"):
+                tag += f"_vw{rel['VectorWidth']}"
+            if rel.get("LdsPadA"):
+                tag += f"_pa{rel['LdsPadA']}"
+            if rel.get("LdsPadB"):
+                tag += f"_pb{rel['LdsPadB']}"
+            if rel.get("WorkGroupMapping"):
+                tag += f"_wgm{rel['WorkGroupMapping']}"
+        return tag
 
     @staticmethod
     def _sweep_value_tag(value: Dict[str, Any]) -> str:
@@ -318,38 +301,8 @@ class CandidateEmitMixin:
     ) -> List[CandidateConfig]:
         """Cross-join each family's winner tile with the never-varied knobs.
 
-        Why this is separate from ``generate_family_phases``: that method
-        iterates one family deck of tiles. This one iterates two independent
-        tables -- ``KNOB_SWEEP_BASES`` (the family's measured winner tile) and
-        ``KNOB_SWEEPS`` (one knob change each) -- and the product is what it
-        emits. Keeping them apart is what makes the sweep legible: a row in
-        ``KNOB_SWEEPS`` says "change exactly this knob", and the base tile is
-        the only thing held constant, so a measured delta is attributable to
-        the knob rather than to a tile move.
-
-        ``width_override`` on a sweep row is honoured before validation, because
-        ``NumLoadsCoalesced`` is gated by ``VectorWidth`` through ``NumLoads``
-        and is illegal at some widths and legal at others (see
-        ``potential_configs.md`` §8.1). Overriding the width here rather than at
-        the gate keeps the illegal combinations out of the deck instead of
-        relying on a rejection to explain them.
-
-        Args:
-            families: Family labels to sweep. Defaults to ``KNOB_SWEEP_BASES``.
-            patterns: Contraction patterns to sweep.
-            base_shapes: Problem shapes to sweep.
-            include_baseline: When true, also emit each ``KNOB_SWEEP_BASES``
-                tile *unchanged*, once per (family, pattern, shape). This is the
-                same-run CONTROL: most sweep rows only carry non-default values,
-                so without it a measured delta has no phase measured under the
-                same clock/temperature conditions to compare against (D4). Tagged
-                ``_base`` so it never collides with a ``_sw<knob>`` id.
-            phases_file: Manifest to append to. Defaults to the generator's own
-                ``phases.yaml``; the ``knob_sweep --phases`` flag sets it, so a
-                dry-run-to-file never touches the live deck.
-
-        Returns:
-            The emitted candidates, already appended to ``phases.yaml``.
+        Separate from generate_family_phases: iterates KNOB_SWEEP_BASES x KNOB_SWEEPS.
+        width_override on a sweep row is honoured before validation.
         """
         from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
@@ -362,92 +315,90 @@ class CandidateEmitMixin:
         for family in fams:
             bases = KNOB_SWEEP_BASES.get(family, [])
             for pattern in pats:
-                for base in bases:
-                    if include_baseline:
-                        # The same-run control: the base tile with no knob
-                        # change. Emitted before the sweeps so it is appended
-                        # first and a reader sees the baseline it belongs to.
-                        for shape in shapes:
-                            template = {
-                                "Architecture": "gfx90c",
-                                "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
-                                "ContractionPattern": pattern,
-                                "ProblemType": shape,
-                                "ScheduleName": "isa",
-                                "FamilyLabel": family,
-                            }
-                            ok, why = self.validate_config(
-                                {**template, **base})
-                            if not ok:
-                                refused.append(
-                                    f"{family}/baseline/{shape}: {why}")
-                                continue
-                            tag = (f"_mt{base.get('MacroTile', '')}"
-                                   f"_tt{base.get('ThreadTile', '')}_base")
-                            label = f"{family}_{pattern}_{shape}{tag}"
-                            phase_id = (f"phase_{family.lower()}_{pattern}"
-                                        f"_{shape}{tag}")
-                            candidates.append(self.emit_candidate(
-                                phase_id=phase_id,
-                                label=label,
-                                dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
-                                shapes=[shape],
-                                template=template,
-                                knobs=dict(base),
-                            ))
-                    for sweep in KNOB_SWEEPS:
-                        if family not in sweep.get("families", []):
-                            continue
-                        for value in sweep["values"]:
-                            # A width override is part of the candidate, not a
-                            # fixup: without it NLCA rows are emitted at a
-                            # width that cannot carry them.
-                            knobs = dict(base)
-                            for over_fam, width in sweep.get(
-                                    "width_override", {}).items():
-                                if over_fam == family:
-                                    knobs["VectorWidth"] = width
-                            knobs.update(value)
-                            for shape in shapes:
-                                template = {
-                                    "Architecture": "gfx90c",
-                                    "DataType": FAMILY_DTYPE_CHAR.get(
-                                        family, "S"),
-                                    "ContractionPattern": pattern,
-                                    "ProblemType": shape,
-                                    "ScheduleName": "isa",
-                                    "FamilyLabel": family,
-                                }
-                                ok, why = self.validate_config(
-                                    {**template, **knobs})
-                                if not ok:
-                                    refused.append(
-                                        f"{family}/{sweep['knob']}/{shape}: "
-                                        f"{why}")
-                                    continue
-                                tag = (f"_mt{base.get('MacroTile', '')}"
-                                       f"_tt{base.get('ThreadTile', '')}"
-                                       f"_sw{self._sweep_value_tag(value)}")
-                                label = f"{family}_{pattern}_{shape}{tag}"
-                                phase_id = (f"phase_{family.lower()}_{pattern}"
-                                            f"_{shape}{tag}")
-                                candidates.append(self.emit_candidate(
-                                    phase_id=phase_id,
-                                    label=label,
-                                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
-                                    shapes=[shape],
-                                    template=template,
-                                    knobs=knobs,
-                                ))
+                candidates, refused = self._emit_baselines(
+                    candidates, refused, family, pattern, bases, shapes,
+                    include_baseline)
+                candidates, refused = self._emit_sweeps(
+                    candidates, refused, family, pattern, bases, shapes)
 
         if candidates:
             self.append_candidates_batch(candidates, phases_file)
-        # Refusals are reported, not dropped silently: an operator needs to see
-        # which sweep rows the gate rejects, or the corpus's silence on a knob
-        # looks like a measured negative instead of an unbuilt candidate.
         for line in refused:
             print(f"[knob-sweep] refused {line}")
         return candidates
+
+    def _emit_baselines(self, candidates, refused, family, pattern, bases,
+                         shapes, include_baseline):
+        """Emit baseline (unchanged base tile) candidates if requested."""
+        if not include_baseline:
+            return candidates, refused
+        for base in bases:
+            for shape in shapes:
+                template = self._build_template(family, pattern, shape)
+                ok, why = self.validate_config({**template, **base})
+                if not ok:
+                    refused.append(f"{family}/baseline/{shape}: {why}")
+                    continue
+                tag = (f"_mt{base.get('MacroTile', '')}"
+                       f"_tt{base.get('ThreadTile', '')}_base")
+                label = f"{family}_{pattern}_{shape}{tag}"
+                phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
+                candidates.append(self.emit_candidate(
+                    phase_id=phase_id, label=label,
+                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                    shapes=[shape], template=template, knobs=dict(base)
+                ))
+        return candidates, refused
+
+    def _emit_sweeps(self, candidates, refused, family, pattern, bases, shapes):
+        """Emit sweep candidates for all KNOB_SWEEPS."""
+        from oto.tensile.decks import KNOB_SWEEPS
+        for base in bases:
+            for sweep in KNOB_SWEEPS:
+                if family not in sweep.get("families", []):
+                    continue
+                candidates, refused = self._emit_sweep_values(
+                    candidates, refused, family, pattern, base, sweep, shapes)
+        return candidates, refused
+
+    def _emit_sweep_values(self, candidates, refused, family, pattern, base,
+                            sweep, shapes):
+        """Emit candidates for one sweep's values."""
+        for value in sweep["values"]:
+            knobs = dict(base)
+            for over_fam, width in sweep.get("width_override", {}).items():
+                if over_fam == family:
+                    knobs["VectorWidth"] = width
+            knobs.update(value)
+            for shape in shapes:
+                template = self._build_template(family, pattern, shape)
+                ok, why = self.validate_config({**template, **knobs})
+                if not ok:
+                    refused.append(
+                        f"{family}/{sweep['knob']}/{shape}: {why}")
+                    continue
+                tag = (f"_mt{base.get('MacroTile', '')}"
+                       f"_tt{base.get('ThreadTile', '')}"
+                       f"_sw{self._sweep_value_tag(value)}")
+                label = f"{family}_{pattern}_{shape}{tag}"
+                phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
+                candidates.append(self.emit_candidate(
+                    phase_id=phase_id, label=label,
+                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                    shapes=[shape], template=template, knobs=knobs
+                ))
+        return candidates, refused
+
+    def _build_template(self, family: str, pattern: str, shape: str) -> Dict[str, Any]:
+        """Build candidate template."""
+        return {
+            "Architecture": "gfx90c",
+            "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+            "ContractionPattern": pattern,
+            "ProblemType": shape,
+            "ScheduleName": "isa",
+            "FamilyLabel": family,
+        }
 
     def generate_decision_trial_phases(
         self,
@@ -456,25 +407,10 @@ class CandidateEmitMixin:
         base_shapes: Optional[List[str]] = None,
         phases_file: Optional[Path] = None
     ) -> List[CandidateConfig]:
-        """Emit the decision-labelled trial tiles, unchanged.
+        """Emit decision-labelled trial tiles (full tiles, not knob deltas).
 
-        Why separate from ``generate_knob_sweep_phases``: a trial is a full
-        tile, not a knob delta, so it cannot sit in ``KNOB_SWEEPS`` (whose
-        contract is one knob change on the family's constant winner base).
-        Each ``DECISION_TRIAL_TILES`` entry carries its own decision label and
-        optionally its own shapes (D1 names the shallow cells; the rest use
-        the sweep's). Emitted unchanged and tagged ``_trialD<n>`` so a reader
-        sees which open decision a phase answers.
-
-        Args:
-            families: Trial families to emit. Defaults to the trials' own.
-            patterns: Contraction patterns. Defaults to ``["Ailk_Bljk"]``.
-            base_shapes: Shapes for trials that do not name their own.
-            phases_file: Manifest to append to (see
-                ``generate_knob_sweep_phases``).
-
-        Returns:
-            The emitted trial candidates, appended to ``phases.yaml``.
+        Each DECISION_TRIAL_TILES entry carries its own decision label and
+        optionally its own shapes. Tagged _trialD<n> to show which decision.
         """
         from oto.tensile.decks import DECISION_TRIAL_TILES
 
