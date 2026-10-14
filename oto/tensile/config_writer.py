@@ -211,11 +211,15 @@ def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
     if macro_tile0 is not None and macro_tile1 is not None:
         fork["MacroTile"] = [[int(macro_tile0), int(macro_tile1)]]
 
-    # WorkGroup: explicit > computed from MacroTile/ThreadTile > default
+    # WorkGroup: explicit > computed from MacroTile/ThreadTile > default.
+    # Element [2] is LocalSplitU (Tensile's WorkGroup is [w0, w1, LSU); there
+    # is no standalone LocalSplitU key, so a candidate carrying LSU=2 used to
+    # benchmark at LSU=1 with no warning. corpus3 Q-D.
+    _lsu = int(config["LocalSplitU"]) if "LocalSplitU" in config else 1
     if "WorkGroup" in config and isinstance(config["WorkGroup"], list):
         fork["WorkGroup"] = [config["WorkGroup"]]
     elif macro_tile0 is not None and macro_tile1 is not None and tt0 and tt1:
-        fork["WorkGroup"] = [[macro_tile0 // tt0, macro_tile1 // tt1, 1]]
+        fork["WorkGroup"] = [[macro_tile0 // tt0, macro_tile1 // tt1, _lsu]]
     else:
         fork["WorkGroup"] = [[16, 16, 1]]
 
@@ -247,10 +251,29 @@ def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
     nlca = config.get("NLCA", config.get("NumLoadsCoalescedA"))
     if nlca is not None:
         fork["NumLoadsCoalescedA"] = [int(nlca)]
+    if "NumLoadsCoalescedB" in config:
+        fork["NumLoadsCoalescedB"] = [int(config["NumLoadsCoalescedB"])]
 
-    for key in ("PrefetchGlobalRead", "PrefetchLocalRead"):
+    # PrefetchGlobalRead is [0,1,2] (Common.py:519) -- it must go as int, not
+    # bool: bool(2) is True, which Tensile reads as 1, silently collapsing the
+    # PGR=2 treatment onto PGR=1 (found while preparing the 2026-10-14 run).
+    if "PrefetchGlobalRead" in config:
+        fork["PrefetchGlobalRead"] = [int(config["PrefetchGlobalRead"])]
+    if "PrefetchLocalRead" in config:
+        fork["PrefetchLocalRead"] = [bool(config["PrefetchLocalRead"])]
+
+    # Every other knob the sweep deck sets. Each of these used to be silently
+    # dropped here, so the candidate benchmarked at the Tensile default -- the
+    # same failure mode as the old LdsPad/strip and StaggerUStride-alone bugs
+    # the comments above record. All are valid Tensile params
+    # (driver._TENSILE_VALID_PARAMS); types follow Common.py domains
+    # (UseSgprForGRO [-1,0,1], FractionalLoad [0,1,2], NonTemporalA/B [0,8),
+    # the rest plain ints). corpus3 Q-A/Q-B.
+    for key in ("UseSgprForGRO", "InnerUnroll", "MaxOccupancy",
+                "AggressivePerfMode", "FractionalLoad", "NonTemporalA",
+                "NonTemporalB", "AssertFree1ElementMultiple"):
         if key in config:
-            fork[key] = [bool(config[key])]
+            fork[key] = [int(config[key])]
 
     for key in FORWARDED_GROUP_C_KNOBS:
         if key in config:
