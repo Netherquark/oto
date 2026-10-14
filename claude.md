@@ -20,6 +20,183 @@ history, or implementation detail owned by another MD. Read owner documents inst
 
 ## 2. Startup sequence
 
+### 2.0 Operating rules — the ways this repo's budget gets burned
+
+These override any instinct to "check first", and they apply to every task below.
+
+#### 2.0.1 Re-verification is a defect, not diligence
+
+**Read the owner MD, accept the fact, and move on. Do not re-derive it.**
+
+A fact is **settled** when all three hold: it is written in an owner MD (§3); that
+MD states its provenance (measured on this box / read from Tensile source /
+derived from a cited measurement); and it is not in that owner's "Verification
+gaps" section. Anything else — a number in a code comment, a docstring, a chat
+transcript, or one you remember — is **not** settled.
+
+Re-checking a settled fact is *waste*. Re-deriving it in code is a *regression*:
+it creates a second home for a fact, which §3.1 forbids.
+
+**Constants have exactly one home.** Peaks, family shapes, dtype maps and ceilings:
+`oto/device/peaks.py`. Register-file / LDS / occupancy model:
+`oto/tensile/gates/vgpr_model.py` + `occupancy.py`. Tensile's own limits: the
+Tensile source, cited by file. The repo `.env`: read by `python-dotenv` in
+`oto/runners/toolchain.py`. Import or cite these; **never retype them.**
+
+**Verify budget: one action, for staleness, never for doubt.**
+
+```
+STALE?   code no longer matches the owner MD -> update the owner MD, then work
+SAME?    code matches the owner MD          -> work. Do not re-check the fact.
+UNKNOWN? not in any owner MD                -> a real gap: record it in that
+                                              owner's "Verification gaps" and
+                                              continue the task
+```
+
+Worked examples, all **settled — do not recompute or "fix" them**: `VGPR_PER_CU =
+65536` (read from Tensile's own kernel writer, confirmed against the device);
+7 CUs on this box; the ±27.8% tie band.
+
+#### 2.0.2 Verdict, ceiling and roofline semantics are decided — apply them
+
+The most expensive failure on this repo is an agent **re-deriving the acceptance
+logic instead of applying it**, including arguing with the user about whether a
+number is a WIN, a TIE, a ceiling, or a peak.
+
+1. **Do not redefine, re-derive or second-guess** the tie band, the verdict
+   thresholds, the realistic ceilings, or the theoretical peaks. Their owner is
+   `gfx90c_theoretical_limits.md`; the machine-readable form is `peaks.py`.
+   Apply them.
+2. **Never present an alternative acceptance framework as a finding.** If you
+   believe one is wrong, it goes in the owner MD as a dated, evidence-backed
+   proposal with a **`DECISION REQUIRED`** marker, and nothing else. You do not
+   get to relabel live cells on the strength of your own reasoning.
+3. **The user owns the framework.** A user instruction overrides this file; this
+   file overrides an agent's preference; an agent's preference overrides nothing.
+4. **One argument, once, in writing, then stop.** Repeating it in chat is not
+   diligence, it is the failure mode.
+
+Vocabulary, stated once so it does not get re-litigated: **theoretical peak** =
+BLAS flop count at 1800 MHz on the FMA pipe. **Realistic ceiling** = the
+acceptance bar, measured-empirical where possible. **WIN/TIE/LOSS** = the A/B
+verdict vs the gfx900 floor, graded at the measured noise floor. **RED/ORANGE/
+GREEN** = missing / <50% of ceiling / ≥50% of ceiling. **The floor** = the shipped
+gfx900 footprint run on this hardware; never a target identity. A ceiling
+utilisation over 100% is a known recorded state (a derived ceiling later
+out-measured), not an error to re-litigate.
+
+#### 2.0.3 Never poison the corpus
+
+**A benchmark number measured under the wrong conditions is worse than no number**,
+because it is stored, it is aggregated, and the next agent cannot tell it from a
+good one. Tensile sweeps `ProblemSizes` in deck order and each size's median
+absorbs the GPU's clock state at that moment. Two CC-family phase groups measured
+the *same* shapes with the *same* configs: 57 phases with 256³ in position 2
+median **148.2**; 143 phases with 256³ in position 4 (right after the ~81 ms 2048³
+run) median **48.8**. The distributions do not overlap. The 150 µs kernel was
+entirely measured at ~⅓ clock.
+
+1. **Never add a candidate to a phase whose `ProblemSizes` order differs from the
+   group's.** If the order must change, that is a **new phase**.
+2. **Never compare across sweep positions.** A cell's identity is
+   `(size, sweep order, position)` — not `(size, config)`.
+3. **Never trust a cheap, small kernel's median after a big one.** Small kernels
+   (≲1 ms) inherit the clock state left by the previous size. The smallest shapes
+   are the most position-sensitive, not the least.
+4. **`clock_adjusted: false` means the Δ% is raw.** Check the field before quoting
+   a delta; if it is false, say so.
+5. **A suspicious result is a bug report, not a win.** If one phase group of an
+   otherwise identical family reads 3× low, suspect the sweep and say which you
+   suspect, with the evidence.
+
+#### 2.0.4 Subagents: fully briefed
+
+**Why:** if the session's usage runs out, the **main context survives and the
+subagent's work is lost**. A subagent is not free scratch space — anything worth
+keeping must end up in the main context, as a file the main agent wrote or as text
+it pasted back.
+
+1. **No open-ended subagent.** Never write "explore the repo" or "research this
+   topic". A prompt must name the exact files to read, the question(s), the output
+   shape, and what to do if the answer is "not found".
+2. **Inline the context it cannot read for itself** — the ground truth it must
+   accept without re-verifying, the constraints it must not violate, and the
+   vocabulary from §2.0.2. Do not make it re-derive hardware facts; hand it the
+   constants.
+3. **Constrain the blast radius.** Every analysis/research subagent prompt states
+   the prohibitions by name: no `Tensile`, no `TensileCreateLibrary`, **no GPU
+   execution of any kind**, no writing into the repo, scratch to `/tmp` only.
+4. **Ask for a response, not a file.** The subagent returns its answer in the
+   response text; the main agent decides what to persist. A subagent that writes
+   into the repo has produced work that can vanish silently.
+5. **Prefer many small briefed subagents over one big open one.**
+6. **Never spawn a subagent to decide a framework question.** Framing, verdicts
+   and ceilings are main-context decisions. Subagents gather evidence.
+
+Briefing template — a prompt that does not fill in every field is not ready to send:
+
+```
+TASK: <one sentence, one deliverable>
+CONTEXT: <what the project is, in 3 lines the subagent cannot look up>
+GROUND TRUTH (accept these, do not re-verify):
+  - <constant / settled fact>  [<owner MD>]
+  - <constant / settled fact>  [<owner MD>]
+QUESTION(S): <numbered, each answerable without judgement>
+OUTPUT: <exact table columns, or numbered findings with file:line citations>
+IF NOT FOUND: say "not found" and list what you did read. Do not guess.
+HARD PROHIBITIONS:
+  - Do NOT run Tensile, TensileCreateLibrary, rocblas-bench.
+  - Do NOT execute ANY GPU code. No HIP/C++ programs, no kernel launches,
+    no device queries, no microbenchmarks. Read-only + CPU-only.
+  - Do NOT write any file into the repo. Scratch to /tmp only.
+DO NOT: change acceptance logic, propose new verdict bands, or re-derive the
+  numbers in GROUND TRUTH.
+```
+
+#### 2.0.5 Use the harness's tooling first; formalise what you prototype.
+
+The repo already owns the loaders, so an agent that writes its own parser gets
+numbers that disagree with the ledger and nobody can tell why. The rule is a
+three-step loop, not a prohibition:
+
+1. **Look in the harness first.** §2.2's tool table is the index. If a tool
+   answers the question, use it — do not re-derive its numbers in a shell
+   one-liner, and do not re-parse a format a loader already handles.
+2. **Prototype in `/tmp/opencode` when the tool genuinely does not exist.** This
+   is expected and fine. What is not fine is stopping there: a measurement that
+   lives only in `/tmp` is lost work, and the next agent repeats it.
+3. **Land it in the harness once it is functional and useful.** Concretely: a
+   module under `oto/` with the §3 ownership docstring (Owns / Does NOT own /
+   Public API), constants imported from their one home rather than retyped, a
+   CLI reachable as `python3 -m oto.…`, a test that pins its model, and a §2.2
+   table row so the next agent finds it. If the prototype overlaps an existing
+   module, extend the existing one and record what changed coverage.
+
+Never prototype into the repo tree "to try it live", and never let a `/tmp`
+number reach a doc, a deck or a verdict before the repo tool that produces it is
+landed.
+
+#### 2.0.6 Never execute GPU code.
+
+The agent machine is the user's **live GNOME desktop session**; a badly-behaved
+or runaway kernel hangs the GPU and takes that session with it. This has already
+happened — a 2 GB streaming read/write probe hung the GPU and crashed the session.
+The word "low-cost proof of concept" is **not** an exception and "just to check
+legality" is **not** an exception: the failure mode is a *hang*, not a slowdown, so
+there is no size at which it becomes safe. Exhaustively banned: no `Tensile`, no
+`TensileCreateLibrary`, no `rocblas-bench`, no `rocprof`, no `hipcc`-compiled
+program, no `hipDeviceProp_t`/`rocminfo`-style device query written for this
+purpose, no `amdgpu_top` sampling under load, no FMA/latency/bandwidth
+microbenchmark of any size. **Everything the agent needs to know about the device
+is already in `gfx90c_theoretical_limits.md` §1–§3 and `oto/device/peaks.py`.**
+Full Tensile benchmark runs are also not the agent's to launch: only in a TTY, and
+only when the USER runs them. Agent work is CPU-only — code, DB and docs, plus the
+repo's own CPU-only tools (`check_candidates.py`, `allruns.py`,
+`check_tensile_build.py`, `check_library_parity.py`, the gate/test suite, deck
+generation, dry-run, result inspection).
+
+### 2.1 Documents
+
 For every substantive task:
 
 1. Read `README.md` for repository-level orientation.
@@ -40,7 +217,7 @@ For every substantive task:
 Read only the documents relevant to the task when scope is narrow; use the full
 sequence when changing strategy, architecture, methodology, or the implementation plan.
 
-### 2.1 Do not re-derive what the tooling already answers
+### 2.2 Do not re-derive what the tooling already answers
 
 Before hand-parsing a `2_BenchmarkData` CSV, a registry row, or a phase's knobs,
 run the canonical tools. They drive oto's own loaders, so they cannot drift from
@@ -51,6 +228,18 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`) |
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §2 (the M1/M2/M3 triage) |
+| **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
+| **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
+
+The two occupancy tools answer different questions and are not interchangeable:
+`asm_occupancy` reads the emitted `.s` (`amdhsa_next_free_vgpr`,
+`group_segment_fixed_size`), so its "waves per CU" is a fact about a kernel that
+built and ran; `occupancy_audit` reads a `kernel_db` row, so its "resident
+workgroups per CU" is a prediction about a candidate. Corrections to the first
+are measurement-vs-model; corrections to the second are model-vs-model.
+`asm_occupancy --check-calibration` verifies the waves-per-SIMD model against
+the AMD/ORNL GFX9 table and exits 1 if it stops fitting — run it before
+trusting any occupancy number in this repo.
 
 `knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
 (multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
@@ -229,11 +418,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   `release_drop`, defaulting to dropped. Do not reintroduce an unconditional
   drop, and do not bundle a T3 opt-in with a T2 opt-in — they release
   independently (`--release-under-specified` / `--release-unreproducible`).
-- **NEVER run full Tensile benchmark runs during code development.** This is not a
-  TTY. Full runs are ONLY allowed in a TTY, and ONLY when the USER runs them. During
-  agent work: no `Tensile`/`TensileCreateLibrary` full benchmarks, no sustained GPU
-  phases, no marathon/deck runs. Code/DB/doc work only. The agent may build, validate,
-  test, generate decks, dry-run and inspect results — never launch full runs.
+- The operating rules in **§2.0** are guardrails, not advice.
 - **`todo.txt` is a USER-ONLY file. The agent never reads, writes, greps, renames,
   touches, or commits it — in any context, for any reason.** (Cross-ref above
   and the commit-discipline rule below.) Its contents are not part of the
@@ -247,12 +432,6 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   blanket add would sweep them into a commit. Before committing, verify
   `git status --porcelain` shows no untracked user file staged. Never add
   random untracked files, proposal.md, todo.txt, or command.txt to the repo.
-- Convergence claims need the agent gate: ≥3 distinct configs tested, ≥2 independent
-  runs (≥6 seeds), CV ≤ 15% per cell, and 0 RED contract cells. The ≤1% run-to-run
-  drift bar applies to retirement eligibility, not to convergence.
-  `command.txt` are intentionally untracked (and NOT in `.gitignore`), so a
-  blanket add would sweep them into a commit. Before committing, verify
-  `git status --porcelain` shows no untracked user file staged.
 - Convergence claims need the agent gate: ≥3 distinct configs tested, ≥2 independent
   runs (≥6 seeds), CV ≤ 15% per cell, and 0 RED contract cells. The ≤1% run-to-run
   drift bar applies to retirement eligibility, not to convergence.
@@ -288,8 +467,7 @@ checks are demonstrated and remaining gaps are stated.
   `potential_configs.md`, `knowledge_base*`, `results.md`, `mapping.md`,
   `README.md`, `oto/device/peaks.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
-- **`todo.txt` is a USER-ONLY file.** The agent never reads, writes, greps,
-  renames, or touches it — in any context, for any reason.
+- **`todo.txt` is a USER-ONLY file** (restated here).
 - One fact, one canonical home. Fix stale docs in the owner + dependent generated
   artifacts; do not create competing summaries. Do not inflate this file with project
   history that belongs elsewhere.

@@ -122,22 +122,12 @@ def _init_tensile(arch: str = "gfx90c") -> None:
 
 def _require_tensile_root(explicit: Optional[str] = None) -> Path:
     """Locate the Tensile checkout, honouring the repo `.env` convention."""
-    candidates: List[Optional[str]] = [explicit, os.environ.get("TENSILE_ROOT")]
-    env_file = REPO / ".env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("TENSILE_ROOT"):
-                parts = line.split("=", 1)
-                if len(parts) == 2:
-                    candidates.append(parts[1].strip().strip("\"'"))
-    for cand in candidates:
-        if cand and (Path(cand) / "Tensile" / "bin" / "Tensile").exists():
-            return Path(cand)
-    raise SystemExit(
-        "Tensile checkout not found. Set TENSILE_ROOT in the repo `.env` or "
-        "the environment, or pass --tensile-root."
-    )
+    from oto.runners.toolchain import require_tensile_root
+
+    try:
+        return require_tensile_root(Path(explicit) if explicit else None, None)
+    except ValueError as exc:
+        raise SystemExit(str(exc))
 
 
 # --------------------------------------------------------------------------

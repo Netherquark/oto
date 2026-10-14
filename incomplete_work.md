@@ -3,6 +3,44 @@
 Status key: RESOLVED (mechanism landed + proven) / PENDING (real gap, still open) /
 PARTIAL (mechanism landed; execution/validation outstanding).
 
+## 6. DECISION REQUIRED — the LDS gate is calibrated to a value Tensile contradicts
+
+**Owner: user. Do not change `LDS_BUDGET` or `BYTES_PER_ELEMENT["Z"]` until this
+is decided.** Both are gate policy, and the second is load-bearing for the first.
+
+`oto/tensile/gates/vgpr_model.py` computes an LDS proxy as
+`(MacroTile0 + MacroTile1) * DepthU * bytesPerElement` and compares it against
+`LDS_BUDGET = 16384`. Two facts, both measured from Tensile's own output:
+
+1. **`BYTES_PER_ELEMENT["Z"]` is 8 but Tensile's complexDouble is 16 bytes.**
+   Tensile/DataType.py:82 has `'reg': 4` and `numBytes() = numRegisters() * 4`
+   = 16, and the same module's `FAMILY_BYTES_PER_ELEMENT` already says `"ZZ": 16`
+   — the two tables in one file disagree.
+2. **The budget was calibrated against the 8-byte value.**
+   `tests/test_occupancy_gate.py::TestLdsGate::test_budget_sits_at_measured_boundary`
+   asserts `(64+64)*16*bpe == 16384`, which holds only at `bpe = 8`. Measured from
+   `amdhsa_group_segment_fixed_size`: Tensile emits **65536** for a ZZ 64x64x16
+   (single-buffered 32768), so the current model understates the ZZ LDS footprint
+   by 4× and overstates nothing. It therefore admits ZZ configs Tensile would
+   refuse — the one direction the module docstring claims it cannot go.
+
+The two are coupled: correcting (1) alone makes the gate reject **110 kernels
+that Tensile built and ran** (worst: DD 64x64x32 and SS 128x128x32, both 32768
+base / 65536 emitted; a Z 64x64x16 among them). Every one of those lands at
+**4 waves/CU** — one resident workgroup — so the choice is not "widen or narrow",
+it is "widen into a single-workgroup regime".
+
+*Scope:* this is the **LDS-tile** byte width only. §8.1's "bytes per element for
+the global load: C 8, Z 8" is a different quantity on a different path (the
+`GLVW x bytes <= 16` register-vector cap), and both can be true at once; they
+are not a contradiction and must not be "reconciled".
+
+Existing values stay in place until decided. The corrected baseline would be
+`"Z": 16` with `LDS_BUDGET = 32768` (preserving today's accept/reject boundary at
+the true single-buffered footprint, which is what the `S`/`D` rows already match).
+Reproduce with `python3 -m oto.harness.asm_occupancy --dtype Z --by gflops`.
+
+
 ## 4.14 In-Place Phases Fix & Telemetry v2 (RESOLVED — 2026-09-14)
 - Fixed 48 invalid contraction entries in `phases.yaml` in-place (NLCA 3→1 ×46, DepthU 4→16 ×2; backup `archive/phases_20260914_prefix.yaml`).
 - Replaced fragile telemetry sampler with `telemetry.py` (non-root sysfs, `mclk_hz` parsed correctly).

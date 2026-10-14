@@ -64,9 +64,10 @@ Corollaries:
 
 ## Reading order for a new agent
 
-`claude.md` (entry contract) → `README.md` (orientation) → the owner MD for the
-task at hand (`claude.md` section 9 routes you) → the module docstring of the
-file you are about to edit. Nothing else. In particular:
+`claude.md` — start at **§2.0 (operating rules)**, then §2.1 (documents) →
+`README.md` (orientation) → the owner MD for the task at hand (`claude.md`
+section 9 routes you) → the module docstring of the file you are about to edit.
+Nothing else. In particular:
 
 * Do **not** read `changelog.md` to find out what the code does now — read the
   module docstring. The changelog is history.
@@ -74,6 +75,8 @@ file you are about to edit. Nothing else. In particular:
   the test suite. The register is a to-do list, not a status.
 * Do **not** read a docstring to find out *why* the project made a choice — that
   is in the ecosystem MD that owns the decision.
+* Do **not** re-verify a settled fact just because it looks surprising. If an
+  owner MD states it with provenance, it is settled (`claude.md` §2.0.1).
 
 ## The docstring convention
 

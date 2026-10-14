@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Toolchain discovery: the Tensile checkout and the ROCm toolchain.
 
-Owns: resolving the Tensile root (explicit flag -> live env -> .env, with no
-fallback) and resolving every ROCm path from native discovery only (explicit env
+Owns: resolving the Tensile root (explicit flag -> live env -> repo `.env`, with
+no fallback) and resolving every ROCm path from native discovery only (explicit env
 value that exists, then `hipconfig`, then `shutil.which`). No hardcoded candidate
-chains.
+chains. Also owns reading the repo-root `.env` via `python-dotenv`, so no other
+module hand-parses it.
 Does NOT own: the driver that uses these paths (oto.runners.driver) or the
 Tensile subprocess environment (also oto.runners.driver).
-Public API: DEFAULT_TENSILE_ROOT, require_tensile_root, hipconfig,
-resolve_rocm_paths.
+Public API: REPO_ROOT, DOTENV_PATH, DEFAULT_TENSILE_ROOT, require_tensile_root,
+hipconfig, resolve_rocm_paths.
 """
 
 from __future__ import annotations
@@ -20,6 +21,17 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
+#: Repo root, the directory that owns `.env`. `.env` is repo configuration, not
+#: a package resource, so it is addressed by path rather than by importlib.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+#: Repo-root `.env`, or None when the repo ships without one (a fresh clone).
+DOTENV_PATH = REPO_ROOT / ".env"
+
+load_dotenv(dotenv_path=DOTENV_PATH, override=False)
+
 #: Read once at import time so a caller that wants the .env value does not have
 #: to re-read the file. Never a fallback path.
 DEFAULT_TENSILE_ROOT = (Path(os.environ["TENSILE_ROOT"])
@@ -30,9 +42,14 @@ def require_tensile_root(explicit: Optional[Path],
                          default: Optional[Path]) -> Path:
     """Resolve the Tensile checkout root from an explicit arg, live env, or .env.
 
+    Precedence, highest first: the explicit ``--tensile-root`` value; the live
+    process environment; the repo-root ``.env``. The live environment wins over
+    `.env` because a caller who exported a value meant it.
+
     Args:
         explicit: A ``--tensile-root`` value, which wins over everything.
-        default: The value read from the environment at import time.
+        default: The value read from the environment at import time, which
+            already includes anything ``.env`` contributed.
 
     Returns:
         The resolved checkout root, validated to contain ``Tensile/bin/Tensile``.
@@ -43,15 +60,19 @@ def require_tensile_root(explicit: Optional[Path],
             guesses a root shells out to the wrong Tensile and produces a corpus
             that looks like measurements of this device.
     """
-    candidate = explicit or default
-    if candidate is None:
+    candidate = explicit or default or os.environ.get("TENSILE_ROOT")
+    if not candidate:
         raise ValueError(
             "TENSILE_ROOT is not set. Configure it in the repo-root `.env` "
-            "(TENSILE_ROOT=<path to Tensile checkout>) or pass --tensile-root."
+            "(TENSILE_ROOT=<path to Tensile checkout>), export it, or pass "
+            "--tensile-root."
         )
     resolved = Path(candidate).resolve()
     if not (resolved / "Tensile" / "bin" / "Tensile").exists():
-        raise ValueError(f"TENSILE_ROOT {resolved} has no Tensile bin/Tensile; check `.env`.")
+        raise ValueError(
+            f"TENSILE_ROOT {resolved} has no Tensile/bin/Tensile. Fix the "
+            f"value in {DOTENV_PATH}, export it, or pass --tensile-root."
+        )
     return resolved
 
 

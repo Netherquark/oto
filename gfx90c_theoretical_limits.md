@@ -200,3 +200,41 @@ working set, so large squares are unambiguously ALU-side. Therefore "go as close
 the theoretical limit as possible" = **raise achieved CU occupancy with right-sized
 GSU/WGM/MT/TT** (see `implementation_plan.md` and `potential_configs.md`),
 and 3-KD this file with measured oto cells.
+
+### 7.1 Measured, not inferred — and LDS binds more often than VGPR
+
+Measuring every emitted kernel instead (`python3 -m oto.harness.asm_occupancy`, 
+5757 kernels, all with GFLOP/s joined) gives the opposite emphasis:
+
+| | measured |
+|---|---|
+| Bound by **LDS** | **61.7%** of the corpus |
+| Bound by VGPR | 22.4% |
+| Bound by both identically (reported as a tie, not broken by order) | 15.9% |
+| Median waves/CU | 8 (2 waves/SIMD) |
+| At ≤3 waves/CU | 2.1% (121 kernels) |
+| Kernels that spill | **0** |
+
+So "occupancy is starved" is true in aggregate but not in the shape the text
+implies: LDS caps at-or-below the register file in **77.6%** of kernels (61.7%
+strictly, 15.9% tied), and the extremes (≤3 waves/CU) are rare. The 15.9% tie
+line matters — an earlier version of `asm_occupancy` resolved ties by dict order
+toward VGPR, which understated LDS involvement by 16 points. It also refutes "occupancy always ≤3": as a *resident
+workgroup* count that holds for ~49% of kernels, as a *wave* count for 2.1% —
+two different questions, which is why `asm_occupancy` reports waves and
+`occupancy_audit` reports workgroups and they must not be substituted.
+
+Per family (median waves/CU, max measured GFLOP/s):
+
+| dtype | kernels | median waves/CU | best GFLOP/s |
+|---|---|---|---|
+| Z | 229 | 4 | 24.7 |
+| D | 354 | 5 | 99.9 |
+| C | 328 | 8 | 360.9 |
+| S | 2498 | 8 | 1340.5 |
+| H | 2348 | 16 | 2922.8 |
+
+The ALU-peak ordering (Z < D < C < S < H) tracks the family's flop-per-byte
+machine balance, not its occupancy — H runs the most *and* the fastest, because
+its 2-byte elements make it the only family whose ridge sits above its bandwidth
+ceiling. That is the whole argument for H-family work in `potential_configs.md`.

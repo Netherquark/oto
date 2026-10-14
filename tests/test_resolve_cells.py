@@ -72,7 +72,11 @@ def test_every_native_winner_resolves_full_config(evidence):
     # CC:512 resolver-final winner: MT64x64/4x4/VW2/DU8/WGM4+NLCA1 (not WGM8)
     assert by[("CC", "512x512x512")]["native_config"]["WorkGroupMapping"] == 4
     assert by[("CC", "512x512x512")]["native_config"]["NumLoadsCoalescedA"] == 1
-    assert by[("ZZ", "1024x1024x1024")]["native_config"]["DepthU"] == 16
+    # ZZ:1024 winner is the DepthU-8 tile (phase_cand_zz_128_32x32x8_..._du8_...),
+    # not the DepthU-16 tile that won under run_20261009_205427. Pinned from the
+    # acceptance report this resolver ran against; if the winner moves again this
+    # assert is the first thing that goes, and the new depth is in the phase name.
+    assert by[("ZZ", "1024x1024x1024")]["native_config"]["DepthU"] == 8
     assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [32, 64]
 
 
@@ -86,12 +90,20 @@ def test_unresolved_hpa_floor_rows_are_tolerated(evidence):
 
 
 def test_meta_provenance_is_consistent(evidence):
+    """Provenance is *self-consistent*, never a pinned corpus count or run id.
+
+    A literal run id here is a corpus count in disguise: it goes stale the moment
+    the next run lands, and it asserts nothing about the resolver. What must hold
+    is that the meta agrees with the acceptance report it was derived from, and
+    that the key/yaml/registry relationships stay intact.
+    """
     _, meta = evidence
-    assert meta["n_cells"] == 38
+    report = json.load(open(BASE / "gfx90c_results" / "acceptance_report.json"))
+    assert meta["acceptance_run_id"] == report["run_id"]
+    assert meta["n_cells"] == len(report["per_cell_verdicts"])
     assert meta["sources"]["run_config_yamls"] >= 6000
     assert meta["sources"]["resolver_keys"] >= meta["sources"]["run_config_yamls"]
     assert meta["sources"]["registry_phases"] >= 1000
-    assert meta["acceptance_run_id"] == "run_20261009_205427"
 
 
 def test_table_and_tsv_render(evidence):

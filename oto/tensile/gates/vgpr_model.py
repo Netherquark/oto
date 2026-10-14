@@ -56,9 +56,15 @@ ACCVGPR_BUDGET = 128
 #: (128x32x16 needs 106496 B and is rejected). Deliberately conservative: it may
 #: refuse a config Tensile would accept, never admits one Tensile refuses.
 LDS_BUDGET = 16384
-#: Bytes per element for the LDS footprint, by dtype char. Note this is NOT
-#: VGPR_PER_ELEMENT: a f64 element is 8 bytes but only 2 VGPRs, while a complex
-#: f64 element is 8 VGPRs and 8 bytes.
+#: Bytes per element for the LDS footprint, by dtype char. This is Tensile's
+#: own ``DataType.numBytes()`` (= ``properties['reg'] * 4``) -- EXCEPT "Z", which
+#: is deliberately left at half that value. See DECISION REQUIRED in
+#: gfx90c_theoretical_limits.md §6: complex double is 4 registers = 16 bytes in
+#: Tensile/DataType.py:82 (and FAMILY_BYTES_PER_ELEMENT agrees, "ZZ": 16), but
+#: LDS_BUDGET below was calibrated against the 8-byte value, so correcting this
+#: entry alone would reject ZZ configs Tensile builds and runs. The two must be
+#: decided together. A f64 element is 8 bytes but 2 accumulator VGPRs (per
+#: element); a complex f64 element is 8 accumulator VGPRs and 16 LDS bytes.
 BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
 #: Retained for the workgroup estimate: budget is expressed in accumulators, and
 #: the register file is shared by every thread in a workgroup.
