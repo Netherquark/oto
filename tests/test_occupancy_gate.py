@@ -44,6 +44,7 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
 
 # The VGPR model tables and the occupancy gates are separate modules since the
 # gate split; the candidate generator imports them rather than owning them.
+from oto.tensile.gates.loads import validate_tensile_loads  # noqa: E402
 from oto.tensile.gates.occupancy import (occupancy_feasible,  # noqa: E402
                                          occupancy_workgroups_per_cu)
 from oto.tensile.gates.vgpr_model import (ACCVGPR_BUDGET,  # noqa: E402
@@ -247,6 +248,82 @@ class TestVectorWidthCap(unittest.TestCase):
                 seen.add(key)
             widths = {c.get("VectorWidth") for c in self.decks[fam]}
             self.assertTrue(widths, fam)
+
+
+class TestGlobalLoadVectorWidthRule(unittest.TestCase):
+    """An explicit GlobalLoadVectorWidth is not free.
+
+    Tensile refuses ``GLVW != VectorWidth and != 1`` unless ``BufferLoad`` and
+    ``GuaranteeNoPartialA`` hold (SolutionStructs.py:4584-4595) -- and for the
+    assembly path this device takes, ``AssertFree0ElementMultiple`` defaults to 1
+    while ``TLUA`` is true for ``Ailk_Bljk``, so ``GuaranteeNoPartialA`` is false
+    and the restriction bites. The gate used to ignore an explicit ``GLVW``
+    entirely (it derived ``max(VW, numElemPerReg)``), so ``GLVW=2`` passed on a
+    ``VectorWidth=4`` tile and Tensile then dropped the phase at solution
+    construction -- the reference-rerun hashes ``7f866dcf`` / ``a0edeb30``.
+    """
+
+    def test_explicit_glvw2_on_vw4_is_refused(self):
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2))
+        self.assertFalse(ok)
+        self.assertIn("must be == VectorWidth", why)
+
+    def test_explicit_glvw_equal_to_vw_is_accepted(self):
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=4, GlobalLoadVectorWidthB=4))
+        self.assertTrue(ok, why)
+
+    def test_glvw1_narrow_is_accepted_on_a_vw4_tile(self):
+        """GLVW=1 is the only *non-default* legal value on a VW>1 tile."""
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=1, GlobalLoadVectorWidthB=1))
+        self.assertTrue(ok, why)
+
+    def test_auto_glvw_is_unaffected(self):
+        """-1 is the '= VectorWidth' default and must stay legal."""
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=-1, GlobalLoadVectorWidthB=-1))
+        self.assertTrue(ok, why)
+
+    def test_pv_reduction_cancels_a_widening_into_a_noop(self):
+        """ZZ 32x32x8, VW=1: the pv reduction (SolutionStructs.py:2010) turns an
+        explicit GLVW=2 back into 1, so it is legal but measures the base tile."""
+        ok, why = validate_tensile_loads(
+            cfg("Z", "32x32x8", "2x2", VectorWidth=1,
+                GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2))
+        self.assertTrue(ok, why)
+
+    def test_assert_free_element_multiple_lifts_the_restriction(self):
+        """The guard is conditional: GuaranteeNoPartialA holds when
+        AssertFree0ElementMultiple is a multiple of GLVW_A (SolutionStructs:4177),
+        so GLVW=2 beside AF0EM=2 is legal on a VW4 tile.
+
+        FORWARD_KNOB_DOMAINS explores exactly this pair
+        (GlobalLoadVectorWidthA/B in {1,2,4} x AssertFree0ElementMultiple in
+        {1,2}), so a gate that refused it unconditionally would delete a legal
+        slice of the synthesis space.
+        """
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2,
+                AssertFree0ElementMultiple=2, AssertFree1ElementMultiple=2))
+        self.assertTrue(ok, why)
+
+    def test_source_language_keeps_the_restriction(self):
+        """``bufferLoad`` also requires KernelLanguage Assembly
+        (SolutionStructs:3292); Source takes the unconditional branch."""
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2,
+                AssertFree0ElementMultiple=2, AssertFree1ElementMultiple=2,
+                KernelLanguage="Source"))
+        self.assertFalse(ok)
+        self.assertIn("must be == VectorWidth", why)
 
 
 class TestLdsGate(unittest.TestCase):

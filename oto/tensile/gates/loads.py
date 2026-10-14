@@ -86,6 +86,37 @@ def _vector_width(config: Dict[str, Any], tt0: int, tt1: int,
     return vw
 
 
+def _glvw_for(config: Dict[str, Any], tc: str, default: int) -> int:
+    """The GlobalLoadVectorWidth Tensile actually uses for operand ``tc``.
+
+    An explicit ``GlobalLoadVectorWidthA``/``B`` is honoured verbatim: Tensile
+    passes it into ``setGlobalLoadVectorWidth`` as ``grvw``
+    (SolutionStructs:2010). Only ``-1`` (the "= VectorWidth" default) and ``0``
+    mean "derive it". This gate used to model the *derived* width only, so a
+    config that set ``GlobalLoadVectorWidth=2`` on a ``VectorWidth=4`` tile
+    passed here and was then refused by Tensile -- "GlobalLoadVectorWidthA 2 must
+    be == VectorWidth 4 or == 1" (SolutionStructs:4584-4596). Real refuses of
+    exactly that shape are the reference-rerun hashes ``7f866dcf`` / ``a0edeb30``
+    (tests/test_reference_tiers.py).
+
+    Args:
+        config: A Tensile solution dict.
+        tc: Operand, ``"A"`` or ``"B"``.
+        default: The derived width to fall back to (``max(VW, numElemPerReg)``).
+
+    Returns:
+        The width Tensile will use: the explicit value, else ``default``.
+    """
+    raw = config.get(f"GlobalLoadVectorWidth{tc}")
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return default if value <= 0 else value
+
+
 def _transposes(config: Dict[str, Any]) -> Tuple[bool, bool]:
     """(TLUA, TLUB) from the contraction pattern or the label.
 
@@ -182,12 +213,45 @@ class _Operand:
 
     def _shift_ptr_stage(self) -> Optional[str]:
         """GLVW==VW-or-1: post-pv-reduction shift-ptr guard
-        (SolutionStructs:4583-4596)."""
+        (SolutionStructs:4583-4596). Only fires when the solution cannot
+        guarantee the wide load is whole -- see ``_restriction_active``."""
         glvw_eff = self.glvw // self._pv
-        if glvw_eff > 1 and glvw_eff != self.vw:
+        if (glvw_eff > 1 and glvw_eff != self.vw
+                and self._restriction_active(glvw_eff)):
             return (f"{self.tc}: GLVW={glvw_eff} must be == VectorWidth "
                     f"{self.vw} or == 1")
         return None
+
+    @property
+    def buffer_load(self) -> bool:
+        """Tensile's local ``bufferLoad`` (SolutionStructs:3292).
+
+        True only for an Assembly kernel with ``BufferLoad`` on. The project's
+        ``config_writer`` always writes ``KernelLanguage: Assembly`` and
+        ``BufferLoad`` defaults True, so this is the state every deck phase is
+        built in -- but it is read, not assumed, so a ``Source`` or
+        ``BufferLoad=0`` config still takes the stricter branch.
+        """
+        language = str(self._config.get("KernelLanguage", "Assembly"))
+        return (bool(self._config.get("BufferLoad", True))
+                and language == "Assembly")
+
+    def _restriction_active(self, glvw_eff: int) -> bool:
+        """``not bufferLoad or not GuaranteeNoPartial`` (SolutionStructs:4584).
+
+        ``GuaranteeNoPartialX`` is ``AssertFree0/1ElementMultiple % GLVW_X == 0``
+        when that operand is TLU and True otherwise (SolutionStructs:4177-4183).
+        So a tile that asserts the free dimension is a multiple of the wide load
+        -- e.g. ``AssertFree0ElementMultiple=2`` beside ``GLVW=2`` -- legitimately
+        lifts the restriction, which is why the gate must not apply it blindly.
+        """
+        if not self.buffer_load:
+            return True
+        if not self.tlu:
+            return False
+        knob = ("AssertFree0ElementMultiple" if self.tc == "A"
+                else "AssertFree1ElementMultiple")
+        return int(self._config.get(knob, 1)) % glvw_eff != 0
 
     def _nlca_stage(self, nlca: int) -> Optional[str]:
         """NumLoadsCoalesced legality (SolutionStructs:2058)."""
@@ -333,16 +397,17 @@ def validate_tensile_loads(config: Dict[str, Any]) -> Tuple[bool, str]:
     if dtype["isHalf"] and vw < 2:
         return False, "VW must be >= 2 for half"
 
-    # GLVW default: max(VW, numElemPerReg) for assembly (SolutionStructs:3451)
+    # GLVW default: max(VW, numElemPerReg) for assembly (SolutionStructs:3451);
+    # an explicit GlobalLoadVectorWidthA/B overrides it per operand (_glvw_for).
     numElemPerReg = math.ceil(1.0 / dtype["reg"]) if dtype["reg"] > 0 else 1
-    glvw = max(vw, numElemPerReg)
-
-    # GLVW * bpe <= 16 (SolutionStructs:3460)
-    if glvw * dtype["bytes"] > 16:
-        return False, f"GLVW {glvw} * bpe {dtype['bytes']} > 16"
+    glvw_default = max(vw, numElemPerReg)
 
     tlu_a, tlu_b = _transposes(config)
     for tc, mt_tc, tlu in (("A", mt0, tlu_a), ("B", mt1, tlu_b)):
+        glvw = _glvw_for(config, tc, glvw_default)
+        # GLVW * bpe <= 16 (SolutionStructs:3460)
+        if glvw * dtype["bytes"] > 16:
+            return False, f"GLVW{tc} {glvw} * bpe {dtype['bytes']} > 16"
         operand = _Operand(tc, mt_tc, depth_u, num_threads, glvw, vw, tlu, config)
         reason = operand.rejection()
         if reason:

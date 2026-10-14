@@ -172,7 +172,66 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
 - **DDR cells (GEMV/batch) never compare to the ALU roof** — refer them to `t_min`
   (§3) with BW=42 and the measured GEMV band (64×4096×1 → 1199–1311 ≈ 40 GB/s).
 
-## 6. Verification gaps (do not silently close)
+## 6. Open verification gaps and decisions
+
+### 6.1 DECISION REQUIRED — the ZZ LDS byte count, and what it is and is not
+
+**Owner: user. Do not change `BYTES_PER_ELEMENT["Z"]` or `LDS_BUDGET` until this
+is decided.**
+
+`oto/tensile/gates/vgpr_model.py` gates an LDS proxy as
+`(MacroTile0 + MacroTile1) * DepthU * bytesPerElement` against `LDS_BUDGET =
+16384`. Two facts, both measured:
+
+**F1 — `BYTES_PER_ELEMENT["Z"] = 8` is half of Tensile's element width.**
+Tensile/DataType.py:82 gives complexDouble `'reg': 4`, and
+`numBytes() = int(numRegisters * 4)` = **16**. The same module already carries
+`FAMILY_BYTES_PER_ELEMENT["ZZ"] = 16`, and
+`ASSEMBLY_DTYPE_ELEM_BYTES` in `gates/assembly.py` counts `Z = 16` too. So three
+tables agree on 16 and one says 8. For every other family the byte table equals
+Tensile's element width; **ZZ is the only family where it is half**.
+
+**F2 — this is *not* an over-admission, and an earlier draft of this section
+that said so was wrong.** Measured across all emitted kernels
+(`python3 -m oto.harness.asm_occupancy --dtype Z`): at the 8-byte reading,
+**0 of 229 ZZ kernels that built and ran exceed the 16384 budget**. At the
+16-byte reading **67 would be refused**, including the corpus's own ZZ winner
+(`64x64x16`, 65536 B emitted — the whole LDS pool, at one resident workgroup).
+So the 8 does not let illegal configs through; it makes the ZZ gate the *most
+permissive* family, and correcting it alone would refuse work Tensile accepted.
+
+**What the discrepancy actually costs.** The gate's proxy is meant to be the
+*unpadded base* footprint, and for S/H/D/C it equals Tensile's true
+single-buffered tile. For ZZ it is exactly half of it. Measured true footprints:
+
+| ZZ tile | gate says (bpe=8) | true single-buffered (bpe=16) | Tensile emitted | resident WG |
+|---|---|---|---|---|
+| 32x32x8 | 4096 | 8192 | 16384 | 8 waves/CU |
+| 64x64x8 | 8192 | 16384 | 32768 | 4 waves/CU |
+| 64x64x16 | 16384 (= budget) | 32768 | 65536 | 1 wave/CU |
+
+The 16384 budget therefore does **not** mean "≤16 KB of LDS" for ZZ; it means
+"≤ half a 16 KB tile", and the real allocation is 4× larger. This is why ZZ is
+the family where LDS capacity binds hardest (61.7% of the whole corpus), and why
+a ZZ deck entry can look legal to the gate while Tensile allocates the entire LDS
+pool to it.
+
+**Why it is coupled and cannot be fixed alone.** `LDS_BUDGET = 16384` was chosen
+so `(64+64)*16*8 == 16384` puts the measured complex boundary at the wall —
+`tests/test_occupancy_gate.py::TestLdsGate::test_budget_sits_at_measured_boundary`
+asserts exactly that identity, so it fails at bpe=16. Corrected baseline that
+preserves today's accept/reject boundary: `"Z": 16` with `LDS_BUDGET = 32768`.
+Note the consequence the user is choosing between: keeping 8/16384 refuses
+nothing but under-describes ZZ's real LDS pressure; moving to 16/32768 describes
+it correctly and refuses the 67 single-workgroup kernels above.
+
+*Scope:* this is the **LDS-tile** width only. `knowledge_base.md` §8.1's "complex
+types are 8 B" is the **global-load** element width under the `GLVW x bytes <= 16`
+cap — a different quantity on a different path. Both can be true at once.
+Reproduce with `python3 -m oto.harness.asm_occupancy --dtype Z --by gflops`
+and `--binder`.
+
+### 6.2 Other verification gaps (do not silently close)
 
 1. LLVM-24 docs vs installed clang-19 disagree on `v_mad_mix_f32` availability for
    gfx90c (doc says absent; clang-19 assembles it). Material conclusions (§1.2) are

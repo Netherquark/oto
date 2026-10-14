@@ -338,3 +338,120 @@ What this still cannot answer: form-vs-thermal. The 2× question needs the *same
 kernel in *both* invocation forms on the *same* cell, which is precisely the
 comparison the certainty tiers refuse to grade. A single cheap phase validates
 the plumbing; it does not settle the mechanism.
+
+## 13. Corpus forensics: what has actually been varied (2026-10-14)
+
+A whole-corpus pass over all 5757 emitted kernels (`python3 -m
+oto.harness.asm_occupancy`, GFLOP/s joined against every phase's `2_BenchmarkData`)
+plus the knob census (`python3 allruns.py`). Analysis and the resulting deck are
+in `potential_configs.md`; this section is the measured evidence.
+
+### 13.1 The knob census — two knobs have only ever held one value
+
+`allruns.py` reports, across both arms and every cell:
+
+```
+never-exercised knobs (both arms, all cells)
+  GlobalSplitU         = ['1']   <- only ever this one value
+  StaggerU             = ['32']  <- only ever this one value
+```
+
+Independently, no winning config in `gfx90c_results/analysis/cells_resolved.json`
+sets `PrefetchGlobalRead`, `AggressivePerfMode`, `MaxOccupancy`, `LocalSplitU`,
+`BufferLoad`, `InnerUnroll`, `FractionalLoad`, `UseSgprForGRO`, `LocalRead2A/B`,
+`GlobalRead2A/B`, `StorePriorityOpt`, `GlobalLoadVectorWidthA/B` or
+`NumLoadsCoalescedB`. The phase-name token census over all 5757 phases finds
+only `g` (4834), `mt` (4201), `vw` (1267), `tt` (1247), `w` (1211), `du` (916),
+`nlc` (1) — **one phase in the whole corpus mentions NLCA**.
+
+**Consequence:** every tuning conclusion to date, and every verdict, is a
+conclusion about `MacroTile x ThreadTile x DepthU x VectorWidth x
+WorkGroupMapping`. The other eleven axes have never been separated from their
+defaults, so nothing in the corpus is evidence about them.
+
+### 13.2 Measured occupancy — the "always ≤3" claim, resolved
+
+From the emitted `amdhsa_next_free_vgpr` / `amdhsa_group_segment_fixed_size`
+directives, not from a gate model. Model verified against the AMD/ORNL GFX9
+table (`--check-calibration`, 10/10 rows; VGPR granule 4).
+
+| | measured |
+|---|---|
+| Bound by LDS (strictly) | 61.7% |
+| Bound by VGPR (strictly) | 22.4% |
+| Both cap identically | 15.9% |
+| Median waves/CU | 8 (= 2 waves/SIMD) |
+| At ≤3 waves/CU | 121 kernels, 2.1% |
+| At ≤3 resident workgroups/CU | 2810 kernels, 48.8% |
+| Kernels that spill to scratch | 0 |
+
+The two "≤3" figures are different axes and must not be substituted: a
+1024-thread workgroup is 16 wavefronts, so it reads as 1 resident workgroup
+while occupying 16 of the 40 wave slots. The 48.8% figure is the one behind the
+"occupancy is always super low" observation; it is not a occupancy-starvation
+problem, and no kernel pays a scratch-spill tax.
+
+Per family (median waves/CU, best measured GFLOP/s): Z 4 / 24.7, D 5 / 99.9,
+C 8 / 360.9, S 8 / 1340.5, H 16 / 2922.8.
+
+### 13.3 Tile coverage — the complex families are the least searched
+
+Distinct `(MacroTile, ThreadTile, VectorWidth)` triples measured natively:
+
+| family | triples | distinct ThreadTiles |
+|---|---|---|
+| SS | 49 | 16 |
+| HH | 42 | 12 |
+| HS_HPA | 40 | 11 |
+| HH_HPA | 36 | 11 |
+| DD | 17 | 7 |
+| CC | 17 | 6 |
+| ZZ | 9 | 5 |
+
+Best measured kernel per family, and the ThreadTile it uses, shows the
+governing rule — the winning accumulator area scales inversely with
+bytes-per-element:
+
+| family | best tile | TT | VGPR | waves/CU | LDS | best GF/s |
+|---|---|---|---|---|---|---|
+| H | 128x128x16 | 8x8 | 63 | 16 | 16384 | 2922.8 |
+| S | 128x128x8 | 8x8 | 111 | 8 | 16384 | 1340.5 |
+| D | 32x32x8 | 2x2 | 35 | 28 | 8192 | 99.9 |
+| C | 64x64x8 | 4x4 | 79 | 12 | 16384 | 360.9 |
+| Z | 32x32x8 | 2x2 | 63 | 8 | 24960 | 24.7 |
+
+### 13.4 CC:256's LOSS is a measurement artifact, not a kernel deficit
+
+`gfx90c_results/acceptance_report.json`, run `run_20261013_214649`:
+
+| field | value |
+|---|---|
+| `native_best_median` | 193.773 |
+| `spoof_best_median` | 212.336 |
+| `delta_pct` | −8.742 |
+| `native_clock_sclk_hz` | 1 175 000 000 |
+| `spoof_clock_sclk_hz` | **0.0** |
+| `sclk_ref_hz` | 1 800 000 000 |
+| `spoof_clock_coverage` | **0.0** |
+| `clock_adjusted` | **False** |
+
+The floor arm carries no clock telemetry at all, so `clock_adjusted` is False on
+this cell and on every other cell, and the −8.7% cannot be corrected in either
+direction. The native arm ran at 1175 MHz against an 1800 MHz reference; whether
+the floor arm ran faster, slower or the same is unmeasured. **This cell is not
+evidence about kernels**, and the sanctioned candidate work for it is none.
+
+Resolution requires a floor-arm telemetry re-run, which is a TTY job for the user
+(`knowledge_base.md` §8.3, the clock/thermal protocol). Recorded as a
+`DECISION REQUIRED` — the verdict bands are user-owned and are not modified here.
+
+### 13.5 Confounding that these numbers still carry
+
+- **Cross-shape winners.** CC:256's native winner is
+  `phase_auto_0_CC_1024x1024x1024_0` — generated for shape 1024³ and winning at
+  256³. Several cells' "winners" are tiles swept for a different shape, so a
+  per-cell attribution is not clean.
+- **Clock coverage is partial on the native arm too** (0.58 for CC:256), so even
+  the native side is not uniformly normalised.
+- **Best-vs-best per phase spans multiple problem sizes**, so the 360.9 GF/s CC
+  maximum is a max over shapes, not the 256³ result.

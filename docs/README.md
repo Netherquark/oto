@@ -56,6 +56,12 @@ Corollaries:
 | `prior_*.md` | Ecosystem (frozen) | Prior conclusions, results only |
 | `tensile_tuning_context.md` | Ecosystem | Tuning/search philosophy |
 | `adversarial_review.md` | Ecosystem | Audit register |
+| `RESEARCH_PROMPT.md` | Ecosystem | Pass-1 research brief (hardware + tile physics); its output is `corpus.md` |
+| `RESEARCH_PROMPT2.md` | Ecosystem | Pass-2 research brief (the eleven never-varied Tensile knobs); output `corpus2.md` |
+| `corpus.md` | Ecosystem | **Folded pointer** — routes to the single homes; the raw pass-1 sweep is `archive/corpus.pass1_20261014.md` |
+| `corpus2.md` | Ecosystem | **Folded pointer** — routes to the single homes; the raw pass-2 sweep is `archive/corpus2.pass2_20261014.md` |
+| `corpus_cg.md` / `corpus_claude.md` / `corpus_gemini.md` | Ecosystem (raw) | Other agents' answers to the same pass-1 brief; unfold, mine for citations only |
+| `corpus2_cg.md` / `corpus2_claude.md` / `corpus2_gemini.md` | Ecosystem (raw) | Other agents' answers to the same pass-2 brief; unfold, mine for citations only |
 | `plans/REFACTOR_*.md` | Ecosystem | The refactor plans this package was built against |
 | `plans/verify_*.py` | Ecosystem | The executable equivalence proofs for those plans |
 | `docs/design_language.md` | Ecosystem | Design-language spec for the HTML acceptance report |
