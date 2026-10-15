@@ -374,11 +374,7 @@ class ReferenceMixin:
                     self._run_dir_backup, self._configs_dir_backup, self._client_build_dir_backup
                 )
             self._sync_agent_run_id()
-        """Most recently completed gfx900 reference run (recall floor for A/B)."""
-        ref = tlib.latest_reference_run_id(self.registry)
-        if ref and exclude and ref == exclude:
-            return None
-        return ref
+
     def _latest_reference_run(self, exclude: Optional[str] = None) -> Optional[str]:
         """Most recently completed gfx900 reference run (recall floor for A/B)."""
         ref = tlib.latest_reference_run_id(self.registry)

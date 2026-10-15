@@ -103,8 +103,15 @@ def _build_fam_patterns(scanned: List[Dict[str, Any]]) -> Dict[str, Dict[str, Se
     return fam_patterns
 
 
-def _build_families(fam_patterns: Dict[str, Dict[str, Set[str]]]) -> Dict[str, Dict[str, Any]]:
-    """Per-family per-pattern kernel lists and source prefixes."""
+def _build_families(
+    fam_patterns: Dict[str, Dict[str, Set[str]]],
+    scanned: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Per-family per-pattern kernel lists and source prefixes.
+
+    `scanned` supplies the rocm prefixes each (family, pattern) was found under,
+    so one account can share a kernel that lives in several ROCm installs.
+    """
     families: Dict[str, Dict[str, Any]] = {}
     for fam, pats in fam_patterns.items():
         fam_info = {}
@@ -139,7 +146,7 @@ def _scan_dat_library() -> Dict[str, Any]:
             total_kernels += len(entry["kernels"])
             scanned.append(entry)
     fam_patterns = _build_fam_patterns(scanned)
-    families = _build_families(fam_patterns)
+    families = _build_families(fam_patterns, scanned)
     expected_kernels = {
         fam: sum(fam_info.get(p).get("count", 0) for p in CONTRACTION_PATTERNS)
         for fam, fam_info in families.items()
