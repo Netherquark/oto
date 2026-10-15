@@ -195,23 +195,15 @@ def _problem_type(dtype: str, transpose_a: bool, transpose_b: bool,
     return problem_type
 
 
-def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
-                 macro_tile0: Optional[int], macro_tile1: Optional[int],
-                 depth_u_from_macro: Optional[int]) -> Dict[str, Any]:
-    """The ``ForkParameters`` list, in a stable order so a config is
-    diff-reviewable across runs.
-
-    Each block below is a knob that used to be dropped, dropped wrongly, or
-    defaulted into contradiction. The comments are the history.
-    """
-    fork: Dict[str, Any] = {}
-
-    fork["ThreadTile"] = [[tt0, tt1]]
-
+def _fork_thread_macro_workgroup(
+    config: Dict[str, Any], tt0: int, tt1: int,
+    macro_tile0: Optional[int], macro_tile1: Optional[int],
+) -> Dict[str, Any]:
+    """ThreadTile, MacroTile and WorkGroup (with LocalSplitU in element [2])."""
+    fork: Dict[str, Any] = {"ThreadTile": [[tt0, tt1]]}
     # Tensile ForkParameters requires MacroTile: [[M0, M1]] (no DepthU here).
     if macro_tile0 is not None and macro_tile1 is not None:
         fork["MacroTile"] = [[int(macro_tile0), int(macro_tile1)]]
-
     # WorkGroup: explicit > computed from MacroTile/ThreadTile > default.
     # Element [2] is LocalSplitU (Tensile's WorkGroup is [w0, w1, LSU); there
     # is no standalone LocalSplitU key, so a candidate carrying LSU=2 used to
@@ -223,58 +215,107 @@ def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
         fork["WorkGroup"] = [[macro_tile0 // tt0, macro_tile1 // tt1, _lsu]]
     else:
         fork["WorkGroup"] = [[16, 16, 1]]
+    return fork
 
+
+def _fork_split_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+    """WorkGroupMapping and GlobalSplitU: explicit > default."""
+    fork: Dict[str, Any] = {}
     if "WorkGroupMapping" in config:
         fork["WorkGroupMapping"] = [int(config["WorkGroupMapping"])]
     else:
         fork["WorkGroupMapping"] = [4]
-
     if "GlobalSplitU" in config:
         fork["GlobalSplitU"] = [int(config["GlobalSplitU"])]
     else:
         fork["GlobalSplitU"] = [1]
+    return fork
 
-    # DepthU: explicit > from MacroTile string > default
+
+def _fork_depth_u(config: Dict[str, Any],
+                  depth_u_from_macro: Optional[int]) -> Dict[str, Any]:
+    """DepthU: explicit > from MacroTile string > default."""
     if "DepthU" in config:
-        fork["DepthU"] = [int(config["DepthU"])]
-    elif depth_u_from_macro is not None:
-        fork["DepthU"] = [depth_u_from_macro]
-    else:
-        fork["DepthU"] = [16]
+        return {"DepthU": [int(config["DepthU"])]}
+    if depth_u_from_macro is not None:
+        return {"DepthU": [depth_u_from_macro]}
+    return {"DepthU": [16]}
 
+
+def _fork_width_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+    """VectorWidth and the GlobalLoadVectorWidth* keys, when present."""
+    fork: Dict[str, Any] = {}
     if "VectorWidth" in config:
         fork["VectorWidth"] = [int(config["VectorWidth"])]
-
     for key in GLOBAL_LOAD_WIDTH_KEYS:
         if key in config:
             fork[key] = [int(config[key])]
+    return fork
 
+
+def _fork_coalesced_loads(config: Dict[str, Any]) -> Dict[str, Any]:
+    """NumLoadsCoalescedA/B, with the NLCA alias for the A variant."""
+    fork: Dict[str, Any] = {}
     nlca = config.get("NLCA", config.get("NumLoadsCoalescedA"))
     if nlca is not None:
         fork["NumLoadsCoalescedA"] = [int(nlca)]
     if "NumLoadsCoalescedB" in config:
         fork["NumLoadsCoalescedB"] = [int(config["NumLoadsCoalescedB"])]
+    return fork
 
-    # PrefetchGlobalRead is [0,1,2] (Common.py:519) -- it must go as int, not
-    # bool: bool(2) is True, which Tensile reads as 1, silently collapsing the
-    # PGR=2 treatment onto PGR=1 (found while preparing the 2026-10-14 run).
+
+def _fork_prefetch(config: Dict[str, Any]) -> Dict[str, Any]:
+    """PrefetchGlobalRead (int, not bool) and PrefetchLocalRead.
+
+    PrefetchGlobalRead is [0,1,2] (Common.py:519) -- it must go as int, not
+    bool: bool(2) is True, which Tensile reads as 1, silently collapsing the
+    PGR=2 treatment onto PGR=1 (found while preparing the 2026-10-14 run).
+    """
+    fork: Dict[str, Any] = {}
     if "PrefetchGlobalRead" in config:
         fork["PrefetchGlobalRead"] = [int(config["PrefetchGlobalRead"])]
     if "PrefetchLocalRead" in config:
         fork["PrefetchLocalRead"] = [bool(config["PrefetchLocalRead"])]
+    return fork
 
-    # Every other knob the sweep deck sets. Each of these used to be silently
-    # dropped here, so the candidate benchmarked at the Tensile default -- the
-    # same failure mode as the old LdsPad/strip and StaggerUStride-alone bugs
-    # the comments above record. All are valid Tensile params
-    # (driver._TENSILE_VALID_PARAMS); types follow Common.py domains
-    # (UseSgprForGRO [-1,0,1], FractionalLoad [0,1,2], NonTemporalA/B [0,8),
-    # the rest plain ints). corpus3 Q-A/Q-B.
+
+def _fork_sweep_int_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+    """The sweep deck's int knobs, forwarded when present.
+
+    Each of these used to be silently dropped here, so the candidate
+    benchmarked at the Tensile default -- the same failure mode as the old
+    LdsPad/strip and StaggerUStride-alone bugs the comments above record. All
+    are valid Tensile params (driver._TENSILE_VALID_PARAMS); types follow
+    Common.py domains (UseSgprForGRO [-1,0,1], FractionalLoad [0,1,2],
+    NonTemporalA/B [0,8), the rest plain ints). corpus3 Q-A/Q-B.
+    """
+    fork: Dict[str, Any] = {}
     for key in ("UseSgprForGRO", "InnerUnroll", "MaxOccupancy",
                 "AggressivePerfMode", "FractionalLoad", "NonTemporalA",
                 "NonTemporalB", "AssertFree1ElementMultiple"):
         if key in config:
             fork[key] = [int(config[key])]
+    return fork
+
+
+def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
+                 macro_tile0: Optional[int], macro_tile1: Optional[int],
+                 depth_u_from_macro: Optional[int]) -> Dict[str, Any]:
+    """The ``ForkParameters`` list, in a stable order so a config is
+    diff-reviewable across runs.
+
+    Each block below is a knob that used to be dropped, dropped wrongly, or
+    defaulted into contradiction. The comments are the history.
+    """
+    fork: Dict[str, Any] = {}
+    fork.update(_fork_thread_macro_workgroup(config, tt0, tt1,
+                                            macro_tile0, macro_tile1))
+    fork.update(_fork_split_knobs(config))
+    fork.update(_fork_depth_u(config, depth_u_from_macro))
+    fork.update(_fork_width_knobs(config))
+    fork.update(_fork_coalesced_loads(config))
+    fork.update(_fork_prefetch(config))
+    fork.update(_fork_sweep_int_knobs(config))
 
     for key in FORWARDED_GROUP_C_KNOBS:
         if key in config:
@@ -378,6 +419,45 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
     return None
 
 
+def _fork_list_for_phase(
+    config: Dict[str, Any], tt0: int, tt1: int,
+    macro_tile0: Optional[int], macro_tile1: Optional[int],
+    depth_u_from_macro: Optional[int], valid_params, not_tensile_param
+) -> List[Dict[str, Any]]:
+    """The ForkParameters list for one phase, with unknown keys removed."""
+    fork_params = _fork_params(config, tt0, tt1, macro_tile0, macro_tile1,
+                               depth_u_from_macro)
+    # Remove deprecated keys, then anything this Tensile does not know.
+    for key in _DEPRECATED_KEYS:
+        fork_params.pop(key, None)
+    for key in _drop_unsupported(fork_params, valid_params, not_tensile_param):
+        print(f"[cfg] dropping parameter {key!r} not supported by this Tensile")
+    return [{k: v} for k, v in fork_params.items()]
+
+
+def _benchmark_group(
+    exact_sizes: List[str], fork_list: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """The BenchmarkProblems[0][1] block: the fork list plus the exact sizes."""
+    return {
+        "InitialSolutionParameters": None,
+        "BenchmarkCommonParameters": [
+            {"KernelLanguage": ["Assembly"]},
+            {"EdgeType": ["ShiftPtr"]},
+            {"LoopTail": [True]},
+        ],
+        "ForkParameters": fork_list,
+        "BenchmarkForkParameters": None,
+        "JoinParameters": None,
+        "BenchmarkJoinParameters": None,
+        "BenchmarkFinalParameters": [
+            {
+                "ProblemSizes": [{"Exact": size} for size in exact_sizes]
+            }
+        ],
+    }
+
+
 def write_phase_config(driver, path: Path,
                        phase: Dict[str, Any]) -> Tuple[bool, str]:
     """Write a valid Tensile Top-Level Config (GlobalParameters + BenchmarkProblems).
@@ -407,15 +487,13 @@ def write_phase_config(driver, path: Path,
     schedule_name = phase.get("ScheduleName", "isa")
     num_benchmarks = phase.get("NumBenchmarks", 8)
     config = phase.get("config", {})
-    shapes = phase.get("shapes", ["1024x1024x1024"])
     # Last-mile guard. Tensile executes ProblemSizes in list order and each
     # size's median absorbs the clock state the previous size left
     # (`claude.md` 2.0.3), so a producer that scrambles the order silently
     # changes the measurement (the CC:256 "one loser", `results.md` 13.4). The
     # deck, FAMILY_SHAPES and TARGET_CELLS are numerically ascending; re-impose
     # that canonically here so no producer can put a poisoned sweep on the GPU.
-    shapes = ordered_shapes(shapes)
-
+    shapes = ordered_shapes(phase.get("shapes", ["1024x1024x1024"]))
     pattern = _pattern_of(label, phase.get("contraction_pattern"))
     transpose_a, transpose_b = _transposes(pattern)
     exact_sizes = _exact_sizes(shapes)
@@ -423,44 +501,16 @@ def write_phase_config(driver, path: Path,
     tt0, tt1 = _thread_tile(config)
     is_hpa, is_hs_hpa = _hpa_flags(label, config)
 
-    fork_params = _fork_params(config, tt0, tt1, macro_tile0, macro_tile1,
-                              depth_u_from_macro)
-
-    # Remove deprecated keys, then anything this Tensile does not know.
-    for key in _DEPRECATED_KEYS:
-        fork_params.pop(key, None)
-    for key in _drop_unsupported(fork_params, _TENSILE_VALID_PARAMS,
-                                 NOT_A_TENSILE_PARAM):
-        print(f"[cfg] dropping parameter {key!r} not supported by this Tensile")
-
-    fork_list = [{k: v} for k, v in fork_params.items()]
-
-    benchmark_common = [
-        {"KernelLanguage": ["Assembly"]},
-        {"EdgeType": ["ShiftPtr"]},
-        {"LoopTail": [True]},
-    ]
-
-    benchmark_group = {
-        "InitialSolutionParameters": None,
-        "BenchmarkCommonParameters": benchmark_common,
-        "ForkParameters": fork_list,
-        "BenchmarkForkParameters": None,
-        "JoinParameters": None,
-        "BenchmarkJoinParameters": None,
-        "BenchmarkFinalParameters": [
-            {
-                "ProblemSizes": [{"Exact": size} for size in exact_sizes]
-            }
-        ],
-    }
+    fork_list = _fork_list_for_phase(config, tt0, tt1, macro_tile0,
+                                     macro_tile1, depth_u_from_macro,
+                                     _TENSILE_VALID_PARAMS, NOT_A_TENSILE_PARAM)
 
     tensile_yaml = {
         "GlobalParameters": _global_parameters(schedule_name, num_benchmarks),
         "BenchmarkProblems": [
             [
                 _problem_type(dtype, transpose_a, transpose_b, is_hpa, is_hs_hpa),
-                benchmark_group,
+                _benchmark_group(exact_sizes, fork_list),
             ]
         ],
     }
