@@ -48,6 +48,7 @@ __all__ = [
 
 # Re-exported, not re-implemented: ``depth_u`` lives with the VGPR model, and
 # ``dtype_char``/``tile_dims`` with the occupancy gate that uses them.
+_ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, NUM_CUS)
 
 
 # Knob neighbour map for single-knob mutations (corpus-wide, kept here so the
@@ -250,72 +251,114 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     return result
 
 
-def _illegal_knob(config: Dict[str, Any]) -> Optional[str]:
-    """First knob in config that is not in the gfx90c whitelist.
+#: Knobs gfx90c has no hardware path for; a candidate carrying any of
+#: them is refused before the deck is written.
+ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
-    Whitelist is the union of TENSILE_VALID_PARAMS and the forwarded knobs
-    that the generator is allowed to set. Any other knob was either added by
-    a buggy producer or leaked from a legacy phase.yaml; reject early with a
-    clear message.
-    """
-    from oto.runners.driver import NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS
-    whitelist = set(_TENSILE_VALID_PARAMS)
-    whitelist.update({"ContractionPattern", "ScheduleName", "NumBenchmarks",
-                      "Exact", "MacroTile", "ThreadTile", "VectorWidth",
-                      "DepthU", "GlobalSplitU", "WorkGroupMapping",
-                      "WorkGroup", "LocalSplitU", "PrefetchGlobalRead",
-                      "PrefetchLocalRead", "NLCA", "NumLoadsCoalescedA",
-                      "NumLoadsCoalescedB", "UseSgprForGRO", "InnerUnroll",
-                      "MaxOccupancy", "AggressivePerfMode", "FractionalLoad",
-                      "NonTemporalA", "NonTemporalB", "AssertFree1ElementMultiple",
-                      "AssertFree0ElementMultiple", "LdsPadA", "LdsPadB",
-                      "StaggerU", "StaggerUStride"})
-    for key in config:
-        if key not in whitelist and key not in NOT_A_TENSILE_PARAM:
-            return key
-    return None
+
+def _illegal_knob(config: Dict[str, Any]) -> Optional[str]:
+    """The first knob in :data:`ILLEGAL_KNOBS` set to a truthy value, if any."""
+    return next((k for k in ILLEGAL_KNOBS
+                 if k in config and config[k] not in (False, 0, None)), None)
 
 
 def _assert_size_multiple_disabled(config: Dict[str, Any]) -> bool:
-    """Reject AssertSizeMultiple=[1]; Tensile crashes with it."""
-    return config.get("AssertSizeMultiple") == [1]
+    """True when AssertSizeMultiple is exactly ``[1]``, which crashes Tensile."""
+    asm = config.get("AssertSizeMultiple")
+    return isinstance(asm, list) and asm == [1]
 
 
 def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
-    """Check MacroTile % ThreadTile == 0 for both dimensions."""
+    """MacroTile/ThreadTile divisibility and workgroup thread-count legality.
+
+    Why here and not in the loads gate: this is a *shape* property (does the
+    tile divide at all), not a load-width property, and a deck entry that fails
+    it is malformed rather than unsupported.
+    """
     mt = config.get("MacroTile")
     tt = config.get("ThreadTile")
-    if not (mt and tt and isinstance(mt, list) and isinstance(tt, list)):
-        return None
-    if not (len(mt) >= 2 and len(tt) >= 2):
+    if not (mt and tt):
         return None
     try:
-        if mt[0] % tt[0] != 0 or mt[1] % tt[1] != 0:
-            return f"MacroTile {mt} not divisible by ThreadTile {tt}"
-    except (TypeError, ZeroDivisionError):
-        return f"MacroTile {mt} / ThreadTile {tt} not integral"
+        mt_clean = str(mt).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
+        mt_parts = [int(p) for p in
+                    (mt_clean.split("X") if "X" in mt_clean else mt_clean.split("x"))[:2]]
+        tt_clean = str(tt).lower().replace("_", "x")
+        tt_parts = [int(p) for p in tt_clean.split("x")[:2]]
+        if len(mt_parts) == 2 and len(tt_parts) == 2:
+            if tt_parts[0] <= 0 or tt_parts[1] <= 0:
+                return f"Invalid ThreadTile dimensions: {tt}"
+            if mt_parts[0] % tt_parts[0] != 0 or mt_parts[1] % tt_parts[1] != 0:
+                return (f"Indivisible tile: MacroTile {mt} not divisible by "
+                        f"ThreadTile {tt}")
+            wg_threads = ((mt_parts[0] // tt_parts[0])
+                          * (mt_parts[1] // tt_parts[1]))
+            if wg_threads < 64 or wg_threads > 1024 or wg_threads % 64 != 0:
+                return (f"Invalid WorkGroup thread count: {wg_threads} (must "
+                        f"be multiple of 64 in [64, 1024])")
+    except (ValueError, IndexError):
+        pass
     return None
 
 
 def estimate_lds_usage(config: Dict[str, Any]) -> float:
-    """Estimate LDS per CU in KB for a candidate config."""
-    dtype = config.get("DataType", "f32")
-    dt_bytes = 2 if dtype in ("f16", "bf16", "h") else (4 if dtype in ("f32", "s", "c") else 8)
-    mt = config.get("MacroTile", [64, 64])
-    tt = config.get("ThreadTile", [8, 8])
-    depth_u = config.get("DepthU", 16)
-    vw = config.get("VectorWidth", 1)
-    return (mt[0] * mt[1] * depth_u * vw * dt_bytes) / 1024.0
+    """Estimate LDS usage in KB for a GEMM tile.
+
+    Why a separate estimate from the occupancy gate's budget: this is the
+    per-CU LDS ceiling (:data:`LDS_PER_CU_KB`), while the gate models the
+    per-workgroup footprint against Tensile's allocator. Two different budgets,
+    both enforced.
+
+    NOTE: this dtype table disagrees with
+    :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT` for the complex chars
+    (C 16 there is 8). It is left byte-identical on purpose -- changing it would
+    change which candidates the per-CU ceiling refuses -- and is recorded in
+    incomplete_work.md as a real inconsistency to resolve.
+    """
+    mt = config.get("MacroTile", "64x64x16")
+    dtype = config.get("DataType", "S")
+    nlca = int(config.get("NLCA", 1))
+    depth_u = int(config.get("DepthU", 16))
+
+    m, n, k = 64, 64, depth_u
+    clean_mt = str(mt).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
+    parts = clean_mt.split("X") if "X" in clean_mt else clean_mt.split("x")
+    if len(parts) >= 2:
+        try:
+            m = int(parts[0])
+            n = int(parts[1])
+            if len(parts) >= 3:
+                k = int(parts[2])
+        except (ValueError, IndexError):
+            pass
+
+    dtype_sizes = {
+        "S": 4,    # FP32
+        "D": 8,    # FP64
+        "H": 2,    # FP16
+        "B": 2,    # BF16
+        "I8": 1,   # INT8
+        "Z": 8,    # Complex FP32 (2x4)
+        "C": 16,   # Complex FP64 (2x8)
+    }
+    elem_size = dtype_sizes.get(dtype, 4)
+
+    # Total LDS allocation for A & B buffers with NLCA caching/double-buffering
+    total_elements = (m * k + n * k) * nlca
+    return (total_elements * elem_size) / 1024.0
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Estimate occupancy (waves/CU) for a candidate config."""
-    lds_kb = estimate_lds_usage(config)
-    vgpr = config.get("VGPRsPerThread", 256)
-    sgpr = config.get("SGPRsPerThread", 32)
-    wg = config.get("WorkGroup", [64, 4, 1])
-    return min(
-        LDS_PER_CU_KB * 1024 / (lds_kb * 1024) if lds_kb > 0 else 40,
-        256 / (vgpr * wg[0] * wg[1]) if vgpr > 0 else 40,
-        65536 / (sgpr * wg[0] * wg[1]) if sgpr > 0 else 40,
-    )
+    """Modelled workgroups-per-CU from the register file (gfx90c).
+
+    Why it delegates: the previous version inferred threads from ThreadTile via
+    a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore
+    returned >= 1 for every config -- which is how all 8 ZZ phases in
+    run_20260926_201835 reached the compiler and died there with
+    overflowedResources==4. Delegating to the gate's model means the number
+    reported here and the pass/fail decision can never disagree.
+    """
+    ok, _reason = occupancy_feasible(config)
+    if not ok:
+        return 0.0
+    return float(occupancy_workgroups_per_cu(config))

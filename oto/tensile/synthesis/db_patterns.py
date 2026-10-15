@@ -24,7 +24,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN, _DONOR_POOL,
                                             _FORWARD_DRAWS,
-                                            FORWARD_KNOB_DOMAINS)
+                                            FORWARD_KNOB_DOMAINS,
+                                            forward_domain)
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
@@ -32,7 +33,8 @@ class DbPatternsMixin:
     """Per-family mutation patterns, mixed into DBMutator."""
 
 
-    def _forward_draws(self, rng: random.Random) -> List[Dict[str, Any]]:
+    def _forward_draws(self, rng: random.Random,
+                        family: Optional[str] = None) -> List[Dict[str, Any]]:
         """Small random combos of forward knobs (the NARROW/WIDE surface).
 
         Each draw changes 1-3 forward knobs to a legal value, so a donor tile
@@ -49,7 +51,7 @@ class DbPatternsMixin:
             n_knobs = rng.randint(1, 3)  # 1-3 knobs per draw
             draw: Dict[str, Any] = {}
             for k in rng.sample(knobs, n_knobs):
-                draw[k] = rng.choice(FORWARD_KNOB_DOMAINS[k])
+                draw[k] = rng.choice(forward_domain(family, k))
             out.append(draw)
         return out
 

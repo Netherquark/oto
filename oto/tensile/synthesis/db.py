@@ -290,7 +290,7 @@ class DBMutator(DbPatternsMixin):
 
         # WIDE — donor tiles re-combined with forward draws.
         for donor in self._tile_donors(family, parent_config, rng):
-            for draw in self._forward_draws(rng):
+            for draw in self._forward_draws(rng, family):
                 cands.append(({**parent_config, **donor, **draw}, 0.6))
 
         # DIRECTION — toward the floor winner (spoof-steal).

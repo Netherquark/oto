@@ -49,6 +49,66 @@ def phase_family(phase_id: str) -> str:
         return "unknown"
     return "auto" if pid.startswith("phase_auto") else "deck"
 
+def _phase_csv_records(driver, csv_file: Path, phase: Optional[Dict[str, Any]],
+                       phase_id: str, force_arm: str,
+                       declared: List[str], run_name: str) -> List[Dict[str, Any]]:
+    """Records for one phase's benchmark CSV, keyed by (dtype, shape, fp, family).
+
+    Typecode-first cell attribution (the §13.2 rule) via
+    ``aggregate_by_cell_typecode`` -- the same resolver
+    ``reporting._ab_records_from_csv`` uses. Keying WITHOUT the family dimension
+    is what silently folded every HH_HPA / HS_HPA kernel into the plain HH cells
+    and left the eight HPA contract cells with no arm at all: their kernel
+    typecode reads 'HH', so only the explicit HPA family stamp keeps them apart.
+    That must not depend on which code path built the records.
+    """
+    # The phase's family (HPA included), not its dtype.
+    phase_fam = extract_family_from_phase_id(phase_id)
+    cell_map = driver.analytics.aggregate_by_cell_typecode(
+        driver.analytics.load_benchmark_csv(csv_file),
+        phase_family=phase_fam,
+    )
+    if not cell_map:
+        return []
+
+    # The phase's own resolved YAML wins over phases.yaml: floor phases are
+    # not in the deck at all, and a deck entry can drift from what Tensile
+    # actually ran.
+    resolved = _resolved_config(csv_file.parent)
+    config = resolved or dict((phase or {}).get("config") or {})
+    stamps_phase = phase or {"config": config, "family": ""}
+
+    # Measured shapes are authoritative: a phase can emit fewer shapes than
+    # it declared if Tensile rejected one.
+    measured = ordered_shapes({shape for (_d, shape, _f, _fam) in cell_map})
+
+    out: List[Dict[str, Any]] = []
+    for (cell_dtype, shape, fp, family), seeds in cell_map.items():
+        rec = {
+            "DataType": cell_dtype,
+            "ProblemType": shape,
+            "fingerprint": fp,
+            "family": family,
+            "kernel_key": kernel_key(config),
+            "norm_config": norm_config(config, fp),
+            "config": config,
+            "GFLOPS": aggregate_cell(seeds).median,
+            "phase_id": phase_id,
+            "phase_family": phase_family(phase_id),
+            "arm": force_arm,
+            "source_run": run_name,
+            "shapes": measured,
+            "shapes_per_phase": len(measured),
+            "declared_shapes": declared,
+            "n_seeds": len(seeds),
+        }
+        rec.update(driver._named_cell_stamps(
+            {**stamps_phase, "shapes": measured, "family": family.lower()},
+            arm=force_arm))
+        out.append(rec)
+    return out
+
+
 def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]:
     """Per-(cell, config) records for one run, via the canonical loader.
 
@@ -66,43 +126,8 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]
         phase_id = csv_file.parent.parent.name
         phase = manifest.get(phase_id)
         declared = [str(s) for s in (phase or {}).get("shapes", []) or []]
-        dtype = driver.analytics.extract_dtype_from_phase_id(phase_id)
-        cell_map = driver.analytics.aggregate_by_cell(
-            driver.analytics.load_benchmark_csv(csv_file),
-            dtype_override=dtype,
-        )
-        if not cell_map:
-            continue
-        # The phase's own resolved YAML wins over phases.yaml: floor phases are
-        # not in the deck at all, and a deck entry can drift from what Tensile
-        # actually ran.
-        resolved = _resolved_config(csv_file.parent)
-        config = resolved or dict((phase or {}).get("config") or {})
-        # Measured shapes are authoritative: a phase can emit fewer shapes than
-        # it declared if Tensile rejected one.
-        measured = ordered_shapes({shape for (_d, shape, _f) in cell_map})
-        for (cell_dtype, shape, fp), seeds in cell_map.items():
-            rec = {
-                "DataType": cell_dtype,
-                "ProblemType": shape,
-                "fingerprint": fp,
-                "kernel_key": kernel_key(config),
-                "norm_config": norm_config(config, fp),
-                "config": config,
-                "GFLOPS": aggregate_cell(seeds).median,
-                "phase_id": phase_id,
-                "phase_family": phase_family(phase_id),
-                "arm": force_arm,
-                "source_run": run_dir.name,
-                "shapes": measured,
-                "shapes_per_phase": len(measured),
-                "declared_shapes": declared,
-                "n_seeds": len(seeds),
-            }
-            rec.update(driver._named_cell_stamps(
-                phase or {"config": config, "shapes": measured, "family": ""},
-                arm=force_arm))
-            out.append(rec)
+        out.extend(_phase_csv_records(driver, csv_file, phase, phase_id,
+                                      force_arm, declared, run_dir.name))
     return out
 
 

@@ -79,6 +79,24 @@ def _hpa_variant(stamp: str) -> bool:
     return str(stamp).upper().endswith("_HPA")
 
 
+#: (stamp, typecode, resolved) contamination classes already reported. One line
+#: per class, not one per record: the legacy phase_auto_0_{S,Z}_* pool holds
+#: thousands of rows stamped 'Z' whose kernels are SB, and a per-record warning
+#: turns every A/B load into 100+ identical lines.
+_CONTAMINATION_SEEN: set = set()
+
+
+def _warn_contamination(stamp: str, typecode: str, resolved: str,
+                        phase_id: str) -> None:
+    key = (stamp, typecode, resolved)
+    if key in _CONTAMINATION_SEEN:
+        return
+    _CONTAMINATION_SEEN.add(key)
+    print(f"[contamination] e.g. {phase_id} carries family stamp {stamp} but "
+          f"its kernel typecode is {typecode} ({resolved}) — attributing to "
+          f"{resolved} (typecode wins); one line per (stamp, typecode) class")
+
+
 def resolve_cell_family(rec: Dict[str, Any]) -> str:
     """Cell (family) attribution for one benchmark record — the anti-contamination resolver.
 
@@ -106,10 +124,8 @@ def resolve_cell_family(rec: Dict[str, Any]) -> str:
 
     if tcode_fam:
         if stamp in _KNOWN_CELL_FAMILIES and stamp != tcode_fam:
-            print(f"[contamination] {str(rec.get('phase_id', ''))} carries "
-                  f"family stamp {stamp} but its kernel typecode is "
-                  f"{kernel_typecode(kernel_name)} ({tcode_fam}) — attributing "
-                  f"to {tcode_fam} (typecode wins)")
+            _warn_contamination(stamp, kernel_typecode(kernel_name), tcode_fam,
+                                str(rec.get("phase_id", "")))
             return tcode_fam
         return tcode_fam
 

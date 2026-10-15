@@ -397,66 +397,68 @@ def _price_plan(plan: RunPlan, minutes: Optional[float],
     return est
 
 
-def _load_report_inputs(base: Path, run_id: Optional[str]) -> Tuple[Dict[str, Any],
-                                                                   str,
-                                                                   Dict[str, Any],
-                                                                   List[str]]:
-    """Load registry, corpus, manifest and the chain."""
+def _load_ledger_state(base: Path, run_id: Optional[str]) -> Dict[str, Any]:
+    """Registry + corpus + manifest state the status panel reports from."""
     db = base / DB_REL
     if not db.exists():
         raise SystemExit(f"no registry at {db}")
 
     ledger = _load_ledger(db, run_id)
-    chain = ledger["chain"]
-    status_by_run = ledger["status_by_run"]
-    started_by_run = ledger["started_by_run"]
-    completed_by_run = ledger["completed_by_run"]
-    latest = ledger["latest"]
-    unkeyed = ledger["unkeyed"]
-    first_start = ledger["first_start"]
-    last_event = ledger["last_event"]
-
     manifest = tlib.load_rerun_manifest(base)
     corpus, tag_to_key = _resolve_corpus(base)
     if tag_to_key:
-        _resolve_latest_tags(latest, unkeyed, tag_to_key)
-    tally, decided, stale_ids = _tally_chain(latest, unkeyed)
+        _resolve_latest_tags(ledger["latest"], ledger["unkeyed"], tag_to_key)
+    tally, decided, stale_ids = _tally_chain(ledger["latest"], ledger["unkeyed"])
 
     return {
-        "chain": chain,
-        "status_by_run": status_by_run,
-        "started_by_run": started_by_run,
-        "completed_by_run": completed_by_run,
-        "latest": latest,
-        "unkeyed": unkeyed,
-        "first_start": first_start,
-        "last_event": last_event,
+        "db": db,
+        "chain": ledger["chain"],
+        "status_by_run": ledger["status_by_run"],
+        "started_by_run": ledger["started_by_run"],
+        "completed_by_run": ledger["completed_by_run"],
+        "latest": ledger["latest"],
+        "unkeyed": ledger["unkeyed"],
+        "first_start": ledger["first_start"],
+        "last_event": ledger["last_event"],
         "manifest": manifest,
         "corpus": corpus,
-        "tag_to_key": tag_to_key,
         "tally": tally,
         "decided": decided,
         "stale_ids": stale_ids,
-    }, chain, status_by_run, started_by_run, completed_by_run, latest, unkeyed, first_start, last_event, manifest, corpus, tag_to_key, tally, decided, stale_ids
+    }
 
 
-def _plan_inputs(base: Path, plan: RunPlan,
-                 corpus, manifest) -> Tuple[int, Any, int, float]:
-    """Deck size, reference units, tuning units and cost rate."""
+def _plan_inputs(state: Dict[str, Any], base: Path,
+                 plan: RunPlan) -> Dict[str, Any]:
+    """Plan scope (units) and the phase-cost rate the ETA is priced from."""
     deck_size = _get_deck_size(base, plan)
-    ref_units, breakdown = _reference_unit_count(plan, manifest, corpus)
+    ref_units, breakdown = _reference_unit_count(
+        plan, state["manifest"], state["corpus"])
     tune_units = _tuning_unit_count(plan, deck_size)
-    rate, n_samples, used = PhaseCost(db).sample()
+    rate, n_samples, used = PhaseCost(state["db"]).sample()
     minutes = plan.minutes_per_phase if plan.minutes_per_phase else rate
-    return deck_size, ref_units, breakdown, tune_units, rate, minutes, n_samples, used
+    return {
+        "deck_size": deck_size,
+        "ref_units": ref_units,
+        "breakdown": breakdown,
+        "tune_units": tune_units,
+        "rate": rate,
+        "minutes": minutes,
+        "n_samples": n_samples,
+        "used": used,
+    }
 
 
-def _timing_inputs(chain, started_by_run, completed_by_run, first_start, last_event, now):
-    """Elapsed and chain span minutes."""
-    elapsed = _calculate_elapsed(chain, started_by_run, completed_by_run, now)
-    chain_span = _calculate_chain_span(chain, first_start, last_event,
-                                       started_by_run, completed_by_run)
-    return elapsed, chain_span
+def _timing_inputs(state: Dict[str, Any],
+                   now: Optional[datetime]) -> Dict[str, float]:
+    """Elapsed (head run only) and the chain's wall-clock span."""
+    return {
+        "elapsed": _calculate_elapsed(state["chain"], state["started_by_run"],
+                                      state["completed_by_run"], now),
+        "chain_span": _calculate_chain_span(
+            state["chain"], state["first_start"], state["last_event"],
+            state["started_by_run"], state["completed_by_run"]),
+    }
 
 
 def build_report(base: Path, run_id: Optional[str],
@@ -466,45 +468,43 @@ def build_report(base: Path, run_id: Optional[str],
 
     `now` overrides the wall clock used to age a still-running head run.
     """
-    ledger_data, chain, status_by_run, started_by_run, completed_by_run, \
-        latest, unkeyed, first_start, last_event, manifest, corpus, \
-        tag_to_key, tally, decided, stale_ids = _load_report_inputs(base, run_id)
-
-    deck_size, ref_units, breakdown, tune_units, rate, minutes, n_samples, used = \
-        _plan_inputs(base, plan, corpus, manifest)
-
-    elapsed, chain_span = _timing_inputs(chain, started_by_run,
-                                         completed_by_run, first_start,
-                                         last_event, now)
+    state = _load_ledger_state(base, run_id)
+    chain = state["chain"]
+    pin = _plan_inputs(state, base, plan)
+    timing = _timing_inputs(state, now)
 
     tier_rows, ref_done, ref_total, ref_remaining = _tier_rows(
-        corpus, latest, plan)
-    est = _price_plan(plan, minutes, elapsed, decided, ref_total + tune_units,
-                      breakdown, used, ref_remaining, tune_units, ref_done)
+        state["corpus"], state["latest"], plan)
+    est = _price_plan(plan, pin["minutes"], timing["elapsed"], state["decided"],
+                      ref_total + pin["tune_units"], pin["breakdown"],
+                      pin["used"], ref_remaining, pin["tune_units"], ref_done)
 
     thermals = read_thermals(base / "gfx90c_runs" / (chain[-1] if chain else "")) if chain else None
-    started_live = status_by_run.get(chain[-1] if chain else "") == "started"
+    started_live = state["status_by_run"].get(chain[-1] if chain else "") == "started"
 
     return {
         "chain": chain,
         "head": chain[-1] if chain else "",
-        "head_status": status_by_run.get(chain[-1] if chain else "", "unknown"),
+        "head_status": state["status_by_run"].get(chain[-1] if chain else "", "unknown"),
         "in_flight": started_live,
-        "corpus": len(corpus),
-        "tally": tally,
-        "decided": decided,
+        "corpus": len(state["corpus"]),
+        "tally": state["tally"],
+        "decided": state["decided"],
         "tier_rows": tier_rows,
         "ref_total": ref_total,
         "ref_done": ref_done,
         "ref_remaining": ref_remaining,
         "tuning_tracked": False,
-        "elapsed_minutes": elapsed,
-        "chain_span_minutes": chain_span,
-        "stale_records": stale_ids,
-        "estimate": _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples),
+        "elapsed_minutes": timing["elapsed"],
+        "chain_span_minutes": timing["chain_span"],
+        "stale_records": state["stale_ids"],
+        "estimate": _build_estimate_dict(est, pin["breakdown"],
+                                         pin["tune_units"], pin["deck_size"],
+                                         pin["rate"], pin["n_samples"]),
         "plan": _build_plan_dict(plan),
         "thermals": thermals,
     }
+
 
 def _get_deck_size(base: Path, plan: RunPlan) -> int:
     """Get deck size from plan or phases.yaml."""
