@@ -73,80 +73,106 @@ def _vgpr_from_object(obj: Path) -> Optional[Dict[str, Any]]:
     return {"vgpr": vgpr, "kernel": kernel}
 
 
-def main() -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", help="only this run dir name")
     ap.add_argument("--json", type=Path)
-    args = ap.parse_args()
+    return ap
 
-    runs_dir = _HERE / "gfx90c_runs"
+
+def _collect_objects(runs_dir: Path, run_filter: Optional[str]) -> List[Path]:
     objs: List[Path] = []
     for run_dir in sorted(runs_dir.glob("run_*")):
         if not run_dir.is_dir():
             continue
-        if args.run and run_dir.name != args.run:
+        if run_filter and run_dir.name != run_filter:
             continue
         objs += sorted(run_dir.glob("phase_*/1_BenchmarkProblems/*/00_Final/source/"
                                     "build_tmp/SOURCE/assembly/*.o"))
+    return objs
+
+
+def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
+    """(dtype_char, TT0, TT1) from an object file, or None if not decodable."""
+    info = _vgpr_from_object(obj)
+    if not info:
+        return None
+    name = info["kernel"]
+    # dtype from the kernel typecode token (SB/DB/HB/CB/ZB/HHS -> S/D/H/C/Z).
+    tc = name.split("_MT")[0].split("_")
+    code_ch = ""
+    for tok in reversed(tc):
+        u = tok.upper()
+        if u in ("SN", "SE", "GB", "BH"):
+            continue
+        if u[:1] in _WEIGHT:
+            code_ch = u[:1]
+            break
+    # ThreadTile lives in the phase dir name (phase_<fam>_<shape>_<mt>_tt<X>x<Y>_...)
+    # for candidate phases, or in the phase's Data/00_Final.yaml for the
+    # auto-pool phases (whose ids carry no tt token).
+    phase_dir = obj.parent
+    while not phase_dir.name.startswith("phase_") and phase_dir.parent != phase_dir:
+        phase_dir = phase_dir.parent
+    m_tt = re.search(r"tt(\d+)x(\d+)", phase_dir.name)
+    tt = None
+    if m_tt:
+        tt = (int(m_tt.group(1)), int(m_tt.group(2)))
+    else:
+        cfg_yaml = phase_dir / "Data" / "00_Final.yaml"
+        if cfg_yaml.exists():
+            import yaml
+            try:
+                cfgd = yaml.safe_load(cfg_yaml.read_text()) or {}
+                ttr = str(cfgd.get("ThreadTile") or cfgd.get("thread_tile") or "")
+                m2 = re.search(r"(\d+)x(\d+)", ttr.replace(",", "x"))
+                if m2:
+                    tt = (int(m2.group(1)), int(m2.group(2)))
+            except Exception:
+                tt = None
+    if not code_ch or not tt:
+        return None
+    return (code_ch, tt[0], tt[1])
+
+
+def _print_table(rows: List[Dict[str, Any]]) -> None:
+    print(f"{'dtype':5} {'TT':8} {'n':>4} {'measured med':>12} {'model acc':>10} {'ratio':>7}")
+    for r in rows:
+        print(f"{r['dtype']:5} {r['tt']:<6} {r['n']:>4} "
+              f"{r['measured_median_vgpr']:>12} {r['model_acc_vgpr']:>10} "
+              f"{r['ratio']:>7.2f}")
+
+
+def main() -> int:
+    args = _build_arg_parser().parse_args()
+
+    runs_dir = _HERE / "gfx90c_runs"
+    objs = _collect_objects(runs_dir, args.run)
     if not objs:
         print("no Tensile assembly objects found (run a phase first)")
         return 1
 
     by_key: Dict[Tuple[str, int, int], Dict[str, Any]] = defaultdict(lambda: {"counts": []})
     for obj in objs:
+        key = _extract_key(obj)
+        if key is None:
+            continue
         info = _vgpr_from_object(obj)
-        if not info:
+        if info is None:
             continue
-        name = info["kernel"]
-        # dtype from the kernel typecode token (SB/DB/HB/CB/ZB/HHS -> S/D/H/C/Z).
-        tc = name.split("_MT")[0].split("_")
-        code_ch = ""
-        for tok in reversed(tc):
-            u = tok.upper()
-            if u in ("SN", "SE", "GB", "BH"):
-                continue
-            if u[:1] in _WEIGHT:
-                code_ch = u[:1]
-                break
-        # ThreadTile lives in the phase dir name (phase_<fam>_<shape>_<mt>_tt<X>x<Y>_...)
-        # for candidate phases, or in the phase's Data/00_Final.yaml for the
-        # auto-pool phases (whose ids carry no tt token).
-        phase_dir = obj.parent
-        while not phase_dir.name.startswith("phase_") and phase_dir.parent != phase_dir:
-            phase_dir = phase_dir.parent
-        m_tt = re.search(r"tt(\d+)x(\d+)", phase_dir.name)
-        tt = None
-        if m_tt:
-            tt = (int(m_tt.group(1)), int(m_tt.group(2)))
-        else:
-            cfg_yaml = phase_dir / "Data" / "00_Final.yaml"
-            if cfg_yaml.exists():
-                import yaml
-                try:
-                    cfgd = yaml.safe_load(cfg_yaml.read_text()) or {}
-                    ttr = str(cfgd.get("ThreadTile") or cfgd.get("thread_tile") or "")
-                    m2 = re.search(r"(\d+)x(\d+)", ttr.replace(",", "x"))
-                    if m2:
-                        tt = (int(m2.group(1)), int(m2.group(2)))
-                except Exception:
-                    tt = None
-        if not code_ch or not tt:
-            continue
-        key = (code_ch, tt[0], tt[1])
         by_key[key]["counts"].append(info["vgpr"])
 
     print(f"{len(objs)} objects scanned, {sum(len(v['counts']) for v in by_key.values())} mapped\n")
-    print(f"{'dtype':5} {'TT':8} {'n':>4} {'measured med':>12} {'model acc':>10} {'ratio':>7}")
     rows: List[Dict[str, Any]] = []
     for key in sorted(by_key):
         ch, tt0, tt1 = key
         counts = sorted(by_key[key]["counts"])
         med = counts[len(counts) // 2]
-        model = measured_accvgpr(tt0, tt1, _WEIGHT[ch])
+        model = measured_accvgpr(key[1], key[2], _WEIGHT[key[0]])
         ratio = med / model if model else 0.0
-        print(f"{ch:5} {tt0}x{tt1:<6} {len(counts):>4} {med:>12} {model:>10} {ratio:>7.2f}")
-        rows.append({"dtype": ch, "tt": f"{tt0}x{tt1}", "n": len(counts),
+        print(f"{key[0]:5} {key[1]}x{key[2]:<6} {len(counts):>4} {med:>12} {model:>10} {ratio:>7.2f}")
+        rows.append({"dtype": key[0], "tt": f"{key[1]}x{key[2]}", "n": len(counts),
                      "measured_median_vgpr": med, "model_acc_vgpr": model,
                      "ratio": round(ratio, 2)})
     if args.json:
