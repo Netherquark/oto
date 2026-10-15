@@ -235,44 +235,44 @@ class _PanelStdout:
         return getattr(self._real, name)
 
 
-def render(rep: Dict[str, Any], show_thermals: bool) -> str:
-    out: List[str] = []
-    est = rep["estimate"]
-    tally = rep["tally"]
-    plan = rep["plan"]
-    chain = rep["chain"]
-
-    if rep.get("_compact"):
-        return render_compact(rep)
-    out.append("=" * 72)
+def _render_header(rep: Dict[str, Any]) -> List[str]:
+    """Run id/state banner and the decided-so-far block."""
+    out = ["=" * 72]
     state = rep["head_status"].upper()
     if rep["in_flight"]:
         state += "  (in flight)"
     out.append(f"RUN  {rep['head'] or 'none'}  [{state}]")
+    chain = rep["chain"]
     if len(chain) > 1:
         out.append(f"     chain: {' + '.join(chain)}")
     out.append("=" * 72)
-
     if rep["corpus"]:
         out.append(f"  reference corpus      {rep['corpus']} cells")
     out.append(f"  decided so far        {rep['decided']}")
     for key in ("success", "failed", "skipped", "active"):
-        if tally.get(key):
-            out.append(f"    {key:<20}{tally[key]}")
+        if rep["tally"].get(key):
+            out.append(f"    {key:<20}{rep['tally'][key]}")
+    return out
 
-    out.append("")
-    out.append("  TIERS  (decided / total, from the chain)")
+
+def _render_tiers(rep: Dict[str, Any]) -> List[str]:
+    """The tier progress bars."""
+    out = ["", "  TIERS  (decided / total, from the chain)"]
     for label, done, total in rep.get("tier_rows", []):
         pct = (100.0 * done / total) if total else 0.0
         out.append(f"    {label:<22}{bar(pct, 16)} {done}/{total}")
+    return out
 
-    ref_left = rep["ref_remaining"]
-    out.append("")
-    out.append("  PLAN  (what this run still has to do)")
+
+def _render_plan(rep: Dict[str, Any]) -> List[str]:
+    """The plan/projection block: remaining work, rate and cost."""
+    est = rep["estimate"]
+    plan = rep["plan"]
+    out = ["", "  PLAN  (what this run still has to do)"]
     if not est["units"]:
         out.append("    nothing selected -- pass --plan to project a run")
     else:
-        out.append(f"    reference remaining  {ref_left}")
+        out.append(f"    reference remaining  {rep['ref_remaining']}")
         if est["tuning_units"]:
             out.append(f"    tuning               {est['tuning_units']}"
                        f"  ({plan['iterations']} iter x"
@@ -286,7 +286,6 @@ def render(rep: Dict[str, Any], show_thermals: bool) -> str:
             out.append("    note                 tuning progress is not in this"
                        " chain, so the % counts reference work only and the"
                        " ETA is an upper bound")
-
     if est["minutes_per_unit"]:
         out.append(f"  cost per unit         {est['minutes_per_unit']:.2f} min"
                    f"  ({est['source']}, {est['rate_per_hour']:.1f}/h)")
@@ -296,9 +295,14 @@ def render(rep: Dict[str, Any], show_thermals: bool) -> str:
     elif est["units"]:
         out.append("    no comparable run to learn a rate from;"
                    " ETA is unestimated until one completes")
+    return out
 
-    out.append("")
-    out.append(f"  elapsed (this run)    {fmt_duration(rep['elapsed_minutes'])}")
+
+def _render_timing(rep: Dict[str, Any]) -> List[str]:
+    """Elapsed, chain span, ETA and stale-record lines."""
+    est = rep["estimate"]
+    chain = rep["chain"]
+    out = ["", f"  elapsed (this run)    {fmt_duration(rep['elapsed_minutes'])}"]
     if rep.get("chain_span_minutes") and len(chain) > 1:
         out.append(f"  chain span            {fmt_duration(rep['chain_span_minutes'])}"
                    f" across {len(chain)} runs")
@@ -310,23 +314,39 @@ def render(rep: Dict[str, Any], show_thermals: bool) -> str:
     if rep.get("stale_records"):
         out.append(f"  unkeyable records     {rep['stale_records']}"
                    " (no phase_key; excluded from progress)")
+    return out
 
-    if show_thermals and rep.get("thermals"):
-        th = rep["thermals"]
-        out.append("")
-        out.append(f"  thermals              {th['busy_samples']} busy samples"
-                   f"  (gpu_busy > 50%)")
-        out.append(f"    edge temp           {th['temp']}")
-        out.append(f"    power               {th['power']}")
-        out.append(f"    sclk                {th['sclk']}")
-        if th["throttled_frac"] > 0:
-            out.append(f"    >=80C               {th['samples_over_80c']} samples"
-                       f" ({100 * th['throttled_frac']:.1f}%)"
-                       " -- thermal/power limited; throughput here is not")
-            out.append("                        directly comparable to a cool run")
-    elif show_thermals:
-        out.append("")
-        out.append("  thermals              no per-phase telemetry for this run")
+
+def _render_thermals(rep: Dict[str, Any], show_thermals: bool) -> List[str]:
+    """The thermals block (only when asked for)."""
+    if not show_thermals:
+        return []
+    if not rep.get("thermals"):
+        return ["", "  thermals              no per-phase telemetry for this run"]
+    th = rep["thermals"]
+    out = ["", f"  thermals              {th['busy_samples']} busy samples"
+           f"  (gpu_busy > 50%)",
+           f"    edge temp           {th['temp']}",
+           f"    power               {th['power']}",
+           f"    sclk                {th['sclk']}"]
+    if th["throttled_frac"] > 0:
+        out.append(f"    >=80C               {th['samples_over_80c']} samples"
+                   f" ({100 * th['throttled_frac']:.1f}%)"
+                   " -- thermal/power limited; throughput here is not")
+        out.append("                        directly comparable to a cool run")
+    return out
+
+
+def render(rep: Dict[str, Any], show_thermals: bool) -> str:
+    """The full run-status text report."""
+    if rep.get("_compact"):
+        return render_compact(rep)
+    out: List[str] = []
+    out += _render_header(rep)
+    out += _render_tiers(rep)
+    out += _render_plan(rep)
+    out += _render_timing(rep)
+    out += _render_thermals(rep, show_thermals)
     return "\n".join(out)
 
 
