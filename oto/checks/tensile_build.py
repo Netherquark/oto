@@ -41,7 +41,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -133,11 +133,15 @@ def _require_tensile_root(explicit: Optional[str] = None) -> Path:
 # --------------------------------------------------------------------------
 # The proof itself.
 # --------------------------------------------------------------------------
-def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
-    """Run Tensile's solution + kernel-writer pipeline over one phase config.
+def _tensile_pipeline() -> Tuple[Any, Any, Any, Any, Any]:
+    """Import Tensile's writer pipeline.
 
-    Returns a verdict dict; never raises for a bad phase (a bad phase *is* the
-    answer we want to report).
+    Imported late (not at module scope) so the tool still imports and runs its
+    CLI with no Tensile present, and still fails with Tensile's own ImportError
+    before a config is read -- exactly as when the imports sat in
+    `probe_phase_config`. Returns
+    (BP, constructForkPermutations, Solution, KernelWriterAssembly,
+    markDuplicateKernels).
     """
     from Tensile.BenchmarkProblems import constructForkPermutations
     from Tensile.SolutionStructs import Solution
@@ -145,8 +149,138 @@ def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
     from Tensile.BenchmarkProblems import BenchmarkProcess  # noqa: F401
     from Tensile import BenchmarkProblems as BP
 
+    return (BP, constructForkPermutations, Solution, KernelWriterAssembly,
+            markDuplicateKernels)
+
+
+def _dedup_kernels(solutions: List[Any], Solution: Any) -> List[Any]:
+    """The distinct kernels among forked `solutions`, keyed by full name."""
+    kernels = []
+    seen = set()
+    for sol in solutions:
+        kern = sol.getKernels()
+        name = Solution.getNameFull(kern)
+        if name not in seen:
+            seen.add(name)
+            kernels.append(kern)
+    return kernels
+
+
+def _kernel_writer(kernels: List[Any], Solution: Any,
+                   KernelWriterAssembly: Any,
+                   markDuplicateKernels: Any) -> Any:
+    """Mirror writeBenchmarkFiles: one writer owns naming and duplicate flags."""
+    min_naming = Solution.getMinNaming(kernels)
+    serial_naming = Solution.getSerialNaming(kernels)
+    writer = KernelWriterAssembly(
+        min_naming, serial_naming, removeTemporaries=False
+    )
+    markDuplicateKernels(kernels, writer)
+    return writer
+
+
+def _probe_kernel(writer: Any, kern: Any, gidx: int) -> Dict[str, Any]:
+    """Compile one kernel through Tensile's writer; return its verdict record."""
+    exc_text = ""
+    try:
+        err, src = writer.getSourceFileString(kern)
+    except Exception as exc:  # noqa: BLE001 - report, don't crash
+        err, src = -2, ""
+        exc_text = f"{type(exc).__name__}: {exc}"
+    if err != 0 and not exc_text:
+        # getSourceFileString swallows the body-generation exception and returns
+        # -2. Re-run the generator to get the actual reason instead of "unknown".
+        try:
+            writer.getKernelSource(kern)
+        except Exception as exc:  # noqa: BLE001
+            exc_text = f"{type(exc).__name__}: {exc}"[:220]
+    if err == -1 and not exc_text:
+        exc_text = "assembler/subprocess rejected generated source"
+
+    reason = exc_text or ERR_MSG.get(err, f"error code {err}")
+    return {
+        "group": gidx,
+        "ok": err == 0,
+        "err": err,
+        "reason": reason[:300],
+        "kernel": _kernel_label(kern),
+        "src_bytes": len(src) if isinstance(src, str) else None,
+        "vgprs": _pool(writer, "vgprPool"),
+        "sgprs": _pool(writer, "sgprPool"),
+        "accvgprs": _pool(writer, "agprPool"),
+    }
+
+
+def _probe_group(
+    problem_type_cfg: Any,
+    group_cfg: Any,
+    gidx: int,
+    worst: int,
+    tensile: Tuple[Any, Any, Any, Any, Any],
+) -> Tuple[List[Dict[str, Any]], int, int]:
+    """Probe one BenchmarkProblems size group.
+
+    Returns (records, kernels_compiled, worst_err); `worst` is threaded through
+    and returned so the caller keeps one running kernel-count and one running
+    Tensile error code across every problem and group.
+    """
+    (BP, constructForkPermutations, Solution, KernelWriterAssembly,
+     markDuplicateKernels) = tensile
+    records: List[Dict[str, Any]] = []
+    total = 0
+
+    proc = BP.BenchmarkProcess(problem_type_cfg, group_cfg)
+    for step in proc:
+        perms = constructForkPermutations(step.forkParams, step.paramGroups)
+        solutions = BP.generateForkedSolutions(
+            proc.problemType, step.constantParams, perms
+        )
+        if not solutions:
+            records.append(
+                {
+                    "group": gidx,
+                    "ok": False,
+                    "err": None,
+                    "reason": "0 valid solutions after SolutionStructs validation",
+                    "kernel": None,
+                }
+            )
+            continue
+
+        kernels = _dedup_kernels(solutions, Solution)
+        if not kernels:
+            records.append(
+                {
+                    "group": gidx, "ok": False, "err": None,
+                    "reason": "all solutions collapsed to duplicate kernels",
+                    "kernel": None,
+                }
+            )
+            worst = -2
+            continue
+
+        writer = _kernel_writer(kernels, Solution, KernelWriterAssembly,
+                                markDuplicateKernels)
+
+        for kern in kernels:
+            record = _probe_kernel(writer, kern, gidx)
+            total += 1
+            if not record["ok"] and worst == 0:
+                worst = record["err"]
+            records.append(record)
+
+    return records, total, worst
+
+
+def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
+    """Run Tensile's solution + kernel-writer pipeline over one phase config.
+
+    Returns a verdict dict; never raises for a bad phase (a bad phase *is* the
+    answer we want to report).
+    """
+    tensile = _tensile_pipeline()
+
     cfg = yaml.safe_load(phase_yaml.read_text())
-    gp = dict(cfg.get("GlobalParameters") or {})
     problems = cfg.get("BenchmarkProblems") or []
     if not problems:
         return {"ok": False, "reason": "phase config has no BenchmarkProblems section"}
@@ -160,88 +294,10 @@ def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
         problem_type_cfg = entry[0]
         size_groups = entry[1:] or [{}]
         for gidx, group_cfg in enumerate(size_groups):
-            proc = BP.BenchmarkProcess(problem_type_cfg, group_cfg)
-            for step in proc:
-                perms = constructForkPermutations(step.forkParams, step.paramGroups)
-                solutions = BP.generateForkedSolutions(
-                    proc.problemType, step.constantParams, perms
-                )
-                if not solutions:
-                    per_problem.append(
-                        {
-                            "group": gidx,
-                            "ok": False,
-                            "err": None,
-                            "reason": "0 valid solutions after SolutionStructs validation",
-                            "kernel": None,
-                        }
-                    )
-                    continue
-
-                kernels = []
-                seen = set()
-                for sol in solutions:
-                    kern = sol.getKernels()
-                    name = Solution.getNameFull(kern)
-                    if name not in seen:
-                        seen.add(name)
-                        kernels.append(kern)
-                if not kernels:
-                    per_problem.append(
-                        {
-                            "group": gidx, "ok": False, "err": None,
-                            "reason": "all solutions collapsed to duplicate kernels",
-                            "kernel": None,
-                        }
-                    )
-                    worst = -2
-                    continue
-
-                # Mirror writeBenchmarkFiles: one writer instance owns the
-                # naming vectors and the duplicate flags, then does the work.
-                min_naming = Solution.getMinNaming(kernels)
-                serial_naming = Solution.getSerialNaming(kernels)
-                writer = KernelWriterAssembly(
-                    min_naming, serial_naming, removeTemporaries=False
-                )
-                markDuplicateKernels(kernels, writer)
-
-                for kern in kernels:
-                    total += 1
-                    exc_text = ""
-                    try:
-                        err, src = writer.getSourceFileString(kern)
-                    except Exception as exc:  # noqa: BLE001 - report, don't crash
-                        err, src = -2, ""
-                        exc_text = f"{type(exc).__name__}: {exc}"
-                    if err != 0 and not exc_text:
-                        # getSourceFileString swallows the body-generation
-                        # exception and returns -2. Re-run the generator to get
-                        # the actual reason instead of "unknown".
-                        try:
-                            writer.getKernelSource(kern)
-                        except Exception as exc:  # noqa: BLE001
-                            exc_text = f"{type(exc).__name__}: {exc}"[:220]
-                    if err == -1 and not exc_text:
-                        exc_text = "assembler/subprocess rejected generated source"
-
-                    ok = err == 0
-                    if not ok and worst == 0:
-                        worst = err
-                    reason = exc_text or ERR_MSG.get(err, f"error code {err}")
-                    per_problem.append(
-                        {
-                            "group": gidx,
-                            "ok": ok,
-                            "err": err,
-                            "reason": reason[:300],
-                            "kernel": _kernel_label(kern),
-                            "src_bytes": len(src) if isinstance(src, str) else None,
-                            "vgprs": _pool(writer, "vgprPool"),
-                            "sgprs": _pool(writer, "sgprPool"),
-                            "accvgprs": _pool(writer, "agprPool"),
-                        }
-                    )
+            records, n, worst = _probe_group(
+                problem_type_cfg, group_cfg, gidx, worst, tensile)
+            per_problem.extend(records)
+            total += n
 
     failed = sum(1 for r in per_problem if not r["ok"])
     return {
@@ -431,7 +487,47 @@ def print_progress(row: Dict[str, Any], i: int, total: int, outdir: Path,
               f"{'legal' if row['ok'] else 'illegal'}  {agree}", flush=True)
 
 
-def main() -> int:
+def _probe_row(
+    i_phase: Tuple[int, Dict[str, Any]],
+    configs: Dict[str, Any],
+    outdir: Path,
+    args: Any,
+    model_fn: Any,
+) -> Dict[str, Any]:
+    """Probe one phase and shape its report row (may run in a worker thread)."""
+    _, phase = i_phase
+    pid = phase["phase_id"]
+    cfg = phase.get("config") or {}
+    mt, tt = cfg.get("MacroTile"), cfg.get("ThreadTile")
+    info = configs.get(pid) or {}
+    if not info.get("cfg"):
+        res = {"ok": False, "reason": info.get("refusal") or "no config", "solutions": 0}
+    else:
+        res = run_phase(pid, info["cfg"], outdir, args.arch, args.timeout)
+    row = {
+        "phase_id": pid,
+        "label": phase.get("label"),
+        "family": cfg.get("FamilyLabel"),
+        "macro_tile": mt,
+        "thread_tile": tt,
+        "depth_u": cfg.get("DepthU"),
+        "data_type": cfg.get("DataType"),
+        "shapes": phase.get("shapes"),
+        "ok": bool(res.get("ok")),
+        "solutions": res.get("solutions", 0),
+        "reason": res.get("reason"),
+        "worst_err": res.get("worst_err"),
+        "results": res.get("results", []),
+    }
+    if model_fn is not None:
+        pred_ok, pred_why = model_fn(cfg) if mt else (False, "no MacroTile")
+        row["model_ok"] = pred_ok
+        row["model_reason"] = pred_why
+    return row
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """The CLI surface of the build proof."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", help="only this FamilyLabel (e.g. ZZ)")
     ap.add_argument("--phase-id")
@@ -446,7 +542,11 @@ def main() -> int:
     ap.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--phase-yaml", help=argparse.SUPPRESS)
     ap.add_argument("--result-json", help=argparse.SUPPRESS)
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> int:
+    args = _build_arg_parser().parse_args()
 
     if args._worker:
         return _worker(args)
@@ -455,10 +555,10 @@ def main() -> int:
     outdir = Path(args.keep) if args.keep else Path(tempfile.mkdtemp(prefix="tensile_build_"))
     outdir.mkdir(parents=True, exist_ok=True)
 
-    model: Dict[str, Any] = {}
+    model_fn = None
     if args.compare:
         sys.path.insert(0, str(REPO))
-        from oto.tensile.candidate import occupancy_feasible
+        from oto.tensile.candidate import occupancy_feasible as model_fn
 
     rows: List[Dict[str, Any]] = []
     passed = failed = 0
@@ -467,48 +567,19 @@ def main() -> int:
 
     configs = write_phase_configs(phases, outdir)
 
-    def one(i_phase):
-        i, phase = i_phase
-        pid = phase["phase_id"]
-        cfg = phase.get("config") or {}
-        mt, tt = cfg.get("MacroTile"), cfg.get("ThreadTile")
-        info = configs.get(pid) or {}
-        if not info.get("cfg"):
-            res = {"ok": False, "reason": info.get("refusal") or "no config", "solutions": 0}
-        else:
-            res = run_phase(pid, info["cfg"], outdir, args.arch, args.timeout)
-        row = {
-            "phase_id": pid,
-            "label": phase.get("label"),
-            "family": cfg.get("FamilyLabel"),
-            "macro_tile": mt,
-            "thread_tile": tt,
-            "depth_u": cfg.get("DepthU"),
-            "data_type": cfg.get("DataType"),
-            "shapes": phase.get("shapes"),
-            "ok": bool(res.get("ok")),
-            "solutions": res.get("solutions", 0),
-            "reason": res.get("reason"),
-            "worst_err": res.get("worst_err"),
-            "results": res.get("results", []),
-        }
-        if args.compare:
-            pred_ok, pred_why = occupancy_feasible(cfg) if mt else (False, "no MacroTile")
-            row["model_ok"] = pred_ok
-            row["model_reason"] = pred_why
-        return row
-
     if args.jobs > 1:
         from concurrent.futures import ThreadPoolExecutor
 
         # Each phase runs in its own subprocess (Tensile global state), so
         # threads are just process supervision -- no shared mutable state.
         with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-            done = list(pool.map(one, enumerate(phases, 1)))
+            done = list(pool.map(
+                lambda ip: _probe_row(ip, configs, outdir, args, model_fn),
+                enumerate(phases, 1)))
     else:
         done = []
         for i_phase in enumerate(phases, 1):
-            row = one(i_phase)
+            row = _probe_row(i_phase, configs, outdir, args, model_fn)
             done.append(row)
             print_progress(row, i_phase[0], len(phases), outdir, passed, failed)
 

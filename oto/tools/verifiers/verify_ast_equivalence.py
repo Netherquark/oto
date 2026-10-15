@@ -115,7 +115,10 @@ MOVES = [
 ]
 
 #: Modules this refactor deliberately decomposed, so a "body differs" for their
-#: symbols is expected. Each decomposition is proved by another check.
+#: symbols is expected. The first group is proved by another check (the gate
+#: differential, method equivalence, config-writer or report-html checks); the
+#: second is pure extraction (same statements, moved into helpers), proved by
+#: the module's own tests where they exist.
 DECOMPOSED = (
     "scheduler.py", "db_mutator.py", "registry.py", "port_tensile.py",
     "report.py", "library_parity.py", "check_candidates.py",
@@ -123,6 +126,8 @@ DECOMPOSED = (
     "harness/measure_vgprs.py", "harness/regression_matrix.py",
     "analytics.py", "run_status.py", "ab_audit.py", "consolidate.py",
     "tensile_library.py", "harness/generate_candidates.py",
+    # Pure extraction:
+    "check_tensile_build.py",
 )
 
 #: Private helpers this refactor gave a public name.
