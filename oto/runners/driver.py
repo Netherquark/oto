@@ -147,8 +147,8 @@ class TensileDriver(
         self.cooldown_s = cooldown_s
         self.create_run = create_run
 
-        self._init_run_dirs()
         self._init_registry_and_scheduler()
+        self._init_run_dirs()
         self._init_analytics_and_mutator()
         self._init_agent_and_reporter()
         self._init_client_build_dir()
