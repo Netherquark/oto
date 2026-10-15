@@ -15,16 +15,16 @@ rules.** Does not own: acceptance bars/ceilings/verdicts (`gfx90c_theoretical_li
 
 ## 1. Executive — five findings that change the plan
 
-**F1. The spoof floor has ZERO clock telemetry, so no verdict against it can be
-clock-corrected.** `gfx90c_results/acceptance_report.json`, run
-`run_20261013_214649`: for the only LOSS cell (CC 256³),
-`spoof_clock_sclk_hz = 0.0`, `spoof_clock_coverage = 0.0`, `clock_adjusted =
-False`. The native arm ran at `native_clock_sclk_hz = 1175 MHz` against a
-`sclk_ref_hz = 1800 MHz` reference. The −8.7% is therefore **not a tuning
-failure and not evidence about kernels** — it is an un-correctable measurement
-asymmetry. The fix is a floor-arm telemetry run, which is the user's TTY job,
-not a candidate change. Recorded as a `DECISION REQUIRED` in
-`gfx90c_theoretical_limits.md` §6.1; do not silently widen the band.
+**F1. The spoof floor carries no clock telemetry, and that is a standing
+property of the reference chain — not the cause of any single cell's verdict.**
+`gfx90c_results/acceptance_report.json`: `spoof_clock_sclk_hz = 0.0`,
+`spoof_clock_coverage = 0.0`, `clock_adjusted = False` on **every** cell, so no
+verdict against the floor can be clock-corrected. Because the gap is uniform, it
+cannot differentiate one cell from another and therefore explains no LOSS. The
+only cell that ever read LOSS (CC 256³, run `run_20261013_214649`) was depressed
+by a candidate-pool sweep-order defect, not by telemetry; the fix and the clean
+re-run (`run_20261015_041159`, 19 W / 19 T / 0 L, CC:256 **TIE**) are in
+`results.md` §13.4. Do not silently widen the band.
 
 **F2. Two knobs in the deck have only ever held ONE value, across all runs and
 both arms.** `allruns.py` (`--json`), never-exercised-knobs section:
@@ -88,17 +88,17 @@ same-accumulator corner (F3), not on more ThreadTile widths.
 
 ---
 
-## 2. Why each tie/loss happens (per family, cause-coded)
+## 2. Why each tie happens (per family, cause-coded)
 
-Verdicts from `run_20261013_214649`: 19 WIN / 18 TIE / 1 LOSS. Reads as "native
-already beats spoof" — and it does. But that is the wrong comparison: the spoof
-floor is *also* mediocre on this part (CC 346.7 = 31% of ceiling). The real gap
-in every family is **native vs. ceiling**, so §2 codes each family by what
+Verdicts from `run_20261015_041159` (current): 19 WIN / 19 TIE / 0 LOSS. Reads as
+"native already beats spoof" — and it does. But that is the wrong comparison: the
+spoof floor is *also* mediocre on this part (CC 346.7 = 31% of ceiling). The real
+gap in every family is **native vs. ceiling**, so §2 codes each family by what
 limits it, and §8 targets that.
 
 | family | verdict | best median | % ceiling | limiter | cause |
 |---|---|---|---|---|---|
-| CC | 3W/1T/1L | 346.7 | 31.0% | **issue rate** | 4 real FMAs/complex-MAC, no complex-FMA opcode, no MFMA; 8 B/elem; ridge past legal TT (§6) |
+| CC | 3W/2T | 346.7 | 31.0% | **issue rate** | 4 real FMAs/complex-MAC, no complex-FMA opcode, no MFMA; 8 B/elem; ridge past legal TT (§6) |
 | ZZ | 5W | 24.4 | 24.7% | **issue rate + VGPR** | 16 B/elem, 4 regs/elem → TT2x2 is the only tile with headroom; ridge at MT≈10, i.e. unreachable |
 | HH | 2W/3T | 2749.3 | 111.7% | already at bar | — |
 | HH_HPA | 2W/2T | 1447.0 | 129.4% | already at bar | — |
@@ -106,9 +106,10 @@ limits it, and §8 targets that.
 | SS | 2W/6T | 1187.2 | 106.1% | issue rate at high k | — |
 | DD | 3W/4T | 98.0 | ~99% | at bar | — |
 
-Cause codes for the 18 ties and 1 loss, individually:
+Cause codes for the 19 ties, individually:
 
-- **CC:256 LOSS** — measurement (F1). Not a kernel deficit. Do not add candidates for it.
+- **CC:256 TIE** — was a candidate sweep-order defect (`results.md` §13.4), not a
+  kernel deficit. Do not add candidates for it.
 - **CC:512 TIE** — real, +3.1%. Winner MT64x64/WGM4+NLCA1; the deck's
   128x128-class tiles were never generated for CC, so this is unexplored space.
 - **DD 768/1024/1365/2048 TIE** — all ≤2.2%. DD's best measured kernel is
@@ -491,11 +492,15 @@ Anti-transfer: arXiv:2505.03780, arXiv:2507.15277 (`kernel_tuning_research.md` �
 
 ## 9. Open decisions (user-owned; do not act on these silently)
 
-**D1 — CC:256's LOSS is a measurement artifact (§F1).** The floor arm carries no
-telemetry (`spoof_clock_coverage = 0.0`), so `clock_adjusted = False` on every
-cell and no correction is possible. The native arm ran at 1175 MHz against an
-1800 MHz reference. Resolving this requires a floor-arm telemetry re-run, which
-is a TTY job. Do not close it by widening a band; the verdict logic is not ours
+**D1 — CC:256's former LOSS closed as a candidate sweep-order defect
+(resolved 2026-10-15).** The candidate pool emitted `ProblemSizes`
+lexicographically (`1024, 192, 2048, 256, 512`), so 256³ was measured
+immediately after the 2048³ kernel and its median absorbed the throttled clock
+(`claude.md` §2.0.3). The clean re-run (`run_20261015_041159`) reads CC:256 as
+**TIE** — native `210.772` vs floor `214.882`, −0.74 %. The floor arm still
+carries no telemetry (`spoof_clock_coverage = 0.0`), so `clock_adjusted = False`
+on every cell — a standing property of the reference chain, not a closure path
+for this cell. Do not close it by widening a band; the verdict logic is not ours
 to change.
 
 **D2 — `BYTES_PER_ELEMENT["Z"]` vs `LDS_BUDGET`** (full record and measurement in
@@ -539,8 +544,8 @@ paths), so it is labelled a trial and the run judges it. §8.1 matrix +1 (69/69)
 changes, so they own tiles instead of rows (emitted unchanged, tagged
 `_trialD<n>`; `generate_decision_trial_phases`):
 - **D1** — CC `64x64x8/4x4/VW2` (the steal geometry) at `192`/`256`, the shallow
-  cells the LOSS cell owns. The candidate re-measures; the floor-arm telemetry
-  re-run (TTY) closes it.
+  cells CC:256 owns. The candidate re-measures; the sweep-order fix
+  (`results.md` §13.4) and the clean re-run close it.
 - **D2** — ZZ `64x64x16/4x4/VW1` (the LDS-boundary tile). A ZZ VW2 "differentiator"
   row was decked and withdrawn the same day: Tensile's own `numBytes()` for
   complexDouble is 16, so `2 × 16 > 16` and Tensile refuses the phase at solution

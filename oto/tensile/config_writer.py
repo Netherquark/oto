@@ -45,6 +45,7 @@ import yaml
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.occupancy import (ldspad_feasible,
                                          occupancy_feasible)
+from oto.tensile.shape_order import ordered_shapes
 
 #: Contraction pattern -> (TransposeA, TransposeB). Verified against Tensile
 #: index notation and the corpus' own kernel names:
@@ -407,6 +408,13 @@ def write_phase_config(driver, path: Path,
     num_benchmarks = phase.get("NumBenchmarks", 8)
     config = phase.get("config", {})
     shapes = phase.get("shapes", ["1024x1024x1024"])
+    # Last-mile guard. Tensile executes ProblemSizes in list order and each
+    # size's median absorbs the clock state the previous size left
+    # (`claude.md` 2.0.3), so a producer that scrambles the order silently
+    # changes the measurement (the CC:256 "one loser", `results.md` 13.4). The
+    # deck, FAMILY_SHAPES and TARGET_CELLS are numerically ascending; re-impose
+    # that canonically here so no producer can put a poisoned sweep on the GPU.
+    shapes = ordered_shapes(shapes)
 
     pattern = _pattern_of(label, phase.get("contraction_pattern"))
     transpose_a, transpose_b = _transposes(pattern)

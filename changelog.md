@@ -9,6 +9,42 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-15 — "THE ONE LOSER" (CC:256) triaged to a candidate-pool
+  sweep-order bug, not a kernel deficit; fixed at the producer.** The last
+  tracked LOSS cell (CC:256, −8.7 %, `run_20261013_214649`) was not a tuning
+  failure and not the documented floor-telemetry gap — that gap is
+  `spoof_clock_coverage = 0.0` on *every* cell, so it distinguishes nothing and
+  explains no single verdict. Root cause: `oto/harness/candidate_pool.py` sorted
+  `ProblemSizes` as **strings**, yielding the lexicographic order
+  `1024, 192, 2048, 256, 512`; 256³ ran immediately after the 2048³ kernel and
+  its median absorbed the throttled clock (`claude.md` §2.0.3). The same CC
+  `MT64x64x8/TT4x4/VW2` tile reads **54–73 GF/s** at the poisoned 256³ position
+  vs 310/348 at 1024³/2048³, and **225.3** (peak) / **210.8** (median) measured
+  on its own — at or above the floor's 214.9. Fix: the order is defined once in
+  `oto.tensile.shape_order` (`ordered_shapes`/`shape_order_key`) and applied at
+  **all three** producer sites — the wide-row build, the existing-row merge, and
+  `_narrow_row_gen`'s in-place cell merge (a third site the first pass missed) —
+  plus a last-mile guard in `config_writer.write_phase_config` that re-imposes the
+  canonical order no matter what a producer hands it, and the same numeric key for
+  the metadata/display sorts (`ab_records`, `coverage`, `resolve_cells`,
+  `report_sections`). Module "Owns" notes updated. The
+  defect was generator-wide — **366 of 367** generated candidate rows carried the
+  scrambled order; every lexicographic-order phase in the corpus is a
+  candidate-pool phase and every numeric-order phase is a deck/auto phase.
+  Pinned by `tests/test_generate_candidates.py` (the `TestPoolInvariants` ordering
+  invariants, the `TestShapeOrderingHelpers` helper checks, and a crafted
+  `TestNarrowRowMerge` regression for the third site) and the new
+  `tests/test_shape_order.py` (helper, deck, seed overlay, synthesis sweep, and a
+  writer last-mile test that feeds a reversed sweep and asserts a numeric
+  `ProblemSizes`). Live seed overlay regenerated
+  in numeric order (`generate_candidates --prune-candidates`, mirror
+  `gfx90c_results/overlays/phases.candidates.20261015_225451.overlay.yaml`; 372
+  rows, 0 non-ascending). Result: `acceptance_report.json` run
+  `run_20261015_041159` reads **19 WIN / 19 TIE / 0 LOSS** — CC:256 **TIE**
+  (native 210.772 vs floor 214.882, −0.74 %). No verdict band or gate logic
+  changed; the floor-telemetry `DECISION REQUIRED` is superseded as a closure
+  path for this cell. Docs re-pointed: `results.md` §13.4, `potential_configs.md`
+  F1/§2/§9-D1/§10-D1, `gfx90c_tuning_guide.md` §5/§7/§8.
 - **2026-10-14 — writer forwarded every sweep knob (run-blocking fix found while
   folding corpus3).** `oto/tensile/config_writer.py::_fork_params` is the only
   path by which candidate knobs reach Tensile (`BenchmarkCommonParameters`

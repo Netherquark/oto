@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The candidate loaders and the new module's helpers.
 
-Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable.
+Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable. The numeric ProblemSizes order every emitted row carries is defined once in ``oto.tensile.shape_order`` (``_shape_list`` / ``_merge_shapes`` are its call sites here).
 Does NOT own: the row data itself (oto.harness.candidate_rows) or the overlay read/write (oto.harness.candidate_overlay).
-Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for."""
+Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for, _shape_list, _merge_shapes."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from oto.device.peaks import (FAMILY_DTYPES, FAMILY_DTYPE_CHAR,  # noqa: E402
 from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
+from oto.tensile.shape_order import ordered_shapes  # noqa: E402
 from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         AUTO_EXPLICIT, DU_VARIANTS,
                                         FAMILY_DTYPE, LADDER,
@@ -34,6 +35,28 @@ from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
 
 def _tile_key(mt: str, tt: str) -> str:
     return f"{mt.lower()}_tt{tt.lower()}"
+
+
+def _shape_list(sides: Tuple[int, ...]) -> List[str]:
+    """Cube shapes for ``sides`` in canonical ascending order.
+
+    A candidate phase carries its ``TARGET_CELLS`` as one ProblemSizes sweep, and
+    Tensile runs that sweep in list order, each size's median absorbing the clock
+    state the previous size left (``claude.md`` 2.0.3). The deck, ``FAMILY_SHAPES``
+    and ``TARGET_CELLS`` are numerically ascending, so a candidate must match --
+    a string sort would emit ``1024, 192, 2048, 256, 512`` and poison 256^3
+    (`results.md` 13.4).
+    """
+    return ordered_shapes(f"{s}x{s}x{s}" for s in sides)
+
+
+def _merge_shapes(existing: List[str], sides: Tuple[int, ...]) -> List[str]:
+    """Union ``existing`` with ``sides``, re-ordered numerically.
+
+    Used wherever a config already in the pool picks up another cell's shape; a
+    bare ``sorted`` here would re-break an order the new-row path got right.
+    """
+    return ordered_shapes(set(existing) | {f"{s}x{s}x{s}" for s in sides})
 
 
 def _label_for(fam: str, pattern: str, knobs: Dict[str, Any]) -> str:
@@ -150,7 +173,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                 "phase_id": phase_id,
                 "label": _label_for(fam, pattern, knobs),
                 "dtype": FAMILY_DTYPE[fam].lower(),
-                "shapes": sorted(f"{s}x{s}x{s}" for s in sides),
+                "shapes": _shape_list(sides),
                 "ScheduleName": "isa",
                 "NumBenchmarks": 8,
                 "contraction_pattern": pattern,
@@ -163,8 +186,7 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                 row["note"] = note
             pool[fp] = row
         else:
-            existing["shapes"] = sorted(
-                set(existing["shapes"]) | {f"{s}x{s}x{s}" for s in sides})
+            existing["shapes"] = _merge_shapes(existing["shapes"], sides)
             if note and not existing.get("note"):
                 existing["note"] = note
         return pool[fp] if existing is None else None
@@ -248,8 +270,8 @@ def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
                                    "ContractionPattern":
                                    _pattern_for(fam, knobs.get("MacroTile", ""))})
                 if fp in pool:
-                    pool[fp]["shapes"] = sorted(
-                        set(pool[fp]["shapes"]) | {f"{side}x{side}x{side}"})
+                    pool[fp]["shapes"] = _merge_shapes(
+                        pool[fp]["shapes"], (side,))
                     continue
                 if fp in seen_fp:
                     continue

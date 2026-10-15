@@ -34,6 +34,8 @@ from __future__ import annotations
 import statistics
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from oto.tensile.shape_order import shape_order_key
+
 # Three cell states. The names are the specification; there is deliberately no
 # fourth ("empty") state, because "nothing has been tried" and "everything tried
 # failed" demand opposite actions (§H.1.2a).
@@ -208,7 +210,7 @@ def coverage_cells(
             "max_spread_ratio": max((m["spread_ratio"] for m in measured), default=0.0),
             "per_fp": measured,
         })
-    cells.sort(key=lambda c: (c["family"], c["shape"]))
+    cells.sort(key=lambda c: (c["family"], shape_order_key(c["shape"])))
     return cells
 
 

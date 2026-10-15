@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto.metrics.report_models import AcceptanceReport
+from oto.tensile.shape_order import ordered_shapes
 
 
 class SectionMixin:
@@ -189,7 +190,7 @@ class SectionMixin:
         rows = ""
         for label in sorted(groups):
             cg = groups[label]
-            shapes = ", ".join(sorted({c.shape for c in cg}))
+            shapes = ", ".join(ordered_shapes({c.shape for c in cg}))
             entry = cov.get(label)
             if entry:
                 footprint = (f"{entry['coverage_pct']:.1f}% "

@@ -56,6 +56,27 @@ class TestPoolInvariants:
                 assert key in r, (r["phase_id"], key)
             assert r["shapes"], r["phase_id"]
 
+    def test_problem_sizes_are_numerically_ordered(self):
+        """No candidate may scramble its ProblemSizes sweep order.
+
+        Tensile runs a phase's ProblemSizes in deck order and each size's median
+        absorbs the clock state the previous size left (claude.md 2.0.3). Sorting
+        the shape *strings* produced ``1024, 192, 2048, 256, 512`` — 256^3 right
+        after the slowest 2048^3 kernel, measured at ~1/3 clock (~55 vs ~210
+        GFLOPS) and never eligible as its cell's winner. The deck and
+        FAMILY_SHAPES are numerically ascending; a candidate must match.
+        """
+        for r in _rows():
+            sides = [int(s.split("x")[0]) for s in r["shapes"]]
+            assert sides == sorted(sides), (r["phase_id"], r["shapes"])
+
+    def test_problem_sizes_follow_family_shape_order(self):
+        for r in _rows():
+            fam = str(r["config"].get("FamilyLabel", "")).upper()
+            sides = [int(s.split("x")[0]) for s in r["shapes"]]
+            expected = [s for s in FAMILY_SHAPES[fam] if s in set(sides)]
+            assert sides == expected, (r["phase_id"], sides, expected)
+
     def test_every_row_only_addresses_in_grid_cells(self):
         grid = _grid_cells()
         for r in _rows():
@@ -87,6 +108,65 @@ class TestPoolInvariants:
             if not str(p.get("origin", "")).startswith("generated_")
         }
         assert not ({r["fp"] for r in _rows()} & seed_fps)
+
+
+class TestShapeOrderingHelpers:
+    """The two call sites that build a row's ``shapes`` list must order it
+    numerically. A bare ``sorted`` here re-breaks the deck order and poisons the
+    sweep (`results.md` 13.4)."""
+
+    def test_shape_list_is_numeric(self):
+        from oto.harness.candidate_pool import _shape_list
+        assert _shape_list((256, 192, 2048)) == [
+            "192x192x192", "256x256x256", "2048x2048x2048"]
+
+    def test_merge_shapes_is_numeric(self):
+        from oto.harness.candidate_pool import _merge_shapes
+        assert _merge_shapes(["1024x1024x1024", "192x192x192"], (256,)) == [
+            "192x192x192", "256x256x256", "1024x1024x1024"]
+
+
+class TestNarrowRowMerge:
+    """`_narrow_row_gen` adds a cell to an existing row instead of emitting a
+    duplicate config. That merge is the third string-sort site; it must stay
+    numeric even when the row it merges into is already scrambled."""
+
+    def test_merge_into_existing_row_is_numeric(self, monkeypatch):
+        import oto.harness.candidate_pool as cp
+
+        configs = []
+        real_fp = cp._fingerprint
+        monkeypatch.setattr(
+            cp, "_fingerprint",
+            lambda cfg: (configs.append(cfg), real_fp(cfg))[1])
+
+        def offer(fam, tier, pattern, knobs, sides, note=""):
+            return {"phase_id": "offered", "fp": "offered",
+                    "shapes": [f"{sides[0]}x{sides[0]}x{sides[0]}"]}
+
+        # First pass, empty pool: learn every CC neighbour fingerprint.
+        list(cp._narrow_row_gen(None, "CC", (256, 512), set(), {}, offer))
+        assert configs, "expected CC narrow neighbours"
+
+        poisoned = ["1024x1024x1024", "192x192x192"]
+        pool = {real_fp(cfg): {"shapes": list(poisoned)} for cfg in configs}
+
+        offered = []
+
+        def offer2(fam, tier, pattern, knobs, sides, note=""):
+            offered.append(tuple(sides))
+            return {"phase_id": "offered2", "fp": "offered2",
+                    "shapes": [f"{sides[0]}x{sides[0]}x{sides[0]}"]}
+
+        list(cp._narrow_row_gen(None, "CC", (256, 512), set(), pool, offer2))
+
+        # Every neighbour was already a pool row, so nothing was re-offered --
+        # each row was instead extended in place.
+        assert offered == []
+        assert any(len(r["shapes"]) > 2 for r in pool.values())
+        for fp, row in pool.items():
+            sides = [int(s.split("x")[0]) for s in row["shapes"]]
+            assert sides == sorted(sides), (fp, row["shapes"])
 
 
 class TestStripNotForwarded:

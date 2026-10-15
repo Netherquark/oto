@@ -50,6 +50,7 @@ if str(_HERE) not in sys.path:
 import yaml  # noqa: E402
 
 from oto.device.peaks import shipped_cell_set  # noqa: E402
+from oto.tensile.shape_order import shape_order_key  # noqa: E402
 
 # The full structural knob surface — MUST match the yaml emission surface of
 # port_tensile._write_phase_config so docs citing a knob can find it here.
@@ -252,7 +253,8 @@ def build(base_dir: str = ".",
         return _cfg_from_kb_row(row)
 
     cells: List[Dict[str, Any]] = []
-    for v in sorted(pv, key=lambda v: (v["family"], v["shape"])):
+    for v in sorted(pv, key=lambda v: (v["family"],
+                                        shape_order_key(v["shape"]))):
         fam = v["family"]
         shp = v["shape"]
         key = (fam, shp)

@@ -112,6 +112,24 @@ convergence verdict compares against these, throttled+median-of-seeds.
 
 ### Completed
 
+#### CC:256 loser resolved — candidate sweep-order bug (2026-10-15)
+- The last LOSS cell (CC:256) was a producer bug, not a kernel deficit:
+  `oto/harness/candidate_pool.py` sorted `ProblemSizes` as strings →
+  lexicographic `1024,192,2048,256,512`, so 256³ was measured immediately after
+  the 2048³ kernel at ~⅓ clock. Fixed with a numeric shape key at every sort
+  site; module "Owns" note updated.
+- Bug was generator-wide: **366/367** generated candidate rows carried the
+  scrambled order (every lexicographic-order corpus phase is a candidate-pool
+  phase). Ordering now lives once in `oto.tensile.shape_order` and is applied at
+  all three producer sites (wide-row build, existing-row merge, and
+  `_narrow_row_gen`'s in-place merge), with a last-mile guard in
+  `config_writer.write_phase_config` that re-imposes it regardless of producer
+  input. Pinned by `tests/test_generate_candidates.py` and the new
+  `tests/test_shape_order.py`; the live seed overlay was regenerated numeric.
+- Live report `run_20261015_041159` reads **19 WIN / 19 TIE / 0 LOSS**;
+  CC:256 **TIE**. No verdict band or gate logic changed. See `changelog.md`
+  2026-10-15 and `results.md` §13.4.
+
 #### Corpus consolidation + locked floor (2026-10-03)
 - Floor **locked, not re-measured**: `gfx900_ref_locked_52149f315d`, built by
   pooling all 3802 CSVs / 2194 phases from the 3-run chain. `reference_chain()`

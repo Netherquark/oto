@@ -24,6 +24,7 @@ from oto.metrics.ab_identity import (AbIdentityMixin, _driver,
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.policy import aggregate_cell
+from oto.tensile.shape_order import ordered_shapes
 
 #: The project root, resolved from this module's location.
 BASE = Path(__file__).resolve().parents[2]
@@ -79,7 +80,7 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]
         config = resolved or dict((phase or {}).get("config") or {})
         # Measured shapes are authoritative: a phase can emit fewer shapes than
         # it declared if Tensile rejected one.
-        measured = sorted({shape for (_d, shape, _f) in cell_map})
+        measured = ordered_shapes({shape for (_d, shape, _f) in cell_map})
         for (cell_dtype, shape, fp), seeds in cell_map.items():
             rec = {
                 "DataType": cell_dtype,

@@ -566,9 +566,11 @@ The device's clock is not stable and is **not** pinned by default: idle drops to
 400 MHz, and boost only arrives once the part is warm (measured corpus medians
 ~930 MHz at 46–48 °C rising to 1800 MHz at 76–78 °C). So a cold run measures a
 different machine than a warm one, and two arms measured at different
-temperatures are not comparable. `run_20261013_214649`'s sole LOSS is exactly
-this failure: the floor arm has no telemetry at all, so no correction is
-possible (`results.md` §13.4).
+temperatures are not comparable. The floor arm has no telemetry at all, so no
+cross-arm clock correction is possible. (The sole LOSS in
+`run_20261013_214649` was first read as this failure, but it was a candidate
+sweep-order defect — `results.md` §13.4 — and the clean re-run reads CC:256 as
+TIE.)
 
 Steps, all operator-side (TTY):
 

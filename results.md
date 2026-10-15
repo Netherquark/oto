@@ -420,38 +420,47 @@ bytes-per-element:
 | C | 64x64x8 | 4x4 | 79 | 12 | 16384 | 360.9 |
 | Z | 32x32x8 | 2x2 | 63 | 8 | 24960 | 24.7 |
 
-### 13.4 CC:256's LOSS is a measurement artifact, not a kernel deficit
+### 13.4 CC:256's former LOSS was a candidate sweep-order defect — now TIE
 
-`gfx90c_results/acceptance_report.json`, run `run_20261013_214649`:
+`gfx90c_results/acceptance_report.json`, run `run_20261015_041159` (current):
+**19 WIN / 19 TIE / 0 LOSS**. CC:256 reads **TIE** — native `210.772` vs floor
+`214.882`, `delta_pct` −0.74 %.
 
-| field | value |
-|---|---|
-| `native_best_median` | 193.773 |
-| `spoof_best_median` | 212.336 |
-| `delta_pct` | −8.742 |
-| `native_clock_sclk_hz` | 1 175 000 000 |
-| `spoof_clock_sclk_hz` | **0.0** |
-| `sclk_ref_hz` | 1 800 000 000 |
-| `spoof_clock_coverage` | **0.0** |
-| `clock_adjusted` | **False** |
+The earlier LOSS (−8.7 %, run `run_20261013_214649`) was **not** a kernel deficit
+and **not** the floor-telemetry gap. The native arm's winning CC tile is exactly
+the floor's geometry, `MT64x64x8/TT4x4/VW2`: at 256³ it measures **225.3 GF/s**
+(peak rep) in the deck's numeric-order sweep and **210.8** (median) in a
+single-shape phase — both at or above the floor's 214.9. It failed to win only
+because the candidate pool emitted `ProblemSizes` in **lexicographic** order
+(`1024, 192, 2048, 256, 512`), putting 256³ immediately after the 2048³ kernel so
+that its median absorbed the throttled clock (`claude.md` §2.0.3). The same
+64x64x8 CC config reads **54–73 GF/s** at 256³ with 256 in position 4, versus
+**310** at 1024³ and **348** at 2048³.
 
-The floor arm carries no clock telemetry at all, so `clock_adjusted` is False on
-this cell and on every other cell, and the −8.7% cannot be corrected in either
-direction. The native arm ran at 1175 MHz against an 1800 MHz reference; whether
-the floor arm ran faster, slower or the same is unmeasured. **This cell is not
-evidence about kernels**, and the sanctioned candidate work for it is none.
+The defect was generator-wide, not CC-specific: **366 of 367** generated candidate
+rows carried the scrambled order; every lexicographic-order phase in the corpus is
+a candidate-pool phase and every numeric-order phase is a deck/auto phase. The
+order is now defined once in `oto.tensile.shape_order` and applied at all three
+producer sites (wide-row build, existing-row merge, and `_narrow_row_gen`'s
+in-place merge — a third site the first pass missed), with a last-mile guard in
+`config_writer.write_phase_config` that re-imposes it regardless of producer
+input. Pinned by `tests/test_generate_candidates.py` and
+`tests/test_shape_order.py`; the live seed overlay was regenerated in numeric
+order and its generated rows reproduce `iter_candidates()` exactly.
 
-Resolution requires a floor-arm telemetry re-run, which is a TTY job for the user
-(`knowledge_base.md` §8.3, the clock/thermal protocol). Recorded as a
-`DECISION REQUIRED` — the verdict bands are user-owned and are not modified here.
+The floor arm still carries **no** clock telemetry (`spoof_clock_coverage = 0.0`),
+so `clock_adjusted` remains `False` on every cell — a standing property of the
+reference chain, and therefore not the explanation of any single cell's LOSS.
+The `DECISION REQUIRED` this section used to carry (floor-arm telemetry re-run)
+is superseded as a closure path for this cell; the verdict bands remain user-owned.
 
 ### 13.5 Confounding that these numbers still carry
 
-- **Cross-shape winners.** CC:256's native winner is
-  `phase_auto_0_CC_1024x1024x1024_0` — generated for shape 1024³ and winning at
-  256³. Several cells' "winners" are tiles swept for a different shape, so a
-  per-cell attribution is not clean.
-- **Clock coverage is partial on the native arm too** (0.58 for CC:256), so even
+- **Cross-shape winners (other cells).** CC:256's native winner is now the
+  single-shape `phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_trialD1`, so its
+  attribution is clean; several other cells' "winners" are still tiles swept for
+  a different shape, so their per-cell attribution is not.
+- **Clock coverage is partial on the native arm too** (0.48 for CC:256), so even
   the native side is not uniformly normalised.
 - **Best-vs-best per phase spans multiple problem sizes**, so the 360.9 GF/s CC
   maximum is a max over shapes, not the 256³ result.

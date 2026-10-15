@@ -158,13 +158,15 @@ valid** (CC:512 WGM8 315.4 > WGM4 300.9, same clock). Verdict rule: judge
 within-run-relative only; pin sclk (~1400 MHz) or clock-normalize before any
 cross-run number.
 
-**Honest scoreboard (typecode-filtered, folded db, re-measured 2026-10-12):**
-30 cells shared native-vs-floor (C §tool); **29 native / 1 floor**. The single
-floor win is **CC:256** (native 193.8 vs floor 214.0, floor **+10.4 %**) —
-outside the ±2 % tie band, the one honest LOSS and the only sanctioned
-spoof-steal target. (The pre-fold snapshot read 22 native / 8 floor; seven of
-those floor "wins" were inside the ±2 % tie band, and the rebuilt db leaves only
-CC:256 as a strict floor win.)
+**Honest scoreboard (typecode-filtered, folded db, re-measured 2026-10-12):
+30 cells shared native-vs-floor (C §tool); 29 native / 1 floor.** The single
+floor win was **CC:256** (native 193.8 vs floor 214.0, floor **+10.4 %**) —
+outside the ±2 % tie band. **Superseded 2026-10-15:** the native CC:256 reading
+was depressed by a candidate-pool sweep-order defect (256³ measured immediately
+after 2048³; `results.md` §13.4 / `potential_configs.md` F1). The clean re-run
+`run_20261015_041159` reads CC:256 as **TIE** (native 210.772 vs floor 214.882,
+−0.74 %), leaving no strict floor win. (The pre-fold snapshot read 22 native / 8
+floor; seven of those floor "wins" were inside the ±2 % tie band.)
 
 ## 6. Occupancy model vs emitted reality (todo 1 DONE)
 
@@ -223,7 +225,8 @@ failure. Results (re-measured 2026-10-12):
 
 Spoof-steal rule (sanctioned): take the floor's winning config per cell, adapt
 for gfx90c (16-B cap / LDS budget — the gate does this), document, benchmark in
-TTY. Only cell in scope: **CC:256**.
+TTY. Only cell in scope was **CC:256**; it now reads **TIE** after the
+2026-10-15 sweep-order fix (`results.md` §13.4), so no LOSS remains to close.
 
 ## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
 
@@ -233,15 +236,20 @@ DepthU, VectorWidth, GlobalLoadVectorWidthA/B) and the ±% delta, read from
 `gfx90c_results/analysis/kernel_db.json` (rebuild with
 `python3 -m oto.harness.kernel_db --rebuild`). CLI: `--family SS`,
 `--floor-wins-only`, `--json out.json`. Re-measured 2026-10-12: **30 cells
-shared; 29 native / 1 floor.** Findings (same kernel name almost everywhere; the
-deltas are the subtle ones):
+shared; 29 native / 1 floor** (superseded 2026-10-15 — the one floor win,
+CC:256, is a sweep-order artifact and reads TIE on the clean re-run; see below).
+Findings (same kernel name almost everywhere; the deltas are the subtle ones):
 
-- **CC:256 — the only floor win (the steal).** Native
+- **CC:256 — the former floor win (now TIE).** Native
   `Cijk_Ailk_Bjlk_CB_MT32x32x8_SN_K1` (MacroTile 32×32, TT 4×4, VW2, GLVW 2)
   **193.8** vs floor `Cijk_Ailk_Bjlk_CB_MT64x64x8_SN_K1` (MacroTile 64×64,
-  TT 4×4, VW2) **214.0** → floor **+10.4 %**. The delta is **tile area**
-  (32×32 → 64×64), not direction — both kernels are `Ailk_Bjlk` (NT). (Group B;
-  the earlier note calling this a TT-vs-NT direction delta is stale.)
+  TT 4×4, VW2) **214.0** → floor **+10.4 %** (2026-10-12 db). The delta is
+  **tile area** (32×32 → 64×64), not direction — both kernels are `Ailk_Bjlk`
+  (NT). The native 193.8 was swept at the poisoned 256³ position (256³
+  immediately after 2048³); after the sweep-order fix (`results.md` §13.4) the
+  same geometry reads **210.772** vs floor 214.882 = TIE, run
+  `run_20261015_041159`. (Group B; the earlier note calling this a TT-vs-NT
+  direction delta is stale.)
 - **SS:512/768/1365/2048** — the floor ships `128x128x8/8x8/VW4`; native now
   ships the same geometry and wins by −0.9 … −6.5 % (SS:512 854.4 vs 801.5
   −6.2 %, SS:1024 −3.1 %, SS:2048 −2.3 %, SS:4096 −6.5 % via native DepthU16 vs
