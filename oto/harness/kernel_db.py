@@ -141,47 +141,45 @@ def floor_config_from_name(phase_id: str) -> Dict[str, Any]:
             "VectorWidth": vw, "DepthU": du, "GlobalSplitU": gsu}
 
 
-def phase_survey(phase_dir: str, phase_id: str,
-                 is_spoof: bool) -> List[Dict[str, Any]]:
-    """All (kernel-shape) rows for one phase directory."""
-    out: List[Dict[str, Any]] = []
-
+def _yaml_index(phase_dir: str) -> Dict[str, str]:
+    """folder -> 00_Final.yaml, keyed by the BenchmarkProblems subfolder."""
     folder_yaml: Dict[str, str] = {}
     for y in sorted(glob.glob(os.path.join(
             phase_dir, "1_BenchmarkProblems", "*", "Data", "00_Final.yaml"))):
         folder_yaml[os.path.basename(os.path.dirname(os.path.dirname(y)))] = y
+    return folder_yaml
 
-    def yaml_for(cpath: str) -> Optional[str]:
-        rel = os.path.relpath(cpath, phase_dir)
-        parts = rel.split(os.sep)
-        if "Data" in parts:
-            idx = parts.index("Data")
-            if idx >= 2:
-                return folder_yaml.get(parts[idx - 1])
-        base = os.path.basename(cpath)
-        stem = base.split("__")[0]
-        if stem.endswith(".csv"):
-            stem = stem[:-4]
-        return folder_yaml.get(stem)
 
-    cfg: Dict[str, Any] = {}
-    if folder_yaml:
-        cfg = parse_config(folder_yaml[sorted(folder_yaml)[0]])
-    elif is_spoof:
-        cfg = floor_config_from_name(phase_id)
+def _yaml_for(cpath: str, phase_dir: str,
+              folder_yaml: Dict[str, str]) -> Optional[str]:
+    """The 00_Final.yaml a CSV belongs to, by folder or by file stem."""
+    rel = os.path.relpath(cpath, phase_dir)
+    parts = rel.split(os.sep)
+    if "Data" in parts:
+        idx = parts.index("Data")
+        if idx >= 2:
+            return folder_yaml.get(parts[idx - 1])
+    base = os.path.basename(cpath)
+    stem = base.split("__")[0]
+    if stem.endswith(".csv"):
+        stem = stem[:-4]
+    return folder_yaml.get(stem)
 
-    csvs = sorted(glob.glob(os.path.join(
-        phase_dir, "1_BenchmarkProblems", "*", "Data", "00_Final.csv")))
-    csvs += sorted(glob.glob(os.path.join(phase_dir, "2_BenchmarkData", "*.csv")))
-    if not csvs:
-        return out
 
-    per_kernel: Dict[Tuple[str, str], List[Tuple[float, Dict[str, Any]]]] = defaultdict(list)
+def _accumulate_rows(
+    csvs: List[str],
+    phase_dir: str,
+    folder_yaml: Dict[str, str],
+    cfg: Dict[str, Any],
+) -> Dict[Tuple[str, str], List[Tuple[float, Dict[str, Any]]]]:
+    """phase measurement rows, keyed by (kernel column, shape)."""
+    per_kernel: Dict[Tuple[str, str], List[Tuple[float, Dict[str, Any]]]] = \
+        defaultdict(list)
     for cpath in csvs:
-        ypath = yaml_for(cpath) or (os.path.join(os.path.dirname(cpath), "00_Final.yaml")
-                                    if os.path.exists(os.path.join(os.path.dirname(cpath),
-                                                                   "00_Final.yaml"))
-                                    else None)
+        ypath = _yaml_for(cpath, phase_dir, folder_yaml) or (os.path.join(
+            os.path.dirname(cpath), "00_Final.yaml")
+            if os.path.exists(os.path.join(os.path.dirname(cpath),
+                                           "00_Final.yaml")) else None)
         ecfg = parse_config(ypath) if ypath else dict(cfg)
         try:
             with open(cpath) as f:
@@ -206,55 +204,93 @@ def phase_survey(phase_dir: str, phase_id: str,
                 per_kernel[(kc, s)].append((val, ecfg))
         except (OSError, ValueError):
             continue
+    return per_kernel
 
-    for (kc, s), vcfg in sorted(per_kernel.items()):
-        vals = [v for v, _ in vcfg]
-        cfgset = [c for _, c in vcfg]
-        if not vals:
-            continue
-        vals.sort()
-        n = len(vals)
-        med = (vals[n // 2] + vals[(n - 1) // 2]) / 2.0
-        cfg = cfgset[0] if cfgset else {}
+
+def _family_and_dtype(cfg: Dict[str, Any], kc: str,
+                      phase_id: str) -> Tuple[str, str, Any]:
+    """(family, dtype, dtype_enum) for one kernel row.
+
+    Family attribution: the kernel's own typecode is the ground truth
+    (SB/DB/HB/CB/ZB, HHS/HSS -> HH). phase_id text and the config enum can
+    both lie about family — the `phase_auto_*` pool used to resolve to 'S'
+    through its 'auto' prefix (the §13.2 contamination). Never derive a
+    cell family from text when the kernel name is available.
+    """
+    dt_enum = cfg.get("DataTypeEnum")
+    tc_family = family_from_kernel_name(kc)
+    if tc_family:
+        family = tc_family
+        dt = FAMILY_DTYPE_CHAR.get(family, "?")
+    else:
+        m = FAMILY_RE.match(phase_id)
+        family = _DEFAULT_DTYPE.get(m.group(1), "") if m else ""
+        if family:
+            family = _REVERSE_DEFAULT_DTYPE.get(family, "")
         dt_enum = cfg.get("DataTypeEnum")
-        # Family attribution: the kernel's own typecode is the ground truth
-        # (SB/DB/HB/CB/ZB, HHS/HSS -> HH). phase_id text and the config enum can
-        # both lie about family — the `phase_auto_*` pool used to resolve to 'S'
-        # through its 'auto' prefix (the §13.2 contamination). Never derive a
-        # cell family from text when the kernel name is available.
-        tc_family = family_from_kernel_name(kc)
-        tc_code = kernel_typecode(kc)
-        if tc_family:
-            family = tc_family
-            dt = FAMILY_DTYPE_CHAR.get(family, "?")
+        if dt_enum is None:
+            dt = family or "?"
+            dt_enum = -1
         else:
-            m = FAMILY_RE.match(phase_id)
-            family = _DEFAULT_DTYPE.get(m.group(1), "") if m else ""
-            if family:
-                family = _REVERSE_DEFAULT_DTYPE.get(family, "")
-            dt_enum = cfg.get("DataTypeEnum")
-            if dt_enum is None:
-                dt = family or "?"
-                dt_enum = -1
-            else:
-                dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}")
-        entry: Dict[str, Any] = {
-            "phase": phase_id,
-            "kernel": kc,
-            "shape": s,
-            "gflops_best": max(vals),
-            "gflops_median": round(med, 3),
-            "n_seeds": n,
-            "dtype": dt,
-            "dtype_enum": dt_enum,
-            "family": family,
-            "typecode": tc_code,
-        }
-        for kk in ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
-                   "VectorWidth", "DepthU", "GlobalLoadVectorWidthA",
-                   "GlobalLoadVectorWidthB", "ISA"):
-            entry[kk] = cfg.get(kk)
-        out.append(entry)
+            dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}")
+    return family, dt, dt_enum
+
+
+def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
+                  phase_id: str) -> Optional[Dict[str, Any]]:
+    """One kernel-db row for a (kernel column, shape) group."""
+    vals = [v for v, _ in vcfg]
+    cfgset = [c for _, c in vcfg]
+    if not vals:
+        return None
+    vals.sort()
+    n = len(vals)
+    med = (vals[n // 2] + vals[(n - 1) // 2]) / 2.0
+    cfg = cfgset[0] if cfgset else {}
+    family, dt, dt_enum = _family_and_dtype(cfg, kc, phase_id)
+    entry: Dict[str, Any] = {
+        "phase": phase_id,
+        "kernel": kc,
+        "shape": s,
+        "gflops_best": max(vals),
+        "gflops_median": round(med, 3),
+        "n_seeds": n,
+        "dtype": dt,
+        "dtype_enum": dt_enum,
+        "family": family,
+        "typecode": kernel_typecode(kc),
+    }
+    for kk in ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
+               "VectorWidth", "DepthU", "GlobalLoadVectorWidthA",
+               "GlobalLoadVectorWidthB", "ISA"):
+        entry[kk] = cfg.get(kk)
+    return entry
+
+
+def phase_survey(phase_dir: str, phase_id: str,
+                 is_spoof: bool) -> List[Dict[str, Any]]:
+    """All (kernel-shape) rows for one phase directory."""
+    folder_yaml = _yaml_index(phase_dir)
+
+    cfg: Dict[str, Any] = {}
+    if folder_yaml:
+        cfg = parse_config(folder_yaml[sorted(folder_yaml)[0]])
+    elif is_spoof:
+        cfg = floor_config_from_name(phase_id)
+
+    csvs = sorted(glob.glob(os.path.join(
+        phase_dir, "1_BenchmarkProblems", "*", "Data", "00_Final.csv")))
+    csvs += sorted(glob.glob(os.path.join(phase_dir, "2_BenchmarkData", "*.csv")))
+    if not csvs:
+        return []
+
+    per_kernel = _accumulate_rows(csvs, phase_dir, folder_yaml, cfg)
+
+    out: List[Dict[str, Any]] = []
+    for (kc, s), vcfg in sorted(per_kernel.items()):
+        entry = _kernel_entry(kc, s, vcfg, phase_id)
+        if entry is not None:
+            out.append(entry)
     return out
 
 

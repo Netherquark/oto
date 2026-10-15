@@ -180,6 +180,123 @@ def _clamp_pct(x: Optional[float]) -> Optional[float]:
     return round(x, 1) if x is not None else None
 
 
+def _load_kernel_db(
+    db_path: str
+) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    """Read kernel_db.json -> (gfx900_ref floor rows, native phase->config map)."""
+    with open(db_path) as f:
+        kdb = json.load(f)
+    floor_rows: List[Dict[str, Any]] = []
+    native_kb_cfg: Dict[str, Dict[str, Any]] = {}
+    for rid, rows in kdb.items():
+        if "gfx900_ref" in rid:
+            floor_rows.extend(rows)
+        else:
+            for r in rows:
+                if r.get("phase"):
+                    native_kb_cfg.setdefault(r["phase"], _cfg_from_kb_row(r))
+    return floor_rows, native_kb_cfg
+
+
+def _floor_best_by_cell(
+    floor_rows: List[Dict[str, Any]]
+) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Floor best row per (family, shape) cell."""
+    floor_best: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for r in floor_rows:
+        fam = r.get("family")
+        shp = r.get("shape")
+        if not fam or not shp:
+            continue
+        key = (fam, shp)
+        cur = floor_best.get(key)
+        if _floor_best([r] if cur is None else [cur, r]) is r:
+            floor_best[key] = r
+    return floor_best
+
+
+def _native_config(
+    win_phase: str,
+    win_run: str,
+    run_scoped: Dict[str, Dict[str, Any]],
+    registry: Dict[str, Any],
+    run_global: Dict[str, Any],
+    native_kb_cfg: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    """The native winner's config, from the first source that has it."""
+    if not win_phase:
+        return {}
+    scoped = run_scoped.get(win_run, {})
+    for cand in (scoped.get(win_phase), scoped.get("phase_" + win_phase),
+                 registry.get(win_phase), run_global.get(win_phase),
+                 run_global.get("phase_" + win_phase),
+                 native_kb_cfg.get(win_phase)):
+        if cand:
+            return cand
+    return {}
+
+
+def _spoof_config(
+    key: Tuple[str, str],
+    floor_best: Dict[Tuple[str, str], Dict[str, Any]],
+    registry: Dict[str, Any],
+    run_global: Dict[str, Any],
+) -> Dict[str, Any]:
+    """The spoof (floor) winner's config for a cell."""
+    row = floor_best.get(key)
+    if row is None:
+        return {}
+    ph = row.get("phase")
+    if ph:
+        for cand in (registry.get(ph), run_global.get(ph)):
+            if cand:
+                return cand
+    return _cfg_from_kb_row(row)
+
+
+def _cell_row(
+    v: Dict[str, Any],
+    cov: Dict[str, Any],
+    run_scoped: Dict[str, Dict[str, Any]],
+    registry: Dict[str, Any],
+    run_global: Dict[str, Any],
+    native_kb_cfg: Dict[str, Dict[str, Any]],
+    floor_best: Dict[Tuple[str, str], Dict[str, Any]],
+) -> Dict[str, Any]:
+    """One resolved cell: values, delta and both winner configs."""
+    fam = v["family"]
+    shp = v["shape"]
+    key = (fam, shp)
+    nv = v.get("native_value") or 0.0
+    sv = v.get("spoof_value") or 0.0
+    delta = ((nv - sv) / sv * 100.0) if sv else None
+    nwp = v.get("native_winner_phase") or ""
+    nrun = v.get("native_winner_run") or ""
+    ncfg = _native_config(nwp, nrun, run_scoped, registry, run_global,
+                          native_kb_cfg)
+    scfg = _spoof_config(key, floor_best, registry, run_global)
+    fcov = cov.get(fam, {})
+    ceiling = fcov.get("ceiling_gflops") or 0.0
+    peak = fcov.get("theoretical_peak_gflops") or 0.0
+    return {
+        "family": fam,
+        "shape": shp,
+        "dtype": v.get("dtype", ""),
+        "verdict": v.get("verdict", "?"),
+        "delta_pct": delta,
+        "native_median": v.get("native_median"),
+        "native_value": nv,
+        "spoof_median": v.get("spoof_median"),
+        "spoof_value": sv,
+        "pct_ceiling": _clamp_pct(nv / ceiling * 100.0) if ceiling else None,
+        "pct_theoretical": _clamp_pct(nv / peak * 100.0) if peak else None,
+        "native_winner_phase": nwp,
+        "native_winner_run": nrun,
+        "native_config": ncfg,
+        "spoof_config": scfg,
+    }
+
+
 def build(base_dir: str = ".",
           acceptance_path: Optional[str] = None,
           registry_path: Optional[str] = None,
@@ -201,90 +318,20 @@ def build(base_dir: str = ".",
     run_id = report.get("run_id", "?")
     ref_run = report.get("reference_run_id", "?")
 
-    with open(db_path) as f:
-        kdb = json.load(f)
-    floor_rows: List[Dict[str, Any]] = []
-    native_kb_cfg: Dict[str, Dict[str, Any]] = {}
-    for rid, rows in kdb.items():
-        if "gfx900_ref" in rid:
-            floor_rows.extend(rows)
-        else:
-            for r in rows:
-                if r.get("phase"):
-                    native_kb_cfg.setdefault(r["phase"], _cfg_from_kb_row(r))
+    floor_rows, native_kb_cfg = _load_kernel_db(db_path)
 
     run_scoped, run_global, n_yamls = _load_run_configs(str(runs_dir))
     registry, n_registry = _load_registry_phases(registry_path)
     n_resolver = len({**run_global, **registry})
 
-    # Floor best per (family, shape) cell.
-    floor_best: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    for r in floor_rows:
-        fam = r.get("family")
-        shp = r.get("shape")
-        if not fam or not shp:
-            continue
-        key = (fam, shp)
-        cur = floor_best.get(key)
-        if _floor_best([r] if cur is None else [cur, r]) is r:
-            floor_best[key] = r
+    floor_best = _floor_best_by_cell(floor_rows)
 
-    def native_config(win_phase: str, win_run: str) -> Dict[str, Any]:
-        if not win_phase:
-            return {}
-        scoped = run_scoped.get(win_run, {})
-        for cand in (scoped.get(win_phase), scoped.get("phase_" + win_phase),
-                     registry.get(win_phase), run_global.get(win_phase),
-                     run_global.get("phase_" + win_phase),
-                     native_kb_cfg.get(win_phase)):
-            if cand:
-                return cand
-        return {}
-
-    def spoof_config(key: Tuple[str, str]) -> Dict[str, Any]:
-        row = floor_best.get(key)
-        if row is None:
-            return {}
-        ph = row.get("phase")
-        if ph:
-            for cand in (registry.get(ph), run_global.get(ph)):
-                if cand:
-                    return cand
-        return _cfg_from_kb_row(row)
-
-    cells: List[Dict[str, Any]] = []
-    for v in sorted(pv, key=lambda v: (v["family"],
-                                        shape_order_key(v["shape"]))):
-        fam = v["family"]
-        shp = v["shape"]
-        key = (fam, shp)
-        nv = v.get("native_value") or 0.0
-        sv = v.get("spoof_value") or 0.0
-        delta = ((nv - sv) / sv * 100.0) if sv else None
-        nwp = v.get("native_winner_phase") or ""
-        nrun = v.get("native_winner_run") or ""
-        ncfg = native_config(nwp, nrun)
-        scfg = spoof_config(key)
-        fcov = cov.get(fam, {})
-        ceiling = fcov.get("ceiling_gflops") or 0.0
-        peak = fcov.get("theoretical_peak_gflops") or 0.0
-        cells.append({
-            "family": fam,
-            "shape": shp,
-            "dtype": v.get("dtype", ""),
-            "verdict": v.get("verdict", "?"),
-            "delta_pct": delta,
-            "native_median": v.get("native_median"),
-            "native_value": nv,
-            "spoof_median": v.get("spoof_median"),
-            "spoof_value": sv,
-            "pct_ceiling": _clamp_pct(nv / ceiling * 100.0) if ceiling else None,
-            "pct_theoretical": _clamp_pct(nv / peak * 100.0) if peak else None,
-            "native_winner_phase": nwp,
-            "native_winner_run": nrun,
-            "native_config": ncfg,
-            "spoof_config": scfg,
-        })
+    cells: List[Dict[str, Any]] = [
+        _cell_row(v, cov, run_scoped, registry, run_global,
+                  native_kb_cfg, floor_best)
+        for v in sorted(pv, key=lambda v: (v["family"],
+                                           shape_order_key(v["shape"])))
+    ]
 
     meta = {
         "tool": "harness.resolve_cells",

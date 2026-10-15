@@ -41,7 +41,9 @@ import json
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+
+import yaml
 
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
@@ -82,6 +84,111 @@ def _configs_identical(dk: Optional[Dict[str, Any]],
     return all(a.get(k) and a.get(k) == b.get(k) for k in _STRUCTURAL)
 
 
+def _cell_of(row: Dict[str, Any],
+             grid: Set[Tuple[str, str]],
+             phase_family: Any) -> Optional[Tuple[str, str]]:
+    """(family, shape) grid cell for a row, or None for non-cube/non-grid."""
+    shape = row.get("shape") or ""
+    sides = shape.split("x")
+    if len(sides) != 3 or not all(s.isdigit() for s in sides):
+        return None  # non-cube probe row
+    if not (sides[0] == sides[1] == sides[2]):
+        return None  # non-cube (GEMM/TRSV etc.) row
+    fam = phase_family({"phase_id": row.get("phase"), "shapes": []})
+    if not fam and row.get("dtype"):
+        fam = {"S": "SS", "D": "DD", "C": "CC", "Z": "ZZ",
+               "H": "HH"}.get((row.get("dtype") or "").upper(), "")
+    if not fam:
+        return None
+    return (fam, shape) if (fam, shape) in grid else None
+
+
+def _split_native_spoof(db: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
+                                                List[Dict[str, Any]]]:
+    """Native and floor rows, separated by the gfx900_ref run-id prefix."""
+    native: List[Dict[str, Any]] = []
+    spoof: List[Dict[str, Any]] = []
+    for run_id, rows in db.items():
+        if run_id.startswith("gfx900_ref_"):
+            spoof.extend(rows)
+        else:
+            native.extend(rows)
+    return native, spoof
+
+
+def _deck_phase_ids(base_dir: str) -> Set[str]:
+    """The shipped deck's phase ids (the authoritative coverage universe)."""
+    text = (Path(base_dir) / "phases.yaml").read_text()
+    return {p.get("phase_id") for p in (yaml.safe_load(text) or [])}
+
+
+def _bucket_rows(
+    native: List[Dict[str, Any]],
+    spoof: List[Dict[str, Any]],
+    deck_phase_ids: Set[str],
+    grid: Set[Tuple[str, str]],
+    phase_family: Any,
+) -> Tuple[Dict[Tuple[str, str], List[Dict[str, Any]]],
+           Dict[Tuple[str, str], List[Dict[str, Any]]],
+           Dict[Tuple[str, str], List[Dict[str, Any]]]]:
+    """deck / all-time / floor row buckets keyed by (family, shape)."""
+    deck_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    at_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    floor_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for row in native:
+        c = _cell_of(row, grid, phase_family)
+        if c:
+            at_rows[c].append(row)
+            if row.get("phase") in deck_phase_ids:
+                deck_rows[c].append(row)
+    for row in spoof:
+        c = _cell_of(row, grid, phase_family)
+        if c:
+            floor_rows[c].append(row)
+    return deck_rows, at_rows, floor_rows
+
+
+def _matrix_entry(
+    key: str,
+    fam: str,
+    side: str,
+    dk: Optional[Dict[str, Any]],
+    fl: Optional[Dict[str, Any]],
+    at: Optional[Dict[str, Any]],
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """One matrix cell entry; appends wins/losses/regressions to `result`."""
+    entry = {
+        "cell": key, "family": fam,
+        "shape": f"{side}x{side}x{side}",
+        "deck": _med(dk), "floor": _med(fl), "all_time": _med(at),
+        "deck_phase": dk.get("phase") if dk else None,
+        "deck_seeds": dk.get("n_seeds") if dk else None,
+        "floor_phase": fl.get("phase") if fl else None,
+        "all_time_phase": at.get("phase") if at else None,
+        "deck_config": _cfg(dk), "floor_config": _cfg(fl),
+        "vs_floor_pct": None, "loss_config_identical": False,
+    }
+    if dk and fl and _med(fl) > 0:
+        diff = _pct(_med(dk), _med(fl))
+        entry["vs_floor_pct"] = round(diff, 2) if diff is not None else None
+        if diff is not None and diff > 2.0:
+            result["wins"].append({"cell": key, "vs_floor_pct": round(diff, 2)})
+        elif diff is not None and diff < -2.0:
+            identical = _configs_identical(dk, fl)
+            entry["loss_config_identical"] = identical
+            result["losses"].append({"cell": key,
+                                     "vs_floor_pct": round(diff, 2),
+                                     "config_identical": identical})
+    if dk and at and at is not dk and at.get("phase") != dk.get("phase"):
+        diff = _pct(_med(dk), _med(at))
+        if diff is not None and diff < -2.0:
+            result["material_regressions"].append(
+                {"cell": key, "regressed_vs": at.get("phase"),
+                 "pct": round(diff, 2)})
+    return entry
+
+
 def build_matrix(db_path: str, base_dir: str,
                  rebuild: bool = False) -> Dict[str, Any]:
     """deck / floor / all-time per shipped grid cell + aggregate verdicts.
@@ -92,53 +199,18 @@ def build_matrix(db_path: str, base_dir: str,
     construction.
     """
     sys.path.insert(0, base_dir)
-    import yaml
     from oto.harness.kernel_db import load_kernel_db
     from oto.device.peaks import shipped_cell_set
     from oto.tensile.library_parity import phase_family, phases_cells
 
     db = load_kernel_db(db_path, base_dir=base_dir, rebuild=rebuild)
-    native: List[Dict[str, Any]] = []
-    spoof: List[Dict[str, Any]] = []
-    for run_id, rows in db.items():
-        if run_id.startswith("gfx900_ref_"):
-            spoof.extend(rows)
-        else:
-            native.extend(rows)
+    native, spoof = _split_native_spoof(db)
 
     grid = shipped_cell_set()  # {(family, shape)} — canonical, 38 cells
-
-    def cell_of(row: Dict[str, Any]) -> Optional[Tuple[str, str]]:
-        shape = row.get("shape") or ""
-        sides = shape.split("x")
-        if len(sides) != 3 or not all(s.isdigit() for s in sides):
-            return None  # non-cube probe row
-        if not (sides[0] == sides[1] == sides[2]):
-            return None  # non-cube (GEMM/TRSV etc.) row
-        fam = phase_family({"phase_id": row.get("phase"), "shapes": []})
-        if not fam and row.get("dtype"):
-            fam = {"S": "SS", "D": "DD", "C": "CC", "Z": "ZZ",
-                   "H": "HH"}.get((row.get("dtype") or "").upper(), "")
-        if not fam:
-            return None
-        return (fam, shape) if (fam, shape) in grid else None
-
-    deck_phase_ids = {p.get("phase_id") for p in
-                      (yaml.safe_load((Path(base_dir) / "phases.yaml").read_text()) or [])}
-
-    deck_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
-    at_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
-    floor_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
-    for row in native:
-        c = cell_of(row)
-        if c:
-            at_rows[c].append(row)
-            if row.get("phase") in deck_phase_ids:
-                deck_rows[c].append(row)
-    for row in spoof:
-        c = cell_of(row)
-        if c:
-            floor_rows[c].append(row)
+    deck_phase_ids = _deck_phase_ids(base_dir)
+    deck_rows, at_rows, floor_rows = _bucket_rows(native, spoof,
+                                                  deck_phase_ids, grid,
+                                                  phase_family)
 
     keys = sorted({f"{f}:{s.split('x')[0]}" for f, s in set(deck_rows) | set(at_rows) | set(floor_rows)})
     result: Dict[str, Any] = {
@@ -162,35 +234,7 @@ def build_matrix(db_path: str, base_dir: str,
         dk = _best(deck_rows.get((fam, f"{side}x{side}x{side}"), []))
         fl = _best(floor_rows.get((fam, f"{side}x{side}x{side}"), []))
         at = _best(at_rows.get((fam, f"{side}x{side}x{side}"), []))
-        entry = {
-            "cell": key, "family": fam,
-            "shape": f"{side}x{side}x{side}",
-            "deck": _med(dk), "floor": _med(fl), "all_time": _med(at),
-            "deck_phase": dk.get("phase") if dk else None,
-            "deck_seeds": dk.get("n_seeds") if dk else None,
-            "floor_phase": fl.get("phase") if fl else None,
-            "all_time_phase": at.get("phase") if at else None,
-            "deck_config": _cfg(dk), "floor_config": _cfg(fl),
-            "vs_floor_pct": None, "loss_config_identical": False,
-        }
-        if dk and fl and _med(fl) > 0:
-            diff = _pct(_med(dk), _med(fl))
-            entry["vs_floor_pct"] = round(diff, 2) if diff is not None else None
-            if diff is not None and diff > 2.0:
-                result["wins"].append({"cell": key, "vs_floor_pct": round(diff, 2)})
-            elif diff is not None and diff < -2.0:
-                identical = _configs_identical(dk, fl)
-                entry["loss_config_identical"] = identical
-                result["losses"].append({"cell": key,
-                                         "vs_floor_pct": round(diff, 2),
-                                         "config_identical": identical})
-        if dk and at and at is not dk and at.get("phase") != dk.get("phase"):
-            diff = _pct(_med(dk), _med(at))
-            if diff is not None and diff < -2.0:
-                result["material_regressions"].append(
-                    {"cell": key, "regressed_vs": at.get("phase"),
-                     "pct": round(diff, 2)})
-        result["cells"][key] = entry
+        result["cells"][key] = _matrix_entry(key, fam, side, dk, fl, at, result)
     return result
 
 

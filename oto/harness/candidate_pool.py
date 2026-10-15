@@ -118,6 +118,110 @@ def _strip_not_forwarded(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     return {k: v for k, v in config.items() if k not in _NOT_FORWARDED_YET}, dropped
 
 
+def _candidate_phase_id(
+    fam: str,
+    pattern: str,
+    knobs: Dict[str, Any],
+    sides: Tuple[int, ...],
+    fp: str,
+) -> str:
+    """The deterministic phase_id for a candidate config."""
+    mt = knobs["MacroTile"]
+    tt = knobs["ThreadTile"]
+    vw = knobs.get("VectorWidth", 1)
+    du = knobs.get("DepthU", 16)
+    gsu = knobs.get("GlobalSplitU", 1)
+    wgm = knobs.get("WorkGroupMapping", 4)
+    phase_id = (f"phase_cand_{fam.lower()}_{sides[0]}_{_tile_key(mt, tt)}"
+                f"_{pattern}_vw{vw}_du{du}_g{gsu}_w{wgm}")
+    return f"{phase_id}_{fp[:8]}"
+
+
+def _offer_row(
+    sched: CandidateGenerator,
+    seen_fp: Set[str],
+    pool: Dict[str, Dict[str, Any]],
+    fam: str,
+    tier: str,
+    pattern: str,
+    knobs: Dict[str, Any],
+    sides: Tuple[int, ...],
+    note: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Validate one candidate config and fold it into the fp-keyed pool.
+
+    Returns the new row the first time a config is seen (None when it is a
+    duplicate, illegal, or already scheduled by the deck/seed); a config already
+    in the pool gets this cell added to its shape list instead.
+    """
+    knobs = dict(knobs)
+    if "DepthU" not in knobs:
+        mt_parts = [int(x) for x in re.split(r"[xX]",
+                    str(knobs.get("MacroTile", "64x64x16")))]
+        knobs["DepthU"] = mt_parts[2] if len(mt_parts) >= 3 else 16
+    config = {**_base_config(fam), **knobs, "ContractionPattern": pattern}
+    config, dropped = _strip_not_forwarded(config)
+    if dropped:
+        note = (note + f" [stripped {','.join(dropped)}: not forwarded]").strip()
+    ok, why = sched.validate_config(config)
+    if not ok:
+        return None
+    pad_ok, _pad_why = ldspad_feasible(config)
+    if not pad_ok:
+        return None
+    fp = _fingerprint(config)
+    existing = pool.get(fp)
+    if existing is None:
+        if fp in seen_fp:
+            return None
+        row = {
+            "phase_id": _candidate_phase_id(fam, pattern, knobs, sides, fp),
+            "label": _label_for(fam, pattern, knobs),
+            "dtype": FAMILY_DTYPE[fam].lower(),
+            "shapes": _shape_list(sides),
+            "ScheduleName": "isa",
+            "NumBenchmarks": 8,
+            "contraction_pattern": pattern,
+            "config": config,
+            "fp": fp,
+            "origin": "generated_" + tier,
+            "tier": tier,
+        }
+        if note:
+            row["note"] = note
+        pool[fp] = row
+    else:
+        existing["shapes"] = _merge_shapes(existing["shapes"], sides)
+        if note and not existing.get("note"):
+            existing["note"] = note
+    return pool[fp] if existing is None else None
+
+
+def _auto_row_gen(offer) -> Iterator[Dict[str, Any]]:
+    """The explicit per-family AUTO candidates."""
+    for fam, specs in AUTO_EXPLICIT.items():
+        for spec_ in specs:
+            side = int(spec_["shapes"][0].split("x")[0])
+            knobs = {k: v for k, v in spec_.items()
+                     if k not in ("shapes", "pattern", "note")}
+            row = offer(fam, "auto", spec_["pattern"], knobs, (side,),
+                        note=spec_.get("note", ""))
+            if row:
+                yield row
+
+
+def _plan_batch_row_gen(offer) -> Iterator[Dict[str, Any]]:
+    """Rows from the hand-written PLAN_BATCH plan."""
+    for spec_ in PLAN_BATCH:
+        fam = spec_["fam"]
+        knobs = {k: v for k, v in spec_.items()
+                 if k not in ("fam", "pattern", "note")}
+        row = offer(fam, "auto", spec_["pattern"], knobs,
+                    tuple(TARGET_CELLS[fam]), note=spec_.get("note", ""))
+        if row:
+            yield row
+
+
 def iter_candidates() -> Iterator[Dict[str, Any]]:
     """Yield validated, fp-deduped candidate rows (open/free of overlay state).
 
@@ -142,54 +246,8 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
         sides: Tuple[int, ...],
         note: str = "",
     ) -> Optional[Dict[str, Any]]:
-        knobs = dict(knobs)
-        if "DepthU" not in knobs:
-            mt_parts = [int(x) for x in re.split(r"[xX]",
-                        str(knobs.get("MacroTile", "64x64x16")))]
-            knobs["DepthU"] = mt_parts[2] if len(mt_parts) >= 3 else 16
-        config = {**_base_config(fam), **knobs, "ContractionPattern": pattern}
-        config, dropped = _strip_not_forwarded(config)
-        if dropped:
-            note = (note + f" [stripped {','.join(dropped)}: not forwarded]").strip()
-        ok, why = sched.validate_config(config)
-        if not ok:
-            return None
-        pad_ok, _pad_why = ldspad_feasible(config)
-        if not pad_ok:
-            return None
-        fp = _fingerprint(config)
-        existing = pool.get(fp)
-        if existing is None:
-            if fp in seen_fp:
-                return None
-            side0 = sides[0]; fam_key = fam.lower()
-            mt = knobs["MacroTile"]; tt = knobs["ThreadTile"]; vw = knobs.get("VectorWidth", 1)
-            du = knobs.get("DepthU", 16); gsu = knobs.get("GlobalSplitU", 1); wgm = knobs.get("WorkGroupMapping", 4)
-            prefix = "phase_cand"
-            phase_id = (f"{prefix}_{fam_key}_{side0}_{_tile_key(mt, tt)}"
-                        f"_{pattern}_vw{vw}_du{du}_g{gsu}_w{wgm}")
-            phase_id = f"{phase_id}_{fp[:8]}"
-            row = {
-                "phase_id": phase_id,
-                "label": _label_for(fam, pattern, knobs),
-                "dtype": FAMILY_DTYPE[fam].lower(),
-                "shapes": _shape_list(sides),
-                "ScheduleName": "isa",
-                "NumBenchmarks": 8,
-                "contraction_pattern": pattern,
-                "config": config,
-                "fp": fp,
-                "origin": "generated_" + tier,
-                "tier": tier,
-            }
-            if note:
-                row["note"] = note
-            pool[fp] = row
-        else:
-            existing["shapes"] = _merge_shapes(existing["shapes"], sides)
-            if note and not existing.get("note"):
-                existing["note"] = note
-        return pool[fp] if existing is None else None
+        return _offer_row(sched, seen_fp, pool, fam, tier, pattern, knobs,
+                          sides, note)
 
     for fam in TARGET_CELLS:
         ladder = LADDER.get(fam, [])
@@ -215,25 +273,8 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
                             yield row
         yield from _narrow_row_gen(sched, fam, sides, seen_fp, pool, _offer)
 
-    for fam, specs in AUTO_EXPLICIT.items():
-        for spec_ in specs:
-            side = int(spec_["shapes"][0].split("x")[0])
-            knobs = {k: v for k, v in spec_.items()
-                     if k not in ("shapes", "pattern", "note")}
-            row = _offer(fam, "auto", spec_["pattern"], knobs, (side,),
-                         note=spec_.get("note", ""))
-            if row:
-                yield row
-
-    for spec_ in PLAN_BATCH:
-        fam = spec_["fam"]
-        knobs = {k: v for k, v in spec_.items()
-                 if k not in ("fam", "pattern", "note")}
-        row = _offer(fam, "auto", spec_["pattern"], knobs,
-                     tuple(TARGET_CELLS[fam]),
-                     note=spec_.get("note", ""))
-        if row:
-            yield row
+    yield from _auto_row_gen(_offer)
+    yield from _plan_batch_row_gen(_offer)
 
 
 def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
