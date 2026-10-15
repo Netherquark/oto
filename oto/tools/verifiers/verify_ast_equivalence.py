@@ -32,7 +32,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 
 #: The last commit before the package split. Every check compares against it, so
 #: "no behaviour change" is measured against one fixed point.

@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 from unittest import mock
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 ORIG = Path("/tmp/opencode/scheduler_orig.py")

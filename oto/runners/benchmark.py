@@ -31,6 +31,50 @@ from oto.runners.toolchain import resolve_rocm_paths
 from oto.tensile import config_writer
 
 
+def _refuse_reuse_of(phase_out_dir: Path) -> None:
+    """Refuse to benchmark into a directory that already holds results."""
+    existing = sorted(phase_out_dir.glob("2_BenchmarkData/*.csv"))
+    if existing:
+        raise FileExistsError(
+            f"phase output {phase_out_dir} already contains "
+            f"{len(existing)} benchmark CSV(s); re-running would overwrite "
+            f"them. Move the directory aside or use a fresh run id.")
+
+
+def _tensile_command(
+    driver,
+    tensile_bin: Path,
+    config_path: Path,
+    phase_out_dir: Path
+) -> Tuple[List[str], Dict[str, str]]:
+    """The Tensile argv and environment for one phase config."""
+    rocm = resolve_rocm_paths()
+    assembler = rocm["TENSILE_ASSEMBLER"]
+    if not os.path.isfile(assembler):
+        assembler = rocm["TENSILE_ASSEMBLER_FALLBACK"]
+
+    cmd = [
+        sys.executable,
+        str(tensile_bin),
+        "--arch", "gfx90c",
+        "--cxx-compiler", "hipcc",
+        "--c-compiler", "hipcc",
+    ]
+    if os.path.isfile(assembler):
+        cmd += ["--assembler", assembler]
+    cmd += [
+        "--client-build-path", str(driver.client_build_dir),
+        "--client-lock", str(driver.client_build_dir / "client.lock"),
+        "-d", "0",
+        str(config_path),
+        str(phase_out_dir)
+    ]
+    if os.environ.get("TENSILE_VERBOSE") in ("1", "true", "True"):
+        cmd.append("--verbose")
+
+    return cmd, driver._get_tensile_env()
+
+
 class BenchmarkMixin:
     """Phase execution and Tensile process management, mixed into TensileDriver."""
 
@@ -131,9 +175,7 @@ class BenchmarkMixin:
         phase_id = phase.get("phase_id", "unknown")
         label = phase.get("label", "unknown")
         dtype = phase.get("dtype", "S")
-        shapes = phase.get("shapes", [])
         schedule_name = phase.get("ScheduleName", "isa")
-        num_benchmarks = phase.get("NumBenchmarks", 8)
         config = phase.get("config", {})
         fp = phase.get("fp", fingerprint_config(config))
 
@@ -148,31 +190,37 @@ class BenchmarkMixin:
         phase_config_path = self.configs_dir / f"phase_{phase_id}.yaml"
         wrote, refusal = self._write_phase_config(phase_config_path, phase)
         if not wrote:
-            # Refused before any GPU work. Record it as a settled verdict so the
-            # completeness gate is not blocked forever by a phase that can never
-            # build, and so the reason stays attributable instead of surfacing as
-            # an opaque Tensile rejection later.
-            reason = f"{refusal} (refused before Tensile launch)"
-            print(f"Skipping {phase_id}: {reason}")
-            self.registry.append_record({
-                "run_id": self.run_dir.name,
-                "phase_id": phase_id,
-                "label": label,
-                "dtype": dtype,
-                "shapes": shapes,
-                "schedule_name": schedule_name,
-                "num_benchmarks": num_benchmarks,
-                "fp": fp,
-                "phase_key": tlib.phase_key(phase),
-                "config_fingerprint": tlib.config_fingerprint(phase),
-                "timestamp": datetime.now().isoformat(),
-                "status": "skipped_illegal",
-                "error": reason,
-            }, run_id=self.run_dir.name)
-            return {"status": "skipped_illegal", "reason": reason}
+            return self._refuse_phase(phase, fp, refusal)
 
         # Log start record
-        start_record = {
+        self.registry.append_record(self._start_record(phase, fp),
+                                    run_id=self.run_dir.name)
+
+        # Execute Tensile benchmark; the telemetry tag is applied inside.
+        return self._benchmark_phase(phase, fp, phase_config_path, run_dir)
+
+    def _refuse_phase(
+        self,
+        phase: Dict[str, Any],
+        fp: str,
+        refusal: str
+    ) -> Dict[str, Any]:
+        """Record a phase the config writer refused, before any GPU work.
+
+        A refused phase is settled as `skipped_illegal` so the completeness gate
+        is not blocked forever by a phase that can never build, and so the reason
+        stays attributable instead of surfacing as an opaque Tensile rejection
+        later.
+        """
+        phase_id = phase.get("phase_id", "unknown")
+        label = phase.get("label", "unknown")
+        dtype = phase.get("dtype", "S")
+        shapes = phase.get("shapes", [])
+        schedule_name = phase.get("ScheduleName", "isa")
+        num_benchmarks = phase.get("NumBenchmarks", 8)
+        reason = f"{refusal} (refused before Tensile launch)"
+        print(f"Skipping {phase_id}: {reason}")
+        self.registry.append_record({
             "run_id": self.run_dir.name,
             "phase_id": phase_id,
             "label": label,
@@ -181,19 +229,122 @@ class BenchmarkMixin:
             "schedule_name": schedule_name,
             "num_benchmarks": num_benchmarks,
             "fp": fp,
+            "phase_key": tlib.phase_key(phase),
+            "config_fingerprint": tlib.config_fingerprint(phase),
+            "timestamp": datetime.now().isoformat(),
+            "status": "skipped_illegal",
+            "error": reason,
+        }, run_id=self.run_dir.name)
+        return {"status": "skipped_illegal", "reason": reason}
+
+    def _start_record(self, phase: Dict[str, Any], fp: str) -> Dict[str, Any]:
+        """The `started` ledger record for a phase."""
+        record = {
+            "run_id": self.run_dir.name,
+            "phase_id": phase.get("phase_id", "unknown"),
+            "label": phase.get("label", "unknown"),
+            "dtype": phase.get("dtype", "S"),
+            "shapes": phase.get("shapes", []),
+            "schedule_name": phase.get("ScheduleName", "isa"),
+            "num_benchmarks": phase.get("NumBenchmarks", 8),
+            "fp": fp,
             "timestamp": datetime.now().isoformat(),
             "status": "started"
         }
-        start_record.update(self._named_cell_stamps(phase))
-        self.registry.append_record(start_record, run_id=self.run_dir.name)
+        record.update(self._named_cell_stamps(phase))
+        return record
 
-        # Tag the run-wide telemetry sampler with the active phase (started
-        # lazily once per run; kept alive across phases and iterations).
+    def _end_record(
+        self,
+        phase: Dict[str, Any],
+        fp: str,
+        status: str,
+        result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """The completion record, tagged with the phase's content identity.
+
+        `phase_id` alone is not safe for the next run's reuse decision (see
+        `_reusable_phase_keys`): it embeds parser-derived knobs.
+        """
+        record = {
+            "run_id": self.run_dir.name,
+            "phase_id": phase.get("phase_id", "unknown"),
+            "label": phase.get("label", "unknown"),
+            "dtype": phase.get("dtype", "S"),
+            "shapes": phase.get("shapes", []),
+            "schedule_name": phase.get("ScheduleName", "isa"),
+            "num_benchmarks": phase.get("NumBenchmarks", 8),
+            "fp": fp,
+            "timestamp": datetime.now().isoformat(),
+            "status": status,
+            "result": result
+        }
+        record.update(self._named_cell_stamps(phase))
+        record["phase_key"] = tlib.phase_key(phase)
+        record["config_fingerprint"] = tlib.config_fingerprint(phase)
+        return record
+
+    def _outcome_record(
+        self,
+        phase: Dict[str, Any],
+        fp: str,
+        status: str,
+        error: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """A minimal timeout/failure ledger record (no result payload)."""
+        record = {
+            "run_id": self.run_dir.name,
+            "phase_id": phase.get("phase_id", "unknown"),
+            "label": phase.get("label", "unknown"),
+            "fp": fp,
+            "timestamp": datetime.now().isoformat(),
+            "status": status
+        }
+        if error is not None:
+            record["error"] = error
+        return record
+
+    def _recover_completion(
+        self,
+        phase_id: str,
+        label: str,
+        fp: str,
+        result: Dict[str, Any]
+    ) -> None:
+        """Write the completion record if the benchmark returned without one."""
+        try:
+            status = "completed" if result.get("status") == "success" else "failed"
+            end_record = {
+                "run_id": self.run_dir.name,
+                "phase_id": phase_id,
+                "label": label,
+                "fp": fp,
+                "timestamp": datetime.now().isoformat(),
+                "status": status,
+                "result": result
+            }
+            self.registry.append_record(end_record, run_id=self.run_dir.name)
+            print(f"[RECOVERY] Logged {status} record for {phase_id} in finally block")
+        except Exception as e:
+            print(f"[RECOVERY ERROR] Failed to log completion record in finally: {e}")
+
+    def _benchmark_phase(
+        self,
+        phase: Dict[str, Any],
+        fp: str,
+        phase_config_path: Path,
+        run_dir: Path
+    ) -> Dict[str, Any]:
+        """Launch one phase's Tensile run and ledger its outcome.
+
+        Tags the run-wide telemetry sampler with the active phase for the
+        duration (started lazily once per run; kept alive across phases).
+        """
+        phase_id = phase.get("phase_id", "unknown")
         telemetry = self._ensure_telemetry()
         if telemetry is not None:
             telemetry.set_phase(phase_id)
 
-        # Execute Tensile benchmark
         result = None
         end_record_logged = False
         try:
@@ -204,77 +355,36 @@ class BenchmarkMixin:
             )
 
             status = "completed" if result.get("status") == "success" else "failed"
-            end_record = {
-                "run_id": self.run_dir.name,
-                "phase_id": phase_id,
-                "label": label,
-                "dtype": dtype,
-                "shapes": shapes,
-                "schedule_name": schedule_name,
-                "num_benchmarks": num_benchmarks,
-                "fp": fp,
-                "timestamp": datetime.now().isoformat(),
-                "status": status,
-                "result": result
-            }
-            end_record.update(self._named_cell_stamps(phase))
-            # Content identity for the next run's reuse decision (see
-            # _reusable_phase_keys). phase_id alone is not safe: it embeds
-            # parser-derived knobs.
-            end_record["phase_key"] = tlib.phase_key(phase)
-            end_record["config_fingerprint"] = tlib.config_fingerprint(phase)
-            self.registry.append_record(end_record, run_id=self.run_dir.name)
+            self.registry.append_record(
+                self._end_record(phase, fp, status, result),
+                run_id=self.run_dir.name)
             end_record_logged = True
             self._gpu_phases_run += 1
             return result
 
         except subprocess.TimeoutExpired:
             print(f"Phase {phase_id} timed out after {self.phase_timeout_s}s")
-            self.registry.append_record({
-                "run_id": self.run_dir.name,
-                "phase_id": phase_id,
-                "label": label,
-                "fp": fp,
-                "timestamp": datetime.now().isoformat(),
-                "status": "timeout"
-            }, run_id=self.run_dir.name)
+            self.registry.append_record(
+                self._outcome_record(phase, fp, "timeout"),
+                run_id=self.run_dir.name)
             end_record_logged = True
             return {"status": "timeout"}
 
         except Exception as e:
             print(f"Phase {phase_id} failed: {e}")
-            self.registry.append_record({
-                "run_id": self.run_dir.name,
-                "phase_id": phase_id,
-                "label": label,
-                "fp": fp,
-                "timestamp": datetime.now().isoformat(),
-                "status": "failed",
-                "error": str(e)
-            }, run_id=self.run_dir.name)
+            self.registry.append_record(
+                self._outcome_record(phase, fp, "failed", error=str(e)),
+                run_id=self.run_dir.name)
             end_record_logged = True
             return {"status": "failed", "error": str(e)}
+
         finally:
             if telemetry is not None:
                 telemetry.set_phase("")
-            
-            # Ensure completion record is written if result exists but record wasn't logged
             if result and not end_record_logged:
-                try:
-                    status = "completed" if result.get("status") == "success" else "failed"
-                    end_record = {
-                        "run_id": self.run_dir.name,
-                        "phase_id": phase_id,
-                        "label": label,
-                        "fp": fp,
-                        "timestamp": datetime.now().isoformat(),
-                        "status": status,
-                        "result": result
-                    }
-                    self.registry.append_record(end_record, run_id=self.run_dir.name)
-                    print(f"[RECOVERY] Logged {status} record for {phase_id} in finally block")
-                except Exception as e:
-                    print(f"[RECOVERY ERROR] Failed to log completion record in finally: {e}")
+                self._recover_completion(
+                    phase_id, phase.get("label", "unknown"), fp, result)
+
     def _tee_stream(self, stream, file, console, prefix: str) -> threading.Thread:
         """Pump a subprocess stream to its log file and the console, line by line."""
         def _pump():
@@ -310,119 +420,120 @@ class BenchmarkMixin:
         # a phase into a directory that already holds results would therefore
         # destroy that phase's measurements and its logs in place. Refuse, and
         # let the caller pick a fresh run id or archive the directory first.
-        existing = sorted(phase_out_dir.glob("2_BenchmarkData/*.csv"))
-        if existing:
-            raise FileExistsError(
-                f"phase output {phase_out_dir} already contains "
-                f"{len(existing)} benchmark CSV(s); re-running would overwrite "
-                f"them. Move the directory aside or use a fresh run id.")
+        _refuse_reuse_of(phase_out_dir)
 
-        rocm = resolve_rocm_paths()
-        assembler = rocm["TENSILE_ASSEMBLER"]
-        if not os.path.isfile(assembler):
-            assembler = rocm["TENSILE_ASSEMBLER_FALLBACK"]
-
-        cmd = [
-            sys.executable,
-            str(tensile_bin),
-            "--arch", "gfx90c",
-            "--cxx-compiler", "hipcc",
-            "--c-compiler", "hipcc",
-        ]
-        if os.path.isfile(assembler):
-            cmd += ["--assembler", assembler]
-        cmd += [
-            "--client-build-path", str(self.client_build_dir),
-            "--client-lock", str(self.client_build_dir / "client.lock"),
-            "-d", "0",
-            str(config_path),
-            str(phase_out_dir)
-        ]
-        if os.environ.get("TENSILE_VERBOSE") in ("1", "true", "True"):
-            cmd.append("--verbose")
-
-        env = self._get_tensile_env()
+        cmd, env = _tensile_command(self, tensile_bin, config_path, phase_out_dir)
 
         # If Tensile binary exists, execute real CLI
-        if tensile_bin.exists():
-            log_out = open(phase_out_dir / "stdout.log", "w")
-            log_err = open(phase_out_dir / "stderr.log", "w")
-
-            proc = subprocess.Popen(
-                cmd,
-                env=env,
-                cwd=str(self.tensile_root),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                preexec_fn=os.setsid
-            )
-            self._current_proc = proc
-
-            tee_workers = [
-                self._tee_stream(proc.stdout, log_out, sys.stdout, f"[tensile] "),
-                self._tee_stream(proc.stderr, log_err, sys.stderr, f"[tensile:err] "),
-            ]
-
-            start_t = time.time()
-            skipped = False
-            
-            try:
-                while proc.poll() is None and not self._stop_requested:
-                    # Check timeout
-                    if time.time() - start_t > timeout:
-                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                        raise subprocess.TimeoutExpired(cmd, timeout)
-
-                    # Wait up to the poll interval for 's'/'e'/'q' (no-op off a TTY).
-                    key = self._read_key()
-                    if key == 's':
-                        print("\n[USER ACTION] 's' pressed: Skipping current phase...")
-                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                        skipped = True
-                        break
-                    elif key == 'e':
-                        print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
-                        self._finish_after_iteration = True
-                    elif key == 'q':
-                        print("\n[USER ACTION] 'q' pressed: Quitting run...")
-                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                        self._stop_requested = True
-                        break
-
-                if self._stop_requested and proc.poll() is None:
-                    try:
-                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                    except Exception:
-                        pass
-
-                rc = proc.poll() if not skipped else -1
-            finally:
-                self._current_proc = None
-                proc.wait()
-                for w in tee_workers:
-                    w.join(timeout=5)
-                log_out.close()
-                log_err.close()
-
-            if skipped:
-                return {"status": "skipped_by_user", "returncode": -1}
-
-            # Look for 2_BenchmarkData/*.csv or 00_Final.csv
-            bench_data_dir = phase_out_dir / "2_BenchmarkData"
-            csv_files = list(bench_data_dir.glob("*.csv")) if bench_data_dir.exists() else []
-
-            return {
-                "status": "success" if rc == 0 else "failed",
-                "returncode": rc,
-                "benchmark_path": str(bench_data_dir),
-                "csv_count": len(csv_files)
-            }
-        else:
+        if not tensile_bin.exists():
             # Fallback path if Tensile binary is not present in test env
             return {
                 "status": "simulated",
                 "benchmark_path": str(phase_out_dir / "2_BenchmarkData"),
                 "num_benchmarks": 8
             }
+
+        proc, tee_workers, log_out, log_err = self._spawn_tensile(
+            cmd, env, phase_out_dir)
+
+        rc, skipped = self._supervise_tensile(
+            proc, cmd, timeout, tee_workers, log_out, log_err)
+
+        if skipped:
+            return {"status": "skipped_by_user", "returncode": -1}
+
+        # Look for 2_BenchmarkData/*.csv or 00_Final.csv
+        bench_data_dir = phase_out_dir / "2_BenchmarkData"
+        csv_files = list(bench_data_dir.glob("*.csv")) if bench_data_dir.exists() else []
+
+        return {
+            "status": "success" if rc == 0 else "failed",
+            "returncode": rc,
+            "benchmark_path": str(bench_data_dir),
+            "csv_count": len(csv_files)
+        }
+
+    def _spawn_tensile(
+        self,
+        cmd: List[str],
+        env: Dict[str, str],
+        phase_out_dir: Path
+    ) -> Tuple[Any, List[threading.Thread], Any, Any]:
+        """Open the phase logs, spawn Tensile detached, tee both streams."""
+        log_out = open(phase_out_dir / "stdout.log", "w")
+        log_err = open(phase_out_dir / "stderr.log", "w")
+
+        proc = subprocess.Popen(
+            cmd,
+            env=env,
+            cwd=str(self.tensile_root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            preexec_fn=os.setsid
+        )
+        self._current_proc = proc
+
+        tee_workers = [
+            self._tee_stream(proc.stdout, log_out, sys.stdout, f"[tensile] "),
+            self._tee_stream(proc.stderr, log_err, sys.stderr, f"[tensile:err] "),
+        ]
+        return proc, tee_workers, log_out, log_err
+
+    def _supervise_tensile(
+        self,
+        proc,
+        cmd: List[str],
+        timeout: int,
+        tee_workers: List[threading.Thread],
+        log_out,
+        log_err
+    ) -> Tuple[int, bool]:
+        """Poll a live Tensile proc for timeout/keys, then drain and reap it.
+
+        Returns (returncode, skipped); raises TimeoutExpired once the process
+        group has been killed and the tee threads drained.
+        """
+        start_t = time.time()
+        skipped = False
+
+        try:
+            while proc.poll() is None and not self._stop_requested:
+                # Check timeout
+                if time.time() - start_t > timeout:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    raise subprocess.TimeoutExpired(cmd, timeout)
+
+                # Wait up to the poll interval for 's'/'e'/'q' (no-op off a TTY).
+                key = self._read_key()
+                if key == 's':
+                    print("\n[USER ACTION] 's' pressed: Skipping current phase...")
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    skipped = True
+                    break
+                elif key == 'e':
+                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
+                    self._finish_after_iteration = True
+                elif key == 'q':
+                    print("\n[USER ACTION] 'q' pressed: Quitting run...")
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    self._stop_requested = True
+                    break
+
+            if self._stop_requested and proc.poll() is None:
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except Exception:
+                    pass
+
+            rc = proc.poll() if not skipped else -1
+        finally:
+            self._current_proc = None
+            proc.wait()
+            for w in tee_workers:
+                w.join(timeout=5)
+            log_out.close()
+            log_err.close()
+
+        return rc, skipped

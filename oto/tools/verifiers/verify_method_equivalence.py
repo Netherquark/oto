@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 
 NEW = [
     "oto/ledger/registry_core.py", "oto/ledger/queries.py",
@@ -58,7 +58,23 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                 "validate_config": "verified differentially (128k cases)",
                 "main": "decomposed into the stage handlers in cli.py",
                 "run_gfx900_reference": "_resume_deck + _fresh_deck; proved by "
-                                     "test_reference_tiers/test_auto_reference_floor"}
+                                     "test_reference_tiers/test_auto_reference_floor",
+                "execute_phase": "decomposed into _refuse_phase/_start_record/"
+                                 "_benchmark_phase and the _*_record builders; "
+                                 "proved by test_phase1_integration",
+                "_run_tensile_benchmark": "decomposed into _refuse_reuse_of/"
+                                          "_tensile_command/_spawn_tensile/"
+                                          "_supervise_tensile; proved by "
+                                          "test_measurement_integrity",
+                "__init__": "decomposed into _init_* helpers; proved by the "
+                            "tests that construct the driver",
+                "generate_acceptance_report": "decomposed into the report "
+                                              "section builders; proved "
+                                              "byte-for-byte by "
+                                              "verify_report_html.py",
+                "synthesize_library": "decomposed into _emit_* helpers; proved "
+                                      "by test_*synthes*",
+                }
 
 # Modules to normalise: replace these substrings before comparing so the moved
 # module paths do not read as differences.
