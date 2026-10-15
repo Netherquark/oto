@@ -210,7 +210,141 @@ AUTO_EXPLICIT: Dict[str, List[Dict[str, Any]]] = {
 # FAMILY_BYTES_PER_ELEMENT), so even pad 1 would overflow the 16 KB/WG budget.
 # HH GSU2 stays banned here as everywhere (§13.4); HH wave-fill runs through
 # the 64x64 alternates that TARGET_CELLS now includes for HH:256.
-PLAN_BATCH: List[Dict[str, Any]] = []
+PLAN_BATCH: List[Dict[str, Any]] = [
+    # 2026-10-16 Route G — the CC:256 steal (potential_configs.md §0 R8).
+    # CC:256 is the ONLY cell in the corpus that is a genuine shortcoming: native
+    # 210.8 vs spoof 212.3 (TIE, −0.7 %) while both sit at 19 % of the CC
+    # realistic ceiling, and native's typical kernel is 63.6 % below spoof's
+    # (median basis: 50.9 vs 139.8). Every other ORANGE cell is a ceiling
+    # artefact where native already wins outright.
+    #
+    # Stolen from the gfx900 floor winner (cells_resolved.json):
+    #   MacroTile 64x64, ThreadTile 4x4, VectorWidth 2, WorkGroup 16x16x1,
+    #   WorkGroupMapping 4, GlobalSplitU 1, DepthU 8,
+    #   GlobalLoadVectorWidthA/B = 2/2   (measured 212.34)
+    # The native winner is the same geometry one area step down (MT 32x32,
+    # WG 8x8x1, no GLVW) at 193.77 — so the gap is tile AREA + load width, not
+    # contraction direction (both are Ailk_Bjlk/NT).
+    #
+    # Port record (gfx900 → gfx90c): MT, WG and GLVW are taken verbatim because
+    # they are self-consistent consequences of MT/TT/VW rather than vendor magic
+    # numbers. Everything else is re-swept because the source part had 60 CUs and
+    # HBM2: StaggerU (32 was a 56-CU raster choice), WGM (7 CUs wants the
+    # negative I/J-swap family), LdsPad (CC never pads in the floor — a blind
+    # spot shared by Tensile's own Perf/*.yaml), AF0EM/AF1EM (Tensile's recipes
+    # say 4 for single; the floor ships 1, i.e. no assertion).
+    #
+    # All 15 rows below were gate-verified CPU-only on 2026-10-16 through BOTH
+    # validate_config and ldspad_feasible at LDS 16 KB/WG (half the budget).
+    # NOTE: AssertFree* is an ASSERTION, not a hint — a wrong value gives
+    # silently wrong results, so 256 (divisible by 4) is the precondition and
+    # the first AF row must be checked against a reference GEMM before trusted.
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4,
+     "note": "R8: CC:256 steal, floor winner verbatim (gfx900 212.34)"},
+
+    # --- the three verbatim knobs, held; each new axis probed in isolation ---
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LdsPadB": 1,
+     "note": "R8: steal + LdsPadB=1 (bank-conflict pad, CC never pads in floor)"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LdsPadB": 2,
+     "note": "R8: steal + LdsPadB=2"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LdsPadB": 4,
+     "note": "R8: steal + LdsPadB=4"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LdsPadA": 2,
+     "note": "R8: steal + LdsPadA=2"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LdsPadA": 2, "LdsPadB": 2,
+     "note": "R8: steal + LdsPadA=2 LdsPadB=2"},
+
+    # --- the assertion lever: unlocks UseSgprForGRO (VGPR relief) ---
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4,
+     "AssertFree0ElementMultiple": 4, "AssertFree1ElementMultiple": 4,
+     "note": "R8: steal + AF0EM/AF1EM=4 (Tensile's own recipe for single; "
+             "unlocks UseSgprForGRO). 256 is 4-divisible; verify vs reference."},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "AssertFree0ElementMultiple": 4,
+     "AssertFree1ElementMultiple": 4, "LdsPadB": 2,
+     "note": "R8: steal + AF4/4 + LdsPadB=2 (the two compound levers)"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "AssertFree0ElementMultiple": 4,
+     "AssertFree1ElementMultiple": 4, "LdsPadB": 2,
+     "PrefetchGlobalRead": 0,
+     "note": "R8: steal + AF4/4 + LdsPadB=2 + PGR=0 (register relief)"},
+
+    # --- the 7-CU occupancy cliff: fill waves without shrinking the tile ---
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "LocalSplitU": 2,
+     "note": "R8: steal + LocalSplitU=2 (wave-fill at fixed tile area; the "
+             "legal complex equivalent of GSU, which the gate refuses)"},
+
+    # --- WGM: 8 is a 56-CU artefact; probe the negative I/J-swap family ---
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 8,
+     "note": "R8: steal + WGM=8 (the floor's own dominant value, re-probed "
+             "because 8 asks for 8 J-column workgroups on a 7-CU part)"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": -4,
+     "note": "R8: steal + WGM=−4 (negative I/J-swap family, never generated)"},
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "StaggerU": 8, "StaggerUStride": 128,
+     "note": "R8: steal + StaggerU=8/Stride=128 (the live stride axis: 256 "
+             "silently rounds to DepthU*bpe, 128 is genuinely distinct)"},
+
+    # --- the compound: all four levers on the stolen geometry at once ---
+    {"fam": "CC", "pattern": "Ailk_Bjlk",
+     "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+     "WorkGroupMapping": 4, "AssertFree0ElementMultiple": 4,
+     "AssertFree1ElementMultiple": 4, "LdsPadB": 2,
+     "PrefetchGlobalRead": 0, "LocalSplitU": 2,
+     "note": "R8: FULL compound — steal + AF4/4 + LdsPadB2 + PGR0 + LSU2. "
+             "This is the single best candidate to beat CC:256."},
+]
 
 def _pad_rows(fam: str, pattern: str, tile: str, tt: str, vw: int, du: int,
               note: str) -> List[Dict[str, Any]]:
