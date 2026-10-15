@@ -262,6 +262,50 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
             budget_remaining=budget_remaining
         )
 
+    def _mutate_cell(
+        self,
+        cell_key: str,
+        winner_info: Dict[str, Any],
+        mutation_budget: int,
+        retired_cells: List[str],
+        lattice_fallbacks: List[str],
+    ) -> Tuple[List[CandidateConfig], List[Dict[str, Any]], int]:
+        """Mutate one cell's winner; return (new_candidates, replayed, rejected_count)."""
+        family = str(winner_info.get("family") or "").upper()
+        data_type = FAMILY_DTYPE_CHAR.get(
+            family, str(winner_info.get("dtype", "S")).upper())
+        shape = winner_info["shape"]
+        winner_config = winner_info.get("config", {})
+
+        if winner_info.get("is_below_ceiling") is False:
+            return [], [], 0
+
+        mutants, sweep_shapes, cell_state = self._prepare_mutants(
+            cell_key, family, shape, winner_config, mutation_budget,
+            retired_cells, lattice_fallbacks
+        )
+
+        new_candidates: List[CandidateConfig] = []
+        replayed: List[Dict[str, Any]] = []
+        rejected_non_novel = 0
+        ungraded_cells: List[str] = []
+
+        for i, mutant in enumerate(mutants):
+            phase_id = f"phase_auto_{self.iteration}_{cell_key}_{i}"
+            label = f"mutate_{family.lower() or cell_key}_{i}"
+
+            result = self._process_mutant(
+                phase_id, label, family, shape,
+                sweep_shapes, cell_state, mutant, winner_info,
+                new_candidates, replayed, ungraded_cells, cell_key
+            )
+            if result == "rejected_non_novel":
+                rejected_non_novel += 1
+            elif result == "invalid":
+                continue
+
+        return new_candidates, replayed, rejected_non_novel
+
     def mutate_and_feed(
         self,
         winners: Dict[str, Dict[str, Any]],
@@ -284,34 +328,16 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         ungraded_cells: List[str] = []
 
         for cell_key, winner_info in winners.items():
-            family = str(winner_info.get("family") or "").upper()
-            data_type = FAMILY_DTYPE_CHAR.get(
-                family, str(winner_info.get("dtype", "S")).upper())
-            shape = winner_info["shape"]
-            winner_config = winner_info.get("config", {})
+            cands, repl, rejected = self._mutate_cell(
+                cell_key, winner_info, mutation_budget,
+                retired_cells, lattice_fallbacks)
+            new_candidates.extend(cands)
+            replayed.extend(repl)
+            rejected_non_novel += rejected
 
             if winner_info.get("is_below_ceiling") is False:
                 settled_cells.append(cell_key)
-                continue
-
-            mutants, sweep_shapes, cell_state = self._prepare_mutants(
-                cell_key, family, shape, winner_config, mutation_budget,
-                retired_cells, lattice_fallbacks
-            )
-
-            for i, mutant in enumerate(mutants):
-                phase_id = f"phase_auto_{self.iteration}_{cell_key}_{i}"
-                label = f"mutate_{family.lower() or cell_key}_{i}"
-
-                result = self._process_mutant(
-                    phase_id, label, family, data_type, shape,
-                    sweep_shapes, cell_state, mutant, winner_info,
-                    new_candidates, replayed, ungraded_cells, cell_key
-                )
-                if result == "rejected_non_novel":
-                    rejected_non_novel += 1
-                elif result == "invalid":
-                    continue
+            # cell_state is tracked in _process_mutant via ungraded_cells
 
         if self.mutator and replayed:
             self.mutator.write_overlay(replayed, run_id=self.run_id)

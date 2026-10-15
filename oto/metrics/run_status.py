@@ -397,13 +397,11 @@ def _price_plan(plan: RunPlan, minutes: Optional[float],
     return est
 
 
-def build_report(base: Path, run_id: Optional[str],
-                 plan: RunPlan,
-                 now: Optional[datetime] = None) -> Dict[str, Any]:
-    """Build the status report for a run.
-
-    `now` overrides the wall clock used to age a still-running head run.
-    """
+def _load_report_inputs(base: Path, run_id: Optional[str]) -> Tuple[Dict[str, Any],
+                                                                   str,
+                                                                   Dict[str, Any],
+                                                                   List[str]]:
+    """Load registry, corpus, manifest and the chain."""
     db = base / DB_REL
     if not db.exists():
         raise SystemExit(f"no registry at {db}")
@@ -424,16 +422,60 @@ def build_report(base: Path, run_id: Optional[str],
         _resolve_latest_tags(latest, unkeyed, tag_to_key)
     tally, decided, stale_ids = _tally_chain(latest, unkeyed)
 
+    return {
+        "chain": chain,
+        "status_by_run": status_by_run,
+        "started_by_run": started_by_run,
+        "completed_by_run": completed_by_run,
+        "latest": latest,
+        "unkeyed": unkeyed,
+        "first_start": first_start,
+        "last_event": last_event,
+        "manifest": manifest,
+        "corpus": corpus,
+        "tag_to_key": tag_to_key,
+        "tally": tally,
+        "decided": decided,
+        "stale_ids": stale_ids,
+    }, chain, status_by_run, started_by_run, completed_by_run, latest, unkeyed, first_start, last_event, manifest, corpus, tag_to_key, tally, decided, stale_ids
+
+
+def _plan_inputs(base: Path, plan: RunPlan,
+                 corpus, manifest) -> Tuple[int, Any, int, float]:
+    """Deck size, reference units, tuning units and cost rate."""
     deck_size = _get_deck_size(base, plan)
     ref_units, breakdown = _reference_unit_count(plan, manifest, corpus)
     tune_units = _tuning_unit_count(plan, deck_size)
-
     rate, n_samples, used = PhaseCost(db).sample()
     minutes = plan.minutes_per_phase if plan.minutes_per_phase else rate
+    return deck_size, ref_units, breakdown, tune_units, rate, minutes, n_samples, used
 
+
+def _timing_inputs(chain, started_by_run, completed_by_run, first_start, last_event, now):
+    """Elapsed and chain span minutes."""
     elapsed = _calculate_elapsed(chain, started_by_run, completed_by_run, now)
     chain_span = _calculate_chain_span(chain, first_start, last_event,
                                        started_by_run, completed_by_run)
+    return elapsed, chain_span
+
+
+def build_report(base: Path, run_id: Optional[str],
+                 plan: RunPlan,
+                 now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Build the status report for a run.
+
+    `now` overrides the wall clock used to age a still-running head run.
+    """
+    ledger_data, chain, status_by_run, started_by_run, completed_by_run, \
+        latest, unkeyed, first_start, last_event, manifest, corpus, \
+        tag_to_key, tally, decided, stale_ids = _load_report_inputs(base, run_id)
+
+    deck_size, ref_units, breakdown, tune_units, rate, minutes, n_samples, used = \
+        _plan_inputs(base, plan, corpus, manifest)
+
+    elapsed, chain_span = _timing_inputs(chain, started_by_run,
+                                         completed_by_run, first_start,
+                                         last_event, now)
 
     tier_rows, ref_done, ref_total, ref_remaining = _tier_rows(
         corpus, latest, plan)
