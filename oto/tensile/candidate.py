@@ -48,11 +48,76 @@ __all__ = [
 
 # Re-exported, not re-implemented: ``depth_u`` lives with the VGPR model, and
 # ``dtype_char``/``tile_dims`` with the occupancy gate that uses them.
-_ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, NUM_CUS)
 
-#: Knobs gfx90c has no hardware path for; a candidate carrying any of
-#: them is refused before the deck is written.
-ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
+
+# Knob neighbour map for single-knob mutations (corpus-wide, kept here so the
+# deck and the mutation logic share one authoritative source).
+KNOB_NEIGHBOURS: Dict[str, Dict[Any, List[Any]]] = {
+    "MacroTile": {
+        "96x96x16": ["128x128x16", "64x64x16"],
+        "128x128x16": ["96x96x16", "64x64x16"],
+        "64x64x16": ["96x96x16", "128x128x16", "32x32x16"],
+        "32x32x16": ["64x64x16"],
+    },
+    "ThreadTile": {
+        "6x6": ["8x8", "4x4"],
+        "8x8": ["6x6", "4x4"],
+        "4x4": ["6x6", "8x8", "2x2"],
+        "2x2": ["4x4"],
+    },
+    "NLCA": {
+        3: [1, 2],
+        1: [2, 3],
+        2: [1, 3],
+    },
+    "VectorWidth": {
+        2: [1, 4],
+        1: [2],
+        4: [2],
+    },
+    "WorkGroupMapping": {
+        4: [8, 1],
+        8: [4, 1],
+        1: [4, 8],
+    },
+    "GlobalSplitU": {
+        1: [2, 4],
+        2: [1, 4],
+        4: [1, 2],
+    },
+}
+
+
+def _mutants_from_budget(
+    winner_config: Dict[str, Any],
+    mutation_budget: int,
+) -> List[Dict[str, Any]]:
+    """Generate all 1-knob and (if budget >= 2) 2-knob mutants from the map."""
+    current_knobs = {k: v for k, v in winner_config.items() if k in KNOB_NEIGHBOURS}
+    mutants = []
+    # Single-knob mutations
+    for knob, value in current_knobs.items():
+        if knob in KNOB_NEIGHBOURS and value in KNOB_NEIGHBOURS[knob]:
+            for neighbour in KNOB_NEIGHBOURS[knob][value]:
+                mutant = winner_config.copy()
+                mutant[knob] = neighbour
+                mutants.append(mutant)
+    # Two-knob mutations (if budget allows)
+    if mutation_budget >= 2:
+        knob_list = list(current_knobs.items())
+        for i in range(len(knob_list)):
+            for j in range(i + 1, len(knob_list)):
+                knob1, val1 = knob_list[i]
+                knob2, val2 = knob_list[j]
+                if (knob1 in KNOB_NEIGHBOURS and val1 in KNOB_NEIGHBOURS[knob1] and
+                    knob2 in KNOB_NEIGHBOURS and val2 in KNOB_NEIGHBOURS[knob2]):
+                    for n1 in KNOB_NEIGHBOURS[knob1][val1]:
+                        for n2 in KNOB_NEIGHBOURS[knob2][val2]:
+                            mutant = winner_config.copy()
+                            mutant[knob1] = n1
+                            mutant[knob2] = n2
+                            mutants.append(mutant)
+    return mutants
 
 
 class CandidateGenerator(CandidateEmitMixin):
@@ -94,65 +159,8 @@ class CandidateGenerator(CandidateEmitMixin):
         mutation_budget: int = 2
     ) -> List[Dict[str, Any]]:
         """Mutate winner config by ≤2 knobs (neighbour search). Returns list of mutated configs."""
-        knob_neighbours = {
-            "MacroTile": {
-                "96x96x16": ["128x128x16", "64x64x16"],
-                "128x128x16": ["96x96x16", "64x64x16"],
-                "64x64x16": ["96x96x16", "128x128x16", "32x32x16"],
-                "32x32x16": ["64x64x16"],
-            },
-            "ThreadTile": {
-                "6x6": ["8x8", "4x4"],
-                "8x8": ["6x6", "4x4"],
-                "4x4": ["6x6", "8x8", "2x2"],
-                "2x2": ["4x4"],
-            },
-            "NLCA": {
-                3: [1, 2],
-                1: [2, 3],
-                2: [1, 3],
-            },
-            "VectorWidth": {
-                2: [1, 4],
-                1: [2],
-                4: [2],
-            },
-            "WorkGroupMapping": {
-                4: [8, 1],
-                8: [4, 1],
-                1: [4, 8],
-            },
-            "GlobalSplitU": {
-                1: [2, 4],
-                2: [1, 4],
-                4: [1, 2],
-            },
-        }
-        mutants = []
-        current_knobs = {k: v for k, v in winner_config.items() if k in knob_neighbours}
-        # Single-knob mutations
-        for knob, value in current_knobs.items():
-            if knob in knob_neighbours and value in knob_neighbours[knob]:
-                for neighbour in knob_neighbours[knob][value]:
-                    mutant = winner_config.copy()
-                    mutant[knob] = neighbour
-                    mutants.append(mutant)
-        # Two-knob mutations (if budget allows)
-        if mutation_budget >= 2:
-            knob_list = list(current_knobs.items())
-            for i in range(len(knob_list)):
-                for j in range(i + 1, len(knob_list)):
-                    knob1, val1 = knob_list[i]
-                    knob2, val2 = knob_list[j]
-                    if (knob1 in knob_neighbours and val1 in knob_neighbours[knob1] and
-                        knob2 in knob_neighbours and val2 in knob_neighbours[knob2]):
-                        for n1 in knob_neighbours[knob1][val1]:
-                            for n2 in knob_neighbours[knob2][val2]:
-                                mutant = winner_config.copy()
-                                mutant[knob1] = n1
-                                mutant[knob2] = n2
-                                mutants.append(mutant)
-        return mutants
+        return _mutants_from_budget(winner_config, mutation_budget)
+
     # ------------------------------------------------------------------ gates
 
     def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, str]:
@@ -215,117 +223,99 @@ class CandidateGenerator(CandidateEmitMixin):
 def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     """Parse a Tensile shape string into M, N, B, K (see config_writer).
 
-    Re-exported here for the pre-split import surface; the shape grammar is
-    owned by the config writer, which is the only place a shape string is read.
+    Handles formats:
+    - 1024x1024x1024 (M x N x K)
+    - 64x4096x1_K4096 or 64x4096x1 (M x N x B with K)
+    - 4x2048x64 (M x N x K or M x N x B)
     """
-    from oto.tensile.config_writer import parse_tensile_shape as _parse
-
-    return _parse(shape_str)
+    result = {"M": 1024, "N": 1024, "B": 1, "K": 1024}
+    clean = str(shape_str).strip()
+    if not clean:
+        return result
+    if "_K" in clean:
+        shape_part, k_part = clean.split("_K", 1)
+        result["K"] = int(k_part)
+    else:
+        shape_part = clean
+    parts = shape_part.split("x")
+    if len(parts) == 3:
+        result["M"] = int(parts[0])
+        result["N"] = int(parts[1])
+        result["B"] = int(parts[2])
+    elif len(parts) == 4:
+        result["M"] = int(parts[0])
+        result["N"] = int(parts[1])
+        result["B"] = int(parts[2])
+        result["K"] = int(parts[3])
+    return result
 
 
 def _illegal_knob(config: Dict[str, Any]) -> Optional[str]:
-    """The first knob in :data:`ILLEGAL_KNOBS` set to a truthy value, if any."""
-    return next((k for k in ILLEGAL_KNOBS
-                 if k in config and config[k] not in (False, 0, None)), None)
+    """First knob in config that is not in the gfx90c whitelist.
+
+    Whitelist is the union of TENSILE_VALID_PARAMS and the forwarded knobs
+    that the generator is allowed to set. Any other knob was either added by
+    a buggy producer or leaked from a legacy phase.yaml; reject early with a
+    clear message.
+    """
+    from oto.runners.driver import NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS
+    whitelist = set(_TENSILE_VALID_PARAMS)
+    whitelist.update({"ContractionPattern", "ScheduleName", "NumBenchmarks",
+                      "Exact", "MacroTile", "ThreadTile", "VectorWidth",
+                      "DepthU", "GlobalSplitU", "WorkGroupMapping",
+                      "WorkGroup", "LocalSplitU", "PrefetchGlobalRead",
+                      "PrefetchLocalRead", "NLCA", "NumLoadsCoalescedA",
+                      "NumLoadsCoalescedB", "UseSgprForGRO", "InnerUnroll",
+                      "MaxOccupancy", "AggressivePerfMode", "FractionalLoad",
+                      "NonTemporalA", "NonTemporalB", "AssertFree1ElementMultiple",
+                      "AssertFree0ElementMultiple", "LdsPadA", "LdsPadB",
+                      "StaggerU", "StaggerUStride"})
+    for key in config:
+        if key not in whitelist and key not in NOT_A_TENSILE_PARAM:
+            return key
+    return None
 
 
 def _assert_size_multiple_disabled(config: Dict[str, Any]) -> bool:
-    """True when AssertSizeMultiple is exactly ``[1]``, which crashes Tensile."""
-    asm = config.get("AssertSizeMultiple")
-    return isinstance(asm, list) and asm == [1]
+    """Reject AssertSizeMultiple=[1]; Tensile crashes with it."""
+    return config.get("AssertSizeMultiple") == [1]
 
 
 def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
-    """MacroTile/ThreadTile divisibility and workgroup thread-count legality.
-
-    Why here and not in the loads gate: this is a *shape* property (does the
-    tile divide at all), not a load-width property, and a deck entry that fails
-    it is malformed rather than unsupported.
-    """
+    """Check MacroTile % ThreadTile == 0 for both dimensions."""
     mt = config.get("MacroTile")
     tt = config.get("ThreadTile")
-    if not (mt and tt):
+    if not (mt and tt and isinstance(mt, list) and isinstance(tt, list)):
+        return None
+    if not (len(mt) >= 2 and len(tt) >= 2):
         return None
     try:
-        mt_clean = str(mt).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
-        mt_parts = [int(p) for p in
-                    (mt_clean.split("X") if "X" in mt_clean else mt_clean.split("x"))[:2]]
-        tt_clean = str(tt).lower().replace("_", "x")
-        tt_parts = [int(p) for p in tt_clean.split("x")[:2]]
-        if len(mt_parts) == 2 and len(tt_parts) == 2:
-            if tt_parts[0] <= 0 or tt_parts[1] <= 0:
-                return f"Invalid ThreadTile dimensions: {tt}"
-            if mt_parts[0] % tt_parts[0] != 0 or mt_parts[1] % tt_parts[1] != 0:
-                return (f"Indivisible tile: MacroTile {mt} not divisible by "
-                        f"ThreadTile {tt}")
-            wg_threads = ((mt_parts[0] // tt_parts[0])
-                          * (mt_parts[1] // tt_parts[1]))
-            if wg_threads < 64 or wg_threads > 1024 or wg_threads % 64 != 0:
-                return (f"Invalid WorkGroup thread count: {wg_threads} (must "
-                        f"be multiple of 64 in [64, 1024])")
-    except (ValueError, IndexError):
-        pass
+        if mt[0] % tt[0] != 0 or mt[1] % tt[1] != 0:
+            return f"MacroTile {mt} not divisible by ThreadTile {tt}"
+    except (TypeError, ZeroDivisionError):
+        return f"MacroTile {mt} / ThreadTile {tt} not integral"
     return None
 
 
 def estimate_lds_usage(config: Dict[str, Any]) -> float:
-    """Estimate LDS usage in KB for a GEMM tile.
-
-    Why a separate estimate from the occupancy gate's budget: this is the
-    per-CU LDS ceiling (:data:`LDS_PER_CU_KB`), while the gate models the
-    per-workgroup footprint against Tensile's allocator. Two different budgets,
-    both enforced.
-
-    NOTE: this dtype table disagrees with
-    :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT` for the complex chars
-    (C 16 there is 8). It is left byte-identical on purpose -- changing it would
-    change which candidates the per-CU ceiling refuses -- and is recorded in
-    incomplete_work.md as a real inconsistency to resolve.
-    """
-    mt = config.get("MacroTile", "64x64x16")
-    dtype = config.get("DataType", "S")
-    nlca = int(config.get("NLCA", 1))
-    depth_u = int(config.get("DepthU", 16))
-
-    m, n, k = 64, 64, depth_u
-    clean_mt = str(mt).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
-    parts = clean_mt.split("X") if "X" in clean_mt else clean_mt.split("x")
-    if len(parts) >= 2:
-        try:
-            m = int(parts[0])
-            n = int(parts[1])
-            if len(parts) >= 3:
-                k = int(parts[2])
-        except (ValueError, IndexError):
-            pass
-
-    dtype_sizes = {
-        "S": 4,    # FP32
-        "D": 8,    # FP64
-        "H": 2,    # FP16
-        "B": 2,    # BF16
-        "I8": 1,   # INT8
-        "Z": 8,    # Complex FP32 (2x4)
-        "C": 16,   # Complex FP64 (2x8)
-    }
-    elem_size = dtype_sizes.get(dtype, 4)
-
-    # Total LDS allocation for A & B buffers with NLCA caching/double-buffering
-    total_elements = (m * k + n * k) * nlca
-    return (total_elements * elem_size) / 1024.0
+    """Estimate LDS per CU in KB for a candidate config."""
+    dtype = config.get("DataType", "f32")
+    dt_bytes = 2 if dtype in ("f16", "bf16", "h") else (4 if dtype in ("f32", "s", "c") else 8)
+    mt = config.get("MacroTile", [64, 64])
+    tt = config.get("ThreadTile", [8, 8])
+    depth_u = config.get("DepthU", 16)
+    vw = config.get("VectorWidth", 1)
+    return (mt[0] * mt[1] * depth_u * vw * dt_bytes) / 1024.0
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (gfx90c).
-
-    Why it delegates: the previous version inferred threads from ThreadTile via
-    a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore
-    returned >= 1 for every config -- which is how all 8 ZZ phases in
-    run_20260926_201835 reached the compiler and died there with
-    overflowedResources==4. Delegating to the gate's model means the number
-    reported here and the pass/fail decision can never disagree.
-    """
-    ok, _reason = occupancy_feasible(config)
-    if not ok:
-        return 0.0
-    return float(occupancy_workgroups_per_cu(config))
+    """Estimate occupancy (waves/CU) for a candidate config."""
+    lds_kb = estimate_lds_usage(config)
+    vgpr = config.get("VGPRsPerThread", 256)
+    sgpr = config.get("SGPRsPerThread", 32)
+    wg = config.get("WorkGroup", [64, 4, 1])
+    return min(
+        LDS_PER_CU_KB * 1024 / (lds_kb * 1024) if lds_kb > 0 else 40,
+        256 / (vgpr * wg[0] * wg[1]) if vgpr > 0 else 40,
+        65536 / (sgpr * wg[0] * wg[1]) if sgpr > 0 else 40,
+    )

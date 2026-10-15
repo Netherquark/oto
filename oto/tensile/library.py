@@ -49,45 +49,62 @@ __all__ = [
 ]
 
 
-def _scan_dat_library() -> Dict[str, Any]:
-    """Scan installed gfx900 TensileLibrary into manifest dict.
+def _find_shipped_dats(prefix: Path) -> List[Path]:
+    """Candidate .dat files under one ROCm prefix."""
+    return find_gfx900_dat_files(prefix)
 
-    """
-    active_rocm = _resolve_rocm()
-    prefixes = _all_rocm_prefixes()
-    scanned: List[Dict[str, Any]] = []
+
+def _parse_dat_filename(df: Path) -> Optional[Tuple[str, str]]:
+    """(family, pattern) from a TensileLibrary dat filename, or None."""
+    parts = df.name.split("_")
+    try:
+        type_idx = parts.index("Type")
+        end_t = parts.index("Contraction")
+        type_token = "_".join(parts[type_idx + 1:end_t])
+        l_idx = parts.index("l")
+        end_p = parts.index("Cijk")
+        pattern = "_".join(parts[l_idx + 1:end_p])
+    except (ValueError, IndexError):
+        return None
+    if type_token not in SHIPPED_FAMILIES:
+        return None
+    if pattern not in CONTRACTION_PATTERNS:
+        return None
+    return type_token, pattern
+
+
+def _scan_one_dat(
+    df: Path,
+    fam: str,
+    pat: str,
+    prefix: Path
+) -> Optional[Dict[str, Any]]:
+    """Parse one .dat -> kernel list + metadata dict, or None if parse fails."""
+    kernels = parse_shipped_kernels(df)
+    if not kernels:
+        return None
+    return {
+        "family": fam,
+        "pattern": pat,
+        "rocm_prefix": str(prefix),
+        "path": str(df),
+        "mtime": df.stat().st_mtime,
+        "size": df.stat().st_size,
+        "kernels": sorted(kernels),
+    }
+
+
+def _build_fam_patterns(scanned: List[Dict[str, Any]]) -> Dict[str, Dict[str, Set[str]]]:
+    """Aggregate kernels by family and pattern from scanned dat entries."""
     fam_patterns: Dict[str, Dict[str, Set[str]]] = {}
-    total_kernels = 0
-    for prefix in prefixes:
-        for df in find_gfx900_dat_files(prefix):
-            parts = df.name.split("_")
-            # TensileLibrary_Type_<TYPE>_Contraction_l_<pattern>_Cijk_Dijk_<isa>.dat
-            try:
-                type_idx = parts.index("Type")
-                end_t = parts.index("Contraction")
-                type_token = "_".join(parts[type_idx + 1:end_t])
-                l_idx = parts.index("l")
-                end_p = parts.index("Cijk")
-                pattern = "_".join(parts[l_idx + 1:end_p])
-            except (ValueError, IndexError):
-                continue
-            if type_token not in SHIPPED_FAMILIES:
-                continue
-            if pattern not in CONTRACTION_PATTERNS:
-                continue
-            kernels = parse_shipped_kernels(df)
-            total_kernels += len(kernels)
-            scanned.append({
-                "family": type_token,
-                "pattern": pattern,
-                "rocm_prefix": prefix,
-                "path": str(df),
-                "mtime": df.stat().st_mtime,
-                "size": df.stat().st_size,
-                "kernels": sorted(kernels),
-            })
-            fam = fam_patterns.setdefault(type_token, {})
-            fam.setdefault(pattern, set()).update(kernels)
+    for s in scanned:
+        fam = fam_patterns.setdefault(s["family"], {})
+        fam.setdefault(s["pattern"], set()).update(s["kernels"])
+    return fam_patterns
+
+
+def _build_families(fam_patterns: Dict[str, Dict[str, Set[str]]]) -> Dict[str, Dict[str, Any]]:
+    """Per-family per-pattern kernel lists and source prefixes."""
     families: Dict[str, Dict[str, Any]] = {}
     for fam, pats in fam_patterns.items():
         fam_info = {}
@@ -101,6 +118,28 @@ def _scan_dat_library() -> Dict[str, Any]:
                 "sources": sources,
             }
         families[fam] = fam_info
+    return families
+
+
+def _scan_dat_library() -> Dict[str, Any]:
+    """Scan installed gfx900 TensileLibrary into manifest dict."""
+    active_rocm = _resolve_rocm()
+    prefixes = _all_rocm_prefixes()
+    scanned: List[Dict[str, Any]] = []
+    total_kernels = 0
+    for prefix in prefixes:
+        for df in _find_shipped_dats(prefix):
+            parsed = _parse_dat_filename(df)
+            if not parsed:
+                continue
+            fam, pat = parsed
+            entry = _scan_one_dat(df, fam, pat, prefix)
+            if not entry:
+                continue
+            total_kernels += len(entry["kernels"])
+            scanned.append(entry)
+    fam_patterns = _build_fam_patterns(scanned)
+    families = _build_families(fam_patterns)
     expected_kernels = {
         fam: sum(fam_info.get(p).get("count", 0) for p in CONTRACTION_PATTERNS)
         for fam, fam_info in families.items()
