@@ -106,19 +106,11 @@ def measured_band(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
             "repeat_dispersion": repeat}
 
 
-def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]:
-    """Classify every cell in both arms.
-
-    ``native`` is the whole native corpus and ``floor`` the recalled gfx900
-    reference chain; both come from :func:`arm_record_sets`.
-    """
-    native, floor, chain = arm_record_sets(base)
-
-    measured_b = measured_band(native, floor, band_pct)
-    band = measured_b["band_pct"]
-    cross, repeat = measured_b["cross_arm"], measured_b["repeat_dispersion"]
-    measured = measured_b
-
+def _best_by_cell(
+    native: List[Dict[str, Any]],
+    floor: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Best GFLOPS record per cell_key, per arm."""
     cells: Dict[str, Dict[str, Any]] = {}
     for recs, side in ((native, "native"), (floor, "spoof")):
         for r in recs:
@@ -130,52 +122,58 @@ def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]
             best = slot.get(side)
             if best is None or r["GFLOPS"] > best["GFLOPS"]:
                 slot[side] = r
+    return cells
 
-    for key, slot in sorted(cells.items()):
-        n, f = slot.get("native"), slot.get("spoof")
-        slot["native_value"] = n["GFLOPS"] if n else None
-        slot["spoof_value"] = f["GFLOPS"] if f else None
-        if n and f and f["GFLOPS"] > 0:
-            slot["delta_pct"] = (n["GFLOPS"] / f["GFLOPS"] - 1) * 100.0
-            slot["verdict"] = verdict(slot["delta_pct"], band)
-        else:
-            slot["delta_pct"] = None
-            slot["verdict"] = "UNGRADED"
-        slot["protocol_matched"] = bool(
-            n and f and n["shapes_per_phase"] == f["shapes_per_phase"])
-        slot["native_family"] = n.get("phase_family") if n else None
-        slot["spoof_family"] = f.get("phase_family") if f else None
-        # Same form is necessary but not sufficient: auto-generated and
-        # deck-generated phases are different benchmark procedures. This is a
-        # veto, not a confirmation -- "other" is a catch-all for unknown
-        # provenance, so an other/other match is reported as
-        # provenance_known=False rather than treated as evidence.
-        slot["provenance_matched"] = bool(
-            slot["protocol_matched"]
-            and n.get("phase_family") and f.get("phase_family")
-            and n["phase_family"] == f["phase_family"])
-        slot["provenance_known"] = bool(
-            n and f and n.get("phase_family") not in (None, "", "unknown")
-            and f.get("phase_family") not in (None, "", "unknown"))
-        slot["native_run"] = n["source_run"] if n else None
-        slot["spoof_run"] = f["source_run"] if f else None
-        # Certainty is separate from the verdict, and a comparison across
-        # different invocation forms produces a number that is not evidence: the
-        # band measurement shows those ratios scatter over +/-180%, because form
-        # is confounded with both the Tensile generator and the wall-clock
-        # window the phase ran in. Within a matched provenance the margin still
-        # has to clear the measured repeat tail before it means anything.
-        if slot["verdict"] == "UNGRADED":
-            slot["certainty"] = "missing"
-        elif not slot["protocol_matched"]:
-            slot["certainty"] = "form_mismatch"
-        elif not slot["provenance_matched"]:
-            slot["certainty"] = "generator_mismatch"
-        elif abs(slot["delta_pct"] or 0.0) <= band:
-            slot["certainty"] = "within_noise"
-        else:
-            slot["certainty"] = "certain"
 
+def _grade_slot(slot: Dict[str, Any], band: float) -> None:
+    """Fill one cell's verdict, provenance and certainty fields in place."""
+    n, f = slot.get("native"), slot.get("spoof")
+    slot["native_value"] = n["GFLOPS"] if n else None
+    slot["spoof_value"] = f["GFLOPS"] if f else None
+    if n and f and f["GFLOPS"] > 0:
+        slot["delta_pct"] = (n["GFLOPS"] / f["GFLOPS"] - 1) * 100.0
+        slot["verdict"] = verdict(slot["delta_pct"], band)
+    else:
+        slot["delta_pct"] = None
+        slot["verdict"] = "UNGRADED"
+    slot["protocol_matched"] = bool(
+        n and f and n["shapes_per_phase"] == f["shapes_per_phase"])
+    slot["native_family"] = n.get("phase_family") if n else None
+    slot["spoof_family"] = f.get("phase_family") if f else None
+    # Same form is necessary but not sufficient: auto-generated and
+    # deck-generated phases are different benchmark procedures. This is a
+    # veto, not a confirmation -- "other" is a catch-all for unknown
+    # provenance, so an other/other match is reported as
+    # provenance_known=False rather than treated as evidence.
+    slot["provenance_matched"] = bool(
+        slot["protocol_matched"]
+        and n.get("phase_family") and f.get("phase_family")
+        and n["phase_family"] == f["phase_family"])
+    slot["provenance_known"] = bool(
+        n and f and n.get("phase_family") not in (None, "", "unknown")
+        and f.get("phase_family") not in (None, "", "unknown"))
+    slot["native_run"] = n["source_run"] if n else None
+    slot["spoof_run"] = f["source_run"] if f else None
+    # Certainty is separate from the verdict, and a comparison across
+    # different invocation forms produces a number that is not evidence: the
+    # band measurement shows those ratios scatter over +/-180%, because form
+    # is confounded with both the Tensile generator and the wall-clock
+    # window the phase ran in. Within a matched provenance the margin still
+    # has to clear the measured repeat tail before it means anything.
+    if slot["verdict"] == "UNGRADED":
+        slot["certainty"] = "missing"
+    elif not slot["protocol_matched"]:
+        slot["certainty"] = "form_mismatch"
+    elif not slot["provenance_matched"]:
+        slot["certainty"] = "generator_mismatch"
+    elif abs(slot["delta_pct"] or 0.0) <= band:
+        slot["certainty"] = "within_noise"
+    else:
+        slot["certainty"] = "certain"
+
+
+def _summary_counts(cells: Dict[str, Dict[str, Any]]) -> Dict[str, int]:
+    """The graded tally, the certainty split and the three mismatch counts."""
     graded = [c for c in cells.values() if c["verdict"] != "UNGRADED"]
     tally: Dict[str, int] = defaultdict(int)
     certain: Dict[str, int] = defaultdict(int)
@@ -184,13 +182,6 @@ def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]
         if c["certainty"] == "certain":
             certain[c["verdict"]] += 1
     return {
-        "floor_chain": chain,
-        "band_pct": band,
-        "band_source": measured_b["band_source"],
-        "shipped_band_pct": TIE_BAND_PCT,
-        "reproducible_band": measured,
-        "repeat_dispersion": repeat,
-        "proposal_coverage": _proposal_coverage(base, band),
         "tally": dict(tally),
         "tally_certain": dict(certain),
         "tally_certainty": dict(Counter(
@@ -204,6 +195,34 @@ def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]
             if c["protocol_matched"] and not c["provenance_known"]),
         "protocol_mismatched_cells": sum(
             1 for c in cells.values() if not c["protocol_matched"]),
+    }
+
+
+def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]:
+    """Classify every cell in both arms.
+
+    ``native`` is the whole native corpus and ``floor`` the recalled gfx900
+    reference chain; both come from :func:`arm_record_sets`.
+    """
+    native, floor, chain = arm_record_sets(base)
+
+    measured_b = measured_band(native, floor, band_pct)
+    band = measured_b["band_pct"]
+    cross, repeat = measured_b["cross_arm"], measured_b["repeat_dispersion"]
+
+    cells = _best_by_cell(native, floor)
+    for slot in cells.values():
+        _grade_slot(slot, band)
+
+    return {
+        "floor_chain": chain,
+        "band_pct": band,
+        "band_source": measured_b["band_source"],
+        "shipped_band_pct": TIE_BAND_PCT,
+        "reproducible_band": measured_b,
+        "repeat_dispersion": repeat,
+        "proposal_coverage": _proposal_coverage(base, band),
+        **_summary_counts(cells),
         "n_cells": len(cells),
         "cells": [cells[k] for k in sorted(cells)],
     }

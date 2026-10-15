@@ -236,6 +236,109 @@ class ABDeltaMixin:
                            tie_band_pct, sclk_by_phase, sclk_ref)
 
 
+def _clock_basis_values(
+    nv: Dict[str, Any],
+    sv: Dict[str, Any],
+    agg: str,
+    sclk_ref: Optional[float],
+) -> Tuple[float, float, bool]:
+    """(native_val, spoof_val, clock_ok) under the clock-fallback rule.
+
+    Both arms must be clock-covered or NEITHER is adjusted: a half-adjusted
+    delta would compare a clock-corrected arm against an unadjusted one, which
+    no longer cancels. The fallback is the same basis without the `_clock`
+    suffix (winner_clock -> winner, median_clock -> median), so a missing
+    telemetry file degrades to the plain comparison instead of silently
+    switching to a different statistic.
+    """
+    native_val = _stat(nv, "native", agg)
+    spoof_val = _stat(sv, "spoof", agg)
+    clock_ok = bool(nv["clock_ok"] and sv["clock_ok"] and sclk_ref)
+    if agg.endswith("_clock") and not clock_ok:
+        plain = agg[:-len("_clock")]
+        native_val = _stat(nv, "native", plain)
+        spoof_val = _stat(sv, "spoof", plain)
+    return native_val, spoof_val, clock_ok
+
+
+def _clock_fields(nv: Dict[str, Any], sv: Dict[str, Any],
+                  sclk_ref: Optional[float], clock_ok: bool,
+                  agg: str) -> Dict[str, Any]:
+    """The clock-telemetry fields, identical in both bases."""
+    return {
+        "native_best_median_clock": nv["best_median_clock"],
+        "spoof_best_median_clock": sv["best_median_clock"],
+        "native_median_clock": nv["median_clock"],
+        "spoof_median_clock": sv["median_clock"],
+        "native_clock_coverage": nv["clock_coverage"],
+        "spoof_clock_coverage": sv["clock_coverage"],
+        "native_clock_kernels": nv["clock_kernels"],
+        "spoof_clock_kernels": sv["clock_kernels"],
+        "native_clock_sclk_hz": nv["clock_sclk_hz"],
+        "spoof_clock_sclk_hz": sv["clock_sclk_hz"],
+        "sclk_ref_hz": float(sclk_ref or 0.0),
+        # True only when BOTH arms actually had per-phase clock data
+        # for this cell, i.e. the delta really is clock-normalized.
+        "clock_adjusted": bool(clock_ok and agg.endswith("_clock")),
+        "clock_basis": bool(agg.endswith("_clock")),
+    }
+
+
+def _delta_entry(
+    fam: str,
+    side: str,
+    dtype: str,
+    nv: Dict[str, Any],
+    sv: Dict[str, Any],
+    native_val: float,
+    spoof_val: float,
+    delta_pct: float,
+    tie: bool,
+    verdict: str,
+    agg: str,
+    sclk_ref: Optional[float],
+    clock_ok: bool,
+) -> Dict[str, Any]:
+    """One graded native/spoof pair, as the report dict."""
+    entry: Dict[str, Any] = {
+        "native_value": native_val,
+        "spoof_value": spoof_val,
+        "native_median": nv["median"],
+        "spoof_median": sv["median"],
+        "native_best_median": nv["best_median"],
+        "spoof_best_median": sv["best_median"],
+        "native_worst_median": nv["worst_median"],
+        "spoof_worst_median": sv["worst_median"],
+        "native_best": nv["best"],
+        "spoof_best": sv["best"],
+        "native_throttle": nv["throttle"],
+        "spoof_throttle": sv["throttle"],
+        "throttle_adjusted": bool(nv["throttle_adjusted"] and sv["throttle_adjusted"]),
+    }
+    entry.update(_clock_fields(nv, sv, sclk_ref, clock_ok, agg))
+    entry.update({
+        "cell_key": f"{fam}:{side}",
+        "spoof_fp": f"cell_{fam}_{side}",
+        "family": fam,
+        "agg": agg,
+        "delta_pct": delta_pct,
+        "tie": tie,
+        "verdict": verdict,
+        "n_native_kernels": nv["n_kernels"],
+        "n_spoof_kernels": sv["n_kernels"],
+        "n_native_runs": nv["n_runs"],
+        "n_spoof_runs": sv["n_runs"],
+        "native_runs": nv["runs"],
+        "spoof_runs": sv["runs"],
+        "native_winner_run": nv["origin"].get("run_id", ""),
+        "native_winner_phase": nv["origin"].get("phase_id", ""),
+        "native_winner_fp": nv["origin"].get("fingerprint", ""),
+        "spoof_winner_run": sv["origin"].get("run_id", ""),
+        "spoof_winner_phase": sv["origin"].get("phase_id", ""),
+    })
+    return entry
+
+
 def _pair_cells(
         native_records: List[Dict[str, Any]],
         spoof_records: List[Dict[str, Any]],
@@ -254,11 +357,7 @@ def _pair_cells(
     across the whole record set.
 
     When a clock basis is asked for but only one arm is clock-covered, NEITHER
-    is adjusted: a half-adjusted delta would compare a clock-corrected arm
-    against an unadjusted one, which no longer cancels. The fallback is the
-    same basis without the `_clock` suffix (winner_clock -> winner), so a
-    missing telemetry file degrades to the plain comparison instead of
-    silently switching statistic.
+    is adjusted (see _clock_basis_values).
     """
     ns = _collect(native_records, sclk_by_phase, sclk_ref)
     ss = _collect(spoof_records, sclk_by_phase, sclk_ref)
@@ -267,20 +366,8 @@ def _pair_cells(
     for key in sorted(set(ss) & set(ns)):
         fam, side = key
         sv, nv = ss[key], ns[key]
-        native_val = _stat(nv, "native", agg)
-        spoof_val = _stat(sv, "spoof", agg)
-        # Both arms must be clock-covered or NEITHER is adjusted: a
-        # half-adjusted delta would compare a clock-corrected arm against
-        # an unadjusted one, which no longer cancels.
-        clock_ok = bool(nv["clock_ok"] and sv["clock_ok"] and sclk_ref)
-        if agg.endswith("_clock") and not clock_ok:
-            # Fall back to the SAME basis without the clock normalization
-            # (winner_clock -> winner, median_clock -> median), so a
-            # missing telemetry file degrades to the plain comparison
-            # instead of silently switching to a different statistic.
-            plain = agg[:-len("_clock")]
-            native_val = _stat(nv, "native", plain)
-            spoof_val = _stat(sv, "spoof", plain)
+        native_val, spoof_val, clock_ok = _clock_basis_values(
+            nv, sv, agg, sclk_ref)
         if spoof_val <= 0 or native_val <= 0:
             continue
         ratio = native_val / spoof_val
@@ -288,52 +375,7 @@ def _pair_cells(
         tie = abs(delta_pct) <= tie_band_pct
         verdict = "TIE" if tie else ("WIN" if ratio > 1.0 else "LOSS")
         dtype = FAMILY_DTYPE_CHAR.get(fam, "")
-        deltas[(dtype, f"{side}x{side}x{side}", f"cell_{fam}_{side}")] = {
-            "native_value": native_val,
-            "spoof_value": spoof_val,
-            "native_median": nv["median"],
-            "spoof_median": sv["median"],
-            "native_best_median": nv["best_median"],
-            "spoof_best_median": sv["best_median"],
-            "native_worst_median": nv["worst_median"],
-            "spoof_worst_median": sv["worst_median"],
-            "native_best": nv["best"],
-            "spoof_best": sv["best"],
-            "native_throttle": nv["throttle"],
-            "spoof_throttle": sv["throttle"],
-            "throttle_adjusted": bool(nv["throttle_adjusted"] and sv["throttle_adjusted"]),
-            "native_best_median_clock": nv["best_median_clock"],
-            "spoof_best_median_clock": sv["best_median_clock"],
-            "native_median_clock": nv["median_clock"],
-            "spoof_median_clock": sv["median_clock"],
-            "native_clock_coverage": nv["clock_coverage"],
-            "spoof_clock_coverage": sv["clock_coverage"],
-            "native_clock_kernels": nv["clock_kernels"],
-            "spoof_clock_kernels": sv["clock_kernels"],
-            "native_clock_sclk_hz": nv["clock_sclk_hz"],
-            "spoof_clock_sclk_hz": sv["clock_sclk_hz"],
-            "sclk_ref_hz": float(sclk_ref or 0.0),
-            # True only when BOTH arms actually had per-phase clock data
-            # for this cell, i.e. the delta really is clock-normalized.
-            "clock_adjusted": bool(clock_ok and agg.endswith("_clock")),
-            "clock_basis": bool(agg.endswith("_clock")),
-            "cell_key": f"{fam}:{side}",
-            "spoof_fp": f"cell_{fam}_{side}",
-            "family": fam,
-            "agg": agg,
-            "delta_pct": delta_pct,
-            "tie": tie,
-            "verdict": verdict,
-            "n_native_kernels": nv["n_kernels"],
-            "n_spoof_kernels": sv["n_kernels"],
-            "n_native_runs": nv["n_runs"],
-            "n_spoof_runs": sv["n_runs"],
-            "native_runs": nv["runs"],
-            "spoof_runs": sv["runs"],
-            "native_winner_run": nv["origin"].get("run_id", ""),
-            "native_winner_phase": nv["origin"].get("phase_id", ""),
-            "native_winner_fp": nv["origin"].get("fingerprint", ""),
-            "spoof_winner_run": sv["origin"].get("run_id", ""),
-            "spoof_winner_phase": sv["origin"].get("phase_id", ""),
-        }
+        deltas[(dtype, f"{side}x{side}x{side}", f"cell_{fam}_{side}")] = \
+            _delta_entry(fam, side, dtype, nv, sv, native_val, spoof_val,
+                         delta_pct, tie, verdict, agg, sclk_ref, clock_ok)
     return deltas
