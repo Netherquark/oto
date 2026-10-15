@@ -147,15 +147,21 @@ class TensileDriver(
         self.cooldown_s = cooldown_s
         self.create_run = create_run
 
-        self.registry = SQLiteRegistry(self.base_dir)
+        self._init_run_dirs()
+        self._init_registry_and_scheduler()
+        self._init_analytics_and_mutator()
+        self._init_agent_and_reporter()
+        self._init_client_build_dir()
+        self._init_state()
+        self._setup_signal_handlers()
 
+    def _init_run_dirs(self) -> None:
+        """Create or skip the run directory and configs subdir."""
         if self.create_run:
-            # Clean up any orphaned 'started' runs from prior crashes/interrupts
             try:
                 self.registry.cleanup_stale_runs()
             except Exception:
                 pass
-
             self.run_dir = self.registry.create_run_dir()
             self.configs_dir = self.run_dir / "configs"
             self.configs_dir.mkdir(exist_ok=True)
@@ -163,8 +169,11 @@ class TensileDriver(
             self.run_dir = None
             self.configs_dir = None
 
-        # Initialize sub-modules
+    def _init_registry_and_scheduler(self) -> None:
+        self.registry = SQLiteRegistry(self.base_dir)
         self.scheduler = CandidateGenerator(self.base_dir, registry=self.registry)
+
+    def _init_analytics_and_mutator(self) -> None:
         self.analytics = AnalyticsEngine(self.registry, self.base_dir)
         # Option H Phase 1: the ledger-backed mutator. Constructed here so the
         # mutation arm records proposals and resolves outcomes; when it is
@@ -182,6 +191,7 @@ class TensileDriver(
             print(f"[mutator] unavailable ({e}); mutation arm keeps phases.yaml "
                   "behaviour and the identical-fp skip")
 
+    def _init_agent_and_reporter(self) -> None:
         self.agent = ConvergenceAgent(
             self.base_dir,
             self.scheduler,
@@ -191,12 +201,14 @@ class TensileDriver(
         self._sync_agent_run_id()
         self.reporter = AcceptanceReporter(self.base_dir, cooldown_s=self.cooldown_s)
 
+    def _init_client_build_dir(self) -> None:
         # Shared client build dir: built once per run, reused by all phases
         # (Tensile client is config-independent; see ClientExecutable.getClientExecutable).
         self.client_build_dir = self.run_dir / "client_build" if self.run_dir else None
         if self.client_build_dir:
             self.client_build_dir.mkdir(exist_ok=True)
 
+    def _init_state(self) -> None:
         # State
         self._stop_requested = False
         self._finish_after_iteration = False
@@ -212,7 +224,6 @@ class TensileDriver(
         self._live_status = None
         self._live_enabled = True
         self._live_interval = 30.0
-        self._setup_signal_handlers()
     def _setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown."""
         signal.signal(signal.SIGINT, self._signal_handler)

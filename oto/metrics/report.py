@@ -118,6 +118,42 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         except Exception:
             return {"expected_kernels": {}, "total_shipped_kernels": 0}
 
+    def _family_cells(
+        self,
+        all_analytics: List[CellAnalytics],
+        family: str,
+        fam_lower: str,
+        short: Optional[str],
+    ) -> List[CellAnalytics]:
+        """Cells belonging to `family` (explicit prefix or dtype fallback)."""
+        family_cells = [a for a in all_analytics
+                        if str(a.family or "").upper() == family]
+        if not family_cells:
+            family_cells = [a for a in all_analytics
+                            if str(a.dtype or "").upper() == str(short or "").upper()
+                            or str(a.dtype or "").upper() == family]
+        return family_cells
+
+    def _by_size_breakdown(
+        self,
+        family_cells: List[CellAnalytics],
+        ceiling: float,
+        theoretical: float,
+    ) -> Dict[str, Dict[str, Any]]:
+        """Per-kernel-size bucket: cells, best_median and % of ceiling/theoretical."""
+        by_size: Dict[str, Dict[str, Any]] = {}
+        for a in family_cells:
+            size = self._kernel_size_from_shape(a.shape)
+            bucket = by_size.setdefault(size, {"cells": 0, "best_median": 0.0})
+            bucket["cells"] += 1
+            bucket["best_median"] = max(bucket["best_median"], a.median_gflops)
+        sorted_sizes = sorted(by_size.items(),
+                              key=lambda kv: (int(kv[0]) if kv[0].isdigit() else 10 ** 9, kv[0]))
+        for _, bucket in sorted_sizes:
+            bucket["pct_of_ceiling"] = (bucket["best_median"] / ceiling * 100.0) if ceiling > 0 else 0.0
+            bucket["pct_of_theoretical"] = (bucket["best_median"] / theoretical * 100.0) if theoretical > 0 else 0.0
+        return dict(sorted_sizes)
+
     def _compute_family_coverage(
         self,
         all_analytics: List[CellAnalytics],
@@ -131,8 +167,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         Numerator = distinct *deck cells* measured; denominator = len(deck).
         The shipped gfx900 footprint (expected_kernels from the pinned dat
         manifest) is reported separately as an informational `footprint_pct`,
-        not as the coverage gate — measuring N deck shapes against thousands of
-        shipped kernels would cap coverage at a meaningless fraction.
+        not as the coverage gate.
         """
         shipped = shipped or self._load_shipped_manifest()
         expected_kernels = shipped.get("expected_kernels", {})
@@ -140,64 +175,57 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
         coverage = {}
         for family in expected_families:
-            fam_lower = family.lower()
-            # Match by explicit family prefix first (distinguishes HH / HH_HPA / HS_HPA),
-            # fall back to single-letter dtype / family name for cells that carry
-            # no family tag (older runs / aggregate_by_cell path).
-            # Case-insensitive: CellAnalytics.family is canonical UPPERCASE
-            # (analytics.aggregate_by_cell_typecode uppercases the typecode
-            # family), while older runs carry lowercase families. Comparing
-            # `a.family == fam_lower` silently emptied the HH_HPA / HS_HPA
-            # buckets, whose dtype fallback then grabbed every packed-FP16 HH
-            # cell and reported 2749 GFLOPS as "170% of the HPA ceiling".
-            family_cells = [a for a in all_analytics
-                            if str(a.family or "").upper() == family]
-            if not family_cells:
-                short = FAMILY_TO_DTYPE.get(fam_lower)
-                family_cells = [a for a in all_analytics
-                                if str(a.dtype or "").upper() == str(short or "").upper()
-                                or str(a.dtype or "").upper() == family]
-
-            ceiling = REALISTIC_CEILINGS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
-            theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
-            best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
-
-            # Contract deck: distinct family deck shapes measured (the cells the
-            # acceptance grid classifies), distinct from the config-cell count.
-            deck_sizes = FAMILY_SHAPES.get(family, [])
-            deck_shapes = {f"{s}x{s}x{s}" for s in deck_sizes}
-            measured_shapes = {a.shape for a in family_cells}
-            deck_cells_measured = len(measured_shapes & deck_shapes)
-
-            # Per-kernel-size breakdown (256/512/1024/2048/... cube sides, GEMV M dim).
-            by_size: Dict[str, Dict[str, Any]] = {}
-            for a in family_cells:
-                size = self._kernel_size_from_shape(a.shape)
-                bucket = by_size.setdefault(size, {"cells": 0, "best_median": 0.0})
-                bucket["cells"] += 1
-                bucket["best_median"] = max(bucket["best_median"], a.median_gflops)
-            sorted_sizes = sorted(by_size.items(),
-                                  key=lambda kv: (int(kv[0]) if kv[0].isdigit() else 10 ** 9, kv[0]))
-            for _, bucket in sorted_sizes:
-                bucket["pct_of_ceiling"] = (bucket["best_median"] / ceiling * 100.0) if ceiling > 0 else 0.0
-                bucket["pct_of_theoretical"] = (bucket["best_median"] / theoretical * 100.0) if theoretical > 0 else 0.0
-
-            exp = expected_kernels.get(family, 0)
-            coverage[family] = {
-                "expected_kernels": exp,
-                "deck_cells_measured": deck_cells_measured,
-                "deck_cells": len(deck_shapes),
-                "coverage_pct": (deck_cells_measured / len(deck_shapes) * 100.0) if deck_shapes else 0.0,
-                "measured_cells": len(family_cells),
-                "footprint_pct": min(100.0, (len(family_cells) / exp * 100.0) if exp > 0 else 0.0),
-                "best_median": best_median,
-                "ceiling_gflops": ceiling,
-                "theoretical_peak_gflops": theoretical,
-                "pct_of_theoretical": (best_median / theoretical * 100.0) if theoretical > 0 else 0.0,
-                "by_size": dict(sorted_sizes),
-            }
-
+            coverage[family] = self._family_coverage_entry(
+                family, all_analytics, expected_kernels)
         return coverage
+
+    def _family_coverage_entry(
+        self,
+        family: str,
+        all_analytics: List[CellAnalytics],
+        expected_kernels: Dict[str, int],
+    ) -> Dict[str, Any]:
+        fam_lower = family.lower()
+        short = FAMILY_TO_DTYPE.get(fam_lower)
+
+        # Match by explicit family prefix first (distinguishes HH / HH_HPA / HS_HPA),
+        # fall back to single-letter dtype / family name for cells that carry
+        # no family tag (older runs / aggregate_by_cell path).
+        # Case-insensitive: CellAnalytics.family is canonical UPPERCASE
+        # (analytics.aggregate_by_cell_typecode uppercases the typecode
+        # family), while older runs carry lowercase families. Comparing
+        # `a.family == fam_lower` silently emptied the HH_HPA / HS_HPA
+        # buckets, whose dtype fallback then grabbed every packed-FP16 HH
+        # cell and reported 2749 GFLOPS as "170% of the HPA ceiling".
+        family_cells = self._family_cells(all_analytics, family, fam_lower, short)
+
+        ceiling = REALISTIC_CEILINGS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
+        theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
+        best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
+
+        # Contract deck: distinct family deck shapes measured (the cells the
+        # acceptance grid classifies), distinct from the config-cell count.
+        deck_sizes = FAMILY_SHAPES.get(family, [])
+        deck_shapes = {f"{s}x{s}x{s}" for s in deck_sizes}
+        measured_shapes = {a.shape for a in family_cells}
+        deck_cells_measured = len(measured_shapes & deck_shapes)
+
+        by_size = self._by_size_breakdown(family_cells, ceiling, theoretical)
+
+        exp = expected_kernels.get(family, 0)
+        return {
+            "expected_kernels": exp,
+            "deck_cells_measured": deck_cells_measured,
+            "deck_cells": len(deck_shapes),
+            "coverage_pct": (deck_cells_measured / len(deck_shapes) * 100.0) if deck_shapes else 0.0,
+            "measured_cells": len(family_cells),
+            "footprint_pct": min(100.0, (len(family_cells) / exp * 100.0) if exp > 0 else 0.0),
+            "best_median": best_median,
+            "ceiling_gflops": ceiling,
+            "theoretical_peak_gflops": theoretical,
+            "pct_of_theoretical": (best_median / theoretical * 100.0) if theoretical > 0 else 0.0,
+            "by_size": by_size,
+        }
 
     def _kernel_size_from_shape(self, shape: str) -> str:
         """Extract a kernel size label from a problem shape.

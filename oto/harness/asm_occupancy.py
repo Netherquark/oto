@@ -336,7 +336,7 @@ def _fmt(row: Dict) -> str:
             f"{row['waves_per_cu']:>3d}w/CU {ai} {gf}  {row['binder']}")
 
 
-def main() -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Measured occupancy of Tensile's emitted kernels, joined "
                     "to their GFLOP/s. CPU only, reads nothing outside "
@@ -351,60 +351,55 @@ def main() -> int:
     ap.add_argument("--json", default=None, help="write all rows to this path")
     ap.add_argument("--check-calibration", action="store_true",
                     help="verify waves_per_simd against the AMD/ORNL GFX9 table")
-    args = ap.parse_args()
+    return ap
 
-    if args.check_calibration:
-        bad = [(v, waves_per_simd(v), want)
-               for v, want in _CALIBRATION.items()
-               if waves_per_simd(v) != want]
-        if bad:
-            print("CALIBRATION MISMATCH:", bad)
-            return 1
-        print("calibration OK: 10/10 rows of the AMD/ORNL GFX9 table reproduced")
-        return 0
 
-    root = Path(args.runs)
-    rows = measure_corpus(root, args.dtype)
-    if not rows:
-        print(f"no emitted kernels with an amdhsa directive under {root}")
+def _cmd_calibration() -> int:
+    bad = [(v, waves_per_simd(v), want)
+           for v, want in _CALIBRATION.items()
+           if waves_per_simd(v) != want]
+    if bad:
+        print("CALIBRATION MISMATCH:", bad)
         return 1
+    print("calibration OK: 10/10 rows of the AMD/ORNL GFX9 table reproduced")
+    return 0
 
-    if args.json:
-        Path(args.json).write_text(json.dumps(rows, indent=1, default=str))
-        print(f"wrote {len(rows)} rows to {args.json}")
 
-    if args.binder:
-        print("\n-- resource tally --")
-        tally: Dict[str, int] = {}
-        for r in rows:
-            tally[r["binder"]] = tally.get(r["binder"], 0) + 1
-        for k, v in sorted(tally.items(), key=lambda kv: -kv[1]):
-            print(f"  {k:<10s} {v:6d}  {100*v/len(rows):5.1f}%")
-        print("\n-- waves/CU distribution --")
-        hist: Dict[int, int] = {}
-        for r in rows:
-            hist[r["waves_per_cu"]] = hist.get(r["waves_per_cu"], 0) + 1
-        for w in sorted(hist):
-            print(f"  {w:>3d} waves/CU  {hist[w]:6d}  {100*hist[w]/len(rows):5.1f}%")
-        spilled = sum(1 for r in rows if r["scratch"])
-        if spilled:
-            print(f"\n{spilled} kernels carry a private segment (spill)")
-        return 0
+def _cmd_binder(rows: List[Dict[str, Any]]) -> int:
+    print("\n-- resource tally --")
+    tally: Dict[str, int] = {}
+    for r in rows:
+        tally[r["binder"]] = tally.get(r["binder"], 0) + 1
+    for k, v in sorted(tally.items(), key=lambda kv: -kv[1]):
+        print(f"  {k:<10s} {v:6d}  {100*v/len(rows):5.1f}%")
+    print("\n-- waves/CU distribution --")
+    hist: Dict[int, int] = {}
+    for r in rows:
+        hist[r["waves_per_cu"]] = hist.get(r["waves_per_cu"], 0) + 1
+    for w in sorted(hist):
+        print(f"  {w:>3d} waves/CU  {hist[w]:6d}  {100*hist[w]/len(rows):5.1f}%")
+    spilled = sum(1 for r in rows if r["scratch"])
+    if spilled:
+        print(f"\n{spilled} kernels carry a private segment (spill)")
+    return 0
 
-    if args.by == "count":
-        groups: Dict[Tuple, int] = {}
-        for r in rows:
-            key = (r["dtype"], r["mt0"], r["mt1"], r["tt"], r["depth_u"])
-            groups[key] = groups.get(key, 0) + 1
-        ordered = sorted(groups.items(), key=lambda kv: -kv[1])[:args.top]
-        print(f"{len(rows)} kernels, {len(groups)} distinct shapes")
-        for key, n in ordered:
-            probe = next(r for r in rows
-                        if (r["dtype"], r["mt0"], r["mt1"], r["tt"],
-                            r["depth_u"]) == key)
-            print(f"{n:5d}  {_fmt(probe)}")
-        return 0
 
+def _cmd_count(rows: List[Dict[str, Any]], top: int) -> int:
+    groups: Dict[Tuple, int] = {}
+    for r in rows:
+        key = (r["dtype"], r["mt0"], r["mt1"], r["tt"], r["depth_u"])
+        groups[key] = groups.get(key, 0) + 1
+    ordered = sorted(groups.items(), key=lambda kv: -kv[1])[:top]
+    print(f"{len(rows)} kernels, {len(groups)} distinct shapes")
+    for key, n in ordered:
+        probe = next(r for r in rows
+                    if (r["dtype"], r["mt0"], r["mt1"], r["tt"],
+                        r["depth_u"]) == key)
+        print(f"{n:5d}  {_fmt(probe)}")
+    return 0
+
+
+def _cmd_sorted(rows: List[Dict[str, Any]], args: Any) -> int:
     if args.by == "vgpr":
         ordered = sorted(rows, key=lambda r: -r["vgpr"])[:args.top]
     elif args.by == "waves":
@@ -417,6 +412,29 @@ def main() -> int:
     for r in ordered:
         print(_fmt(r))
     return 0
+
+
+def main() -> int:
+    args = _build_arg_parser().parse_args()
+
+    if args.check_calibration:
+        return _cmd_calibration()
+
+    root = Path(args.runs)
+    rows = measure_corpus(root, args.dtype)
+    if not rows:
+        print(f"no emitted kernels with an amdhsa directive under {root}")
+        return 1
+
+    if args.json:
+        Path(args.json).write_text(json.dumps(rows, indent=1, default=str))
+        print(f"wrote {len(rows)} rows to {args.json}")
+
+    if args.binder:
+        return _cmd_binder(rows)
+    if args.by == "count":
+        return _cmd_count(rows, args.top)
+    return _cmd_sorted(rows, args)
 
 
 if __name__ == "__main__":
