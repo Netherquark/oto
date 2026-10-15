@@ -29,7 +29,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
@@ -39,8 +39,7 @@ from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.decks import KNOB_SWEEPS, KNOB_SWEEP_BASES  # noqa: E402
 
 
-def main(argv: List[str] | None = None) -> int:
-    """Emit knob-sweep deck. argv: args vector. Returns: 0 success, 1 no candidates."""
+def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Emit each family's winner tile crossed with the knobs "
                     "the corpus never explicitly set (potential_configs.md §8.1).",
@@ -63,55 +62,81 @@ def main(argv: List[str] | None = None) -> int:
                          "(DECISION_TRIAL_TILES: D1/D2/D3)")
     ap.add_argument("--phases", default="phases.yaml",
                     help="candidate manifest to write (default: ./phases.yaml)")
-    args = ap.parse_args(argv)
-    shapes = args.shapes or ["512x512x512", "1024x1024x1024"]; gen = CandidateGenerator(Path("."))
-    print(f"knob-sweep deck: {len(KNOB_SWEEPS)} sweeps x "
-          f"{len(args.families or KNOB_SWEEP_BASES)} families x "
-          f"{len(shapes)} shapes"
-          + (" + baselines" if args.baseline else "")
-          + (" + trials" if args.trials else ""))
-    if not args.emit:
-        print("DRY RUN -- nothing written. Pass --emit to append.")
-    if not args.emit:
-        # Validate without writing: the generator's sweep method always appends,
-        # so a dry run pre-checks each combination through the same gate and
-        # reports the same refusals. This keeps `--emit` the only thing that can
-        # change the manifest.
-        emitted, refused = _dry_run(gen, args.families or list(KNOB_SWEEP_BASES),
-                                    args.patterns or ["Ailk_Bljk"], shapes,
-                                    include_baseline=args.baseline,
-                                    include_trials=args.trials)
-    else:
-        target = Path(args.phases)
-        emitted = gen.generate_knob_sweep_phases(
-            families=args.families, patterns=args.patterns, base_shapes=shapes,
-            include_baseline=args.baseline, phases_file=target)
-        refused = []
-        if args.trials:
-            emitted += gen.generate_decision_trial_phases(
-                families=args.families, patterns=args.patterns,
-                base_shapes=shapes, phases_file=target)
+    return ap
+
+
+def _run_dry(
+    gen: CandidateGenerator,
+    args: argparse.Namespace,
+    shapes: List[str]
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    print("DRY RUN -- nothing written. Pass --emit to append.")
+    return _dry_run(gen, args.families or list(KNOB_SWEEP_BASES),
+                    args.patterns or ["Ailk_Bljk"], shapes,
+                    include_baseline=args.baseline,
+                    include_trials=args.trials)
+
+
+def _run_emit(
+    gen: CandidateGenerator,
+    args: argparse.Namespace,
+    shapes: List[str]
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    target = Path(args.phases)
+    emitted = gen.generate_knob_sweep_phases(
+        families=args.families, patterns=args.patterns, base_shapes=shapes,
+        include_baseline=args.baseline, phases_file=target)
+    refused: List[str] = []
+    if args.trials:
+        emitted += gen.generate_decision_trial_phases(
+            families=args.families, patterns=args.patterns,
+            base_shapes=shapes, phases_file=target)
+    return emitted, refused
+
+
+def _print_summary(emitted: List[Dict[str, Any]],
+                   refused: List[str],
+                   emit: bool) -> int:
     if not emitted:
         print("ERROR: no candidate could be emitted. Check the refusals above.")
         return 1
-
     print(f"\nready: {len(emitted)} candidates")
     if refused:
         print(f"{len(refused)} refused by the gates:")
         for line in refused:
             print(f"  {line}")
-    if not args.emit:
+    if not emit:
         print("\nre-run with --emit to append these to phases.yaml")
     return 0
 
 
-def _dry_run(gen: CandidateGenerator, families: List[str],
-             patterns: List[str], shapes: List[str],
-             include_baseline: bool = False, include_trials: bool = False
-             ) -> tuple[List[Dict[str, Any]], List[str]]:
-    """Validate sweep combinations without writing manifest. Returns: (emitted, refused)."""
+def main(argv: List[str] | None = None) -> int:
+    """Emit knob-sweep deck. argv: args vector. Returns: 0 success, 1 no candidates."""
+    args = _build_arg_parser().parse_args(argv)
+    shapes = args.shapes or ["512x512x512", "1024x1024x1024"]
+    gen = CandidateGenerator(Path("."))
+    print(f"knob-sweep deck: {len(KNOB_SWEEPS)} sweeps x "
+          f"{len(args.families or KNOB_SWEEP_BASES)} families x "
+          f"{len(shapes)} shapes"
+          + (" + baselines" if args.baseline else "")
+          + (" + trials" if args.trials else ""))
+
+    if args.emit:
+        emitted, refused = _run_emit(gen, args, shapes)
+    else:
+        emitted, refused = _run_dry(gen, args, shapes)
+    return _print_summary(emitted, refused, args.emit)
+
+
+def _emit_baselines(
+    gen: CandidateGenerator,
+    families: List[str],
+    patterns: List[str],
+    shapes: List[str],
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """Emit baseline tiles for each family/shape."""
     from oto.device.peaks import FAMILY_DTYPE_CHAR
-    from oto.tensile.decks import DECISION_TRIAL_TILES, KNOB_SWEEPS, KNOB_SWEEP_BASES
+    from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: List[Dict[str, Any]] = []
     refused: List[str] = []
     for family in families:
@@ -126,12 +151,28 @@ def _dry_run(gen: CandidateGenerator, families: List[str],
                         "ScheduleName": "isa",
                         "FamilyLabel": family,
                     }
-                    if include_baseline:
-                        ok, why = gen.validate_config({**template, **base})
-                        if ok:
-                            emitted.append(dict(base))
-                        else:
-                            refused.append(f"{family}/baseline/{shape}: {why}")
+                    ok, why = gen.validate_config({**template, **base})
+                    if ok:
+                        emitted.append(dict(base))
+                    else:
+                        refused.append(f"{family}/baseline/{shape}: {why}")
+    return emitted, refused
+
+
+def _emit_sweeps(
+    gen: CandidateGenerator,
+    families: List[str],
+    patterns: List[str],
+    shapes: List[str],
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """Emit sweep tiles for each family/knob/shape."""
+    from oto.device.peaks import FAMILY_DTYPE_CHAR
+    from oto.tensile.decks import KNOB_SWEEPS, KNOB_SWEEP_BASES
+    emitted: List[Dict[str, Any]] = []
+    refused: List[str] = []
+    for family in families:
+        for base in KNOB_SWEEP_BASES.get(family, []):
+            for pattern in patterns:
                 for sweep in KNOB_SWEEPS:
                     if family not in sweep.get("families", []):
                         continue
@@ -157,28 +198,63 @@ def _dry_run(gen: CandidateGenerator, families: List[str],
                             else:
                                 refused.append(f"{family}/{sweep['knob']}/"
                                                f"{shape}: {why}")
+    return emitted, refused
+
+
+def _emit_trials(
+    gen: CandidateGenerator,
+    families: List[str],
+    patterns: List[str],
+    shapes: List[str],
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """Emit decision trial tiles."""
+    from oto.device.peaks import FAMILY_DTYPE_CHAR
+    from oto.tensile.decks import DECISION_TRIAL_TILES
+    emitted: List[Dict[str, Any]] = []
+    refused: List[str] = []
+    for trial in DECISION_TRIAL_TILES:
+        family = trial["family"]
+        if family not in families:
+            continue
+        for pattern in patterns:
+            for shape in trial.get("shapes", shapes):
+                template = {
+                    "Architecture": "gfx90c",
+                    "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                    "ContractionPattern": pattern,
+                    "ProblemType": shape,
+                    "ScheduleName": "isa",
+                    "FamilyLabel": family,
+                }
+                ok, why = gen.validate_config(
+                    {**template, **trial["knobs"]})
+                if ok:
+                    emitted.append(dict(trial["knobs"]))
+                else:
+                    refused.append(f"{family}/trial{trial['decision']}/"
+                                   f"{shape}: {why}")
+    return emitted, refused
+
+
+def _dry_run(gen: CandidateGenerator, families: List[str],
+             patterns: List[str], shapes: List[str],
+             include_baseline: bool = False, include_trials: bool = False
+             ) -> tuple[List[Dict[str, Any]], List[str]]:
+    """Validate sweep combinations without writing manifest. Returns: (emitted, refused)."""
+    from oto.tensile.decks import DECISION_TRIAL_TILES, KNOB_SWEEPS, KNOB_SWEEP_BASES
+    emitted: List[Dict[str, Any]] = []
+    refused: List[str] = []
+    if include_baseline:
+        e, r = _emit_baselines(gen, families, patterns, shapes)
+        emitted.extend(e)
+        refused.extend(r)
+    e, r = _emit_sweeps(gen, families, patterns, shapes)
+    emitted.extend(e)
+    refused.extend(r)
     if include_trials:
-        for trial in DECISION_TRIAL_TILES:
-            family = trial["family"]
-            if family not in families:
-                continue
-            for pattern in patterns:
-                for shape in trial.get("shapes", shapes):
-                    template = {
-                        "Architecture": "gfx90c",
-                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
-                        "ContractionPattern": pattern,
-                        "ProblemType": shape,
-                        "ScheduleName": "isa",
-                        "FamilyLabel": family,
-                    }
-                    ok, why = gen.validate_config(
-                        {**template, **trial["knobs"]})
-                    if ok:
-                        emitted.append(dict(trial["knobs"]))
-                    else:
-                        refused.append(f"{family}/trial{trial['decision']}/"
-                                       f"{shape}: {why}")
+        e, r = _emit_trials(gen, families, patterns, shapes)
+        emitted.extend(e)
+        refused.extend(r)
     return emitted, refused
 
 
