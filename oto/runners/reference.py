@@ -22,8 +22,101 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import oto.tensile.library as tlib
 
 
+def _deck_content_fps(deck: List[Dict[str, Any]]) -> Dict[str, str]:
+    """phase_key -> config fingerprint (undotted keys only)."""
+    fps: Dict[str, str] = {}
+    for p in deck:
+        clean = {k: v for k, v in p.items() if not k.startswith("_")}
+        fps[tlib.phase_key(p)] = tlib.config_fingerprint(clean)
+    return fps
+
+
+def _rebuild_deck_for_triage(manifest: Dict[str, Any],
+                            deck: List[Dict[str, Any]],
+                            rerun_manifest: Dict[str, Any]
+                            ) -> List[Dict[str, Any]]:
+    """Rebuild the deck from the shipped manifest, scoped to the audited set.
+
+    A triaged resume exists to re-measure phases whose CONFIG changed.
+    Replaying the stored deck would re-run the pre-fix configs verbatim,
+    so rebuild the deck from the shipped manifest instead and let the
+    content comparison decide what still needs running.
+    """
+    print("[gfx900-reference] triage manifest present: rebuilding the "
+          "deck from the shipped manifest so the config fixes apply")
+    _fresh = tlib.emit_spoof_phases(manifest)
+    # Keep the rebuild inside the audited scope. emit_spoof_phases
+    # spans every shipped family (2285 here) while the audited floor
+    # covers 1212 of them; intersecting by phase_key refreshes the
+    # configs without silently widening the floor with families that
+    # were never part of it.
+    # Scope comes from the triage manifest, not from the deck we
+    # happened to load. The base deck is the newest chain head, which
+    # after several resumes only covers the last slice of kernels;
+    # the manifest is keyed by phase_key and spans every kernel seen
+    # across the whole reference chain.
+    _audited = set(rerun_manifest.get("tiers_by_key") or {}) | {
+        tlib.phase_key(p) for p in deck}
+    _scoped = [p for p in _fresh if tlib.phase_key(p) in _audited]
+    print(f"[gfx900-reference] rebuilt {len(_scoped)}/{len(_fresh)} "
+          f"phase(s) inside the audited scope "
+          f"({len(_audited)} kernel(s) triaged)")
+    return _scoped
+
+
+def _filter_resume_deck(
+    deck: List[Dict[str, Any]],
+    rerun_manifest: Dict[str, Any],
+    reusable_keys: Set[str],
+    reusable_pids: Set[str],
+    release_held: bool,
+) -> Tuple[List[Dict[str, Any]], int, int]:
+    """Apply triage-then-reuse to the deck -> (phases, n_reuse, n_held).
+
+    A triage manifest is authoritative and outranks reuse: T1 exists
+    precisely because the earlier measurement is void, so it must run
+    again even though a completed record exists, and T3 must never be
+    re-staged. Only T0_KEEP phases remain eligible for reuse.
+    Reuse-then-triage ordering would instead drop every T1 phase that
+    already has a verdict and quietly run none of them.
+    T2 is HELD by default (see incomplete_work.md 4.16): pinned out of
+    this run unless the caller explicitly released it.
+    """
+    phases: List[Dict[str, Any]] = []
+    n_reuse = 0
+    n_held = 0
+    for p in deck:
+        key = tlib.phase_key(p)
+        pid = str(p.get("phase_id", ""))
+        if rerun_manifest:
+            tier = tlib.tier_for(p, rerun_manifest)
+            if tier == tlib.TIER_DROP:
+                continue
+            if tier == tlib.TIER_HELD and not release_held:
+                n_held += 1
+                continue
+            if tier == tlib.TIER_FIRST or (
+                    tier in (tlib.TIER_LAST, tlib.TIER_HELD)):
+                phases.append(p)
+                continue
+        if key in reusable_keys or pid in reusable_pids:
+            n_reuse += 1
+            continue
+        phases.append(p)
+    return phases, n_reuse, n_held
+
+
 class ReferenceMixin:
     """The spoof floor run chain, mixed into TensileDriver."""
+
+    def _resume_chain_ids(self, base: str) -> List[str]:
+        """Chain ids for a resume, base first."""
+        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        chain_ids = [r for r in chain_ids
+                     if (self.base_dir / "gfx90c_runs" / r).is_dir()]
+        if base not in chain_ids:
+            chain_ids = [base] + chain_ids
+        return chain_ids
 
     def _resume_deck(self, base: str, base_dir: Path,
                      release_held: bool) -> Tuple[Optional[List[Dict[str, Any]]],
@@ -44,90 +137,33 @@ class ReferenceMixin:
           and T3 must never be re-staged. Reuse-then-triage would drop every T1
           phase that already has a verdict and quietly run none of them.
         """
-        from oto.tensile.candidate import assembly_class_valid  # noqa: F401
         manifest = tlib.load_shipped_manifest(self.base_dir, refresh=False)
 
         with open(base_dir / "phases_reference.yaml") as f:
             deck = yaml.safe_load(f) or []
 
-        # A triaged resume exists to re-measure phases whose CONFIG changed.
-        # Replaying the stored deck would re-run the pre-fix configs verbatim,
-        # so rebuild the deck from the shipped manifest instead and let the
-        # content comparison decide what still needs running.
+        # A triaged resume rebuilds the deck from the shipped manifest; the
+        # content comparison then decides what still needs running.
         _rm = tlib.load_rerun_manifest(self.base_dir)
         if _rm:
-            print("[gfx900-reference] triage manifest present: rebuilding the "
-                  "deck from the shipped manifest so the config fixes apply")
-            _fresh = tlib.emit_spoof_phases(manifest)
-            # Keep the rebuild inside the audited scope. emit_spoof_phases
-            # spans every shipped family (2285 here) while the audited floor
-            # covers 1212 of them; intersecting by phase_key refreshes the
-            # configs without silently widening the floor with families that
-            # were never part of it.
-            # Scope comes from the triage manifest, not from the deck we
-            # happened to load. The base deck is the newest chain head, which
-            # after several resumes only covers the last slice of kernels;
-            # the manifest is keyed by phase_key and spans every kernel seen
-            # across the whole reference chain.
-            _audited = set(_rm.get("tiers_by_key") or {}) | {
-                tlib.phase_key(p) for p in deck}
-            _scoped = [p for p in _fresh if tlib.phase_key(p) in _audited]
-            print(f"[gfx900-reference] rebuilt {len(_scoped)}/{len(_fresh)} "
-                  f"phase(s) inside the audited scope "
-                  f"({len(_audited)} kernel(s) triaged)")
-            deck = _scoped
+            deck = _rebuild_deck_for_triage(manifest, deck, _rm)
 
-        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
-        chain_ids = [r for r in chain_ids
-                     if (self.base_dir / "gfx90c_runs" / r).is_dir()]
-        if base not in chain_ids:
-            chain_ids = [base] + chain_ids
+        chain_ids = self._resume_chain_ids(base)
 
         # Reuse by content, not by phase_id (see _reusable_phase_keys).
-        current_fps = {}
-        for p in deck:
-            clean = {k: v for k, v in p.items() if not k.startswith("_")}
-            current_fps[tlib.phase_key(p)] = tlib.config_fingerprint(clean)
+        current_fps = _deck_content_fps(deck)
         reusable_keys, reusable_pids = self._reusable_phase_keys(
             chain_ids, current_fps)
 
-        # A triage manifest is authoritative and outranks reuse: T1 exists
-        # precisely because the earlier measurement is void, so it must run
-        # again even though a completed record exists, and T3 must never be
-        # re-staged. Only T0_KEEP phases remain eligible for reuse.
-        # Reuse-then-triage ordering would instead drop every T1 phase that
-        # already has a verdict and quietly run none of them.
-        # T2 is HELD by default (see incomplete_work.md 4.16): pinned out of
-        # this run unless the caller explicitly released it.
-        rerun_manifest = _rm
-        phases = []
-        n_reuse = 0
-        n_held = 0
-        for p in deck:
-            key = tlib.phase_key(p)
-            pid = str(p.get("phase_id", ""))
-            if rerun_manifest:
-                tier = tlib.tier_for(p, rerun_manifest)
-                if tier == tlib.TIER_DROP:
-                    continue
-                if tier == tlib.TIER_HELD and not release_held:
-                    n_held += 1
-                    continue
-                if tier == tlib.TIER_FIRST or (
-                        tier in (tlib.TIER_LAST, tlib.TIER_HELD)):
-                    phases.append(p)
-                    continue
-            if key in reusable_keys or pid in reusable_pids:
-                n_reuse += 1
-                continue
-            phases.append(p)
+        phases, n_reuse, n_held = _filter_resume_deck(
+            deck, _rm, reusable_keys, reusable_pids, release_held)
         if n_reuse:
             print(f"[gfx900-reference] reusing {n_reuse}/{len(deck)} phase(s) "
                   f"by content ({len(reusable_keys)} keyed, "
                   f"{len(reusable_pids)} legacy)")
-        if rerun_manifest:
+        if _rm:
             n_t3 = sum(1 for p in deck
-                       if tlib.tier_for(p, rerun_manifest) == tlib.TIER_DROP)
+                       if tlib.tier_for(p, _rm) == tlib.TIER_DROP)
             held_note = (f", {n_held} pinned as held"
                          if n_held else "")
             print(f"[gfx900-reference] triage applied: {len(phases)} phase(s) "
