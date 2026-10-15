@@ -25,6 +25,15 @@ ORIG = Path("/tmp/opencode/scheduler_orig.py")
 # Load the original scheduler.py as module "scheduler_orig", with its
 # `from gfx90c_common import ...` redirected at the new peaks module.
 import types
+import subprocess
+
+# Create the original scheduler.py file
+if not ORIG.parent.exists():
+    ORIG.parent.mkdir(parents=True, exist_ok=True)
+
+src = subprocess.run(["git", "show", f"{REFACTOR_BASE}:scheduler.py"], cwd=ROOT,
+                     capture_output=True, text=True, check=True).stdout
+ORIG.write_text(src)
 
 fake_pkg = types.ModuleType("gfx90c_common")
 import oto.device.peaks as peaks
