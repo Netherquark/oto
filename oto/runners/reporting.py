@@ -264,6 +264,71 @@ class ReportingMixin:
                 spoof_temp_max_c=s_temp_max,
             ))
         return verdicts
+    def _report_inputs(self, run_id: str):
+        """The analytics-derived inputs the report is generated from."""
+        all_analytics = self._native_analytics_all_runs()
+        if not all_analytics:
+            # Degenerate: nothing measured anywhere. Say so loudly rather
+            # than emitting a clean-looking all-zero grid.
+            all_analytics = (self._load_analytics_from_run(self.run_dir)
+                             or self._load_analytics_from_registry(run_id))
+        cell_status = self.analytics.classify_cell_status(all_analytics)
+        family_timing = self._merged_family_timing(run_id)
+        execution_timing = self._compute_execution_timing(run_id, family_timing)
+        return all_analytics, cell_status, family_timing, execution_timing
+
+    def _merged_family_timing(self, run_id: Path):
+        """Candidate-run timing merged with every reference chain run's timing.
+
+        Coverage matrix & execution time are derived from the gfx900 shipped
+        floor machinery: reference-run timings are authoritative for the
+        shipped contract; the candidate run fills in families the floor did
+        not cover. Chain runs (base + resume) merge.
+        """
+        family_timing = self._compute_family_timing(run_id)
+        for ref_run in self._reference_floor_runs(run_id):
+            ref_timing = self._compute_family_timing(ref_run)
+            family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
+        return family_timing
+
+    def _report_native_arm(self, ab_verdicts, native_agg: str):
+        """Provenance summary + the empty-arm warning.
+
+        Must precede provenance: this is what populates _native_arm_records.
+        """
+        native_arm = self._native_arm_provenance(self._native_arm_records, native_agg)
+        if native_arm["empty"]:
+            print("[report] WARNING: native arm is EMPTY across the whole database — "
+                  "every coverage/RED number below is 0 because nothing was ever "
+                  "measured, not because the hardware is slow.")
+        elif ab_verdicts:
+            wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
+            ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
+            losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
+            print(f"[report] native arm: {native_arm['n_records']} cells from "
+                  f"{native_arm['n_runs']} run(s), agg={native_agg} -> "
+                  f"{wins} WIN / {ties} TIE / {losses} LOSS")
+        return native_arm
+
+    def _emit_report(self, run_id: str, run_dir: Optional[Path], report,
+                     ab_verdicts, native_arm, all_analytics, red_list):
+        """Write the JSON report(s) and return the result summary."""
+        if run_dir is not None:
+            report_out = run_dir / "acceptance_report.json"
+            self.reporter.write_report(report, report_out)
+            print(f"Report emitted to: {report_out}")
+        if self.reporter.base_dir:
+            try:
+                self.reporter.write_report(
+                    report,
+                    self.reporter.base_dir / "gfx90c_results" / "acceptance_report.json")
+            except Exception:
+                pass
+        return {"cells": len(all_analytics), "red": len(red_list),
+                "ab": len(ab_verdicts), "run_id": run_id,
+                "native_runs": native_arm["runs"],
+                "overall_pass": report.overall_pass, "summary": report.summary}
+
     def generate_acceptance_report(self, run_dir: Optional[Path] = None, run_id: Optional[str] = None,
                                     native_agg: str = "winner") -> Optional[Dict[str, Any]]:
         """
@@ -296,46 +361,18 @@ class ReportingMixin:
                 print("Report generation: no run_id available")
                 return None
 
-            all_analytics = self._native_analytics_all_runs()
-            if not all_analytics:
-                # Degenerate: nothing measured anywhere. Say so loudly rather
-                # than emitting a clean-looking all-zero grid.
-                all_analytics = (self._load_analytics_from_run(run_dir)
-                                 or self._load_analytics_from_registry(run_id))
-
-            cell_status = self.analytics.classify_cell_status(all_analytics)
-            red_list = cell_status["red"]
-            family_timing = self._compute_family_timing(run_id)
-            for ref_run in self._reference_floor_runs(run_id):
-                # Coverage matrix & execution time are derived from the gfx900
-                # shipped floor machinery: reference-run timings are authoritative
-                # for the shipped contract; the candidate run fills in families
-                # the floor did not cover. Chain runs (base + resume) merge.
-                ref_timing = self._compute_family_timing(ref_run)
-                family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
-
-            execution_timing = self._compute_execution_timing(run_id, family_timing)
+            all_analytics, cell_status, family_timing, execution_timing = \
+                self._report_inputs(run_id)
 
             # Must precede provenance: this is what populates _native_arm_records.
             ab_verdicts = self._compute_ab_verdicts(run_id, run_dir, agg=native_agg)
-            native_arm = self._native_arm_provenance(self._native_arm_records, native_agg)
-            if native_arm["empty"]:
-                print("[report] WARNING: native arm is EMPTY across the whole database — "
-                      "every coverage/RED number below is 0 because nothing was ever "
-                      "measured, not because the hardware is slow.")
-            elif ab_verdicts:
-                wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
-                ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
-                losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
-                print(f"[report] native arm: {native_arm['n_records']} cells from "
-                      f"{native_arm['n_runs']} run(s), agg={native_agg} -> "
-                      f"{wins} WIN / {ties} TIE / {losses} LOSS")
+            native_arm = self._report_native_arm(ab_verdicts, native_agg)
 
             report = self.reporter.generate_acceptance_report(
                 run_id=run_id,
                 ab_verdicts=ab_verdicts,
                 all_analytics=all_analytics,
-                red_list=red_list,
+                red_list=cell_status["red"],
                 orange_list=cell_status["orange"],
                 family_timing=family_timing,
                 execution_timing=execution_timing,
@@ -346,19 +383,9 @@ class ReportingMixin:
                 reference_floor_authoritative=getattr(
                     self, "_reference_floor_authoritative", True),
             )
-            if run_dir is not None:
-                report_out = run_dir / "acceptance_report.json"
-                self.reporter.write_report(report, report_out)
-                print(f"Report emitted to: {report_out}")
-            if self.reporter.base_dir:
-                try:
-                    self.reporter.write_report(report, self.reporter.base_dir / "gfx90c_results" / "acceptance_report.json")
-                except Exception:
-                    pass
-            return {"cells": len(all_analytics), "red": len(red_list),
-                    "ab": len(ab_verdicts), "run_id": run_id,
-                    "native_runs": native_arm["runs"],
-                    "overall_pass": report.overall_pass, "summary": report.summary}
+            return self._emit_report(run_id, run_dir, report, ab_verdicts,
+                                     native_arm, all_analytics,
+                                     cell_status["red"])
         except Exception as e:
             print(f"Report generation error: {e}")
             return None

@@ -189,28 +189,30 @@ def _fmt(x):
     return "x".join(map(str, x)) if isinstance(x, (list, tuple)) else str(x)
 
 
-def main() -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", type=Path, default=BASE)
     ap.add_argument("--family", help="filter tables to one family label (e.g. ZZ)")
     ap.add_argument("--json", type=Path, help="also write machine-readable output here")
-    args = ap.parse_args()
+    return ap
 
-    base = args.base_dir.resolve()
-    knobs = _Knobs(base)
-    _drv, native, floor, ref_ids = _load_arms(base)
 
-    nat = _winners(native, "native", knobs)
-    flr = _winners(floor, "floor", knobs)
-    nat_t, flr_t = _reach(native, "native", knobs), _reach(floor, "floor", knobs)
-
-    keep = lambda c: not args.family or c[0].upper() == args.family.upper()  # noqa: E731
+def _filter_by_family(nat, flr, nat_t, flr_t, family):
+    """Apply --family to all four tables (cell keys vs family keys)."""
+    if not family:
+        return nat, flr, nat_t, flr_t
+    want = family.upper()
+    keep = lambda c: c[0].upper() == want  # noqa: E731
     nat = {k: v for k, v in nat.items() if keep(k)}
     flr = {k: v for k, v in flr.items() if keep(k)}
-    nat_t = {k: v for k, v in nat_t.items() if not args.family or k.upper() == args.family.upper()}
-    flr_t = {k: v for k, v in flr_t.items() if not args.family or k.upper() == args.family.upper()}
+    nat_t = {k: v for k, v in nat_t.items() if k.upper() == want}
+    flr_t = {k: v for k, v in flr_t.items() if k.upper() == want}
+    return nat, flr, nat_t, flr_t
 
+
+def _print_summary(base, ref_ids, native, floor, nat, flr):
+    """The header block: arms, cell counts and the partial-knob list."""
     print(f"base-dir     : {base}")
     print(f"floor runs   : {ref_ids}")
     print(f"native arm   : {len(native)} records / {len({r.get('source_run') for r in native})} run(s)")
@@ -223,6 +225,9 @@ def main() -> int:
     print("\nnote: a 2_BenchmarkData CSV is a MULTI-SIZE SWEEP — GFlops is the LAST")
     print("      column, column 0 is the row index, and SizeL is the real K.")
 
+
+def _print_load_width(nat_t, flr_t):
+    """Load width actually reached, per arm x family."""
     print("\n=== load width actually reached, per arm x family ===")
     print(f"  {'family':8} {'native':26} {'floor':26} verdict")
     fams = sorted(set(nat_t) | set(flr_t))
@@ -238,21 +243,26 @@ def main() -> int:
              f"neither at {GLOBAL_LOAD_CAP_BYTES}B cap")
         print(f"  {f:8} {str([f'{x}B' for x in nb]):26} {str([f'{x}B' for x in fb]):26} {v}")
 
-    for label, W in (("NATIVE", nat), ("FLOOR", flr)):
-        print(f"\n=== best config per cell — {label} ===")
-        print(f"  {'cell':14} {'GFLOPS':>9} {'nker':>5} {'MT':11} {'TT':6} {'VW':>3} "
-              f"{'loadB':>6} {'DU':>4} {'WGM':>4} {'GSU':>4} pattern")
-        for cell in sorted(W):
-            w = W[cell]
-            k = w["knobs"]
-            vw = k.get("VectorWidth")
-            b = DTYPE_BYTES.get(FAMILY_CHAR.get(cell[0], cell[0][0]), 4)
-            lb = f"{int(vw) * b}B" if vw is not None else "?"
-            print(f"  {f'{cell[0]}:{cell[1]}':14} {w['gflops']:9.1f} {w['n_kernels']:5} "
-                  f"{_fmt(k.get('MacroTile')):11} {_fmt(k.get('ThreadTile')):6} {str(vw):>3} "
-                  f"{lb:>6} {str(k.get('DepthU')):>4} {str(k.get('WorkGroupMapping')):>4} "
-                  f"{str(k.get('GlobalSplitU')):>4} {k.get('ContractionPattern')}")
 
+def _print_best_table(W, label):
+    """Best config per cell, one arm."""
+    print(f"\n=== best config per cell — {label} ===")
+    print(f"  {'cell':14} {'GFLOPS':>9} {'nker':>5} {'MT':11} {'TT':6} {'VW':>3} "
+          f"{'loadB':>6} {'DU':>4} {'WGM':>4} {'GSU':>4} pattern")
+    for cell in sorted(W):
+        w = W[cell]
+        k = w["knobs"]
+        vw = k.get("VectorWidth")
+        b = DTYPE_BYTES.get(FAMILY_CHAR.get(cell[0], cell[0][0]), 4)
+        lb = f"{int(vw) * b}B" if vw is not None else "?"
+        print(f"  {f'{cell[0]}:{cell[1]}':14} {w['gflops']:9.1f} {w['n_kernels']:5} "
+              f"{_fmt(k.get('MacroTile')):11} {_fmt(k.get('ThreadTile')):6} {str(vw):>3} "
+              f"{lb:>6} {str(k.get('DepthU')):>4} {str(k.get('WorkGroupMapping')):>4} "
+              f"{str(k.get('GlobalSplitU')):>4} {k.get('ContractionPattern')}")
+
+
+def _print_triples(nat_t, flr_t):
+    """(MacroTile / ThreadTile / VectorWidth) triples per arm x family."""
     print("\n=== (MacroTile / ThreadTile / VectorWidth) triples per arm x family ===")
     for arm, T in (("native", nat_t), ("floor", flr_t)):
         print(f"\n-- {arm}")
@@ -265,7 +275,9 @@ def main() -> int:
                 print(f"   {'':8} at {GLOBAL_LOAD_CAP_BYTES}B cap: "
                       + ", ".join(f"{a}/{b_}/vw{c}" for a, b_, c in at_cap))
 
-    # knobs that exist in the schema but were never exercised by either arm
+
+def _print_never_exercised(nat, flr):
+    """Knobs that exist in the schema but were never exercised by either arm."""
     print("\n=== never-exercised knobs (both arms, all cells) ===")
     for knob in ("GlobalSplitU", "ContractionPattern", "StaggerU", "DepthU",
                  "WorkGroupMapping", "LdsPadB", "PrefetchGlobalRead"):
@@ -277,15 +289,41 @@ def main() -> int:
         if vals and len(vals) == 1:
             print(f"  {knob:20} = {sorted(vals)}   <- only ever this one value")
 
+
+def _write_allruns_json(path, ref_ids, native, floor, nat, flr, nat_t, flr_t):
+    """The machine-readable dump of every table this tool printed."""
+    path.write_text(json.dumps(
+        {"floor_runs": ref_ids,
+         "records": {"native": len(native), "floor": len(floor)},
+         "winners": {a: {f"{c[0]}:{c[1]}": v for c, v in W.items()}
+                     for a, W in (("native", nat), ("floor", flr))},
+         "triples": {a: {f: sorted(map(list, t)) for f, t in T.items()}
+                     for a, T in (("native", nat_t), ("floor", flr_t))}},
+        indent=1, default=str))
+
+
+def main() -> int:
+    args = _build_arg_parser().parse_args()
+
+    base = args.base_dir.resolve()
+    knobs = _Knobs(base)
+    _drv, native, floor, ref_ids = _load_arms(base)
+
+    nat = _winners(native, "native", knobs)
+    flr = _winners(floor, "floor", knobs)
+    nat_t, flr_t = _reach(native, "native", knobs), _reach(floor, "floor", knobs)
+
+    nat, flr, nat_t, flr_t = _filter_by_family(nat, flr, nat_t, flr_t, args.family)
+    _print_summary(base, ref_ids, native, floor, nat, flr)
+    _print_load_width(nat_t, flr_t)
+    for label, W in (("NATIVE", nat), ("FLOOR", flr)):
+        _print_best_table(W, label)
+    _print_triples(nat_t, flr_t)
+    _print_never_exercised(nat, flr)
+
     if args.json:
-        args.json.write_text(json.dumps(
-            {"floor_runs": ref_ids,
-             "records": {"native": len(native), "floor": len(floor)},
-             "winners": {a: {f"{c[0]}:{c[1]}": v for c, v in W.items()}
-                         for a, W in (("native", nat), ("floor", flr))},
-             "triples": {a: {f: sorted(map(list, t)) for f, t in T.items()}
-                         for a, T in (("native", nat_t), ("floor", flr_t))}},
-            indent=1, default=str))
+        _write_allruns_json(args.json, ref_ids, native, floor,
+                            nat, flr, nat_t, flr_t)
         print(f"\nwrote {args.json}")
     return 0
 
