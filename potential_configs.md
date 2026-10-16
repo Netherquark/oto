@@ -113,7 +113,7 @@ geometry and conservative on everything else.
 
 ## R12 — gfx90c hardware read (confirmed from existing docs)
 
-From `gfx90c_tuning_guide.md` §1.1, `archive/corpus4.tuning_20261016.md` §1,
+From `gfx90c_tuning_guide.md` §1.1 (primary-source legal domains),
 and `gfx90c_theoretical_limits.md` §1:
 
 | property | value | consequence |
@@ -134,7 +134,7 @@ and `gfx90c_theoretical_limits.md` §1:
 | Max LDS | 65536 B | LDS capacity binds 61.7% of kernels |
 
 **The 7-CU occupancy cliff** (from `gfx90c_tuning_guide.md` §1.2 and
-`archive/corpus4.tuning_20261016.md` §6.1):
+`gfx90c_tuning_guide.md` §1.2 (7-CU geometry)):
 
 At 256³, a 128×128 macro tile yields 4 workgroups for 7 CUs — **6 of 7 CUs idle**.
 No knob tuning recovers that; the only levers are a smaller MacroTile, more
@@ -179,7 +179,7 @@ CC advantage comes from MT=[128,128] tiles that native never generated.
 
 ### Route B (updated) — The ten never-varied knobs
 
-From `archive/corpus4.tuning_20261016.md` §5 and the floor census (§R4):
+From the floor census (§R4):
 
 | knob | floor value (2285/2285) | legal on gfx90c | why it could win |
 |---|---|---|---|
@@ -200,7 +200,7 @@ From `archive/corpus4.tuning_20261016.md` §5 and the floor census (§R4):
 
 ### Route C (updated) — Wave-quantisation ladder (SS/DD only)
 
-From `archive/corpus4.tuning_20261016.md` §6.1 and the 7-CU cliff analysis:
+From `gfx90c_tuning_guide.md` §1.2 and the 7-CU cliff analysis:
 
 | problem | MT | G (tiles) | G mod 7 | utilisation |
 |---|---|---|---|---|
@@ -241,7 +241,7 @@ kernel-writer, not a deck entry.
 
 ## R14 — what to stop doing
 
-Ceasing (from `archive/corpus4.tuning_20261016.md` §4.4 and the floor census):
+Ceasing (per floor census):
 - **ThreadTile width ladders for C and Z** — the accumulator cap makes every
   wider tile illegal; pure rejects.
 - **LdsPad/LDS-layout work** for families where bandwidth is oversupplied — LDS

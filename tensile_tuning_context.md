@@ -148,3 +148,56 @@ active workflow. Floor `gfx900_ref_20260925_152942`: 1,073/2,285 executed, 1,096
 unattempted + 116 failed — continued via `--gfx900-reference --resume`;
 `--auto` gates tuning on full floor completion, then converges per-cell verdicts
 by workload cell `(family, dtype, shape)`. No LLM consultations in the loop.
+---
+
+## §S — SOTA autotuning strategy cross-check (corpus4-derived, durable facts now live here)
+
+Verified facts from the external GEMM autotuning literature, applied to a 7-CU / 64 KiB-LDS / 1 MiB-L2 / Wave64 / no-MFMA target:
+
+1. **Budget-tiered search.** Kernel Tuner study (Tavecchio et al., TEVC 2022; 26 spaces × 9 GPUs
+   × 16 optimisers, GEMM in OpenCL on AMD MI50): **≤ 200 evaluations → dual annealing** wins (SMAC
+   "did not even beat random sampling for GEMM" at low budgets); **200–800 evals → first-improvement
+   local search + SA**. At ~120 sec per evaluation, a 10h run ≈ 300 evals ⇒ low-to-medium tier,
+   so the loop is **analytic pre-filter → hill-climb the surviving footprint → draw diagonals
+   last**, never a surrogate model in the inner loop.
+2. **AMD gains ~5× more from autotuning than NVIDIA** (~10× vs 2×; arXiv 2407.11488). Vendor-tuned
+   configs do *not* transfer across vendors — which is why SS pads, DD/HH_HPA/HS_HPA never pad
+   must be honoured as asymmetric rather than averaged over.
+3. **Analytic / constructed schedules beat search when the space is huge.** ROLLER + tritonBLAS:
+   `LDS capacity fixes the CU tile` (`(tM + tN) × tK × elem ≤ LDS`), `VGPR budget fixes the warp
+   tile`, **94.7 % selection efficiency** at **50–80 μs** tile selection (5-6 orders of magnitude
+   faster than Triton autotuning's 10-50s / 75 configs). Use as the Stage-0 pre-filter; keep
+   measurement as the ground truth.
+4. **Vendor-sanctioned templated search.** Bolt + `rocblas-gemm-tune` use Tensile to heuristically
+   search — the exact technique here. AMD's workload guide confirms `mfma_16x16` > `mfma_32x32`
+   on MI300X and explicitly states *"there is no guarantee that the workload being tuned will be
+   able to outperform the default GEMM algorithm"* — the floor is the bar, not a ceiling.
+5. **SplitK / K-split is the dominant lever for large-K-small-MN** (hipBLASLt blog,
+   Stream-K++). StreamK and GSU>1 are mutually exclusive; we picked GSU.
+6. **Subzero samples matter.** Profile GPU counters (bank conflict rate, LDS bandwidth, TCE/L2
+   stall) *during* the search to disambiguate *why* a config lost — the rationale behind the
+   counter regression in Stage 0/1.
+
+**Cost model (cheap, no GPU).** Predicted time ≈ `max(flops/peak, bytes/bw) + LDS_conflict_penalty`,
+with the conflict factor estimated from stride/DepthU/VectorWidth/bpe/LdsPad. **Use for ordering and
+pruning only** — never accept on the model; measurement is the ground truth.
+
+**Measurement hygiene (per allruns.py pass 3 read).** Ban within-the-overlap measurement (a config
+whose median comes from a run that overlapped a different invocation) — the 658.2 vs 333.0
+multi-shape swing on the same kernel is **real**, not noise, and form-mismatched cells grade
+`UNGRADED`. Always destroy the optimizer's draws between iterations; 32 reps per config in
+Kernel Tuner is the source-of-truth, versus our 8 seeds which is thin near the band.
+
+## §S.X — Source list (verify each yourself, all live as of the corpus pass)
+- arxiv.org/abs/2210.01465 (TEVC 2022), 2407.11488, 2512.04226 (tritonBLAS), 2102.05297,
+  2102.04199, 2201.05587, 2604.12891, 2408.11417, 2110.08221, 2102.04199, 1908.05792
+- rocm.blogs.amd.com artificial-intelligence/gemm_blog, software-tools-optimization/hipblaslt
+  (SplitK), software-tools-optimization/lds-bank-conflict (padding vs XOR)
+- rocm.docs.amd.com projects/ai-ecosystem (workload), rocprofiler-compute pipeline descriptions
+- tvm.apache.org/2021/03/03/intro-auto-scheduler, docs/deep_dive/tensor_ir/tutorials/meta_schedule
+- usenix.org/conference/osdi22/presentation/zhu, arxiv.org/abs/2408.11417 (Stream-K++),
+  arxiv.org/abs/2102.05297 (counters), github.com/AMD-AGI/GEAK (methodology card)
+- rocmdocs.amd.com/projects/composable_kernel (LDS bank model, 32 banks × 4 B)
+- seb-v.github.io/optimization/update/2025/01/20 (FP32 matmul +60% over rocBLAS, the
+  contribution ladder: reg tiling → double-buffer GMEM → LDS pad + -mcumode → VGPR/bank
+  register placement → inner unroll → SGPR batched addressing)

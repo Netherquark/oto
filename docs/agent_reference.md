@@ -31,7 +31,7 @@ python3 -m pytest -q
 | `potential_configs.md` | Master analysis: verdicts, routes, deck |
 | `gfx90c_tuning_guide.md` §1.1–§1.2, §9.1 | Primary-source knob reference + geometry |
 | `tensile_tuning_context.md` | Stage 0–3 search order + NOT VERIFIED note |
-| `archive/corpus4.tuning_20261016.md` | Raw research corpus (read-only) |
+| (research corpus: deleted — durable facts promoted to this doc + gfx90c_tuning_guide.md + tensile_tuning_context.md) | absorbed |
 | `oto/device/peaks.py` | Hardware peaks + canonical vocabulary |
 | `oto/tensile/decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |
 | `oto/tensile/gates/occupancy.py` | LDS + VGPR occupancy gate |
