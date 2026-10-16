@@ -20,7 +20,8 @@ import math
 import re
 from typing import Any, Dict, Optional, Tuple
 
-from .vgpr_model import FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP
+from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
+                         knob_int)
 
 #: Tensile DataType properties the classic path reads, in the units
 #: SolutionStructs uses (``reg`` is registers per element, not bytes).
@@ -60,8 +61,7 @@ def _load_geometry(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int,
     mt_parts = [int(x) for x in re.split(r'[xX]', mt_clean)]
     if len(mt_parts) < 2:
         return None
-    depthU = (int(config.get("DepthU", mt_parts[2]))
-              if len(mt_parts) >= 3 else int(config.get("DepthU", 16)))
+    depthU = knob_int(config.get("DepthU"), mt_parts[2] if len(mt_parts) >= 3 else 16)
     tt_parts = [int(x) for x in re.split(
         r'[xX]', str(config.get("ThreadTile", "4x4")).lower().replace("_", "x"))]
     if len(tt_parts) < 2:
@@ -129,7 +129,8 @@ def _transposes(config: Dict[str, Any]) -> Tuple[bool, bool]:
 
 def _nlca_for(config: Dict[str, Any], tc: str) -> int:
     """NumLoadsCoalesced for one operand, honouring the shared NLCA alias."""
-    return int(config.get(f"NumLoadsCoalesced{tc}", config.get("NLCA", 1)))
+    value = config.get(f"NumLoadsCoalesced{tc}", config.get("NLCA", 1))
+    return knob_int(value, 1)
 
 
 # --------------------------------------------------------------- per-operand

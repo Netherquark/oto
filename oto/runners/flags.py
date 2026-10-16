@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Optional
 
 
 def _add_scope_flags(parser: argparse.ArgumentParser) -> None:

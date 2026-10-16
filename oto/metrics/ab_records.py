@@ -16,7 +16,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import yaml
 
 from oto.metrics.ab_identity import (AbIdentityMixin, _driver,
                                         _pair_key, _resolved_config,

@@ -10,6 +10,10 @@
 > **C**=oto/harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.
 > §11 is the loop for proposing the next candidate.
+> §1.1/§1.2 are the primary-source knob reference — Tensile's own legal domains
+> and the 7-CU geometry behind every tile choice; §9.1 is the virgin-axis census.
+> Before changing a domain in `oto/tensile/synthesis/db_knobs.py`, read §1.1 and
+> then prove the change with `python3 -m oto.tools.deck_review legality`.
 
 ## 0. The one-line truth
 
@@ -57,6 +61,69 @@ StaggerUStride domains, `StaggerUStride >= DepthU·bytesPerElement` when
 refused exactly the legal swizzle values, which is why swizzle forwarding looked
 "blocked" — was fixed 2026-10-09. The generator no longer strips the trio; tests
 lock the writer, the gate and the generator.
+
+### 1.1 Primary-source legal domains (Tensile's own `validParameters`)
+
+The domains in `oto/tensile/synthesis/db_knobs.py` are a *narrowing* of Tensile's
+legal set, so the legal set has to be written down somewhere or every domain
+change is guesswork. This is it — read from `Tensile/Common.py`'s
+`validParameters` (`ROCm/Tensile@develop`). **Line numbers deliberately omitted**;
+the symbol names are the citation.
+
+| knob | Tensile-legal values | what we sample | narrowing rationale |
+|---|---|---|---|
+| `StaggerU` | `[0,2,4,8,16,32,64]` | `0,8,16,32` | even clicks only; the odd ones are noise |
+| `StaggerUStride` | `[0,16,32,64,128,256,512,1024,2048]` | `0,64,128,256` | Tensile **silently raises SUS to a whole multiple of `DepthU*bpe`**, so a draw of 256 collapses to 64 at DU16/bpe4 — most of a coarse domain is one point (P §0 R6) |
+| `StaggerUMapping` | `[0,1,2,3,4]` | `0,1,2` | 3/4 are debug/special |
+| `GlobalSplitU` | `1…4096` | `1,2,4` on SS/DD; **`1` only** on CC/ZZ/HH/HH_HPA/HS_HPA | **family-restricted, and the two restrictions are not the same.** Tensile allows `>1` only for single, 8-bit float, double+BufferStore, Assembly-with-half-accumulate, `_GlobalAccumulation`, or MFMA; gfx90c has no MFMA. *Structural*: complex (`CC`/`ZZ`) and half-with-f32-accumulate (`HH_HPA`/`HS_HPA`) can never run it. *Deck state*: `HH` is hardware-legal but banned by decision, because `>1` on half Assembly also needs `AssertFree0ElementMultiple>=2` and the HH deck ships `AF0EM=1` — lift it the day an HH candidate carries `AF0EM>=2`. Single home: `db_knobs.FAMILY_KNOB_DOMAINS`, read via `forward_domain` |
+| `PrefetchGlobalRead` | `[0,1,2]` | `0,1` | `2` needs 2× LDS + buffering VGPRs; not admitted by the 16 384-B/WG budget on 64 KiB LDS |
+| `PrefetchLocalRead` | `0…128` | `0,1` | 0/1 is the measured split |
+| `1LDSBuffer` | `[-1,0,1]` | **not sampled** | halves LDS but needs `ScheduleInnerAccuracy` 2 or 3 — the strongest virgin occupancy lever (§9.1) |
+| `FractionalLoad` | `[0,1,2]` | **not sampled** | `2` frees the `DepthU` choice on ragged M/N/K |
+| `NumLoadsCoalesced{A,B}` | `-1…64` | `1,2,3` (`NLCA/B`) | `-1` = *least* coalescing (largest number of reads along the coalesced dim) — a distinct regime, not a synonym for `3` |
+| `GlobalLoadVectorWidth{A,B}` | `[-1,1,2,3,4,6,8,16]` | **dtype-dependent** | the verified 16-B cap (`L` §1) makes `GLVW*bpe ≤ 16`; worst legal per dtype is S 4, H 8, D 2, C 2, **Z 1**. A flat `(1,2,4)` domain is a guaranteed-refusal generator for DD/CC/ZZ — see `FAMILY_KNOB_DOMAINS` |
+| `LocalReadVectorWidth` | `[-1,1,2,4,8,16]` | tied to `VectorWidth` | — |
+| `VectorWidth` | `[-1,1,2,3,4,6,8,16]` | per-family | same 16-B cap |
+| `LdsPad{A,B}` | `-1…127` | `0,1,2,4` | `-1` means "same as VectorWidth if TLU=0 else 0" — derivable, not worth a draw; `1` is reported as the value the floor never uses (§9.1, `check`) |
+| `LdsBlockSizePerPad{A,B}` | `[-1,0,64,128,256,512,1024,2048,4096]` | **not sampled** | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Virgin (§9.1) |
+| `TransposeLDS` | `[-1,1,0]` | **not sampled** | TLU=0 matrices only; aligns LDS layout with VALU reads in the absence of MFMA |
+| `UnrollMajorLDS{A,B}` | `[False,True]` | **not sampled** | "beneficial for smaller data types"; relieves `VgprForLocalReadPacking` |
+| `WaveSeparateGlobalRead{A,B}` | `[0,1]` | **not sampled** | splits LDS by wave → fewer cross-wave bank collisions (§9.1) |
+| `ThreadSeparateGlobalRead{A,B}` | `[0,1,2,4]` | **not sampled** | `2` is documented to pair with `WaveSeparateGlobalRead` |
+| `NonTemporal{A,B,C,D}` | `0…7` | **not sampled** | 1=`glc`, 2=`slc`, 3=both; cache-hint bits matter on a 1 MiB L2 |
+| `WorkGroupMapping` | `-1024…1024` | `1,2,3,4,-1,-4` | **8 is the floor's dominant value only because it was tuned for 56–60 CUs**; on 7 CUs it asks for 8 workgroups in the J-column before wrapping. Negatives swap wg0/wg1 — geometrically neutral on square tiles, and the negative family has *never* been generated |
+| `MaxOccupancy` | `1…40` | **not sampled** | cap LDS to buy occupancy |
+| `InnerUnroll` | `[1,2,4,8,16,32,64]` | per-tile | — |
+| `DepthU` | `-16…-1` ∪ `2…1024` | `4,8,16,32` | negatives are the "derived" sentinel |
+| `DepthULdsDivisor` | `[1,2,4]` | **not sampled** | needs `ScheduleInnerAccuracy=3` + `TransposeLDS` + `PrefetchGlobalRead≠2` + `DirectToLds=0`; cuts LDS 2×/4× |
+| `StoreCInUnroll` | `[False,True]` | forwarded | C-store unrolling (Group C) |
+| `StoreCInUnrollInterval` | `1…15` | **not sampled** | — |
+| `PersistentKernel` | `-1…511` | **not sampled** | amortises tile assignment on a 4-tile grid (M2's real enemy) |
+| `StreamK` | `[0,1,2,3]` | **not sampled** | — |
+| `AssertFree0/1ElementMultiple` | `[1,2,4,8,16]` | `1,2` (rows), `4` (CC:256 batch) | **assertions, not hints.** AF0 asserts **M** (Tensile's FreeIndex[0]="I"), AF1 asserts **N** (FreeIndex[1]="J"). Recommended 16/I8, 8/half, **4/single**, 2/double. Tensile does **not** enforce the divisibility — its own comment says the generator "will assume that the ... size is some multiple", so a wrong value drops the needed predication and returns silently wrong numbers. Checked in `candidate_pool._offer_row`, the only place config and shape are both in scope |
+| `AssertSummationElementMultiple` | `[1,2,4,…,1024]` | **not sampled** | asserts **K**, and Tensile applies `ASEM//GSU`, so it must also divide by `GlobalSplitU`. Same unenforced-divisibility hazard; guarded by the same check |
+
+Tile enumeration (same source): `numThreads ∈ {32,64,…,1024}` — **workgroup size
+is always a multiple of 32**; `ThreadTile` sides ≤16 or multiples of 4;
+`MacroTile` sides ∈ {1,2,4,8,16,32,64,128,256,512,1024} ∪ {6,12,24,48,96,192,384,768}.
+The `MatrixInstruction` shapes enumerated in the same table are **gfx908+ only and
+unreachable here** (`HasMFMA=False`) — recorded as a dead end, not an omission.
+
+### 1.2 The small-box geometry, which drives `WorkGroupMapping` and tile choice
+
+Only **7 CUs**. Grid = `⌈M/MT0⌉ × ⌈N/MT1⌉` workgroups. Occupancy ≥2 WG/CU needs
+≥14 resident tiles; ≥8 WG/CU needs ≥56. So:
+
+| MT | tiles @256³ | tiles @512³ | tiles @1024³ |
+|---|---|---|---|
+| 32×32 | 64 (9.1/CU) | 256 | 1024 |
+| 64×64 | 16 (2.3/CU) | 64 (9.1/CU) | 256 |
+| 128×128 | 4 — **6 of 7 CUs idle** | 16 (2.3/CU) | 64 (9.1/CU) |
+| 256×128 | 2 | 8 | 32 |
+
+This is the mechanism behind M2 (guide §5): `128×128` at 256³/512³ is not a
+tuning miss, it is a geometry that cannot fill the machine. Payoff ranking for
+the tile axis is therefore **H at 256³/512³, M at 1024³, L at 2048³+**.
 
 ## 2. Hardware plate book (no re-derivation — see L §1/§2)
 
@@ -278,6 +345,49 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
 | **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `_write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
 | **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/db.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
+
+### 9.1 The virgin axes — where the floor has zero variance
+
+Cross-referencing the shipped gfx900 reference floor against Tensile's own legal
+set (§1.1) gives the knobs the floor **never moves** — over the whole floor, not
+merely rarely. This is the cheapest possible candidate list: every one of these
+is a legal value on this device that no baseline measurement has ever occupied,
+so there is no "we already tried that" to discover later. The counts are not
+transcribed here on purpose (`claude.md` §5); re-derive the variance from
+`python3 allruns.py` and the floor's own manifests.
+
+**The "floor state" column is transcribed from `archive/corpus4.tuning_20261016.md`
+§5, not re-derived here, and is marked `check`.** `allruns.py` reports the knob
+values of each cell's *winner*, not the full variance across the floor, so it
+cannot confirm or refute a "never moves" claim on its own. Verify a row against
+the floor manifests before spending a run on it.
+
+| knob | floor state | why it could win on gfx90c |
+|---|---|---|
+| `1LDSBuffer=1` | never | **halves LDS → doubles occupancy.** Requires `ScheduleInnerAccuracy` 2 or 3 |
+| `DepthULdsDivisor` (2, 4) | never | cuts LDS 2×/4×. Requires SIA=3 + `TransposeLDS` + `PrefetchGlobalRead≠2` + `DirectToLds=0` |
+| `LdsBlockSizePerPadA/B` | 0 everywhere | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Composes with `LdsPad`, which Group C already forwards |
+| `WaveSeparateGlobalReadA/B` | 0 everywhere | splits the LDS buffer by wave → fewer cross-wave bank collisions (K §2 phase model) |
+| `ThreadSeparateGlobalReadA/B` | 0 everywhere | `2` is documented to pair with `WaveSeparateGlobalRead` |
+| `UnrollMajorLDSA/B` | 0 everywhere | relieves `VgprForLocalReadPacking`; "beneficial for smaller data types" |
+| `NonTemporalA/B/C/D` (1–3) | 0 everywhere | `glc`/`slc` cache hints; on a **1 MiB L2** the pollution control is plausibly worth more than on a discrete part with 32 MiB |
+| `FractionalLoad=2` | never (only {0,1}) | frees the `DepthU` choice on ragged M/N/K by moving the edge handling into a temp VGPR |
+| `PersistentKernel` | 0 everywhere | amortises tile assignment; on a 4-tile grid the assignment is a real fraction of the launch |
+| `MaxOccupancy < 40` | 40 | deliberately cap LDS to raise occupancy |
+| `TransposeLDS=1` | 0 | TLU=0 only; aligns the LDS layout with MFMA-free VALU reads |
+| `PrefetchGlobalRead=2` | 0 | deeper prefetch; conditional on the 16 384-B/WG budget |
+| `GlobalReadPerMfma` / `LocalWritePerMfma` | 1 / −1 | **names are MFMA-era but the knobs are general** — they throttle global/LDS issue density, which is the thing to schedule on a machine with no MFMA |
+| `LdsPadA/B = 1` | {0,2,4} (`check`) | Group C forwards pads but the domains still omit 1 |
+| `StaggerUMapping` | ~0 everywhere (`check`) | Tensile's own `Perf/*.yaml` recommends `[0,1]`; the floor sits essentially entirely at the unexplored end of the vendor's own recommendation. Correctly opened in `db_knobs` |
+| `NLCA = -1` | never (−1 ≠ 3) | "-1 = largest number of reads along the coalesced dimension" is the *least*-coalesced regime, a different point in the space, not a synonym |
+
+**Caveat on the whole table.** "Zero variance in the floor" is not "safe to
+turn on". Every row above changes memory traffic, LDS residency or issue
+density, so each needs a paired measurement against its own baseline in the
+same run — never a lone row quoted against a different run's number (M4). And
+`PrefetchGlobalRead=2`, `DepthULdsDivisor`, `1LDSBuffer` and `TransposeLDS`
+interact with the LDS budget, so they must be gated by `ldspad_feasible` like
+every other Group C knob rather than trusted.
 
 Complex-GSU note (supersedes the earlier "MultipleBuffer wave-fill" lever):
 GlobalSplitU>1 on complex is **gate-refused on gfx90c** (scheduler:1379-1382;

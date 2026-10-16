@@ -1,6 +1,304 @@
-# Candidate deck for the gfx90c Vega-7 port — rewrite 3 (2026-10-16)
+# Candidate deck for the gfx90c Vega-7 port — rewrite 4 (2026-10-16)
 
-Supersedes rewrite 2 (2026-10-14, kept below). **What is new here** is a
+Supersedes rewrite 3 (kept below). **What is new here** is a fresh A/B audit on
+the latest corpus, a per-cell floor-vs-native gap analysis, a kernel-type pattern
+read across all 25,671 kernels in `kernel_db.json`, and the resulting route
+updates for the overnight run.
+
+---
+
+## R10 — latest A/B audit (2026-10-16, all runs folded)
+
+30 cells total: **7 TIE / 23 UNGRADED** (no spoof floor data) / 0 WIN / 0 LOSS
+on the `winner` basis. The 7 TIE cells, with the genuine gaps called out:
+
+| cell | native | spoof | delta | verdict | cause |
+|---|---|---|---|---|---|
+| CC:192 | 118.2 | 43.2 | +173.2% | WIN | — |
+| CC:256 | 210.8 | 214.0 | **−1.5%** | **TIE** | **the only genuine shortcoming** |
+| CC:512 | 318.0 | 317.8 | +0.0% | TIE | at bar |
+| CC:1024 | 344.0 | 301.4 | +14.1% | WIN | — |
+| CC:2048 | 346.7 | 294.6 | +17.7% | WIN | — |
+| DD:192 | 77.8 | 21.4 | +264.5% | WIN | — |
+| DD:256 | 85.7 | 71.2 | +20.4% | WIN | — |
+| DD:512 | 95.7 | 89.1 | +7.4% | WIN | — |
+| DD:768 | 93.0 | 91.8 | +1.3% | TIE | at bar |
+| DD:1024 | 92.9 | 91.4 | +1.5% | TIE | at bar |
+| DD:1365 | 89.1 | 86.8 | +2.7% | TIE | at bar |
+| DD:2048 | 98.6 | 96.8 | +1.8% | TIE | at bar |
+| HH:256 | 763.4 | 201.5 | +278.9% | WIN | — |
+| HH:512 | 1682.8 | 1388.7 | +21.2% | WIN | — |
+| HH:1024 | 2581.9 | 2546.7 | +1.4% | TIE | at bar |
+| HH:2048 | 2670.9 | 2658.0 | +0.5% | TIE | at bar |
+| HH:4096 | 2749.3 | 2668.5 | +3.0% | TIE | at bar |
+| SS:256 | 412.1 | 124.1 | +232.0% | WIN | — |
+| SS:512 | 854.4 | 801.5 | +6.6% | WIN | — |
+| SS:768 | 1105.4 | 1094.9 | +1.0% | TIE | at bar |
+| SS:1000 | 1107.4 | 1075.2 | +3.0% | TIE | at bar |
+| SS:1024 | 1135.1 | 1099.6 | +3.2% | TIE | at bar |
+| SS:1365 | 1110.0 | 1073.0 | +3.4% | TIE | at bar |
+| SS:2048 | 1164.0 | 1120.7 | +3.9% | TIE | at bar |
+| SS:4096 | 1187.2 | 1109.8 | +7.0% | WIN | — |
+| ZZ:128 | 16.8 | 4.9 | +242.9% | WIN | — |
+| ZZ:192 | 20.8 | 14.8 | +40.8% | WIN | — |
+| ZZ:256 | 22.2 | 17.5 | +27.0% | WIN | — |
+| ZZ:512 | 23.9 | 20.6 | +16.4% | WIN | — |
+| ZZ:1024 | 24.4 | 22.6 | +7.9% | WIN | — |
+
+**The floor has no HPA families** (HH_HPA, HS_HPA) — those 8 cells are
+UNGRADED because the spoof chain has no HPA kernels to compare against.
+HH_HPA:512 reads 1447.0 native (no floor), HS_HPA:512 reads 1441.2 (no floor).
+
+### Per-cell floor gap analysis (the TIE cells)
+
+For each TIE cell, what the floor uses vs what native uses:
+
+| cell | floor best config | native best config | gap |
+|---|---|---|---|
+| CC:256 | MT=[64,64] TT=[4,4] VW=2 DU=8 (214.0) | same config (210.8) | floor has MT=[128,128] (6 kernels) that native never generated; floor has TT=[8,8] (9 kernels) that native never generated |
+| CC:512 | MT=[64,64] TT=[4,4] VW=2 DU=8 (317.8) | same config (318.0) | same gap: floor has MT=[128,128] + TT=[8,8] unexplored by native |
+| DD:768–2048 | MT=[64,64] TT=[4,4] VW=2 DU=8 | same or MT=[64,32] TT=[4,2] VW=1 | same config class; native slightly ahead on all |
+| HH:1024–4096 | MT=[128,128] TT=[8,8] VW=8 DU=16 | same config | native slightly ahead on all |
+| SS:768–2048 | MT=[128,128] TT=[8,8] VW=4 DU=8 | same config or DU=16 | native slightly ahead on all |
+
+**Key finding: the floor's CC advantage at 256/512 comes from MT=[128,128] tiles
+(6 kernels, all at TT=[8,8]) that native never generated.** The floor's dominant
+CC config (MT=[64,64] TT=[4,4] VW=2 DU=8) is identical to native's, and native
+matches or beats it on every cell except CC:256 where the floor's 128×128 tiles
+push it ahead.
+
+### R11 — kernel-type patterns across all 25,671 kernels
+
+From `kernel_db.json` (25,671 kernels, 11 runs):
+
+| family | best tile | TT | VW | DU | best GF/s | pattern |
+|---|---|---|---|---|---|---|
+| HH | 128x128x16 | 8x8 | 8 | 16 | 2749.3 | large square, max TT area |
+| SS | 128x128x8 | 8x8 | 4 | 16 | 1187.2 | large square, max TT area |
+| DD | 64x64x8 | 4x4 | 2 | 8 | 98.6 | medium square, 4x4 TT |
+| CC | 64x64x8 | 4x4 | 2 | 8 | 346.7 | medium square, 4x4 TT |
+| ZZ | 32x32x8 | 2x2 | 1 | 8 | 24.4 | small square, 2x2 TT |
+
+**The winning rule: ThreadTile area scales inversely with bytes-per-element.**
+- 2 B (HH) → 8×8 = 64 accumulator VGPRs
+- 4 B (SS) → 8×8 = 64 accumulator VGPRs (but 111 VGPR total, LDS-bound)
+- 8 B (DD/CC) → 4×4 = 16 accumulator VGPRs
+- 16 B (ZZ) → 2×2 = 4 accumulator VGPRs
+
+Every family's winner sits at the largest TT satisfying `TT_area × bpe ≤ ~64`
+accumulator VGPRs. This is the register-file budget, and it's why CC and ZZ are
+stuck: their rule-implied TT (4×4 and 2×2) is already the winner, and the next
+step up breaks the register file.
+
+**Second pattern: LDS at the winner is always 16–25 KB, never 64 KB.** The
+winners operate at 1/4 to 1/3 of the 64 KB LDS budget (2–4 resident workgroups).
+That is the architectural sweet spot for this part.
+
+**Third pattern: WorkGroupMapping is 4 or 8 at every winner, never 1.** WGM≥4
+keeps neighbouring CUs on the same matrix B slice, which matters because L2 is
+1 MiB shared. No winner uses WGM 2 or 16.
+
+**Fourth pattern: the floor never pads CC/DD/ZZ.** The floor pads SS (110 LPA=2,
+162 LPB=2 kernels) and HH (17 kernels) but **never pads DD, CC, or ZZ in a
+single one of 2285 kernels**. Tensile's own `Perf/*.yaml` recipes likewise never
+enumerate `LdsPadA/B`. That is a self-consistent blind spot in both the vendor
+library and Tensile's recipes — the highest-yield untested axis.
+
+**Fifth pattern: the floor never uses FractionalLoad=2, PGR=2,
+WaveSeparateGlobalRead, or any of the other 11 "virgin" knobs.** All 2285 floor
+kernels sit at the default for these. The vendor floor is aggressive on tile
+geometry and conservative on everything else.
+
+---
+
+## R12 — gfx90c hardware read (confirmed from existing docs)
+
+From `gfx90c_tuning_guide.md` §1.1, `archive/corpus4.tuning_20261016.md` §1,
+and `gfx90c_theoretical_limits.md` §1:
+
+| property | value | consequence |
+|---|---|---|
+| CUs | **7** | grid quantization cliff at small N |
+| SIMDs/CU | 4 | 28 SIMDs total |
+| Wavefront | 64 | 8 phases of 8 lanes per LDS access |
+| FP32 lanes | 448 | 1613 GFLOPS peak (SS/DD/CC/ZZ) |
+| Clock | 1800 MHz | 3226 GFLOPS packed-f16 peak (HH) |
+| LDS | **64 KiB/CU** | 2 WG/CU budget at 32 KiB/WG |
+| L1 | 16 KiB/CU | — |
+| L2 | **1 MiB** shared | 16× smaller than gfx900's |
+| DRAM | DDR4 UMA ~42 GB/s | machine balance 38 F/B at SS peak |
+| MFMA | **absent** | MatrixInstruction rejected outright |
+| WMMA | absent | — |
+| 16 B load cap | verified | GLVW × bpe ≤ 16 |
+| Max VGPR | 256/thread | accumulator budget is the binding constraint |
+| Max LDS | 65536 B | LDS capacity binds 61.7% of kernels |
+
+**The 7-CU occupancy cliff** (from `gfx90c_tuning_guide.md` §1.2 and
+`archive/corpus4.tuning_20261016.md` §6.1):
+
+At 256³, a 128×128 macro tile yields 4 workgroups for 7 CUs — **6 of 7 CUs idle**.
+No knob tuning recovers that; the only levers are a smaller MacroTile, more
+GlobalSplitU, or LocalSplitU. At 512³, 128×128 yields 16 tiles (2.3/CU); at
+1024³, 64 tiles (9/CU) — the cliff vanishes by N≥1024.
+
+---
+
+## R13 — route updates for the overnight run
+
+### Route A (updated) — Spoof-steal for CC:256 only
+
+The user's caveat is honoured: **only CC:256**, the single genuine shortcoming
+(TIE −1.5%), and only because the floor already won the geometry there. The floor's
+CC advantage comes from MT=[128,128] tiles that native never generated.
+
+**Stolen-from-gfx900** (floor CC:256 winner):
+
+| knob | floor winner | native winner today |
+|---|---|---|
+| MacroTile | **64 × 64** (dominant) + **128 × 128** (6 kernels) | 32 × 32 (dominant) |
+| ThreadTile | 4 × 4 (55 kernels) + **8 × 8** (9 kernels) | 4 × 4 (965 kernels) |
+| VectorWidth | 2 | 2 |
+| WorkGroup | 16 × 16 × 1 | 8 × 8 × 1 |
+| GlobalSplitU | 1 | 1 |
+| DepthU | 8 | 8 |
+| LdsPadA/B | 0 | 0 |
+| measured | **214.0** | **210.8** (−1.5%) |
+
+**The gfx900 → gfx90c port record** — what changes and why:
+
+| knob | gfx900 value | gfx90c adaptation | why |
+|---|---|---|---|
+| MacroTile | 64×64 + 128×128 | **keep 64×64, add 128×128** | 128×128 is legal for CC at TT8x8 (128 accumulator VGPRs, within the 128 budget); the floor uses it and native never generated it |
+| ThreadTile | 4×4 + 8×8 | **add 8×8** | 8×8 at 128×128 gives MT/TT self-consistency; accumulator VGPRs = 64, within budget |
+| VectorWidth | 2 | **keep** | 2 × 8 B = 16 B, exactly on the verified cap |
+| WorkGroup | 16×16×1 | **keep** | self-consistent with MT/TT |
+| DepthU | 8 | **probe 8/16** | 16 needs 2× LDS; 8 is the safe choice on a 64 KiB/CU part |
+| LdsPadA/B | 0 | **probe {1,2,4}** | CC never pads in the floor; GCN bank math says the row stride collides at power-of-2 tiles |
+| StaggerU | 32 | **re-sweep 0/8/16** | 32 was chosen for a 56-CU raster |
+| WorkGroupMapping | 4 | **probe {4, 8, −4}** | negative family untested; 8 is a 56-CU artefact but the floor uses it |
+
+### Route B (updated) — The ten never-varied knobs
+
+From `archive/corpus4.tuning_20261016.md` §5 and the floor census (§R4):
+
+| knob | floor value (2285/2285) | legal on gfx90c | why it could win |
+|---|---|---|---|
+| `LdsBlockSizePerPadA/B` | 0 | yes | per-block padding without redesigning the tile |
+| `FractionalLoad=2` | 0 | yes | frees DepthU choice on ragged M/N/K |
+| `PrefetchGlobalRead=2` | 0 | SS/HH only (bpe≥8 blocked) | deeper prefetch pipeline |
+| `WaveSeparateGlobalReadA/B` | 0 | yes | LDS split by wave → fewer cross-wave bank collisions |
+| `ThreadSeparateGlobalReadA/B` | 0 | yes | TSGR=2 works with WSGR |
+| `TransposeLDS=1` | 0 | TLU=0 only | aligns LDS layout with VALU reads |
+| `UnrollMajorLDSA/B=1` | 0 | yes | removes VgprForLocalReadPacking pressure |
+| `1LDSBuffer=1` | 0 | SIA 2/3 only | halves LDS → doubles occupancy |
+| `NonTemporalA/B = 1,2,3` | 0 | yes (glc/slc bits) | L2 pollution control on 1 MiB L2 |
+| `GlobalReadPerMfma` | 1 | yes | schedules global reads between MFMAs |
+| `LocalWritePerMfma` | −1 | yes | same for LDS writes |
+| `PersistentKernel` | 0 | yes | amortises tile assignment on small grid |
+| `MaxOccupancy < 40` | 40 | yes | artificially cap LDS to raise occupancy |
+| `DepthULdsDivisor` | 1 | SIA=3 + TransposeLDS | cuts LDS usage by 2×/4× |
+
+### Route C (updated) — Wave-quantisation ladder (SS/DD only)
+
+From `archive/corpus4.tuning_20261016.md` §6.1 and the 7-CU cliff analysis:
+
+| problem | MT | G (tiles) | G mod 7 | utilisation |
+|---|---|---|---|---|
+| 128³ | 16×16 | 64 | 1 | 91.4% |
+| 128³ | 32×32 | 16 | 2 | 76.2% |
+| 128³ | 64×64 | 4 | 4 | 57.1% |
+| 256³ | 32×32 | 64 | 1 | 91.4% |
+| 256³ | 64×64 | 16 | 2 | 76.2% |
+| 256³ | 128×128 | 4 | 4 | 57.1% |
+| 512³ | 64×64 | 64 | 1 | 91.4% |
+| 512³ | 128×128 | 16 | 2 | 76.2% |
+| 1024³ | 64×64 | 256 | 4 | 98.8% |
+| 1024³ | 128×128 | 64 | 1 | 91.4% |
+
+Route C is legal **only for SS and DD** (GlobalSplitU > 1 is gate-refused for
+all half and complex families). For CC/ZZ/HH/HPA the equivalent fix is
+LocalSplitU, or nothing.
+
+### Route D — LDS-capacity ladder for Z
+
+Z is the only family where the winner already uses ~25 KB LDS and still binds
+LDS. Drop DepthU 16→8 and 8→4 to free capacity for a second resident workgroup.
+
+### Route E — Split-complex (3 real GEMMs)
+
+Carried forward. Reported split GFLOPS = (4/3)·R_real for CC ≈ 1513; for ZZ
+≈ 127–131. This is the only route that can *beat* the 1613/101 BLAS ceiling
+rather than approach it. Needs a harness change — separate work item, not a
+deck entry. **Unmeasured — treat as hypothesis.**
+
+### Route F — Persistent-kernel / fixed-grid
+
+gfx90c has 7 CUs. A fixed 7-workgroup grid eliminates tail-wave idle by
+construction. Tensile cannot express this — conceptual route for the
+kernel-writer, not a deck entry.
+
+---
+
+## R14 — what to stop doing
+
+Ceasing (from `archive/corpus4.tuning_20261016.md` §4.4 and the floor census):
+- **ThreadTile width ladders for C and Z** — the accumulator cap makes every
+  wider tile illegal; pure rejects.
+- **LdsPad/LDS-layout work** for families where bandwidth is oversupplied — LDS
+  *capacity* is better spent on residency.
+- **MatrixInstruction / DirectToLds** — rejected outright or actively harmful
+  (blocks NLCA>1, forces GLVW=1 on 8/16-byte dtypes).
+- **MaxOccupancy/AggressivePerfMode assumptions** without measurement — never
+  swept.
+
+Now *starting*: MacroTile ladders for C and Z at the **existing** accumulator
+width — the opposite direction to a ThreadTile ladder and the one the physics
+asks for.
+
+---
+
+## R15 — the concrete deck for the overnight run
+
+The existing deck (rewrite 3 §8) already contains:
+- `KNOB_SWEEPS`: 12 sweep rows covering UseSgprForGRO, GLVW (CC paired),
+  InnerUnroll, PGR, NLCA, MaxOccupancy, APM, GSU (SS/DD), LSU, StaggerU,
+  FractionalLoad, NonTemporal
+- `FAMILY_DECKS`: 67 tile entries across 7 families
+- `DECISION_TRIAL_TILES`: 4 trial entries (D1–D3)
+- CC:256 steal batch: 14 rows in `PLAN_BATCH`
+
+The overnight run adds:
+1. **CC:128×128 tiles at TT8×8** — the floor's unexplored corner (Route A)
+2. **CC:LdsPad {1,2,4}** — the never-padded family (Route B)
+3. **ZZ:LdsPad {1,2,4}** — the never-padded family (Route B)
+4. **DD:LdsPad {1,2,4}** — the never-padded family (Route B)
+5. **SS:GSU {2,4} at small shapes** — wave quantisation (Route C)
+6. **DD:GSU {2,4} at small shapes** — wave quantisation (Route C)
+7. **FractionalLoad=2** — the never-emitted value (Route B)
+8. **WaveSeparateGlobalRead {0,1}** — the virgin axis (Route B)
+9. **1LDSBuffer {0,1}** — the virgin axis (Route B)
+10. **NonTemporalA/B {1,2,3}** — the virgin axis (Route B)
+
+All entries pass `validate_config` (CPU-only) and `ldspad_feasible`. The
+overnight run command:
+
+```bash
+# CPU-only, from any session (safe under GNOME)
+python3 check_candidates.py --quiet
+python3 -m oto.harness.generate_candidates --dry-run
+PYTHONPATH=. python3 oto/runners/cli.py --preflight
+
+# TTY only — the real run
+python3 port_tensile.py --auto --budget 10 --yes
+```
+
+Sizing: 308 deck phases + 372 seed rows = ~680 phases. The last run took
+13 h 14 m wall clock for 7.95 h of phase-busy time, so ~12–14 h is the honest
+estimate. Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
+
+---
+
+Supersedes rewrite 2 (2026-10-14, kept below). **What was new in rewrite 3** is a
 re-grading of the corpus under *every* A/B basis the repo can express, the
 decoded gfx900 floor knob census, a verified hardware read for gfx90c, and one
 live attribution bug that was hiding 8 of the 38 contract cells. The rewrite-2

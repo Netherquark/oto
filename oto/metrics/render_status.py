@@ -33,21 +33,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import sqlite3
-import statistics
 import sys
 import threading
 import time
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # Imported lazily by `main`: the report module imports this one for the
 # render names it re-exports, so a top-level import would be circular.
-from oto.metrics.read_thermals import read_thermals
 from oto.metrics.run_plan import RunPlan, fmt_duration  # noqa: F401
 
 __all__ = ["bar", "render_compact", "render", "LiveStatus", "_PanelStdout"]

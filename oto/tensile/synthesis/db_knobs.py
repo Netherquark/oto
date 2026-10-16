@@ -50,26 +50,53 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
 
 #: Per-family overrides. A family absent here uses FORWARD_KNOB_DOMAINS.
 #:
-#: The load-width domains are dtype-dependent because of the *verified* 16-byte
-#: global-load cap (``GLOBAL_LOAD_BYTE_CAP``): worst legal VectorWidth per dtype
-#: is S 4, H 8, D 2, C 2, Z 1, and ``GLVW * bpe`` must stay <= 16 B. Drawing
+#: **Load widths** are dtype-dependent because of the *verified* 16-byte global-
+#: load cap (``GLOBAL_LOAD_BYTE_CAP``): worst legal VectorWidth per dtype is
+#: S 4, H 8, D 2, C 2, Z 1, and ``GLVW * bpe`` must stay <= 16 B. Drawing
 #: GLVW=4 for DD/C/Z was a guaranteed gate refusal, wasting one of the five
 #: forward draws the mutator gets per iteration.
+#:
+#: **GlobalSplitU** is restricted per family, and the two kinds of restriction
+#: are NOT the same thing, so keep them apart:
+#:
+#: *Structural* -- ``>1`` can never run on this device, so offering it only burns
+#: a draw. Tensile's own rule (SolutionStructs:3553) allows GSU only for single,
+#: 8-bit float, double-with-BufferStore, Assembly-with-half-accumulate,
+#: ``_GlobalAccumulation``, or MFMA. gfx90c has no MFMA, which leaves:
+#:   - ``CC`` / ``ZZ`` (complex) -- never legal.
+#:   - ``HH_HPA`` / ``HS_HPA`` (half in, **f32** accumulate) -- never legal.
+#:
+#: *Deck state* -- ``HH`` is hardware-legal but banned **by decision**: GSU>1 on
+#: half Assembly additionally requires ``AssertFree0ElementMultiple >= 2`` for the
+#: atomics on edge tiles (SolutionStructs:3616), and the HH deck ships
+#: ``AF0EM = 1``. See ``gfx90c_tuning_guide.md`` §9 ("HH GSU>1 structurally
+#: banned (wide + narrow, test-locked)") and ``potential_configs.md`` pre-rewrite
+#: §"SS is the only GSU-legal family". So this row is a *policy*, not a silicon
+#: fact: lift it the day an HH candidate carries ``AF0EM >= 2``, and the axis
+#: comes back without touching any other family.
+#:
+#: ``DD`` keeps ``(1, 2, 4)``: double plus BufferStore is a supported GSU case,
+#: and the census classes DD as *coupled* rather than refused.
 FAMILY_KNOB_DOMAINS: Dict[str, Dict[str, Tuple[Any, ...]]] = {
     "SS": {"GlobalLoadVectorWidthA": (1, 2, 4),
            "GlobalLoadVectorWidthB": (1, 2, 4)},
     "HH": {"GlobalLoadVectorWidthA": (1, 2, 4, 8),
-           "GlobalLoadVectorWidthB": (1, 2, 4, 8)},
+           "GlobalLoadVectorWidthB": (1, 2, 4, 8),
+           "GlobalSplitU": (1,)},
     "HH_HPA": {"GlobalLoadVectorWidthA": (1, 2, 4, 8),
-               "GlobalLoadVectorWidthB": (1, 2, 4, 8)},
+               "GlobalLoadVectorWidthB": (1, 2, 4, 8),
+               "GlobalSplitU": (1,)},
     "HS_HPA": {"GlobalLoadVectorWidthA": (1, 2, 4, 8),
-               "GlobalLoadVectorWidthB": (1, 2, 4, 8)},
+               "GlobalLoadVectorWidthB": (1, 2, 4, 8),
+               "GlobalSplitU": (1,)},
     "DD": {"GlobalLoadVectorWidthA": (1, 2),
            "GlobalLoadVectorWidthB": (1, 2)},
     "CC": {"GlobalLoadVectorWidthA": (1, 2),
-           "GlobalLoadVectorWidthB": (1, 2)},
+           "GlobalLoadVectorWidthB": (1, 2),
+           "GlobalSplitU": (1,)},
     "ZZ": {"GlobalLoadVectorWidthA": (1,),
-           "GlobalLoadVectorWidthB": (1,)},
+           "GlobalLoadVectorWidthB": (1,),
+           "GlobalSplitU": (1,)},
 }
 
 

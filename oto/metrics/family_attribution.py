@@ -12,7 +12,6 @@ Public API: extract_family_from_phase_id, resolve_cell_family, FAMILY_TO_DTYPE.
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, List, Sequence
 
 from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,

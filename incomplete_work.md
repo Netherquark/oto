@@ -3,6 +3,157 @@
 Status key: RESOLVED (mechanism landed + proven) / PENDING (real gap, still open) /
 PARTIAL (mechanism landed; execution/validation outstanding).
 
+## 5.4 The equivalence verifiers were red on arrival — now all five pass
+
+`python3 verify_all.py` reported **5 of 5 checks failing**. It was not caused by
+the work in progress: a clean `HEAD` worktree with none of it failed identically.
+The suite had simply been left red, which is the same failure mode as a guard that
+is red before you touch anything — nobody reads it, so it stops being evidence.
+
+Each failure had a different cause, and only one was a defect in the code rather
+than in the check:
+
+| check | cause | resolution |
+|---|---|---|
+| `ast equivalence` | four symbols decomposed in the AC-1b pass were never added to `RESTRUCTURED` | registered, after proving the call graph: for `mutate_and_feed` the transitive `self.*` reach set from HEAD is a strict **superset** of the base commit's — nothing lost. The check must walk mixin bases, or the four coverage methods look dropped when they moved intact to `oto/ledger/agent_coverage.py` |
+| `gate differential` | **two real defects** (below), plus one deliberate message reword | fixed; see below |
+| `config writer` | the writer now **forwards 9 knobs it used to silently drop** (`MaxOccupancy`, `AggressivePerfMode`, `UseSgprForGRO`, `InnerUnroll`, `FractionalLoad`, `NonTemporalA/B`, `NumLoadsCoalescedB`, `AssertFree1ElementMultiple`) and now honours `LocalSplitU` instead of discarding it. 190 of 5757 written configs differ | registered, with the acceptance requiring the diff to be **additions only** — a single removal still fails |
+| `method equivalence` | `run_auto`, `run_phases`, `_compute_ab_verdicts` decomposed without registration | registered |
+| `report html` | one section is indented differently in the source; the rendered DOM is identical | the check now strips pretty-printing line breaks before comparing, and still fails on any real content change (asserted) |
+
+A sixth defect was in the harness itself rather than in any check:
+`verify_all.py` did `ENV.setdefault("TENSILE_ROOT", "")`, which is not a no-op.
+With the variable absent from the shell it **injected an empty value**, and
+`require_tensile_root` reads "set but empty" as an error rather than falling back
+to the repo-root `.env`. The report check therefore died on the harness's own
+placeholder while passing when run directly — a difference of exactly the kind
+that teaches people to ignore a guard. It now passes the environment through
+unchanged.
+
+**The two real defects the gate differential found:**
+
+1. **Three copies of `parse_tensile_shape` had drifted.** The one in
+   `oto/tensile/candidate.py` was a hand-rolled reparse that dropped the `_B16`
+   batch suffix and replaced the original's regex digit-extraction with
+   `str.split("x")` — so it raised `ValueError` where the original returned the
+   default cube. No production module called it, but **both** failing verifiers
+   imported it, so it had quietly become the thing they compared the original
+   against. It now delegates to `oto/tensile.config_writer`'s copy, which is
+   byte-identical to the base commit's.
+2. **The gates raised instead of returning a verdict.** `int(config.get(k, D))`
+   raises `TypeError` when a knob is present with a `None` value, in six places
+   across the loads and assembly gates. A raising gate is exactly the opaque
+   mid-run failure the gates exist to prevent. Fixed with `vgpr_model.knob_int`,
+   which is provably identical to `int()` on every value `int()` accepts and only
+   differs where `int()` would raise. The differential now buckets "the old gate
+   raised where the new one returns a verdict" as its own category — **1593**
+   comparisons — because counting it as either a regression or a pass hid it both
+   ways.
+
+The five root `verify_*.py` wrappers were also dead: each imported a `main` that
+does not exist, because the moved verifiers are scripts, not libraries.
+`verify_all.py` invokes them by path and never came through the wrappers, which
+is why that stayed broken unnoticed. They now `runpy` the module.
+
+## 5.3 CC:256 `AssertFree0/1ElementMultiple=4` — the empirical half is unverified
+
+**Status: CPU-side gate landed; the GPU-side proof is a TTY task.**
+
+The CC:256 steal batch (`candidate_rows.PLAN_BATCH`, R8) carries four rows with
+`AssertFree0ElementMultiple=4` / `AssertFree1ElementMultiple=4`, on the theory
+that the assertion unlocks `UseSgprForGRO` (VGPR relief for address
+calculation) — Tensile's own recommended value for single precision.
+
+**What is proven.** The rows hold on every shape they are offered across. `SS`
+targets include **1365**, which is divisible by neither 2 nor 4, so an AF=4 row on
+that family would be silently wrong; the new guard in
+`candidate_pool._shapes_satisfying_assertions` filters such a row's shape list
+rather than dropping it, and drops the row only when no shape survives.
+`tests/test_element_assertions.py` locks the dimension mapping (AF0->M,
+AF1->N, ASEM->K), the `ASEM % GlobalSplitU` rule, and the shipped rows.
+`generate_candidates --dry-run` is unchanged at 381 candidates (+14 CC) and the
+guard drops nothing today.
+
+**Why the gate was necessary at all.** Tensile does not enforce this. Its own
+`validParameters` comment says the kernel generator "will assume that the ...
+size is some multiple", and for the summation case says it "requires runtime
+checking to ensure the specified summation value meets the requirements" — which
+Tensile does not do. The only divisibility it checks is
+`AF0EM % GlobalLoadVectorWidthA == 0` (`GuaranteeNoPartialA`), a knob-to-knob rule
+that says nothing about the problem size. The gate families in
+`oto.tensile.gates` cannot help either: they validate a config and never see a
+shape.
+
+**What remains — needs the GPU, so run it in the TTY.** The gate proves the
+assertion is *coherent*; it cannot prove the emitted kernel is *correct*. Before
+trusting the first AF=4 row's GFLOPS, compare its output against a reference
+GEMM on real silicon:
+
+```bash
+# 1. the first AF=4 CC:256 row (four exist; they differ only in LdsPad)
+python3 -m oto.harness.generate_candidates --dry-run          # confirm the rows emit
+# 2. run the CC:256 cell with correctness checking on, in the TTY
+python3 port_tensile.py --auto --budget 1 --yes
+```
+
+Then compare the AF=4 row's result tensor against a reference CGEMM for
+`256x256x256` complex single. **Until that comparison passes, treat the AF=4
+rows' timings as unverified** — a wrong assertion does not produce a slow kernel,
+it produces a fast wrong one. If it fails, the fix is the AF value, not the
+measurement.
+
+## 5.2 DONE (2026-10-16) — `GlobalSplitU` domain is now family-aware
+
+`python3 -m oto.tools.deck_review legality` classified every
+`(family, knob, value)` draw against the launch gates and found one real defect:
+**`GlobalSplitU` offered `(1, 2, 4)` to all seven families, but `>1` can never run
+on five of them.**
+
+**The two restrictions are different, and conflating them is the trap.**
+
+* **Structural** — Tensile allows `GlobalSplitU > 1` only for single, 8-bit float,
+  double-with-BufferStore, Assembly-with-half-accumulate, `_GlobalAccumulation`,
+  or MFMA (SolutionStructs:3553). gfx90c has no MFMA, so **CC and ZZ** (complex)
+  and **HH_HPA / HS_HPA** (half in, f32 accumulate) can never run it. No companion
+  knob rescues these.
+* **Deck state** — **HH** is hardware-legal but banned *by decision*: `>1` on
+  half Assembly additionally requires `AssertFree0ElementMultiple >= 2` for the
+  atomics on edge tiles (SolutionStructs:3616), and the HH deck ships `AF0EM = 1`.
+  So this one is a policy, and it lifts itself the day an HH candidate carries
+  `AF0EM >= 2`.
+
+`DD` keeps `(1, 2, 4)`: double plus BufferStore is a supported case, and the
+census classes DD as *coupled* rather than refused.
+
+**Fixed.** `FAMILY_KNOB_DOMAINS` now carries `"GlobalSplitU": (1,)` for CC, ZZ, HH,
+HH_HPA and HS_HPA, and the census drops from 81 to 71 refused-standalone draws —
+exactly the ten GSU values that could never run, and nothing else. The deck is
+unchanged (381 candidates + 14 CC), because the generator gate-filtered these
+anyway; what changed is that the mutator no longer spends a draw slot on them.
+
+**The fix would have been cosmetic without the routing.** Three sites read the
+base `FORWARD_KNOB_DOMAINS` directly and so bypassed the per-family override:
+`db.synthesize_mutants`' narrow pass (the live one), and the four dead
+`_xx_mutation_pattern` methods in `db_patterns`. A fourth site —
+`candidate_pool._narrow_row_gen` — carried its own **hand-written tuple**
+`("CC","ZZ","HH","HH_HPA","HS_HPA")`, a second home for the same fact that could
+drift silently. All four now go through `forward_domain`, and the duplicated list
+is gone. Routing the dead patterns also fixed a latent `KeyError`: they read
+`FORWARD_KNOB_DOMAINS["GSU"]`, a key that does not exist.
+
+**Locked by** `tests/test_db_mutator.py::test_gsu_above_one_is_never_offered_where_it_cannot_run`
+and `::test_gsu_axis_survives_where_it_is_legal` — the second matters because a fix
+that emptied SS's and DD's axis would pass the first while deleting the search
+dimension the run depends on. A third test,
+`::test_the_banned_gsu_test_is_not_vacuous`, exists because the narrow pass scores
+every single-knob delta at priority 1.0, so a small `n` is filled by the first
+knobs in dict order and never reaches `GlobalSplitU`: at `n=24` no mutant carries
+it at all and the ban test passed without testing anything.
+
+Everything else the census flags is **coupling, not defect** (`GLVW` must equal
+`VectorWidth` or 1; `NLCA` must divide the load count; `StaggerU=0` needs
+`StaggerUStride=0` drawn alongside). See `gfx90c_tuning_guide.md` §1.1.
+
 ## 6. DECISION REQUIRED — the LDS gate is calibrated to a value Tensile contradicts
 
 **Owner: user. Do not change `LDS_BUDGET` or `BYTES_PER_ELEMENT["Z"]` until this
@@ -196,29 +347,50 @@ No behaviour change. Proven five ways against the pre-refactor commit
 * `verify_ast_equivalence.py` — every public symbol of every pre-split module
   still exists with the same body; 0 unexplained differences.
 
-### PENDING — functions still over 60 lines (49 total; 33 by code line)
+### DONE (2026-10-16) — functions still over 60 lines: 0 remaining
 
-Acceptance criterion 2 of the plan ("no function over 60 lines") is **not yet
-met**, and it is the **only** reason Refactor 1 cannot be called "completely
-finished". The file-level criterion (no file over 600 lines) *is* met: the
-largest file is `oto/tensile/legality.py` at 565 lines.
+Acceptance criterion 2 of the plan ("no function over 60 lines") is now **met**.
+All 31 offenders were decomposed without altering behaviour, proved per function
+by the existing verifier suite (`python3 verify_all.py`) and the test suite, and
+several by a differential check against the pre-refactor implementation (the
+`regression_matrix` and `ab_audit` outputs are byte-identical over the repo's own
+data).
 
-**Decision (2026-10-12).** These cuts are deliberately **not** implemented in
-the run-launch session (they churn the run loop immediately before an overnight
-run). The `acceptance.py` criterion-1b check (total lines
+**The rule is now executable.** `tests/test_function_length.py` asserts the
+60-line span over `oto/**/*.py`, so a regression fails the suite instead of
+silently re-accumulating. Three undefined-name regressions that the
+decomposition introduced (and that the verifier suite did not catch, because
+nothing constructed the affected objects) were found by pyflakes and fixed;
+`_build_families` in `oto/tensile/library.py` had lost `scanned` from its
+signature, which broke every `load_shipped_manifest` call.
+
+**File-level criterion — the register's claim was stale and is corrected here.**
+This section used to read "no file over 600 lines is met; the largest file is
+`oto/tensile/legality.py` at 565 lines". The true maximum is
+**`oto/checks/tensile_build.py` at 606 lines**, so the file criterion was already
+violated before this round. It is deliberately **not** asserted by a test: a
+guard that is red on arrival is ignored instead of obeyed. Fix the file, then add
+the assertion. The function criterion is the one that matters and the one that is
+enforced.
+
+**Decision (2026-10-12, now implemented).** These cuts were deliberately *not*
+implemented in the run-launch session (they churn the run loop immediately
+before an overnight run). The `acceptance.py` criterion-1b check (total lines
 `n.end_lineno - n.lineno + 1` over `oto/**/*.py`) was deleted with the other
-untracked `plans/` scripts on 2026-10-14; the rule now lives only in this
-register (AC 1b, 49 entries below). The code-only column identifies *which* seam is worth
-cutting, it is not the exit test. The full closing plan is at the end of this
-section.
+untracked `plans/` scripts on 2026-10-14, which left the rule unenforced; it
+now lives in `tests/test_function_length.py`, with the rationale above. The
+**code-only** column in the table below identifies *which* seam was worth
+cutting; it was never the exit test. The snapshot and closing plan are kept for
+the record.
 
-**Metric note (2026-10-12).** The rule only means "a function too long to
-follow", and several entries below are long because of their *docstring*, not
-their code -- `reference_thresholds` is 78 lines of which 43 are code;
-`load_phases_manifest` is 64 lines of which 32 are code. The table therefore
+**Metric note (2026-10-12).** The rule only meant "a function too long to
+follow", and several entries below were long because of their *docstring*, not
+their code -- `reference_thresholds` was 78 lines of which 43 are code;
+`load_phases_manifest` was 64 lines of which 32 are code. The table therefore
 gives both the raw length and the **code-only** length (docstring, blank and
 comment lines removed); the code-only column is the one that should drive the
-work. 33 functions exceed 60 *code* lines.
+work. 33 functions exceeded 60 *code* lines at that snapshot; all are now
+decomposed.
 
 Fixed this round, both mechanical data extractions proved equivalent:
 `_init_db` (schema DDL moved to `_SCHEMA_DDL`/`_INDEX_DDL`/

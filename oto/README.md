@@ -105,6 +105,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tools/consolidate_floor.py`` — The locked floor: plan it, materialise it, clone the registry under it.
 * ``tools/consolidate_install.py`` — Installation: stage, install, and archive what is superseded.
 * ``tools/consolidate_targets.py`` — Which cells a consolidated deck must address.
+* ``tools/deck_review.py`` — The three pre-deck questions: ``score`` (is the floor actually beaten, under every A/B basis), ``legality`` (is this knob domain deck-safe), ``flood`` (per-cell config census and what a top-K cap costs).
 * ``tools/verify_run.py`` — Corpus snapshot / diff / telemetry verification.
 
 ## oto/harness/ — the analysis harness

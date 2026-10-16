@@ -15,7 +15,7 @@ measured_accvgpr, depth_u, lds_base_bytes.
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
@@ -163,3 +163,21 @@ def lds_base_bytes(mt0: int, mt1: int, ch: str) -> int:
     if bpe is None:
         return 0
     return (mt0 + mt1) * bpe
+
+
+def knob_int(value: Any, default: int) -> int:
+    """`int(value)`, treating absent / None / unusable as `default`.
+
+    A gate must return a verdict, never raise. A config dict can carry a key
+    with a None value -- a knob present in the template but unset -- and
+    ``int(None)`` raises ``TypeError``, which escapes the launch boundary and
+    becomes exactly the opaque mid-run failure these gates exist to prevent.
+    Found by `verify_gate_differential`: the pre-refactor gate returned a
+    verdict for ``NLCA: None`` and this one raised.
+    """
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default

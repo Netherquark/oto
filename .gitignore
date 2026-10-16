@@ -85,3 +85,18 @@ gfx90c_results
 backups/
 unified_cell_summary.csv
 unified_measurements.csv
+
+# backups
+*.bak2
+*.pre_*_fix_*
+*.pre_rewrite_*
+synthesis.py.bak2
+
+# archive (raw corpora, live locally, never committed)
+archive/
+command.txt
+context.md
+context_raw.md
+registry.db
+research_prompt*.txt
+todo.txt

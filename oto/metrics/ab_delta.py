@@ -7,7 +7,6 @@ Public API: ABDeltaMixin."""
 
 from __future__ import annotations
 
-import math
 import statistics
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple

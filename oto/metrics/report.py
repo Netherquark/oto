@@ -21,7 +21,6 @@ from oto.device.peaks import (FAMILY_DTYPES, FAMILY_SHAPES, PEAK_GFLOPS,
                               REALISTIC_CEILINGS, THEORETICAL_PEAKS)
 from oto.metrics.analytics import (AnalyticsEngine, CellAnalytics,
                                    FAMILY_TO_DTYPE)
-from oto.metrics.policy import aggregate_cell
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin

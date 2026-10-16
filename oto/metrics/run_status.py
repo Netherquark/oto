@@ -15,12 +15,9 @@ _parse_ts, _jittery, read_thermals, main.
 
 from __future__ import annotations
 
-import argparse
 import json
-import math
 import os
 import sqlite3
-import statistics
 import sys
 import threading
 import time

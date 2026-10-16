@@ -13,7 +13,6 @@ Run: python3 test_auto_reference_floor.py
 """
 from __future__ import annotations
 
-import os
 import sys
 import types
 import unittest

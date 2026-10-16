@@ -17,7 +17,6 @@ import random
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 from pathlib import Path
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR
@@ -26,8 +25,6 @@ from oto.ledger.harvest import HarvestMixin
 from oto.ledger.mutator import Mutator, Proposal
 from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
 import oto.metrics.coverage as coverage
-from oto.metrics.coverage import (STATE_REPLICATE, STATE_RETIRED,  # noqa: E402
-                                decide_state)
 from oto.tensile.candidate import CandidateGenerator, CandidateConfig
 
 

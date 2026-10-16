@@ -273,9 +273,10 @@ def print_report(result: Dict[str, Any]) -> None:
     print(f"tie band    : +/-{result['band_pct']:.1f}% "
           f"({result['band_source']}; shipped default "
           f"+/-{result['shipped_band_pct']:.1f}%)")
+    cross = rb.get("cross_arm") or {}
     for label, key in (("protocol-matched  ", "protocol_matched"),
                        ("protocol-mismatched", "protocol_mismatched")):
-        s = rb[key]
+        s = cross.get(key) or {}
         if not s.get("n"):
             print(f"{label}: no shared configurations")
             continue

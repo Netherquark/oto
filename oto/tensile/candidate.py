@@ -15,14 +15,12 @@ keeps working; oto.tensile.gates is their only home.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 
 from oto.device.peaks import (FAMILY_DTYPE_CHAR, LDS_PER_CU_KB, NUM_CUS)
 from oto.tensile.candidate_config import CandidateConfig
@@ -224,31 +222,23 @@ class CandidateGenerator(CandidateEmitMixin):
 def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     """Parse a Tensile shape string into M, N, B, K (see config_writer).
 
-    Handles formats:
-    - 1024x1024x1024 (M x N x K)
-    - 64x4096x1_K4096 or 64x4096x1 (M x N x B with K)
-    - 4x2048x64 (M x N x K or M x N x B)
+    Re-exported here for the pre-split import surface; the shape grammar is
+    owned by the config writer, which is the only place a shape string is read.
+
+    This used to be a third, hand-rolled copy of the parser, and it was wrong in
+    two ways the authoritative one is not: it dropped the ``_B16`` / ``B16_``
+    batch suffix, and it replaced the original's regex digit-extraction with
+    ``str.split("x")`` -- which raises ``ValueError`` on anything that is not a
+    bare shape string, where the original returned the default 1024 cube. It
+    read plausibly and was called by no production module, but
+    ``verify_config_writer`` and ``verify_gate_differential`` both import it, so
+    it quietly became the thing those checks compared the original against, and
+    both checks failed for that reason rather than for any real divergence.
+    Delegate instead.
     """
-    result = {"M": 1024, "N": 1024, "B": 1, "K": 1024}
-    clean = str(shape_str).strip()
-    if not clean:
-        return result
-    if "_K" in clean:
-        shape_part, k_part = clean.split("_K", 1)
-        result["K"] = int(k_part)
-    else:
-        shape_part = clean
-    parts = shape_part.split("x")
-    if len(parts) == 3:
-        result["M"] = int(parts[0])
-        result["N"] = int(parts[1])
-        result["B"] = int(parts[2])
-    elif len(parts) == 4:
-        result["M"] = int(parts[0])
-        result["N"] = int(parts[1])
-        result["B"] = int(parts[2])
-        result["K"] = int(parts[3])
-    return result
+    from oto.tensile.config_writer import parse_tensile_shape as _parse
+
+    return _parse(shape_str)
 
 
 #: Knobs gfx90c has no hardware path for; a candidate carrying any of

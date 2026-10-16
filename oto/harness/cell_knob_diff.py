@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -39,7 +38,6 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_SHAPES    # noqa: E402
 
 STRUCTURAL_KNOBS = (
     "MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU", "DepthU",

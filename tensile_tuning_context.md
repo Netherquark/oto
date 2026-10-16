@@ -70,6 +70,70 @@ max-of-seeds; median-of-seeds is the statistic.
 
 Ratified measured ceiling util: FP32 69%, FP16 77%, BF16 69%, INT8 55%, FP64 98%.
 
+## Search order — what to try, and in what order
+
+The `Core Strategy` above says *that* the loop mutates ≤2 knobs; it does not say
+*which* knobs first. This section does, and it is the one place that owns the
+ordering. It is the conclusion of the external autotuning literature applied to
+7 CUs / 64 KiB LDS / 1 MiB L2 / no MFMA; the per-knob legal domains live in
+`gfx90c_tuning_guide.md` §1.1 and the virgin axes in §9.1.
+
+**Stage 0 — analytic pre-filter, zero GPU cost.** A draw that fails any of these
+is a guaranteed refusal, and every refusal costs one of the mutator's five draws
+per iteration. `python3 -m oto.tools.deck_review legality` proves the domains
+against the real gates rather than trusting this list.
+
+1. `grid = ⌈M/MT0⌉·⌈N/MT1⌉ ≥ 14` for ≥2 WG/CU on 7 CUs; else force `GSU ≥ ⌈14/grid⌉`,
+   capped at what the family allows (**not** CC/ZZ — gate-refused on this port).
+2. `LDS = 2·(MT0+MT1)·DU·bpeAB + pad_bytes ≤ 32768` for 2 WG/CU, `≤ 65536` for 1.
+3. `VGPR ≤ 256` — the existing `oto.tensile.gates.vgpr_model` model.
+4. `GLVW × bpe ≤ 16` and `GLVW ∈ {1, VectorWidth}`.
+5. `MT0·MT1/(WG0·WG1) = TT0·TT1` and workgroup size ≡ 0 mod 32.
+
+**Stage 1 — coarse grid over the floor's own axes**, anchored on Tensile's
+`Perf/*.yaml` envelope but **re-centred for 7 CUs**: at 256³/512³ drop
+`128×128`/`128×256` entirely (4 tiles = 6 of 7 CUs idle); at ≥1024³ keep them.
+
+**Stage 2 — virgin axes, one at a time, from the incumbent**, highest
+verified payoff-to-risk first:
+
+```
+AssertFree{0,1}ElementMultiple (4 or 8; legality-gated)
+  → LdsPad{A,B} ∈ {0,1,2,4}
+  → NLCA/NLCB ∈ {1,2,4}
+  → SIA{2,3} × 1LDSBuffer{−1,1} × DepthULdsDivisor{1,2,4}
+  → WorkGroupMapping ∈ {1,2,3,4,−1,−4} + StaggerU{0,32} × StaggerUMapping{0,1}
+  → NonTemporal{A,B} ∈ {0,1,2}
+  → FractionalLoad ∈ {0,1,2}
+  → StoreCInUnroll × StoreRemapVectorWidth
+```
+
+**Stage 3 — local refinement** by first-improvement hill climbing, ≤2 *co-dependent*
+knobs per move. The coupled clusters are `LdsPad↔NLCA↔DepthU` and
+`SIA↔1LDSBuffer↔PrefetchLocalRead↔EPS`: single-axis moves through a coupled pair
+land in rejection valleys that look like walls.
+
+**Why this order and not a random sweep.** The transferable result from the
+autotuning literature is that a *budget-tiered* algorithm — coarse-to-fine, with
+an analytic pre-filter ahead of the search — beats uniform random search at every
+budget, and that the gap widens as the budget shrinks. At 7 CUs the per-config
+cost is high and the budget is a single overnight run, so the pre-filter is
+worth more here than on a large discrete part. Analytic/constructed schedules
+beat search outright when the space is huge, which is why Stage 0 exists at all.
+
+**What is NOT VERIFIED.** No published study measures "MLP-style tuning vs the
+vendor floor on a 7-CU Vega APU". What *is* first-party: AMD's `rocblas-gemm-tune`
+uses Tensile to *heuristically search* kernel parameters — this technique is
+vendor-sanctioned; and AMD's own workload guide states plainly that **there is
+no guarantee a tuned workload beats the default GEMM algorithm**. Treat the
+floor's wins as the bar to clear, not as a ceiling we are entitled to.
+
+**Cost model, if one is built.** Predicted time ≈
+`max(flops/peak, bytes/bw) + LDS_conflict_penalty`, with the penalty from a bank
+conflict factor as a function of `(stride, DepthU, VectorWidth, bpe, LdsPad)`.
+Use it only to **rank and prune** — never to accept. The measurement is the
+ground truth, and a surrogate that disagrees with it is a bug, not a finding.
+
 ## Final Rule
 
 Deterministic loop, HW decides, DB remembers. If the user manually invokes an LLM to

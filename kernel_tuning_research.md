@@ -6,6 +6,7 @@
 - Companions: `gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `potential_configs.md` §8 (Groups A/B/C), §9 (steal), §10 (other routes incl. §10.2 split-complex) and §12 (next-run queue) define the ranked experiment groups and the resolution ladder (occupancy/tile levers → split-complex). Section 7 below maps each research finding onto that existing plan; §8 lists the **open research directions** — the questions these mechanics do not settle — as falsifiable probes, not new experiment cells.
 - `gfx90c_theoretical_limits.md` remains the authority for performance ceilings; this doc only explains *why* those ceilings exist.
 - Cite conventions: repo files as `path.py:line` against the local Tensile checkout at `TENSILE_ROOT` (per `.env`); web sources inline as `(site, URL)`; full list in **Sources**. Claims I could not fully verify are marked **check**.
+- **A later primary-source pass (2026-10-16) is in `archive/corpus4.tuning_20261016.md`**: Tensile's `validParameters` / `defaultSolution` / shipped `Perf/*.yaml` read directly, plus the external autotuning literature. Its conclusions were promoted once each into their owners — `gfx90c_tuning_guide.md` §1.1 (the legal knob domains) and §9.1 (the virgin axes), and `tensile_tuning_context.md` (the search order). Read the owners, not the corpus; read the corpus only to check the reasoning or the citations.
 
 ---
 

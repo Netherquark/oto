@@ -232,6 +232,9 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
 | Which knobs has the corpus ever actually varied? | `python3 allruns.py` (`--json out.json`; the `never-exercised knobs` block) |
+| Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
+| Is this forward-knob domain deck-safe, or does it generate refusals? | `python3 -m oto.tools.deck_review legality` (`--family CC`) |
+| How many configs per cell, and does a top-K cap lose a winner? | `python3 -m oto.tools.deck_review flood` (`--cap 24`) |
 
 `oto.tensile.knob_sweep` is a **dry run by default** and writes `phases.yaml`
 only with `--emit`; that keeps the read-only contract of stage 2 intact while
@@ -239,6 +242,14 @@ still giving deck generation a one-line entry point. It exists because
 `allruns.py` proves `GlobalSplitU` and `StaggerU` have only ever held one value
 each — see `potential_configs.md` §8 for the deck it emits and §8.1 for the
 measured legality matrix behind it.
+
+`oto.tools.deck_review` is the pre-deck gate for **candidate generation** and the
+one tool that stops a second, divergent opinion forming. `score` exists because
+the acceptance report's basis is *best per-kernel median* — an order statistic,
+so the arm that draws more kernels has the higher expected max; read `median`
+and `floor_best`, not `winner`. `legality` exists because a refused draw costs
+one of the mutator's five draws per iteration. All three are CPU-only and
+read-only; `docs/harness_runbook.md` explains what each one is for.
 
 The two occupancy tools answer different questions and are not interchangeable:
 `asm_occupancy` reads the emitted `.s` (`amdhsa_next_free_vgpr`,

@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import statistics
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from oto.metrics.analytics import CellAnalytics

@@ -13,6 +13,7 @@ boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
+oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
@@ -25,6 +26,45 @@ modules (e.g. `oto/harness/*`). Both tools resolve families/shapes/dtype from th
 repo's canonical sources (`oto.device.peaks`, `oto.tensile.library_parity`) — they
 can never disagree with the shipped grid (knowledge_base.md §6.1). Cache paths are
 listed above.
+
+## The three questions, before you deck anything
+
+`oto/tools/deck_review` is the pre-flight for candidate generation. It answers
+the three questions in order, all CPU-only and read-only:
+
+```bash
+python3 -m oto.tools.deck_review score            # is the floor actually beaten?
+python3 -m oto.tools.deck_review legality         # is this knob domain deck-safe?
+python3 -m oto.tools.deck_review flood --cap 24   # where is the GPU budget going?
+```
+
+**1. `score` — never trust the headline.** The acceptance report grades on
+`agg="winner"` = *best per-kernel median*, which is an **order statistic**: the
+arm that draws more kernels has the higher expected max. The native arm carries
+~28 configs per SS cell per run (~143 accumulated) against ZZ's 26-config spoof
+arm, so a cell can read WIN while its *typical* kernel loses by half. `score`
+recomputes the verdict under every basis `oto.metrics.ab_delta._stat` expresses
+and prints the `floor_best` losers and `winner` ties, which is the actual work
+list. Read `median` and `floor_best`, not `winner`.
+
+**2. `legality` — never deck a domain blind.** Every (family, knob, value) draw
+from `FORWARD_KNOB_DOMAINS` is classified against the launch gates on the tiles
+that *actually ran* (read from `kernel_db.json`), into three buckets: **legal**,
+**coupled** (tile-dependent, ordinary), and **refused standalone**. Only the last
+is worth reading closely, and even it is not "dead": `StaggerU=0` is refused
+because `StaggerUStride` defaults to 256, and becomes legal the moment
+`StaggerUStride=0` is drawn too. A genuinely dead value is one whose reason is a
+structural class rule ("illegal on gfx90c", "no MatrixInstruction"). The reason
+text names the culprit, so read it rather than the count. Use this after editing
+`db_knobs.py`; `python3 check_candidates.py` on the real deck — which sees every
+knob at once — stays the authority.
+
+**3. `flood` — know what the run is actually measuring.** The per-cell distinct
+config census from `kernel_db.json`, plus what a top-K cap would retain and
+whether that cap loses any cell winner. A cell whose median is a fifth of its own
+winner is a cell in which almost everything measured was junk. The cap is ranked
+by measured median, so it retains every cell's frontier by construction — which
+`tests/test_deck_review.py` asserts.
 
 ## Workflow
 

@@ -108,6 +108,75 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         self.assertGreater(len(tiles), 1, f"only {tiles}")
         self.assertIn("128x128x8", tiles)
 
+    #: The narrow pass scores every single-knob delta at priority 1.0, so a
+    #: small `n` is filled by the first knobs in dict order and GlobalSplitU
+    #: (13th) is never reached. Measured: at n=24 no mutant carries it at all,
+    #: at n=40 SS offers the full {1,2,4}. Use 40, and assert the axis was
+    #: actually seen -- otherwise these tests pass vacuously.
+    _GSU_N = 40
+
+    def _offered_gsu(self, family, seeds=12):
+        """Every GlobalSplitU value the mutator offers this family."""
+        parent = {"MacroTile": "64x64x8", "ThreadTile": "4x4",
+                  "VectorWidth": 2, "GlobalSplitU": 1, "DepthU": 8}
+        offered = set()
+        for seed in range(seeds):
+            for mut in self.db.synthesize_mutants(
+                    family, parent, "256x256x256", random.Random(seed),
+                    n=self._GSU_N):
+                if "GlobalSplitU" in mut:
+                    offered.add(mut["GlobalSplitU"])
+        return offered
+
+    def test_gsu_above_one_is_never_offered_where_it_cannot_run(self):
+        """The mutator must not spend draws on a knob value that cannot run.
+
+        Tensile (SolutionStructs:3553) allows GlobalSplitU>1 only for single,
+        8-bit float, double-with-BufferStore, Assembly-with-half-accumulate,
+        `_GlobalAccumulation`, or MFMA. gfx90c has no MFMA, so on complex
+        (CC/ZZ) and on half-with-f32-accumulate (HH_HPA/HS_HPA) it is
+        structurally impossible. HH is *hardware*-legal but banned by decision,
+        because GSU>1 on half Assembly also needs
+        AssertFree0ElementMultiple>=2 and the HH deck ships AF0EM=1.
+
+        This is a domain restriction, so it must hold on every path that draws a
+        knob -- the narrow single-knob deltas and the wide forward draws alike.
+        """
+        for family in ("CC", "ZZ", "HH", "HH_HPA", "HS_HPA"):
+            with self.subTest(family=family):
+                offered = self._offered_gsu(family)
+                self.assertEqual(
+                    offered - {1}, set(),
+                    f"{family} was offered GlobalSplitU {sorted(offered)}, "
+                    f"none of which can run on this device")
+
+    def test_the_banned_gsu_test_is_not_vacuous(self):
+        """Guard the guard.
+
+        If the axis is never reached, `offered` is empty and the test above
+        passes while proving nothing. Pin that the families *do* see a GSU draw,
+        so a future change to the sampling budget cannot silently neuter it.
+        """
+        for family in ("CC", "ZZ", "HH", "HH_HPA", "HS_HPA"):
+            with self.subTest(family=family):
+                self.assertTrue(
+                    self._offered_gsu(family),
+                    f"{family} never saw a GlobalSplitU draw at "
+                    f"n={self._GSU_N}, so the ban is untested rather than held")
+
+    def test_gsu_axis_survives_where_it_is_legal(self):
+        """The restriction must not have sterilised the families that can use it.
+
+        A fix that quietly emptied SS's and DD's GSU axis would pass the ban
+        test above while removing the search dimension the run depends on.
+        """
+        for family in ("SS", "DD"):
+            with self.subTest(family=family):
+                self.assertTrue(
+                    self._offered_gsu(family) - {1},
+                    f"{family} lost its GlobalSplitU axis entirely; the fix "
+                    f"should only remove values that cannot run")
+
     def test_novelty_is_guaranteed_not_remeasured(self):
         """A mutant is never a config the ledger has already decided. Recording
         each emission and re-synthesizing must yield only novel fps — the

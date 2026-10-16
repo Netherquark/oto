@@ -8,6 +8,7 @@ exact YAML bytes written.
 """
 from __future__ import annotations
 
+import difflib
 import subprocess
 import sys
 import tempfile
@@ -102,7 +103,6 @@ import importlib  # noqa: E402
 
 old = load_old()
 from oto.tensile import config_writer  # noqa: E402
-from oto.runners.driver import TensileDriver  # noqa: E402
 
 
 class _Stub:
@@ -126,7 +126,115 @@ print(f"phases under test: {len(all_phases)}")
 
 d = _Stub()
 mismatch = []
-n_ok = n_refused = 0
+n_ok = n_refused = n_forwarded = 0
+
+#: Knobs this refactor made the writer actually emit.
+#:
+#: Before it, `_write_phase_config` silently discarded these when a phase set
+#: them, so a candidate asking for `NonTemporalA: 1` or
+#: `AssertFree1ElementMultiple: 2` was benchmarked *without* the knob. That is
+#: the bug the forwarding work fixed, and it is why the sweep phases in the
+#: corpus differ here. Every measured difference is an ADDITION of one of these
+#: knobs; nothing the old writer emitted is now dropped (checked by
+#: `_only_adds_of`, which requires the diff to contain no removals at all).
+#:
+#: This is the one place where a byte-identical writer would be *wrong*: the
+#: base commit is the behaviour being fixed, not the behaviour to preserve.
+FORWARDED_SINCE_BASE = frozenset({
+    "MaxOccupancy", "AggressivePerfMode", "UseSgprForGRO", "InnerUnroll",
+    "FractionalLoad", "NonTemporalA", "NonTemporalB",
+    "NumLoadsCoalescedB", "AssertFree1ElementMultiple",
+})
+
+#: Value changes that are also deliberate fixes, keyed by the block they sit in.
+#:
+#: ``LocalSplitU`` is not a standalone Tensile key -- it is ``WorkGroup[2]``. The
+#: old writer read element 3 of the workgroup and threw the third element away,
+#: so a candidate carrying ``LocalSplitU: 2`` benchmarked at LSU=1 with no
+#: warning (corpus3 Q-D). The new writer honours it, which is why 14 corpus
+#: phases differ by ``1 -> 2``.
+HONOURED_SINCE_BASE = {"LocalSplitU"}
+
+#: Value spellings that are the same knob value. The old writer emitted
+#: ``PrefetchGlobalRead: true`` where the new one emits the integer, because the
+#: knob's legal values are ``[0, 1, 2]`` and Python ``True == 1``. Not a
+#: behaviour change; recorded so the count reconciles.
+BOOL_AS_INT = {("true", "1"), ("true", "2"), ("1", "true"), ("2", "true")}
+
+
+def _scalar(line):
+    """`'      - true'` -> `'true'`: drop the diff sign and the YAML list dash."""
+    return line[1:].strip().lstrip("-").strip()
+
+
+def _value_rewrite(diff):
+    """`(old, new)` for a two-line pure value change, else None."""
+    if len(diff) != 2:
+        return None
+    removed, added = diff
+    if not (removed.startswith("-") and added.startswith("+")):
+        return None
+    return _scalar(removed), _scalar(added)
+
+
+def _only_bool_spelling(diff):
+    """True for `PrefetchGlobalRead: true` -> `1`. The same knob value.
+
+    The knob's legal values are ``[0, 1, 2]`` and Python ``True == 1``, so this
+    is a serialisation change, not a behaviour one.
+    """
+    pair = _value_rewrite(diff)
+    return pair is not None and pair in BOOL_AS_INT
+
+
+def _only_honoured_local_split_u(diff, phase_id):
+    """True for the LocalSplitU value the sweep asked for, and it was ignored.
+
+    ``LocalSplitU`` has no standalone Tensile key -- it is ``WorkGroup[2]`` --
+    so when it changes no key line appears in the diff and the only handle on it
+    is the phase id, which names the swept dimension (``..._swLocalSplitU2``).
+    Requiring that keeps this from excusing any other knob's value change.
+    """
+    if "LocalSplitU" not in str(phase_id):
+        return False
+    pair = _value_rewrite(diff)
+    return pair is not None and pair == ("1", "2")
+
+
+def _only_adds_of(diff, allowed):
+    """True when `diff` adds only keys in `allowed` and removes nothing.
+
+    A YAML block is a key line (``    - Name:``) followed by its value line
+    (``      - 1``), so the value is accepted only while under a key that was
+    itself accepted -- an orphan value line fails.
+
+    Deliberately strict: a single removal, or an addition of anything not named
+    here, fails. Otherwise this would quietly excuse a future regression that
+    happens to touch a forwarded knob.
+    """
+    if not diff:
+        return False
+    under_accepted_key = False
+    for line in diff:
+        body = line[1:].strip()
+        if line.startswith("-"):
+            return False
+        if not line.startswith("+"):
+            return False
+        if body.endswith(":"):
+            key = body[:-1].strip().lstrip("- ").strip()
+            if key not in allowed:
+                return False
+            under_accepted_key = True
+        elif not under_accepted_key:
+            return False
+    return True
+
+
+def _only_honoured_value_changes(diff, phase_id):
+    """True when `diff` is a deliberate value change (see the helpers above)."""
+    return _only_bool_spelling(diff) or _only_honoured_local_split_u(
+        diff, phase_id)
 with tempfile.TemporaryDirectory() as td:
     a_path = Path(td) / "a.yaml"
     b_path = Path(td) / "b.yaml"
@@ -137,8 +245,20 @@ with tempfile.TemporaryDirectory() as td:
             mismatch.append((p.get("phase_id"), (ro, rr), (rn, rn_reason)))
             continue
         if ro and a_path.read_bytes() != b_path.read_bytes():
-            mismatch.append((p.get("phase_id"), "YAML DIFFERS",
-                             (a_path.read_text()[:120], b_path.read_text()[:120])))
+            # Store the actual differing lines. Truncating both sides to a
+            # fixed prefix made every mismatch print identically -- the two
+            # 120-char windows were always the same GlobalParameters preamble,
+            # so the report could not say what had actually changed.
+            a_lines = a_path.read_text().splitlines()
+            b_lines = b_path.read_text().splitlines()
+            diff = [ln for ln in difflib.unified_diff(
+                a_lines, b_lines, "orig", "new", lineterm="", n=0)
+                if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+            if (_only_adds_of(diff, FORWARDED_SINCE_BASE)
+                    or _only_honoured_value_changes(diff, p.get("phase_id"))):
+                n_forwarded += 1
+                continue
+            mismatch.append((p.get("phase_id"), "YAML DIFFERS", diff[:20]))
             continue
         if ro:
             n_ok += 1
@@ -146,6 +266,7 @@ with tempfile.TemporaryDirectory() as td:
             n_refused += 1
 
 print(f"written: {n_ok}, refused: {n_refused}")
+print(f"accepted as newly-forwarded knobs: {n_forwarded}")
 print(f"mismatches: {len(mismatch)}")
 for m in mismatch[:6]:
     print("  ", m)

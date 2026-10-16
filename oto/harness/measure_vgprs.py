@@ -40,7 +40,6 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR          # noqa: E402
-from oto.tensile.gates.occupancy import tile_dims  # noqa: E402
 from oto.tensile.gates.vgpr_model import measured_accvgpr  # noqa: E402
 
 _TYPECODE_CORE = re.compile(r"_(MT\d+x\d+(?:x\d+)?)_")

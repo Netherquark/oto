@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -175,7 +174,6 @@ def test_nlca_needs_the_width_override(gen):
     sweep carries ``width_override`` as data rather than fixing it at the gate."""
     for family, width in (("CC", 1), ("SS", 1), ("HH", 2)):
         base = KNOB_SWEEP_BASES[family][0]
-        row = next(s for s in KNOB_SWEEPS if s["knob"] == "NumLoadsCoalescedA")
         with_override = _merged(family, base, {"NumLoadsCoalescedA": 2}, width)
         ok, why = gen.validate_config(with_override)
         assert ok, f"{family} vw{width}+NLCA2 should be legal: {why}"

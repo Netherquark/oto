@@ -80,10 +80,10 @@ class DbPatternsMixin:
                     elif k == "LdsPadB":
                         d["LdsPadB"] = lspad_val
                     elif k == "GSU":
-                        d["GSU"] = rng.choice(FORWARD_KNOB_DOMAINS["GSU"])
+                        d["GSU"] = rng.choice(forward_domain("SS", "GlobalSplitU"))
                     elif k == "GlobalLoadVectorWidthA":
                         d["GlobalLoadVectorWidthA"] = rng.choice(
-                            FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
+                            forward_domain("SS", "GlobalLoadVectorWidthA"))
                 if d:
                     patterns.append(d)
 
@@ -93,11 +93,11 @@ class DbPatternsMixin:
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "WorkGroupMapping":
                     d["WorkGroupMapping"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["WorkGroupMapping"])
+                        forward_domain("SS", "WorkGroupMapping"))
                 elif k == "GSU":
                     d["GSU"] = wgm_val // 32  # GSU=1,2,4 maps to wgm 32,64,128
                 elif k == "StaggerU":
-                    d["StaggerU"] = rng.choice(FORWARD_KNOB_DOMAINS["StaggerU"])
+                    d["StaggerU"] = rng.choice(forward_domain("SS", "StaggerU"))
             if d:
                 patterns.append(d)
 
@@ -109,7 +109,7 @@ class DbPatternsMixin:
                     d["GlobalLoadVectorWidthA"] = glvw_val
                 elif k == "StaggerUStride":
                     d["StaggerUStride"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["StaggerUStride"])
+                        forward_domain("SS", "StaggerUStride"))
             if d:
                 patterns.append(d)
 
@@ -133,10 +133,10 @@ class DbPatternsMixin:
                     d["DepthU"] = depthu_val
                 elif k == "GlobalLoadVectorWidthA":
                     d["GlobalLoadVectorWidthA"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthA"])
+                        forward_domain("DD", "GlobalLoadVectorWidthA"))
                 elif k == "GlobalLoadVectorWidthB":
                     d["GlobalLoadVectorWidthB"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalLoadVectorWidthB"])
+                        forward_domain("DD", "GlobalLoadVectorWidthB"))
             if d:
                 patterns.append(d)
 
@@ -147,7 +147,7 @@ class DbPatternsMixin:
                 if k == "GSU":
                     d["GSU"] = gsu_val
                 elif k == "NLCA":
-                    d["NLCA"] = rng.choice(FORWARD_KNOB_DOMAINS["NLCA"])
+                    d["NLCA"] = rng.choice(forward_domain("DD", "NLCA"))
             if d:
                 patterns.append(d)
 
@@ -194,7 +194,7 @@ class DbPatternsMixin:
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "GlobalSplitU":
                     d["GlobalSplitU"] = rng.choice(
-                        FORWARD_KNOB_DOMAINS["GlobalSplitU"])
+                        forward_domain("CC", "GlobalSplitU"))
             if d:
                 patterns.append(d)
 
@@ -226,7 +226,7 @@ class DbPatternsMixin:
                 if k == "VectorWidth":
                     d["VectorWidth"] = vw_val
                 elif k == "DepthU":
-                    d["DepthU"] = rng.choice(FORWARD_KNOB_DOMAINS["DepthU"])
+                    d["DepthU"] = rng.choice(forward_domain("ZZ", "DepthU"))
             if d:
                 patterns.append(d)
 

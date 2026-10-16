@@ -298,7 +298,9 @@ def measure_corpus(runs_root: Path,
             ai = None
             if mt and facts:
                 bpe, flops_mac = facts
-                m0, m1, ku = int(mt.group(1)), int(mt.group(2)), int(mt.group(3))
+                # group(3) is the K-unroll; the arithmetic-intensity formula
+                # below needs only M and N, so it is not parsed.
+                m0, m1 = int(mt.group(1)), int(mt.group(2))
                 ai = flops_mac * m0 * m1 / ((m0 + m1) * bpe)
             rows.append({
                 "phase": phase.name,

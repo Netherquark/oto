@@ -49,7 +49,6 @@ if str(_HERE) not in sys.path:
 
 import yaml  # noqa: E402
 
-from oto.device.peaks import shipped_cell_set  # noqa: E402
 from oto.tensile.shape_order import shape_order_key  # noqa: E402
 
 # The full structural knob surface — MUST match the yaml emission surface of

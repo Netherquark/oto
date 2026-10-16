@@ -33,7 +33,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 # This file lives in tests/, so the repo root is one level up. ROOT is both the
 # import root and the data root, and both are the repo root -- the harness

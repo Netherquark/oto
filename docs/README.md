@@ -57,10 +57,11 @@ Corollaries:
 | `tensile_tuning_context.md` | Ecosystem | Tuning/search philosophy |
 | `adversarial_review.md` | Ecosystem | Audit register |
 | `archive/RESEARCH_PROMPT*.md` | Ecosystem | The three research briefs, verbatim; outputs folded, prompts retained as historical scope records |
-| `archive/corpus*.md` | Ecosystem | Verbatim research corpora (passes 1–3 + companion agents); read only for the raw record, never as an authority |
+| `archive/corpus*.md` | Ecosystem | Verbatim research corpora (passes 1–4 + companion agents); read only for the raw record, never as an authority |
 | `plans/REFACTOR_*.md` | Ecosystem | The refactor plans this package was built against |
 | `plans/verify_*.py` | Ecosystem | The executable equivalence proofs for those plans |
 | `docs/design_language.md` | Ecosystem | Design-language spec for the HTML acceptance report |
+| `docs/agent_reference.md` | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
 | `docs/harness_runbook.md` | Ecosystem | Harness runbook (moved from `oto/harness/README.md`) |
 | `oto/**/*.py` | **Docstrings** | Everything about one function's contract |
 

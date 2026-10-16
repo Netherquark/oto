@@ -52,6 +52,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Optional, Tuple
 
+from .vgpr_model import knob_int
+
 #: Bytes per element for the assembly-class dtype check. Distinct from
 #: :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT`, which is an LDS
 #: footprint table: a complex double element is 16 bytes here and 8 there,
@@ -131,8 +133,8 @@ def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
                 "MFMA; SolutionStructs:3553)")
 
     if dtype_upper in ("H", "B") and gsu > 1:
-        af0em = int(config.get("AssertFree0ElementMultiple",
-                               config.get("AssertFree0Multiple", 1)))
+        af0em = knob_int(config.get("AssertFree0ElementMultiple",
+                                     config.get("AssertFree0Multiple", 1)), 1)
         if af0em < 2:
             return (f"GlobalSplitU={gsu} on half Assembly requires "
                     "AssertFree0ElementMultiple>=2 (have "
@@ -152,8 +154,8 @@ def _stagger_rejection(config: Dict[str, Any],
     refused every swizzle-off config.
     """
     bpe = ASSEMBLY_DTYPE_ELEM_BYTES.get(str(config.get("DataType", "S")).upper(), 4)
-    stagger = int(config.get("StaggerUStride", STAGGER_STRIDE_DEFAULT))
-    stagger_u = int(config.get("StaggerU", STAGGER_U_DEFAULT))
+    stagger = knob_int(config.get("StaggerUStride"), STAGGER_STRIDE_DEFAULT)
+    stagger_u = knob_int(config.get("StaggerU"), STAGGER_U_DEFAULT)
     if stagger_u > 0 and depth_u * bpe > stagger:
         return (f"DepthU={depth_u} * {bpe}B = {depth_u*bpe} > "
                 f"StaggerUStride={stagger}: StaggerUStride must be >= "
@@ -178,7 +180,7 @@ def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
         source line that refuses it.
     """
     dtype_upper = str(config.get("DataType", "S")).upper()
-    gsu = int(config.get("GlobalSplitU", 1))
+    gsu = knob_int(config.get("GlobalSplitU"), 1)
     # Resolved before the GSU rules, exactly as before the split: a config whose
     # DepthU is named but unparsable raises here rather than falling through to
     # a "legal" verdict from a later rule.

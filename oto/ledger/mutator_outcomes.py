@@ -11,7 +11,6 @@ Public API: MutatorOutcomesMixin (classify_outcome, _per_cell_medians).
 
 from __future__ import annotations
 
-import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 

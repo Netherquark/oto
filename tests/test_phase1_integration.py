@@ -469,9 +469,8 @@ class SkipBypassTests(Harness):
             {"type": "benchmark_result", "fp": "fpPassed", "GFLOPS": 12.0,
              "status": "completed"},
             run_id="prior")
-        phase = {"phase_id": "phase_auto_s", "fp": "fpPassed",
-                 "origin": "overlay", "overlay_run_id": driver.run_dir.name,
-                 "config": {}}
+        # The overlay identity is spelled as literals below rather than built as
+        # a dict; this used to build one and never use it.
         # Baseline: the skip fires.
         allowed, reason = should_run("phase_auto_s", "fpPassed",
                                      registry=self.registry,
@@ -488,7 +487,6 @@ class SkipBypassTests(Harness):
 
     def test_curated_phases_keep_the_identical_fp_skip(self):
         # The bypass must not re-benchmark settled curated phases every run.
-        driver = self._driver("run_curated")
         self.registry.append_record(
             {"type": "benchmark_result", "fp": "fpCur", "GFLOPS": 12.0,
              "status": "completed"},
@@ -789,8 +787,6 @@ class ReadOnlyRegistryTests(Harness):
             seen["read_only"] = read_only
             return SQLiteRegistry(base, read_only=True)
         import oto.ledger.registry as reg_mod
-        original = ab_audit.SQLiteRegistry if hasattr(ab_audit, "SQLiteRegistry") \
-            else None
         # ab_audit imports SQLiteRegistry inside the function; patch the module.
         import unittest.mock as mock
         with mock.patch("oto.ledger.registry.SQLiteRegistry", spy):

@@ -46,7 +46,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
                                             _DONOR_POOL, _FORWARD_DRAWS,
                                             FAMILY_DTYPE_CHAR,
-                                            FORWARD_KNOB_DOMAINS)
+                                            FORWARD_KNOB_DOMAINS,
+                                            forward_domain)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
@@ -281,9 +282,14 @@ class DBMutator(DbPatternsMixin):
 
         # NARROW — single-knob deltas on the parent (highest value: these are
         # the axes the manifest sampler cannot touch).
-        for knob, values in FORWARD_KNOB_DOMAINS.items():
-            cur = parent_config.get(knob)
-            for v in values:
+        #
+        # Through forward_domain, not FORWARD_KNOB_DOMAINS: the per-family
+        # overrides are the whole point of that helper, and reading the base
+        # table here is what let the mutator keep offering GlobalSplitU=2 to
+        # CC/ZZ/HH_HPA/HS_HPA, where it can never run.
+        for knob in FORWARD_KNOB_DOMAINS:
+            for v in forward_domain(family, knob):
+                cur = parent_config.get(knob)
                 if v == cur:
                     continue
                 cands.append(({**parent_config, knob: v}, 1.0))
