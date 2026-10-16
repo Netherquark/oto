@@ -3,7 +3,7 @@
 
 Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable. The numeric ProblemSizes order every emitted row carries is defined once in ``oto.tensile.shape_order`` (``_shape_list`` / ``_merge_shapes`` are its call sites here).
 Does NOT own: the row data itself (oto.harness.candidate_rows) or the overlay read/write (oto.harness.candidate_overlay).
-Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for, _shape_list, _merge_shapes."""
+Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for, _shape_list, _merge_shapes, _assertion_failures, _shapes_satisfying_assertions, DROPPED_ASSERTIONS."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 import sys
-import yaml
+# `yaml` is imported lazily, inside the functions that use it, so that
+# importing this module does not pull in the parser.
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -25,12 +26,20 @@ from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.tensile.shape_order import ordered_shapes  # noqa: E402
+from oto.tensile.synthesis.db_knobs import (  # noqa: E402
+                                            forward_domain)
 from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         AUTO_EXPLICIT, DU_VARIANTS,
                                         FAMILY_DTYPE, LADDER,
                                         NARROW_NEIGHBOURS, PATTERNS,
                                         PLAN_BATCH, TARGET_CELLS,
                                         WGM_VARIANTS, _pad_rows)
+
+#: Notes for rows dropped because no target shape satisfied their element-
+#: multiple assertions. Appended to by ``_offer_row``; drained by
+#: ``iter_candidates`` so a run can report what was pruned and why instead of
+#: losing the information.
+DROPPED_ASSERTIONS: List[str] = []
 
 
 def _tile_key(mt: str, tt: str) -> str:
@@ -118,6 +127,87 @@ def _strip_not_forwarded(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     return {k: v for k, v in config.items() if k not in _NOT_FORWARDED_YET}, dropped
 
 
+#: The three element-multiple assertions, and the problem dimension each one
+#: asserts. Read from Tensile's own `validParameters` doc comments
+#: (`Common.py`), which name the dimensions explicitly:
+#:
+#: * ``AssertFree0ElementMultiple`` -- "Kernel generator will assume that the
+#:   FreeIndex[0] size is some multiple ... FreeIndex[0] is usually letter I"
+#:   -> **M**. Legal values ``[1,2,4,8,16]``; recommended 16/I8, 8/half, 4/single,
+#:   2/double.
+#: * ``AssertFree1ElementMultiple`` -- FreeIndex[1] = "J" -> **N**. Same domain.
+#: * ``AssertSummationElementMultiple`` -- "will assume that the summation size is
+#:   some multiple" -> **K**, and when ``GlobalSplitU>1`` it is applied as
+#:   ``ASEM//GSU``, so it must divide by GSU as well. Legal values ``[1..1024]``
+#:   powers of two.
+#:
+#: All three mean "1 indicates no assertion (since all sizes are multiples of 1)".
+#:
+#: Why this table lives here and not in ``oto/tensile.gates``: the gate families
+#: validate a *config*, and these assertions are the one class of Tensile knob
+#: that is about a *shape*. There is no way to check them without both, and the
+#: gates never see the shape.
+_ELEMENT_ASSERTIONS: Tuple[Tuple[str, int, str], ...] = (
+    ("AssertFree0ElementMultiple", 0, "M"),
+    ("AssertFree1ElementMultiple", 1, "N"),
+    ("AssertSummationElementMultiple", 2, "K"),
+)
+
+
+def _assertion_failures(config: Dict[str, Any], side: int) -> List[str]:
+    """Which of the config's element-multiple assertions ``side`` violates.
+
+    ``side`` is a cubic size; dims are M, N, K. An absent or non-numeric
+    assertion means 1, i.e. no assertion, which every size satisfies.
+
+    Tensile does **not** enforce these: its own comment says the kernel
+    generator "will assume that the ... size is some multiple", and for the
+    summation case it says outright that this "requires runtime checking to
+    ensure the specified summation value meets the requirements". The only
+    divisibility Tensile checks is ``AF0EM % GlobalLoadVectorWidthA == 0``
+    (``GuaranteeNoPartialA``, enforced in ``oto.tensile.gates.loads``), which is a
+    knob-to-knob rule and says nothing about the problem size. So a wrong value
+    does not fail loudly -- the kernel drops the M/N predication it needed and
+    returns **silently wrong numbers**. That is the whole reason this exists.
+    """
+    out: List[str] = []
+    gsu = int(config.get("GlobalSplitU", 1) or 1)
+    for knob, index, label in _ELEMENT_ASSERTIONS:
+        raw = config.get(knob, 1)
+        try:
+            mult = int(raw)
+        except (TypeError, ValueError):
+            mult = 1
+        if mult <= 1:
+            continue
+        if side % mult:
+            out.append(f"{label}={side} not a multiple of {knob}={mult}")
+        elif knob == "AssertSummationElementMultiple" and gsu > 1 and mult % gsu:
+            out.append(f"{knob}={mult} is not a multiple of GlobalSplitU={gsu}, "
+                       f"so ASEM//GSU is not the asserted multiple")
+    return out
+
+
+def _shapes_satisfying_assertions(
+        config: Dict[str, Any], sides: Tuple[int, ...]) -> Tuple[Tuple[int, ...], List[str]]:
+    """`sides` filtered to the sizes every element-multiple assertion accepts.
+
+    Filtering rather than dropping is deliberate: a row offered across a family
+    that spans both 4-divisible and non-divisible sizes is still a good candidate
+    for the divisible ones, and a fingerprint is benchmarked once, so silently
+    dropping the row would throw away a legitimate measurement.
+    """
+    kept: List[int] = []
+    reasons: List[str] = []
+    for side in sides:
+        bad = _assertion_failures(config, int(side))
+        if bad:
+            reasons.append(f"{side}: " + "; ".join(bad))
+        else:
+            kept.append(int(side))
+    return tuple(kept), reasons
+
+
 def _candidate_phase_id(
     fam: str,
     pattern: str,
@@ -137,6 +227,38 @@ def _candidate_phase_id(
     return f"{phase_id}_{fp[:8]}"
 
 
+def _with_depth_u(knobs: Dict[str, Any]) -> Dict[str, Any]:
+    """`knobs` with an explicit `DepthU`, taken from the MacroTile string."""
+    out = dict(knobs)
+    if "DepthU" not in out:
+        parts = [int(x) for x in re.split(r"[xX]", str(out.get("MacroTile",
+                                                                 "64x64x16")))]
+        out["DepthU"] = parts[2] if len(parts) >= 3 else 16
+    return out
+
+
+def _build_row(fam: str, tier: str, pattern: str, knobs: Dict[str, Any],
+               sides: Tuple[int, ...], config: Dict[str, Any], fp: str,
+               note: str) -> Dict[str, Any]:
+    """The pool row for a config that is not in the pool and not already scheduled."""
+    row = {
+        "phase_id": _candidate_phase_id(fam, pattern, knobs, sides, fp),
+        "label": _label_for(fam, pattern, knobs),
+        "dtype": FAMILY_DTYPE[fam].lower(),
+        "shapes": _shape_list(sides),
+        "ScheduleName": "isa",
+        "NumBenchmarks": 8,
+        "contraction_pattern": pattern,
+        "config": config,
+        "fp": fp,
+        "origin": "generated_" + tier,
+        "tier": tier,
+    }
+    if note:
+        row["note"] = note
+    return row
+
+
 def _offer_row(
     sched: CandidateGenerator,
     seen_fp: Set[str],
@@ -154,11 +276,7 @@ def _offer_row(
     duplicate, illegal, or already scheduled by the deck/seed); a config already
     in the pool gets this cell added to its shape list instead.
     """
-    knobs = dict(knobs)
-    if "DepthU" not in knobs:
-        mt_parts = [int(x) for x in re.split(r"[xX]",
-                    str(knobs.get("MacroTile", "64x64x16")))]
-        knobs["DepthU"] = mt_parts[2] if len(mt_parts) >= 3 else 16
+    knobs = _with_depth_u(knobs)
     config = {**_base_config(fam), **knobs, "ContractionPattern": pattern}
     config, dropped = _strip_not_forwarded(config)
     if dropped:
@@ -169,32 +287,32 @@ def _offer_row(
     pad_ok, _pad_why = ldspad_feasible(config)
     if not pad_ok:
         return None
+    # The element-multiple assertions are the one knob class whose correctness
+    # depends on the *shape*, so they are checked here -- the only place config
+    # and shape are both in scope. See _ELEMENT_ASSERTIONS for why nothing else
+    # in the pipeline catches a violation.
+    offered = len(sides)
+    sides, refused = _shapes_satisfying_assertions(config, sides)
+    if not sides:
+        DROPPED_ASSERTIONS.append(
+            f"{note} [dropped: {refused[0] if refused else 'no shape satisfies'}]"
+            .strip())
+        return None
+    if refused:
+        note = (f"{note} [assertion filter: {len(refused)} of {offered} shapes"
+                f" refused]").strip()
     fp = _fingerprint(config)
     existing = pool.get(fp)
     if existing is None:
         if fp in seen_fp:
             return None
-        row = {
-            "phase_id": _candidate_phase_id(fam, pattern, knobs, sides, fp),
-            "label": _label_for(fam, pattern, knobs),
-            "dtype": FAMILY_DTYPE[fam].lower(),
-            "shapes": _shape_list(sides),
-            "ScheduleName": "isa",
-            "NumBenchmarks": 8,
-            "contraction_pattern": pattern,
-            "config": config,
-            "fp": fp,
-            "origin": "generated_" + tier,
-            "tier": tier,
-        }
-        if note:
-            row["note"] = note
+        row = _build_row(fam, tier, pattern, knobs, sides, config, fp, note)
         pool[fp] = row
-    else:
-        existing["shapes"] = _merge_shapes(existing["shapes"], sides)
-        if note and not existing.get("note"):
-            existing["note"] = note
-    return pool[fp] if existing is None else None
+        return row
+    existing["shapes"] = _merge_shapes(existing["shapes"], sides)
+    if note and not existing.get("note"):
+        existing["note"] = note
+    return None
 
 
 def _auto_row_gen(offer) -> Iterator[Dict[str, Any]]:
@@ -228,7 +346,12 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
     A candidate *phase* is one config carrying a SHAPE LIST (like the deck
     rows); a fingerprint is config-level and needs exactly one row, or the
     spread of shapes collapses to the first cell that mentions it.
+
+    Rows pruned because no target shape satisfied their element-multiple
+    assertions are recorded in ``DROPPED_ASSERTIONS`` rather than vanishing, so
+    a run can report them.
     """
+    del DROPPED_ASSERTIONS[:]
     sched = CandidateGenerator(REPO_ROOT, registry=None)
 
     seen_fp: Set[str] = set(_load_deck_fps())
@@ -299,9 +422,12 @@ def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
                       "WorkGroupMapping": 4, "GlobalSplitU": 1}
         for knob in NARROW_NEIGHBOURS:
             val = winner.get(knob)
-            if knob == "GlobalSplitU" and fam in ("CC", "ZZ", "HH", "HH_HPA",
-                                                  "HS_HPA"):
-                continue  # GSU>1 illegal on complex/HPA; banned on HH (§13.4)
+            # GSU>1 is unavailable on CC/ZZ (complex, no MFMA) and on
+            # HH_HPA/HS_HPA (f32 accumulate), and is banned on HH by decision.
+            # Ask the domain rather than repeating that list here: it used to be
+            # a hand-written tuple that could drift from db_knobs silently.
+            if knob == "GlobalSplitU" and val not in forward_domain(fam, knob):
+                continue
             nbrs = NARROW_NEIGHBOURS[knob].get(val)
             if not nbrs:
                 continue

@@ -16,13 +16,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import yaml
 
 from oto.metrics.ab_band import (BAND_HI, BAND_LO, TIE_BAND_PCT, measured_band,
                                  repeat_dispersion, reproducible_band, verdict)
@@ -32,7 +30,6 @@ from oto.metrics.ab_records import (_registry_records, arm_record_sets,
                                     arm_records, phase_records, phase_family)
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key
-from oto.metrics.policy import aggregate_cell
 
 BASE = Path(__file__).resolve().parents[2]
 
@@ -41,26 +38,6 @@ __all__ = ["BASE", "TIE_BAND_PCT", "BAND_LO", "BAND_HI", "audit", "cell_deltas",
            "repeat_dispersion", "phase_records", "arm_records", "phase_family",
            "norm_config", "main"]
 
-
-def phase_family(phase_id: str) -> str:
-    """Which Tensile generator produced a phase: ``auto``, ``deck`` or ``unknown``.
-
-    The distinction that matters is Tensile's AutoTuner versus a deck-driven
-    sweep. Everything named ``phase_auto_*`` is AutoTuner; every other phase is
-    a deck sweep, whichever prefix the deck happened to use (``phase_ss_*`` for
-    the floor's pooled phases, ``phase_<cell>_*`` for the live deck). Keying on
-    the raw prefix instead would call those two the same generator by accident
-    and the floor's deck sweeps an unknown one.
-
-    Invocation form and generator are confounded: the single-shape population
-    is overwhelmingly ``auto`` while the multi-shape population is entirely
-    deck sweeps, and the two executed in disjoint halves of the same run, so
-    thermal state is confounded on top of that.
-    """
-    pid = phase_id or ""
-    if not pid:
-        return "unknown"
-    return "auto" if pid.startswith("phase_auto") else "deck"
 
 def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
                 agg: str = "best_median",
@@ -80,30 +57,6 @@ def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
     """
     return _driver(Path(base) if base else BASE).analytics.compute_native_vs_spoof_delta(
         native, floor, agg=agg)
-
-
-def measured_band(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
-                  band_pct: Optional[float] = None) -> Dict[str, Any]:
-    """The acceptance band, and where each component of it came from.
-
-    Two independent estimates of the same thing: cross-arm disagreement on
-    identical configs, and raw repeat spread. The shipped 5% is only a floor.
-    Never grade inside the repeat tail. An explicit `band_pct` overrides, and
-    that is recorded rather than silently substituted.
-    """
-    cross = reproducible_band(native, floor)
-    repeat = repeat_dispersion(native + floor)
-    cross_pct = cross["protocol_matched"].get("band_pct") or 0.0
-    repeat_pct = repeat.get("p90_cv_pct") or 0.0
-    if band_pct is None:
-        band = max(cross_pct, repeat_pct, TIE_BAND_PCT)
-        source = ("max(cross-arm, repeat-tail, shipped-floor)"
-                  if band > TIE_BAND_PCT else "shipped-floor")
-    else:
-        band = float(band_pct)
-        source = "caller-supplied"
-    return {"band_pct": band, "band_source": source, "cross_arm": cross,
-            "repeat_dispersion": repeat}
 
 
 def _best_by_cell(
@@ -208,7 +161,9 @@ def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]
 
     measured_b = measured_band(native, floor, band_pct)
     band = measured_b["band_pct"]
-    cross, repeat = measured_b["cross_arm"], measured_b["repeat_dispersion"]
+    # `cross_arm` is recorded in the band payload for the report but is not
+    # read here, so it is indexed out of the destructuring rather than bound.
+    repeat = measured_b["repeat_dispersion"]
 
     cells = _best_by_cell(native, floor)
     for slot in cells.values():

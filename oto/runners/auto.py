@@ -11,10 +11,9 @@ Public API: AutoMixin.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-from oto.runners.auto_prompt import AutoPlan, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS
+from oto.runners.auto_prompt import AutoPlan
 
 
 class AutoMixin:
@@ -74,7 +73,7 @@ class AutoMixin:
         release_drop: bool,
     ) -> tuple[int, int, "AutoPlan", bool, bool]:
         """Resolve the auto plan and budget parameters."""
-        from oto.runners.auto_prompt import AutoPlan, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS
+        from oto.runners.auto_prompt import AutoPlan
         plan = plan or AutoPlan()
         if budget is None:
             budget = plan.iterations

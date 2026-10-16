@@ -476,8 +476,8 @@ class BenchmarkMixin:
         self._current_proc = proc
 
         tee_workers = [
-            self._tee_stream(proc.stdout, log_out, sys.stdout, f"[tensile] "),
-            self._tee_stream(proc.stderr, log_err, sys.stderr, f"[tensile:err] "),
+            self._tee_stream(proc.stdout, log_out, sys.stdout, "[tensile] "),
+            self._tee_stream(proc.stderr, log_err, sys.stderr, "[tensile:err] "),
         ]
         return proc, tee_workers, log_out, log_err
 

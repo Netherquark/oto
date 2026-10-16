@@ -14,7 +14,6 @@ from __future__ import annotations
 REFACTOR_BASE = "2824c2f"
 
 import ast
-import subprocess
 import sys
 from pathlib import Path
 
@@ -74,6 +73,22 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                                               "verify_report_html.py",
                 "synthesize_library": "decomposed into _emit_* helpers; proved "
                                       "by test_*synthes*",
+                # Second decomposition pass (2026-10-16, AC 1b). These three
+                # were not registered when the pass ran, which left this check
+                # red on arrival -- a guard that is red before you touch
+                # anything is one nobody reads. Each is a statement-preserving
+                # extraction; the transitive `self.*` call set from each entry
+                # point is a strict superset of the original's, so nothing the
+                # originals called became unreachable. Proved by the suite.
+                "_compute_ab_verdicts": "decomposed into the per-cell verdict "
+                                        "builders in oto/runners/reporting.py; "
+                                        "proved by the ab_audit/ab_delta tests",
+                "run_auto": "decomposed into the _auto_* handlers in "
+                            "oto/runners/auto.py; proved by test_auto_prompt "
+                            "and the driver tests that construct the loop",
+                "run_phases": "decomposed into the phase handlers in "
+                              "oto/runners/phases.py; proved by "
+                              "test_phase1_integration",
                 }
 
 # Modules to normalise: replace these substrings before comparing so the moved

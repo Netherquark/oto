@@ -17,7 +17,6 @@ import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from oto.metrics.report_models import AcceptanceReport
 from oto.tensile.shape_order import ordered_shapes
 
 
@@ -102,8 +101,8 @@ class SectionMixin:
                 out += (f" &middot; Native arm: whole-db best/{stat} across {arm.get('n_runs', len(runs))} "
                         f"run(s) [{shown}{more}] ({arm.get('n_records', 0)} cells)")
             else:
-                out += (f" &middot; Native arm: <strong>EMPTY</strong> — no native measurement "
-                        f"anywhere in the db, so every cell reads 0/MISSING")
+                out += (" &middot; Native arm: <strong>EMPTY</strong> — no native measurement "
+                        "anywhere in the db, so every cell reads 0/MISSING")
         if report.reference_run_id:
             out += f" &middot; Spoof floor: gfx900 shipped TensileLibrary (ref <code>{report.reference_run_id}</code>)"
         prefixes = (report.shipped_manifest or {}).get("rocm_prefixes", [])

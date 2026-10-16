@@ -44,15 +44,22 @@ CHECKS = [
 
 #: Tensile is not needed for #1/#3's gate logic but IS needed for the dtype table
 #: the report and config checks read.
+#: Pass the caller's environment through unchanged. It used to do
+#: ``ENV.setdefault("TENSILE_ROOT", "")``, which is not a no-op: when the
+#: variable was absent from the shell it *injected an empty value*, and
+#: ``require_tensile_root`` reads "set but empty" as an error instead of
+#: falling back to the repo-root ``.env``. So the one check that needs the
+#: Tensile checkout died on the harness's own placeholder, while passing when
+#: run directly -- which is exactly the kind of difference that gets a guard
+#: ignored. Inject nothing; let each check resolve it the way the driver does.
 ENV = dict(os.environ)
-ENV.setdefault("TENSILE_ROOT", "")
 
 
 def main() -> int:
-    if not ENV.get("TENSILE_ROOT"):
-        print("NOTE: TENSILE_ROOT is unset -- checks that read Tensile's dtype "
-              "table will report fewer records. Export it to exercise them "
-              "fully.")
+    if not ENV.get("TENSILE_ROOT") and not (ROOT / ".env").is_file():
+        print("NOTE: TENSILE_ROOT is unset and there is no repo-root .env -- "
+              "checks that read Tensile's dtype table will not have a checkout "
+              "to read. Export it to exercise them fully.")
 
     failures = []
     for label, script in CHECKS:
@@ -67,7 +74,7 @@ def main() -> int:
             print("\n".join(proc.stderr.strip().splitlines()[-15:]))
             failures.append(label)
         else:
-            print(f"--- OK")
+            print("--- OK")
 
     print("\n================ SUMMARY ================")
     for label, _ in CHECKS:

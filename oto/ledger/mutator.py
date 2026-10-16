@@ -12,17 +12,16 @@ Public API: Mutator, Proposal, classify_outcome (re-exported).
 
 from __future__ import annotations
 
-import csv
 import json
 import random
-import re
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
 
-import yaml
+# `yaml` is imported lazily, inside the functions that use it, so that
+# importing this module does not pull in the parser.
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.ledger.mutator_outcomes import (OUTCOME_FUNCTIONAL,  # noqa: E402
@@ -33,7 +32,6 @@ from oto.ledger.mutator_outcomes import (OUTCOME_FUNCTIONAL,  # noqa: E402
                                         MutatorOutcomesMixin,
                                         _per_cell_medians, classify_outcome)
 from oto.metrics.analytics import AnalyticsEngine
-from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.legality import TEMPLATE_KEYS
 
 __all__ = ["Mutator", "Proposal", "classify_outcome",
@@ -42,9 +40,11 @@ __all__ = ["Mutator", "Proposal", "classify_outcome",
            "ORIGIN_NOVEL", "ORIGIN_REPLICATE",
            "DEFAULT_NEGATIVE_CACHE_K", "DEFAULT_DRAWS_PER_CELL"]
 
-#: Re-exported from `legality`, the single owner: this module assembles nothing,
-#: it only strips the caller's keys from what `legality` built.
-from oto.tensile.legality import TEMPLATE_KEYS  # noqa: E402,F401
+#: `legality` is the single owner of TEMPLATE_KEYS (imported above): this module
+#: assembles nothing, it only strips the caller's keys from what `legality`
+#: built. The import used to appear twice -- once here and once in the header --
+#: and the duplicate carried a `noqa: F401` that is no longer needed, because the
+#: name is genuinely used.
 import oto.tensile.legality as legality  # noqa: E402
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted

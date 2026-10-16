@@ -12,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
+# `yaml` is imported lazily, inside the functions that use it, so that
+# importing this module does not pull in the parser.
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 

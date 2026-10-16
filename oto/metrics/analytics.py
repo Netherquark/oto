@@ -16,14 +16,13 @@ resolve_cell_family, FAMILY_TO_DTYPE (re-exported), CLOCK_MIN_COVERAGE.
 from __future__ import annotations
 
 import csv
-import json
 import re
-import statistics
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Set
 
-import yaml
+# `yaml` is imported lazily, inside the functions that use it, so that
+# importing this module does not pull in the parser.
 
 from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
                               PEAK_GFLOPS, REALISTIC_CEILINGS,
@@ -46,10 +45,11 @@ __all__ = ["AnalyticsEngine", "CellAnalytics", "extract_family_from_phase_id",
 CLOCK_MIN_COVERAGE = 0.5
 
 
-# Family prefix -> Tensile DataType char (lowercase keys for phase_id parsing).
-FAMILY_TO_DTYPE = {
-    k.lower(): v for k, v in FAMILY_DTYPE_CHAR.items()
-}
+# `FAMILY_TO_DTYPE` (family prefix -> Tensile DataType char, lowercased keys for
+# phase_id parsing) is owned by `oto.metrics.family_attribution` and imported
+# above. It used to be rebuilt here from FAMILY_DTYPE_CHAR, shadowing the import;
+# the two dicts compared equal, so the local copy was pure duplication that could
+# drift. Do not reintroduce it -- extend the owner.
 
 
 class CellAnalytics:

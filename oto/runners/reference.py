@@ -280,9 +280,9 @@ class ReferenceMixin:
         base_yaml = base_dir / "phases_reference.yaml"
         if not base_yaml.is_file():
             return [], {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
-        with open(base_yaml) as f:
-            deck = yaml.safe_load(f) or []
-
+        # The deck is not read here: `is_file()` above is the existence check,
+        # and `_resume_deck` re-reads it and returns the phase list. This used to
+        # `yaml.safe_load` the whole reference deck and throw the result away.
         phases, resume_meta = self._resume_deck(base, base_dir, release_held)
         if not phases:
             print("[gfx900-reference] reference deck already fully completed -- "
