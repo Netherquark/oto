@@ -198,5 +198,149 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         self.assertGreaterEqual(len(seen), 32)
 
 
+#: One deck-realistic parent per family: the tile shape the family's shipped
+#: winners actually use (MacroTile x ThreadTile x VectorWidth, DepthU).
+PARENTS = {
+    "SS": {"MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4,
+           "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+           "GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4},
+    "DD": {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+           "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+           "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2},
+    "CC": {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
+           "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+           "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2},
+    "ZZ": {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 1,
+           "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+           "GlobalLoadVectorWidthA": 1, "GlobalLoadVectorWidthB": 1},
+    "HH": {"MacroTile": "128x128x16", "ThreadTile": "8x8", "VectorWidth": 8,
+           "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+           "GlobalLoadVectorWidthA": 8, "GlobalLoadVectorWidthB": 8},
+    "HH_HPA": {"MacroTile": "64x128x16", "ThreadTile": "4x8", "VectorWidth": 4,
+               "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+               "GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4},
+    "HS_HPA": {"MacroTile": "128x64x16", "ThreadTile": "8x4", "VectorWidth": 4,
+               "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+               "GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4},
+}
+
+
+class TestDrawsAreJointlyLegal(unittest.TestCase):
+    """Every draw is gate-clean *before* it is offered, not filtered after.
+
+    Triage of the campaign ledger (potential_configs.md §R23): every candidate
+    the launch boundary ever refused was a *joint* violation -- a forward-knob
+    value that is legal on its own but not beside the rest of the tile
+    (GlobalLoadVectorWidth outside {VectorWidth, 1}, an LDS-budget overrun, an
+    illegal GlobalSplitU class, an NLCA above the tile's load count). The
+    domains are independent by construction; Tensile's legal set is not.
+
+    So the samplers must draw the joint subset. These tests pin that, and pin
+    that the joint filter removes only what the gates refuse.
+    """
+
+    def setUp(self):
+        self.mutator = _StubMutator()
+        self.db = DBMutator(REPO, self.mutator)
+        self.sched = CandidateGenerator(REPO, registry=None)
+
+    def _assert_legal(self, family, parent, draw):
+        cfg = {**self.db._template(family), **parent, **draw}
+        ok, why = self.sched.validate_config(cfg)
+        self.assertTrue(ok, f"{family} {draw}: {why}")
+        ok, why = ldspad_feasible(cfg)
+        self.assertTrue(ok, f"{family} {draw}: {why}")
+
+    def test_forward_draws_are_jointly_legal(self):
+        """No wide-forward draw is a config the launch boundary would refuse."""
+        for family, parent in PARENTS.items():
+            with self.subTest(family=family):
+                for seed in range(40):
+                    for draw in self.db._forward_draws(
+                            random.Random(seed), parent, family):
+                        self._assert_legal(family, parent, draw)
+
+    def test_family_patterns_are_jointly_legal(self):
+        """Same for the four per-family passes (db.synthesis.db_patterns)."""
+        emitted = {}
+        for family in ("SS", "DD", "CC", "ZZ"):
+            pattern = getattr(self.db, f"_{family.lower()}_mutation_pattern")
+            parent = PARENTS[family]
+            n = 0
+            for seed in range(40):
+                for draw in pattern(parent, random.Random(seed)):
+                    n += 1
+                    self._assert_legal(family, parent, draw)
+            emitted[family] = n
+        # Guard the guard: an empty pattern list would pass vacuously.
+        self.assertTrue(all(emitted.values()), emitted)
+
+    def test_joint_domain_is_a_subset_of_the_forward_domain(self):
+        """The filter narrows; it never invents a value the family may not draw."""
+        from oto.tensile.synthesis.db_knobs import (FORWARD_KNOB_DOMAINS,
+                                                    forward_domain)
+        for family, parent in PARENTS.items():
+            for knob in FORWARD_KNOB_DOMAINS:
+                with self.subTest(family=family, knob=knob):
+                    joint = set(self.db._joint_domain(family, knob, parent))
+                    self.assertTrue(joint <= set(forward_domain(family, knob)))
+
+    def test_joint_domain_pins_the_measured_couplings(self):
+        """The three couplings the ledger actually refused, pinned by value.
+
+        Each of these is a value the *naive* independent draw still offers:
+        the assertion is only meaningful because the full domain is wider.
+        """
+        from oto.tensile.synthesis.db_knobs import forward_domain
+
+        # GlobalLoadVectorWidth must be the tile's VectorWidth or 1
+        # (SolutionStructs:4583-4596): 2 is offered by the SS domain and
+        # refused beside VectorWidth 4.
+        self.assertIn(2, forward_domain("SS", "GlobalLoadVectorWidthA"))
+        self.assertEqual(
+            self.db._joint_domain("SS", "GlobalLoadVectorWidthA",
+                                  PARENTS["SS"]), (1, 4))
+
+        # NLCA must divide the tile's load count (SolutionStructs:2058). A
+        # 128x128x8 tile at ThreadTile 8x8 / VectorWidth 4 has exactly one
+        # load per operand, so {2,3} -- two thirds of the domain -- is refused.
+        self.assertEqual(forward_domain("SS", "NLCA"), (1, 2, 3))
+        self.assertEqual(
+            self.db._joint_domain("SS", "NLCA", PARENTS["SS"]), (1,))
+
+        # The StaggerU trio moves as one (SolutionStructs:3326-3342): the
+        # parent's absent StaggerU means Tensile's default 32 ("stagger on"),
+        # so StaggerUStride=0 -- in the domain -- is refused.
+        self.assertIn(0, forward_domain("CC", "StaggerUStride"))
+        self.assertNotIn(
+            0, self.db._joint_domain("CC", "StaggerUStride", PARENTS["CC"]))
+
+    def test_the_joint_filter_did_not_sterilise_the_coupled_axes(self):
+        """Guard the guard, as the GlobalSplitU ban tests do.
+
+        A filter that emptied GLVW or DepthU for every family would pass the
+        legality tests above while removing search dimensions the run depends
+        on. Pin that both still vary for the families the ledger refused.
+        """
+        for family in ("SS", "HH", "HH_HPA"):
+            for knob in ("GlobalLoadVectorWidthA", "DepthU"):
+                with self.subTest(family=family, knob=knob):
+                    self.assertGreater(
+                        len(self.db._joint_domain(family, knob,
+                                                  PARENTS[family])), 1,
+                        f"{family} lost its {knob} axis entirely")
+
+    def test_a_wide_draw_never_lands_on_a_refused_config(self):
+        """End-to-end: the synthesiser's whole output is legal, by construction
+        and not merely by the ``_gate`` filter that follows it."""
+        for family, parent in PARENTS.items():
+            with self.subTest(family=family):
+                mutants = self.db.synthesize_mutants(
+                    family, parent, "256x256x256", random.Random("t"), n=8)
+                self.assertEqual(len(mutants), 8, family)
+                for mut in mutants:
+                    self._assert_legal(family, parent, mut)
+
+
 if __name__ == "__main__":
     unittest.main()

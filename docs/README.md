@@ -48,13 +48,16 @@ Corollaries:
 | `implementation_plan.md` | Ecosystem | The current executable plan only |
 | `mapping.md` | Ecosystem | The shipped-footprint replication contract |
 | `gfx90c_theoretical_limits.md` | Ecosystem | Per-family ceilings, the acceptance authority |
+| `gfx90c_tuning_guide.md` | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
+| `kernel_tuning_research.md` | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
+| `complex_gemm_research_brief.md` | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
 | `potential_configs.md` | Ecosystem | The candidate deck, decisions, search rules |
 | `results.md` | Ecosystem | Measured evidence |
 | `knowledge_base.md` | Ecosystem | Architecture knowledge at the captured state |
 | `changelog.md` | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | Ecosystem | Open-work register |
 | `prior_*.md` | Ecosystem (frozen) | Prior conclusions, results only |
-| `tensile_tuning_context.md` | Ecosystem | Tuning/search philosophy |
+| `tensile_tuning_context.md` | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
 | `adversarial_review.md` | Ecosystem | Audit register |
 | `plans/REFACTOR_*.md` | Ecosystem | The refactor plans this package was built against |
 | `plans/verify_*.py` | Ecosystem | The executable equivalence proofs for those plans |

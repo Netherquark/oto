@@ -1440,44 +1440,6 @@
     VectorWidth: 1
     AggressivePerfMode: 1
   fp: 73f5f29635ef26fdd7fe6f88f925db869b65ae527491949c26e4412fcb0530b1
-- phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode2
-  label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swAggressivePerfMode2
-  dtype: C
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: C
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: CC
-    MacroTile: 64x64x8
-    ThreadTile: 4x4
-    VectorWidth: 1
-    AggressivePerfMode: 2
-  fp: 9094a89f4601fbd3705df90de121930ac32727f9ac71b6b8e4ecad7adae82717
-- phase_id: phase_cc_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode2
-  label: CC_Ailk_Bljk_1024x1024x1024_mt64x64x8_tt4x4_swAggressivePerfMode2
-  dtype: C
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: C
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: CC
-    MacroTile: 64x64x8
-    ThreadTile: 4x4
-    VectorWidth: 1
-    AggressivePerfMode: 2
-  fp: f5024b2cf5d2caca0795d57dcec91678bc9e0949791ea756bf600d7d0cfcb74c
 - phase_id: phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swLocalSplitU2
   label: CC_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_swLocalSplitU2
   dtype: C
@@ -2084,82 +2046,6 @@
     VectorWidth: 1
     AggressivePerfMode: 1
   fp: d8b282a0147406abaf95118cd0fac7bc4014ea7d100d473289d38308d7e6ae91
-- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
-  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
-  dtype: Z
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 1
-    AggressivePerfMode: 2
-  fp: 83feffae6623ed54f227bbf5bbe8c6897d276fdce827fe80ed8989723761cb26
-- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
-  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
-  dtype: Z
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 1
-    AggressivePerfMode: 2
-  fp: 9dc52b9f6ab67370614392856e73544dd63c49ccdaab1221505d35ae67b6011e
-- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
-  label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
-  dtype: Z
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 1
-    LocalSplitU: 2
-  fp: 0b6ed187d3583f8df18df6b255c94611f654e7a0e7fee84e8378a6c0866c06e5
-- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
-  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
-  dtype: Z
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: Z
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: ZZ
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 1
-    LocalSplitU: 2
-  fp: 8509684e4c61f468b75ca76c3e4bfbcdebadf1209a3ece7498637ab8041d92dd
 - phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
   label: ZZ_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
   dtype: Z
@@ -2804,44 +2690,6 @@
     VectorWidth: 4
     AggressivePerfMode: 1
   fp: f3d1f9bbb42c4ee0d8d83137e23984d39ddf2c099879ea5050fcb0fa0783fdc3
-- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: S
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: S
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: SS
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: a285c63ba3ea95d3a8913b3eaa5b6437ff8e1134feb727506d9ba6c6bc89f091
-- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: S
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: S
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: SS
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: 57c908150e073a95d9b4564c0ceb853b85402366d0ca56dd435bdb5100ad599d
 - phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU2
   label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swGlobalSplitU2
   dtype: S
@@ -2918,44 +2766,6 @@
     VectorWidth: 4
     GlobalSplitU: 4
   fp: 9e16e9a627f341822c188e6de57abb9256e1729bbac235d435ded72fbd2ca1e5
-- phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: S
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: S
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: SS
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: 9060b8bf7a7cac946c3a29e4e5d5487b9b27a2a8d1475972537657c84625318d
-- phase_id: phase_ss_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  label: SS_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: S
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: S
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: SS
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: 09738a51c9e6ebc63ded5c9def612985ef93b6d8b593714c1351d723b467eb47
 - phase_id: phase_ss_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   label: SS_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   dtype: S
@@ -3600,44 +3410,6 @@
     VectorWidth: 4
     AggressivePerfMode: 1
   fp: 5bf821d5ff47eb23ac12562a93e66b9aca69fe8b411ee58ed908a620c83d6712
-- phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode2
-  label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 128x128x16
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: fd8596538b26d382ae58db0f0102f4906f1b8eb21642be48d4245504d7fce899
-- phase_id: phase_hh_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode2
-  label: HH_Ailk_Bljk_1024x1024x1024_mt128x128x16_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: HH
-    MacroTile: 128x128x16
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: bdfea685b3738456e7e9b489cb68cbf7bec784c8d2c2343e8e0a9ff61cd0cd5f
 - phase_id: phase_hh_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swLocalSplitU2
   label: HH_Ailk_Bljk_512x512x512_mt128x128x16_tt8x8_swLocalSplitU2
   dtype: H
@@ -4244,44 +4016,6 @@
     VectorWidth: 2
     AggressivePerfMode: 1
   fp: d9a8ebe5f94245657df23e61f8c65be29f0aa293b93fd2767951f95fcef69d34
-- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
-  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swAggressivePerfMode2
-  dtype: D
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: D
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: DD
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 2
-    AggressivePerfMode: 2
-  fp: 697c02e4008c3f6d63265e16047ba370b0ba7c8447c3d09e9e99b0ea3f2bfcef
-- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
-  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swAggressivePerfMode2
-  dtype: D
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: D
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: DD
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 2
-    AggressivePerfMode: 2
-  fp: 258d0b891764e9c1eded713ab484db09b9aba87e4635f73c39ab5ff14a2d190f
 - phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU2
   label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swGlobalSplitU2
   dtype: D
@@ -4358,44 +4092,6 @@
     VectorWidth: 2
     GlobalSplitU: 4
   fp: 481701abc28f6b80ee66d782622748d63ce4b0f8f479fa9d21e0a52c72952487
-- phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
-  label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swLocalSplitU2
-  dtype: D
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: D
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: DD
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 2
-    LocalSplitU: 2
-  fp: 320cacfb9ab114f5644aefc43b3a9f6c2f9910dbe6c27f18c02219fa8ccc7b60
-- phase_id: phase_dd_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
-  label: DD_Ailk_Bljk_1024x1024x1024_mt32x32x8_tt2x2_swLocalSplitU2
-  dtype: D
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: D
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: DD
-    MacroTile: 32x32x8
-    ThreadTile: 2x2
-    VectorWidth: 2
-    LocalSplitU: 2
-  fp: 8066aac43f7fe04fceafeddcdcdd7e8cc537167587042a6b4c99eb7ff2a5b713
 - phase_id: phase_dd_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
   label: DD_Ailk_Bljk_512x512x512_mt32x32x8_tt2x2_swStaggerU0
   dtype: D
@@ -4964,82 +4660,6 @@
     VectorWidth: 4
     AggressivePerfMode: 1
   fp: fe7571dcda437d643d6a242986cb835587c145ce9e6012318876045807123921
-- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: 292cb5013cdb9f773fa38e3f79dc463b3522da51be12a6314bd37e9259634b53
-- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: 8b2d0e12159e2386d669ebb198dd38c93186d0f46b678c12b82d81a5a49e93e3
-- phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: e25008b51dfa2d12160cf446db739b7f9126a3abccaf26e83492c4af4f05c403
-- phase_id: phase_hh_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  label: HH_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: H
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: HH_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: 9a3c75ee557edac9590adf2e92a6eff58f3332ce8ecf02f2a48fee2e9239696e
 - phase_id: phase_hh_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   label: HH_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   dtype: H
@@ -5608,82 +5228,6 @@
     VectorWidth: 4
     AggressivePerfMode: 1
   fp: e1c3b1d97d8f3d70822e9fdcfa030e7648609d0c147b84b5097abfb32eef649f
-- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: a4e1d705947846facb1131b5d46402c019f452b8dbbeb2a7101ba088edbb976e
-- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swAggressivePerfMode2
-  dtype: H
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    AggressivePerfMode: 2
-  fp: b9eb10bfbaade6a02a76a15a27cc90c375ee0af043ce8e2a28f3c99a1f3c4209
-- phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: H
-  shapes:
-  - 512x512x512
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 512x512x512
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: def4452fe6627455f1167d3d39fab662a323c83e9ae7dc722c5cc381f53d8756
-- phase_id: phase_hs_hpa_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  label: HS_HPA_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt8x8_swLocalSplitU2
-  dtype: H
-  shapes:
-  - 1024x1024x1024
-  ScheduleName: isa
-  NumBenchmarks: 8
-  config:
-    Architecture: gfx90c
-    DataType: H
-    ContractionPattern: Ailk_Bljk
-    ProblemType: 1024x1024x1024
-    ScheduleName: isa
-    FamilyLabel: HS_HPA
-    MacroTile: 128x128x8
-    ThreadTile: 8x8
-    VectorWidth: 4
-    LocalSplitU: 2
-  fp: a43c1f8f3395b34ef12edb7d8ad76e72c6aadeeb2077d77a0aabe5a032987f90
 - phase_id: phase_hs_hpa_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   label: HS_HPA_Ailk_Bljk_512x512x512_mt128x128x8_tt8x8_swStaggerU0
   dtype: H

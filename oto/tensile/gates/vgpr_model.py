@@ -65,6 +65,12 @@ LDS_BUDGET = 16384
 #: entry alone would reject ZZ configs Tensile builds and runs. The two must be
 #: decided together. A f64 element is 8 bytes but 2 accumulator VGPRs (per
 #: element); a complex f64 element is 8 accumulator VGPRs and 16 LDS bytes.
+#:
+#: The *global-load* half of that decision is now settled and does NOT live here:
+#: the classic-load gate has its own table, ``gates.loads.LOAD_DTYPE_INFO``, whose
+#: ``Z`` row reads ComplexDouble's 4 registers / 16 bytes, so the 16 B load cap
+#: refuses ZZ VectorWidth 2 (see potential_configs.md §R23). This LDS table stays
+#: at 8 because LDS_BUDGET was calibrated against it.
 BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
 #: Retained for the workgroup estimate: budget is expressed in accumulators, and
 #: the register file is shared by every thread in a workgroup.

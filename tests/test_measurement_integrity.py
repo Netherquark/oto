@@ -4,9 +4,11 @@
 Three seams that silently corrupted results before, and whose failure mode is
 invisible in the output:
 
-1. ``vgpr_model.FAMILY_BYTES_PER_ELEMENT`` listed ZZ as 8 bytes. Complex double is
-   16, so the 16 B global-load cap admitted VectorWidth 2 and Tensile rejected
-   those configs at assembly time.
+1. The classic-load gate's dtype table (``gates.loads.LOAD_DTYPE_INFO``) carried
+   the ComplexFloat row for complex double (2 registers, 8 bytes), so its 16 B
+   global-load cap admitted a ZZ VectorWidth 2 and Tensile rejected those configs
+   at solution construction. It now reads ComplexDouble's 4/16 and every row is
+   pinned to ``Tensile DataType.numBytes()``.
 2. ``ab_audit.phase_family`` decides whether two measurements are comparable at
    all. It must read the *generator* (Tensile AutoTuner vs a deck sweep), not
    the raw phase-id prefix, or the live deck's ``phase_<cell>_*`` and the
@@ -61,6 +63,30 @@ class TestDtypeByteTable(unittest.TestCase):
                 self.assertLessEqual(
                     candidate.cap_vector_width("ZZ", mt, tt), 1,
                     "complex double must not admit VectorWidth 2")
+
+    def test_load_gate_dtype_table_matches_tensile(self):
+        """The classic-load gate carries its own dtype row, and it had drifted.
+
+        ``Z`` held the ComplexFloat numbers (2 registers, 8 bytes) instead of
+        ComplexDouble's (4, 16), so the gate's 16 B-cap read
+        ``GLVW 2 * 8 = 16 <= 16`` while Tensile computed ``2 * 16 = 32`` and
+        refused the solution -- the live
+        ``phase_cand_zz_128_32x64x8_tt2x4_..._vw2`` phase. Pinning every row to
+        Tensile's ``numBytes()`` is what keeps the two tables from splitting
+        again. ``I8`` is skipped: Tensile spells int8 ``I8`` while
+        ``dtype_bytes`` looks up the first character, which lands on int32.
+        """
+        from oto.tensile.gates.loads import LOAD_DTYPE_INFO
+        for char in ("S", "D", "H", "B", "Z", "C"):
+            with self.subTest(char=char):
+                want = dtype_bytes(char)
+                self.assertIsNotNone(want, f"Tensile has no dtype {char}")
+                self.assertEqual(
+                    LOAD_DTYPE_INFO[char]["bytes"], want,
+                    f"{char}: load gate says {LOAD_DTYPE_INFO[char]['bytes']} B, "
+                    f"Tensile numBytes() says {want}")
+                self.assertEqual(int(LOAD_DTYPE_INFO[char]["reg"] * 4), want,
+                                 f"{char}: reg is not numBytes/4")
 
     def test_mixed_precision_families_governed_by_widest_operand(self):
         """HS/HS_HPA load a single alongside a half; HH_HPA loads half."""

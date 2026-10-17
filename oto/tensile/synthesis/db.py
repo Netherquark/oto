@@ -16,21 +16,28 @@ gets novel, valid mutants from three strategy families, with
 `bypass_identical_skip=True` so each mutant is measured regardless of prior
 history -- novelty is guaranteed by the ledger, not by pass/fail history:
   * NARROW -- single-knob deltas on the forward knobs the manifest sampler
-    cannot reach (FORWARD_KNOB_DOMAINS): LdsPadA/B {0,1,2,4}, NLCA {1,2,3},
-    GSU {1,2,4}, WGM {1,4,8}, GLVW A/B {1,2,4}, PGR {0}, StaggerU/Stride
-    {0,8,16,32} / {256,512}. Each draw changes 1-3 knobs.
+    cannot reach. Each draw changes 1-3 knobs.
   * WIDE -- DB tile donors (per-family measured winners and the floor winner)
-    re-combined with forward draws: MacroTile/ThreadTile from DB winners,
-    DepthU {4,8,16,32}, GlobalSplitU {1,2,4}, GLVW A/B {1,2,4}, WorkGroup from
-    DB winners.
+    re-combined with forward draws: tile and WorkGroup from the donor, the
+    forward knobs from the draw.
   * DIRECTION -- the parent's knobs moved toward the floor winner's knobs
     (structural knobs only; knobs the parent already matches are left alone).
-  * Family-specific patterns (DbPatternsMixin) target each family's failure
-    mode: SS wave coverage/occupancy, DD register pressure, CC total-elements
-    divisibility/LdsPad, ZZ vector width/thread tile.
 Budget: 5 forward draws per iteration; each mutant is gated through
 `validate_config` + `ldspad_feasible` before ledger emission. The campaign's
 convergence test lives in oto.ledger.agent.
+
+The value sets are NOT restated here. A knob's per-family draw set is
+``db_knobs.forward_domain``; the *jointly* legal subset of it -- GLVW against
+VectorWidth, NLCA against the load count, DepthU against the LDS budget, the
+StaggerU trio against each other -- is
+``db_patterns.DbPatternsMixin._joint_domain``, which probes the gates. The
+enumerated lists this docstring used to carry had drifted from the table and
+named values the gates refuse (potential_configs.md §R23).
+
+The four ``_<family>_mutation_pattern`` methods are not called by
+``synthesize_mutants``: the family-specific passes were never wired in, so SS/
+DD/CC/ZZ get the generic narrow/wide/direction surface. They are kept -- and
+kept gate-legal -- pending a decision to wire them (potential_configs.md §R23).
 
 Public API: DBMutator, FORWARD_KNOB_DOMAINS (re-exported).
 """
@@ -46,8 +53,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
                                             _DONOR_POOL, _FORWARD_DRAWS,
                                             FAMILY_DTYPE_CHAR,
-                                            FORWARD_KNOB_DOMAINS,
-                                            forward_domain)
+                                            FORWARD_KNOB_DOMAINS)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
@@ -264,6 +270,42 @@ class DBMutator(DbPatternsMixin):
 
     # -- forward-knob draws ---------------------------------------------
 
+    def _narrow_mutants(self, family: str, parent_config: Dict[str, Any]
+                        ) -> List[Tuple[Dict[str, Any], float]]:
+        """Single-knob deltas on the parent's forward knobs (priority 1.0).
+
+        These are the axes the manifest sampler cannot touch, so they are the
+        highest-value mutants. Drawn through ``_joint_domain``, not
+        ``forward_domain``: the per-family overrides narrow a knob on its own,
+        but Tensile's legal set is joint (GLVW against VectorWidth, NLCA against
+        the tile's load count, DepthU against the LDS budget, the StaggerU trio
+        against each other). Reading the flat domains here is what let the
+        mutator offer GLVW=2 beside VectorWidth 4, or NLCA=3 to a tile with one
+        load -- refuses the launch boundary then absorbed one draw at a time
+        (potential_configs.md §R23).
+        """
+        out: List[Tuple[Dict[str, Any], float]] = []
+        for knob in FORWARD_KNOB_DOMAINS:
+            for v in self._joint_domain(family, knob, parent_config):
+                if v != parent_config.get(knob):
+                    out.append(({**parent_config, knob: v}, 1.0))
+        return out
+
+    def _wide_mutants(self, family: str, parent_config: Dict[str, Any],
+                      rng: random.Random
+                      ) -> List[Tuple[Dict[str, Any], float]]:
+        """Donor tiles re-combined with forward draws (priority 0.6).
+
+        The draws are validated against the *donor* tile -- the tile they land
+        on -- rather than the parent's, so a donor that moves DepthU also moves
+        which StaggerUStride values are legal.
+        """
+        out: List[Tuple[Dict[str, Any], float]] = []
+        for donor in self._tile_donors(family, parent_config, rng):
+            base = {**parent_config, **donor}
+            for draw in self._forward_draws(rng, base, family):
+                out.append(({**parent_config, **donor, **draw}, 0.6))
+        return out
 
     def synthesize_mutants(self, family: str, parent_config: Dict[str, Any],
                           shape: str, rng: random.Random,
@@ -278,33 +320,19 @@ class DBMutator(DbPatternsMixin):
         self.load_db()
         parent_config = self._normalize_parent_config(parent_config)
         parent_config = {**parent_config, "_shape": shape}
+
+        # Priority order: narrow (1.0) > direction (0.9) > wide (0.6). The sort
+        # below is stable, so the order within a priority is the order below.
         cands: List[Tuple[Dict[str, Any], float]] = []
+        cands.extend(self._narrow_mutants(family, parent_config))
 
-        # NARROW — single-knob deltas on the parent (highest value: these are
-        # the axes the manifest sampler cannot touch).
-        #
-        # Through forward_domain, not FORWARD_KNOB_DOMAINS: the per-family
-        # overrides are the whole point of that helper, and reading the base
-        # table here is what let the mutator keep offering GlobalSplitU=2 to
-        # CC/ZZ/HH_HPA/HS_HPA, where it can never run.
-        for knob in FORWARD_KNOB_DOMAINS:
-            for v in forward_domain(family, knob):
-                cur = parent_config.get(knob)
-                if v == cur:
-                    continue
-                cands.append(({**parent_config, knob: v}, 1.0))
-
-        # WIDE — donor tiles re-combined with forward draws.
-        for donor in self._tile_donors(family, parent_config, rng):
-            for draw in self._forward_draws(rng, family):
-                cands.append(({**parent_config, **donor, **draw}, 0.6))
-
-        # DIRECTION — toward the floor winner (spoof-steal).
         floor = self.floor_winner(family, shape)
         if floor:
             direction = self._floor_direction(parent_config, floor)
             if direction:
                 cands.append(({**parent_config, **direction}, 0.9))
+
+        cands.extend(self._wide_mutants(family, parent_config, rng))
 
         out: List[Dict[str, Any]] = []
         seen = set()

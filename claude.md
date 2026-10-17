@@ -234,6 +234,8 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Which knobs has the corpus ever actually varied? | `python3 allruns.py` (`--json out.json`; the `never-exercised knobs` block) |
 | Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
 | Is this forward-knob domain deck-safe, or does it generate refusals? | `python3 -m oto.tools.deck_review legality` (`--family CC`) |
+| Do the launch gates agree with what Tensile actually built? (false rejections / misses) | `python3 -m oto.harness.gate_calibration` (`--population ours`, `--fail-on-false-reject`) |
+| Why did a phase produce no measurement? (empty-phase reason census) | `python3 -m oto.harness.failure_triage` (`--run <id>`) |
 | How many configs per cell, and does a top-K cap lose a winner? | `python3 -m oto.tools.deck_review flood` (`--cap 24`) |
 
 `oto.tensile.knob_sweep` is a **dry run by default** and writes `phases.yaml`

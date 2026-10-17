@@ -7,7 +7,8 @@ Does NOT own: the tile vocabulary (``TILE_KNOBS`` lives in
 oto.tensile.synthesis.tile_space, imported by both synthesisers), the donor
 loader that pops the pool (oto.tensile.synthesis.db), or the per-family mutation
 patterns that consume these domains (oto.tensile.synthesis.db_patterns).
-Public API: FORWARD_KNOB_DOMAINS, _DEFAULT_PATTERN, _DONOR_POOL, _FORWARD_DRAWS.
+Public API: FORWARD_KNOB_DOMAINS, _DEFAULT_PATTERN, _DONOR_POOL, _FORWARD_DRAWS,
+forward_domain, census_domain.
 """
 
 from __future__ import annotations
@@ -104,12 +105,38 @@ def forward_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     """The legal draw set for ``knob`` in ``family`` (family override wins).
 
     Calibrated on gfx90c hardware facts, not on what the gfx900 floor chose.
+    This is the *mutator's* set: it is narrowed per family so a draw the gate
+    would refuse anyway does not burn one of the five draws an iteration gets.
     """
     if family:
         fam = FAMILY_KNOB_DOMAINS.get(str(family).upper())
         if fam and knob in fam:
             return fam[knob]
     return FORWARD_KNOB_DOMAINS[knob]
+
+
+def census_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
+    """The device-truth draw set for ``knob``: global ∪ family override.
+
+    The drawing mutator and the legality census want opposite things from a
+    domain. The mutator wants ``forward_domain`` — narrow, so a value the gate
+    refuses never wastes a draw. The census wants the *device truth*: a value
+    refused by a structural class rule ("illegal on gfx90c", "no
+    MatrixInstruction") must still be **reported with its rule**, or a reader
+    mistakes a deliberately-narrowed domain for a dead axis and "fixes" it.
+    ``GlobalSplitU>1`` on CC/ZZ is exactly that case: structurally illegal
+    (SolutionStructs:3553 — no MFMA), and absent from CC's ``forward_domain``.
+
+    The union is the set of values either consumer can see, so the census
+    neither misses a narrowed-away refusal (CC ``GlobalSplitU``) nor invents a
+    refusal for a value only some family can draw (HH ``GLVW=8``).
+    """
+    vals = set(FORWARD_KNOB_DOMAINS[knob])
+    if family:
+        fam = FAMILY_KNOB_DOMAINS.get(str(family).upper())
+        if fam and knob in fam:
+            vals |= set(fam[knob])
+    return tuple(sorted(vals))
 
 #: Default ContractionPattern per family (matches the deck/first pattern).
 _DEFAULT_PATTERN = {

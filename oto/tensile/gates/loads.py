@@ -25,12 +25,21 @@ from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
 
 #: Tensile DataType properties the classic path reads, in the units
 #: SolutionStructs uses (``reg`` is registers per element, not bytes).
+#:
+#: ``bytes`` must equal ``vgpr_model.FAMILY_BYTES_PER_ELEMENT`` for the same
+#: dtype -- one fact, one home, and ``tests/test_measurement_integrity.py``
+#: pins them against each other so they cannot drift again. They *had* drifted
+#: on ``Z``: this table carried the ComplexFloat row (2 registers, 8 bytes) for
+#: complexDouble, whose ``reg`` is 4 (Tensile/DataType.py, the ComplexDouble
+#: entry). A VectorWidth 2 ZZ tile then read ``GLVW 2 * 8 = 16 <= 16`` while
+#: Tensile computed ``2 * 16 = 32`` and refused the solution, which is exactly
+#: ``run_20261017_092909``'s ``phase_cand_zz_128_32x64x8_tt2x4_..._vw2`` (0 CSV).
 LOAD_DTYPE_INFO = {
     "S":  {"reg": 1,    "bytes": 4,  "isHalf": False, "isInt8": False},
     "D":  {"reg": 2,    "bytes": 8,  "isHalf": False, "isInt8": False},
     "H":  {"reg": 0.5,  "bytes": 2,  "isHalf": True,  "isInt8": False},
     "B":  {"reg": 0.5,  "bytes": 2,  "isHalf": False, "isInt8": False},
-    "Z":  {"reg": 2,    "bytes": 8,  "isHalf": False, "isInt8": False},
+    "Z":  {"reg": 4,    "bytes": 16, "isHalf": False, "isInt8": False},
     "C":  {"reg": 2,    "bytes": 8,  "isHalf": False, "isInt8": False},
     "I8": {"reg": 0.25, "bytes": 1,  "isHalf": False, "isInt8": True},
 }
@@ -131,6 +140,33 @@ def _nlca_for(config: Dict[str, Any], tc: str) -> int:
     """NumLoadsCoalesced for one operand, honouring the shared NLCA alias."""
     value = config.get(f"NumLoadsCoalesced{tc}", config.get("NLCA", 1))
     return knob_int(value, 1)
+
+
+def _local_split_u(config: Dict[str, Any]) -> int:
+    """LocalSplitU as Tensile will actually receive it (SolutionStructs:1958).
+
+    Tensile has no standalone ``LocalSplitU`` key: it reads the workgroup's third
+    element. ``config_writer._fork_tile`` emits an explicit ``WorkGroup``
+    verbatim and only folds the ``LocalSplitU`` key in when WorkGroup is absent,
+    so an explicit ``WorkGroup: [16,16,1]`` *shadows* a ``LocalSplitU: 2`` beside
+    it and the knob is then a silent no-op (potential_configs.md §R23). The gate
+    models the emitted config, because that is the one Tensile judges -- reading
+    the intent instead would refuse phases Tensile builds.
+    """
+    wg = config.get("WorkGroup")
+    third: Any = None
+    if isinstance(wg, (list, tuple)) and len(wg) >= 3:
+        third = wg[2]
+    elif isinstance(wg, str) and "x" in wg:
+        parts = wg.lower().split("x")
+        if len(parts) >= 3:
+            third = parts[2]
+    if third is None:
+        third = config.get("LocalSplitU")
+    try:
+        return max(1, int(third))
+    except (TypeError, ValueError):
+        return 1
 
 
 # --------------------------------------------------------------- per-operand
@@ -383,7 +419,14 @@ def validate_tensile_loads(config: Dict[str, Any]) -> Tuple[bool, str]:
     if geom is None:
         return True, ""
     mt0, mt1, depth_u, tt0, tt1 = geom
-    num_threads = (mt0 // tt0) * (mt1 // tt1)
+    # NumThreads = SubGroup0 * SubGroup1 * LocalSplitU (SolutionStructs:1964).
+    # LocalSplitU is the workgroup's third element, not a separate tile: the
+    # workgroup still covers MT0 x MT1, but gains LSU extra wavefronts, so every
+    # partial-vector and divisibility reading below sees the larger thread count.
+    # Dropping it made the gate accept the LSU=2 sweep rows whose whole failure is
+    # that count -- run_20261017_092909's DD mt32x32x8/tt2x2 refused with
+    # "GlobalLoadVectorWidthA 2 % pv 4 != 0" on 0 CSV while this gate said legal.
+    num_threads = (mt0 // tt0) * (mt1 // tt1) * _local_split_u(config)
 
     dtype = _load_dtype_info(config)
     vw = _vector_width(config, tt0, tt1, dtype)

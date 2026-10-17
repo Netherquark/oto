@@ -12,6 +12,11 @@ documented with the failure mode it is designed to attack:
 plus ``_forward_draws`` (small random combinations of forward knobs from the
 NARROW/WIDE surface) and ``_floor_direction`` (the deltas that move a parent
 toward the floor winner).
+
+Both ``_forward_draws`` and the family patterns draw through ``_joint_domain``,
+never through ``forward_domain`` directly: a forward knob's *legal* values depend
+on the rest of the tile, so treating the domains as independent axes generates
+configs the launch boundary then refuses (``potential_configs.md`` §R23).
 Does NOT own: the domains they draw from (oto.tensile.synthesis.db_knobs) or the
 mutant synthesis that gates them (oto.tensile.synthesis.db).
 Public API: DbPatternsMixin.
@@ -33,14 +38,50 @@ class DbPatternsMixin:
     """Per-family mutation patterns, mixed into DBMutator."""
 
 
+    def _joint_domain(self, family: Optional[str], knob: str,
+                      parent_config: Dict[str, Any]) -> Tuple[Any, ...]:
+        """``forward_domain`` (family, knob) narrowed to the values this tile
+        can actually carry.
+
+        The domains in ``db_knobs`` are independent by construction. Tensile's
+        legal set for a forward knob is not:
+
+          * ``GlobalLoadVectorWidthA/B`` must be the tile's ``VectorWidth`` or 1
+            (SolutionStructs:4583-4596);
+          * ``NLCA`` must divide the tile's load count, its vector count and its
+            perpendicular extent (SolutionStructs:2058);
+          * ``DepthU`` must fit the LDS budget at this MacroTile/ThreadTile;
+          * ``StaggerU`` / ``StaggerUMapping`` / ``StaggerUStride`` move as one
+            trio (SolutionStructs:3326-3342).
+
+        A draw that ignores that passes every *individual* domain check and is
+        then refused at the launch boundary, burning one of ``_FORWARD_DRAWS``.
+
+        Why probe rather than restate: the measured refusal ledger
+        (``potential_configs.md`` §R23) contains no per-knob rejections at all --
+        every one is one of the couplings above, and each already exists as a
+        line in a gate. Probing ``self._gate`` -- the same two CPU-only gates the
+        launch boundary runs -- keeps one home for them instead of a second,
+        drifting copy here.
+
+        ``parent_config`` must itself be gate-legal (a measured donor, deck
+        winner or floor tile). If it is not, every probe fails and the knob is
+        skipped rather than offering a value that cannot run.
+        """
+        base = {**self._template(family), **parent_config}
+        return tuple(value for value in forward_domain(family, knob)
+                     if self._gate({**base, knob: value}))
+
     def _forward_draws(self, rng: random.Random,
-                        family: Optional[str] = None) -> List[Dict[str, Any]]:
+                       parent_config: Dict[str, Any],
+                       family: Optional[str] = None) -> List[Dict[str, Any]]:
         """Small random combos of forward knobs (the NARROW/WIDE surface).
 
-        Each draw changes 1-3 forward knobs to a legal value, so a donor tile
-        re-combined with a forward draw is a genuinely new config, not a
-        re-measure of a shipped vector. Increased from 3 to 5 draws per
-        iteration to cover more of the forward-knob space.
+        Each draw changes 1-3 forward knobs, each to a value the gates admit
+        *beside the ones this draw has already picked* -- see ``_joint_domain``.
+        The order matters: moving ``DepthU`` changes which ``StaggerUStride``
+        values are legal, so a later knob in the same draw must see the earlier
+        one instead of a fresh copy of the parent.
 
         Diagonal combinations (2-3 knobs simultaneously) are preferred over
         single-knob changes to escape local optima faster.
@@ -51,8 +92,12 @@ class DbPatternsMixin:
             n_knobs = rng.randint(1, 3)  # 1-3 knobs per draw
             draw: Dict[str, Any] = {}
             for k in rng.sample(knobs, n_knobs):
-                draw[k] = rng.choice(forward_domain(family, k))
-            out.append(draw)
+                domain = self._joint_domain(
+                    family, k, {**parent_config, **draw})
+                if domain:
+                    draw[k] = rng.choice(domain)
+            if draw:
+                out.append(draw)
         return out
 
     # -- family-specific mutation patterns -------------------------------
@@ -69,8 +114,8 @@ class DbPatternsMixin:
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: NLCA toggle (1→3 or 3→1) + LdsPad increase
-        for nlca_val in [1, 3]:
-            for lspad_val in [2, 4]:
+        for nlca_val in self._joint_domain("SS", "NLCA", parent_config):
+            for lspad_val in self._joint_domain("SS", "LdsPadA", parent_config):
                 d = {}
                 for k in rng.sample(knobs, rng.randint(1, 2)):
                     if k == "NLCA":
@@ -79,37 +124,38 @@ class DbPatternsMixin:
                         d["LdsPadA"] = lspad_val
                     elif k == "LdsPadB":
                         d["LdsPadB"] = lspad_val
-                    elif k == "GSU":
-                        d["GSU"] = rng.choice(forward_domain("SS", "GlobalSplitU"))
                     elif k == "GlobalLoadVectorWidthA":
                         d["GlobalLoadVectorWidthA"] = rng.choice(
-                            forward_domain("SS", "GlobalLoadVectorWidthA"))
+                            self._joint_domain("SS", "GlobalLoadVectorWidthA",
+                                               parent_config))
                 if d:
                     patterns.append(d)
 
-        # Pattern 2: WGM change + GSU double
-        for wgm_val in [4, 8]:
+        # Pattern 2: WGM change + StaggerU
+        for _ in range(2):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "WorkGroupMapping":
                     d["WorkGroupMapping"] = rng.choice(
-                        forward_domain("SS", "WorkGroupMapping"))
-                elif k == "GSU":
-                    d["GSU"] = wgm_val // 32  # GSU=1,2,4 maps to wgm 32,64,128
+                        self._joint_domain("SS", "WorkGroupMapping",
+                                           parent_config))
                 elif k == "StaggerU":
-                    d["StaggerU"] = rng.choice(forward_domain("SS", "StaggerU"))
+                    d["StaggerU"] = rng.choice(
+                        self._joint_domain("SS", "StaggerU", parent_config))
             if d:
                 patterns.append(d)
 
-        # Pattern 3: GLVW quadruple + StaggerU stride
-        for glvw_val in [1, 2, 4]:
+        # Pattern 3: GLVW change + StaggerU stride
+        for glvw_val in self._joint_domain("SS", "GlobalLoadVectorWidthA",
+                                           parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "GlobalLoadVectorWidthA":
                     d["GlobalLoadVectorWidthA"] = glvw_val
                 elif k == "StaggerUStride":
                     d["StaggerUStride"] = rng.choice(
-                        forward_domain("SS", "StaggerUStride"))
+                        self._joint_domain("SS", "StaggerUStride",
+                                           parent_config))
             if d:
                 patterns.append(d)
 
@@ -126,33 +172,37 @@ class DbPatternsMixin:
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: DepthU increase + GLVW change
-        for depthu_val in [8, 16, 32]:
+        for depthu_val in self._joint_domain("DD", "DepthU", parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "DepthU":
                     d["DepthU"] = depthu_val
                 elif k == "GlobalLoadVectorWidthA":
                     d["GlobalLoadVectorWidthA"] = rng.choice(
-                        forward_domain("DD", "GlobalLoadVectorWidthA"))
+                        self._joint_domain("DD", "GlobalLoadVectorWidthA",
+                                           parent_config))
                 elif k == "GlobalLoadVectorWidthB":
                     d["GlobalLoadVectorWidthB"] = rng.choice(
-                        forward_domain("DD", "GlobalLoadVectorWidthB"))
+                        self._joint_domain("DD", "GlobalLoadVectorWidthB",
+                                           parent_config))
             if d:
                 patterns.append(d)
 
-        # Pattern 2: GSU double + NLCA change
-        for gsu_val in [2, 4]:
+        # Pattern 2: GSU change + NLCA change
+        for gsu_val in self._joint_domain("DD", "GlobalSplitU", parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GSU":
-                    d["GSU"] = gsu_val
+                if k == "GlobalSplitU":
+                    d["GlobalSplitU"] = gsu_val
                 elif k == "NLCA":
-                    d["NLCA"] = rng.choice(forward_domain("DD", "NLCA"))
+                    d["NLCA"] = rng.choice(
+                        self._joint_domain("DD", "NLCA", parent_config))
             if d:
                 patterns.append(d)
 
-        # Pattern 3: GLVW quadruple alone
-        for glvw_val in [1, 2, 4]:
+        # Pattern 3: GLVW change alone
+        for glvw_val in self._joint_domain("DD", "GlobalLoadVectorWidthA",
+                                           parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 1)):
                 if k == "GlobalLoadVectorWidthA":
@@ -174,9 +224,9 @@ class DbPatternsMixin:
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: LdsPad combination + NLCA change
-        for lspad_a_val in [1, 2, 4]:
-            for lspad_b_val in [0, 1, 2]:
-                for nlca_val in [1, 2, 3]:
+        for lspad_a_val in self._joint_domain("CC", "LdsPadA", parent_config):
+            for lspad_b_val in self._joint_domain("CC", "LdsPadB", parent_config):
+                for nlca_val in self._joint_domain("CC", "NLCA", parent_config):
                     d = {}
                     for k in rng.sample(knobs, rng.randint(1, 3)):
                         if k == "LdsPadA":
@@ -188,18 +238,19 @@ class DbPatternsMixin:
                     if d:
                         patterns.append(d)
 
-        # Pattern 2: MacroTile change + GlobalSplitU
-        for mt_val in ["32x32x16", "64x64x16", "96x96x16"]:
+        # Pattern 2: GlobalSplitU. MacroTile is a tile knob and moves through
+        # the donor pass, not the forward surface, so only GSU is drawn here.
+        for _ in range(3):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
                 if k == "GlobalSplitU":
                     d["GlobalSplitU"] = rng.choice(
-                        forward_domain("CC", "GlobalSplitU"))
+                        self._joint_domain("CC", "GlobalSplitU", parent_config))
             if d:
                 patterns.append(d)
 
         # Pattern 3: NLCA triple toggle
-        for nlca_val in [1, 2, 3]:
+        for nlca_val in self._joint_domain("CC", "NLCA", parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 1)):
                 if k == "NLCA":
@@ -219,20 +270,21 @@ class DbPatternsMixin:
         patterns: List[Dict[str, Any]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
 
-        # Pattern 1: VW change + DepthU
-        for vw_val in [1, 2]:
+        # Pattern 1: DepthU change. VectorWidth is not a forward knob (it is a
+        # tile property, drawn by the donor pass), so only DepthU moves here.
+        for depthu_val in self._joint_domain("ZZ", "DepthU", parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "VectorWidth":
-                    d["VectorWidth"] = vw_val
-                elif k == "DepthU":
-                    d["DepthU"] = rng.choice(forward_domain("ZZ", "DepthU"))
+                if k == "DepthU":
+                    d["DepthU"] = depthu_val
             if d:
                 patterns.append(d)
 
         # Pattern 2: GlobalLoadVectorWidthA/B change
-        for glvwa_val in [1, 2, 4]:
-            for glvwb_val in [1, 2, 4]:
+        for glvwa_val in self._joint_domain("ZZ", "GlobalLoadVectorWidthA",
+                                            parent_config):
+            for glvwb_val in self._joint_domain("ZZ", "GlobalLoadVectorWidthB",
+                                                parent_config):
                 d = {}
                 for k in rng.sample(knobs, rng.randint(1, 2)):
                     if k == "GlobalLoadVectorWidthA":
@@ -243,7 +295,8 @@ class DbPatternsMixin:
                     patterns.append(d)
 
         # Pattern 3: StaggerU stride change
-        for stride_val in [256, 512]:
+        for stride_val in self._joint_domain("ZZ", "StaggerUStride",
+                                             parent_config):
             d = {}
             for k in rng.sample(knobs, rng.randint(1, 1)):
                 if k == "StaggerUStride":

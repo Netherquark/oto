@@ -10,9 +10,11 @@ boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
 ## Layout
 
 ```
+oto/harness/gate_calibration.py   # gate-vs-corpus agreement census (false rejections + misses)
+oto/harness/failure_triage.py     # empty-phase reason census (why did a phase produce nothing)
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
-oto/harness/resolve_cells.py      # per-cell native+floor winner resolver (full knob surface)
+oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
@@ -48,7 +50,9 @@ and prints the `floor_best` losers and `winner` ties, which is the actual work
 list. Read `median` and `floor_best`, not `winner`.
 
 **2. `legality` — never deck a domain blind.** Every (family, knob, value) draw
-from `FORWARD_KNOB_DOMAINS` is classified against the launch gates on the tiles
+from `census_domain` — the device-truth set (global `FORWARD_KNOB_DOMAINS` ∪ the
+family override), *not* the mutator's narrowed `forward_domain` — is classified
+against the launch gates on the tiles
 that *actually ran* (read from `kernel_db.json`), into three buckets: **legal**,
 **coupled** (tile-dependent, ordinary), and **refused standalone**. Only the last
 is worth reading closely, and even it is not "dead": `StaggerU=0` is refused
@@ -123,7 +127,10 @@ python3 -m oto.harness.resolve_cells --tsv verdicts.tsv   # + tabular verdict du
 ```
 
 For every acceptance-gradeable cell it reports: verdict, delta %, % of
-realistic ceiling and % of theoretical peak; the **native winner** — phase,
+realistic ceiling and % of theoretical peak; a **`cfg_gap`** class
+(`identical` / `near` / `retile` / `no-floor`) between the native winner's config
+and the floor's — the mechanical half of the tie taxonomy, whose reading is
+potential_configs.md §R17; the **native winner** — phase,
 run, and the phase's full structural config, resolved winner-run-first from
 the run dirs' `configs/*.yaml`, then registry `phases.data.config`, then the
 kernel_db structural row; and the **floor's best kernel** for the same cell

@@ -17,9 +17,11 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tensile/candidate_emission.py`` — The append boundary: how a candidate becomes a launchable phase.
 * ``tensile/config_writer.py`` — The launch-boundary config writer.
 * ``tensile/decks.py`` — The curated family tile decks: the starting candidates, and what kind each is.
+* ``tensile/knob_sweep.py`` — Emit the knob-sweep deck: every family's winner tile x one knob change.
 * ``tensile/legality.py`` — The legality prior: manifest-derived legal domain, and source-cited walls.
 * ``tensile/library.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
 * ``tensile/library_parity.py`` — The coverage-parity rule: what the produced TensileLibrary may address.
+* ``tensile/shape_order.py`` — Canonical numeric ordering for Tensile problem-shape strings.
 * ``tensile/shipped_library.py`` — The shipped gfx900 library: locating it, parsing it, rebuiling a kernel from its name.
 
 ### ``tensile/gates/``
@@ -105,15 +107,27 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tools/consolidate_floor.py`` — The locked floor: plan it, materialise it, clone the registry under it.
 * ``tools/consolidate_install.py`` — Installation: stage, install, and archive what is superseded.
 * ``tools/consolidate_targets.py`` — Which cells a consolidated deck must address.
-* ``tools/deck_review.py`` — The three pre-deck questions: ``score`` (is the floor actually beaten, under every A/B basis), ``legality`` (is this knob domain deck-safe), ``flood`` (per-cell config census and what a top-K cap costs).
+* ``tools/deck_review.py`` — The three questions to settle before decking a candidate or trusting a score.
 * ``tools/verify_run.py`` — Corpus snapshot / diff / telemetry verification.
+
+### ``tools/verifiers/``
+
+* ``tools/verifiers/verify_all.py`` — Run every Refactor-1 equivalence verification against the pre-refactor tree.
+* ``tools/verifiers/verify_ast_equivalence.py`` — Symbol-level equivalence: every public symbol of every pre-split module.
+* ``tools/verifiers/verify_config_writer.py`` — _write_phase_config equivalence.
+* ``tools/verifiers/verify_gate_differential.py`` — : The last commit before the package split. Every check in this directory
+* ``tools/verifiers/verify_method_equivalence.py`` — Method-level equivalence: every TensileDriver method moved into a mixin, and every port_tensile function moved into a new module, must keep its exact body.
+* ``tools/verifiers/verify_report_html.py`` — Byte-identity check for the report_html.py split.
 
 ## oto/harness/ — the analysis harness
 
+* ``harness/asm_occupancy.py`` — Measured occupancy of every emitted Tensile kernel in the run corpus.
 * ``harness/candidate_overlay.py`` — The candidate overlay: what is written, pruned and mirrored.
 * ``harness/candidate_pool.py`` — The candidate loaders and the new module's helpers.
 * ``harness/candidate_rows.py`` — The candidate row builders: per-family tile ladders and the auto rows.
 * ``harness/cell_knob_diff.py`` — Per-cell native-vs-floor winner knob fingerprint diff.
+* ``harness/failure_triage.py`` — Failed-candidate triage: which phases produced nothing, and why.
+* ``harness/gate_calibration.py`` — Gate calibration: do the launch gates agree with what Tensile actually built?
 * ``harness/generate_candidates.py`` — The candidate-generator CLI.
 * ``harness/kernel_db.py`` — Ground-truth per-kernel-per-shape GFLOPS database.
 * ``harness/measure_vgprs.py`` — Measure real per-thread VGPRs from Tensile-emitted code objects.

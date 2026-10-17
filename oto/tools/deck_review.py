@@ -263,11 +263,16 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
 def _legality(base: Path, families: Optional[List[str]]) -> int:
     """Classify each forward-knob draw as legal, coupled, or refused-standalone.
 
+    Draws come from ``census_domain`` (global ∪ family override), not the
+    mutator's narrowed ``forward_domain``: a value a family's domain drops for
+    draw economy is still classified here, so a structural refusal
+    (``GlobalSplitU>1`` on CC/ZZ) is named rather than silently absent.
+
     The two limits of a one-knob-at-a-time census, and why each is deliberate,
     are in `_classify_draw` and `_measured_tiles`.
     """
     from oto.tensile.candidate import CandidateGenerator
-    from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
+    from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN, census_domain
     from oto.tensile.synthesis.tile_space import reconcile_tile
 
     gen = CandidateGenerator(base)
@@ -296,7 +301,7 @@ def _legality(base: Path, families: Optional[List[str]]) -> int:
             skipped[fam] = len(candidates)
             informative = candidates
         for knob in FORWARD_KNOB_DOMAINS:
-            for value in forward_domain(fam, knob):
+            for value in census_domain(fam, knob):
                 ok, n_bad, why = _classify_draw(
                     template, informative, knob, value, gate, reconcile_tile)
                 if ok:

@@ -496,18 +496,15 @@ KNOB_SWEEPS: List[Dict[str, Any]] = [
                "solutions set 40. 7 CUs makes wave count scarcer than on the "
                "60-CU parts AMD tuned for.",
     },
-    {
-        "knob": "AggressivePerfMode",
-        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
-        "values": [{"AggressivePerfMode": 1}, {"AggressivePerfMode": 2}],
-        "why": "Default 1, so the value-1 phase is an implicit CONTROL. Mode 2 "
-               "is *described as* an LDS cap to 2 waves/SIMD, but the explicit "
-               "branch is unconfirmed at the pinned commit (corpus3 Q-E ii) — "
-               "the row tests whether mode 2 differs at all. "
-               "gfx90c_theoretical_limits.md §7.1 measures the corpus "
-               "median at 8 waves/CU = 2 waves/SIMD, so a real cap would be a "
-               "free experiment in that direction.",
-    },
+    # `AggressivePerfMode` is deliberately NOT a row, and this one is measured
+    # rather than suspected: the mode-2 sweep ran on 2026-10-15/17 and produced
+    # **zero** `.hsaco` objects for every family and every tile (24 phases, 0
+    # CSV), while its mode-1 control in the same run built 20 (one per target
+    # arch). Tensile writes the source and then fails to compile it, so the
+    # phase costs a full subprocess and returns nothing -- no tile property
+    # predicts it, which is why it is a deck decision and not a gate. The
+    # "2 waves/SIMD LDS cap" the old row proposed to probe stays unconfirmed
+    # (`knowledge_base.md` §Q-E ii); it is not a reason to ship dead phases.
     # ---- K splitting. Legal only for SS and DD on this gate:
     # `Assembly class: GlobalSplitU=2 on complex C: illegal`, and the same for
     # every half family. Route C in potential_configs.md therefore applies to
@@ -524,11 +521,17 @@ KNOB_SWEEPS: List[Dict[str, Any]] = [
     # blocked by the GlobalSplitU restriction.
     {
         "knob": "LocalSplitU",
-        "families": ["CC", "ZZ", "SS", "HH", "DD", "HH_HPA", "HS_HPA"],
+        "families": ["CC", "HH"],
         "values": [{"LocalSplitU": 2}],
         "why": "Splits the MacroTile M extent across waves inside one "
                "workgroup. Wave-fill without a second kernel, which is the "
-               "shape of fix the small-shape rows need.",
+               "shape of fix the small-shape rows need. Families narrowed from "
+               "all seven by measurement (2026-10-15/17): LSU>1 multiplies "
+               "NumThreads, so it only survives where the load wave still "
+               "divides -- CC 64x64x8/4x4 and HH 128x128x16/8x8 built and ran, "
+               "while SS/HH_HPA 128x128x8/8x8 hit `Kernel Uses 131072 > 65536 "
+               "bytes of LDS` and ZZ/DD 32x32x8/2x2 hit `GlobalLoadVectorWidth "
+               "2 % pv 4 != 0`. The gate now models that thread count.",
     },
     # ---- Raster / swizzle. StaggerU is legal at every value with and without
     # BufferLoad (validated), so this is free to sweep -- and it is currently

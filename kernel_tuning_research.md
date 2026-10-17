@@ -6,7 +6,7 @@
 - Companions: `gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `potential_configs.md` §8 (Groups A/B/C), §9 (steal), §10 (other routes incl. §10.2 split-complex) and §12 (next-run queue) define the ranked experiment groups and the resolution ladder (occupancy/tile levers → split-complex). Section 7 below maps each research finding onto that existing plan; §8 lists the **open research directions** — the questions these mechanics do not settle — as falsifiable probes, not new experiment cells.
 - `gfx90c_theoretical_limits.md` remains the authority for performance ceilings; this doc only explains *why* those ceilings exist.
 - Cite conventions: repo files as `path.py:line` against the local Tensile checkout at `TENSILE_ROOT` (per `.env`); web sources inline as `(site, URL)`; full list in **Sources**. Claims I could not fully verify are marked **check**.
-- **A later primary-source pass (2026-10-16) is in `archive/corpus4.tuning_20261016.md`**: Tensile's `validParameters` / `defaultSolution` / shipped `Perf/*.yaml` read directly, plus the external autotuning literature. Its conclusions were promoted once each into their owners — `gfx90c_tuning_guide.md` §1.1 (the legal knob domains) and §9.1 (the virgin axes), and `tensile_tuning_context.md` (the search order). Read the owners, not the corpus; read the corpus only to check the reasoning or the citations.
+- **The 2026-10-16 primary-source pass** (Tensile's `validParameters` / `defaultSolution` / shipped `Perf/*.yaml` read directly, plus the external autotuning literature) had its conclusions promoted once each into their owners — `gfx90c_tuning_guide.md` §1.1 (the legal knob domains) and §9.1 (the virgin axes), and `tensile_tuning_context.md` (the search order). Its raw file was retired on that fold (`docs/README.md`), so the owners are the durable record.
 
 ---
 
@@ -177,6 +177,41 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   reduction workspace, and `assembly._gsu_rejection` refuses complex GSU>1 and
   half-with-f32-accumulate GSU>1 — so **SS is the only GSU-legal family**
   (ladder `{1,2,4}`); the "MultipleBuffer wave-fill" lever is withdrawn here.
+- **`LocalSplitU` / `NumThreads` (the load path's real thread count).** Tensile has
+  no standalone `LocalSplitU` key: it reads the workgroup's third element
+  (`SolutionStructs.py:1958`) and computes `NumThreads = SubGroup0 * SubGroup1 *
+  LocalSplitU` (`:1964`). Two consequences that bit this port:
+  1. **Shadowing.** `config_writer._fork_tile` emits an explicit `WorkGroup`
+     verbatim and only folds `LocalSplitU` in when WorkGroup is absent, so
+     `WorkGroup: [16,16,1]` beside `LocalSplitU: 2` benchmarks at LSU 1 while
+     the note claims LSU 2. The gate therefore models the *emitted* value
+     (`loads._local_split_u`: WorkGroup's third element wins). A knob shadowed
+     by an explicit WorkGroup is the same failure mode as a not-forwarded knob
+     (silent no-op) -- `NOT_FORWARDED_KNOBS`/`_DEPRECATED_KEYS` is the
+     analogous report surface.
+  2. **LDS footprint.** `ldsNumElementsReduction = LSU * MT0 * MT1`
+     (`SolutionStructs.py:4108`) scaled by the destination element size, with
+     `MaxLDS = 65536` (`:4334`). This is the rule behind the `131072 > 65536`
+     rejects; it is deliberately **not** gated yet, because it needs a
+     per-family destination-element-size table that does not exist
+     (potential_configs.md §R23).
+  The gate's *other* deliberate blind spot is the NumThreads-aware VGPR budget
+  (`65536 // NumThreads` instead of the fixed 128): calibrating it against the
+  corpus cost one false rejection on a measured kernel, so it waits for a
+  config-exact VGPR table (§R23).
+- **The 16-B global-load cap check runs early.** `SolutionStructs.py:3459-3461`
+  (`GLVW * numBytes() > 16`) is evaluated *before* `setGlobalLoadVectorWidth`
+  reduces pv (`:2010`), so a ZZ tile at `VectorWidth=2` is refused on the cap
+  (`2 * 16 = 32`) even though the pv-reduced width would have fit. This is why
+  `LOAD_DTYPE_INFO["Z"]` must carry ComplexDouble's 4 registers / 16 bytes, not
+  ComplexFloat's 2 / 8 -- the load gate and `vgpr_model.FAMILY_BYTES_PER_ELEMENT`
+  are separate homes (the load half is 16 B, the LDS half stays 8 B).
+- **`AggressivePerfMode=2` builds nothing** (measured, not modelled): across two
+  runs, every family and every tile produced 0 `.hsaco` and 0 CSV while the
+  mode-1 control in the same run built 20 (one per target arch). Tensile writes
+  the source then fails to compile it. It is a deck decision like the retired
+  `BufferLoad` row, not a gate -- no tile property predicts it; recorded in
+  `oto/tensile/decks.py` and removed from the sweep (potential_configs.md §R23).
 - **`StreamK` is unavailable on gfx90c**: rejected unless
   `MIWaveGroup0×MIWaveGroup1 == 4` (`Tensile/SolutionStructs.py:2976`) —
   MFMA-only → **all StreamK/StreamK++ literature is background, not an experiment**

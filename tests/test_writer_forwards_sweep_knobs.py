@@ -110,6 +110,50 @@ def test_local_split_u_rides_workgroup_index_2(driver, tmp_path):
     assert list(wg)[2] == 2, f"LSU lost: WorkGroup={wg!r}"
 
 
+def test_forwarded_knobs_equals_the_fork_surface():
+    """``FORWARDED_KNOBS`` must be exactly the keys ``_fork_params`` emits.
+
+    The declared tuple is what the deck and the docs may assume reaches Tensile
+    (potential_configs.md §R16). If a fork helper starts or stops emitting a key
+    without the tuple following, a candidate silently reverts to the Tensile
+    default -- the exact placebo the tuple exists to make impossible.
+    ``GlobalReduceVectorWidth`` is emitted but is not a Tensile parameter, so it
+    is excluded from both the tuple and this probe by construction.
+    """
+    probe = {
+        "WorkGroup": [16, 16, 1], "WorkGroupMapping": 4, "GlobalSplitU": 1,
+        "DepthU": 8, "VectorWidth": 2, "GlobalLoadVectorWidthA": 2,
+        "GlobalLoadVectorWidthB": 2, "NumLoadsCoalescedA": 1,
+        "NumLoadsCoalescedB": 1, "PrefetchGlobalRead": 1,
+        "PrefetchLocalRead": 0, "UseSgprForGRO": 0, "InnerUnroll": 1,
+        "MaxOccupancy": 0, "AggressivePerfMode": 1, "FractionalLoad": 0,
+        "NonTemporalA": 0, "NonTemporalB": 0, "AssertFree1ElementMultiple": 1,
+        "LdsPadA": 0, "LdsPadB": 0, "AssertFree0ElementMultiple": 1,
+        "StaggerU": 0, "StaggerUMapping": 0, "StaggerUStride": 0,
+        "StoreCInUnroll": 0,
+    }
+    fork = config_writer._fork_params(dict(probe), tt0=2, tt1=2,
+                                      macro_tile0=64, macro_tile1=64,
+                                      depth_u_from_macro=8)
+    assert set(fork) == set(config_writer.FORWARDED_KNOBS), (
+        "fork surface drifted from FORWARDED_KNOBS: "
+        f"emitted-not-declared={sorted(set(fork) - set(config_writer.FORWARDED_KNOBS))} "
+        f"declared-not-emitted={sorted(set(config_writer.FORWARDED_KNOBS) - set(fork))}")
+
+
+def test_not_forwarded_knobs_are_disjoint_from_the_forwarded_surface():
+    """A knob cannot be both declared forwarded and declared unreachable."""
+    both = set(config_writer.NOT_FORWARDED_KNOBS) & set(config_writer.FORWARDED_KNOBS)
+    assert not both, f"classified as both forwarded and not: {sorted(both)}"
+
+
+def test_candidate_rows_strip_list_has_one_home():
+    """The harness's strip list must be the writer's ``NOT_FORWARDED_KNOBS``."""
+    from oto.harness.candidate_rows import _NOT_FORWARDED_YET
+
+    assert set(_NOT_FORWARDED_YET) == set(config_writer.NOT_FORWARDED_KNOBS)
+
+
 def test_every_sweep_value_key_is_forwarded(driver, tmp_path):
     """Blanket guard: no KNOB_SWEEPS value key may silently default."""
     probes = {

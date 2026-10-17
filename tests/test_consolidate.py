@@ -8,10 +8,11 @@ Three things are pinned because each one produced a wrong answer at least once:
 
   * The legality gate has to include the global-load byte cap. The occupancy and
     assembly-class gates both pass a complex-double phase at VectorWidth 2, which
-    Tensile rejects at assembly time -- 20 such phases sat in the deck and cost a
-    wasted overnight run. The byte widths have to come from Tensile's own tables:
-    scheduler.FAMILY_BYTES_PER_ELEMENT lists ZZ as 8 bytes and complex double is
-    16, which is the whole reason the bad phases were generated.
+    Tensile rejects at solution construction -- such phases sat in the deck and
+    cost a wasted overnight run. The byte widths have to come from Tensile's own
+    tables: the modelled gate carried ComplexFloat's 8 bytes for ZZ while complex
+    double is 16. That row is now corrected and pinned to Tensile by
+    tests/test_measurement_integrity.py, but this gate still reads the authority.
   * The deck has to be verbatim copies. A generated or re-keyed entry is an
     invented solution, which is the one thing this pipeline must never do.
   * Family matching has to be case-insensitive. extract_family_from_phase_id

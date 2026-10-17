@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES  # noqa: E402
 from oto.ledger.registry import fingerprint_config  # noqa: E402
+from oto.tensile.config_writer import NOT_FORWARDED_KNOBS  # noqa: E402
 
 #: Family label -> the Tensile dtype char, for the generated config's
 #: ``DataType``. An alias of ``FAMILY_DTYPE_CHAR`` kept because the
@@ -125,11 +126,11 @@ WGM_VARIANTS = (4, 1, 8)
 
 # Patterns per family. CC/ZZ favour the natural complex loop; SS/HH span all
 # four transposes because the deck already does.
-#: Builder keys the launch boundary does not forward yet; a candidate carrying
-#: one is stripped of it at emit time and the strip is reported.
-_NOT_FORWARDED_YET = frozenset({
-    "LdsBlockSizePerPadA", "LdsBlockSizePerPadB", "DirectToVgprA", "DirectToVgprB",
-})
+#: Builder keys the launch boundary does not forward; a candidate carrying
+#: one is stripped of it at emit time and the strip is reported (never a silent
+#: no-op). The single home is ``config_writer.NOT_FORWARDED_KNOBS``
+#: (potential_configs.md §R16); this is the name the harness reads it under.
+_NOT_FORWARDED_YET = frozenset(NOT_FORWARDED_KNOBS)
 
 PATTERNS = {
     "SS": ("Ailk_Bjlk", "Alik_Bjlk", "Ailk_Bljk", "Alik_Bljk"),
@@ -306,11 +307,13 @@ PLAN_BATCH: List[Dict[str, Any]] = [
     # --- the 7-CU occupancy cliff: fill waves without shrinking the tile ---
     {"fam": "CC", "pattern": "Ailk_Bjlk",
      "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
-     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "DepthU": 8, "GlobalSplitU": 1,
      "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
      "WorkGroupMapping": 4, "LocalSplitU": 2,
      "note": "R8: steal + LocalSplitU=2 (wave-fill at fixed tile area; the "
-             "legal complex equivalent of GSU, which the gate refuses)"},
+             "legal complex equivalent of GSU, which the gate refuses). No "
+             "explicit WorkGroup: `config_writer._fork_tile` emits an explicit "
+             "one verbatim and would shadow the LSU into a no-op."},
 
     # --- WGM: 8 is a 56-CU artefact; probe the negative I/J-swap family ---
     {"fam": "CC", "pattern": "Ailk_Bjlk",
@@ -337,13 +340,14 @@ PLAN_BATCH: List[Dict[str, Any]] = [
     # --- the compound: all four levers on the stolen geometry at once ---
     {"fam": "CC", "pattern": "Ailk_Bjlk",
      "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
-     "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
+     "DepthU": 8, "GlobalSplitU": 1,
      "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
      "WorkGroupMapping": 4, "AssertFree0ElementMultiple": 4,
      "AssertFree1ElementMultiple": 4, "LdsPadB": 2,
      "PrefetchGlobalRead": 0, "LocalSplitU": 2,
      "note": "R8: FULL compound — steal + AF4/4 + LdsPadB2 + PGR0 + LSU2. "
-             "This is the single best candidate to beat CC:256."},
+             "This is the single best candidate to beat CC:256. No explicit "
+             "WorkGroup, so the LSU really lands (see the row above)."},
 ]
 
 def _pad_rows(fam: str, pattern: str, tile: str, tt: str, vw: int, du: int,
@@ -460,3 +464,93 @@ for fam, pattern, tile, tt, vw, du, rows in (
         PLAN_BATCH.append({"fam": fam, "pattern": pattern, "MacroTile": tile,
                            "ThreadTile": tt, "VectorWidth": vw, "DepthU": du,
                            **kw, "note": "2026-10-09: " + note})
+
+
+# --- tie-geometry adaptation (potential_configs.md rewrite 5 §R16) ----------
+# The big-shape TIEs (SS 768-4096, HH 1024-4096, and the two HPA columns) are
+# ties *because* native reproduces the floor's own gfx900 geometry -- the config
+# is copied across SKUs and never adapted for a 7-CU / 1 MiB-L2 part.  The
+# CC:256 steal batch above is the working template: take the measured winner
+# tile and apply the forwarded knobs the corpus never co-varied with it.
+#
+# Only knobs the launch boundary actually forwards are used, so none of these
+# is a silent no-op (config_writer.FORWARDED_KNOBS): NonTemporalA/B, MaxOccupancy,
+# InnerUnroll, PrefetchGlobalRead, LocalSplitU, LdsPadA/B,
+# StaggerU/UMapping/UStride.  The truly-virgin axes that R15 named
+# (WaveSeparateGlobalRead, 1LDSBuffer, TransposeLDS) are in
+# config_writer.NOT_FORWARDED_KNOBS and are deliberately absent -- see §R16.
+#
+# AggressivePerfMode is forwarded but unused here: mode 2 built 0 `.hsaco` for
+# every family and tile across two runs (the measurement is recorded in
+# decks.py), and mode 1 is Tensile's default, so a mode-1 row would re-measure
+# the base tile.  LocalSplitU=2 appears only on tiles whose load wave survives
+# the extra wavefront -- LSU multiplies NumThreads (SolutionStructs:1964), so it
+# is legal on some geometries and refused on others (§R23).
+#
+# Tiles are the per-cell measured winners (cells_resolved.full.txt), so a row
+# lands on the geometry that actually ties; `_offer_row` gate-verifies each
+# against validate_config and ldspad_feasible, and a refusal is reported, never
+# silently dropped.
+_TIE_ADAPT: List[Tuple[str, str, str, str, int, int,
+                       List[Tuple[Dict[str, Any], str]]]] = [
+    # SS:512-1365 winner; SS:2048/4096 use the DepthU-16 variant below.
+    ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, [
+        ({"NonTemporalA": 1}, "NonTemporalA (stream past the 1 MiB L2)"),
+        ({"NonTemporalB": 1}, "NonTemporalB"),
+        ({"MaxOccupancy": 8}, "MaxOccupancy=8 (7-CU residency clamp)"),
+        ({"InnerUnroll": 2}, "InnerUnroll=2 (fewer loop issues)"),
+        ({"StaggerU": 16, "StaggerUMapping": 2}, "swizzle SU16/SUM2"),
+        ({"LdsPadB": 1}, "LdsPadB=1 (bank pad, 4 B rows)"),
+    ]),
+    # SS:2048/4096 winner (DepthU 16).
+    ("SS", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, [
+        ({"NonTemporalA": 1}, "NonTemporalA on the deep tile"),
+        ({"PrefetchGlobalRead": 0}, "PGR=0 (register/LDS relief)"),
+        ({"LocalSplitU": 2}, "LocalSplitU=2"),
+    ]),
+    # HH:1024-4096 winner.  VW=8 is 2 B x 8 == the 16 B load cap.
+    ("HH", "Ailk_Bjlk", "128x128x16", "8x8", 8, 16, [
+        ({"NonTemporalA": 1}, "NonTemporalA"),
+        ({"NonTemporalB": 1}, "NonTemporalB"),
+        ({"MaxOccupancy": 8}, "MaxOccupancy=8"),
+        ({"InnerUnroll": 2}, "InnerUnroll=2"),
+        ({"StaggerU": 0, "StaggerUMapping": 0, "StaggerUStride": 0},
+         "swizzle off"),
+        ({"StaggerU": 16, "StaggerUMapping": 2}, "swizzle SU16/SUM2"),
+        ({"LdsPadB": 1}, "LdsPadB=1"),
+        ({"WorkGroupMapping": -4}, "WGM=-4 (negative I/J-swap family)"),
+    ]),
+    # DD:768-2048 winner (near-bar; residual is issue rate).
+    ("DD", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, [
+        ({"NonTemporalA": 1}, "NonTemporalA"),
+        ({"MaxOccupancy": 8}, "MaxOccupancy=8"),
+        ({"InnerUnroll": 2}, "InnerUnroll=2"),
+        ({"LocalSplitU": 2}, "LocalSplitU=2"),
+    ]),
+    # HH_HPA:1024/2048 winner (no floor data; native is 123-129% of bar).
+    ("HH_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 4, 16, [
+        ({"NonTemporalA": 1}, "NonTemporalA"),
+        ({"MaxOccupancy": 8}, "MaxOccupancy=8"),
+        ({"InnerUnroll": 2}, "InnerUnroll=2"),
+    ]),
+    # HH_HPA:512 winner (the 2.2x cell).
+    ("HH_HPA", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, [
+        ({"NonTemporalA": 1}, "NonTemporalA on the :512 winner"),
+    ]),
+    # HS_HPA:1024 winner.
+    ("HS_HPA", "Ailk_Bjlk", "128x64x16", "8x4", 4, 16, [
+        ({"NonTemporalA": 1}, "NonTemporalA"),
+        ({"MaxOccupancy": 8}, "MaxOccupancy=8"),
+        ({"InnerUnroll": 2}, "InnerUnroll=2"),
+    ]),
+    # HS_HPA:512 winner.
+    ("HS_HPA", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, [
+        ({"NonTemporalA": 1}, "NonTemporalA on the :512 winner"),
+    ]),
+]
+for _fam, _pat, _tile, _tt, _vw, _du, _variants in _TIE_ADAPT:
+    for _kw, _note in _variants:
+        PLAN_BATCH.append({"fam": _fam, "pattern": _pat, "MacroTile": _tile,
+                           "ThreadTile": _tt, "VectorWidth": _vw,
+                           "DepthU": _du, **_kw,
+                           "note": "2026-10-17 tie-adapt: " + _note})

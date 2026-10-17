@@ -4,11 +4,13 @@
 Owns: for every cell the acceptance report grades, resolving the winning phase,
 its run and its FULL structural knob config, in the documented order (the winner
 run's own configs dir, the registry ``phases.data``, any native run's configs,
-then the kernel_db structural row).
+then the kernel_db structural row); and the mechanical ``cfg_gap`` between the
+native winner's config and the floor's (identical / near / retile / no-floor).
 
 Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
-report itself (oto.metrics.report), or the kernel_db it falls back to
-(oto.harness.kernel_db).
+report itself (oto.metrics.report), the kernel_db it falls back to
+(oto.harness.kernel_db), or the *reading* of ``cfg_gap`` as a tie taxonomy and
+the routes it implies (potential_configs.md §R17–§R18).
 
 Public API: main, _table, _tsv.
 
@@ -253,6 +255,39 @@ def _spoof_config(
     return _cfg_from_kb_row(row)
 
 
+#: The structural knobs a native (kernel_db/registry) config and a floor (run
+#: YAML) config both carry. GLVW / PGR / NLCA / pads are absent from the
+#: DB-sourced native side, so comparing them would report a gap that is an
+#: artefact of the source, not of the tuning.
+_GAP_KEYS = ("MacroTile", "ThreadTile", "VectorWidth", "DepthU",
+             "GlobalSplitU", "WorkGroup", "WorkGroupMapping")
+
+
+def _cfg_gap(ncfg: Dict[str, Any], scfg: Dict[str, Any]) -> Optional[str]:
+    """How far the native winner's config sits from the floor's.
+
+    The per-cell half of the tie taxonomy (potential_configs.md §R17); the
+    *reading* -- which gaps mean "nothing to chase" -- stays in that section.
+
+    * ``no-floor`` — the family ships no floor arm (the HPA columns), so the
+      "tie" is measured against an undone reference, not a beaten one.
+    * ``identical`` — both arms run the same geometry: the vendor's rank-1
+      gfx900 tile transferred across SKUs unchanged.
+    * ``near`` — same tile, a VectorWidth/DepthU step apart.
+    * ``retile`` — a *different* tile ties (native found a smaller one).
+    """
+    if not ncfg:
+        return None
+    if not scfg:
+        return "no-floor"
+    shared = [k for k in _GAP_KEYS if k in ncfg and k in scfg]
+    if all(ncfg[k] == scfg[k] for k in shared):
+        return "identical"
+    same_tile = (ncfg.get("MacroTile") == scfg.get("MacroTile")
+                 and ncfg.get("ThreadTile") == scfg.get("ThreadTile"))
+    return "near" if same_tile else "retile"
+
+
 def _cell_row(
     v: Dict[str, Any],
     cov: Dict[str, Any],
@@ -282,6 +317,7 @@ def _cell_row(
         "shape": shp,
         "dtype": v.get("dtype", ""),
         "verdict": v.get("verdict", "?"),
+        "cfg_gap": _cfg_gap(ncfg, scfg),
         "delta_pct": delta,
         "native_median": v.get("native_median"),
         "native_value": nv,
@@ -375,15 +411,16 @@ def _pct_str(x: Optional[float], w: int = 6) -> str:
 
 def _table(cells: List[Dict[str, Any]]) -> str:
     lines = [
-        f"{'fam':<4}{'shape':<18}{'verdict':<7}{'d%':>7}{'nat':>8}{'spoof':>8}"
+        f"{'fam':<4}{'shape':<18}{'verdict':<7}{'gap':<10}{'d%':>7}{'nat':>8}{'spoof':>8}"
         f"{'%ceil':>7}{'%theo':>7}  {'NATIVE WINNER CONFIG':<82}  FLOOR CONFIG",
     ]
     for c in cells:
         nw = c["native_config"]
         nstr = _compact_cfg(nw)
         sstr = _compact_cfg(c["spoof_config"], kb=not c["spoof_config"])
-        lines.append("%-4s %-18s %-7s %s %7.1f %7.1f %s %s  %-82s %s"
+        lines.append("%-4s %-18s %-7s %-10s %s %7.1f %7.1f %s %s  %-82s %s"
                      % (c["family"], c["shape"], c["verdict"],
+                        c["cfg_gap"] or "-",
                         _pct_str(c["delta_pct"]), c["native_value"],
                         c["spoof_value"], _clamp_pct(c["pct_ceiling"] or 0) or "-",
                         _clamp_pct(c["pct_theoretical"] or 0) or "-",
@@ -392,13 +429,13 @@ def _table(cells: List[Dict[str, Any]]) -> str:
 
 
 def _tsv(cells: List[Dict[str, Any]]) -> str:
-    head = ("family\tshape\tdtype\tverdict\tdelta_pct\tnative_median\tnative_value"
+    head = ("family\tshape\tdtype\tverdict\tcfg_gap\tdelta_pct\tnative_median\tnative_value"
             "\tspoof_median\tspoof_value\tpct_ceiling\tpct_theoretical"
             "\tnative_winner_phase\tnative_winner_run\tnative_config\tspoof_config")
     rows = [head]
     for c in cells:
         rows.append("\t".join(str(v) for v in (
-            c["family"], c["shape"], c["dtype"], c["verdict"],
+            c["family"], c["shape"], c["dtype"], c["verdict"], c["cfg_gap"],
             "" if c["delta_pct"] is None else round(c["delta_pct"], 2),
             c["native_median"], c["native_value"],
             c["spoof_median"], c["spoof_value"],

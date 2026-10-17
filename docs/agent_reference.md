@@ -22,6 +22,10 @@ python3 -m pytest tests/test_pyflakes.py tests/test_function_length.py -q
 
 # 4. Full test suite
 python3 -m pytest -q
+
+# 5. Gate calibration / failure triage (CPU-only, read-only)
+python3 -m oto.harness.gate_calibration --population ours
+python3 -m oto.harness.failure_triage
 ```
 
 ## Key Files
@@ -37,9 +41,13 @@ python3 -m pytest -q
 | `oto/tensile/gates/occupancy.py` | LDS + VGPR occupancy gate |
 | `oto/tensile/gates/loads.py` | Classic-path global-load divisibility + 16B cap |
 | `oto/tensile/gates/assembly.py` | Assembly-class gate (MFMA rejection is here) |
-| `oto/tools/deck_review.py` | The three pre-deck questions |
+| `oto/tools/deck_review.py` | The three pre-deck questions; its legality census draws the device-truth domain |
 | `oto/harness/kernel_db.py` | kernel_db.json builder |
-| `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver |
+| `oto/harness/gate_calibration.py` | Gate-vs-corpus agreement census: false rejections (gate too strict) and misses (gate too loose) |
+| `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
+| `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
+| `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
+| `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
 | `tests/test_db_mutator.py` | GlobalSplitU ban guard |
@@ -63,7 +71,10 @@ python3 -m pytest -q
 2. **LDS at the winner is always 16–25 KB**, never 64 KB (2–4 resident workgroups).
 3. **WGM is 4 or 8 at every winner**, never 1 (keeps neighbouring CUs on the same B slice).
 4. **The floor never pads CC/DD/ZZ** — the highest-yield untested axis.
-5. **The floor never uses** FractionalLoad=2, PGR=2, WaveSeparateGlobalRead, 1LDSBuffer, etc.
+5. **The floor never uses** FractionalLoad=2, PGR=2, LdsPad, StaggerU. (It also
+   never uses `WaveSeparateGlobalRead` / `1LDSBuffer` / `TransposeLDS` — but those
+   are *unreachable*, not merely unmeasured: the launch boundary does not forward
+   them, so a candidate naming one benchmarks at the default. See R16.)
 6. **Empty on cc/zz**: no LdsPad; on then on for ss/hh — structural blind spot.
 
 ## Verdict bases (per `oto/metrics/ab_delta.py`)
@@ -82,11 +93,23 @@ Report `floor_best` as co-primary alongside `winner`.
 | route | status | cells |
 |---|---|---|
 | A: spoof-steal (CC:256) | decked, 52 rows in PLAN_BATCH | CC:256 |
-| B: 14 never-varied knobs | decked, 12 in KNOB_SWEEPS | all families |
+| B: 14 never-varied knobs | decked in KNOB_SWEEPS | all families |
 | C: wave-quantisation ladder | legal only for SS/DD | SS, DD small shapes |
 | D: LDS-capacity ladder for Z | pending | ZZ all |
 | E: split-complex (3 real GEMMs) | separate work item | CC, ZZ |
 | F: persistent fixed grid | conceptual only | all |
+
+## Reading the deck's stragglers
+
+`python3 -m oto.harness.resolve_cells` prints one row per cell with a `cfg_gap`
+class; `potential_configs.md` §R17 reads it into a route:
+
+| `cfg_gap` | meaning | lever |
+|---|---|---|
+| `identical` | native ties on the floor's own tile | co-vary a *forwarded* knob at that tile |
+| `near` | same tile, a VectorWidth/DepthU step apart | the width/depth step |
+| `retile` | native ties on a *different*, smaller tile | a tile probe, not a width probe |
+| `no-floor` | the family ships no floor arm (HPA) | nothing — native is already above the ceiling |
 
 ## Do not search
 
@@ -94,7 +117,15 @@ Report `floor_best` as co-primary alongside `winner`.
 - `ThreadTile` width ladders for C/Z — accumulator cap makes every wider tile illegal
 - `LdsPad`/LDS-layout work on bandwidth-oversupplied families
 - `-mllvm -amdgpu-*` compiler flags (no-op: ~93% of shipped library is ISA text)
-- `MaxOccupancy`/`AggressivePerfMode` without measurement
+- `AggressivePerfMode=2` — measured dead: 0 `.hsaco` for every family and every
+  tile across two runs, while its mode-1 control built 20. It cost phases, not
+  evidence. See `potential_configs.md` §R23.
+- `MaxOccupancy` assumptions without measurement
+- `WaveSeparateGlobalReadA/B`, `ThreadSeparateGlobalReadA/B`, `1LDSBuffer`,
+  `TransposeLDS`, `UnrollMajorLDSA/B`, `LdsBlockSizePerPadA/B`, `DirectToVgprA/B`
+  — **not forwarded** by the launch boundary (`config_writer.NOT_FORWARDED_KNOBS`),
+  so decking one benchmarks at the default until R20 funds both the forwarding and
+  its gate. The harness now strips and *reports* these instead of no-op'ing silently.
 
 ## CPU-only contract (`claude.md` §5)
 
@@ -115,14 +146,19 @@ PYTHONPATH=. python3 oto/runners/cli.py --preflight
 python3 port_tensile.py --auto --budget 10 --yes
 ```
 
-Sizing: 308 deck phases + 372 seed rows ≈ 680 phases, ~12–14 h wall clock.
+Sizing: `check_candidates.py --quiet` prints the `phases.yaml` count and
+`generate_candidates --dry-run` prints `TOTAL candidates=…`; the run's phase count
+is their sum — read those two lines rather than trusting a literal pinned here
+(`claude.md`: "Never write a corpus count down — anywhere"). At the current
+deck that is ~12–14 h wall clock.
 Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
 
 ## Post-run read guide
 
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
-python3 allruns.py --json /tmp/opencode/post.json
+python3 -m oto.harness.resolve_cells            # per-cell winners + cfg_gap
+python3 allruns.py --json gfx90c_results/analysis/post.json
 PYTHONPATH=. python3 oto/runners/cli.py --native-agg floor_best
 ```
 

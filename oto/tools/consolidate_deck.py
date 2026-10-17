@@ -110,12 +110,15 @@ def _form_rank(forms: List[int]) -> int:
 def dtype_bytes(char: str) -> Optional[int]:
     """Bytes per element for a dtype char, read from Tensile itself.
 
-    Tensile.DataType.DataType.properties is the authority: numBytes() is
-    reg * 4. It is read here rather than from
-    ``oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT``
-    because that table lists ZZ as 8 bytes, and complex double is 16. That single
-    wrong number is what let VectorWidth 2 through for ZZ and produced the
-    ``GlobalLoadVectorWidthA * DataType.numBytes() > 16`` assembly rejects.
+    ``Tensile.DataType.DataType.properties`` is the authority: numBytes() is
+    reg * 4. It is read here rather than from the modelled tables
+    (``oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT`` and
+    ``oto.tensile.gates.loads.LOAD_DTYPE_INFO``) because this gate exists to
+    cross-check those models rather than to copy them. The load gate's ``Z`` row
+    once carried ComplexFloat's 8 bytes for complex double, which let VectorWidth
+    2 through for ZZ and produced the ``GlobalLoadVectorWidthA *
+    DataType.numBytes() > 16`` assembly rejects; reading the authority here is
+    what catches such a drift instead of inheriting it.
     """
     try:
         import sys as _s

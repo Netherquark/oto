@@ -192,6 +192,55 @@ def test_nlca_is_never_legal_for_zz_dd_or_hpa(gen):
 
 
 # --------------------------------------------------------------------------
+# the measured dead axis, and the LSU thread count
+# --------------------------------------------------------------------------
+
+def test_no_sweep_row_sweeps_aggressive_perf_mode():
+    """AggressivePerfMode=2 is a dead axis on this device, measured not guessed.
+
+    The mode-2 sweep ran 2026-10-15/17 and produced **zero** ``.hsaco`` objects
+    for every family and every tile (24 phases, 0 CSV), while its mode-1 control
+    in the same run built 20 (one per target arch). Tensile writes the source and
+    then fails to compile it, so each phase costs a full subprocess and returns
+    nothing. No tile property predicts that, which is why it is a deck decision
+    (``decks.py`` records it) and not a gate.
+    """
+    for sweep in KNOB_SWEEPS:
+        for value in sweep["values"]:
+            assert value.get("AggressivePerfMode") != 2, sweep["knob"]
+
+
+def test_localsplitu_is_legal_only_where_the_thread_count_survives(gen):
+    """LSU>1 multiplies NumThreads (SolutionStructs:1964), so it stays legal only
+    where the operand still fills the load wave. The deck's family list must
+    match the gate family by family -- the measured split is CC/HH legal,
+    SS/HH_HPA/ZZ/DD/HS_HPA refused."""
+    row = next(s for s in KNOB_SWEEPS if s["knob"] == "LocalSplitU")
+    assert set(row["families"]) == {"CC", "HH"}, row["families"]
+    for family in REAL:
+        base = KNOB_SWEEP_BASES[family][0]
+        ok, why = gen.validate_config(_merged(family, base, {"LocalSplitU": 2}))
+        assert ok == (family in row["families"]), \
+            f"{family}: gate says {ok} ({why}) but the deck lists {row['families']}"
+
+
+def test_no_live_phase_decks_the_dead_perf_mode():
+    """The live deck must not re-ship what measurement killed.
+
+    AggressivePerfMode=2 built 0 `.hsaco` and 0 CSV for every family and every
+    tile across two runs. The sweep row is gone from ``KNOB_SWEEPS`` and the
+    emitted rows were pruned from ``phases.yaml``; this is the guard that keeps
+    a hand-edit or a stale regeneration from putting them back
+    (potential_configs.md §R23).
+    """
+    import yaml
+    deck = yaml.safe_load((BASE / "phases.yaml").read_text()) or []
+    bad = [p["phase_id"] for p in deck
+           if (p.get("config") or {}).get("AggressivePerfMode") == 2]
+    assert bad == [], f"{len(bad)} live phases sweep AggressivePerfMode=2: {bad[:3]}"
+
+
+# --------------------------------------------------------------------------
 # the paired GLVW widen (D4) and the baseline control
 # --------------------------------------------------------------------------
 
@@ -345,10 +394,11 @@ def test_every_decision_trial_is_gate_legal(gen):
 
     Checked against BOTH gates: ``validate_config`` (the append boundary) and
     the consolidate deck gate ``_is_legal``, which reads dtype bytes from
-    Tensile itself rather than from ``BYTES_PER_ELEMENT``. They disagree on ZZ's
-    load width, and it is the second one that describes what Tensile will
-    actually build -- a trial only the first accepts is exactly the phase that
-    dies at solution construction.
+    Tensile itself rather than from the modelled table. The two agree on ZZ's
+    load width since the ``LOAD_DTYPE_INFO["Z"]`` correction (16 B, pinned by
+    ``tests/test_measurement_integrity.py``); the second is still worth asking
+    because it is the authority, and a trial only the first accepts is exactly
+    the phase that dies at solution construction.
     """
     from oto.tools.consolidate import _is_legal
 
@@ -402,12 +452,13 @@ def test_no_emitted_candidate_passes_only_the_lenient_gate(gen):
     """Blanket guard: nothing this deck can emit may pass ``validate_config``
     while the Tensile-truth gate (``consolidate._is_legal``) refuses it.
 
-    ``validate_config`` reads dtype bytes from ``BYTES_PER_ELEMENT``, where ZZ is
-    8; ``_is_legal`` reads them from Tensile's own ``DataType``, where complex
-    double is 16. A ZZ VW2 config passes the first and fails the second, which
-    is precisely the phase Tensile refuses at solution construction after the
-    whole compile budget is spent. The deck must agree with the stricter gate,
-    because that is the one that describes what gets built.
+    ``validate_config`` reads dtype bytes from the modelled ``LOAD_DTYPE_INFO``;
+    ``_is_legal`` reads them from Tensile's own ``DataType``. They agreed on ZZ
+    only after the ``Z`` row was corrected to complex double's 16 B — before
+    that a ZZ VW2 config passed the first and failed the second, which is
+    precisely the phase Tensile refuses at solution construction after the whole
+    compile budget is spent. The deck must agree with the stricter gate, because
+    that is the one that describes what gets built.
     """
     from oto.tools.consolidate import _is_legal
 

@@ -1,9 +1,267 @@
-# Candidate deck for the gfx90c Vega-7 port — rewrite 4 (2026-10-16)
+# Candidate deck for the gfx90c Vega-7 port — rewrite 5 (2026-10-17)
 
-Supersedes rewrite 3 (kept below). **What is new here** is a fresh A/B audit on
-the latest corpus, a per-cell floor-vs-native gap analysis, a kernel-type pattern
-read across all 25,671 kernels in `kernel_db.json`, and the resulting route
-updates for the overnight run.
+Supersedes rewrite 4 (R10–R15, kept below for history). **What is new here** is
+the straggler trace on the latest A/B, a per-cell **tie taxonomy** that separates
+genuine work from measurement noise, the **launch-boundary forwarding surface**
+that decides which of R15's "virgin axes" are real, the **adaptation routes**
+(R18) that break the big-shape ties *without* stealing, and the deck rows that
+carry them (R19).
+
+**Owns:** the candidate deck, the routes, the search rules. Does not own:
+ceilings and verdict bars (`gfx90c_theoretical_limits.md` §5), measured evidence
+(`results.md`), hardware facts (`gfx90c_theoretical_limits.md` §1–§3),
+or the per-cell winners (`gfx90c_results/analysis/cells_resolved.full.txt`).
+
+---
+
+## R16 — the forwarding surface: which knobs actually reach Tensile
+
+One fact, one home: `oto/tensile/config_writer.py` is the **only** place a knob
+becomes Tensile YAML, and it now *declares* that surface as data —
+`FORWARDED_KNOBS` (what reaches Tensile) and `NOT_FORWARDED_KNOBS` (valid
+parameters it does not reach), pinned to the fork helpers by
+`tests/test_writer_forwards_sweep_knobs.py`. The helpers behind them are
+`_fork_thread_macro_workgroup`, `_fork_split_knobs`, `_fork_depth_u`,
+`_fork_width_knobs`, `_fork_coalesced_loads`, `_fork_prefetch` and
+`_fork_sweep_int_knobs`, plus the `FORWARDED_GROUP_C_KNOBS` tuple. A key outside
+`FORWARDED_KNOBS` is silently dropped at the launch boundary and the candidate
+then benchmarks at the Tensile default — a no-op that reads in the ledger as a
+measured negative. This is the failure mode the module docstring calls out ("the
+one place that has to answer for every silent-drop bug").
+
+| group | knobs forwarded |
+|---|---|
+| tile | `MacroTile`, `ThreadTile`, `WorkGroup` (with `LocalSplitU` as element [2]), `DepthU` |
+| width | `VectorWidth`, `GlobalLoadVectorWidthA/B` |
+| split | `GlobalSplitU`, `WorkGroupMapping` |
+| loads | `NumLoadsCoalescedA/B` (and the `NLCA` alias) |
+| prefetch | `PrefetchGlobalRead` (int 0/1/2), `PrefetchLocalRead` (bool) |
+| sweep ints | `UseSgprForGRO`, `InnerUnroll`, `MaxOccupancy`, `AggressivePerfMode`, `FractionalLoad`, `NonTemporalA/B`, `AssertFree1ElementMultiple` |
+| Group C | `LdsPadA/B`, `AssertFree0ElementMultiple`, `StaggerU`/`StaggerUMapping`/`StaggerUStride`, `StoreCInUnroll` |
+
+`GlobalReduceVectorWidth` is a trap in the *other* direction: `_fork_width_knobs`
+emits it (reference metadata spells it `grvw`) and `_drop_unsupported` then strips
+it, because it is not a Tensile parameter at all. It is in neither tuple.
+
+**Not forwarded (`NOT_FORWARDED_KNOBS`) — dead letters until the launch boundary
+is extended (R20):** `WaveSeparateGlobalReadA/B`, `ThreadSeparateGlobalReadA/B`,
+`1LDSBuffer`, `TransposeLDS`, `UnrollMajorLDSA/B`, `GlobalReadPerMfma`,
+`LocalWritePerMfma`, `DepthULdsDivisor`, `PersistentKernel`,
+`LdsBlockSizePerPadA/B`, `DirectToVgprA/B`. The harness strips these at emit time
+and *reports* the strip (`candidate_rows._NOT_FORWARDED_YET` is that tuple), so a
+candidate carrying one is now a reported no-op rather than a silent one.
+
+This corrects R15: its items 8 (`WaveSeparateGlobalRead`) and 9 (`1LDSBuffer`)
+were listed as deck additions, but the writer does not forward either, so a
+candidate carrying them would have benchmarked at the default, and the overnight
+budget would have been spent on a placebo. Of R15's route-B table, only the
+rows whose knob appears in the table above are executable.
+
+## R17 — the tie taxonomy (latest A/B: 19 WIN / 19 TIE / 0 LOSS, 0 RED / 12 ORANGE)
+
+The 19 ties are not one problem. `resolve_cells` reports the mechanical gap
+between the native winner's config and the floor's as `cfg_gap` and the classes
+it produces are the taxonomy below — so this split is now checkable, not read:
+
+**(a) Same-geometry ties (`cfg_gap=identical`)** — native's winning tile is the
+floor's, and at most a couple of non-tile knobs differ (and did not move the
+needle): the tile is
+byte-for-byte identical at `CC:256`, `CC:512`, `DD:768`, `HH:1024`, `SS:1000`,
+`SS:1024`, `SS:1365`, and identical-but-for-`NLCA`/`PGR`/pad at `HH:2048`,
+`HH:4096`, `SS:768`. This is the user's reading, confirmed against
+`cells_resolved.full.txt`: the two complex/medium cells reproduce
+`MT=[64,64] TT=[4,4] VW=2 DU=8` and the four wide cells reproduce
+`MT=[128,128] TT=[8,8] VW∈{4,8} DU∈{8,16}`.
+
+**(b) Near ties (`cfg_gap=near`)** — native's winner keeps the floor's tile and
+differs only in a `VectorWidth` or `DepthU` step: `DD:2048` (VW 2 vs 1),
+`SS:2048` and `SS:4096` (DU 16 vs 8).
+
+**(b′) Re-tiles (`cfg_gap=retile`)** — native ties on a *different* tile than the
+floor's, and a smaller one: `DD:1024` (`MT=[64,32] TT=[4,2] VW=1` against the
+floor's `MT=[64,64] TT=[4,4] VW=2`) and `DD:1365` (`MT=[32,32] TT=[2,2] DU=16`
+against `MT=[64,64] TT=[4,4] DU=8`). These were folded into (b) on the first
+reading and that was wrong — the deficit they carry is a tile choice, not a
+width step, so the lever is a *tile* probe, not a VW/DU probe.
+
+**(c) HPA ties (`cfg_gap=no-floor`)** — `HH_HPA:1024/2048`, `HS_HPA:1024/2048`.
+These carry **no floor at all** (the gfx900 chain ships no HPA kernels), so a
+"tie" here is a comparison against the undone reference arm; native already sits
+at 123–129 % of the family ceiling. Not a kernel deficit — do not over-invest.
+
+**Why same-geometry ties exist.** gfx900 (56–60 CU, 2 MiB L2, HBM2) and gfx90c
+(7 CU, 1 MiB L2, DDR4 UMA) differ *only* in CU count, L2 size and bandwidth.
+The data-path shape — wave64, 64 KiB LDS/CU, the same VGPR file, no MFMA — is
+identical, so the vendor's rank-1 tiles transfer unchanged. At k ≥ 768 the L2
+difference stops biting (a 128×128 tile holds 16 KiB of LDS, not L2), which is
+exactly where the ties live.
+
+**Why nothing has beaten them.** The knob-sweep deck perturbs
+`KNOB_SWEEP_BASES`, and both relevant bases are the *wrong* tile: CC's base is
+`VectorWidth 1` while CC's winner is VW2 (the D4 paired-widen row pinned it to
+VW1 deliberately), and HH's base is VW4 while HH's winner is VW8. So the twelve
+sweep rows never once perturbed the geometry that ties. R19 fixes that where the
+tile is explicit (PLAN_BATCH), not by re-pinning the sweep bases — the sweep
+tests index `KNOB_SWEEP_BASES[family][0]` and the D4 row depends on CC staying
+VW1.
+
+**What the ties are not.** No tie is a RED cell and none is a LOSS. The twelve
+ORANGE cells (< 50 % of the family ceiling) are yardstick artefacts: complex
+pays four real FMAs per complex-MAC with no MFMA opcode, and 128³/256³ cubes
+cannot fill 7 CUs — native is 1.1–3.8× the floor on all twelve. The one cell that
+was a genuine shortcoming (CC:256, the only ever-LOSS) now reads TIE at +4.2 %.
+
+## R18 — the executable adaptation routes (all knobs forwarded per R16)
+
+These are the levers R17's analysis leaves standing. Each is a *single-knob or
+small compound change on the measured winner geometry* — except for the two
+re-tile cells (R17(b′): `DD:1024`/`DD:1365`), whose lever is a **tile** probe,
+not a width probe.
+
+| # | route | knobs | cells | mechanism |
+|---|---|---|---|---|
+| A | **L2 pollution** | `NonTemporalA/B ∈ {1}` | SS/HH big, DD 768+ | stream past the 1 MiB shared L2 instead of thrashing it; the floor ships 0 everywhere |
+| B | **Residency clamp** | `MaxOccupancy ∈ {8,12}` | all ties | pads per-workgroup LDS to `DeviceLDS // N`; 7 CUs makes wave count scarcer than on the 60-CU parts AMD tuned for |
+| C | **LDS-cap branch** | `AggressivePerfMode = 2` | all ties | described as a 2-waves/SIMD LDS cap; the corpus median is already 2 waves/SIMD, so it is either free or a real clamp |
+| D | **Issue-slot reduction** | `InnerUnroll = 2`, `NumLoadsCoalescedA/B`, `UseSgprForGRO` | CC, ZZ, and the wide tiles | complex and ZZ are issue-bound; longer unroll and coalesced loads cut loop-control issues, `UseSgprForGRO` moves GRO offsets from VGPR to SGPR |
+| E | **Wave-fill** | `LocalSplitU = 2`; `GlobalSplitU ∈ {2,4}` | LSU: all; GSU: **SS/DD only** | the 7-CU cliff. GSU is gate-refused for every half and complex family, so LSU (which splits the M extent inside one workgroup, no reduction kernel) is the legal equivalent there |
+| F | **Bank conflicts** | `LdsPadA/B ∈ {1,2,4}` | CC, ZZ, DD, SS, HH, HPA | GCN LDS is 32 banks × 4 B, `bank = (addr/4) mod 32`, wave64 serviced in 8 phases of 8 lanes. **DD, CC and ZZ are never padded in the floor** — a blind spot shared by Tensile's own `Perf/*.yaml` — so this is the highest-yield untested axis for the complex families |
+| G | **Swizzle** | `StaggerU ∈ {0,8,16}` + `StaggerUMapping ∈ {0,1,2}` + `StaggerUStride ∈ {0,128}` | all ties | `StaggerU = 32` was a 56-CU raster choice, pinned corpus-wide; `StaggerUStride = 256` silently rounds to `DepthU × bpe`, so the live stride values are 0/64/128 |
+| H | **Prefetch depth** | `PrefetchGlobalRead ∈ {0,2}`, `PrefetchLocalRead ∈ {0}` | CC, ZZ, SS, HH | the floor never emits PGR 2; PGR 0 / PLR 0 halve register and LDS double-buffer pressure on the VGPR-bound complex tiles |
+| I | **Negative WGM family** | `WorkGroupMapping ∈ {-1,-4}`, also `{1,2,3,8}` | all ties | WGM 8 asks for eight J-column workgroups before wrapping on a 7-CU part; the negative (I/J-swap) family has never been generated at all |
+
+`MatrixInstruction`, `DirectToLds*`, `WavefrontSize` and the `-mllvm -amdgpu-*`
+flags remain out of scope: on gfx90c they are `SolutionStructs`-rejected outright
+or actively harmful (`DirectToLds` blocks `NLCA > 1`, forces `GLVW = 1` on 8/16-B
+dtypes, and forces `1LDSBuffer`).
+
+## R19 — the deck changes for this overnight run
+
+* **PLAN_BATCH: +37 tie-adapt rows (36 net-new after fingerprint dedup).** R18 A–I applied to the *measured winner
+  geometry* of each tie cell — SS `128x128x8/8x8/VW4/DU8` and
+  `128x128x16/8x8/VW4/DU16`; HH `128x128x16/8x8/VW8/DU16`; DD `64x64x8/4x4/VW2/DU8`
+  (the DD:768/2048 winner — DD:1024/1365 tie on *different, smaller* tiles per
+  R17(b′), so those two get a tile probe next, not a width probe); and the
+  HH_HPA / HS_HPA winners. Every row uses only forwarded knobs (R16), so
+  none is a placebo; `iter_candidates` gate-verifies each against
+  `validate_config` + `ldspad_feasible`, and a refusal is reported, never dropped
+  silently. This is the same template the CC:256 steal batch uses, applied to the
+  cells that actually tie.
+* **`knob_sweep.py` repaired.** The module referenced `KNOB_SWEEPS` /
+  `KNOB_SWEEP_BASES` at module scope without importing them, so its CLI raised
+  `NameError` and three tests were red. Now imported; the sweep test file is green.
+* **Preflight is the authority, not a number written here** (`claude.md`: never
+  write a corpus count down). `python3 -m oto.harness.generate_candidates --dry-run`
+  must report `0 refused`, `python3 check_candidates.py --quiet` must report
+  `0 illegal`, and `PYTHONPATH=. python3 oto/runners/cli.py --preflight` must show
+  full parity (38/38 shipped cells) before the run.
+
+## R20 — the launch-boundary extension (ranked, deliberately NOT done here)
+
+The three axes R15 wanted are real levers, but each is a `config_writer` change
+plus a gate change, so they are a work item, not a deck row:
+
+1. **`1LDSBuffer = 1`** — halves per-workgroup LDS, which doubles the resident
+   workgroups that LDS capacity currently caps. Highest expected payoff because
+   LDS *capacity* (not VGPR) is the binding constraint for the majority of
+   kernels.
+2. **`WaveSeparateGlobalReadA/B` (+ `ThreadSeparateGlobalReadA/B`)** — splits the
+   LDS write by wave/thread, attacking cross-wave bank collisions on the wide tiles.
+3. **`TransposeLDS` / `UnrollMajorLDSA/B`** — aligns the LDS layout with the VALU
+   read order.
+
+Each needs a one-line addition to `_fork_params` **and** the occupancy gate taught
+the changed footprint, or the gate mis-predicts feasibility. Until then they stay
+out of the deck: a candidate carrying them is a no-op (R16).
+
+## R21 — what to stop doing
+
+* **ThreadTile width ladders for C and Z** — the accumulator cap makes every
+  wider tile illegal; pure rejects.
+* **`MatrixInstruction` / `DirectToLds`** — rejected or harmful (R18).
+* **Hunting HPA ties** — no floor exists to beat and native is already at 123–129 %
+  of the ceiling (R17c).
+* **Re-pinning `KNOB_SWEEP_BASES`** to chase a winner — the sweep tests index
+  `[0]` and the D4 widen depends on CC VW1; put winner-geometry work in
+  PLAN_BATCH instead (R17, R19).
+* **Reading a single `best`-seed sample as a verdict** — judge within-run, ≥3
+  seeds, on the median, ±2 % tie band.
+
+## R22 — the overnight command
+
+```bash
+# CPU-only, safe under GNOME (no GPU stress):
+python3 check_candidates.py --quiet
+python3 -m oto.harness.generate_candidates --dry-run
+PYTHONPATH=. python3 oto/runners/cli.py --preflight
+
+# TTY only — the real run:
+python3 port_tensile.py --auto --budget 10 --yes
+```
+
+The overlay `gfx90c_results/overlays/phases.seed.overlay.yaml` is a generated,
+gitignored artifact; it has already been refreshed for this run with
+`python3 -m oto.harness.generate_candidates` (no `--dry-run`), which appended the
+tie-adapt rows.
+
+Sizing is honest-estimate territory: the latest completed run took 8 h 39 m wall
+clock, and the tie-adapt rows add ~36 phases on top of the existing deck, so plan
+for a full overnight window. The full desktop (GNOME) session must not launch
+this: ring timeouts and GPU resets under a loaded compositor are a known failure
+mode — the run belongs in the user's TTY.
+
+---
+
+## R23 — the failed-candidate triage, and the two gates that now refuse them
+
+Every failed candidate from every run was re-read CPU-only from three sources:
+the ledger (`registry.db` `proposals`), every run directory's empty phases, and
+the two latest live runs in full. The classes, worst first, with what happened to
+each:
+
+| class | evidence | disposition |
+|---|---|---|
+| **ZZ `VectorWidth=2` cleared the 16 B cap** | live `phase_cand_zz_..._vw2` refused by Tensile with `GlobalLoadVectorWidthA * DataType.numBytes() > 16`, 0 CSV; every other ZZ phase at VW1 built | **fixed.** The load gate's `Z` row held ComplexFloat's numbers (2 registers, 8 bytes) for complexDouble. It now reads 4/16 (Tensile `DataType`, ComplexDouble), and `tests/test_measurement_integrity.py` pins the whole row to Tensile so the load gate and `FAMILY_BYTES_PER_ELEMENT` cannot split again. It also fixes the derived default: with `reg=4`, an absent `VectorWidth` derives 1, matching the phases that built. |
+| **`LocalSplitU=2` was never in the thread count** | 24 live phases: the 4 that built (CC `64x64x8/4x4`, HH `128x128x16/8x8`) vs 20 dead on `GlobalLoadVectorWidthA 2 % pv 4 != 0` (ZZ/DD `32x32x8/2x2`) and `Kernel Uses 131072 > 65536 bytes of LDS` (SS/HH_HPA `128x128x8/8x8`) | **fixed.** Tensile computes `NumThreads = SubGroup0 * SubGroup1 * LocalSplitU` (SolutionStructs:1964) and reads LSU from `WorkGroup[2]`; the gate read the tile alone, so the sweep looked legal. The gate now reads what Tensile will receive (see the shadowing row below). The sweep's family list is narrowed to the two that survive. |
+| **`AggressivePerfMode=2` builds nothing** | every family and every tile, two runs: 0 `.hsaco`, 0 CSV, while the mode-1 control in the same run built 20 (one per target arch). Tensile writes the source, then fails to compile it | **removed** from the sweep, with the evidence recorded in `decks.py`. Not a gate: no tile property predicts it, so it is a deck decision like the retired `BufferLoad` row. |
+| **GLVW coupling; NLCA/LDS/StaggerU coupling** | ~21–25 % of mutator draws were illegal before the fix | **already fixed** by R18's joint domains. |
+| **A knob shadowed by an explicit `WorkGroup`** | the deck's two `CC` steal rows carried `WorkGroup: [16,16,1]` *and* `LocalSplitU: 2`, so they benchmarked at LSU 1 while their note claimed LSU 2 | **fixed on both sides.** `config_writer._fork_tile` emits an explicit `WorkGroup` verbatim and only folds `LocalSplitU` in when WorkGroup is absent — so `LocalSplitU` (declared honoured in R16) is a silent no-op beside one. The gate now reads the *emitted* value (a `WorkGroup` third element wins), and the two rows no longer pass an explicit WorkGroup, so their LSU lands. |
+| **`Invalid parameter name: GlobalReduceVectorWidth`**, missing `configs/phase_*.yaml`, `resource_tracker` `ValueError` | historical only — the Sep-28 reference replays, the reference-resume path, and Python 3.14 joblib noise | already closed (`_drop_unsupported`, the resume path) or environmental; no action. |
+
+Two Tensile rules were **measured and deliberately left un-gated**, because each
+needs a new fact and neither refuses anything the fixes above do not already
+refuse on this corpus:
+
+1. The **LSU LDS reduction** — `ldsNumElementsReduction = LSU * MT0 * MT1`
+   (SolutionStructs:4108), which is what makes the `131072 > 65536` rejects. It
+   needs the *destination* element size per family, which is a new table.
+2. The **NumThreads-aware VGPR budget** — `65536 // NumThreads` rather than the
+   fixed 128 (which is only `65536 // 512`). Calibrating it against the corpus
+   cost one false rejection on a measured kernel, and the last retired VGPR model
+   died of exactly that overreach; it needs a config-exact VGPR table first.
+
+Deck hygiene that follows from the two fixes: 24 dead rows left `phases.yaml`
+(the `swAggressivePerfMode2` set and the now-refused `swLocalSplitU2` tiles), 9
+left the seed overlay (the ZZ VW2 candidate, two `AggressivePerfMode=2`
+candidates, and six `LocalSplitU=2` ones), and 8 left the `PLAN_BATCH`
+hypotheses (the same two classes). Coverage parity is unchanged (38/38 cells)
+because every removed row had a surviving sibling on the same tile and shape, and
+`generate_candidates` now emits a fully gate-legal set with nothing refused.
+
+The durable Tensile mechanics behind these fixes (NumThreads/LSU, the
+shadowed-WorkGroup rule, the LSU LDS reduction, the 16-B cap check order, the
+APM death) live in `kernel_tuning_research.md` §4; §R23 keeps the triage
+narrative and the disposition table.
+
+---
+
+## Superseded: rewrite 4 (2026-10-16), kept below for history
+
+**What was new in rewrite 4** was a fresh A/B audit, a per-cell floor-vs-native
+gap analysis, a kernel-type pattern read across `kernel_db.json`, and the
+resulting route updates. Its numbers are superseded above; its mechanisms
+(Routes A–F, the legality matrix, the open decisions) are still cited by §-number
+from code comments, so they are retained verbatim below.
 
 ---
 
@@ -260,9 +518,9 @@ asks for.
 ## R15 — the concrete deck for the overnight run
 
 The existing deck (rewrite 3 §8) already contains:
-- `KNOB_SWEEPS`: 12 sweep rows covering UseSgprForGRO, GLVW (CC paired),
-  InnerUnroll, PGR, NLCA, MaxOccupancy, APM, GSU (SS/DD), LSU, StaggerU,
-  FractionalLoad, NonTemporal
+- `KNOB_SWEEPS`: the sweep rows covering UseSgprForGRO, GLVW (CC paired),
+  InnerUnroll, PGR, NLCA, MaxOccupancy, GSU (SS/DD), LSU, StaggerU,
+  FractionalLoad, NonTemporal (APM was dropped — §R23)
 - `FAMILY_DECKS`: 67 tile entries across 7 families
 - `DECISION_TRIAL_TILES`: 4 trial entries (D1–D3)
 - CC:256 steal batch: 14 rows in `PLAN_BATCH`
@@ -292,9 +550,11 @@ PYTHONPATH=. python3 oto/runners/cli.py --preflight
 python3 port_tensile.py --auto --budget 10 --yes
 ```
 
-Sizing: 308 deck phases + 372 seed rows = ~680 phases. The last run took
-13 h 14 m wall clock for 7.95 h of phase-busy time, so ~12–14 h is the honest
-estimate. Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
+Sizing: `phases.yaml` plus the seed overlay is what a run builds;
+`python3 check_candidates.py --quiet` prints the live deck count and refuses
+anything illegal. The last run took 13 h 14 m wall clock for 7.95 h of phase-busy
+time, so ~12–14 h is the honest estimate. Judge **within-run only**, ≥3 seeds,
+median, ±2% tie band.
 
 ---
 
@@ -1329,19 +1589,20 @@ retains **765 of 3831 configs (20 %)** and **loses 0 of 35 cell winners**
 
 ```bash
 # 1. CPU-only, from any session (safe under GNOME)
-python3 check_candidates.py --family CC --quiet        # 48 checked, 0 illegal
-python3 -m oto.harness.generate_candidates --dry-run  # 381 candidates, +14 CC
+python3 check_candidates.py --family CC --quiet        # legal, or it names the rows
+python3 -m oto.harness.generate_candidates --dry-run  # prints the per-family tally
 PYTHONPATH=. python3 oto/runners/cli.py --preflight   # 38/38 parity, all OK
 
 # 2. TTY only — the real run
 python3 port_tensile.py --auto --budget 10 --yes
 ```
 
-Sizing: 308 deck phases + 372 seed rows = **680 phases**. The last run took
-13 h 14 m wall clock for 7.95 h of phase-busy time (40 % overhead: config
-generation, Tensile build, queueing), so **~12–14 h** is the honest estimate and
-`--budget 10` iterations of mutation on top. Judge **within-run only**, ≥3 seeds,
-median, ±2 % tie band.
+Sizing: `phases.yaml` plus the seed overlay is what a run builds;
+`python3 check_candidates.py --quiet` prints the live deck count and refuses
+anything illegal. The last run took 13 h 14 m wall clock for 7.95 h of phase-busy
+time (40 % overhead: config generation, Tensile build, queueing), so **~12–14 h**
+is the honest estimate and `--budget 10` iterations of mutation on top. Judge
+**within-run only**, ≥3 seeds, median, ±2 % tie band.
 
 ### 11.7 Read the results honestly
 

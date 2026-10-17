@@ -291,11 +291,30 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
         self.assertTrue(ok, why)
 
     def test_pv_reduction_cancels_a_widening_into_a_noop(self):
-        """ZZ 32x32x8, VW=1: the pv reduction (SolutionStructs.py:2010) turns an
-        explicit GLVW=2 back into 1, so it is legal but measures the base tile."""
+        """D 32x32x8, VW=1: the pv reduction (SolutionStructs.py:2010) turns an
+        explicit GLVW=2 back into 1, so it is legal but measures the base tile.
+
+        Deliberately not ZZ: complex double is 16 B, so GLVW=2 trips the 16 B cap
+        first (SolutionStructs:3459, which runs before
+        ``setGlobalLoadVectorWidth``'s pv reduction), and the no-op this test is
+        about never gets a chance to happen.
+        """
         ok, why = validate_tensile_loads(
-            cfg("Z", "32x32x8", "2x2", VectorWidth=1,
+            cfg("D", "32x32x8", "2x2", VectorWidth=1,
                 GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2))
+        self.assertTrue(ok, why)
+
+    def test_zz_vector_width_2_is_refused_by_the_byte_cap(self):
+        """complexDouble is 16 B, so VW 2 loads 32 B and Tensile refuses the
+        solution. The gate read the ComplexFloat row (8 B) and let it through --
+        which is how ``phase_cand_zz_128_32x64x8_tt2x4_..._vw2`` reached a live
+        run and came back with 0 CSV."""
+        ok, why = validate_tensile_loads(
+            cfg("Z", "32x64x8", "2x4", VectorWidth=2))
+        self.assertFalse(ok)
+        self.assertIn("> 16", why)
+        ok, why = validate_tensile_loads(
+            cfg("Z", "32x64x8", "2x4", VectorWidth=1))
         self.assertTrue(ok, why)
 
     def test_assert_free_element_multiple_lifts_the_restriction(self):
@@ -324,6 +343,68 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
                 KernelLanguage="Source"))
         self.assertFalse(ok)
         self.assertIn("must be == VectorWidth", why)
+
+
+class TestLocalSplitUThreadCount(unittest.TestCase):
+    """LocalSplitU multiplies NumThreads (SolutionStructs:1964).
+
+    Tensile reads it from ``WorkGroup[2]`` -- the workgroup still covers
+    MT0 x MT1, it just gains LSU extra wavefronts -- so every pv and load-wave
+    reading downstream sees the larger count. The gate read the tile alone, and
+    the whole LSU=2 sweep therefore looked legal: 20 of 24 phases died
+    (``GLVW 2 % pv 4 != 0`` on 32x32x8/2x2; ``Kernel Uses 131072 > 65536 bytes
+    of LDS`` on 128x128x8/8x8) while the four that built -- CC 64x64x8/4x4 and
+    HH 128x128x16/8x8, two shapes each -- are the control this fix must keep.
+    """
+
+    def test_lsu2_survives_where_the_load_wave_still_divides(self):
+        for dtype, mt, tt, vw in (("C", "64x64x8", "4x4", 1),
+                                  ("H", "128x128x16", "8x8", 4)):
+            with self.subTest(dtype=dtype):
+                ok, why = validate_tensile_loads(
+                    cfg(dtype, mt, tt, VectorWidth=vw, LocalSplitU=2))
+                self.assertTrue(ok, why)
+
+    def test_lsu2_dies_where_it_does_not(self):
+        for dtype, mt, tt, vw, want in (
+                ("Z", "32x32x8", "2x2", 1, "% pv"),
+                ("D", "32x32x8", "2x2", 2, "% pv"),
+                ("S", "128x128x8", "8x8", 4, "must be == VectorWidth"),
+                ("H", "128x128x8", "8x8", 4, "must be == VectorWidth")):
+            with self.subTest(dtype=dtype):
+                ok, why = validate_tensile_loads(
+                    cfg(dtype, mt, tt, VectorWidth=vw, LocalSplitU=2))
+                self.assertFalse(ok)
+                self.assertIn(want, why)
+
+    def test_workgroup_spelling_reads_the_same(self):
+        """An emitted phase carries only ``WorkGroup`` ("16x16x2"); a deck row
+        carries ``LocalSplitU``. Both must produce the same thread count."""
+        for kw in ({"LocalSplitU": 2}, {"WorkGroup": "16x16x2"}):
+            with self.subTest(**kw):
+                ok, why = validate_tensile_loads(
+                    cfg("D", "32x32x8", "2x2", VectorWidth=2, **kw))
+                self.assertFalse(ok)
+                self.assertIn("% pv", why)
+
+    def test_an_explicit_workgroup_shadows_the_knob(self):
+        """``config_writer._fork_tile`` emits an explicit ``WorkGroup`` verbatim
+        and only folds ``LocalSplitU`` in when WorkGroup is absent, so the two
+        keys together are a silent no-op: the deck's own steal rows carried
+        ``WorkGroup: [16,16,1]`` beside ``LocalSplitU: 2`` and benchmarked at
+        LSU 1 (potential_configs.md §R23). The gate reads the emitted value."""
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4,
+                WorkGroup=[16, 16, 1], LocalSplitU=2))
+        self.assertTrue(ok, why)            # emitted LSU is 1, so the tile lives
+        ok, why = validate_tensile_loads(
+            cfg("S", "128x128x8", "8x8", VectorWidth=4, LocalSplitU=2))
+        self.assertFalse(ok)                # no WorkGroup: the LSU really lands
+        self.assertIn("must be == VectorWidth", why)
+
+    def test_lsu1_is_the_default_and_unchanged(self):
+        ok, why = validate_tensile_loads(cfg("D", "32x32x8", "2x2", VectorWidth=2))
+        self.assertTrue(ok, why)
 
 
 class TestLdsGate(unittest.TestCase):

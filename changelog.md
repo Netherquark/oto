@@ -9,6 +9,116 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-18 — the /tmp calibration and triage machinery formalised into the
+  harness.** The two CPU-only scripts that backed the §R23 triage (the gate-vs-
+  corpus agreement census and the empty-phase reason census) are now modules, so
+  the next gate edit or overnight run can re-run them instead of re-deriving
+  them.
+  * **`oto/harness/gate_calibration.py`** — for every phase whose launch config is
+    on disk, the `(built, gate-legal)` confusion across the native and replayed-
+    floor populations, plus the two named work lists: **false rejections** (the
+    gate refused a phase Tensile built — the decision rule requires this to be
+    0 on our corpus) and **misses** (the gate allowed a phase that produced no
+    measurement). The config is reconstructed from the phase's own
+    `configs/phase_*.yaml` (the compiled launch truth), with the contraction
+    pattern and family label recovered from their canonical homes
+    (`config_writer.TRANSPOSE_MAP`, `library_parity.phase_family`) rather than a
+    second copy. Reproduces the §R23 calibration exactly: native 2812 / 79 / 46
+    with 0 false rejections; the floor population keeps its documented 43.
+  * **`oto/harness/failure_triage.py`** — the empty-phase reason census (Tensile
+    `reject:` lines, non-empty stderr, stdout tail, or no logs), per run and in
+    aggregate: 9820 phase dirs, 944 with no non-empty CSV. Same output as the
+    retired `/tmp/opencode/triage_all_runs.py`.
+  * **Docs.** Both modules are wired into the harness runbook layout,
+    `docs/agent_reference.md` (Key Files + Quick Start), and the `claude.md`
+    §2.2 tool table; `oto/README.md` is regenerated. The durable Tensile
+    mechanics behind §R23 (NumThreads/LSU, the shadowed-WorkGroup rule, the LSU
+    LDS reduction, the 16-B cap check order, the APM death) are promoted into
+    `kernel_tuning_research.md` §4, with §R23 pointing at that home.
+  * Tests: `tests/test_gate_calibration.py` and
+    `tests/test_failure_triage.py` pin the reconstruction, the confusion matrix
+    and the reason-mining mechanism on synthetic corpora.
+- **2026-10-17 — every failed candidate triaged; two live gate misses closed and
+  the dead axes pruned out of the deck.** Three sources, all read CPU-only: the
+  ledger's rejected proposals, every run directory's empty phases, and the two
+  latest live runs in full. Classes and dispositions are `potential_configs.md`
+  §R23.
+  * **The load gate read ComplexFloat for complexDouble.** `LOAD_DTYPE_INFO["Z"]`
+    held 2 registers / 8 B, so `GLVW 2 * 8 = 16 <= 16` read as legal while Tensile
+    computed `2 * 16 = 32` and refused the solution — the live
+    `phase_cand_zz_128_32x64x8_tt2x4_..._vw2` phase, 0 CSV. It is now 4 / 16
+    (Tensile `DataType`, ComplexDouble), and the row's derived `VectorWidth`
+    default follows: with `reg=4` an absent width derives 1, which is what every
+    ZZ phase that actually built used. `tests/test_measurement_integrity.py` pins
+    every row to Tensile's `numBytes()`, so the load gate cannot split from
+    `FAMILY_BYTES_PER_ELEMENT` again.
+  * **`LocalSplitU` was not in the thread count.** Tensile computes
+    `NumThreads = SubGroup0 * SubGroup1 * LocalSplitU` (SolutionStructs:1964) and
+    reads LSU from `WorkGroup[2]`; the gate read the tile alone, so the whole
+    LSU=2 sweep looked legal. On the 24 live LSU=2 phases the corrected gate
+    refuses exactly the 20 that died (`GlobalLoadVectorWidthA 2 % pv 4 != 0`,
+    `Kernel Uses 131072 > 65536 bytes of LDS`) and keeps the 4 that built (CC
+    `64x64x8/4x4`, HH `128x128x16/8x8`) — and 0 false rejections anywhere else in
+    the corpus. The gate reads the value Tensile will receive (an explicit
+    `WorkGroup` wins over the knob — see the shadowing bullet below); the sweep's
+    families narrow to the two that survive.
+  * **`AggressivePerfMode=2` is a dead axis, measured not guessed.** Every family
+    and every tile across two runs produced 0 `.hsaco` and 0 CSV, while its mode-1
+    control in the same run built 20 (one per target arch): Tensile writes the
+    source and then fails to compile it. Removed from `KNOB_SWEEPS` with the
+    evidence recorded in `decks.py`; deliberately not a gate, because no tile
+    property predicts it.
+  * **A knob shadowed by an explicit `WorkGroup`.** `LocalSplitU` is declared
+    honoured (R16), but `config_writer._fork_tile` emits an explicit `WorkGroup`
+    verbatim and only folds `LocalSplitU` into it when WorkGroup is absent — so
+    the deck's two CC steal rows (`WorkGroup: [16,16,1]` beside `LocalSplitU: 2`)
+    benchmarked at LSU 1 while their note claimed LSU 2. The gate now reads the
+    *emitted* value (WorkGroup's third element wins), and the rows drop the
+    explicit WorkGroup so the LSU lands.
+  * **Deck hygiene.** 24 rows left `phases.yaml` (14 `swAggressivePerfMode2`, 10
+    now-refused `swLocalSplitU2`), 9 left the seed overlay (the ZZ VW2
+    candidate, 2 `AggressivePerfMode=2`, 6 `LocalSplitU=2`), and 8 left the
+    `PLAN_BATCH` hypotheses (2 APM2, 6 LSU2). `check_candidates.py` reports 0
+    illegal and coverage parity is unchanged (38/38 cells), since every removed
+    row had a surviving sibling on the same tile and shape. Triaged, measured,
+    and deliberately **not** gated: the LSU LDS-reduction term (needs a
+    per-family destination element size) and the NumThreads-aware VGPR budget
+    (needs a config-exact VGPR table; without one it false-rejects a measured
+    kernel — the overreach that killed the previous VGPR model).
+- **2026-10-17 — the straggler trace is formalized into the harness: `cfg_gap`
+  in `resolve_cells`, the forwarding surface declared as data in `config_writer`,
+  and the legality census given the device-truth domain.** The one-off `/tmp`
+  trace is retired; each conclusion now has one home.
+  * `resolve_cells` emits `cfg_gap` (`identical` / `near` / `retile` /
+    `no-floor`) — the mechanical half of the tie taxonomy, derived from the two
+    resolved configs and reported in the table, the TSV and the JSON cache. The
+    reading stays in `potential_configs.md` §R17, which this corrected:
+    `DD:1024` / `DD:1365` are **re-tiles** (native ties on a *different, smaller*
+    tile), not the "width/DepthU step" the first reading called them.
+  * `config_writer.FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` declare the launch
+    boundary's surface once, pinned to the fork helpers by
+    `tests/test_writer_forwards_sweep_knobs.py`. `candidate_rows._NOT_FORWARDED_YET`
+    *is* `NOT_FORWARDED_KNOBS` (4 keys → 16), so a candidate naming
+    `1LDSBuffer` / `WaveSeparateGlobalRead*` / `TransposeLDS` /
+    `LdsBlockSizePerPad*` is stripped and reported instead of silently
+    benchmarking at the default (the §R16 placebo).
+  * `db_knobs.census_domain` (global ∪ family override) now feeds
+    `deck_review`'s legality census: the mutator's narrowed `forward_domain`
+    saves draws, but the census must report a structural refusal even when a
+    family domain drops it. This names `GlobalSplitU>1` on CC/ZZ again and fixes
+    the pre-existing red
+    `test_deck_review::test_structural_refusals_are_reported_with_their_rule`.
+  * `tests/test_resolve_cells.py`: a drifted corpus snapshot
+    (`CC:512 NumLoadsCoalescedA == 1`) was replaced by the invariant it stood in
+    for — the winning phase in the latest run carries no `NLCA` in its
+    `ForkParameters`, so the resolver was right and the pin was stale (the
+    anti-pattern the same file's provenance test warns against).
+  * Docs merge: `docs/README.md` now indexes `gfx90c_tuning_guide.md`,
+    `kernel_tuning_research.md` and `complex_gemm_research_brief.md`;
+    `kernel_tuning_research.md`'s dangling `archive/corpus4…` pointer is gone
+    (the file was retired on the fold); `docs/agent_reference.md` gains the
+    straggler-read table, the unreachable-axis stop entry, the declared
+    forwarding surface and a repo-local post-run path.
 - **2026-10-15 — "THE ONE LOSER" (CC:256) triaged to a candidate-pool
   sweep-order bug, not a kernel deficit; fixed at the producer.** The last
   tracked LOSS cell (CC:256, −8.7 %, `run_20261013_214649`) was not a tuning

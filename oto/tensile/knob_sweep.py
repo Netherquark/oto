@@ -36,6 +36,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
+from oto.tensile.decks import KNOB_SWEEPS, KNOB_SWEEP_BASES  # noqa: E402
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:

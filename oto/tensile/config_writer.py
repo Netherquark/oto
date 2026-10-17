@@ -10,8 +10,9 @@ Does NOT own: the gates it consults (oto.tensile.gates), the shape parser it
 uses (oto.tensile.candidate.parse_tensile_shape), or the driver that calls it
 (oto.runners.benchmark).
 Public API: write_phase_config, TRANSPOSE_MAP, GLOBAL_LOAD_WIDTH_KEYS,
-FORWARDED_GROUP_C_KNOBS. (The driver's private `_TENSILE_VALID_PARAMS` is
-consulted at the launch boundary but is not re-exported here.)
+FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS, NOT_FORWARDED_KNOBS. (The driver's
+private `_TENSILE_VALID_PARAMS` is consulted at the launch boundary but is not
+re-exported here.)
 
 Forwarding surface -- the knobs the deck controls, the CPU gate that governs
 each, and that this writer emits them verbatim ("forwarded" means the key
@@ -31,6 +32,12 @@ reaches Tensile rather than being silently dropped at the launch boundary;
 | StaggerU / StaggerUMapping / StaggerUStride | store stagger | ``ldspad_feasible`` | yes (Group C) |
 | AssertFree0ElementMultiple | half Assembly GSU>1 legality | ``ldspad_feasible`` | yes (Group C) |
 | StoreCInUnroll | C-store unrolling | ``ldspad_feasible`` | yes (Group C) |
+| WaveSeparateGlobalRead*, ThreadSeparateGlobalRead*, 1LDSBuffer, TransposeLDS, UnrollMajorLDS*, LdsBlockSizePerPad*, DirectToVgpr*, GlobalReadPerMfma, LocalWritePerMfma, DepthULdsDivisor, PersistentKernel | not reachable | -- | **no** |
+
+The "yes" rows are enumerated, machine-readably, in ``FORWARDED_KNOBS``; the
+"no" row is ``NOT_FORWARDED_KNOBS``. A candidate naming a "no" knob benchmarks
+at the Tensile default, so the deck strips it and reports the drop rather than
+silently no-op'ing it.
 """
 
 from __future__ import annotations
@@ -87,6 +94,41 @@ FORWARDED_GROUP_C_KNOBS = ("LdsPadA", "LdsPadB", "AssertFree0ElementMultiple",
 #: emitting it is what killed all 127 T1 reference reruns at "Filling in
 #: Parameters With Defaults" having executed zero phases.
 _DEPRECATED_KEYS = ("MacroTile0", "MacroTile1")
+
+#: The COMPLETE forwarding surface: every Tensile ``ForkParameters`` name
+#: ``_fork_params`` can emit and ``_drop_unsupported`` leaves in place. Declared
+#: once so "is this knob real?" has a single, testable answer -- the deck became
+#: a placebo three times (``GlobalReduceVectorWidth``, the LDS pads, and
+#: StaggerUStride-forwarded-alone) precisely because the surface was only
+#: *implied* by the fork helpers. ``tests/test_writer_forwards_sweep_knobs.py``
+#: pins this tuple to them, and ``potential_configs.md`` §R16 is its prose.
+FORWARDED_KNOBS = (
+    "ThreadTile", "MacroTile", "WorkGroup",
+    "WorkGroupMapping", "GlobalSplitU",
+    "DepthU",
+    "VectorWidth", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
+    "NumLoadsCoalescedA", "NumLoadsCoalescedB",
+    "PrefetchGlobalRead", "PrefetchLocalRead",
+    "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode",
+    "FractionalLoad", "NonTemporalA", "NonTemporalB",
+    "AssertFree1ElementMultiple",
+) + FORWARDED_GROUP_C_KNOBS
+
+#: Valid Tensile parameters a builder may name, which the launch boundary does
+#: NOT forward. A candidate carrying one would benchmark at the Tensile default
+#: while its manifest claims the treatment ran -- a silent placebo. Declared so
+#: the deck can strip-and-REPORT it (``candidate_rows._NOT_FORWARDED_YET``)
+#: rather than no-op it, and so §R16/§R20 have one home for what is unreachable
+#: today and what it would cost to reach it.
+NOT_FORWARDED_KNOBS = (
+    "WaveSeparateGlobalReadA", "WaveSeparateGlobalReadB",
+    "ThreadSeparateGlobalReadA", "ThreadSeparateGlobalReadB",
+    "1LDSBuffer", "TransposeLDS", "UnrollMajorLDSA", "UnrollMajorLDSB",
+    "LdsBlockSizePerPadA", "LdsBlockSizePerPadB",
+    "DirectToVgprA", "DirectToVgprB",
+    "GlobalReadPerMfma", "LocalWritePerMfma", "DepthULdsDivisor",
+    "PersistentKernel",
+)
 
 
 # ---------------------------------------------------------------- readers
