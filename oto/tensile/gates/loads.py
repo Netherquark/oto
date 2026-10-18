@@ -62,19 +62,23 @@ def _load_geometry(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int,
     """(mt0, mt1, DepthU, tt0, tt1) from a config, or None when unusable.
 
     Why None is legal input: a config that does not name a tile is not this
-    gate's business, and the caller treats it as "nothing to check".
+    gate's business, and the caller treats it as "nothing to check". A tile that
+    is not a numeric ``MxN`` (a placeholder like ``"NONE"``) is unusable the same
+    way and must not raise -- :func:`tile_dims` in the occupancy gate fails
+    closed identically.
     """
     mt_clean = (str(config.get("MacroTile", "64x64x64")).upper()
                 .replace("MT", "").replace("SB_", "")
                 .replace("HB_", "").replace("DB_", ""))
-    mt_parts = [int(x) for x in re.split(r'[xX]', mt_clean)]
-    if len(mt_parts) < 2:
+    tt_clean = str(config.get("ThreadTile", "4x4")).lower().replace("_", "x")
+    try:
+        mt_parts = [int(x) for x in re.split(r'[xX]', mt_clean)]
+        tt_parts = [int(x) for x in re.split(r'[xX]', tt_clean)]
+    except ValueError:
+        return None
+    if len(mt_parts) < 2 or len(tt_parts) < 2:
         return None
     depthU = knob_int(config.get("DepthU"), mt_parts[2] if len(mt_parts) >= 3 else 16)
-    tt_parts = [int(x) for x in re.split(
-        r'[xX]', str(config.get("ThreadTile", "4x4")).lower().replace("_", "x"))]
-    if len(tt_parts) < 2:
-        return None
     tt0, tt1 = tt_parts[0], tt_parts[1]
     if tt0 <= 0 or tt1 <= 0:
         return None

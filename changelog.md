@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-18 — the unparseable-tile crash fixed; `occupancy_feasible`
+  decomposed.** Two robustness gaps left by the gate closure above, both pinned
+  by tests:
+  * **A placeholder tile no longer crashes a gate.** `loads._load_geometry`
+    documented "None when unusable" but called `int()` on a non-numeric
+    `MacroTile` (a `"NONE"` fork value), so `validate_tensile_loads` — and hence
+    `oto.harness.gate_calibration.audit` — raised `ValueError`. It now fails closed
+    to `None`, exactly as `occupancy.tile_dims` already did, and
+    `gate_calibration._tile_str`/`read_phase_config` gained the matching guard so
+    an unmodellable phase is *excluded* from the census rather than counted
+    gate-legal. Regression: `TestUnparseableTileFailsClosed`
+    and the two placeholder tests in `tests/test_gate_calibration.py`.
+  * **`occupancy_feasible` split back under the 60-line rule.**
+    `tests/test_function_length.py` (AC 1b) went red at 85 lines when the two new
+    rules landed; they moved into `_workgroup_file_check` /
+    `_lds_reduction_check`, and the model narrative into their docstrings. No
+    behaviour change: the census is unchanged (3349 phases / 3217 built / 132
+    refused, 0 misses, 0 false rejections) and the focused gate suite is green.
+
 - **2026-10-18 — the legality gate is closed, and the tile axes now have
   provable ceilings.** Three calibrated rules retire every remaining native
   empty phase: the workgroup register-file rule, the `LocalSplitU` LDS-reduction
@@ -80,7 +99,9 @@ and NOT the experimental data (that is `results.md`).
     pattern and family label recovered from their canonical homes
     (`config_writer.TRANSPOSE_MAP`, `library_parity.phase_family`) rather than a
     second copy. Reproduces the §R23 calibration exactly: native 2812 / 79 / 46
-    with 0 false rejections; the floor population keeps its documented 43.
+    with 0 false rejections; the floor population keeps its documented 43. (The
+    2026-10-18 rules above then turn those 46 misses into correct refusals, so
+    the live census is 3349 / 3217 / 132 — `results.md` §14.2.)
   * **`oto/harness/failure_triage.py`** — the empty-phase reason census (Tensile
     `reject:` lines, non-empty stderr, stdout tail, or no logs), per run and in
     aggregate: 9820 phase dirs, 944 with no non-empty CSV. Same output as the

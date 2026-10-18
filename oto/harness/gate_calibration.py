@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -77,10 +78,40 @@ def _first(value: Any) -> Any:
 
 
 def _tile_str(value: Any) -> Any:
-    """A tile/workgroup list -> the ``"MxN"`` string the gates parse."""
+    """A tile/workgroup list -> the ``"MxN"`` string the gates parse.
+
+    A list whose entries are not integers (e.g. ``["NONE"]``) is returned
+    unchanged, so :func:`_tile_parses` can reject it rather than this raising.
+    """
     if isinstance(value, (list, tuple)):
-        return "x".join(str(int(x)) for x in value)
+        try:
+            return "x".join(str(int(x)) for x in value)
+        except (TypeError, ValueError):
+            return value
     return value
+
+
+def _tile_parses(value: Any) -> bool:
+    """True when a tile is numeric ``MxN[ xD]`` (a dim the gates can model).
+
+    A fork value that is present but not numeric (a placeholder like ``"NONE"``)
+    is unmodellable: the gates' ``tile_dims``/``_load_geometry`` would fail
+    closed, so this phase must be *excluded* from the census rather than counted
+    as gate-legal. Prefixes the gates strip (``MT``/``SB_``/``HB_``/``DB_``) are
+    stripped here too, so the two agree on what a tile is.
+    """
+    clean = str(value).upper()
+    for prefix in ("MT", "SB_", "HB_", "DB_"):
+        clean = clean.replace(prefix, "")
+    parts = re.split(r"[xX]", clean)
+    if len(parts) < 2:
+        return False
+    for part in parts:
+        try:
+            int(part)
+        except ValueError:
+            return False
+    return True
 
 
 def read_phase_config(path: Path, phase_id: str) -> Optional[Dict[str, Any]]:
@@ -108,6 +139,12 @@ def read_phase_config(path: Path, phase_id: str) -> Optional[Dict[str, Any]]:
     for key in ("MacroTile", "ThreadTile", "WorkGroup"):
         if cfg.get(key) is not None:
             cfg[key] = _tile_str(cfg.get(key))
+    for key in ("MacroTile", "ThreadTile"):
+        value = cfg.get(key)
+        if value is not None and not _tile_parses(value):
+            # Present but unmodellable (e.g. a "NONE" placeholder): the gates
+            # cannot judge it, so the census must exclude it, not call it legal.
+            return None
 
     cfg["DataType"] = str(pt.get("DataType", "s")).upper()
     if pt.get("HighPrecisionAccumulate"):

@@ -616,6 +616,30 @@ class TestUnknownDTypeFailsClosed(unittest.TestCase):
             self.assertTrue(ok, f"FamilyLabel {alias} must map to a real weight")
 
 
+class TestUnparseableTileFailsClosed(unittest.TestCase):
+    """A placeholder tile ("NONE") must not crash a gate; it fails closed.
+
+    The gates cannot model a non-numeric MacroTile, so each reports "nothing to
+    check" rather than raising -- the contract ``tile_dims``/``_load_geometry``
+    document, and the case that used to crash ``gate_calibration`` on a phase
+    config whose fork carried a placeholder.
+    """
+
+    def test_load_gate_does_not_raise_on_a_placeholder_tile(self):
+        for macro in ("NONE", ["NONE"], "MT_NONE", None):
+            with self.subTest(macro=macro):
+                ok, why = validate_tensile_loads(
+                    cfg("S", "64x64x8", "4x4", MacroTile=macro))
+                self.assertTrue(ok, why)
+
+    def test_occupancy_gate_does_not_raise_on_a_placeholder_tile(self):
+        for macro in ("NONE", ["NONE"], None):
+            with self.subTest(macro=macro):
+                ok, why = occupancy_feasible(
+                    cfg("S", "64x64x8", "4x4", MacroTile=macro))
+                self.assertEqual((ok, why), (True, ""))
+
+
 class TestThreadTileCancellation(unittest.TestCase):
     def test_unchanged_config_is_still_legal(self):
         self.assertTrue(occupancy_feasible(cfg("S", "64x64x8", "4x4"))[0])

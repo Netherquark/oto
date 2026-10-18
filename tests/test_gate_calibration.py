@@ -93,6 +93,19 @@ class TestReadPhaseConfig(unittest.TestCase):
             self.assertEqual(cfg["FamilyLabel"], "SS")
             self.assertEqual(cfg["ContractionPattern"], "Ailk_Bjlk")
 
+    def test_placeholder_tile_is_excluded_not_a_crash(self):
+        """A non-numeric MacroTile is unmodellable -> None, never a ValueError.
+
+        Regression: a phase whose fork carried a ``"NONE"`` placeholder crashed
+        ``audit`` inside the loads gate's ``int()``.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            cfg_dir = Path(td) / "configs"
+            cfg_dir.mkdir()
+            _phase_yaml(cfg_dir / "phase_none.yaml", ("NONE", "NONE"), (4, 4), 8, 2)
+            self.assertIsNone(
+                gc.read_phase_config(cfg_dir / "phase_none.yaml", "phase_ss_x"))
+
 
 class TestMeasurementProduced(unittest.TestCase):
     def test_empty_or_missing_dir(self):
@@ -139,6 +152,25 @@ class TestAudit(unittest.TestCase):
             self.assertEqual(result["meta"]["filtered_out"], 0)
             # the ZZ-ish? none; all phases are SS here
             self.assertEqual(result["populations"]["ours"]["phases"], 4)
+
+
+class TestPlaceholderTileExcluded(unittest.TestCase):
+    def test_unmodellable_phase_is_excluded_from_the_census(self):
+        """A phase with a placeholder tile is not counted at all, not 'legal'."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run = root / "gfx90c_runs" / "run_test"
+            cfg = run / "configs"
+            cfg.mkdir(parents=True)
+            ph = run / "phase_none"
+            (ph / "2_BenchmarkData").mkdir(parents=True)
+            _phase_yaml(cfg / "phase_phase_none.yaml", ("NONE", "NONE"), (4, 4), 8, 2)
+            (ph / "2_BenchmarkData" / "x.csv").write_text("a,b\n1,2\n")
+            result = gc.audit(str(root))
+            ours = result["populations"]["ours"]
+            self.assertEqual(ours["phases"], 0)
+            self.assertEqual(ours["built"], 0)
+            self.assertEqual(ours["false_rejections"], [])
 
 
 class TestMain(unittest.TestCase):

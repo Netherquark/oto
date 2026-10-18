@@ -267,45 +267,32 @@ def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
 def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Register-file gate: reject configs Tensile cannot generate.
 
-    Complements (does not replace) the divisibility and assembly-class gates:
-    an over-wide thread tile passes all of those and still dies here.
+    Complements the divisibility and assembly-class gates: an over-wide thread
+    tile passes those and still dies here. Three calibrated rules, in the order
+    Tensile reaches them:
 
-    The constraint is on **ThreadTile**, not MacroTile. A thread holds
-    TT0 x TT1 accumulators, each `weight` VGPRs, so
+    * per-thread accumulators -- ``TT0*TT1*weight > ACCVGPR_BUDGET`` (128).
+      Tensile refuses past 256 VGPRs/thread; on gfx90c complex (Z), TT 4x4 =
+      128 accVGPR passes and TT 8x4 = 256 -> 271 VGPRs FAILs.
+    * the workgroup register file -- ``weight*MT0*MT1*LSU >= 65536`` (error 4,
+      see :func:`_workgroup_file_check`); ThreadTile cancels, so it bounds
+      MacroTile *area*.
+    * the LDS reduction buffer -- ``LSU>1`` and
+      ``LSU*MT0*MT1*computeBytes > 65536`` (``MaxLDS``, see
+      :func:`_lds_reduction_check`).
 
-        accVGPRs = TT0 * TT1 * weight
-
-    and MacroTile only changes how many threads share the file, not the
-    per-thread cost. Tensile then refuses to emit a kernel once the per-thread
-    total crosses 256 VGPRs. Measured on gfx90c, complex (Z, weight 8):
-
-        TT 2x2 ->  32 accVGPR ->  63-71 VGPRs  ok
-        TT 4x2 ->  64 accVGPR ->  95-99 VGPRs  ok
-        TT 4x4 -> 128 accVGPR -> 154-199 VGPRs  ok
-        TT 8x4 -> 256 accVGPR -> 271 VGPRs     FAIL "not in [0, 256]"
-        TT 8x8 -> 512 accVGPR -> 519 VGPRs     FAIL
-
-    A *second*, independent constraint bounds the workgroup total: the
-    accumulators of every thread together must fit in the 64K-VGPR file with
-    room to spare, i.e. ``R*MT0*MT1*LocalSplitU < 65536``. The thread tile
-    cancels out, so this fires on wide MacroTiles the per-thread rule accepts
-    (C/ZZ 128x128x8 tt4x4: 64 accVGPR/thread passes the 128 budget, but
-    1024 threads * 64 = 65536 fills the file and Tensile raises error 4). Both
-    rules are calibrated on the corpus (0 false rejections, 40 empty phases for
-    the file rule), and the LDS-reduction rule below adds 13 more.
-
-    An earlier version of this gate modelled MacroTile area instead and was
-    wrong in both directions: it passed TT 8x4 complex (the 8 ZZ phases that
-    died 116 times each across real runs) and rejected nothing that Tensile
-    accepts. See potential_configs.md for the full post-mortem.
+    All three are corpus-calibrated with 0 false rejections. An earlier version
+    modelled MacroTile *area* at ``<= 65536/2`` instead and was wrong in both
+    directions (it passed the 8 ZZ TT8x4 phases that died 116 times each); the
+    post-mortem is in ``potential_configs.md``.
 
     Args:
         config: A Tensile solution dict.
 
     Returns:
-        ``(True, "")`` when the config is launchable, else
-        ``(False, reason)``. A config with no readable tile dims passes with
-        \"nothing to model\" -- other gates own that case.
+        ``(True, "")`` when the config is launchable, else ``(False, reason)``.
+        No readable tile dims -> ``(True, "")`` ("nothing to model"); other
+        gates own that case.
     """
     dims = tile_dims(config)
     if not dims:
@@ -317,38 +304,58 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
         # Fail closed: an unmodelled dtype could be a complex one (Z weights 8),
         # and guessing low would let a config through that then dies as error 4.
         return False, _unknown_dtype_rejection(ch)
-    ku = depth_u(config)
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
         return False, _accvgpr_rejection(ch, r, tt0, tt1, acc)
-
-    # Workgroup register file: R*MT0*MT1*LSU >= 65536 is exactly
-    # "the accumulator set alone fills the 64K file", so Tensile's
-    # numWorkGroupsPerCU check (functionSuffix) cannot reach 1 -> error 4.
     lsu = local_split_u(config)
-    if r * mt0 * mt1 * lsu >= VGPR_PER_CU:
-        return False, _workgroup_vgpr_rejection(
-            ch, r, mt0, mt1, lsu, num_threads(dims, lsu))
-
-    # LDS reduction buffer (only emitted when LSU > 1): Tensile sizes it at
-    # LSU*MT0*MT1 compute elements and rejects at SolutionStructs:4334.
-    if lsu > 1:
-        compute = compute_bytes(config, ch)
-        if compute:
-            lds_reduction = lsu * mt0 * mt1 * compute
-            if lds_reduction > MAX_LDS_BYTES:
-                return False, _lds_reduction_rejection(
-                    ch, mt0, mt1, lsu, compute, lds_reduction)
-
+    reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
+    if reason:
+        return False, reason
+    reason = _lds_reduction_check(config, ch, mt0, mt1, lsu)
+    if reason:
+        return False, reason
+    ku = depth_u(config)
     if ku <= 0:
-        # Fail closed for the same reason as an unknown dtype weight: a config
-        # whose depth cannot be read computes a footprint up to 16x too small,
-        # which is exactly how 128x32x16 slipped through an earlier revision.
+        # Fail closed, like an unknown weight: an unread depth understates the
+        # LDS footprint up to 16x (how 128x32x16 once slipped through).
         return False, _undetermined_depth_rejection()
     lds = lds_base_bytes(mt0, mt1, ch) * ku
     if lds > LDS_BUDGET:
         return False, _lds_rejection(ch, mt0, mt1, ku, lds)
     return True, ""
+
+
+def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> Optional[str]:
+    """Reason when the accumulator set alone fills the 64K file, else None.
+
+    Tensile's ``KernelWriterAssembly.functionSuffix`` sets ``overflowedResources
+    = 4`` (error 4) when ``65536 // NumThreads // max(vgpr, agpr) < 1``. The
+    accumulators are always allocated, so ``weight*MT0*MT1*LSU`` is a sound lower
+    bound on the workgroup total and ``>= 65536`` is exactly "no room for one
+    workgroup". ThreadTile cancels, so this bounds MacroTile *area*.
+    """
+    if weight * mt0 * mt1 * lsu >= VGPR_PER_CU:
+        return _workgroup_vgpr_rejection(
+            ch, weight, mt0, mt1, lsu, num_threads(dims, lsu))
+    return None
+
+
+def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> Optional[str]:
+    """Reason when the LSU reduction buffer exceeds 64 KiB, else None.
+
+    Only emitted when ``LocalSplitU > 1``: Tensile sizes it at
+    ``LSU*MT0*MT1`` *compute* elements and rejects past ``MaxLDS`` at
+    ``SolutionStructs:4334``.
+    """
+    if lsu <= 1:
+        return None
+    compute = compute_bytes(config, ch)
+    if not compute:
+        return None
+    size = lsu * mt0 * mt1 * compute
+    if size > MAX_LDS_BYTES:
+        return _lds_reduction_rejection(ch, mt0, mt1, lsu, compute, size)
+    return None
 
 
 def _pads_feasible(config: Dict[str, Any], ku: int,
