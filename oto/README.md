@@ -134,4 +134,5 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``harness/occupancy_audit.py`` — Resident-workgroup audit per (family, shape) cell.
 * ``harness/regression_matrix.py`` — Deck-vs-floor-vs-all-time cell regression matrix.
 * ``harness/resolve_cells.py`` — Per-cell native-vs-floor winner resolution on the full knob surface.
+* ``harness/rule_calibration.py`` — Rule calibration: would a *proposed* gate rule add false rejections?
 

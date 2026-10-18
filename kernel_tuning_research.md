@@ -214,6 +214,16 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   the constraint the retired `R*MTarea <= 65536/2` area model was reaching for,
   with the right threshold (65536) and the right boundary (`>=`) —
   potential_configs.md §R24/§R27.
+- **The `NumThreads`-aware per-thread budget is a trap (probed, rejected).** The
+  obvious next rule is a per-thread VGPR ceiling `min(256, 65536 // NumThreads)`.
+  Probed against the corpus (`oto.harness.rule_calibration --rule nt_budget`,
+  2026-10-18) it would refuse **1 phase Tensile built** — complex `Z` tt2x2 at
+  64x64, `NumThreads = 1024` → budget 64 against a measured 71 VGPRs — so it
+  adds a false rejection and must not land. It is kept in the harness as the
+  worked counter-example that a rule is calibrated *in isolation, before it
+  becomes a gate*. The shipped workgroup rule is sound precisely because it
+  stops at the accumulator *lower bound* (`R*MT0*MT1*LSU`) rather than the
+  measured total.
 - **The 16-B global-load cap check runs early.** `SolutionStructs.py:3459-3461`
   (`GLVW * numBytes() > 16`) is evaluated *before* `setGlobalLoadVectorWidth`
   reduces pv (`:2010`), so a ZZ tile at `VectorWidth=2` is refused on the cap

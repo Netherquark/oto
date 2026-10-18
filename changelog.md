@@ -9,6 +9,21 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-18 — the rule-calibration probe, formalised from the throwaway
+  `/tmp` scripts.** `oto/harness/rule_calibration.py` applies any candidate
+  rule — a `config -> Optional[bool]` predicate — to the corpus and reports the
+  decision-rule confusion: false rejections on built phases (must be **0** before
+  a rule lands) and empty-phase catches, by family. The `builtin_rules` registry
+  ships the two shipped rules as *views* of the gate
+  (`occupancy.refuses_workgroup_register_file` / `refuses_lds_reduction_buffer`,
+  so a probe cannot drift from the enforcement), the generator-seam `apm2` rule,
+  and the **rejected** `nt_budget` candidate (`min(256, 65536//NumThreads)` — 1
+  false rejection, kept as the worked counter-example). `--rule module:attr` (or
+  `path.py:attr`) probes a rule that is not in the gate yet. Live (ours):
+  `workgroup_file` 0 false rejections / 40 caught, `lds_reduction` 0/13, `apm2`
+  0/28, `nt_budget` 1/26. Registered in `oto/README.md`, `claude.md` §2.2/§5,
+  `docs/harness_runbook.md`, `docs/agent_reference.md`; the `nt_budget` finding
+  folded into `kernel_tuning_research.md` §4.
 - **2026-10-18 — the unparseable-tile crash fixed; `occupancy_feasible`
   decomposed.** Two robustness gaps left by the gate closure above, both pinned
   by tests:

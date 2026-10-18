@@ -57,7 +57,8 @@ above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that
 old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model;
 post-mortem in potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible, occupancy_workgroups_per_cu,
-dtype_char, tile_dims.
+dtype_char, tile_dims, refuses_workgroup_register_file,
+refuses_lds_reduction_buffer.
 """
 
 from __future__ import annotations
@@ -356,6 +357,45 @@ def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> Optional[str]:
     if size > MAX_LDS_BYTES:
         return _lds_reduction_rejection(ch, mt0, mt1, lsu, compute, size)
     return None
+
+
+def refuses_workgroup_register_file(config: Dict[str, Any]) -> Optional[bool]:
+    """The workgroup-register-file rule as a standalone predicate.
+
+    ``None`` when the config cannot be modelled (unreadable tile dims or an
+    unmapped dtype -- other gates own that case), else whether
+    ``weight*MT0*MT1*LocalSplitU >= 65536``. This is the calibration-facing form
+    ``oto.harness.rule_calibration`` probes; it re-uses the same
+    :func:`_workgroup_file_check` ``occupancy_feasible`` enforces, so the two
+    cannot drift.
+    """
+    dims = tile_dims(config)
+    if not dims:
+        return None
+    mt0, mt1, _tt0, _tt1 = dims
+    ch = dtype_char(config)
+    weight = VGPR_PER_ELEMENT.get(ch)
+    if weight is None:
+        return None
+    return _workgroup_file_check(
+        dims, mt0, mt1, weight, local_split_u(config), ch) is not None
+
+
+def refuses_lds_reduction_buffer(config: Dict[str, Any]) -> Optional[bool]:
+    """The LSU LDS-reduction-buffer rule as a standalone predicate.
+
+    ``None`` when the config cannot be modelled, else whether Tensile's
+    reduction buffer exceeds ``MaxLDS`` (only possible when ``LocalSplitU > 1``):
+    ``LSU*MT0*MT1*computeBytes > 65536``. Calibration-facing form of
+    :func:`_lds_reduction_check`, kept on the same code path so the probe and the
+    gate agree by construction.
+    """
+    dims = tile_dims(config)
+    if not dims:
+        return None
+    mt0, mt1, _tt0, _tt1 = dims
+    return _lds_reduction_check(
+        config, dtype_char(config), mt0, mt1, local_split_u(config)) is not None
 
 
 def _pads_feasible(config: Dict[str, Any], ku: int,

@@ -235,6 +235,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
 | Is this forward-knob domain deck-safe, or does it generate refusals? | `python3 -m oto.tools.deck_review legality` (`--family CC`) |
 | Do the launch gates agree with what Tensile actually built? (false rejections / misses) | `python3 -m oto.harness.gate_calibration` (`--population ours`, `--fail-on-false-reject`) |
+| Would a *proposed* gate rule add false rejections? (calibrate a rule in isolation, before implementing it) | `python3 -m oto.harness.rule_calibration` (`--rule <builtin\|module:attr>`, `--fail-on-false-reject`) |
 | Why did a phase produce no measurement? (empty-phase reason census) | `python3 -m oto.harness.failure_triage` (`--run <id>`) |
 | How many configs per cell, and does a top-K cap lose a winner? | `python3 -m oto.tools.deck_review flood` (`--cap 24`) |
 
@@ -422,7 +423,11 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   build. `bytesPerElement` is NOT the VGPR weight (f64 = 8 bytes but 2 VGPRs).
   A fifth, generator-seam rule (`candidate._non_generative_knob_rejection`)
   refuses `AggressivePerfMode` outside {0,1}, which the assembly path cannot
-  emit.
+  emit. **Before any new rule lands it must be probed in isolation with
+  `python3 -m oto.harness.rule_calibration --rule <module:attr>` and show 0
+  false rejections**, then confirmed in situ with `gate_calibration`; a rule
+  that refuses even one built phase is not allowed to ship (the `nt_budget`
+  builtin is the worked counter-example — 1 false rejection, rejected).
 - The native-vs-spoof A/B floor is the dedicated `gfx900_ref_*` run chain (recalled,
   never re-run). `--auto` auto-resumes an incomplete floor, but it **always
   proceeds to native tuning** — the floor is attempted, never a gate. If the floor

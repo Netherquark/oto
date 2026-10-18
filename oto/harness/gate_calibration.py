@@ -171,8 +171,12 @@ def _empty_population() -> Dict[str, Any]:
             "misses": []}
 
 
-def _population_of(run_name: str) -> str:
-    """Native candidate vs the replayed gfx900 floor (matching kernel_db)."""
+def population_of(run_name: str) -> str:
+    """Native candidate vs the replayed gfx900 floor (matching kernel_db).
+
+    Public because the corpus censuses (``gate_calibration``,
+    ``rule_calibration``) must split the same way.
+    """
     return "reference" if run_name.startswith("gfx900_ref") else "ours"
 
 
@@ -202,7 +206,7 @@ def audit(base: str = ".", families: Optional[Sequence[str]] = None) -> Dict[str
 
     for run in sorted(d for d in runs_dir.iterdir() if d.is_dir()):
         meta["runs"] += 1
-        pop = populations[_population_of(run.name)]
+        pop = populations[population_of(run.name)]
         cfg_dir = run / "configs"
         for phase_dir in sorted(d for d in run.iterdir()
                                 if d.is_dir() and d.name.startswith("phase")):

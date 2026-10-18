@@ -26,6 +26,7 @@ python3 -m pytest -q
 # 5. Gate calibration / failure triage (CPU-only, read-only)
 python3 -m oto.harness.gate_calibration --population ours
 python3 -m oto.harness.failure_triage
+python3 -m oto.harness.rule_calibration               # probe proposed rules
 ```
 
 ## Key Files
@@ -44,6 +45,7 @@ python3 -m oto.harness.failure_triage
 | `oto/tools/deck_review.py` | The three pre-deck questions; its legality census draws the device-truth domain |
 | `oto/harness/kernel_db.py` | kernel_db.json builder |
 | `oto/harness/gate_calibration.py` | Gate-vs-corpus agreement census: false rejections (gate too strict) and misses (gate too loose) |
+| `oto/harness/rule_calibration.py` | Probe a proposed gate rule in isolation: false rejections (must be 0) + empty-phase catches, by family |
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |

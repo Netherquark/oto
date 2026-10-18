@@ -12,6 +12,7 @@ boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
 ```
 oto/harness/gate_calibration.py   # gate-vs-corpus agreement census (false rejections + misses)
 oto/harness/failure_triage.py     # empty-phase reason census (why did a phase produce nothing)
+oto/harness/rule_calibration.py   # probe a *proposed* rule in isolation (false rejections + catches)
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
@@ -159,7 +160,12 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    65536`, Tensile error 4), and the LSU LDS-reduction cap (`LSU*MT0*MT1*compute
    <= 65536`). Register-file wg/CU 512–8192. No occupancy regression below the
    floor's. Current gate status is reported by the live tools
-   (`python3 -m oto.harness.gate_calibration --population ours`).
+   (`python3 -m oto.harness.gate_calibration --population ours`). **To add a
+   rule, probe it first:** `python3 -m oto.harness.rule_calibration --rule
+   <module:attr>` applies a `config -> Optional[bool]` predicate to the corpus
+   and prints its false rejections (must be 0) and catches; the `builtin_rules`
+   registry ships the shipped rules as views of the gate plus the rejected
+   `nt_budget` counter-example.
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or
