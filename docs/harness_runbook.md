@@ -153,9 +153,13 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    Non-cube probe shapes have no cell: they are fine to measure, reported as
    non-cube shapes (never under coverage).
 2. **Occupancy (CPU gate).** New kernels must pass
-   `oto.tensile.gates.occupancy.occupancy_feasible` (register-file wg/CU 512–8192).
-   No occupancy regression below the floor's. Current gate status is reported by
-   the live tools.
+   `oto.tensile.gates.occupancy.occupancy_feasible`, which enforces three
+   calibrated 0-false-rejection constraints: the per-thread accumulator cap
+   (`TT0*TT1*R <= 128`), the workgroup register-file cap (`R*MT0*MT1*LSU <
+   65536`, Tensile error 4), and the LSU LDS-reduction cap (`LSU*MT0*MT1*compute
+   <= 65536`). Register-file wg/CU 512–8192. No occupancy regression below the
+   floor's. Current gate status is reported by the live tools
+   (`python3 -m oto.harness.gate_calibration --population ours`).
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or

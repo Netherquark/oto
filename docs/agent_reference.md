@@ -114,12 +114,19 @@ class; `potential_configs.md` §R17 reads it into a route:
 ## Do not search
 
 - `MatrixInstruction` / `DirectToLds` — rejected or actively harmful
-- `ThreadTile` width ladders for C/Z — accumulator cap makes every wider tile illegal
+- `ThreadTile` width ladders for C/Z — the per-thread accumulator cap (`TT0*TT1*R
+  > 128`) makes every wider thread tile illegal
+- **Wider MacroTile for C/Z** — provably closed (`potential_configs.md` §R27):
+  the workgroup register-file rule (`R*MT0*MT1*LSU < 65536`) caps area at
+  `65536/R`, so the widest legal complex tiles are CC `128x64` and ZZ
+  `64x64`/`128x32`; a brute force above those areas finds none legal
 - `LdsPad`/LDS-layout work on bandwidth-oversupplied families
 - `-mllvm -amdgpu-*` compiler flags (no-op: ~93% of shipped library is ISA text)
-- `AggressivePerfMode=2` — measured dead: 0 `.hsaco` for every family and every
-  tile across two runs, while its mode-1 control built 20. It cost phases, not
-  evidence. See `potential_configs.md` §R23.
+- `AggressivePerfMode=2` — now **refused at the generator seam**
+  (`candidate._non_generative_knob_rejection`): the assembly path cannot emit it
+  (`Components/Priority.py` dispatches only 0/1, so `MAC_F32C` raises
+  `TypeError`). 0/28 built across every family. The writer still forwards it by
+  contract. See `potential_configs.md` §R24.
 - `MaxOccupancy` assumptions without measurement
 - `WaveSeparateGlobalReadA/B`, `ThreadSeparateGlobalReadA/B`, `1LDSBuffer`,
   `TransposeLDS`, `UnrollMajorLDSA/B`, `LdsBlockSizePerPadA/B`, `DirectToVgprA/B`

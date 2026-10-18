@@ -398,14 +398,26 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   native deck hardcoded exactly that for SS/HH/DD. `cap_vector_width()` derives
   the width; `test_occupancy_gate.py` fails if any family deck cannot reach 16 B.
   Do not re-add a hand-picked narrower width as the only option.
-- **Two measured resource limits gate every candidate, on two different
-  parameters** (both derived from Tensile's own kernel writer, not guessed):
-  `ThreadTile0 x ThreadTile1 x dtype_weight <= 128` accumulator VGPRs per thread
-  (the hardware cap is 256/thread), and
-  `(MT0 + MT1) x DepthU x bytesPerElement <= 16384` for the LDS tile footprint.
-  Neither is a tuning knob and neither may be relaxed to admit a candidate: the
+- **Four calibrated resource limits gate every candidate** (all derived from
+  Tensile's own source, not guessed). The launch boundary runs them in
+  `validate_config`; `python3 -m oto.harness.gate_calibration --population ours`
+  proves **0 false rejections** on the corpus:
+  1. `ThreadTile0 x ThreadTile1 x dtype_weight <= 128` accumulator VGPRs per
+     thread (the hardware cap is 256/thread).
+  2. `(MT0 + MT1) x DepthU x bytesPerElement <= 16384` for the LDS tile
+     footprint.
+  3. `dtype_weight x MT0 x MT1 x LocalSplitU < 65536` — the *workgroup register
+     file* (Tensile error 4). ThreadTile cancels, so this caps MacroTile **area**
+     at `65536/weight` and is what makes the widest legal complex tiles CC
+     `128x64` / ZZ `64x64`/`128x32` (potential_configs.md §R24/§R27).
+  4. `LocalSplitU x MT0 x MT1 x computeBytes <= 65536` — the LDS reduction buffer
+     (only when `LocalSplitU > 1`; Tensile `MaxLDS`, `SolutionStructs:4108,4334`).
+  None is a tuning knob and none may be relaxed to admit a candidate: the
   2026-09-28 overnight run spent 288 of 309 attempts on phases that could never
   build. `bytesPerElement` is NOT the VGPR weight (f64 = 8 bytes but 2 VGPRs).
+  A fifth, generator-seam rule (`candidate._non_generative_knob_rejection`)
+  refuses `AggressivePerfMode` outside {0,1}, which the assembly path cannot
+  emit.
 - The native-vs-spoof A/B floor is the dedicated `gfx900_ref_*` run chain (recalled,
   never re-run). `--auto` auto-resumes an incomplete floor, but it **always
   proceeds to native tuning** — the floor is attempted, never a gate. If the floor

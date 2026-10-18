@@ -141,8 +141,9 @@ Readings:
 
 `DD:2048` native already sits at **100.2 % of the realistic DD ceiling** (floor
 96.6 % of median) — DD's big shapes are closed by physics, not by a kernel gap.
-The report's tie band this run is bracketed by the largest tie (`SS:1024`,
-+4.6 %) and the smallest win (`CC:256`, +7.8 %).
+The acceptance report uses the shipped tie band, `ab_band.TIE_BAND_PCT = 5 %`;
+this run brackets it exactly — the largest tie is `SS:1024` at +4.6 %, the
+smallest win `CC:256` at +7.8 %.
 
 ## R26 — the straggler class tracker
 
