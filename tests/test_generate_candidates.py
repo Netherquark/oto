@@ -334,3 +334,71 @@ class TestBeatTheSpoofInvariants:
         fps = [r["fp"] for r in target]
         assert len(ids) == len(set(ids)) == len(target)
         assert len(fps) == len(set(fps)) == len(target)
+
+
+class TestEveryDeckRowIsGenerative:
+    """No deck, ladder or batch row may be refused by the generator gate.
+
+    The 2026-10-18 §R24/§R27 review found the same dead wide-complex tiles
+    duplicated across three tables (`decks.FAMILY_DECKS`, `candidate_rows.LADDER`
+    and `candidate_rows.PLAN_BATCH`): CC 128x128x8 (the accumulators alone fill
+    the 64K register file -> Tensile error 4), ZZ 128x64/64x128 at 4x2/2x4
+    threads (GLVW does not divide the packed access), SS/HH 32x32x16/2x2 at
+    VW4/VW8 (a 2-wide thread tile cannot be a multiple of a 4/8-wide load), and
+    an SS 128x128x16 LSU-2 tie-adapt row (131072 B of LDS reduction buffer
+    against the 65536 ceiling). A row the gate refuses is a wasted draw, so this
+    pins that each table is gate-clean under every contraction pattern it is
+    instantiated with.
+
+    It is a *pin on the tables*, not on the gate: if the gate is calibrated to
+    accept a row that is genuinely legal, that row must be allowed here, which is
+    why the assertion is "no row refused", not an exact set.
+    """
+
+    PATTERNS = ("Ailk_Bljk", "Ailk_Bjlk", "Alik_Bljk", "Alik_Bjlk")
+
+    @staticmethod
+    def _template(family: str, pattern: str) -> dict:
+        from oto.device.peaks import FAMILY_DTYPE_CHAR
+        return {"Architecture": "gfx90c",
+                "DataType": FAMILY_DTYPE_CHAR[family],
+                "ContractionPattern": pattern,
+                "ScheduleName": "isa", "FamilyLabel": family}
+
+    def _is_refused(self, family, pattern, knobs):
+        from oto.tensile.candidate import CandidateGenerator
+        gen = CandidateGenerator(REPO)
+        cfg = {**self._template(family, pattern), **knobs}
+        return not gen.validate_config(cfg)[0]
+
+    def test_family_decks_are_gate_clean(self):
+        from oto.tensile.decks import FAMILY_DECKS
+        bad = []
+        for family, rows in FAMILY_DECKS.items():
+            for knobs in rows:
+                # Legal under *some* pattern is enough: the generator emits the
+                # row for whichever patterns accept it.
+                if all(self._is_refused(family, p, knobs)
+                       for p in self.PATTERNS):
+                    bad.append((family, knobs))
+        assert bad == [], f"gate refuses all patterns for: {bad}"
+
+    def test_ladder_is_gate_clean(self):
+        from oto.harness.candidate_rows import LADDER
+        bad = []
+        for family, rows in LADDER.items():
+            for knobs in rows:
+                if all(self._is_refused(family, p, knobs)
+                       for p in self.PATTERNS):
+                    bad.append((family, knobs))
+        assert bad == [], f"ladder rows refused by the gate: {bad}"
+
+    def test_plan_batch_is_gate_clean(self):
+        from oto.harness.candidate_rows import PLAN_BATCH
+        bad = [(e["fam"], e.get("note"))
+               for e in PLAN_BATCH
+               if self._is_refused(
+                   e["fam"], e["pattern"],
+                   {k: v for k, v in e.items()
+                    if k not in ("fam", "pattern", "note")})]
+        assert bad == [], f"PLAN_BATCH rows refused by the gate: {bad}"

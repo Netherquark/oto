@@ -33,6 +33,15 @@ OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.
 # ones listed are vetted against the gate (complex double caps TT at 4x4, etc).
 # Duplicated here so the generator does not depend on the deck precedence
 # and can add anisotropy the decks never expressed.
+#
+# 2026-10-18: five rows that the gate refuses were removed/repointed here too
+# (potential_configs.md §R24/§R27). This ladder was the *second* home of the
+# dead wide tiles: SS/HH `32x32x16/2x2` at VW4/VW8 (TT 2 cannot be a multiple
+# of a 4/8-wide load), CC `128x128x8/4x4` (the accumulators alone fill the 64K
+# register file -> Tensile error 4; the widest legal CC tile is 128x64 with 8x4
+# threads), and ZZ `128x64x8/4x2` / `64x128x8/2x4` (GLVW 1 does not divide a
+# packed-2 B/A access; the widest legal ZZ tiles use 4x4). No row below is
+# refused by the gate.
 
 LADDER: Dict[str, List[Dict[str, Any]]] = {
     "SS": [
@@ -48,7 +57,6 @@ LADDER: Dict[str, List[Dict[str, Any]]] = {
         {"MacroTile": "128x64x16", "ThreadTile": "8x4", "VectorWidth": 2},
         {"MacroTile": "32x64x8", "ThreadTile": "4x8", "VectorWidth": 4},
         {"MacroTile": "64x32x16", "ThreadTile": "4x4", "VectorWidth": 4},
-        {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 4},
         {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2},
         {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 4},
     ],
@@ -71,7 +79,7 @@ LADDER: Dict[str, List[Dict[str, Any]]] = {
         {"MacroTile": "256x128x8", "ThreadTile": "16x8", "VectorWidth": 4},
         {"MacroTile": "128x256x8", "ThreadTile": "8x16", "VectorWidth": 4},
         {"MacroTile": "96x96x16", "ThreadTile": "6x6", "VectorWidth": 2},
-        {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 8},
+        {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2},
         {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 4},
         {"MacroTile": "128x128x32", "ThreadTile": "8x8", "VectorWidth": 8},
     ],
@@ -81,7 +89,7 @@ LADDER: Dict[str, List[Dict[str, Any]]] = {
         {"MacroTile": "64x64x16", "ThreadTile": "4x4", "VectorWidth": 1},
         {"MacroTile": "128x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
         {"MacroTile": "64x128x8", "ThreadTile": "4x4", "VectorWidth": 2},
-        {"MacroTile": "128x128x8", "ThreadTile": "4x4", "VectorWidth": 2},
+        {"MacroTile": "128x64x8", "ThreadTile": "8x4", "VectorWidth": 2},
         {"MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 2},
         {"MacroTile": "32x64x16", "ThreadTile": "2x4", "VectorWidth": 2},
         {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2},
@@ -95,8 +103,8 @@ LADDER: Dict[str, List[Dict[str, Any]]] = {
         {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 1},
         {"MacroTile": "32x64x8", "ThreadTile": "2x4", "VectorWidth": 1},
         {"MacroTile": "64x32x8", "ThreadTile": "4x2", "VectorWidth": 1},
-        {"MacroTile": "128x64x8", "ThreadTile": "4x2", "VectorWidth": 1},
-        {"MacroTile": "64x128x8", "ThreadTile": "2x4", "VectorWidth": 1},
+        {"MacroTile": "128x32x8", "ThreadTile": "4x4", "VectorWidth": 1},
+        {"MacroTile": "32x128x8", "ThreadTile": "4x4", "VectorWidth": 1},
     ],
     "HH_HPA": [
         {"MacroTile": "128x64x8", "ThreadTile": "8x4", "VectorWidth": 2},
@@ -506,7 +514,15 @@ _TIE_ADAPT: List[Tuple[str, str, str, str, int, int,
     ("SS", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, [
         ({"NonTemporalA": 1}, "NonTemporalA on the deep tile"),
         ({"PrefetchGlobalRead": 0}, "PGR=0 (register/LDS relief)"),
-        ({"LocalSplitU": 2}, "LocalSplitU=2"),
+    ]),
+    # SS LSU=2: the winner tile is *illegal* at LSU 2 -- the reduction buffer
+    # 2*128*128*4 B = 131072 B exceeds the 65536 per-CU LDS ceiling
+    # (potential_configs.md §R24) -- so the wave-fill probe runs on the widest
+    # LEGAL LSU-2 tile instead: M and DepthU kept, N halved to sit exactly on
+    # the reduction cap, VW2 because a 4-wide load does not divide the 8x4
+    # operand access.
+    ("SS", "Ailk_Bjlk", "128x64x16", "8x4", 2, 16, [
+        ({"LocalSplitU": 2}, "LocalSplitU=2 on the widest legal tile"),
     ]),
     # HH:1024-4096 winner.  VW=8 is 2 B x 8 == the 16 B load cap.
     ("HH", "Ailk_Bjlk", "128x128x16", "8x8", 8, 16, [

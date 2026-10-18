@@ -314,14 +314,28 @@ vendor's.
   `128x128x8/4x8`, `128x96x8/8x4` are replaced with `128x64x8/8x4|4x4` and
   `64x128x8/4x8` (VW2) — the *provable* widest legal CC tile, never emitted at
   VW2. The ZZ rows `128x128x8/4x4`, `128x64x8/4x4` become `128x32x8/4x4` and
-  `32x128x8/4x4`.
+  `32x128x8/4x4`. The narrow SS/HH/ZZ rows are made explicit (the VW4/VW8 rows
+  silently clamped to VW2; the ZZ VW2 row is a duplicate of the bare one *and*
+  unbuildable, so it is removed).
+* **The same dead tiles had two further homes, both repaired.**
+  `candidate_rows.py` `LADDER` carried `CC 128x128x8/4x4` (the register-file
+  tile), `ZZ 128x64x8/4x2` and `ZZ 64x128x8/2x4` (GLVW does not divide the
+  packed access) and `SS/HH 32x32x16/2x2` at VW4/VW8; they are repointed to the
+  widest legal tiles (`CC 128x64x8/8x4`, `ZZ 128x32x8/4x4`, `ZZ 32x128x8/4x4`,
+  VW2). `PLAN_BATCH`'s SS `128x128x16/8x8/VW4` `LocalSplitU=2` tie-adapt row
+  needs a 131072 B reduction buffer against the 65536 ceiling, so the LSU probe
+  moves to `128x64x16/8x4/VW2` — the widest legal LSU-2 SS tile. **0 rows in
+  `FAMILY_DECKS`, `LADDER` or `PLAN_BATCH` are gate-refused**
+  (`TestEveryDeckRowIsGenerative`).
 * **`DECISION_TRIAL_TILES` D3** becomes the widest legal ZZ pair (D1/D2
   unchanged).
 * **New model pins (tests):** `TestWorkgroupRegisterFile`,
   `TestLdsReductionBuffer` (`tests/test_occupancy_gate.py`);
   `test_generator_refuses_the_dead_perf_mode` and
   `test_no_legal_complex_tile_is_wider_than_the_measured_max`
-  (`tests/test_knob_sweep.py`).
+  (`tests/test_knob_sweep.py`); `TestEveryDeckRowIsGenerative`
+  (`tests/test_generate_candidates.py`), which pins that no deck, ladder or
+  batch row is gate-refused under any contraction pattern.
 * **Preflight is the authority, not a number written here.** `python3
   check_candidates.py --quiet` → `0 illegal`;
   `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;

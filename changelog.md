@@ -42,8 +42,18 @@ and NOT the experimental data (that is `results.md`).
   * **Deck hygiene.** `phases.yaml`'s 4 dead `ZZ trialD3` rows (128x128, 128x64)
     are replaced with the widest legal ZZ tiles `128x32x8/4x4` and `32x128x8/4x4`
     (fingerprints recomputed); `check_candidates.py --quiet` is **284 rows, 0
-    illegal**. `decks.py`'s CC/ZZ wider rows likewise move to legal tiles, and
-    `DECISION_TRIAL_TILES` D3 is repointed with its rationale.
+    illegal**. The same dead tiles lived in two further homes and are repaired
+    there too: `decks.py`'s CC/ZZ wider rows move to legal tiles (CC `128x64x8`
+    at 8x4/4x4 and `64x128x8/4x8`, all VW2; ZZ `128x32x8`/`32x128x8`), the
+    narrow SS/HH/ZZ rows are made explicit (VW4/VW8 silently clamped to 2; the
+    ZZ VW2 duplicate is unbuildable and removed), and `candidate_rows.py`'s
+    `LADDER` (`CC 128x128x8/4x4`, `ZZ 128x64x8/4x2`, `ZZ 64x128x8/2x4`,
+    `SS/HH 32x32x16/2x2` at VW4/VW8) and `PLAN_BATCH` (the SS
+    `128x128x16/8x8` LSU-2 tie-adapt row, which needs 131072 B of reduction
+    buffer) are repaired the same way. `DECISION_TRIAL_TILES` D3 is repointed
+    with its rationale, and
+    `tests/test_generate_candidates.py::TestEveryDeckRowIsGenerative` pins that
+    no deck, ladder or batch row is refused under any contraction pattern.
   * **Tests.** `TestWorkgroupRegisterFile` and `TestLdsReductionBuffer`
     (`tests/test_occupancy_gate.py`), the APM generator-refusal and the
     no-wider-complex-tile brute force (`tests/test_knob_sweep.py`). Focused suite
