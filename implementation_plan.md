@@ -136,6 +136,13 @@ convergence verdict compares against these, throttled+median-of-seeds.
   12 ORANGE, **PROVISIONAL** floor): `CC:256` moved **TIE → WIN (+7.8 %)**, the
   R8 steal landing. Evidence `results.md` §14; reading `potential_configs.md`
   §R24–§R32 (rewrite 6).
+- The rule-calibration machinery behind those three rules is now a repo tool,
+  **`oto.harness.rule_calibration`**: it probes any candidate
+  `config -> Optional[bool]` predicate against the corpus and reports the false
+  rejections (must be 0) and empty-phase catches. `builtin_rules` re-verifies the
+  shipped rules as *views* of the gate and keeps the **rejected** `nt_budget`
+  candidate (`min(256, 65536//NumThreads)`, 1 false rejection) as the worked
+  counter-example; `--rule module:attr` probes a rule that is not in the gate yet.
 
 #### CC:256 loser resolved — candidate sweep-order bug (2026-10-15)
 - The last LOSS cell (CC:256) was a producer bug, not a kernel deficit:

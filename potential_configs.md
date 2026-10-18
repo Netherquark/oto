@@ -370,6 +370,7 @@ vendor's.
 python3 check_candidates.py --quiet
 python3 -m oto.harness.generate_candidates --dry-run
 python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
+python3 -m oto.harness.rule_calibration --fail-on-false-reject
 python3 -m oto.harness.failure_triage
 PYTHONPATH=. python3 oto/runners/cli.py --preflight
 python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
@@ -378,8 +379,9 @@ python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
 python3 port_tensile.py --auto --budget 10 --yes
 ```
 
-The gate calibration must print `0 MISS` and `0 FALSE REJECTION`; if it does not,
-a new phase is a gate bug, not a kernel result.
+The gate calibration must print `0 MISS` and `0 FALSE REJECTION`, and the rule
+probe `0 FALSE REJECTION`; if either does not, a new phase is a gate bug, not a
+kernel result.
 
 ---
 
