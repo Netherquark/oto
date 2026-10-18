@@ -9,6 +9,52 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-18 — the legality gate is closed, and the tile axes now have
+  provable ceilings.** Three calibrated rules retire every remaining native
+  empty phase: the workgroup register-file rule, the `LocalSplitU` LDS-reduction
+  rule, and a generator-seam refusal of the non-generative `AggressivePerfMode=2`.
+  `python3 -m oto.harness.gate_calibration --population ours` goes from 53 misses
+  to **0 misses, 0 false rejections** (3349 configs, 3217 built).
+  * **`oto/tensile/gates/vgpr_model.py`** — new canonical readers
+    `compute_bytes`, `is_hpa`, `local_split_u`, `num_threads` and the tables
+    `MAX_LDS_BYTES=65536`, `COMPUTE_BYTES_PER_ELEMENT` (HPA → f32). `local_split_u`
+    moved here from `loads.py` (one home), which now aliases it.
+  * **`oto/tensile/gates/occupancy.py`** — `occupancy_feasible` enforces two new
+    rules: `R*MT0*MT1*LSU >= 65536` (Tensile error 4; ThreadTile cancels, so this
+    is a *MacroTile* bound distinct from the per-thread one — 40 empty phases, 0
+    built refused) and `LSU*MT0*MT1*computeBytes > 65536` (Tensile `MaxLDS`; 13
+    empty, 0 built). Both 0-false-rejection on the native *and* reference
+    populations.
+  * **`oto/tensile/candidate.py`** — `_non_generative_knob_rejection` refuses
+    `AggressivePerfMode ∉ {0,1}` at the generator seam, beside
+    `AssertSizeMultiple: [1]` (0/28 built across all seven families;
+    `Components/Priority.py` dispatches only the boolean fingerprints, so
+    `Priority.find` → `None` → `MAC_F32C` `TypeError`). The writer still forwards
+    `AggressivePerfMode=2` verbatim — its contract test proves the forwarding —
+    so this is a draw-time refusal, not a launch-boundary one.
+  * **Ceilings.** The two register rules plus the LDS budget and the classic-load
+    divisibility make the "*wider MacroTile*" route per-dtype: area `< 65536/R`
+    (`SS/HH` 65536, `DD` 32768, `CC` 16384, `ZZ` 8192). A brute force over every CC
+    tile above 8192 and every ZZ tile above 4096 finds **none legal**; the widest
+    legal complex tiles are CC `128x64x8` and ZZ `64x64x8`/`128x32x8`. This retires
+    the `potential_configs.md` §8.2 "legal but never generated" headroom list,
+    whose four tiles all fill the register file.
+  * **Deck hygiene.** `phases.yaml`'s 4 dead `ZZ trialD3` rows (128x128, 128x64)
+    are replaced with the widest legal ZZ tiles `128x32x8/4x4` and `32x128x8/4x4`
+    (fingerprints recomputed); `check_candidates.py --quiet` is **284 rows, 0
+    illegal**. `decks.py`'s CC/ZZ wider rows likewise move to legal tiles, and
+    `DECISION_TRIAL_TILES` D3 is repointed with its rationale.
+  * **Tests.** `TestWorkgroupRegisterFile` and `TestLdsReductionBuffer`
+    (`tests/test_occupancy_gate.py`), the APM generator-refusal and the
+    no-wider-complex-tile brute force (`tests/test_knob_sweep.py`). Focused suite
+    green: 130 harness tests + 111 gate/sweep/writer tests.
+  * **Docs.** Rewrite 6 of `potential_configs.md` (§R24–§R32: the closed gate, the
+    tie taxonomy on `run_20261018_004835` — 20 WIN / 18 TIE / 0 LOSS — the
+    four-class straggler tracker, why no steal is now justified, the ceilings, the
+    per-cell ledger trace, the winning kernel-type pattern, and the deck rows);
+    the two mechanics promoted into `kernel_tuning_research.md` §4; the ceiling
+    table added to `gfx90c_tuning_guide.md` §1.1.
+
 - **2026-10-18 — the /tmp calibration and triage machinery formalised into the
   harness.** The two CPU-only scripts that backed the §R23 triage (the gate-vs-
   corpus agreement census and the empty-phase reason census) are now modules, so

@@ -43,7 +43,10 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # QUANT 32x32 at N=256 is 64 tiles / 7 CUs = 91% machine use,
             # the best packing of any tile in the ladder. Also 2x2 threads,
             # which halves VGPR pressure and doubles occupancy headroom.
-            {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
+            # VW2, not VW4: a 2-wide ThreadTile cannot be a multiple of a
+            # 4-wide load (`TT0=2 not multiple of VW=4`); the narrow probe is
+            # the point, so the load width follows the thread tile.
+            {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
             # QUANT 96x96 is non-power-of-two on purpose: ceil(2048/96)=22,
             # 22^2=484 tiles over 7 CUs quantizes far finer than 128x128's
             # 16^2=256, and at N=1365 it is the only tile in the ladder that
@@ -96,8 +99,10 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
             # QUANT HH:256 at 64x64 is 16 tiles / 7 = 76%; at 32x32 it is
             # 64 tiles and 91%, which is the only tile that meaningfully
-            # unpacks the 256 square on a 7-CU part.
-            {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 8, "WorkGroupMapping": 4},
+            # unpacks the 256 square on a 7-CU part. VW2, not VW8: a 2-wide
+            # ThreadTile cannot be a multiple of an 8-wide load, and half
+            # requires VW >= 2, so 2 is the only legal width for this probe.
+            {"MacroTile": "32x32x16", "ThreadTile": "2x2", "NLCA": 1, "VectorWidth": 2, "WorkGroupMapping": 4},
             # QUANT 96x96/6x6: 484 tiles at N=2048, and ceil(4096/96)=43 so
             # 43^2 tiles at the top cell -- the finest quantization in the
             # ladder. 6x6 threads cap this family at VW2, which the
@@ -123,7 +128,11 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # at N=256 and 16 at N=512. 32x32 is the only tile that fills 7
             # CUs. This is the single highest-leverage ZZ change.
             {"MacroTile": "32x32x8", "ThreadTile": "2x2", "NLCA": 1},
-            {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 2, "NLCA": 1},
+            # (Removed 2026-10-18: a `32x32x16/2x2/VectorWidth=2` row sat here.
+            # Complex double is 16 B/element, so the 16 B global-load cap admits
+            # VW1 only: the row was a duplicate of the bare 32x32x16 above *and*
+            # unbuildable (`GLVWA 2 * bpe 16 > 16`). VectorWidth is not a ZZ
+            # axis -- the deck must not pretend otherwise.)
             # MEASURED floor winner at ZZ:192 -- 32x32x8 on 4x4 threads, not
             # the 2x2 this deck had assumed. At complex double 4x4 is
             # TT0*TT1*8 = 128 accumulator VGPRs, exactly on the budget, so
@@ -142,13 +151,19 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # the only ZZ knob with measured support; include it.
             {"MacroTile": "64x64x16", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
-            # ---- 2026-10-14 (potential_configs.md F3/§8.2): legal and never
-            # generated. ZZ's largest emitted tile is 128x32x16; 128x128x8 at
-            # TT4x4 is 128 accumulator VGPRs, exactly on the budget, and
-            # gives AI 32 F/B against a 2.4 F/B ridge. Long unroll at the
-            # same width is also unexercised for the 4x4 thread tile.
-            {"MacroTile": "128x128x8", "ThreadTile": "4x4", "NLCA": 1},
-            {"MacroTile": "128x64x8", "ThreadTile": "4x4", "NLCA": 1},
+            # ---- 2026-10-18 (potential_configs.md §R24): the widest LEGAL ZZ
+            # tile. The 2026-10-14 rows here (128x128x8/tt4x4 and 128x64x8/tt4x4)
+            # were wrong: 128x128 and 128x64 make R*MTarea = 8*16384 / 8*8192 --
+            # 131072 / 65536 accumulator VGPRs across the workgroup, so the
+            # accumulators alone fill the 64K file and Tensile raises error 4
+            # ("Occupancy limit") before a kernel exists. The per-thread budget
+            # (TT4x4*8 = 128) is what the old comment read; the *workgroup*
+            # budget is the binding one. Brute force over every tile with area
+            # > 4096 (the widest emitted) confirms NO legal ZZ tile is wider --
+            # so 128x32 and 32x128 at DepthU 8 are the widest legal, and the
+            # asymmetric aspect is itself unexercised.
+            {"MacroTile": "128x32x8", "ThreadTile": "4x4", "NLCA": 1},
+            {"MacroTile": "32x128x8", "ThreadTile": "4x4", "NLCA": 1},
         ],
         # ---- CC: 2.5-19.7% of the FP32 roof on every cell, and the only
         # family where the floor's winning config was already run natively
@@ -183,15 +198,19 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             # to prove that rather than assume it.
             {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
-            # ---- 2026-10-14 (potential_configs.md F3/§8.2): the widest
-            # legal MacroTile at the widest legal accumulator. The corpus's
-            # largest CC tile ever emitted is 128x64, so all three rows below
-            # are unexplored. The accumulator cap is what stops TT going
-            # wider (`Occupancy limit: ThreadTile 6x6 needs 144 accumulator
-            # VGPRs`), so MacroTile is the only remaining axis.
-            {"MacroTile": "128x128x8", "ThreadTile": "8x4"},
-            {"MacroTile": "128x128x8", "ThreadTile": "4x8"},
-            {"MacroTile": "128x96x8", "ThreadTile": "8x4"},
+            # ---- 2026-10-18 (potential_configs.md §R24): the widest LEGAL CC
+            # MacroTile. The 2026-10-14 rows here were wrong. 128x128x8 at
+            # 8x4 *and* 4x8 makes R*MTarea = 4*16384 = 65536 accumulator VGPRs
+            # across the workgroup, so the accumulators alone fill the 64K file
+            # and Tensile raises error 4 before a kernel exists; 128x96x8/8x4
+            # fails classic-load divisibility (totalElements 1024 %
+            # (NumThreads*glvw) 768 != 0). Brute force over every CC tile with
+            # area > 8192 found NONE legal, so 128x64/64x128 at DepthU 8 is the
+            # widest legal CC tile -- and it was never emitted (the corpus max
+            # is the same 128x64 at VW1, never at VW2/8x4).
+            {"MacroTile": "128x64x8", "ThreadTile": "8x4", "VectorWidth": 2},
+            {"MacroTile": "128x64x8", "ThreadTile": "4x4", "VectorWidth": 2},
+            {"MacroTile": "64x128x8", "ThreadTile": "4x8", "VectorWidth": 2},
         ],
         # ---- HH_HPA: loses 7.7-9.8% at 2048/4096. The floor wins 4096 at
         # 128x64x8 with **8x4** threads and 2048 at the transposed
@@ -395,19 +414,25 @@ DECISION_TRIAL_TILES: List[Dict[str, Any]] = [
     {
         "decision": "D3",
         "family": "ZZ",
-        "knobs": {"MacroTile": "128x128x8", "ThreadTile": "4x4",
+        "knobs": {"MacroTile": "128x32x8", "ThreadTile": "4x4",
                   "VectorWidth": 1},
-        "why": "§8.2 headroom tile (AI 32 F/B at 13x ridge, never generated) "
-               "that keeps the ZZ deck non-empty under either D2 reading. "
-               "Exactly at the gate budget at bpe=8.",
+        "why": "The widest LEGAL ZZ tile after the workgroup register-file rule "
+               "(potential_configs.md §R24). 128x128x8 and 128x64x8 -- the "
+               "2026-10-14 'headroom' rows -- make R*MTarea = 8*16384 / 8*8192 "
+               "accumulator VGPRs across the workgroup, so the accumulators "
+               "alone fill the 64K file and Tensile dies with error 4 before a "
+               "kernel exists. Brute force over every ZZ tile with area > 4096 "
+               "finds none legal, so 128x32x8 is the wide end and the aspect "
+               "ratio is the only unexercised axis.",
     },
     {
         "decision": "D3",
         "family": "ZZ",
-        "knobs": {"MacroTile": "128x64x8", "ThreadTile": "4x4",
+        "knobs": {"MacroTile": "32x128x8", "ThreadTile": "4x4",
                   "VectorWidth": 1},
-        "why": "Asymmetric §8.2 ZZ headroom tile (never generated); survives "
-               "either D2 reading.",
+        "why": "The transposed partner of the widest legal ZZ tile (never "
+               "generated). Same area, opposite aspect, so the pair decides "
+               "whether ZZ prefers an M-major or N-major wide tile.",
     },
 ]
 

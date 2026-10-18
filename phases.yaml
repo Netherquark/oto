@@ -5528,8 +5528,8 @@
     ThreadTile: 4x4
     VectorWidth: 1
   fp: 07ec3a55e01dcc64dddac1409095983a4589f640e66c1302210569c8fd146543
-- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt128x128x8_tt4x4_trialD3
-  label: ZZ_Ailk_Bljk_512x512x512_mt128x128x8_tt4x4_trialD3
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt128x32x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_512x512x512_mt128x32x8_tt4x4_trialD3
   dtype: Z
   shapes:
   - 512x512x512
@@ -5542,12 +5542,12 @@
     ProblemType: 512x512x512
     ScheduleName: isa
     FamilyLabel: ZZ
-    MacroTile: 128x128x8
+    MacroTile: 128x32x8
     ThreadTile: 4x4
     VectorWidth: 1
-  fp: 1889f95f171d9b0d31e24b689053f7561417c06503947e43b266ceda61e18406
-- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt4x4_trialD3
-  label: ZZ_Ailk_Bljk_1024x1024x1024_mt128x128x8_tt4x4_trialD3
+  fp: ffb0e791894994612af5ecaf5e8c69d6e0d3ddf375cc43c77f784b6d1eb32e59
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt128x32x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt128x32x8_tt4x4_trialD3
   dtype: Z
   shapes:
   - 1024x1024x1024
@@ -5560,12 +5560,12 @@
     ProblemType: 1024x1024x1024
     ScheduleName: isa
     FamilyLabel: ZZ
-    MacroTile: 128x128x8
+    MacroTile: 128x32x8
     ThreadTile: 4x4
     VectorWidth: 1
-  fp: cd8cde5a823ca0cc58416cf7ac0706f33a61a0648e3a2d51e306f5ef2685b3de
-- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt128x64x8_tt4x4_trialD3
-  label: ZZ_Ailk_Bljk_512x512x512_mt128x64x8_tt4x4_trialD3
+  fp: d4aff8591113b17675e7407dc135d07d587503ad5e35036fa79df72e3b4502c7
+- phase_id: phase_zz_Ailk_Bljk_512x512x512_mt32x128x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_512x512x512_mt32x128x8_tt4x4_trialD3
   dtype: Z
   shapes:
   - 512x512x512
@@ -5578,12 +5578,12 @@
     ProblemType: 512x512x512
     ScheduleName: isa
     FamilyLabel: ZZ
-    MacroTile: 128x64x8
+    MacroTile: 32x128x8
     ThreadTile: 4x4
     VectorWidth: 1
-  fp: 37b3f7437b1c368277fe153b9046579779accd9c62ef95e4bac03879a474ac26
-- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt128x64x8_tt4x4_trialD3
-  label: ZZ_Ailk_Bljk_1024x1024x1024_mt128x64x8_tt4x4_trialD3
+  fp: c40644fb0489a366f64b026f63544df2894c5a48060ab0ce99a496f329a78a09
+- phase_id: phase_zz_Ailk_Bljk_1024x1024x1024_mt32x128x8_tt4x4_trialD3
+  label: ZZ_Ailk_Bljk_1024x1024x1024_mt32x128x8_tt4x4_trialD3
   dtype: Z
   shapes:
   - 1024x1024x1024
@@ -5596,7 +5596,7 @@
     ProblemType: 1024x1024x1024
     ScheduleName: isa
     FamilyLabel: ZZ
-    MacroTile: 128x64x8
+    MacroTile: 32x128x8
     ThreadTile: 4x4
     VectorWidth: 1
-  fp: 0c99024ffab3c0763df696db8b3db55113445b841226274706aa057d22d32dc2
+  fp: e2a5d9f62714d0ad1dde84e7dc59fed101a38207c723f0d9efa5919d0ccbe259

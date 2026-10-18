@@ -23,25 +23,39 @@ i.e. error 4 is REGISTER-FILE exhaustion, not LDS. It is only detectable at
 kernel-generation time, which is why it cannot be caught by the divisibility
 or assembly-class gates -- those all pass on a config that dies here.
 
-Model. With NumThreads = (MT0/TT0)*(MT1/TT1):
+Model. With NumThreads = (MT0/TT0)*(MT1/TT1)*LocalSplitU:
 
     acc_vgprs_per_thread = TT0*TT1*R
     budget               = 65536 // NumThreads
-    acc/budget           = R * MT0 * MT1 / 65536      <- ThreadTile cancels
+    acc/budget           = R * MT0 * MT1 * LSU / 65536
 
-so the decision depends only on dtype weight R and MacroTile AREA. R
-additionally absorbs the operand/address/local-read pipeline registers that an
-accumulator-only count misses.
+The per-thread accumulator count (TT0*TT1*R) is what the 256 VGPR ISA ceiling
+bounds; the *workgroup total* (R*MT0*MT1*LSU) is what Tensile's file check
+bounds. The ThreadTile cancels out of the file check, so the two rules are
+genuinely different constraints and both must be enforced:
+
+  * per-thread:  TT0*TT1*R > 128          -> "total vgpr not in [0, 256]"
+                 (TT 8x4 complex, the 8 ZZ phases that died 116 times each)
+  * per-workgroup: R*MT0*MT1*LSU >= 65536 -> error 4 "Occupancy limit"
+                 (C 128x128x8/tt4x4, Z 128x64x8/tt8x4: the accumulator alone
+                  fills the 64K file, leaving nothing for operands)
+
+The per-workgroup rule uses ``>=`` (not ``>``): an accumulator count equal to the
+whole file already leaves no VGPRs for operands or addresses, so the kernel must
+overflow. Calibrated cell-by-cell on the corpus (`gate_calibration`), it refuses
+0 built phases and 40 empty ones.
 
 RETIRED: this gate used to model R * MacroTile_area <= 65536/2. That model was
 calibrated against the pass/fail boundary but was structurally wrong, and real
 runs proved it. It predicted complex (Z) 128x64 and 64x128 would fail -- true,
 but for the wrong reason -- while passing complex 128x32, which then died 116
 times in run_20260928_024945. Building every phase's kernel with Tensile's own
-writer (check_tensile_build.py, CPU-only) showed the constraint is the
+writer (check_tensile_build.py, CPU-only) showed the per-thread constraint is the
 per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
-limit, and MacroTile is not in the expression at all. Calibration table now
-lives in oto.tensile.gates.vgpr_model; post-mortem in potential_configs.md.
+limit; the MacroTile-area term belongs to the *separate* workgroup-file rule
+above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that
+old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model;
+post-mortem in potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible, occupancy_workgroups_per_cu,
 dtype_char, tile_dims.
 """
@@ -52,10 +66,10 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
-                         MAX_VGPR_PER_THREAD, MEASURED_VGPR,
-                         MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU,
-                         VGPR_PER_ELEMENT, depth_u, lds_base_bytes,
-                         measured_accvgpr)
+                         MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
+                         MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
+                         compute_bytes, depth_u, lds_base_bytes, local_split_u,
+                         measured_accvgpr, num_threads)
 
 #: Legal StaggerU values (Tensile Common.py:945).
 STAGGER_U_DOMAIN = (0, 2, 4, 8, 16, 32, 64)
@@ -161,6 +175,33 @@ def _accvgpr_rejection(ch: str, r: int, tt0: int, tt1: int, acc: int) -> str:
     )
 
 
+def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
+                              nt: int) -> str:
+    """Reject text for a workgroup whose accumulators alone fill the register file."""
+    return (
+        f"MacroTile {mt0}x{mt1} (LocalSplitU {lsu}, NumThreads {nt}) needs "
+        f"{r*mt0*mt1*lsu} accumulator VGPRs across the workgroup ({ch} weight "
+        f"{r}); the file holds {VGPR_PER_CU}. The accumulators alone fill it, so "
+        f"Tensile raises 'Generating kernel source resulted in error 4' "
+        f"(overflowedResources / the 'Occupancy limit' in KernelWriterAssembly "
+        f"functionSuffix) with no room left for operands. Reduce MacroTile area "
+        f"(<= {VGPR_PER_CU // r} elements per workgroup) or drop LocalSplitU."
+    )
+
+
+def _lds_reduction_rejection(ch: str, mt0: int, mt1: int, lsu: int,
+                             compute: int, lds: int) -> str:
+    """Reject text for an LSU reduction buffer past the per-CU LDS ceiling."""
+    return (
+        f"LocalSplitU {lsu} on MacroTile {mt0}x{mt1} needs a "
+        f"{lds}-byte LDS reduction buffer ({lsu}*{mt0}*{mt1}*{compute}B compute), "
+        f"over the {MAX_LDS_BYTES} per-CU ceiling; Tensile rejects it with "
+        f"'Kernel Uses N > 65536 bytes of LDS' (SolutionStructs:4108,4334). "
+        f"Reduce MacroTile area (<= {MAX_LDS_BYTES // (lsu * compute)} elements) "
+        f"or set LocalSplitU 1."
+    )
+
+
 def _undetermined_depth_rejection() -> str:
     """Reject text for a config whose DepthU cannot be read."""
     return (
@@ -202,11 +243,18 @@ def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
     if not dims:
         return 0
     mt0, mt1, tt0, tt1 = dims
-    r = VGPR_PER_ELEMENT.get(dtype_char(config))
+    ch = dtype_char(config)
+    r = VGPR_PER_ELEMENT.get(ch)
     if r is None:
         return 0
+    lsu = local_split_u(config)
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
+        return 0
+    if r * mt0 * mt1 * lsu >= VGPR_PER_CU:
+        return 0
+    compute = compute_bytes(config, ch)
+    if lsu > 1 and compute and lsu * mt0 * mt1 * compute > MAX_LDS_BYTES:
         return 0
     ku = depth_u(config)
     if ku <= 0:
@@ -237,6 +285,15 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
         TT 8x4 -> 256 accVGPR -> 271 VGPRs     FAIL "not in [0, 256]"
         TT 8x8 -> 512 accVGPR -> 519 VGPRs     FAIL
 
+    A *second*, independent constraint bounds the workgroup total: the
+    accumulators of every thread together must fit in the 64K-VGPR file with
+    room to spare, i.e. ``R*MT0*MT1*LocalSplitU < 65536``. The thread tile
+    cancels out, so this fires on wide MacroTiles the per-thread rule accepts
+    (C/ZZ 128x128x8 tt4x4: 64 accVGPR/thread passes the 128 budget, but
+    1024 threads * 64 = 65536 fills the file and Tensile raises error 4). Both
+    rules are calibrated on the corpus (0 false rejections, 40 empty phases for
+    the file rule), and the LDS-reduction rule below adds 13 more.
+
     An earlier version of this gate modelled MacroTile area instead and was
     wrong in both directions: it passed TT 8x4 complex (the 8 ZZ phases that
     died 116 times each across real runs) and rejected nothing that Tensile
@@ -264,6 +321,24 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
         return False, _accvgpr_rejection(ch, r, tt0, tt1, acc)
+
+    # Workgroup register file: R*MT0*MT1*LSU >= 65536 is exactly
+    # "the accumulator set alone fills the 64K file", so Tensile's
+    # numWorkGroupsPerCU check (functionSuffix) cannot reach 1 -> error 4.
+    lsu = local_split_u(config)
+    if r * mt0 * mt1 * lsu >= VGPR_PER_CU:
+        return False, _workgroup_vgpr_rejection(
+            ch, r, mt0, mt1, lsu, num_threads(dims, lsu))
+
+    # LDS reduction buffer (only emitted when LSU > 1): Tensile sizes it at
+    # LSU*MT0*MT1 compute elements and rejects at SolutionStructs:4334.
+    if lsu > 1:
+        compute = compute_bytes(config, ch)
+        if compute:
+            lds_reduction = lsu * mt0 * mt1 * compute
+            if lds_reduction > MAX_LDS_BYTES:
+                return False, _lds_reduction_rejection(
+                    ch, mt0, mt1, lsu, compute, lds_reduction)
 
     if ku <= 0:
         # Fail closed for the same reason as an unknown dtype weight: a config

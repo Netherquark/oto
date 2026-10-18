@@ -1,4 +1,370 @@
-# Candidate deck for the gfx90c Vega-7 port — rewrite 5 (2026-10-17)
+# Candidate deck for the gfx90c Vega-7 port — rewrite 6 (2026-10-18)
+
+Supersedes rewrite 5 (R16–R23, kept below for history). **What is new here:** the
+legality gate is now **closed** on our corpus — 0 misses, 0 false rejections, was
+53 misses — from three rules calibrated in §R24; the tile axes now have
+**provable ceilings** and the "wider MacroTile" route is **dead for CC and ZZ**
+(§R27); the straggler list is decomposed into four classes with a per-class route
+set (§R26), including why **no steal is justified**; the ledger trace per cell is
+in §R28; and the deck's dead complex rows are replaced with the widest *legal*
+tiles (§R30).
+
+**Owns:** the candidate deck, the routes, the search rules, and the reading of the
+gates. Does not own: ceilings and verdict bars
+(`gfx90c_theoretical_limits.md` §5), measured evidence (`results.md`), hardware
+facts (`gfx90c_theoretical_limits.md` §1–§3), the per-cell winners
+(`gfx90c_results/analysis/cells_resolved.full.txt`), or the durable Tensile
+mechanics (`kernel_tuning_research.md` §4).
+
+---
+
+## R24 — the latest A/B, and the gate is now closed
+
+**Scoreboard.** `gfx90c_results/acceptance_report.json` (2026-10-18T09:53):
+`run_20261018_004835` vs the locked floor `gfx900_ref_locked_52149f315d` →
+**20 WIN / 18 TIE / 0 LOSS**, 0 RED / 12 ORANGE, 9 h 03 m. The report is
+*provisional*: the gfx900 reference chain did not finish and the user declined a
+re-measurement, so the verdicts are indicative. `CC:256` upgraded TIE → **WIN
+(+7.8 %)** since `run_20261017_092909` — that is the CC steal (R8) landing.
+
+**The gate is closed.** `python3 -m oto.harness.gate_calibration --population ours`:
+
+| revision | phases | built | gate-refused | agreed | MISS | FALSE REJECTION |
+|---|---|---|---|---|---|---|
+| rewrite 5 | 3349 | 3217 | 79 | 79 | **53** | 0 |
+| **now** | 3349 | 3217 | 132 | **132** | **0** | **0** |
+
+Every native phase Tensile built, the gate allows; every phase the gate refuses,
+Tensile did not build. 0 false rejections on *both* populations (ours, and the
+3870 built reference phases). The three rules that closed it — each a
+0-false-rejection fix:
+
+**(1) The workgroup register file** (`occupancy_feasible`). Tensile's
+`KernelWriterAssembly.functionSuffix` sets `overflowedResources = 4` when
+
+```
+vgprPerThreadPerOccupancy = 65536 // NumThreads
+numWorkGroupsPerCU        = vgprPerThreadPerOccupancy // max(vgpr, agpr)
+if numWorkGroupsPerCU < 1:  overflowedResources = 4     # "resulted in error 4"
+```
+
+The accumulator set is always allocated, so it is a *sound lower bound* on
+`vgprPool.size()`; with `NumThreads = (MT0/TT0)*(MT1/TT1)*LSU` the accumulator
+count per workgroup is exactly `weight * MT0 * MT1 * LocalSplitU`, so
+**ThreadTile cancels**. The rule:
+
+```
+weight * MT0 * MT1 * LocalSplitU >= 65536   ->   refuse
+```
+
+with `>=` (not `>`): an accumulator set that exactly fills the file leaves no
+VGPR for operands or addresses, so Tensile must overflow. Catches
+`C 128x128x8/tt4x4` (12 phases), `Z 128x128x8/tt4x4` (6), `Z 128x64x8/tt4x4`
+(14), `Z 64x128x8/4x8` (8) — **40 empty phases, 0 built refused**. It is also the
+constraint the *retired* area model (`R*MTarea <= 65536/2`) was reaching for,
+with the wrong threshold (32768, not 65536) and the wrong boundary (`>`, not
+`>=`); §R27 is what that buys.
+
+**(2) The LSU LDS reduction** (`occupancy_feasible`). `LocalSplitU > 1` makes
+Tensile allocate a reduction buffer of `multiplier * LSU * MT0 * MT1` elements
+(SolutionStructs:4108), `multiplier = ComputeBytes // LoadBytes`, so in bytes it
+is exactly `LSU * MT0 * MT1 * ComputeDataType.numBytes()`; :4334 refuses past
+`MaxLDS = 65536`:
+
+```
+LocalSplitU > 1 and LSU * MT0 * MT1 * ComputeBytes > 65536   ->   refuse
+```
+
+This is the `Kernel Uses 131072 > 65536 bytes of LDS` class (13 phases, 0 built
+refused). R23 deferred it pending a "destination element size table"; it is the
+*compute* dtype that matters (`ComputeDataType.numBytes()`, table at
+`vgpr_model.COMPUTE_BYTES_PER_ELEMENT`, HPA → f32 4 B), not the destination's.
+
+**(3) `AggressivePerfMode = 2` is non-generative** (`candidate.py`, the
+*generator* seam). Tensile declares the domain `[0,1,2]` (Common.py:1446) but
+`Components/Priority.py` dispatches the priority component by exact match on the
+boolean fingerprints `{False}` / `{True}`, so 2 matches neither, `Priority.find`
+returns `None`, and `MAC_F32C.__call__` raises `TypeError: 'NoneType' object is
+not callable` before a kernel exists. Measured: **0 of 28 built**, across all
+seven families. Refused at the *generator* seam, not the writer: the writer's
+contract test probes APM=2 to prove the *forwarding*, so the writer keeps
+forwarding any value and the *drawer* refuses the dead one — the same split as
+`AssertSizeMultiple: [1]`.
+
+R23's second deferred item — the **NumThreads-aware VGPR budget** — is rule (1),
+and it resolved *differently* than R23 expected. R23 wanted a config-exact VGPR
+table because the *measured-total* form cost one false rejection on a measured
+kernel. It does not need one: the accumulator form carries no measured table,
+which is what removes the overreach.
+
+## R25 — the tie taxonomy on run_20261018_004835 (20 WIN / 18 TIE / 0 LOSS)
+
+`resolve_cells` is regenerated against the latest run. The 18 ties, with the
+mechanical native-vs-floor gap `cfg_gap` and the measured margin (`Δ %` = native
+over floor):
+
+| cell | `cfg_gap` | Δ % | native winner | floor winner |
+|---|---|---|---|---|
+| CC:512 | identical | +4.4 | `64x64x8 / 4x4 / VW2 / DU8` | same |
+| DD:768 | identical | +1.5 | `64x64x8 / 4x4 / VW2 / DU8` | same |
+| DD:1024 | **retile** | +1.2 | `64x32x8 / 4x2 / VW1 / DU8` | `64x64x8 / 4x4 / VW2 / DU8` |
+| DD:1365 | **retile** | +2.2 | `32x32x8 / 2x2 / VW1 / DU16` | `64x64x8 / 4x4 / VW1 / DU8` |
+| DD:2048 | near | +2.3 | `64x64x8 / 4x4 / **VW2** / DU8` | `64x64x8 / 4x4 / VW1 / DU8` |
+| HH:1024 | identical | +1.3 | `128x128x16 / 8x8 / VW8 / DU16` | same |
+| HH:2048 | identical | +3.7 | same + `PGR=0 NLCA=1 LdsPadA=0` | same |
+| HH:4096 | identical | +3.3 | same + `PGR=0 NLCA=1 LdsPadA=0` | same |
+| HH_HPA:1024 | no-floor | +0.1 | `64x128x16 / 4x8 / VW4 / DU16` | — |
+| HH_HPA:2048 | no-floor | −0.0 | `64x128x16 / 4x8 / VW4 / DU16` | — |
+| HS_HPA:1024 | no-floor | +0.1 | `128x64x16 / 8x4 / VW4 / DU16` | — |
+| HS_HPA:2048 | no-floor | +3.3 | `64x128x16 / 4x8 / VW4 / DU16` | — |
+| SS:768 | identical | +1.1 | `128x128x8 / 8x8 / VW4 / DU8` | same |
+| SS:1000 | identical | +3.7 | same | same |
+| SS:1024 | identical | +4.6 | same | same |
+| SS:1365 | identical | +3.8 | same | same |
+| SS:2048 | near | +1.1 | `128x128x**16** / 8x8 / VW4` | `128x128x**8** / 8x8 / VW4` |
+| SS:4096 | near | +3.4 | `128x128x**16**` | `128x128x**8**` |
+
+Readings:
+
+* **(a) identical — 13 of 18.** The native winner *is* the floor's tile
+  (`CC:512`, `DD:768`, `HH:1024/2048/4096`, `SS:768/1000/1024/1365`). This is the
+  "unedited steal" reading, and it is correct: on `HH` the only difference is
+  `PGR=0 NLCA=1 LdsPadA=0` — knobs that did not move the needle.
+* **(b) near — 4.** The floor's tile with one `VectorWidth` or `DepthU` step
+  (`DD:2048` VW 2-vs-1; `SS:2048/4096` DU 16-vs-8). The lever is a width/depth
+  probe, not a tile probe.
+* **(b′) retile — 2.** `DD:1024` and `DD:1365` tie on a *smaller, different* tile
+  than the floor's. The lever is a **tile** probe.
+* **(c) no-floor — 4.** `HH_HPA:1024/2048`, `HS_HPA:1024/2048`: the gfx900 chain
+  ships no HPA kernel, so there is nothing to beat; native is at 123–129 % of the
+  family ceiling. Not a deficit, not a target.
+
+`DD:2048` native already sits at **100.2 % of the realistic DD ceiling** (floor
+96.6 % of median) — DD's big shapes are closed by physics, not by a kernel gap.
+The report's tie band this run is bracketed by the largest tie (`SS:1024`,
++4.6 %) and the smallest win (`CC:256`, +7.8 %).
+
+## R26 — the straggler class tracker
+
+The "laundry list" is four classes, not one, and each has its own lever. The
+magnitudes are the `Δ %` column above.
+
+| class | cells | the lever | best-possible margin |
+|---|---|---|---|
+| **C1 — same-geometry ties** | `CC:512`, `DD:768`, `HH:1024/2048/4096`, `SS:768/1000/1024/1365` | non-tile knobs on the winner geometry | ≤ +4.6 % |
+| **C2 — near ties (VW/DU)** | `DD:2048`, `SS:2048`, `SS:4096` | a `VectorWidth` / `DepthU` step | ≤ +3.4 % |
+| **C3 — retiles** | `DD:1024`, `DD:1365` | a tile probe (native is on a *smaller* tile) | ≤ +2.2 % |
+| **C4 — no-floor HPA** | `HH_HPA:1024/2048`, `HS_HPA:1024/2048` | none — nothing to beat | ~0 |
+
+Per class, the four route kinds:
+
+* **wide** — *closed for the complex families* (§R27): no CC tile with area >
+  8192 and no ZZ tile with area > 4096 is legal. Still open for `SS`/`HH` (area
+  up to 256×256), but those cells already sit at 99–112 % of ceiling with the
+  floor's own 128×128 tile, so a wider tile is an LDS-bound bet with little
+  headroom.
+* **narrow** — open everywhere, and *proven* by C3: at `DD:1024/1365` a
+  *smaller* tile ties, and `DD:192/256/512` **win** with `32x32` (+267 %/+20 %/
+  +7 %). Narrow is the lever for the 7-CU occupancy cliff.
+* **steal** — **no steal is in this run, and none is justified.** There are 0
+  LOSS cells; the ties are byte-identical floor tiles (i.e. already stolen); and
+  the one steal that had content — `CC:256` (R8) — has already landed as a WIN.
+  Stealing a gfx900 config *adds nothing* where the gfx900 config is already what
+  native ships, which is every tie. The steal route stays closed until a native
+  LOSS appears, and then only for that cell.
+* **novel** — R18's routes A–I applied to the winner geometry: the `PLAN_BATCH`
+  rows. These are the only levers left for C1/C2.
+
+`DD` is the **only family whose winner tile changes by shape** (`32x32` at
+192–512, `64x64` at 768–2048, `64x32`/`32x32` retiles at 1024/1365). That is the
+signature of a tile-sensitive family; the right lever is a tile probe, and the C3
+cells are exactly where it has not been run.
+
+The **CC:256 steal port record** — the "bit-by-bit gfx900 → gfx90c adaptation"
+requirement — is §R8 above: only `MacroTile 64x64`, `WorkGroup 16x16x1` and
+`GLVW 2/2` were taken verbatim (all three are self-consistent consequences of
+MT/TT/VW, not vendor magic numbers), and `StaggerU`, `WGM`, `LdsPad`,
+`AssertFree*ElementMultiple`, `PGR` and `LSU` were all re-swept because the source
+part has 60 CUs and HBM2, not 7 CU and DDR4. It is the template for a future
+steal, and the reason none is run now.
+
+## R27 — the tile axes now have provable ceilings
+
+Three CPU-only constraints bound every tile. All three are calibrated
+zero-false-rejection on the corpus, so "illegal" here means Tensile will not
+build it:
+
+1. **Workgroup register file** (§R24 rule 1): `weight * MT0 * MT1 * LSU < 65536`.
+   With the per-dtype accumulator weight `R` (`S/H` 1, `D` 2, `C` 4, `Z` 8) the
+   ceiling is `MT0*MT1 < 65536 / R`: `SS/HH` 65536, `DD` 32768, `CC` 16384,
+   `ZZ` 8192.
+2. **LDS tile budget** (`occupancy_feasible`): `(MT0+MT1) * DepthU *
+   bytes(LDS row) <= 16384`.
+3. **Classic-load divisibility** (`validate_tensile_loads`): `MT0*DU` and `MT1*DU`
+   must divide by `NumThreads * GLVW`.
+
+**Consequence (brute force, pinned by
+`test_no_legal_complex_tile_is_wider_than_the_measured_max`):** over every CC tile
+with area > 8192 and every ZZ tile with area > 4096, at every thread tile that
+survives the per-thread budget, **not one is legal**. So:
+
+| family | widest legal MacroTile | widest ever *emitted* |
+|---|---|---|
+| CC | `128x64x8` (or `64x128x8`) | `128x64x8`, but at VW1 — never VW2 |
+| ZZ | `64x64x8` / `128x32x8` / `32x128x8` | `128x32x8`, but at tt2x8 — never tt4x4 |
+
+This **retires §8.2** ("Tiles that are legal but were never generated"): its four
+"headroom" tiles — `ZZ 128x128x8`, `ZZ 128x64x8`, `CC 128x128x8`, `CC 128x96x8` —
+are all **illegal**, and the claim that they were "legal" was wrong. The old gate
+read the *per-thread* budget (`TT0*TT1*R <= 128`), which those tiles pass (128
+exactly), and not the *workgroup* budget, which they fill (65536). The
+`128x96x8/8x4` row additionally fails divisibility
+(`totalElements 1024 % (NumThreads*glvw) 768 != 0`).
+
+The legal-wide rows now in the deck are in §R30.
+
+## R28 — the ledger trace: what was tried, per cell
+
+Search breadth from the registry's own generation log (`phases`) — distinct
+`(MacroTile, ThreadTile, VectorWidth, DepthU)` geometries per cell — plus the
+proposal ledger's outcomes for the tie cells:
+
+| family | generation attempts | distinct geoms / cell (big shapes) |
+|---|---|---|
+| SS | 409 | 64–88 |
+| HS_HPA | 147 | 84–85 |
+| HH_HPA | 175 | 81 |
+| HH | 103 | 57 |
+| CC | 59 | 13–16 |
+| DD | 58 | 16 |
+| **ZZ** | **50** | **5** |
+
+| tie cell | proposals | functional | rejected | slow | pending |
+|---|---|---|---|---|---|
+| CC:512 | 1 | 1 | 0 | 0 | 0 |
+| DD:768 | 3 | 0 | 1 | 2 | 0 |
+| DD:1024 | 0 | 0 | 0 | 0 | 0 |
+| DD:1365 | 1 | 0 | 0 | 1 | 0 |
+| DD:2048 | 0 | 0 | 0 | 0 | 0 |
+| HH:1024 | 14 | 13 | 1 | 0 | 0 |
+| HH:2048 | 8 | 6 | 2 | 0 | 0 |
+| HH:4096 | 12 | 9 | 3 | 0 | 0 |
+| HH_HPA:1024 | 40 | 28 | 5 | 3 | 4 |
+| HH_HPA:2048 | 34 | 32 | 0 | 0 | 2 |
+| HS_HPA:1024 | 27 | 18 | 4 | 5 | 0 |
+| HS_HPA:2048 | 29 | 20 | 3 | 3 | 3 |
+| SS:768 | 18 | 6 | 6 | 6 | 0 |
+| SS:1000 | 24 | 14 | 6 | 4 | 0 |
+| SS:1024 | 21 | 10 | 9 | 1 | 1 |
+| SS:1365 | 19 | 10 | 7 | 2 | 0 |
+| SS:2048 | 15 | 9 | 6 | 0 | 0 |
+| SS:4096 | 13 | 8 | 4 | 1 | 0 |
+
+What this says:
+
+* **ZZ is under-searched by an order of magnitude** — 5 distinct geometries per
+  cell against SS's 64–88 — and it is the family furthest from its ceiling
+  (17–25 %). The `pending` count for ZZ is 0, so the draw queue is not the
+  blocker; the **deck** is (5 rows is not a search). §R30 widens it.
+* **The complex families carry the most `legal_slow`** (`DD:768` 2/3, `SS:768`
+  6/18, `SS:1365` 2/19): the draws built, ran, and were slow — geometry
+  saturated, not the gate.
+* **The retile cells (`DD:1024/2048`) have zero proposals.** Their tie was found
+  by the deck, not by the mutator; a tile probe is the untried lever (C3).
+* **`HH_HPA`/`HS_HPA` have the deepest queues** (40/34/27/29 proposals) and the
+  smallest margins — budget spent where there is nothing to beat.
+* `phases` generation attempts per family sum to 409+58+50+59+103+175+147+19 =
+  1020; the 38 pending proposals are unresolved draws the overnight run should
+  now resolve (all gate-legal after §R24).
+
+## R29 — which kernel types perform best (the pattern across all runs)
+
+From the winners on this run (all 38 cells) and the corpus census:
+
+* **Small cubes want a SMALL tile and many workgroups.** `SS:256` is won by
+  `96x96x16 / 6x6 / VW2 / WGM8` at **+231 %** over the floor's `32x64` big tile;
+  `HH:256` by `32x64x16 / 4x4 / VW4` at **+277 %**; `DD:192` by `32x32x8 / 2x2`
+  at **+267 %**. The floor ships a rank-1 tile for a cube that cannot fill it.
+* **Big real cubes (SS/HH ≥ 512) want the vendor rank-1 tile** —
+  `128x128x8|16 / 8x8 / VW4|8`, `WGM4`. It wins at `HH:512` (+22 %) and `SS:512`
+  (+10 %), and *ties* above; the only in-band gains left are `DU 16` at
+  `SS:2048/4096`.
+* **`DD` tracks the cube size** (`32x32` → `64x64` → retiles) and is at 94–100 %
+  of ceiling once the cube is ≥ 768.
+* **`CC` and `ZZ` are issue-bound, not area-bound.** Complex costs four real FMAs
+  per complex MAC with no MFMA, and `ZZ` is FP64 at 1/16 rate; both run at
+  17–31 % of ceiling and cannot be fixed by area (which is capped anyway, §R27).
+  Their lever is **occupancy** — the smallest tiles already win (`CC 64x64/4x4`,
+  `ZZ 32x32/2x2`).
+
+The highest-yield band in the whole corpus is therefore the **small-shape band**
+(`SS/HH/DD` at 192–512), where the floor is worst and the margins are +20 % to
++277 %. The big-shape band is a knob surface around a tile that is already the
+vendor's.
+
+## R30 — the deck changes for this run
+
+* **`phases.yaml`: 4 dead rows replaced.** The `ZZ trialD3` rows
+  (`mt128x128x8_tt4x4`, `mt128x64x8_tt4x4` at 512³ and 1024³) fail the workgroup
+  register-file rule (`8·128·128 = 131072`, `8·128·64 = 65536`), so they can
+  never generate. Replaced with the **widest legal ZZ tiles**, `128x32x8/4x4` and
+  `32x128x8/4x4` (fingerprints recomputed). `check_candidates --quiet` goes
+  4 illegal → **0 illegal**.
+* **`decks.py`:** the CC "widest legal MacroTile" rows `128x128x8/8x4`,
+  `128x128x8/4x8`, `128x96x8/8x4` are replaced with `128x64x8/8x4|4x4` and
+  `64x128x8/4x8` (VW2) — the *provable* widest legal CC tile, never emitted at
+  VW2. The ZZ rows `128x128x8/4x4`, `128x64x8/4x4` become `128x32x8/4x4` and
+  `32x128x8/4x4`.
+* **`DECISION_TRIAL_TILES` D3** becomes the widest legal ZZ pair (D1/D2
+  unchanged).
+* **New model pins (tests):** `TestWorkgroupRegisterFile`,
+  `TestLdsReductionBuffer` (`tests/test_occupancy_gate.py`);
+  `test_generator_refuses_the_dead_perf_mode` and
+  `test_no_legal_complex_tile_is_wider_than_the_measured_max`
+  (`tests/test_knob_sweep.py`).
+* **Preflight is the authority, not a number written here.** `python3
+  check_candidates.py --quiet` → `0 illegal`;
+  `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;
+  `PYTHONPATH=. python3 oto/runners/cli.py --preflight` → parity (38/38 cells).
+
+## R31 — what to stop doing
+
+* **Chasing a wider MacroTile for C and Z** — provably closed (§R27), not a
+  budget question.
+* **ThreadTile width ladders for C and Z** — the accumulator cap makes every
+  wider tile illegal.
+* **Stealing a gfx900 config for a TIE** — the tie *is* the stolen config; the
+  route has nothing to add until a LOSS appears (§R26).
+* **`MatrixInstruction` / `DirectToLds` / `WavefrontSize` / `-mllvm -amdgpu-*`** —
+  rejected or harmful on gfx90c.
+* **Hunting HPA ties** — no floor exists and native is at 123–129 % of ceiling.
+* **Re-pinning `KNOB_SWEEP_BASES`** — the sweep tests index `[0]` and the D4
+  widen needs CC at VW1; winner-geometry work goes in `PLAN_BATCH`.
+* **`AggressivePerfMode = 2`** — now refused at the generator seam (§R24).
+* **Reading a single `best`-seed sample as a verdict** — judge within-run, ≥3
+  seeds, on the median, inside the report's tie band.
+
+## R32 — the overnight command
+
+```bash
+# CPU-only, safe under GNOME (no GPU stress):
+python3 check_candidates.py --quiet
+python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
+python3 -m oto.harness.failure_triage
+PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
+
+# TTY only — the real run:
+python3 port_tensile.py --auto --budget 10 --yes
+```
+
+The gate calibration must print `0 MISS` and `0 FALSE REJECTION`; if it does not,
+a new phase is a gate bug, not a kernel result.
+
+---
+
+## Superseded: rewrite 5 (2026-10-17), kept below for history
 
 Supersedes rewrite 4 (R10–R15, kept below for history). **What is new here** is
 the straggler trace on the latest A/B, a per-cell **tie taxonomy** that separates

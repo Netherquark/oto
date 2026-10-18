@@ -189,16 +189,31 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
      by an explicit WorkGroup is the same failure mode as a not-forwarded knob
      (silent no-op) -- `NOT_FORWARDED_KNOBS`/`_DEPRECATED_KEYS` is the
      analogous report surface.
-  2. **LDS footprint.** `ldsNumElementsReduction = LSU * MT0 * MT1`
-     (`SolutionStructs.py:4108`) scaled by the destination element size, with
-     `MaxLDS = 65536` (`:4334`). This is the rule behind the `131072 > 65536`
-     rejects; it is deliberately **not** gated yet, because it needs a
-     per-family destination-element-size table that does not exist
-     (potential_configs.md §R23).
-  The gate's *other* deliberate blind spot is the NumThreads-aware VGPR budget
-  (`65536 // NumThreads` instead of the fixed 128): calibrating it against the
-  corpus cost one false rejection on a measured kernel, so it waits for a
-  config-exact VGPR table (§R23).
+  2. **LDS footprint.** `ldsNumElementsReduction = multiplier * LSU * MT0 * MT1`
+     (`SolutionStructs.py:4104-4108`), `multiplier = ComputeBytes // LoadBytes`,
+     so in bytes it simplifies to `LSU * MT0 * MT1 * ComputeDataType.numBytes()`
+     (the multiplier cancels the load element size); `MaxLDS = 65536` (`:4334`).
+     This is the rule behind the `131072 > 65536` rejects. **Gated** since
+     2026-10-18 (`occupancy.occupancy_feasible`, table
+     `vgpr_model.COMPUTE_BYTES_PER_ELEMENT`, HPA → f32 4 B): 0 false rejections,
+     13 empty phases caught. It is the *compute* dtype that scales the buffer,
+     not the destination.
+- **The workgroup register file (Tensile's second, independent VGPR bound).**
+  `KernelWriterAssembly.functionSuffix` computes
+  `vgprPerThreadPerOccupancy = 65536 // NumThreads` and sets
+  `overflowedResources = 4` ("resulting in error 4") when
+  `numWorkGroupsPerCU = vgprPerThreadPerOccupancy // max(vgpr, agpr) < 1`. The
+  accumulator set is always allocated, so `TT0*TT1*R` is a sound lower bound on
+  `vgprPool.size()`; substituting `NumThreads = (MT0/TT0)*(MT1/TT1)*LSU` makes the
+  workgroup accumulator total `R * MT0 * MT1 * LSU` — **ThreadTile cancels**. The
+  rule `R * MT0 * MT1 * LSU >= 65536` is therefore a *MacroTile* constraint,
+  distinct from the per-thread `TT0*TT1*R <= 128` bound (**both** are enforced).
+  The boundary is `>=`, not `>`, because an accumulator set that exactly fills the
+  file leaves no VGPR for operands. **Gated** since 2026-10-18: 0 false rejections,
+  40 empty phases caught, on both the native and the reference populations. It is
+  the constraint the retired `R*MTarea <= 65536/2` area model was reaching for,
+  with the right threshold (65536) and the right boundary (`>=`) —
+  potential_configs.md §R24/§R27.
 - **The 16-B global-load cap check runs early.** `SolutionStructs.py:3459-3461`
   (`GLVW * numBytes() > 16`) is evaluated *before* `setGlobalLoadVectorWidth`
   reduces pv (`:2010`), so a ZZ tile at `VectorWidth=2` is refused on the cap
@@ -206,12 +221,19 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   `LOAD_DTYPE_INFO["Z"]` must carry ComplexDouble's 4 registers / 16 bytes, not
   ComplexFloat's 2 / 8 -- the load gate and `vgpr_model.FAMILY_BYTES_PER_ELEMENT`
   are separate homes (the load half is 16 B, the LDS half stays 8 B).
-- **`AggressivePerfMode=2` builds nothing** (measured, not modelled): across two
+- **`AggressivePerfMode=2` builds nothing** (measured, then traced): across two
   runs, every family and every tile produced 0 `.hsaco` and 0 CSV while the
-  mode-1 control in the same run built 20 (one per target arch). Tensile writes
-  the source then fails to compile it. It is a deck decision like the retired
-  `BufferLoad` row, not a gate -- no tile property predicts it; recorded in
-  `oto/tensile/decks.py` and removed from the sweep (potential_configs.md §R23).
+  mode-1 control in the same run built 20 (one per target arch). The cause is in
+  `Components/Priority.py`: the priority component is dispatched by exact match on
+  the boolean kernel fingerprints `{False}` / `{True}`, so 2 matches neither,
+  `Priority.find` returns `None`, and `MAC_F32C.__call__` raises
+  `TypeError: 'NoneType' object is not callable` before a kernel exists.
+  **Refused** at the generator seam since 2026-10-18
+  (`candidate._non_generative_knob_rejection`) — every family, 0/28 built. The
+  *writer* still forwards any value (its contract test probes APM=2 to prove the
+  forwarding), so this is a draw-time refusal, beside `AssertSizeMultiple: [1]`;
+  recorded in `oto/tensile/decks.py` and out of the sweep (potential_configs.md
+  §R24).
 - **`StreamK` is unavailable on gfx90c**: rejected unless
   `MIWaveGroup0×MIWaveGroup1 == 4` (`Tensile/SolutionStructs.py:2976`) —
   MFMA-only → **all StreamK/StreamK++ literature is background, not an experiment**

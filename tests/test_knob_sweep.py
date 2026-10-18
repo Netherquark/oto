@@ -210,6 +210,52 @@ def test_no_sweep_row_sweeps_aggressive_perf_mode():
             assert value.get("AggressivePerfMode") != 2, sweep["knob"]
 
 
+def test_generator_refuses_the_dead_perf_mode(gen):
+    """The generator seam refuses APM=2 even though the writer forwards it.
+
+    ``config_writer`` deliberately forwards any knob value verbatim -- its
+    contract test probes APM=2 to prove exactly that -- so the refusal lives in
+    ``CandidateGenerator.validate_config``, beside the AssertSizeMultiple crash
+    rule. This is what makes "the sweep row is gone" a *structural* guarantee:
+    a hand-written candidate or a mutator cannot re-draw the value.
+    """
+    base = KNOB_SWEEP_BASES["CC"][0]
+    ok, why = gen.validate_config(_merged("CC", base, {"AggressivePerfMode": 2}))
+    assert not ok, "APM=2 must be refused at the generator seam"
+    assert "AggressivePerfMode=2" in why, why
+    for good in (0, 1):
+        ok, why = gen.validate_config(
+            _merged("CC", base, {"AggressivePerfMode": good}))
+        assert ok, f"APM={good} must stay legal: {why}"
+
+
+def test_no_legal_complex_tile_is_wider_than_the_measured_max(gen):
+    """The wide-MacroTile route is closed for CC and ZZ (potential_configs §R24).
+
+    Pins the search that retired the 2026-10-14 "headroom" tiles: over every CC
+    tile with area > 8192 (the widest *emitted* CC tile, 128x64) and every ZZ
+    tile with area > 4096 (64x64 / 128x32), at every thread tile that survives
+    the per-thread budget, not one is legal. The binding constraints are the
+    workgroup register-file ceiling (R*MT0*MT1*LSU < 65536) and the classic-load
+    divisibility rule, both calibrated zero-false-rejection, so "none legal" is a
+    property of the device rather than of an over-strict gate.
+    """
+    found = []
+    for family, cap in (("CC", 8192), ("ZZ", 4096)):
+        for m0 in (64, 96, 128, 160, 192, 256):
+            for m1 in (32, 48, 64, 96, 128):
+                for du in (4, 8, 16, 32):
+                    if m0 * m1 <= cap:
+                        continue
+                    for tt in ("2x2", "4x4", "4x2", "2x4"):
+                        cfg = {**_template(family),
+                               "MacroTile": f"{m0}x{m1}x{du}", "ThreadTile": tt}
+                        ok, _ = gen.validate_config(cfg)
+                        if ok:
+                            found.append((family, m0, m1, du, tt))
+    assert found == [], f"a wider complex tile exists and should be decked: {found[:5]}"
+
+
 def test_localsplitu_is_legal_only_where_the_thread_count_survives(gen):
     """LSU>1 multiplies NumThreads (SolutionStructs:1964), so it stays legal only
     where the operand still fills the load wave. The deck's family list must

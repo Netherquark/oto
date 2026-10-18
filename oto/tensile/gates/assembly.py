@@ -52,7 +52,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Optional, Tuple
 
-from .vgpr_model import knob_int
+from .vgpr_model import is_hpa, knob_int
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
 #: :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT`, which is an LDS
@@ -99,11 +99,13 @@ def assembly_depth_u(config: Dict[str, Any]) -> int:
 
 
 def _is_hpa(config: Dict[str, Any], dtype_upper: str) -> bool:
-    """True when the config runs half with an f32 accumulator (HPA class)."""
-    return bool(config.get("HighPrecisionAccumulate", False)) or (
-        "HPA" in str(config.get("FamilyLabel", "")).upper()
-        or "HPA" in str(config.get("label", "")).upper()
-    )
+    """True when the config runs half with an f32 accumulator (HPA class).
+
+    Thin alias: the reader (key-or-label, the two places the class is recorded)
+    lives in :func:`oto.tensile.gates.vgpr_model.is_hpa` so this rule and the
+    compute-byte reader cannot disagree.
+    """
+    return is_hpa(config)
 
 
 def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,

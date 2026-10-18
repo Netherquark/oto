@@ -2,20 +2,23 @@
 
 Owns: the numbers the register-file gate needs and cannot derive -- the global
 load byte cap, the family bytes-per-element table, the per-dtype VGPR weights,
-the accumulator VGPR budget, the LDS budget, and the two measured VGPR tables
-read out of Tensile's own kernel writer. Also the config readers those numbers
-need (``depth_u``, ``lds_base_bytes``, ``measured_accvgpr``).
+the accumulator VGPR budget, the LDS budgets (per-workgroup tile and per-CU
+allocator), the compute-dtype byte table, and the two measured VGPR tables read
+out of Tensile's own kernel writer. Also the config readers those numbers need
+(``depth_u``, ``lds_base_bytes``, ``measured_accvgpr``, ``local_split_u``,
+``num_threads``, ``is_hpa``, ``compute_bytes``).
 Does NOT own: the pass/fail decision (oto.tensile.gates.occupancy) or the
 legality classes (oto.tensile.gates.assembly).
 Public API: GLOBAL_LOAD_BYTE_CAP, FAMILY_BYTES_PER_ELEMENT, VGPR_PER_CU,
 MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT, ACCVGPR_BUDGET, LDS_BUDGET,
-BYTES_PER_ELEMENT, VGPR_BUDGET, MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE,
-measured_accvgpr, depth_u, lds_base_bytes.
+MAX_LDS_BYTES, BYTES_PER_ELEMENT, COMPUTE_BYTES_PER_ELEMENT, VGPR_BUDGET,
+MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE, measured_accvgpr, depth_u,
+lds_base_bytes, local_split_u, num_threads, is_hpa, compute_bytes.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
@@ -75,6 +78,25 @@ BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
 #: Retained for the workgroup estimate: budget is expressed in accumulators, and
 #: the register file is shared by every thread in a workgroup.
 VGPR_BUDGET = VGPR_PER_CU // 2
+
+
+#: Tensile's ``globalParameters["MaxLDS"]`` -- the *per-CU* LDS allocator ceiling,
+#: 64 KiB. Distinct from :data:`LDS_BUDGET`, which is the conservative
+#: per-workgroup tile proxy of 16 KiB. The two must not be conflated: the tile
+#: proxy is deliberately conservative (it may refuse a config Tensile accepts),
+#: whereas this is the exact number Tensile compares against at
+#: SolutionStructs:4334, so a rule built on it is sound in both directions.
+MAX_LDS_BYTES = 65536
+
+#: ``ComputeDataType.numBytes()`` per assembly dtype char. Drives the LDS
+#: reduction buffer (``multiplier = bytesPerComElem // bytesPerLoadElem``,
+#: SolutionStructs:4104-4108), whose footprint in bytes simplifies to
+#: ``LocalSplitU * MT0 * MT1 * compute bytes`` because the multiplier cancels the
+#: load element size. Half defaults to 2 (half accumulate); ``compute_bytes``
+#: raises it to 4 when the config is HPA (f32 accumulate).
+COMPUTE_BYTES_PER_ELEMENT = {
+    "S": 4, "D": 8, "H": 2, "B": 2, "I8": 1, "I1": 1, "C": 8, "Z": 16,
+}
 
 #: Measured per-thread VGPR totals from Tensile's own kernel writer on gfx90c,
 #: reported by check_tensile_build.py. (threadtile, accvgpr, observed total).
@@ -187,3 +209,78 @@ def knob_int(value: Any, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def is_hpa(config: Dict[str, Any]) -> bool:
+    """True when the config accumulates half inputs in f32 (the HPA class).
+
+    Reads Tensile's own key first, then the family label -- the two places the
+    class is recorded. Shared by the compute-byte reader here and the
+    GlobalSplitU class rule (oto.tensile.gates.assembly), so the two cannot
+    disagree about which family a config belongs to.
+    """
+    return bool(config.get("HighPrecisionAccumulate", False)) or (
+        "HPA" in str(config.get("FamilyLabel", "")).upper()
+        or "HPA" in str(config.get("label", "")).upper()
+    )
+
+
+def compute_bytes(config: Dict[str, Any], ch: str) -> int:
+    """``ComputeDataType.numBytes()`` for a config's dtype char, or 0 if unknown.
+
+    Half with f32 accumulate (HPA) computes in f32, so it returns 4, not 2. The
+    complex chars carry their own width (C 8, Z 16); an unknown char returns 0 so
+    a caller sees "cannot model" rather than a falsely small reduction buffer.
+    """
+    if ch == "H" and is_hpa(config):
+        return 4
+    return COMPUTE_BYTES_PER_ELEMENT.get(ch, 0)
+
+
+def local_split_u(config: Dict[str, Any]) -> int:
+    """LocalSplitU as Tensile will actually receive it (SolutionStructs:1958).
+
+    Tensile has no standalone ``LocalSplitU`` key: it reads the workgroup's third
+    element. ``config_writer._fork_tile`` emits an explicit ``WorkGroup``
+    verbatim and only folds the ``LocalSplitU`` key in when WorkGroup is absent,
+    so an explicit ``WorkGroup: [16,16,1]`` *shadows* a ``LocalSplitU: 2`` beside
+    it and the knob is then a silent no-op (potential_configs.md §R23). The gate
+    models the emitted config, because that is the one Tensile judges -- reading
+    the intent instead would refuse phases Tensile builds.
+
+    This reader lives here, with the other config readers (``depth_u``,
+    ``lds_base_bytes``), because both the load-divisibility gate and the
+    register/LDS feasibility gate need the same NumThreads multiplier.
+    """
+    wg = config.get("WorkGroup")
+    third: Any = None
+    if isinstance(wg, (list, tuple)) and len(wg) >= 3:
+        third = wg[2]
+    elif isinstance(wg, str) and "x" in wg:
+        parts = wg.lower().split("x")
+        if len(parts) >= 3:
+            third = parts[2]
+    if third is None:
+        third = config.get("LocalSplitU")
+    try:
+        return max(1, int(third))
+    except (TypeError, ValueError):
+        return 1
+
+
+def num_threads(dims: Tuple[int, int, int, int], lsu: int) -> int:
+    """NumThreads = (MT0/TT0) * (MT1/TT1) * LocalSplitU (SolutionStructs:1964).
+
+    Args:
+        dims: ``(MT0, MT1, TT0, TT1)`` from :func:`tile_dims`.
+        lsu: LocalSplitU from :func:`local_split_u`.
+
+    Returns:
+        The workgroup's thread count, or 0 when any tile dim is non-positive so
+        the caller fails closed instead of dividing by zero.
+    """
+    mt0, mt1, tt0, tt1 = dims
+    if min(mt0, mt1, tt0, tt1) <= 0:
+        return 0
+    return (mt0 // tt0) * (mt1 // tt1) * lsu
+

@@ -10,15 +10,22 @@ two different reasons, and neither was caught before burning real GPU time:
   * 232 attempts, run_20260928_024945: thread tiles 8x4 and 8x8 failed with
     "Generating asm kernel error: total vgpr: 271 not in [0, 256]".
 
-The gate now models the real constraint, measured with Tensile's own kernel
+The gate now models the real constraints, measured with Tensile's own kernel
 writer (see check_tensile_build.py, which is CPU-only):
 
-    accVGPRs per thread = ThreadTile0 * ThreadTile1 * dtype_weight
-    a thread is architecturally capped at 256 VGPRs
+    accVGPRs per thread      = ThreadTile0 * ThreadTile1 * dtype_weight
+                               (a thread is architecturally capped at 256 VGPRs)
+    accVGPRs per workgroup   = dtype_weight * MT0 * MT1 * LocalSplitU
+                               (the 64K file must hold them all, with room for
+                                operands -- Tensile's error-4 "Occupancy limit")
+    LDS reduction (LSU > 1)  = LSU * MT0 * MT1 * ComputeDataType.numBytes()
+                               (Tensile's per-CU LDS ceiling, 65536)
 
-MacroTile does not appear in that expression -- it only changes how many threads
-share the 64K register file. An earlier version of this gate modelled
-R * MacroTile_area <= 32768 instead, which passed every failing case above.
+ThreadTile cancels out of the workgroup rule, so MacroTile is the constraint
+there; MacroTile does not appear in the per-thread rule. The two are genuinely
+different constraints and both are enforced. An earlier version of this gate
+modelled R * MacroTile_area <= 32768 for the per-thread rule, which passed every
+failing complex case above.
 
 Run: python3 test_occupancy_gate.py
 """
@@ -473,6 +480,79 @@ class TestMacroTileIsNotTheConstraint(unittest.TestCase):
                 occupancy_feasible(cfg("Z", mt, tt))[0],
                 f"{mt}/{tt} must stay rejected",
             )
+
+
+class TestWorkgroupRegisterFile(unittest.TestCase):
+    """Tensile's second, independent register constraint (error 4).
+
+    The per-thread rule above bounds ``TT0*TT1*weight``. The *workgroup* rule
+    bounds every thread's accumulators together: ``weight*MT0*MT1*LocalSplitU``
+    must stay strictly under the 64K file, because the kernel still needs
+    operand and address VGPRs. ThreadTile cancels, so this fires on wide
+    MacroTiles the per-thread rule accepts (C/Z 128x128x8 tt4x4: 64 accVGPR per
+    thread passes the 128 budget, but 1024 threads * 64 = 65536 fills the file
+    and Tensile raises "resulted in error 4").
+    """
+
+    def test_field_filling_tiles_are_refused(self):
+        self.assertFalse(occupancy_feasible(cfg("C", "128x128x8", "4x4"))[0])
+        self.assertFalse(occupancy_feasible(cfg("C", "128x128x8", "8x4"))[0])
+        self.assertFalse(occupancy_feasible(cfg("Z", "128x128x8", "2x2"))[0])
+        self.assertFalse(occupancy_feasible(cfg("Z", "128x64x8", "4x4"))[0])
+
+    def test_one_step_down_the_area_ladder_is_legal(self):
+        self.assertTrue(occupancy_feasible(cfg("C", "128x64x8", "8x4"))[0])
+        self.assertTrue(occupancy_feasible(cfg("Z", "128x32x8", "4x4"))[0])
+        self.assertTrue(occupancy_feasible(cfg("Z", "32x128x8", "4x4"))[0])
+
+    def test_threadtile_cancels_out_of_the_workgroup_rule(self):
+        """Verdict follows MacroTile, not ThreadTile, once per-thread passes."""
+        for tt in ("2x2", "4x4"):
+            self.assertFalse(
+                occupancy_feasible(cfg("Z", "128x64x8", tt))[0], tt)
+        for tt in ("2x2", "4x4"):
+            self.assertTrue(
+                occupancy_feasible(cfg("Z", "64x64x8", tt))[0], tt)
+
+    def test_local_split_u_multiplies_the_workgroup_cost(self):
+        """LSU is part of the workgroup cost, not just the load thread count.
+
+        NumThreads = (MT0/TT0)*(MT1/TT1)*LSU, so the per-thread budget Tensile
+        computes (65536 // NumThreads) halves when LSU doubles -- the reason the
+        register reason is reported (the register rule is checked first).
+        """
+        ok, why = occupancy_feasible(
+            cfg("D", "128x128x8", "8x8", LocalSplitU=2,
+                WorkGroup=[16, 16, 2]))
+        self.assertFalse(ok)
+        self.assertIn("accumulator", why)
+        # The same tile at LSU 1 is legal.
+        self.assertTrue(occupancy_feasible(cfg("D", "128x128x8", "8x8"))[0])
+
+
+class TestLdsReductionBuffer(unittest.TestCase):
+    """LocalSplitU > 1 adds an LDS reduction buffer (SolutionStructs:4108).
+
+    Tensile sizes it at ``LSU*MT0*MT1*ComputeDataType.numBytes()`` elements and
+    rejects the kernel at :4334 when the byte total passes 65536 -- the
+    "Kernel Uses 131072 > 65536 bytes of LDS" class (13 phases on the corpus).
+    """
+
+    def test_oversized_reduction_is_refused(self):
+        ok, why = occupancy_feasible(
+            cfg("S", "128x128x8", "4x4", LocalSplitU=2, WorkGroup=[32, 32, 2]))
+        self.assertFalse(ok)
+        self.assertIn("reduction", why)
+
+    def test_moderate_reduction_is_allowed(self):
+        ok, why = occupancy_feasible(
+            cfg("S", "64x64x8", "4x4", LocalSplitU=2, WorkGroup=[16, 16, 2]))
+        self.assertTrue(ok, why)
+
+    def test_rule_only_applies_when_local_split_u_is_raised(self):
+        """LSU 1 has no reduction buffer, however wide the MacroTile."""
+        ok, why = occupancy_feasible(cfg("S", "128x128x8", "4x4"))
+        self.assertTrue(ok, why)
 
 
 class TestRealDtypesUnaffected(unittest.TestCase):

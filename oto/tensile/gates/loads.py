@@ -21,7 +21,7 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
-                         knob_int)
+                         knob_int, local_split_u)
 
 #: Tensile DataType properties the classic path reads, in the units
 #: SolutionStructs uses (``reg`` is registers per element, not bytes).
@@ -143,30 +143,13 @@ def _nlca_for(config: Dict[str, Any], tc: str) -> int:
 
 
 def _local_split_u(config: Dict[str, Any]) -> int:
-    """LocalSplitU as Tensile will actually receive it (SolutionStructs:1958).
+    """LocalSplitU as Tensile will actually receive it.
 
-    Tensile has no standalone ``LocalSplitU`` key: it reads the workgroup's third
-    element. ``config_writer._fork_tile`` emits an explicit ``WorkGroup``
-    verbatim and only folds the ``LocalSplitU`` key in when WorkGroup is absent,
-    so an explicit ``WorkGroup: [16,16,1]`` *shadows* a ``LocalSplitU: 2`` beside
-    it and the knob is then a silent no-op (potential_configs.md §R23). The gate
-    models the emitted config, because that is the one Tensile judges -- reading
-    the intent instead would refuse phases Tensile builds.
+    Thin alias kept for this module's call sites; the reader, its rationale and
+    the shadowed-WorkGroup story live in
+    :func:`oto.tensile.gates.vgpr_model.local_split_u` (one home for the fact).
     """
-    wg = config.get("WorkGroup")
-    third: Any = None
-    if isinstance(wg, (list, tuple)) and len(wg) >= 3:
-        third = wg[2]
-    elif isinstance(wg, str) and "x" in wg:
-        parts = wg.lower().split("x")
-        if len(parts) >= 3:
-            third = parts[2]
-    if third is None:
-        third = config.get("LocalSplitU")
-    try:
-        return max(1, int(third))
-    except (TypeError, ValueError):
-        return 1
+    return local_split_u(config)
 
 
 # --------------------------------------------------------------- per-operand

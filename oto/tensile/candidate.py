@@ -189,6 +189,9 @@ class CandidateGenerator(CandidateEmitMixin):
             return False, f"Illegal knob {knob} for gfx90c"
         if _assert_size_multiple_disabled(config):
             return False, "AssertSizeMultiple: [1] causes crashes"
+        crash = _non_generative_knob_rejection(config)
+        if crash is not None:
+            return False, crash
         reason = _tile_divisibility_rejection(config)
         if reason:
             return False, reason
@@ -256,6 +259,41 @@ def _assert_size_multiple_disabled(config: Dict[str, Any]) -> bool:
     """True when AssertSizeMultiple is exactly ``[1]``, which crashes Tensile."""
     asm = config.get("AssertSizeMultiple")
     return isinstance(asm, list) and asm == [1]
+
+
+def _non_generative_knob_rejection(config: Dict[str, Any]) -> Optional[str]:
+    """A knob value Tensile declares legal but its assembly path cannot emit.
+
+    Only ``AggressivePerfMode`` qualifies today. Tensile declares the domain
+    [0,1,2] (Common.py:1446) but the priority component is dispatched by exact
+    match on the boolean kernel fingerprints
+    (Components/Priority.py: ``ConstantPriority.kernel = {"AggressivePerfMode":
+    False}``, ``AggressivePriority.kernel = {"AggressivePerfMode": True}``), so 2
+    matches neither, ``Priority.find`` returns None and ``MAC_F32C.__call__``
+    raises ``TypeError: 'NoneType' object is not callable`` before a kernel
+    exists. Measured, not guessed: 0 of 28 APM=2 phases built across all seven
+    families (run_20261015_041159, run_20261017_092909), and every one burned a
+    GPU slot. The sweep row was withdrawn on 2026-10-15; this rule is what stops
+    a hand-written candidate or a mutator from re-drawing it.
+
+    Why the generator seam and not the launch boundary: ``config_writer``
+    deliberately forwards any knob value verbatim (its contract test probes
+    APM=2 to prove the forwarding, ``test_writer_forwards_sweep_knobs``), so the
+    refusal belongs where candidates are drawn, beside
+    :func:`_assert_size_multiple_disabled`.
+    """
+    apm = config.get("AggressivePerfMode")
+    if apm is None:
+        return None
+    try:
+        value = int(apm)
+    except (TypeError, ValueError):
+        return None
+    if value in (0, 1):
+        return None
+    return (f"AggressivePerfMode={value} is non-generative on the assembly path "
+            "(Components/Priority.py dispatches only 0/1, so MAC_F32C raises "
+            "TypeError); Tensile declares [0,1,2] at Common.py:1446")
 
 
 def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:

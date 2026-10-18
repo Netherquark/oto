@@ -109,6 +109,24 @@ is always a multiple of 32**; `ThreadTile` sides ≤16 or multiples of 4;
 The `MatrixInstruction` shapes enumerated in the same table are **gfx908+ only and
 unreachable here** (`HasMFMA=False`) — recorded as a dead end, not an omission.
 
+**Two register bounds, not one** (both gated since 2026-10-18, 0 false
+rejections; mechanics in `kernel_tuning_research.md` §4):
+
+| bound | rule | binds on |
+|---|---|---|
+| per-thread accumulator | `TT0*TT1*R <= 128` | ThreadTile width |
+| workgroup register file (Tensile error 4) | `R * MT0 * MT1 * LocalSplitU < 65536` | **MacroTile area** |
+
+`R` is the accumulator VGPR weight (`S/H` 1, `D` 2, `C` 4, `Z` 8). The second
+rule is Tensile's own `65536 // NumThreads // max(vgpr, agpr) >= 1`; ThreadTile
+cancels out of it, so it caps MacroTile *area* at `65536/R` — `SS/HH` 65536,
+`DD` 32768, `CC` 16384, `ZZ` 8192. Consequently the widest *legal* MacroTile is
+CC `128x64`, ZZ `64x64`/`128x32`; the wider "headroom" tiles in
+`potential_configs.md` §8.2 fill the file (65536) and are unbuildable. A third
+rule bounds `LocalSplitU > 1`: the LDS reduction buffer
+`LSU*MT0*MT1*computeBytes` must stay ≤ 65536
+(`kernel_tuning_research.md` §4, rule 2).
+
 ### 1.2 The small-box geometry, which drives `WorkGroupMapping` and tile choice
 
 Only **7 CUs**. Grid = `⌈M/MT0⌉ × ⌈N/MT1⌉` workgroups. Occupancy ≥2 WG/CU needs
