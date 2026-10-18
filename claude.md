@@ -227,7 +227,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 |---|---|
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`) |
-| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `potential_configs.md` §2 (the M1/M2/M3 triage) |
+| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
@@ -265,8 +265,13 @@ trusting any occupancy number in this repo.
 
 `knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
 (multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
-A phase dying with `Generating kernel source resulted in error 4` is a
-**legality-gate miss, not bad luck** — see `potential_configs.md` §2.
+A phase that dies with `Generating kernel source resulted in error 4` is the
+**workgroup register-file rule** (`R*MT0*MT1*LocalSplitU >= 65536`): the
+accumulators alone fill the 64K file with no VGPR left for operands, so a config
+that carries it is now refused before it launches
+(`oto.tensile.gates.occupancy.occupancy_feasible`; `potential_configs.md` §R24
+rule 1 / §R27). The gate census must show 0 false rejections — the same rule
+refuses 40 of the corpus's empty phases and 0 of its built ones.
 
 ## 3. MD ownership — do not duplicate
 

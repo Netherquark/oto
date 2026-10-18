@@ -538,25 +538,41 @@ Gate 4 is the one that was silently absent. Tensile sets
 `overflowedResources = 4` ("Occupancy limit", user-visible as
 `Generating kernel source resulted in error 4`) when the register file cannot
 hold one workgroup. Run `python3 check_candidates.py` to sweep a deck; it exits
-1 on any illegal config, so legality is provable **before** a GPU run. The
-routing rule — a phase dying with `Generating kernel source resulted in error 4`
-is a legality-gate miss, not bad luck — is `claude.md` §2.1. Gate semantics
-live in `oto/tensile/gates/*` (each gate module documents itself).
+1 on any illegal config, so legality is provable **before** a GPU run. That error
+is now *caught*: it is the workgroup register-file rule modelled below
+(`occupancy_feasible`), so a phase that carries it is refused at preflight rather
+than dying on the GPU — see `claude.md` §2.2 / §5 and `potential_configs.md`
+§R24. Gate semantics live in `oto/tensile/gates/*` (each gate module documents
+itself).
 
-**The occupancy rule (corrected).** The constraint is on **ThreadTile**, not
-MacroTile: a thread holds `TT0 x TT1` accumulators, each `weight` VGPRs, so
-`accVGPRs = TT0*TT1*weight` is checked against `ACCVGPR_BUDGET = 128` (the
-256-VGPR/thread ISA cap with headroom). MacroTile is **not** in the expression —
-it only changes how many threads share the 64 KiB file. Measured on gfx90c
-complex (Z, weight 8) with Tensile's own writer: `TT 2x2` → 63 VGPRs ok,
+**The occupancy rule (corrected — two constraints, not one).** The *per-thread*
+constraint is on **ThreadTile**: a thread holds `TT0 x TT1` accumulators, each
+`weight` VGPRs, so `accVGPRs = TT0*TT1*weight` is checked against
+`ACCVGPR_BUDGET = 128` (the 256-VGPR/thread ISA cap with headroom). Measured on
+gfx90c complex (Z, weight 8) with Tensile's own writer: `TT 2x2` → 63 VGPRs ok,
 `TT 4x4` → 154 ok, `TT 8x4` → 271 FAIL, `TT 8x8` → 519 FAIL; the pass/fail
 boundary is exactly `accVGPR > 128`. An earlier model used
 `R * MacroTile_area <= 65536/2` (a "2× headroom" rule) and was structurally
 wrong in both directions — it passed the 8 ZZ `TT8x4` phases that then died 116
-times each in `run_20260928_024945` — and it is retired. Model and calibration
-table: `oto/tensile/gates/vgpr_model.py` (`ACCVGPR_BUDGET`, `MEASURED_VGPR`,
-`measured_accvgpr`); decision: `occupancy_feasible`. Gate 4 is the only gate
-that can kill a whole family through thread-tile width alone.
+times each in `run_20260928_024945` — and it is retired.
+
+The **second, independent** constraint is the *workgroup register file*: Tensile
+needs `65536 // NumThreads // max(vgpr, agpr) >= 1`, and since the accumulators
+are always allocated (a sound lower bound on `vgprPool.size()`), the rule is
+`weight * MT0 * MT1 * LocalSplitU >= 65536` → error 4. Here **MacroTile IS in the
+expression** (ThreadTile cancels out), so it caps tile *area* at `65536/weight`:
+CC `128x64`, ZZ `64x64`/`128x32`. The old area model was reaching for this rule
+with the wrong threshold (32768, not 65536) and the wrong boundary (`>`, not
+`>=`). A *third* cap applies when `LocalSplitU > 1`: the LDS reduction buffer
+`LSU*MT0*MT1*computeBytes <= 65536`. All four limits (with the LDS tile proxy and
+the classic-load divisibility rule) are listed in `claude.md` §5, are calibrated
+zero-false-rejection against the corpus (2026-10-18), and must never be relaxed
+to admit a candidate.
+
+Model and calibration table: `oto/tensile/gates/vgpr_model.py` (`ACCVGPR_BUDGET`,
+`MAX_LDS_BYTES`, `MEASURED_VGPR`, `measured_accvgpr`); decisions:
+`occupancy_feasible`. The gate can kill a family through thread-tile width *or*
+through MacroTile area — the two are different rules and neither is redundant.
 
 ---
 

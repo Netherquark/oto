@@ -464,3 +464,58 @@ is superseded as a closure path for this cell; the verdict bands remain user-own
   the native side is not uniformly normalised.
 - **Best-vs-best per phase spans multiple problem sizes**, so the 360.9 GF/s CC
   maximum is a max over shapes, not the 256³ result.
+
+## 14. Latest A/B, the gate census and the tile ceilings (2026-10-18)
+
+`gfx90c_results/acceptance_report.json`, run `run_20261018_004835` against the
+locked floor `gfx900_ref_locked_52149f315d`: **20 WIN / 18 TIE / 0 LOSS**,
+**0 RED / 12 ORANGE**, 9 h 03 m wall (5 h 34 m of that in phases). The report is
+**PROVISIONAL** — the gfx900 reference chain did not finish and the user declined
+a re-measurement — so these verdicts are indicative and must not gate a release.
+The step from §13.4's 19/19 is `CC:256`: **TIE → WIN (+7.8 %)**, the R8 steal
+landing.
+
+The per-cell *reading* of these 18 ties (the mechanical `cfg_gap`, the class
+tracker, and why no steal is now justified) is `potential_configs.md` §R25/§R26;
+this section is the measured evidence and the provenance.
+
+### 14.1 The twelve ORANGE cells are the two issue-bound families
+
+`per_family_coverage`, best median per graded size, `%` of the realistic ceiling:
+
+| family | 128 | 192 | 256 | 512 | 768 | 1000 | 1024 | 1365 | 2048 | 4096 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| CC | — | **10.6** | **20.5** | **28.8** | — | — | **30.8** | — | **31.0** | — |
+| ZZ | **17.1** | **21.1** | **22.7** | **24.7** | — | — | **24.8** | — | — | — |
+| SS | — | — | **36.8** | 76.4 | 99.1 | 99.0 | 101.5 | 99.2 | 104.0 | 106.1 |
+| HH | — | — | **31.0** | 68.4 | — | — | 104.9 | — | 108.5 | 111.7 |
+| DD | — | 79.0 | 87.1 | 97.1 | 94.3 | — | 94.2 | 90.4 | 100.2 | — |
+
+All 12 ORANGE cells are CC (5) and ZZ (5) plus `SS:256` and `HH:256` — the two
+families whose ceiling is an *issue-rate* wall (complex = 4 real FMAs per complex
+MAC with no MFMA; ZZ = FP64 at 1/16), and the two small cubes the floor serves
+with a rank-1 tile. `DD` is 79–100 % (79.0 % at 192³, 87.1 % at 256³, then
+90–100 %) and `SS`/`HH` at 76–112 % from 512³ up: those are closed, not lagging.
+
+### 14.2 The gate census: 0 misses, 0 false rejections
+
+`python3 -m oto.harness.gate_calibration --population ours`, over every phase
+whose launch config is on disk: **3349 configs, 3217 built, 132 empty — 0 MISS /
+0 FALSE REJECTION** (before the 2026-10-18 rules: 79 refused + **53 MISS**). The
+three rules and their Tensile sources are `potential_configs.md` §R24. The
+reference population keeps its pre-existing **43 false rejections**, *all* of
+them the LDS tile-footprint proxy (`LDS_BUDGET = 16384`) on large-DepthU gfx900
+kernels (SS 29, DD 12, HH 1, HS_HPA 1; DepthU 16/32/64) — a reference-only story,
+not a regression from these rules.
+
+### 14.3 Confounding this section carries
+
+- **Provisional floor.** The reference chain is a single locked run with no clock
+  telemetry, so no cell's verdict is clock-normalised and the whole board is
+  indicative (§13.5's standing caveat, unchanged).
+- **Coverage is per-cell, not per-kernel.** Every family's graded cells are
+  measured, but the *search* behind them is uneven: the registry's generation log
+  shows `SS`/`HS_HPA`/`HH_HPA` at 57–88 distinct geometries per cell against
+  `DD` 16, `CC` 13–16 and **`ZZ` 5** (`potential_configs.md` §R28). A WIN on
+  `CC`/`DD`/`ZZ` therefore says "this deck beat the floor", not "the family is
+  exhausted".

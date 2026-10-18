@@ -35,9 +35,13 @@ re-measurement, so the verdicts are indicative. `CC:256` upgraded TIE → **WIN
 | **now** | 3349 | 3217 | 132 | **132** | **0** | **0** |
 
 Every native phase Tensile built, the gate allows; every phase the gate refuses,
-Tensile did not build. 0 false rejections on *both* populations (ours, and the
-3870 built reference phases). The three rules that closed it — each a
-0-false-rejection fix:
+Tensile did not build. **0 misses, 0 false rejections** on our population
+(3349 phases / 3217 built). The reference population (4568 phases / 3870 built)
+keeps its pre-existing **43 false rejections** — *all* of them the **LDS
+tile-footprint proxy** (`LDS_BUDGET = 16384`, `(MT0+MT1)*DepthU <= 2048`) firing
+on large-DepthU gfx900 kernels (SS 29, DD 12, HH 1, HS_HPA 1; DepthU 16/32/64),
+a reference-only story unrelated to the rules below. **Each of the three new
+rules adds 0 false rejections to both populations.** They are:
 
 **(1) The workgroup register file** (`occupancy_feasible`). Tensile's
 `KernelWriterAssembly.functionSuffix` sets `overflowedResources = 4` when

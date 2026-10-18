@@ -279,6 +279,40 @@ absent from the corpus exactly because Tensile refused to emit them — the mode
 and reality agree on every observed outcome. Regression:
 `tests/test_occupancy_gate.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`.
 
+### 6.1 The two rules the per-thread model was missing (2026-10-18)
+
+`accVGPR <= 128` is necessary but **not sufficient**. Two independent *workgroup*-
+level constraints account for every remaining empty phase Tensile ever produced,
+and both are now enforced (`occupancy_feasible`) and calibrated
+zero-false-rejection against the whole corpus.
+
+**Workgroup register file (Tensile error 4).** Tensile emits
+`65536 // NumThreads // max(vgpr, agpr) >= 1`; the accumulators are always
+allocated, so `weight * MT0 * MT1 * LocalSplitU` is a sound lower bound on the
+per-thread VGPR count and the rule is
+**`weight * MT0 * MT1 * LocalSplitU >= 65536` → refuse**. ThreadTile cancels out,
+so this rule caps MacroTile *area* at `65536/weight` (SS/HH 65536, DD 32768,
+CC 16384, ZZ 8192) — the widest legal complex tiles are CC `128x64` and ZZ
+`64x64`/`128x32`. The retired `R * area <= 65536/2` model was reaching for this
+rule with the wrong threshold and the wrong boundary.
+
+**LSU LDS-reduction buffer.** When `LocalSplitU > 1` the reduction staging buffer
+must fit the 64 KiB LDS:
+**`LocalSplitU * MT0 * MT1 * computeBytes > 65536` → refuse** (Tensile
+`MaxLDS`; `computeBytes` is the *compute* dtype's element size — `Z`/`ZZ` 16,
+`C`/`D` 8, `S` 4, `H` 2 with 4 for f32-accumulate HPA;
+`vgpr_model.compute_bytes`).
+
+**Full census** (`python3 -m oto.harness.gate_calibration --population ours`):
+**3349 configs, 3217 built, 132 empty — 0 MISS / 0 FALSE REJECTION** (79 refused
++ **53 MISS** before these rules). The reference population keeps its documented
+**43 false rejections** — *all* the pre-existing LDS tile-footprint proxy
+(`LDS_BUDGET = 16384`) on large-DepthU gfx900 kernels (SS 29, DD 12, HH 1,
+HS_HPA 1; DepthU 16/32/64), a reference-only story. **The three new rules add 0
+false rejections to both populations.** Tests:
+`tests/test_occupancy_gate.py::TestWorkgroupRegisterFile`,
+`::TestLdsReductionBuffer`.
+
 > 2026-10-09: for the physical per-cell **resident-workgroup** audit (the
 > "occupancy ≤3 everywhere" question, incl. the VGPR-vs-LDS binder split and
 > the single-buffer probe), see `potential_configs.md` §5 +
@@ -310,8 +344,10 @@ failure. Results (re-measured 2026-10-12):
 
 Spoof-steal rule (sanctioned): take the floor's winning config per cell, adapt
 for gfx90c (16-B cap / LDS budget — the gate does this), document, benchmark in
-TTY. Only cell in scope was **CC:256**; it now reads **TIE** after the
-2026-10-15 sweep-order fix (`results.md` §13.4), so no LOSS remains to close.
+TTY. Only cell in scope was **CC:256**; the 2026-10-15 sweep-order fix first
+took it to TIE (`results.md` §13.4), and the R8 steal **landed** on the
+2026-10-18 run: `run_20261018_004835` reads CC:256 **WIN (+7.8 %)**. No cell is
+a LOSS, so no further steal is open (`potential_configs.md` §R24/§R25).
 
 ## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
 
@@ -322,7 +358,9 @@ DepthU, VectorWidth, GlobalLoadVectorWidthA/B) and the ±% delta, read from
 `python3 -m oto.harness.kernel_db --rebuild`). CLI: `--family SS`,
 `--floor-wins-only`, `--json out.json`. Re-measured 2026-10-12: **30 cells
 shared; 29 native / 1 floor** (superseded 2026-10-15 — the one floor win,
-CC:256, is a sweep-order artifact and reads TIE on the clean re-run; see below).
+CC:256, is a sweep-order artifact and reads TIE on the clean re-run; the R8
+steal then landed it as **WIN (+7.8 %)** on 2026-10-18; see below and
+`results.md` §14).
 Findings (same kernel name almost everywhere; the deltas are the subtle ones):
 
 - **CC:256 — the former floor win (now TIE).** Native

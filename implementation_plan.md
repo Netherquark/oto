@@ -112,6 +112,31 @@ convergence verdict compares against these, throttled+median-of-seeds.
 
 ### Completed
 
+#### Legality gate closed + tile ceilings (2026-10-18)
+- The gate census is now **0 MISS / 0 FALSE REJECTION** (3349 configs, 3217
+  built, 132 empty; was 79 refused + **53 MISS**) from three calibrated rules:
+  the workgroup register file (`R*MT0*MT1*LocalSplitU >= 65536`, Tensile error 4;
+  ThreadTile cancels, so it caps MacroTile *area*), the LSU LDS reduction
+  (`LSU*MT0*MT1*computeBytes > 65536`, Tensile `MaxLDS`), and a generator-seam
+  refusal of `AggressivePerfMode ∉ {0,1}`. The reference population keeps its
+  documented 43 false rejections (all the pre-existing LDS tile-footprint proxy
+  on large-DepthU gfx900 kernels), a reference-only story. Each new rule adds 0
+  false rejections to both populations.
+- The tile axes now have **provable ceilings**: area `< 65536/R` (SS/HH 65536,
+  DD 32768, CC 16384, ZZ 8192). A brute force above CC 8192 / ZZ 4096 finds none
+  legal, so the widest legal complex tiles are CC `128x64` and ZZ
+  `64x64`/`128x32`; `potential_configs.md` §8.2's "legal but never generated"
+  headroom list is retired as wrong.
+- The same dead wide tiles lived in **three** homes and are all repaired
+  (`phases.yaml` 4 rows, `decks.FAMILY_DECKS`, `candidate_rows.LADDER` +
+  `PLAN_BATCH`). `check_candidates.py --quiet` is **284 rows, 0 illegal**;
+  `TestEveryDeckRowIsGenerative` pins that no deck/ladder/batch row is
+  gate-refused under any contraction pattern. Candidate pool 405 → 416.
+- Live report `run_20261018_004835` reads **20 WIN / 18 TIE / 0 LOSS** (0 RED /
+  12 ORANGE, **PROVISIONAL** floor): `CC:256` moved **TIE → WIN (+7.8 %)**, the
+  R8 steal landing. Evidence `results.md` §14; reading `potential_configs.md`
+  §R24–§R32 (rewrite 6).
+
 #### CC:256 loser resolved — candidate sweep-order bug (2026-10-15)
 - The last LOSS cell (CC:256) was a producer bug, not a kernel deficit:
   `oto/harness/candidate_pool.py` sorted `ProblemSizes` as strings →
