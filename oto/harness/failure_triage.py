@@ -9,7 +9,7 @@ of a one-off script.
 
 Does NOT own: whether the *gates* should have predicted the failure
 (``oto.harness.gate_calibration``), the per-phase M1/M2/M3 failure taxonomy
-(potential_configs.md §2), or the run status / telemetry
+(``gfx90c_tuning_guide.md`` §5), or the run status / telemetry
 (``oto.metrics.run_status``).
 
 Public API: main, census, reason_for_phase, measurement_produced.

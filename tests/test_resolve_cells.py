@@ -2,8 +2,8 @@
 """
 test_resolve_cells.py — harness.resolve_cells per-cell winner resolution.
 
-Regression guards for the 38-cell evidence generator (potential_configs.md §2,
-the authoritative source for per-family triage / spoof-steal candidate work):
+Regression guards for the 38-cell evidence generator (potential_configs.md
+§R25, the per-cell reading — §R26 is the class tracker):
 
   * exactly the shipped deck — (family, shape) equals shipped_cell_set()
     (knowledge_base.md §6.1), no added/absent cells;
