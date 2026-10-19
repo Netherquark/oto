@@ -9,6 +9,45 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the GCN5 GEMM literature review folded, section by section, into
+  its owners; the raw file retired.** `gfx90c_gcn5_gemm_literature_caveman_full.md`
+  (a `/caveman full` external pass over rasterisation/wave quantisation, complex and
+  FP64 GEMM, LDS banks/padding, global-load pipeline/cache policy, split-K/Stream-K/
+  persistent kernels, small-K GEMM, autotuner search-space design, measurement
+  methodology, and handwritten-GCN-asm literature) is gone; each part now has an
+  owner:
+  * `kernel_tuning_research.md` — **§1** adds "no packed FP32 FMA
+    (`V_PK_FMA_F32`)" as a hardware fact; **§3.4 (new)** is rasterisation vs wave
+    quantisation (the 9-WG/7-CU tail, the transfer-only Triton/NVIDIA/cache-oblivious
+    precedent, the CPU-only grid/tail ranker, mixed-tile caution); **§4** adds
+    single-vs-double-buffer, `NonTemporal`, the "`StaggerU` is not a no-op until
+    measured" correction, the "unforwarded knob must be verified at the generator"
+    rule, and `InnerUnroll`/`DepthU` FP64 ILP; **§5** adds the Higham 3M
+    numerical-stability caveat and the non-atomic split-K design; **§8.7 (new)** is
+    split-K/Stream-K/persistent; **§9** adds the packed-FP32 do-not-cite row; the
+    portability rule and the Sources groups are extended.
+  * `complex_gemm_research_brief.md` — **§5** Higham caveat; **§8** register
+    blocking under `TT0*TT1*R ≤ 128` (legality filter, not a performance proof) + the
+    packed-FP32 correction; **§9** the non-atomic split-K as *new machinery*, not a
+    knob; **§11 (new)** complex-double occupancy/ILP + CLBlast `6464`.
+  * `tensile_tuning_context.md` **§S** — search-space size ("14–25 configs/cell is a
+    small shortlist"; the ZZ 5-geometry cell is the near-duplicate failure end),
+    surrogate/Bayesian recorded as *declined by `AI Rollout` policy*, and per-shape
+    vs family-wide.
+  * `knowledge_base.md` — **§8.3** external measurement corroboration (no universal
+    iteration count or ±% band; the project's bands are its own predeclared policy);
+    **§8.4** the packed-FP32 do-not-cite row.
+  * `gfx90c_tuning_guide.md` **§1.2** — where the tile shape comes from (`96×96/6×6`
+    is `WG×TT` arithmetic, and every ladder rung is empirical).
+  * `gfx90c_theoretical_limits.md` **§3** — the square-FP32 roofline closed form
+    `I = n/6`.
+  * `potential_configs.md` **§R33 (new)** — the review's eight-step experiment order
+    mapped onto the existing routes, with steps 4 (3M) and 7 (non-atomic split-K /
+    Stream-K) marked *not reachable as candidates on this port*. It adds no route.
+  * `implementation_plan.md` Completed, and this entry. Registered: no new module
+    (the fold is docs-only), so `claude.md` §2.2 / runbook / agent-reference rows are
+    unchanged. The review's `[CHECK]`/`[Transfer only]` labels are preserved
+    verbatim in the owners.
 - **2026-10-18 — the rule-calibration probe, formalised from the throwaway
   `/tmp` scripts.** `oto/harness/rule_calibration.py` applies any candidate
   rule — a `config -> Optional[bool]` predicate — to the corpus and reports the

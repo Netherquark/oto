@@ -177,6 +177,27 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
 6. **Subzero samples matter.** Profile GPU counters (bank conflict rate, LDS bandwidth, TCE/L2
    stall) *during* the search to disambiguate *why* a config lost — the rationale behind the
    counter regression in Stage 0/1.
+7. **Search-space size is implementation-dependent; there is no universal `10²/10³/10⁴` rule.**
+   CLBlast describes the GEMM space as too large for exhaustive search and stages its tuning
+   (small initial set → a random fraction of a much larger space); Kernel Tuner, ATLAS,
+   Ansor/AutoTVM and Triton all pick by measurement over a curated set. Consequence for this
+   repo: **14–25 configs/cell is a *small shortlist*** — sensible after strong legality/resource
+   pruning, risky when the candidates are near-duplicates. The corpus's ZZ cell (5 distinct
+   geometries, and the family furthest from ceiling) is the near-duplicate end of that scale
+   (`potential_configs.md` §R28/§R33).
+8. **Surrogate / Bayesian / bandit selection is published for GPU kernels** (rough, discrete,
+   constrained spaces, expensive evaluations — Willemsen et al.; KernelTuner's multiple
+   optimisers; Ansor's learned cost model). It is **explicitly OUT of this project's contract**:
+   `AI Rollout` caps at Levels 0–2 and requires deterministic ≤2-knob mutation, so record this
+   as an external recommendation the project has *declined*, not a route. The transferable part
+   that *is* adopted is the literature's insistence on **mechanism-diverse exploration (WGM,
+   buffers, LDS layout, depth) rather than ±1-knob hill-climbing alone** — which is why Stage 2
+   sweeps virgin axes one mechanism at a time.
+9. **Per-shape tuning is established practice, not a guaranteed gain.** CLBlast tunes on the
+   actual dimensions; Triton uses shape-keyed autotune. Specialise only where grid quantisation,
+   edge waste, K length or cache reuse differ materially (gfx90c: the small-shape band,
+   `potential_configs.md` §R29); keep the family-wide config as baseline/fallback and retain a
+   specialisation only when the gain repeats outside the tie band.
 
 **Cost model (cheap, no GPU).** Predicted time ≈ `max(flops/peak, bytes/bw) + LDS_conflict_penalty`,
 with the conflict factor estimated from stride/DepthU/VectorWidth/bpe/LdsPad. **Use for ordering and
@@ -191,6 +212,12 @@ Kernel Tuner is the source-of-truth, versus our 8 seeds which is thin near the b
 ## §S.X — Source list (verify each yourself, all live as of the corpus pass)
 - arxiv.org/abs/2210.01465 (TEVC 2022), 2407.11488, 2512.04226 (tritonBLAS), 2102.05297,
   2102.04199, 2201.05587, 2604.12891, 2408.11417, 2110.08221, 2102.04199, 1908.05792
+- Autotuner design, folded 2026-10-19 (§S 7–9): CLBlast (github.com/CNugteren/CLBlast,
+  doc/tuning.md), Kernel Tuner (doi.org/10.1016/j.future.2018.08.004), ATLAS
+  (sciencedirect S0167819100000879), Ansor (arxiv.org/abs/2006.06762), Triton GEMM tutorial
+  (triton-lang.org), Willemsen Bayesian (arxiv.org/abs/2111.14991), Stream-K
+  (arxiv.org/abs/2301.03598), CUTLASS efficient-GEMM + measurement methodology (docs.nvidia.com/cutlass),
+  Roofline (eecs.berkeley.edu EECS-2008-134)
 - rocm.blogs.amd.com artificial-intelligence/gemm_blog, software-tools-optimization/hipblaslt
   (SplitK), software-tools-optimization/lds-bank-conflict (padding vs XOR)
 - rocm.docs.amd.com projects/ai-ecosystem (workload), rocprofiler-compute pipeline descriptions

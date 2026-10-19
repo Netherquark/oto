@@ -111,7 +111,11 @@ the missed dual-issue (`v_fma_mix_f32` absent on gfx90c), not extra per-instruct
 - Use **42 GB/s** as the realistic DDR roofline for `t_min` (~82% of 51.2).
 - Minimal-traffic bytes (single pass, no reuse) = (M·K + K·N + M·N)·S with S per family
   (SS 4, DD 8, HH/HPA 2, ZZ 8, CC 16, INT8 1). Arithmetic intensity I =
-  2·M·N·K/bytes (real) or 8·M·N·K/bytes (complex).
+  2·M·N·K/bytes (real) or 8·M·N·K/bytes (complex). **Closed form for a square FP32
+  cube `M=N=K=n`: `I = n/6` FLOP/byte** — the roofline model's own worked case
+  ([Roofline, UCB/EECS-2008-134](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html));
+  with the per-family `S`, the same algebra gives each family's square-flip side
+  (the ridges below).
 - `t_min = max( 2·M·N·K / P , bytes / BW )` (42 GB/s; P per §2). Apply a ~1.2–1.5
   traffic multiplier before calling a kernel "failed" (real kernels move more than
   minimum traffic).

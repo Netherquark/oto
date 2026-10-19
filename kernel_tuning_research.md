@@ -7,6 +7,7 @@
 - `gfx90c_theoretical_limits.md` remains the authority for performance ceilings; this doc only explains *why* those ceilings exist.
 - Cite conventions: repo files as `path.py:line` against the local Tensile checkout at `TENSILE_ROOT` (per `.env`); web sources inline as `(site, URL)`; full list in **Sources**. Claims I could not fully verify are marked **check**.
 - **The 2026-10-16 primary-source pass** (Tensile's `validParameters` / `defaultSolution` / shipped `Perf/*.yaml` read directly, plus the external autotuning literature) had its conclusions promoted once each into their owners — `gfx90c_tuning_guide.md` §1.1 (the legal knob domains) and §9.1 (the virgin axes), and `tensile_tuning_context.md` (the search order). Its raw file was retired on that fold (`docs/README.md`), so the owners are the durable record.
+- **The 2026-10-19 GCN5 GEMM literature review** (`gfx90c_gcn5_gemm_literature_caveman_full.md`, a `/caveman full` pass over rasterisation/wave quantisation, complex/FP64, LDS, pipeline/cache, split-K, small-K, search-space design, measurement, and handwritten-asm literature) was folded the same way: §A/§C–§G/§J → this doc (§1, §3.4, §4, §5, §8.7, §9), §B/§C-complex → `complex_gemm_research_brief.md` (§5–§11), §H and §29 → `tensile_tuning_context.md` §S and `knowledge_base.md` §8, §27 → `gfx90c_tuning_guide.md` §1.2, and the ranked experiment order → `potential_configs.md` §R33. Every `[CHECK]`/`[Transfer only]` label is preserved; the raw file was retired, so the owners are the record.
 
 ---
 
@@ -18,6 +19,7 @@
   - **4 × 16-wide SIMDs**, each with its own **64 KiB VGPR file** (16384 32-bit regs/SIMD, 65536/CU) and a **10-entry scheduler partition** → hardware cap **10 waves/SIMD, 40 waves/CU**.
   - **64 KiB LDS per CU** (one workgroup-facing scratchpad), **32 banks × 4 B = 128 B/cycle**, with hardware conflict-resolution logic that re-schedules same-bank accesses into multiple cycles (rocprofiler-compute pipeline descriptions, https://rocm.docs.amd.com/projects/rocprofiler-compute/en/docs-6.3.0/conceptual/pipeline-descriptions.html).
   - **wave64 only**: LLVM reserves `ENABLE_WAVEFRONT_SIZE32` as 0 on GFX6–9 (LLVM AMDGPUUsage); wave32 is an RDNA invention (Wikipedia RDNA, https://en.wikipedia.org/wiki/RDNA_(microarchitecture)). **Consequence: every kernel is 64-lane; no wave32 trick exists on this APU.**
+- **No dual-lane packed FP32 FMA.** Vega ISA lists `V_PK_FMA_F16` (packed half) and `V_MAD_MIX_F32` (mixed-width MAD); it does **not** list `V_PK_FMA_F32`, and `V_MAD_MIX_F32` is not two independent packed FP32 FMAs (AMD Vega ISA PDF, https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/vega-shader-instruction-set-architecture.pdf). FP16 is the only packed/dual-rate arithmetic class on this part; do not build a gfx90c search dimension on a packed-FP32 FMA (see §9 do-not-cite).
 - **Issue rate**: GCN issues **1 instruction per wave per 4 cycles** (Wikipedia RDNA; Wronski "GCN – two ways of latency hiding and wave occupancy", https://bartwronski.com/2014/03/27/gcn-two-ways-of-latency-hiding-and-wave-occupancy) → a SIMD keeps its issue port busy only with **≥4 resident waves** (feeds §3).
 - **Memory**: the APU trades the ~400 GB/s HBM of dGPU Vega for **DDR4 shared with the CPU, ~30–40 GB/s effective** (FOSS United port article) — one to two orders of magnitude below dGPU; `gfx90c_theoretical_limits.md` §roofs is the authority for the resulting ceilings. **FP64 rate 1:16** (TechPowerUp Vega 64 spec, https://www.techpowerup.com/gpu-specs/radeon-vega-64.c3039) — **check**: no first-party doc states the gfx90c iGPU ratio explicitly; Cezanne FP64 is widely reported as 1/16 **check**.
 - **Implication for the campaign**: on a bandwidth-poor, wave64, 10-wave-partition machine, the levers that matter are (a) **register-residency quantization** (§3), (b) **LDS conflict/padding** (§2), (c) **access-pattern knobs** (`StaggerU`, `WorkGroupMapping`, §4) — not wave-size or tensor-core tricks.
@@ -30,6 +32,16 @@
 - Hardware splits a wave64 LDS instruction into **phases**, phase width depending on instruction width: **32 lanes for b32**, **8 lanes for b128** (CK LDS bank-conflicts doc). A conflict serializes lanes of a phase that hit the same bank into extra cycles.
 - **Conflict factor** used below: `max dwords landing on one bank` ÷ `mean dwords per bank over the phase` (1× = conflict-free).
 - Assumed access pattern: a **column read of a row-major LDS tile** with `R = 64` elements per row and row stride `(R + p)·e` bytes for pad `p` (elements of the type). **check** — which side (read vs write, TLU vs transpose) dominates in our kernels must be confirmed against the emitted `ds_read` pattern; the *relative* pad ranking below is what the experiment tests.
+- **The 32-bit `+1` pad rule does not transfer blindly to wide accesses.** For
+  `ds_read_b64`/`b128` the vector alignment, instruction width and lane grouping
+  matter, so the stride/pad arithmetic above must be re-derived for the actual
+  instruction — not reused from the f32 case. The method is: model each lane's
+  actual address for the actual instruction, classify banks per service phase, then
+  test padding **or** an XOR preshuffle (the latter avoids extra LDS storage; on
+  this port it is not reachable in VALU mode — §2.3). AMD's CK LDS guide shows
+  phase-specific `b128` behavior and XOR preshuffle, but its examples target newer
+  matrix-oriented kernels; adapt and validate on GCN5
+  (CK LDS bank-conflict guide, URL).
 
 ### 2.2 Worked numbers
 
@@ -56,6 +68,11 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   `UnrollMajorLDS`, else `VectorWidth`** (`:2812-2817`) — i.e. Tensile only pads
   when a transpose read is required, mirroring its own comment *"Padding only
   helps when transpose is required"* (`Tensile/Common.py:1360`).
+- **Absence of padding in the shipped gfx900 CC solution does not prove padding
+  cannot help here** — a particular solution's choice is not a proof, and the
+  auto-rule above only pads when a transpose read is required. Inspect the shipped
+  CC params and emitted assembly, derive the lane→bank mapping, then test
+  pad/swizzle. **check** until that dump exists (the §8.1 probe).
 - Tensile's historical caution: *"in 2016 this didn't seem to help performance,
   profilers were showing that channel conflicts weren't really hurting"*
   (`Tensile/Common.py:1358`) — **our context differs**: 2016-era dGPU bandwidth
@@ -132,6 +149,45 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   *"allocates extra lds to artificially limit occupancy"* when cache thrashing
   hurts (`Tensile/Common.py:983`) — a reminder that more residency is a
   hypothesis, not a goal.
+
+### 3.4 Rasterisation vs wave quantisation — the external evidence
+
+- **Two separate effects.** Grid *traversal order* (row/column-major, grouped,
+  rectangular swizzle, Morton) changes which output tiles are adjacent, mainly for
+  locality; *wave quantisation* is the partial last wave a fixed grid size leaves
+  behind. Remapping cannot remove that tail while the total grid is fixed.
+  **Worked instance: 9 workgroups on 7 CUs** (`256³ / MT96×96` = 9 tiles — the
+  campaign's SS:256 winner geometry) → `P = 7`, `waves = ⌈9/7⌉ = 2`, final-wave
+  occupancy `2/7 = 28.6 %`. This is the arithmetic behind the guide's M2 residency
+  table (`gfx90c_tuning_guide.md` §5), and why the SS:256 `WGM8`-vs-`WGM4`
+  question is a *locality* question, not a tail question.
+- **External precedent is transfer-only.** Triton's GEMM tutorial reports grouped
+  scheduling loading 54 vs 90 operand blocks over the same first nine output tiles,
+  >10 % on some systems incl. A100 (Triton, URL); an NVIDIA study found rectangular
+  horizontal/vertical grouping beat Morton order in its workloads (NVIDIA, URL).
+  Both are **[Transfer only]** — they motivate a gfx90c test, they do not predict a
+  gfx90c gain. Cache-oblivious blocking (recursive blocking + Peano-curve order) is
+  the [GPU-general] version (Bader & Zenger, URL). Compare row/col/grouped 4/8,
+  X/Y rectangular swizzle and (optionally) Morton on gfx90c; test cache-resident/
+  reused operands separately from rotating/streaming buffers.
+- **Randomise the timing order, then repeat.** The gfx90c test for any
+  mapping/traversal claim is: hold tile, depth, memory policy and input-cache state
+  fixed, vary only the order, randomise the measurement order, and repeat. **If the
+  difference vanishes across repeats, call it noise, not a quantisation fix** —
+  the tail arithmetic above is descriptive and cannot by itself move throughput.
+- **CPU-only ranker, not a throughput oracle.** For tile `BM×BN`:
+  `GM=⌈M/BM⌉`, `GN=⌈N/BN⌉`, `T=GM·GN`, `P=C·r` (C = 7 CUs, r = resident WG/CU),
+  `waves=⌈T/P⌉`, `eta_slots=T/(P·waves)`, `tail=(T mod P)/P`. Use it to rank
+  candidates by grid size, edge waste, register/LDS residency and K-loop length;
+  do **not** optimise `T mod 7` alone — a divisible grid can still lose to spills,
+  poor memory access or unequal block times. **[CHECK] no published formula
+  predicts actual gfx90c throughput from grid shape + CU count + WG size alone.**
+- **Mixed/irregular workgroup sizes.** No strong published study shows mixed
+  96×96 and 128×96 tiles generally win on GCN5; tall-skinny GEMM work (Ernst
+  et al., URL) is **[Transfer only]** and its mixed-tile results include Volta.
+  Mixed tiles cost extra launches over disjoint output regions or a dynamic
+  scheduler, plus edge-handling and imbalance. Sweep uniform tiles with the
+  predictor first; pursue mixed tiles only on repeatable material underfill.
 
 ## 4. Tensile knob mechanics
 
@@ -263,6 +319,40 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   potential_configs.md §7, referenced for the counts). On this port NLCA is
   also the shared alias for `NumLoadsCoalescedA` in
   `oto/tensile/gates/loads.py:_nlca_for`.
+- **Pipeline buffer depth (`PrefetchGlobalRead`) — single vs double buffer.** The
+  literature has no closed-form gfx90c rule: double buffering overlaps loads and
+  compute but costs LDS/VGPR and can reduce occupancy; **single buffering can win
+  on short-K / low-work kernels** where little compute exists to hide the load.
+  Sweep buffering/prefetch with the tile fixed at K≈128–256 and *whole-kernel*
+  time (short K may never amortise the pipeline setup). Extends the PGR=1 ⇒ 2×
+  LDS/VGPR entry above (H3, §7).
+- **`NonTemporalA/B` — a cache hint, not a guaranteed bypass.** The knob lowers to
+  an emitted load flavor (`th:TH_LOAD_NT`); "non-temporal" must not be assumed to
+  bypass every cache level. Possible win: stop one-use streaming operands evicting
+  useful L2 lines. Possible loss: lose reuse when operands are revisited. On a
+  **1 MiB L2** there is no universal published result; measure default / NT-A /
+  NT-B / both under cache-resident *and* rotating-buffer cases, and inspect the
+  emitted modifiers (complex side: `complex_gemm_research_brief.md` §10).
+- **`StaggerU` is not a no-op until measured.** It offsets K-loop start positions
+  among workgroups to disperse correlated traffic. It **cannot be dismissed as a
+  no-op merely because the device has 7 CUs or ~42 GB/s** — that is an argument,
+  not a measurement. Test with tile/depth fixed, compare repeat times and any
+  memory counters, and prune only on a repeatable null (the §8.4 probe).
+- **`TransposeLDS` / `WaveSeparateGlobalRead{A,B}` / `1LDSBuffer` gate a *stage*,
+  not a value.** They change three different stages — LDS arrangement, which waves
+  issue global reads (fewer cross-wave bank collisions), and buffering/overlap. No
+  universally-best GCN5 setting is published. **If the launch/config layer does not
+  forward a knob and the YAML does not set it, the harness must be extended before
+  meaningful tuning** — verify each reaches the generator; an unforwarded knob only
+  inflates the search. This is the general form of the forwarding surface at
+  `oto/tensile/config_writer.py::FORWARDED_KNOBS` (`potential_configs.md` §R16).
+- **`InnerUnroll` / `DepthU` and ILP (small-K and FP64).** Larger depth may cut
+  loop overhead and expose independent work, at higher VGPR (lower residency); a
+  larger thread tile likewise exposes more accumulator chains. Sweep `DepthU`
+  (legal values 8/16/32/64) with the output tile fixed, then tune the tile
+  separately — for `K ≈ 128–256` this *is* the small-K question, and for FP64 it is
+  the ILP question. **[CHECK] no publication shows `DepthU` dominates ILP on GCN5**
+  (complex-double side: `complex_gemm_research_brief.md` §11).
 - **Enforcement/module pointers**: the forwarded set is
   `FORWARDED_GROUP_C_KNOBS` and the write path `_fork_params`
   (`oto/tensile/config_writer.py`); the class rules are
@@ -285,6 +375,24 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   - These reduce **arithmetic, not bytes** — attractive exactly where our CC/DD cells are VALU-bound, less so if the cell is already DRAM-bound on DDR4 (§1).
 - **Reduction-path strategy already ranked by the project** (potential_configs.md §10.1): `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` splits K across workgroups with partial results in workspace, then a post-kernel accumulates — mechanically sound for complex (gate §4) at the cost of a **2-kernel launch + workspace traffic**, which matters more on this bandwidth-poor APU than on dGPU. `StreamK` would be the modern answer but is MFMA-gated (§4).
 - **Ordering principle** (from §7, unchanged): pads → GSU+MultipleBuffer → PGR=0 → NLCA=3 → split-complex; each rung is only entered if the previous stays under the ~2× gap budget.
+- **3M/Gauss carries a numerical-stability price (Higham).** The literature's
+  three-multiply result (Higham, SIAM, URL) reports up to **25 % arithmetic
+  saving** but **lower numerical stability than the conventional four-multiply
+  form**, practically useful only in suitable cases. Do **not** assume a 25 %
+  kernel speedup: extra adds, temporaries, registers and traffic can erase it,
+  especially at small K. Validate against a high-precision reference on
+  cancellation-heavy inputs, and report max/relative error and application
+  tolerance before believing a win. (Instruction counts: §4 above and
+  `complex_gemm_research_brief.md` §4–§5.)
+- **Split-K without atomics is a second design, not `GlobalSplitU`.** The
+  literature is explicit (CUTLASS, **[Transfer only]**): partition K, each
+  first-stage workgroup writes its own partials to a workspace, and a **second
+  kernel reduces them in a fixed order** — the deterministic race-free
+  alternative to GSU's beta-scaled atomic writes. Without a workspace there is no
+  general race-free cross-workgroup reduction. Cost = scratch traffic + another
+  launch + the reduction. Tensile's `GlobalSplitU` is the *atomic* path (§4); a
+  custom non-atomic fixup would be new machinery this port does not forward.
+  Complex case: `complex_gemm_research_brief.md` §9; §8.7 below.
 
 ## 6. SOTA autotuning and cross-SKU porting ("anti-spoofing")
 
@@ -298,7 +406,8 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   2. **Rankings transfer better than values**: NT/T layout dominance and macro-tile *scale* tend to port (same ISA); exact `DepthU`, `LdsPad`, `GSU`, `VW` boundaries are per-SKU (per-arch tuning evidence above).
   3. **Validate per device, per session** — M4's rules stand: benchmark **TTY runs only, never from the GUI session**; enforce the **1.175 GHz clock-suppression check** before trusting any delta (see `knowledge_base.md` M4 / `changelog.md`, referenced not copied).
   4. **Warm-start caches must be keyed by device** (DevConf finding) — a cached "best config" from a previous session/machine is evidence, not a result.
-  5. **Stream-K literature is background, not applicable here**: StreamK requires MFMA (`SolutionStructs.py:2976`); the transferable ideas are **split-K via `GSU>1`** and **persistent/quantization-aware tile sizing** (Colfax Stream-K/persistent-kernel tutorials, https://colfaxresearch.com; Stream-K++, arXiv:2408.11417, https://arxiv.org/abs/2408.11417).
+  5. **Stream-K literature is background, not applicable here**: StreamK requires MFMA (`SolutionStructs.py:2976`); the transferable ideas are **split-K via `GSU>1`** and **persistent/quantization-aware tile sizing** (Colfax Stream-K/persistent-kernel tutorials, https://colfaxresearch.com; Stream-K++, arXiv:2408.11417, https://arxiv.org/abs/2408.11417). The mechanism and its limits are §8.7.
+  6. **Full portability rule.** Mathematical algorithms often transfer; **ISA legality, occupancy, LDS conflicts, cache modifiers and measured performance wins remain architecture-specific.** Verify on gfx90c before converting any hypothesis (this doc) into benchmark policy (`potential_configs.md`).
 
 ## 7. Concrete experiments mapped to M1–M4
 
@@ -413,11 +522,36 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   is safe given the LDS-pad and clock cliffs this doc documents — evidence says
   no; the experiment is a replay of a foreign winner on this box under M4 rules.
 
+### 8.7 Split-K, Stream-K, persistent kernels
+
+- **Stream-K is background here, and its numbers do not transfer.** The Stream-K
+  paper partitions aggregate inner-loop work across processing elements and
+  reports peak speedups up to **14×/6.7×** over 32,824 geometries — explicitly
+  **not gfx90c performance evidence**; Tensile's `StreamK` is MFMA-gated on this
+  ISA (§4). The transferable idea is work-centric decomposition, which `GSU>1`
+  approximates.
+- **Persistence does not create parallelism.** A persistent work queue reduces
+  scheduling overhead and improves balance *only when many tasks exist*. With few
+  output blocks, persistent scheduling over the same output tiles + K partition
+  leaves CUs idle too; split-K/work-centric decomposition is what creates tasks,
+  at scratch/fixup cost. For tiny matrices check launch overhead first; for
+  long-K / too-few-blocks, test partial-K before building a general queue.
+  **[CHECK] no directly comparable paper shows a persistent GEMM winning on a
+  seven-CU gfx90c**, and `PersistentKernel` is not forwarded by this port's writer.
+- **Split-K applies to any type, with a per-type workspace.** Partials per output
+  per partition: FP64 **8 B**, complex-double **16 B**. More partitions raise
+  concurrency but also partial traffic + reduction cost; a fixed-order reduction
+  improves reproducibility versus uncontrolled atomic order (yet still differs
+  from an unsplit accumulation). **[CHECK] there is no published universal gfx90c
+  split-K threshold for FP64/complex-double** — time both stages plus workspace
+  traffic (the non-atomic design is §5).
+
 ---
 
 ## Sources
 
 **Hardware / architecture**
+- AMD Vega Shader ISA (packed FP16 `V_PK_FMA_F16`; mixed-width `V_MAD_MIX_F32`; **no `V_PK_FMA_F32`**): https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/vega-shader-instruction-set-architecture.pdf
 - LLVM AMDGPUUsage (gfx target families, wave32 reserved on GFX6–9, VGPR granularity): https://llvm.org/docs/AMDGPUUsage.html
 - HIP docs — Hardware implementation (LDS 32 banks × 4 B, 128 B/cycle): https://rocm.docs.amd.com/projects/HIP/en/latest/understand/hardware_implementation.html
 - Composable Kernel — Understanding AMD GPU LDS and Bank Conflicts (bank aliasing, per-instruction phases, XOR swizzle): https://rocm.docs.amd.com/projects/composable_kernel/en/latest/conceptual/ck_tile/hardware/lds_bank_conflicts.html
@@ -441,6 +575,12 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - NVIDIA — Matrix Multiplication Background (tile & wave quantization): https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html
 - WaveTune (arXiv:2604.10187): https://arxiv.org/abs/2604.10187
 
+**Traversal / rasterisation / small-shape**
+- Triton GEMM tutorial (grouped scheduling; shape-keyed autotune): https://triton-lang.org/main/getting-started/tutorials/03-matrix-multiplication.html
+- NVIDIA — thread-group ID swizzling (rectangular grouping vs Morton, **[Transfer only]**): https://developer.nvidia.com/blog/optimizing-compute-shaders-for-l2-locality-using-thread-group-id-swizzling
+- Bader & Zenger — cache-oblivious matrix multiplication (recursive blocking + Peano order, [GPU-general]): https://www.sciencedirect.com/science/article/pii/S0024379506001595
+- Ernst et al. — tall-skinny GEMM on GPUs (unusual-shape mappings/autotuning, **[Transfer only]**): https://journals.sagepub.com/doi/10.1177/1094342020965661
+
 **Complex GEMM**
 - "Flexible Performant GEMM Kernels on GPUs" (SplitComplex vs InterleavedComplex): https://ieeexplore.ieee.org/document/9655458
 - cuBLAS docs — Gauss / cgemm3m complexity reduction (**check** figure): https://docs.nvidia.com/doc/cuBLAS/
@@ -448,6 +588,8 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - BLIS 1m (SISC): https://www.cs.utexas.edu/~flame/pubs/blis6_sisc_rev0.pdf ; flame/blis: https://github.com/flame/blis
 - GEMMFIP — arXiv:2302.08417: https://arxiv.org/abs/2302.08417
 - rocBLAS programming guide (Tensile complex problem types): https://rocm.docs.amd.com/projects/rocblas/
+- Higham — three-multiply complex matrix multiplication (up to 25 % saving, **lower numerical stability**): https://epubs.siam.org/doi/10.1137/0613043
+- CLBlast tuning docs (staged GEMM tuning; precision `6464` complex-double): https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md
 - **First-party companion brief:** `complex_gemm_research_brief.md` (repo root) —
   BLAS-8 accounting, the four-FMA complex MAC (MAC_F32C.py/MAC_F64C.py), 3M/4M
   instruction counts, MAGMA/Fermi + Ozaki routes. The single citation anchor for
@@ -462,6 +604,16 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - DevConf 2026 — "Warm Starts Over Fresh Runs" (defaults 14–31 % slower; device-keyed caches) — **check** URL
 - Colfax — persistent kernels / Stream-K tutorials: https://colfaxresearch.com
 - Stream-K++ — arXiv:2408.11417: https://arxiv.org/abs/2408.11417
+
+**Split-K / persistent / roofline / measurement**
+- Osama et al. — Stream-K (work-centric decomposition; peak 14×/6.7× over 32,824 geometries, **[Transfer only]**): https://arxiv.org/abs/2301.03598
+- CUTLASS — efficient GEMM (K-partitioned GEMM + batched reduction + workspace, **[Transfer only]**): https://docs.nvidia.com/cutlass/latest/media/docs/cpp/efficient_gemm.html
+- CUTLASS — GEMM performance-measurement methodology (warmup/profiling loops, clock settling, sample counts; NVIDIA-specific): https://docs.nvidia.com/cutlass/latest/media/docs/cpp/gemm_performance_measurement_methodology_guidelines.html
+- Roofline model (Williams et al., UCB/EECS-2008-134): https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html
+- Kernel Tuner (van Werkhoven et al.): https://doi.org/10.1016/j.future.2018.08.004
+- ATLAS (empirical BLAS optimisation): https://www.sciencedirect.com/science/article/pii/S0167819100000879
+- Ansor / AutoTVM (learned cost model + evolutionary search): https://arxiv.org/abs/2006.06762
+- Willemsen et al. — Bayesian/surrogate GPU-kernel autotuning: https://arxiv.org/abs/2111.14991
 
 **Tensile (local checkout at `TENSILE_ROOT`)**
 - `Tensile/Common.py:511-519` (PGR cost), `:551-556` (`1LDSBuffer`), `:906-946` (`StaggerU`), `:975-981` (`WorkGroupMapping`), `:983` (`MaxOccupancy`), `:1358/:1360` (`LdsPad` comments), `:1542-1629` (defaults)
@@ -500,6 +652,8 @@ does not repeat the work.
 | COSTA, FASTEST, BASS, BEST, Pyramid, MagicLine, SeerNN, PlanGen, GemmLab, Charo analytical GEMM, Fugerite et al. | Bibliographic ghosts **in this corpus**: none could be verified to exist as cited. Treat as folklore until independently located. |
 | A universal "2 waves/SIMD is the right occupancy target" | Not a law. The project's own measurement puts the corpus **median** at 2 waves/SIMD (`gfx90c_theoretical_limits.md` §7.1), which is a description of what happened, not a target. |
 | "AMD's shipped Vega solutions are systematically small-tiled" | **Resolved, and the answer is no.** AMD's shipped vega10/vega20 solution files contain MT128x16 (FP32), MT064x064 (FP64), MT016x016 (FP16) *in the same library* — there is no uniform small- or large-tile bias. AMD's *rank-1* solutions are small (see `potential_configs.md` §6 Route A), but the library spans three orders of tile area, so "AMD prefers small tiles" is not a supportable generalisation. |
+| "Vega has a packed / dual-lane FP32 FMA (`V_PK_FMA_F32`)" | Vega ISA lists `V_PK_FMA_F16` (packed half) and `V_MAD_MIX_F32` (mixed-width MAD) but **not** `V_PK_FMA_F32`; `V_MAD_MIX_F32` is not two packed FP32 FMAs (§1). Do not build a gfx90c search dimension on a nonexistent packed-FP32 FMA. |
+| "Handwritten GCN/GFX90C assembly systematically beats tuned Tensile" | **Not established.** **[CHECK]** No directly comparable study found; KernelTuner's AMD Vega result concerns *tuning time* versus brute force, not kernel throughput. Custom assembly may win selected shapes via schedule/layout/address optimisation, but only measured against tuned Tensile under identical correctness and measurement protocol. |
 
 ### 9.1 What `corpus.md` contributed that this file did not have
 

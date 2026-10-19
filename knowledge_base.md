@@ -620,6 +620,18 @@ Steps, all operator-side (TTY):
 Without step 1 and step 6 the run cannot distinguish a kernel improvement from a
 thermal or DVFS difference, which is the single largest confound in this corpus.
 
+**External corroboration (CUTLASS measurement guidelines, [Transfer only]).** The
+literature agrees on the shape of this protocol — separate warmup and profiling
+loops, minimal gaps between launches, controlled caches, stable clocks, and enough
+samples to average out timer overhead — and is equally clear that its own numbers
+are NVIDIA-specific, not gfx90c constants (it reports ~3 s of clock settling in its
+environment and >1,000 profiling iterations for a large GEMM). **No universal
+iteration count and no universal ±% tie band exist**; this project's bands (§8
+±5 % parity; the guide's tighter M1 band) are its own predeclared policy, not an
+external standard. The one transferable rule: distinguish a first-run clock
+transition from a wave tail, and retain raw samples rather than only a best time
+([CUTLASS methodology](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/gemm_performance_measurement_methodology_guidelines.html)).
+
 ### 8.4 Do not cite — unverified claims that circulate in this project
 
 Claims that have been searched for and **not** confirmed. Citing them is a
@@ -640,6 +652,7 @@ defect, not a shortcut. Each names what was actually found, if anything.
 | "DirectToLDS helps CC/ZZ/DD" | Pinned `isDirectToLdsDoable` requires a 4-byte global load; their 8/16 B elements fail it. SS/HH-only. |
 | "WGM=7 is the natural optimum for 7 CUs" | WGM is a J-dimension traversal block height (`wgSerial = wg0 + (wg1 % WGM) * nwg0`), not a CU count. No verified 7-CU raster rule exists. |
 | "`ScheduleGlobalRead`/`ScheduleLocalWrite` tune the non-MI kernel" | No direct use in the pinned Assembly writer. ISA-diff preflight required. |
+| "Vega has a packed/dual-lane FP32 FMA (`V_PK_FMA_F32`)" | Vega ISA lists `V_PK_FMA_F16` (packed half) and `V_MAD_MIX_F32` (mixed-width) but **not** `V_PK_FMA_F32`; `V_MAD_MIX_F32` is not two packed FP32 FMAs. No FP32 lane-doubling exists on this part. |
 
 Full detail, including what each source *does* say, is in `kernel_tuning_research.md`
 §9 — same list, kept in one place, with a per-row "what is actually known" and one

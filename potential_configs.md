@@ -7,7 +7,8 @@ legality gate is now **closed** on our corpus — 0 misses, 0 false rejections, 
 (§R27); the straggler list is decomposed into four classes with a per-class route
 set (§R26), including why **no steal is justified**; the ledger trace per cell is
 in §R28; and the deck's dead complex rows are replaced with the widest *legal*
-tiles (§R30).
+tiles (§R30). §R33 maps the 2026-10-19 GCN5 GEMM literature review's experiment
+order onto these routes.
 
 **Owns:** the candidate deck, the routes, the search rules, and the reading of the
 gates. Does not own: ceilings and verdict bars
@@ -382,6 +383,45 @@ python3 port_tensile.py --auto --budget 10 --yes
 The gate calibration must print `0 MISS` and `0 FALSE REJECTION`, and the rule
 probe `0 FALSE REJECTION`; if either does not, a new phase is a gate bug, not a
 kernel result.
+
+## R33 — the literature's experiment order, mapped onto the routes above
+
+The 2026-10-19 GCN5 GEMM literature review (mechanisms in
+`kernel_tuning_research.md` §3.4/§4/§5/§8.7, `complex_gemm_research_brief.md`
+§5–§11, `tensile_tuning_context.md` §S) proposes an eight-step order. It is **not a
+new plan** — every step is already a route or a probe; this maps it and marks the
+steps this port cannot reach:
+
+1. **SS:256 WGM4/WGM8 + row/column, randomised order, repeats** — the ±4× anomaly,
+   and the current straggler. Route: §R26 SS class + `candidate_rows.NARROW_NEIGHBOURS`
+   WGM set; mechanism `kernel_tuning_research.md` §3.4. **Reachable.**
+2. **CPU predictor ranks tile candidates** (grid/tail/edge/residency) — a ranking
+   tool, not an acceptance test (`kernel_tuning_research.md` §3.4). **Reachable (CPU-only).**
+3. **ZZ/FP64: keep 32×32, sweep thread tile and K depth independently** —
+   `complex_gemm_research_brief.md` §11. Route: §R30 widest-legal rows + `LADDER`
+   ZZ rungs. **Reachable.**
+4. **CC: 3-product vs 4-product, with error tests and all temporaries/launch costs** —
+   high-value but *not* a config: no 3M path is forwarded, and the numerical caveat
+   (`complex_gemm_research_brief.md` §5) makes it a design change, not a draw. **Not reachable as a candidate.**
+5. **LDS: model per-lane `ds_read_b64/b128` addresses/phases/banks, then pad/XOR** —
+   `kernel_tuning_research.md` §2/§8.1. Route: §R26/§R30 pad rows; XOR
+   (`LdsBlockSizePerPad`) stays unforwarded. **Partly reachable.**
+6. **Pipeline/cache: one knob at a time** (prefetch, buffers, wave-separated loads,
+   NT), verifying each is forwarded — `kernel_tuning_research.md` §4; forwarding
+   surface is §R16. **Reachable for forwarded knobs only.**
+7. **Underfilled shapes: non-atomic split-K / Stream-K, including workspace + fixup** —
+   `kernel_tuning_research.md` §8.7; **not forwarded** (no `GlobalSplitUAlgorithm`/
+   workspace, StreamK MFMA-gated) → background. **Not reachable.**
+8. **Tuner: legality/resource prune → mechanism-diverse shortlist → (surrogate
+   selection) → replicate → statistical tie policy** — the prune + mechanism-diverse
+   shortlist is Stage 0–2 (`tensile_tuning_context.md` §S); **surrogate selection is
+   declined by policy**. **Partly reachable.**
+
+The one literature finding that lands directly on the current straggler:
+**14–25 configs/cell is a *small* shortlist** (`tensile_tuning_context.md` §S item 7),
+and the near-duplicate failure mode is exactly the ZZ cell's 5 distinct geometries
+(§R28). The steps above therefore re-rank the existing routes by the anomaly's
+expected value; they add no route that §R26–§R30 did not already carry.
 
 ---
 

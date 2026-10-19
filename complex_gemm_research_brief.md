@@ -80,6 +80,14 @@ real counterpart. The "÷4" applies to *complex-MAC throughput*, not to BLAS-8 G
 - Net: a **fused 4M** kernel is instruction-optimal and traffic-free (why rocBLAS uses
   it); 3M/2M help only when the restructured real GEMMs are themselves efficient and
   the combine is amortized.
+- **Numerical-stability caveat (Higham).** The three-multiply form is *not* merely a
+  cheaper 4M: Higham's analysis reports up to **25 % arithmetic saving** but **lower
+  numerical stability than the conventional four-multiply product**, practically
+  useful only in suitable cases ([Higham, SIAM](https://epubs.siam.org/doi/10.1137/0613043)).
+  So a 3M experiment must carry a high-precision reference and cancellation-heavy
+  inputs, and must report max/relative error against the application's tolerance;
+  do not assume the 25 % arithmetic saving becomes a 25 % kernel speedup — extra
+  adds, temporaries, registers and traffic can erase it, especially at small K.
 
 ## 6. Measured gfx90c complex GEMM (first-party, this repo)
 From the project registry (`gfx90c_results/registry.db`; this is a first-party
@@ -114,19 +122,34 @@ The field reuses low-precision matrix engines; none of it is reachable on gfx90c
 
 ## 8. Exotic paths against the 4-FMA wall on gfx90c
 Instruction-level levers are closed: gfx90c has no `v_dot*`/dp4a (gfx906+), no
-`v_pk_fma_bf16` (any gfx9), and no `v_mfma_*`
-([LLVM AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html),
-[ROCm specs](https://rocm.docs.amd.com/en/docs-6.1.5/reference/gpu-arch-specs.html)).
-So the only real options are algorithmic/occupancy:
+`v_pk_fma_bf16` (any gfx9), no `v_mfma_*`, and — the correction that circulates
+most often — **no packed/dual-lane FP32 FMA**: Vega lists `V_PK_FMA_F16` (packed
+half) and `V_MAD_MIX_F32` (mixed-width) but not `V_PK_FMA_F32`, and
+`V_MAD_MIX_F32` is not two independent packed FP32 FMAs
+([AMD Vega ISA](https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/vega-shader-instruction-set-architecture.pdf),
+[LLVM AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html),
+[ROCm specs](https://rocm.docs.amd.com/en/docs-6.1.5/reference/gpu-arch-specs.html);
+`kernel_tuning_research.md` §1/§9). So the only real options are algorithmic/occupancy:
 
 - (a) **3M/2M restructuring** to cut GEMM count 25–50%, accepting extra passes
   ([MAGMA](https://www.netlib.org/utk/people/JackDongarra/PAPERS/208_2010_an-improved-magma-gemm-for-fermi-gpus.pdf),
-  [arXiv:2609.05419](https://arxiv.org/abs/2609.05419));
+  [arXiv:2609.05419](https://arxiv.org/abs/2609.05419)) — with the Higham
+  numerical caveat of §5;
 - (b) **Ozaki/INT8 emulation** — moot without a fast low-precision engine
   ([arXiv:2508.03984](https://arxiv.org/html/2508.03984v2));
 - (c) **occupancy/register tiling** — the demonstrated gfx90c bottleneck, the same
   GSU/WGM/MT/TT levers that lift real GEMMs, are the realistic route from ~20% toward the
   ~69–80% real-family bar (local analysis: `gfx90c_theoretical_limits.md` §7).
+  **The register-blocking reference is a trampoline, not an answer:** BLIS
+  establishes register-resident output microtiles and operand reuse, but its CPU
+  tile dimensions do not prescribe GPU thread tiles, and **no published rule proves
+  one tile optimal under this project's per-thread bound `TT0*TT1*R ≤ 128`**
+  ([BLIS](https://doi.org/10.1145/2764454)). Complex needs both real and imaginary
+  accumulators, so operands, pointers, masks and temporaries consume more registers
+  too. Treat the 128 bound as a **legality filter, not a performance proof**:
+  enumerate legal configs, reject likely spills, estimate occupancy, benchmark the
+  survivors. (`R` is the per-dtype accumulator VGPR weight — `S/H` 1, `D` 2, `C` 4,
+  `Z` 8 — so the bound counts logical accumulators; `kernel_tuning_research.md` §4.)
 
 ## 9. GlobalSplitU reachability on this port
 GSU splits K across workgroups; legality is dtype-locked on the reachable writer
@@ -143,12 +166,60 @@ paths (`oto/tensile/gates/assembly.py`, `assembly_class_valid`):
 For the complex families GSU is therefore **not a lever**; the split-complex route
 (§4–§5, §8) is the only way to reduce per-GEMM work.
 
+**A non-atomic split-K is a different design, not a reachable knob.** The literature
+(CUTLASS, **[Transfer only]**) describes K-partitioned GEMM where each first-stage
+workgroup writes its own complex partials to a **workspace** and a **second kernel
+reduces them in a fixed order** — the deterministic, race-free counterpart of GSU's
+beta-scaled atomic writes. Without a workspace there is no general race-free
+cross-workgroup reduction. The cost is scratch writes/reads, a second launch and the
+reduction; for small CC/ZZ the fill benefit may not cover it. Tensile's
+`GlobalSplitU` is the atomic path; this port forwards neither
+`GlobalSplitUAlgorithm` nor a reduction workspace, so a non-atomic fixup is **new
+machinery**, not a config ([CUTLASS](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/efficient_gemm.html);
+`kernel_tuning_research.md` §5/§8.7).
+
 ## 10. Non-temporal loads
 `NonTemporalA/B/C/D` lowers to `buffer_load … th:TH_LOAD_NT` — a load-flavor knob,
 not a class rule (`oto/tensile/gates/assembly.py`). It is narrow: do **not** use it
 on normal tiled A/B (they reuse across K within the 1 MB L2 — NT would flush it); use
 it on (a) the C operand read-modify-write, (b) single-K-pass GSU kernels where each
 tile is read once. One legality-checked probe row per case is enough to decide.
+"Non-temporal" must **not** be assumed to bypass every cache level; inspect the
+emitted modifiers ("meaning depends on the emitted ISA cache modifiers",
+`kernel_tuning_research.md` §4).
+
+## 11. Complex-double (ZGEMM) occupancy and FP64 ILP
+ZGEMM runs on the FP64 VALU at 1/16 rate (§2–§3), so its ceiling is a *pipeline*
+ceiling and its levers are concurrency and independent work, not arithmetic tricks.
+
+- **No defensible universal "saturation" wavefront count exists for gfx90c FP64.**
+  The concurrency needed to saturate the FP64 pipe depends on dependent-FMA
+  latency, independent chains per thread, scheduling, VGPR allocation and memory
+  stalls; generic occupancy docs give no gfx90c-specific FP64 saturation curve
+  **[CHECK]**. Test thread-tile/accumulator count and unroll depth independently,
+  tracking runtime against VGPR/occupancy. If more resident waves stop helping,
+  stop chasing occupancy. Do **not** transfer MI50/MI60/CDNA/RDNA/NVIDIA
+  thresholds to gfx90c.
+- **Register blocking for 1/16-rate FP64.** The accumulator storage floor for real
+  FP64 is `TT0*TT1*8` bytes per thread (its outputs alone); actual demand is higher
+  (operands + temporaries), and complex-double keeps real *and* imaginary
+  accumulators, doubling the logical storage. A larger tile improves reuse/ILP but
+  lowers resident waves. Keep the project's measured **32×32** reference winner as
+  a reference, not a literature-proven optimum; sweep adjacent legal tiles and
+  inspect spills **[CHECK] no published gfx90c FP64 optimal tile found**.
+- **Complex-double is a standard tuning target, not a solved one.** CLBlast
+  supports precision `6464` (complex-double) with its own tunable GEMM parameters
+  ([CLBlast](https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md)), and
+  BLIS describes a reusable microkernel framework
+  ([BLIS](https://doi.org/10.1145/2764454)) — these establish the problem, not a
+  portable tile optimum **[CHECK] no GCN5-specific complex-double tile
+  recommendation found**. Tune complex-double independently, carrying both
+  accumulators, reduction and temporary traffic, and an error check.
+- **`InnerUnroll` / `DepthU` expose FP64 ILP.** More unrolling may reveal
+  independent FP64 work and cut loop overhead, at higher VGPR (lower residency).
+  Sweep `DepthU`/`InnerUnroll` with `TT0×TT1` fixed, then sweep the tile at the
+  selected depths **[CHECK] no publication proves `DepthU` dominates FP64 ILP on
+  GCN5**. Mechanics: `kernel_tuning_research.md` §4.
 
 ## Quantitative guidance
 - Ceilings (BLAS-8): **CGEMM = FP32 peak ≈ 1613 GFLOPS; ZGEMM = FP64 peak ≈ 101 GFLOPS**

@@ -112,6 +112,21 @@ convergence verdict compares against these, throttled+median-of-seeds.
 
 ### Completed
 
+#### GCN5 GEMM literature review folded into its owners (2026-10-19)
+- `gfx90c_gcn5_gemm_literature_caveman_full.md` (a `/caveman full` external
+  literature pass) was integrated section-by-section and retired: mechanisms →
+  `kernel_tuning_research.md` (§1 no packed-FP32 FMA; §3.4 rasterisation vs wave
+  quantisation + the CPU predictor; §4 pipeline/cache knobs; §5 the Higham 3M
+  caveat + non-atomic split-K; §8.7 split-K/Stream-K/persistent; §9 do-not-cite);
+  complex/FP64 → `complex_gemm_research_brief.md` (§5 Higham; §8 register blocking
+  + the packed-FP32 correction; §9 non-atomic split-K; new §11 complex-double
+  occupancy/ILP); search design + measurement → `tensile_tuning_context.md` §S and
+  `knowledge_base.md` §8.3; tile-shape provenance → `gfx90c_tuning_guide.md` §1.2;
+  the roofline closed form → `gfx90c_theoretical_limits.md` §3; and the ranked
+  experiment order → `potential_configs.md` §R33 (mapped onto the existing routes;
+  its steps 4 and 7 are *not* reachable as candidates on this port). No new routes;
+  the review's `[CHECK]`/`[Transfer only]` labels are preserved.
+
 #### Legality gate closed + tile ceilings (2026-10-18)
 - The gate census is now **0 MISS / 0 FALSE REJECTION** (3349 configs, 3217
   built, 132 empty; was 79 refused + **53 MISS**) from three calibrated rules:

@@ -143,6 +143,19 @@ This is the mechanism behind M2 (guide §5): `128×128` at 256³/512³ is not a
 tuning miss, it is a geometry that cannot fill the machine. Payoff ranking for
 the tile axis is therefore **H at 256³/512³, M at 1024³, L at 2048³+**.
 
+**Where the tile *shape* comes from — and its limits.** Tensile derives a macro
+tile as `WorkGroup × ThreadTile`; the campaign's `96×96/6×6` is a 16×16 workgroup
+with a 6×6 per-thread tile (arithmetic, not a proof). **No published derivation
+proves `96×96` or `6×6` intrinsically optimal for GCN5** — treat every ladder rung
+as empirical and filter it by register/LDS legality, grid size and edge waste
+([Tensile parameters](https://rocm.docs.amd.com/projects/Tensile/en/latest/src/conceptual/kernel-parameters.html);
+`kernel_tuning_research.md` §3.4). Larger tiles buy reuse and fewer blocks but cost
+accumulator registers, edge waste and occupancy; the small-box table above is the
+gfx90c-specific half of that trade. The grid/tail arithmetic behind the table is
+the CPU-only predictor in `kernel_tuning_research.md` §3.4 — use it to *rank* tiles,
+and remember the ~1 MiB L2 makes traversal order a locality question
+(`WorkGroupMapping`) rather than a throughput oracle.
+
 ## 2. Hardware plate book (no re-derivation — see L §1/§2)
 
 - gfx90c = ISA (9,0,12), **7 CU → 28 SIMDs → 280 wave slots**, Wave64, 448 FP32 lanes.
