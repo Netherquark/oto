@@ -570,3 +570,74 @@ for _fam, _pat, _tile, _tt, _vw, _du, _variants in _TIE_ADAPT:
                            "ThreadTile": _tt, "VectorWidth": _vw,
                            "DepthU": _du, **_kw,
                            "note": "2026-10-17 tie-adapt: " + _note})
+
+
+# --- the never-co-varied forwarded axes (potential_configs.md rewrite 7 §R37) --
+#
+# §R37 is why these exist. The 2026-10-18 run left 18 cells inside the report's
+# +/-5% tie band; the `_TIE_ADAPT` batch above had already probed NonTemporalA/B,
+# MaxOccupancy, InnerUnroll, the StaggerU swizzle, LdsPadB and PGR on those same
+# winner geometries, and every one of them measured 0.83-0.98 of the base. So the
+# geometry is a local optimum for *those* axes, and re-probing them is dead
+# budget. What is left is the set of forwarded knobs that no phase in the
+# registry has ever carried on a winner geometry:
+#
+#   * UseSgprForGRO -- absent from the registry entirely (0 of 1137 phases).
+#   * PrefetchLocalRead -- absent from the registry entirely.
+#   * LdsPadA -- only ever carried by the broken `phases.yaml` `sw*` generation
+#     (§R35), which measured ~0.5x of its own same-run winner because it was
+#     built on Ailk_Bljk + VectorWidth 1, so its reading is void.
+#
+# `NumLoadsCoalescedA/B` is deliberately ABSENT, and this is a *proof*, not an
+# omission. `gates/loads.py::_nlca_stage` implements Tensile's joint rule
+# (SolutionStructs:2058): NLCA must divide `numLoads`, divide
+# `totalVectorsCoalesced`, and leave `totalElementsPerp` divisible by
+# `numLoads // NLCA`. On the winner tiles GLVW saturates the 16-B cap, so
+# numLoads is 1 and NLCA>1 fails `NLCA > NumLoads` outright -- on exactly the
+# geometries a 7-CU part would want re-tuned. The axis is unreachable, not
+# unexplored: were GLVW ever lowered, NLCA>1 would open up, and the gate is what
+# will say so.
+#
+# Every key below is in `config_writer.FORWARDED_KNOBS` (UseSgprForGRO/InnerUnroll
+# via `_fork_sweep_int_knobs`, PrefetchLocalRead via `_fork_prefetch`, LdsPadA/B
+# via FORWARDED_GROUP_C_KNOBS), verified knob by knob against
+# `_fork_list_for_phase` rather than inferred from this comment. `LocalSplitU` is
+# absent too: it is in neither `FORWARDED_KNOBS` nor `NOT_FORWARDED_KNOBS`, so the
+# launch boundary strips nothing and the writer drops it, which makes the two
+# `LocalSplitU: 2` rows above silent no-ops.
+#
+# Bases are the per-cell measured winners from `cells_resolved.full.txt`, so a
+# row lands on the geometry that actually ties. GlobalLoadVectorWidth is left
+# implicit, as in `_TIE_ADAPT`: Tensile defaults it to VectorWidth, which is what
+# every measured winner recorded.
+_PROBE_AXES: List[Tuple[Dict[str, Any], str]] = [
+    ({"UseSgprForGRO": 1}, "UseSgprForGRO (0 of 1137 phases ever set it)"),
+    ({"PrefetchLocalRead": 0}, "PrefetchLocalRead=0 (LDS read-prefetch relief)"),
+    ({"LdsPadA": 4, "LdsPadB": 4}, "pad both LDS rows to 8 B"),
+    ({"InnerUnroll": 2, "UseSgprForGRO": 1}, "InnerUnroll=2 with SgprForGRO"),
+]
+
+#: (family, pattern, MacroTile, ThreadTile, VectorWidth, DepthU, sides) -- the
+#: measured winner of every cell that currently ties the floor. `sides` is
+#: documentation: a row is offered across its whole family, and `_offer_row`
+#: decides which of those sizes its element-multiple assertions accept.
+_TIE_WINNERS: List[Tuple[str, str, str, str, int, int, Tuple[int, ...]]] = [
+    ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, (768, 1000, 1024, 1365)),
+    ("SS", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, (2048, 4096)),
+    ("CC", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, (512, 1024, 2048)),
+    ("DD", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, (768,)),
+    ("DD", "Alik_Bjlk", "64x32x8", "4x2", 1, 8, (1024,)),
+    ("DD", "Ailk_Bjlk", "32x32x16", "2x2", 1, 16, (1365,)),
+    ("DD", "Alik_Bljk", "64x64x8", "4x4", 2, 8, (2048,)),
+    ("HH", "Ailk_Bjlk", "128x128x16", "8x8", 8, 16, (1024, 2048, 4096)),
+    ("HH_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 4, 16, (1024,)),
+    ("HH_HPA", "Ailk_Bjlk", "128x64x8", "8x4", 2, 8, (2048,)),
+    ("HS_HPA", "Ailk_Bjlk", "128x64x16", "8x4", 4, 16, (1024,)),
+    ("HS_HPA", "Alik_Bjlk", "64x128x16", "4x8", 4, 16, (2048,)),
+]
+for _fam, _pat, _tile, _tt, _vw, _du, _sides in _TIE_WINNERS:
+    for _kw, _note in _PROBE_AXES:
+        PLAN_BATCH.append({"fam": _fam, "pattern": _pat, "MacroTile": _tile,
+                           "ThreadTile": _tt, "VectorWidth": _vw,
+                           "DepthU": _du, **_kw,
+                           "note": "2026-10-19 virgin-axis: " + _note})

@@ -9,6 +9,23 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the virgin axes are re-decked, and one of them is closed by
+  proof.** `potential_configs.md` rewrite 7 (§R34–§R39) carries the two-cause
+  diagnosis of the "zero improvement" night, the honest 18-cell tie table, and
+  the new deck. The deck adds `_PROBE_AXES` × `_TIE_WINNERS` in
+  `oto/harness/candidate_rows.py`: four forwarded axes that no phase in the
+  1137-row registry has ever carried on a winner geometry
+  (`UseSgprForGRO=1` and `PrefetchLocalRead=0`, absent entirely;
+  `LdsPadA/B=4`, only ever carried by the broken probe generation; and the
+  `InnerUnroll=2 + UseSgprForGRO=1` combination), each on the twelve measured
+  winner geometries of the tied cells — 46 rows, 0 element-multiple drops, 0
+  strips, 0 refusals. `NumLoadsCoalescedA/B` was drafted as the fifth and dropped
+  because the gate proved it unreachable: `gates/loads.py::_nlca_stage` needs
+  NLCA to divide `numLoads`, and the winner tiles sit at `numLoads = 1` because
+  GLVW saturates the 16-B cap, so NLCA>1 fails `NLCA > NumLoads` outright. Also
+  recorded: `LocalSplitU` is in neither `FORWARDED_KNOBS` nor
+  `NOT_FORWARDED_KNOBS`, so the two `LocalSplitU: 2` rows in `_TIE_ADAPT` are
+  silent no-ops — the fourth instance of the placebo class.
 - **2026-10-19 — the mutation arm can finally see the cells it exists to fix.**
   Every one of `run_20261018_004835`'s 412 candidates went to a cell that was
   already *below* its family ceiling -- 155 to SS:256, 67 to CC:192, 41 to

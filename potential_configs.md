@@ -1,14 +1,23 @@
-# Candidate deck for the gfx90c Vega-7 port — rewrite 6 (2026-10-18)
+# Candidate deck for the gfx90c Vega-7 port — rewrite 7 (2026-10-19)
 
-Supersedes rewrite 5 (R16–R23, kept below for history). **What is new here:** the
-legality gate is now **closed** on our corpus — 0 misses, 0 false rejections, was
-53 misses — from three rules calibrated in §R24; the tile axes now have
-**provable ceilings** and the "wider MacroTile" route is **dead for CC and ZZ**
-(§R27); the straggler list is decomposed into four classes with a per-class route
-set (§R26), including why **no steal is justified**; the ledger trace per cell is
-in §R28; and the deck's dead complex rows are replaced with the widest *legal*
-tiles (§R30). §R33 maps the 2026-10-19 GCN5 GEMM literature review's experiment
-order onto these routes.
+Supersedes rewrite 6 (R24–R33, kept below for history). **What is new here:** the
+overnight run that "improved nothing" is explained twice over. First it *measured*
+nothing: a lost GPU under the full GNOME/Wayland compositor made Tensile abort in
+`GetHardware` on 409 of 414 phases and the driver still filed the run `completed`
+(§R34). Then the part that did run could not have helped, because the mutation arm
+never proposed for the cells that tie the floor (§R34) — and neither could the
+virgin-axis readings the plan was built on, because that probe generation was
+built on the wrong contraction pattern at half the winner's vector width (§R35).
+§R36 is the honest 18-cell tie table: most of it is inside the measurement band,
+not behind a geometry. §R37 is the only virgin forwarded surface left, now in the
+deck. §R38 says what this deck cannot fix, §R39 is the TTY checklist.
+
+The earlier rewrite-6 findings stand: the legality gate is closed (0 misses, 0
+false rejections, was 53 — §R24); the tile axes have provable ceilings and the
+"wider MacroTile" route is dead for CC and ZZ (§R27); the straggler classes and
+the reasoning that **no steal is justified** are §R26; the ledger trace is §R28;
+the dead complex rows were replaced by the widest *legal* tiles (§R30); and §R33
+maps the GCN5 GEMM literature review onto these routes.
 
 **Owns:** the candidate deck, the routes, the search rules, and the reading of the
 gates. Does not own: ceilings and verdict bars
@@ -16,6 +25,248 @@ gates. Does not own: ceilings and verdict bars
 facts (`gfx90c_theoretical_limits.md` §1–§3), the per-cell winners
 (`gfx90c_results/analysis/cells_resolved.full.txt`), or the durable Tensile
 mechanics (`kernel_tuning_research.md` §4).
+
+---
+
+## R34 — the overnight run failed twice, and both causes are now fixed
+
+**Cause 1: it measured nothing, and the driver called that `completed`.**
+`run_20261019_002432` ran 9 h 47 m, produced 409 phase directories, one partial
+result CSV and **413 core dumps**, and was filed `status=completed`. The cores
+backtrace `#6 __cxa_throw → #7 Tensile::Client::GetHardware → #8 main`, and the
+core strings carry `Error 100(hipErrorNoDevice)` at
+`Tensile/Source/client/main.cpp:273`. Telemetry agrees: `gpu_busy_percent = 0`
+for every phase after the first. The GPU is healthy now (`rocm-smi`: gfx90c,
+68 °C, 24 W) and both probe configs re-ran at `exit=0` against the same built
+client, so this is the documented "do not launch under the full GNOME/Wayland
+compositor" failure, not a hardware fault.
+
+The driver had no way to notice. **Fixed** in `oto/runners/phases.py`
+(`cf18277`): `ABORT_AFTER_CONSECUTIVE_EMPTY = 5`, a refused tile
+(`skipped_illegal` / `skipped_by_user`) does **not** count toward the streak, and
+an aborted run finalises as **`failed`** with an `abort_reason` rather than as
+`interrupted`. Pinned by `tests/test_phase1_integration.py::GpuLossAbortTests`.
+
+**Cause 2: the mutation arm cannot see the cells it exists to fix.** Of that
+run's 412 candidates, every single one went to a small cell that already beat the
+floor — SS:256 **155**, CC:192 67, ZZ:128 41, HH:256 39, DD:192 37,
+HH_HPA:512 35, HS_HPA:512 33, HH_HPA:4096 1. None went to any cell that ties.
+
+The mechanism is one line. `_mutate_cell` returned early when
+`winner_info["is_below_ceiling"] is False`, and `is_below_ceiling`
+(`oto/metrics/analytics.py`) is measured against `REALISTIC_CEILINGS`
+(`oto/device/peaks.py`), a measured-empirical snapshot the large cells have since
+*passed*: SS publishes 1118.7 and measures **1135.1**. So the cells that tie the
+floor are exactly the cells the arm refuses to touch, and the budget recirculates
+into the small cells forever.
+
+**Fixed** in `oto/ledger/agent.py` + `oto/metrics/ab_delta.py` (`c2ab21f`).
+`ABDeltaMixin.cells_not_beating_floor` reduces the A/B pairing to the set of
+cells whose winner has not beaten the recalled floor (`agg="winner"`, so both
+arms are graded on their best per-kernel median); `ConvergenceAgent._floor_losers`
+reads it at most once per iteration and `_cell_settled` now returns "settled"
+only when a cell is at/above its ceiling **and** has beaten the floor. Two guards
+keep it honest: the floor is never consulted for a below-ceiling cell, and an
+unreadable floor (no frozen reference recalled) leaves the ceiling rule exactly
+as it was, so an offline corpus cannot flood the deck. On the live corpus the set
+is precisely the 18 TIE cells of §R36 — not one WIN, not one LOSS.
+
+---
+
+## R35 — every virgin-axis reading taken before 2026-10-17 is void
+
+The plan's pessimism about the "virgin axes" (StaggerU, NonTemporal, MaxOccupancy,
+InnerUnroll, PGR, SgprForGRO, LdsPad) rests on a probe generation that cannot
+support it. The `sw*` rows in `phases.yaml` — the only place those knobs were
+ever set outside `_TIE_ADAPT` — carry **three** knobs (`MacroTile`, `ThreadTile`,
+`VectorWidth`) and are built on `ContractionPattern: Ailk_Bljk` at
+`VectorWidth: 1`. They ran once, in `run_20261015_041159` (28 phase dirs), and
+never again.
+
+Measured against their **own same-run winner**, they are not probes at all:
+
+| cell | best non-probe in the run | best `sw*` probe | ratio |
+|---|---|---|---|
+| CC:1024 | 309.6 | 172.9 (`swNonTemporalA1`) | 0.56 |
+| SS:1024 | 1080.3 | 518.8 | 0.48 |
+
+All 15–17 probes in that run land in **0.36–0.56**. A uniform ~2× loss across
+`MaxOccupancy`, `InnerUnroll`, `StaggerU`, `StaggerUStride`, `UseSgprForGRO`,
+`PGR`, `LdsPadA`, `FractionalLoad`, `AggressivePerfMode` and
+`AssertFree0ElementMultiple` is not fifteen independent knob effects; it is one
+bad base — the wrong contraction pattern at half the vector width. **Every
+negative conclusion carried from that generation is void**, and the "we already
+tried the virgin axes" line of reasoning is withdrawn.
+
+The 2026-10-17 `_TIE_ADAPT` batch is *not* in this class: it sits on the measured
+winner geometry, and each of its knobs was re-verified against
+`_fork_list_for_phase` (not inferred from the batch comment) to confirm it
+reaches Tensile. Those probes measure 0.83–0.98 — real, and real near-misses.
+
+One row class *is* a no-op and is now recorded as such: `LocalSplitU` appears in
+neither `config_writer.FORWARDED_KNOBS` nor `NOT_FORWARDED_KNOBS`, so the harness
+strips nothing, the writer never forks it, and the two `LocalSplitU: 2` rows in
+`_TIE_ADAPT` benchmarked the plain base tile under a name claiming otherwise.
+It is a fourth instance of the placebo class the `FORWARDED_KNOBS` docstring
+names, and `LocalSplitU` belongs in `NOT_FORWARDED_KNOBS` when someone next
+touches that tuple.
+
+---
+
+## R36 — the 18 tie cells, band-honest
+
+`_floor_losers()` on the live corpus, in full. Band: the report's `tie_band_pct`
+is ±5.0 %, and the corpus's own reproducibility band is **±16.45 %**
+(`coverage.reference_thresholds`, source `max(cross-arm, repeat-tail,
+shipped-floor)`).
+
+| cell | verdict | native | floor | delta | |
+|---|---|---|---|---|---|
+| SS:1024 | TIE | 1135.1 | 1084.9 | **+4.6 %** | replicate |
+| CC:512 | TIE | 322.0 | 308.4 | **+4.4 %** | replicate |
+| SS:1365 | TIE | 1110.0 | 1069.8 | **+3.8 %** | replicate |
+| SS:1000 | TIE | 1107.4 | 1067.7 | **+3.7 %** | replicate |
+| HH:2048 | TIE | 2670.9 | 2575.2 | **+3.7 %** | replicate |
+| SS:4096 | TIE | 1187.2 | 1148.0 | **+3.4 %** | replicate |
+| HH:4096 | TIE | 2749.3 | 2662.0 | **+3.3 %** | replicate |
+| HS_HPA:2048 | TIE | 1388.9 | 1344.2 | **+3.3 %** | replicate |
+| DD:2048 | TIE | 98.8 | 96.6 | +2.3 % | real gain |
+| DD:1365 | TIE | 89.1 | 87.2 | +2.2 % | real gain |
+| DD:768 | TIE | 93.0 | 91.6 | +1.5 % | real gain |
+| HH:1024 | TIE | 2581.9 | 2548.5 | +1.3 % | real gain |
+| DD:1024 | TIE | 92.9 | 91.7 | +1.2 % | real gain |
+| SS:2048 | TIE | 1164.0 | 1151.3 | +1.1 % | real gain |
+| SS:768 | TIE | 1108.2 | 1095.9 | +1.1 % | real gain |
+| HH_HPA:1024 | TIE | 1447.0 | 1445.5 | +0.1 % | real gain |
+| HS_HPA:1024 | TIE | 1429.7 | 1428.7 | +0.1 % | real gain |
+| HH_HPA:2048 | TIE | 1380.7 | 1381.1 | **−0.0 %** | real gain |
+
+This table is the most important artefact in the rewrite, because it splits the
+problem in two. **Eight cells sit at +3.3…+4.6 %**, i.e. *already beating the
+floor* by a margin the ±5 % acceptance band cannot resolve — and a single-knob
+toggle on their winner geometry moves ±2–3 %, which is smaller than the ±16.45 %
+reproducibility band. For those eight the honest lever is **replication, not
+geometry**: more seeds on the same config, which shrinks the band rather than
+the delta. The remaining ten are at +0.1…+2.3 % (HH_HPA:2048 is a dead heat at
+−0.0 %), and those need a **real gain**, which is what §R37 is for. Nothing in
+the port is *losing* to the floor — there are zero LOSS verdicts.
+
+---
+
+## R37 — the deck for the tied cells: the never-co-varied forwarded axes
+
+`_TIE_ADAPT` (§ below, still in the deck) has already spent the obvious knobs on
+these exact winner geometries, and §R35 shows those probes were real and lost by
+1.9–3.2 %. Re-running them is dead budget. What remains are the forwarded knobs
+that **no phase in the 1137-row registry has ever carried on a winner geometry**.
+Four axes, twelve measured-winner bases, all in `oto/harness/candidate_rows.py`:
+
+| axis | why it is the one to spend on |
+|---|---|
+| `UseSgprForGRO: 1` | **0 of 1137** phases ever set it |
+| `PrefetchLocalRead: 0` | **0 of 1137** phases ever set it; LDS read-prefetch relief on the DepthU-16 tiles |
+| `LdsPadA: 4, LdsPadB: 4` | only ever carried by the broken §R35 generation; pad both LDS rows to 8 B |
+| `InnerUnroll: 2 + UseSgprForGRO: 1` | the 2-knob combination, since every single knob here loses |
+
+**`NumLoadsCoalescedA/B` is closed, and the closure is a proof.** It looked like
+the most promising virgin axis — it was carried only as the constant `NLCA=1` in
+CC/DD/HH_HPA and never co-varied with any tile — but `gates/loads.py::_nlca_stage`
+implements Tensile's joint rule (`SolutionStructs:2058`): NLCA must divide
+`numLoads`, divide `totalVectorsCoalesced`, and leave `totalElementsPerp`
+divisible by `numLoads // NLCA`. On the winner tiles GLVW saturates the 16-byte
+cap, so `numLoads = 1` and NLCA>1 fails `NLCA > NumLoads` outright — on exactly
+the geometries a 7-CU part would want re-tuned. The deck asked for it (25 rows
+were gate-refused by
+`test_generate_candidates.py::test_plan_batch_is_gate_clean`) and the gate said
+no, which is the gate working. The axis reopens only if GLVW is ever lowered.
+
+Bases are the per-cell measured winners, so each row lands on the geometry that
+actually ties:
+
+| family | pattern | tile | tt | vw | du | cells |
+|---|---|---|---|---|---|---|
+| SS | Ailk_Bjlk | 128x128x8 | 8x8 | 4 | 8 | 768 / 1000 / 1024 / 1365 |
+| SS | Ailk_Bjlk | 128x128x16 | 8x8 | 4 | 16 | 2048 / 4096 |
+| CC | Ailk_Bjlk | 64x64x8 | 4x4 | 2 | 8 | 512 / 1024 / 2048 |
+| DD | Ailk_Bjlk | 64x64x8 | 4x4 | 2 | 8 | 768 |
+| DD | Alik_Bjlk | 64x32x8 | 4x2 | 1 | 8 | 1024 |
+| DD | Ailk_Bjlk | 32x32x16 | 2x2 | 1 | 16 | 1365 |
+| DD | Alik_Bljk | 64x64x8 | 4x4 | 2 | 8 | 2048 |
+| HH | Ailk_Bjlk | 128x128x16 | 8x8 | 8 | 16 | 1024 / 2048 / 4096 |
+| HH_HPA | Ailk_Bjlk | 64x128x16 | 4x8 | 4 | 16 | 1024 |
+| HH_HPA | Ailk_Bjlk | 128x64x8 | 8x4 | 2 | 8 | 2048 |
+| HS_HPA | Ailk_Bjlk | 128x64x16 | 8x4 | 4 | 16 | 1024 |
+| HS_HPA | Alik_Bjlk | 64x128x16 | 4x8 | 4 | 16 | 2048 |
+
+48 rows offered, 46 novel after fp-dedupe (the remainder are configs the pool
+already measured), 0 element-multiple drops, 0 strips, 0 refusals. Cost: well
+under 2 h of a 10 h night, because every row arms its family's shape list and a
+family has ≤ 8 target sizes. `GlobalLoadVectorWidth` is deliberately left
+implicit, as in `_TIE_ADAPT`: Tensile defaults it to `VectorWidth`, which is what
+every measured winner recorded.
+
+**What is still unreachable, and what it would cost** (unchanged from §R20): the
+`NOT_FORWARDED_KNOBS` surface — `1LDSBuffer`, `TransposeLDS`, `UnrollMajorLDS*`,
+`WaveSeparateGlobalRead*`, `ThreadSeparateGlobalRead*`, `DirectToVgpr*`,
+`LdsBlockSizePerPad*`, `DepthULdsDivisor`, `PersistentKernel`. Each needs a
+launch-boundary change before it can be tested at all. On a 7-CU part
+`1LDSBuffer` and `DepthULdsDivisor` are the two that plausibly matter, because
+both buy LDS back on the deep tiles; that is the next structural job, not a deck
+row.
+
+---
+
+## R38 — what this deck cannot fix, and how to read the next A/B
+
+**It cannot resolve a tie that is inside the noise.** Eight of the eighteen ties
+are +3.3…+4.6 % over the floor while the corpus's own reproducibility band is
+±16.45 %. No candidate can be *shown* to convert those; the correct next step is
+to replicate the current winner on those cells until the band at that cell is
+below its delta, then re-grade. A run that adds geometry to them will report
+movement that means nothing.
+
+**The tie band is a policy knob, not a measurement.** The verdict uses ±5.0 %
+(`compute_native_vs_spoof_delta`'s default) while the measured band is 16.45 %.
+Any claim that the port does or does not "beat the floor all around" has to say
+which of the two it means. With `tie_band_pct = 5.0`, the honest current
+statement is: **20 WIN, 18 TIE, 0 LOSS**, and the eight replicable ties are
+probably wins already.
+
+**The mutation arm fixed in §R34 changes the *economy* of the next run, not its
+verdict.** Candidates will now flow to the tied cells for the first time. Expect
+most to land at 0.83–0.98 like every other single-knob probe on these geometries;
+the value is that it can no longer spend a night on SS:256.
+
+---
+
+## R39 — the overnight run: preflight and post-run
+
+CPU-only, safe under GNOME (the legality proof is `--dry-run`):
+
+```bash
+python3 -m oto.harness.generate_candidates --dry-run   # 0 drops, 0 strips, 0 refusals
+python3 -m pytest -q tests/test_phase1_integration.py tests/test_mutation_arm.py \
+    tests/test_ab_audit.py tests/test_function_length.py tests/test_pyflakes.py
+```
+
+TTY only, never from a GNOME/Wayland session (§R34 cause 1):
+
+```bash
+# 1. confirm the GPU is actually there, and say so in the transcript
+rocm-smi --showtemp --showpower
+# 2. the run
+python3 -m oto.runners.cli --auto --budget <N>
+# 3. FIRST THING after it returns -- the guard files the run failed if the GPU left
+sqlite3 gfx90c_results/registry.db \
+  "SELECT run_id,status,metadata FROM runs ORDER BY rowid DESC LIMIT 3;"
+ls gfx90c_runs/<new_run>/core.* 2>/dev/null | wc -l     # must be 0, was 413
+# 4. only then read the A/B
+python3 -m oto.metrics.ab_audit
+```
+
+If step 3 shows `status=failed` with an `abort_reason`, stop: the night bought
+nothing and the config must not be re-used. If it shows `completed` with 0 cores,
+the §R36 table is the scoreboard, split into its replicate and real-gain halves.
 
 ---
 
