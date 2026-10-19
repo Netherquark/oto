@@ -805,3 +805,145 @@ class ReadOnlyRegistryTests(Harness):
         import oto.metrics.ab_audit as ab_audit
         ab_audit.audit(base)          # an empty corpus must not raise
         self.assertEqual(reg.db_path.read_bytes(), before)
+
+
+# ------------------------------------------------------------------- GPU loss
+
+class GpuLossAbortTests(Harness):
+    """A long streak of empty phases must abort the run, not burn the night.
+
+    The 2026-10-19 overnight run lost the GPU after its first phase: every later
+    client aborted in ``Tensile::Client::GetHardware`` (``hipErrorNoDevice``,
+    SIGABRT / exit 134), so 413 of 414 phases wrote no measurement and 9h47m of
+    budget produced nothing but void phases. A phase that measures nothing is
+    normal once (a refused tile); a *streak* is the only signal the loop ever
+    gets that the device is gone. Without this guard the loop happily iterates
+    the remaining deck against a dead GPU.
+    """
+
+    def _driver(self, run_id="run_gpu_loss"):
+        import oto.runners.cli
+        from oto.ledger.agent import ConvergenceAgent
+        driver = TensileDriver.__new__(TensileDriver)
+        driver.base_dir = self.tmp
+        driver.registry = self.registry
+        driver.analytics = self.analytics
+        driver.scheduler = _StubScheduler()
+        driver.mutator = self.mutator
+        driver.agent = ConvergenceAgent(self.tmp, _StubScheduler(),
+                                        self.analytics, mutator=self.mutator)
+        driver.run_dir = self.registry.create_run_dir(run_id)
+        driver.configs_dir = driver.run_dir / "configs"
+        driver.configs_dir.mkdir(exist_ok=True)
+        driver._sync_agent_run_id()
+        driver._stop_requested = False
+        driver._finish_after_iteration = False
+        driver._abort_note = None
+        driver._gpu_phases_run = 0
+        driver.cooldown_s = 0
+        driver.phase_timeout_s = 1
+        driver._last_run_status = None
+        driver._start_live_status = lambda *a, **k: None
+        driver._stop_live_status = lambda *a, **k: None
+        driver._read_key = lambda block=True, **k: ""
+        driver._apply_cooldown = lambda: True
+        driver._ensure_telemetry = lambda: None
+        driver._named_cell_stamps = lambda phase: {}
+        driver._write_phase_config = lambda path, phase: (True, None)
+        return driver
+
+    def _deck(self, driver, n=8):
+        from oto.ledger.registry import fingerprint_config
+        # Replace the fixture's one-row curated deck so the phase count under
+        # test is exactly n (the curated row would otherwise skew the streak).
+        (self.tmp / "phases.yaml").write_text("[]")
+        rows = []
+        for i in range(n):
+            cfg = {"Architecture": "gfx90c", "DataType": "S",
+                   "MacroTile": f"{32 + 8 * i}x32x16"}
+            rows.append({"phase_id": f"phase_gpu_{i}", "label": f"g{i}",
+                         "dtype": "s", "shapes": ["128x128x128"],
+                         "config": cfg, "fp": fingerprint_config(cfg)})
+        self.write_overlay(driver.run_dir.name, rows)
+        return rows
+
+    def _run_status(self, run_id):
+        import json
+        import sqlite3
+        with sqlite3.connect(self.registry.db_path) as conn:
+            status, meta = conn.execute(
+                "SELECT status, metadata FROM runs WHERE run_id=?",
+                (run_id,)).fetchone()
+        return status, json.loads(meta or "{}")
+
+    def test_a_streak_of_empty_phases_aborts_the_run(self):
+        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        driver = self._driver()
+        self._deck(driver, n=8)
+        executed = []
+
+        def fake_execute(phase, run_dir):
+            pid = phase["phase_id"]
+            executed.append(pid)
+            # Mirror the real failure: Tensile records the client's SIGABRT line
+            # in the phase stdout and writes no 2_BenchmarkData CSV at all.
+            d = run_dir / pid
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "stdout.log").write_text(
+                "clientExit=1 (ERROR) ... exited with code 134\n")
+            return {"status": "failed", "returncode": 134, "csv_count": 0}
+
+        driver.execute_phase = fake_execute
+        driver.run_phases()
+        self.assertEqual(
+            len(executed), ABORT_AFTER_CONSECUTIVE_EMPTY,
+            "the loop iterated past the abort threshold")
+        self.assertTrue(driver._stop_requested)
+        self.assertIn("consecutive phases produced no measurement",
+                      driver._abort_note)
+        self.assertIn("hipErrorNoDevice", driver._abort_note)
+        status, meta = self._run_status(driver.run_dir.name)
+        self.assertEqual(status, "failed",
+                         "a GPU-loss abort is a failed run, not an interrupt")
+        self.assertIn("abort_reason", meta)
+
+    def test_a_measured_phase_resets_the_streak(self):
+        driver = self._driver("run_gpu_reset")
+        self._deck(driver, n=8)
+        executed = []
+
+        def fake_execute(phase, run_dir):
+            executed.append(phase["phase_id"])
+            ok = len(executed) % 5 == 0      # 4 empty, then one real result
+            return {"status": "success" if ok else "failed",
+                    "returncode": 0 if ok else 134,
+                    "csv_count": 1 if ok else 0}
+
+        driver.execute_phase = fake_execute
+        driver.run_phases()
+        self.assertEqual(len(executed), 8, "a lone success must reset the streak")
+        self.assertFalse(driver._stop_requested)
+        self.assertIsNone(driver._abort_note)
+        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")
+
+    def test_a_refused_tile_does_not_count_towards_the_streak(self):
+        driver = self._driver("run_gpu_refused")
+        self._deck(driver, n=8)
+        executed = []
+        driver.execute_phase = lambda phase, run_dir: (
+            executed.append(phase["phase_id"]) or
+            {"status": "skipped_illegal", "phase_id": phase["phase_id"]})
+        driver.run_phases()
+        self.assertEqual(len(executed), 8,
+                         "a decided refusal is not a lost GPU")
+        self.assertFalse(driver._stop_requested)
+
+    def test_a_run_shorter_than_the_threshold_still_completes(self):
+        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        driver = self._driver("run_gpu_short")
+        self._deck(driver, n=ABORT_AFTER_CONSECUTIVE_EMPTY - 1)
+        driver.execute_phase = lambda phase, run_dir: {
+            "status": "failed", "returncode": 134, "csv_count": 0}
+        driver.run_phases()
+        self.assertFalse(driver._stop_requested, "aborted below the threshold")
+        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")

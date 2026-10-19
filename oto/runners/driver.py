@@ -210,6 +210,10 @@ class TensileDriver(
         # State
         self._stop_requested = False
         self._finish_after_iteration = False
+        # Set by the GPU-loss guard in PhaseMixin._abort_run when consecutive
+        # phases measure nothing; makes the run finalize as *failed* with the
+        # reason recorded, not as a user *interrupt*.
+        self._abort_note = None
         self._gpu_phases_run = 0
         self._current_proc = None
         self._last_ab_reference_run_id: Optional[str] = None

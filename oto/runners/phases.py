@@ -3,8 +3,9 @@
 
 Owns: ``load_phases_manifest`` (phases.yaml + the per-run overlay + the seed
 overlay), ``run_phases`` (target filtering, the ``should_run`` policy gate, the
-identical-fp skip and its two bypasses, the tally and the final run status), and
-``_resolve_proposal_outcome`` (writing a measured outcome back to the ledger).
+identical-fp skip and its two bypasses, the tally, the GPU-loss abort and the
+final run status), and ``_resolve_proposal_outcome`` (writing a measured outcome
+back to the ledger).
 Does NOT own: phase execution (benchmark.py), the reference floor (reference.py)
 or the auto loop (auto.py).
 Public API: PhaseMixin.
@@ -20,6 +21,22 @@ import yaml
 
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
+
+#: Consecutive executed phases that produce no measurement before the harness
+#: declares the GPU lost and aborts the run. A single empty phase is normal (a
+#: tile Tensile refuses, or a one-off client hiccup); a long *streak* is a
+#: systemic break. The 2026-10-19 overnight run lost the device after its first
+#: phase and burned 9h47m emitting 413 void phases whose client aborted in
+#: ``Tensile::Client::GetHardware`` with ``hipErrorNoDevice`` -- a whole night of
+#: budget for nothing, which is exactly what this guard exists to prevent.
+ABORT_AFTER_CONSECUTIVE_EMPTY = 5
+
+#: Signatures of a client-side abort at the hardware probe (SIGABRT, exit 134)
+#: rather than a per-tile refusal. Tensile prints "exited with code 134" into the
+#: phase's stdout.log; the core dump carries the ``hipErrorNoDevice`` text. Only
+#: used to sharpen the abort message, never to decide the abort itself.
+_CLIENT_ABORT_MARKERS = ("exited with code 134", "hipErrorNoDevice")
+
 
 class PhaseMixin:
     """Deck merge + policy-filtered phase execution, mixed into TensileDriver."""
@@ -208,43 +225,115 @@ class PhaseMixin:
 
         phases = self._filter_target_phases(phases, target_ids)
         self._start_live_status()
-
-        results = []
-        executed_count = 0
-        skipped_count = 0
-        refused_count = 0
         try:
-            for phase in phases:
-                if self._check_stop_requested():
-                    break
-
-                phase_id = phase.get("phase_id", "")
-                fp = phase.get("fp", fingerprint_config(phase.get("config", {})))
-
-                if not self._should_execute_phase(phase, fp, target_ids, opt_in_identical_skip):
-                    skipped_count += 1
-                    self._record_skip(phase_id, fp, reason="skipped_by_policy")
-                    if self._handle_user_keys_during_skip() == "stop":
-                        break
-                    continue
-
-                result = self.execute_phase(phase, self.run_dir)
-                results.append(result)
-
-                executed_count, refused_count = self._update_counters(
-                    result, executed_count, refused_count
-                )
-                if result.get("status") in ("completed", "failed", "success"):
-                    self._resolve_proposal_outcome(phase, self.run_dir)
-
-                if self._finish_after_iteration:
-                    print("End-after-iteration requested, halting phase execution")
-                    break
-
-            self._finalize_run_status(executed_count, skipped_count, refused_count)
+            results, tally = self._execute_phase_loop(
+                phases, target_ids, opt_in_identical_skip)
+            self._finalize_run_status(*tally)
             return results
         finally:
             self._stop_live_status()
+
+    def _execute_phase_loop(
+        self,
+        phases: List[Dict[str, Any]],
+        target_ids: Optional[List[str]],
+        opt_in_identical_skip: bool
+    ) -> tuple[List[Dict[str, Any]], tuple[int, int, int]]:
+        """Walk the deck; return ``(results, (executed, skipped, refused))``.
+
+        Halts early on a user stop, an end-after-iteration request, or the
+        GPU-loss guard: consecutive phases that measure nothing mean the device
+        is gone, and continuing would spend the budget on void phases.
+        """
+        results: List[Dict[str, Any]] = []
+        executed_count = skipped_count = refused_count = empty_streak = 0
+        for phase in phases:
+            if self._check_stop_requested():
+                break
+
+            phase_id = phase.get("phase_id", "")
+            fp = phase.get("fp", fingerprint_config(phase.get("config", {})))
+
+            if not self._should_execute_phase(phase, fp, target_ids, opt_in_identical_skip):
+                skipped_count += 1
+                self._record_skip(phase_id, fp, reason="skipped_by_policy")
+                if self._handle_user_keys_during_skip() == "stop":
+                    break
+                continue
+
+            result = self.execute_phase(phase, self.run_dir)
+            results.append(result)
+
+            executed_count, refused_count = self._update_counters(
+                result, executed_count, refused_count)
+            if result.get("status") in ("completed", "failed", "success"):
+                self._resolve_proposal_outcome(phase, self.run_dir)
+
+            empty_streak = self._track_empty_streak(result, phase_id, empty_streak)
+            if empty_streak is None:
+                break
+
+            if self._finish_after_iteration:
+                print("End-after-iteration requested, halting phase execution")
+                break
+        return results, (executed_count, skipped_count, refused_count)
+
+    def _track_empty_streak(
+        self,
+        result: Dict[str, Any],
+        phase_id: str,
+        empty_streak: int
+    ) -> Optional[int]:
+        """Advance the no-measurement streak; abort and return None when full."""
+        empty_streak = (empty_streak + 1
+                        if self._phase_produced_no_measurement(result)
+                        else 0)
+        if empty_streak >= ABORT_AFTER_CONSECUTIVE_EMPTY:
+            self._abort_run(phase_id, empty_streak)
+            return None
+        return empty_streak
+
+    def _phase_produced_no_measurement(self, result: Dict[str, Any]) -> bool:
+        """True when an executed phase yielded no benchmark data at all.
+
+        A phase that Tensile refused (``skipped_illegal``) is a *decided* outcome
+        and does not count; a timeout, a crash, or a client abort leaves zero CSVs
+        in ``2_BenchmarkData`` and does.
+        """
+        if result.get("status") in ("skipped_illegal", "skipped_by_user"):
+            return False
+        return not result.get("csv_count")
+
+    def _abort_run(self, phase_id: str, streak: int) -> None:
+        """Stop the run when consecutive phases measure nothing (GPU lost).
+
+        Refusing to continue is the point: without this the loop happily spends
+        hours writing phases whose client never reaches the GPU. The run is
+        marked *failed* (not *interrupted*), because this is a broken run, not a
+        user stop.
+        """
+        note = (f"{streak} consecutive phases produced no measurement; the last "
+                f"was {phase_id}")
+        if self._client_aborted_at_probe(phase_id):
+            note += (" -- the client aborted at the hardware probe "
+                     "(SIGABRT / hipErrorNoDevice: the GPU is no longer visible "
+                     "to HIP, e.g. a lost /dev/kfd or a driver-level reset)")
+        print(f"\n[ABORT] {note}")
+        print("[ABORT] halting the run instead of burning the remaining budget "
+              "on void phases")
+        self._abort_note = note
+        self._stop_requested = True
+
+    def _client_aborted_at_probe(self, phase_id: str) -> bool:
+        """Whether a phase's stdout records a client abort at the hardware probe."""
+        if self.run_dir is None:
+            return False
+        try:
+            text = (self.run_dir / phase_id / "stdout.log").read_text(
+                errors="ignore")
+        except OSError:
+            return False
+        return any(marker in text for marker in _CLIENT_ABORT_MARKERS)
 
     def _filter_target_phases(
         self,
@@ -353,7 +442,12 @@ class PhaseMixin:
         refused_count: int
     ) -> None:
         """Finalize run status in registry."""
-        if self._stop_requested:
+        # `_abort_note` is initialised in `_init_state`; read it via getattr so
+        # drivers assembled field-by-field (tests, embedding) cannot AttributeError.
+        abort_note = getattr(self, "_abort_note", None)
+        if abort_note:
+            final_status = "failed"
+        elif self._stop_requested:
             final_status = "interrupted"
         elif executed_count == 0 and (skipped_count + refused_count) > 0:
             final_status = "skipped"
@@ -365,6 +459,8 @@ class PhaseMixin:
         }
         if refused_count:
             run_meta["phases_refused_illegal"] = refused_count
+        if abort_note:
+            run_meta["abort_reason"] = abort_note
         if self._finish_after_iteration:
             run_meta["end_after_iteration"] = True
         self._last_run_status = final_status

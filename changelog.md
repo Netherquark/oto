@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the overnight run can no longer burn a night on a lost GPU.**
+  `run_20261019_002432` measured *nothing*: after its first phase the device
+  disappeared from HIP and 413 of 414 clients aborted in
+  `Tensile::Client::GetHardware` with `hipErrorNoDevice` (SIGABRT / exit 134) --
+  confirmed from the systemd core dumps, whose stack is
+  `__cxa_throw -> GetHardware -> main` at `client/main.cpp:273`. 9h47m of budget
+  produced one phase of data, and the failure surfaced only as
+  "exited with code 134" in each phase's stdout, which nothing acted on. The
+  phase loop now stops itself: `PhaseMixin` counts *consecutive executed phases
+  that produced no measurement* (`_phase_produced_no_measurement`) and, at
+  `ABORT_AFTER_CONSECUTIVE_EMPTY = 5`, prints a diagnostic naming the probe
+  abort (`_client_aborted_at_probe`, matching `exited with code 134` /
+  `hipErrorNoDevice` in the phase stdout) and halts. Such a run finalizes as
+  **failed** with `abort_reason` in its metadata, not as a user *interrupt*. A
+  refused tile (`skipped_illegal`) is a decided outcome and never counts, so a
+  legal-tile sweep is unaffected. Pinned by `GpuLossAbortTests` (streak aborts;
+  a single measured phase resets the streak; a refused tile does not count; a
+  deck shorter than the threshold still completes). No new module, so
+  `claude.md` §2.2 / runbook / agent-reference rows are unchanged.
 - **2026-10-19 — the fourteen residual literature questions folded; the second raw
   file retired.** `gfx90c_gcn5_gemm_residual_14q_caveman_full.md` (the `/caveman full`
   answer pass over the questions the first review left open) is gone. Every verdict is
