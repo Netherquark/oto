@@ -423,6 +423,16 @@ and the near-duplicate failure mode is exactly the ZZ cell's 5 distinct geometri
 (§R28). The steps above therefore re-rank the existing routes by the anomaly's
 expected value; they add no route that §R26–§R30 did not already carry.
 
+A second, 2026-10-19 literature pass answered the fourteen residual questions that
+this route mapping left open. Every verdict is *closest-evidence-found, none
+gfx90c-specific*, and each is now stated inline in its owner — Origami and the
+grid predictor in `kernel_tuning_research.md` §3.4, the LLVM VGPR-allocation rule in
+§9.3, the MI250X non-temporal and StaggerU scoping in §4, the Stream-K knob names in
+§8.7; the oneMKL/Higham 3M error bound in `complex_gemm_research_brief.md` §5; and
+the AMD warmup/sample methodology in `knowledge_base.md` §8.3. **It changes no
+route** — it converts four open [CHECK]s into cited "closest evidence, not
+gfx90c-specific" statements, so the search is not repeated.
+
 ---
 
 ## Superseded: rewrite 5 (2026-10-17), kept below for history

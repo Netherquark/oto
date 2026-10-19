@@ -127,6 +127,18 @@ convergence verdict compares against these, throttled+median-of-seeds.
   its steps 4 and 7 are *not* reachable as candidates on this port). No new routes;
   the review's `[CHECK]`/`[Transfer only]` labels are preserved.
 
+#### The 14 residual literature questions folded (2026-10-19)
+- `gfx90c_gcn5_gemm_residual_14q_caveman_full.md` (the `/caveman full` answer pass
+  over the questions the review left open) was integrated and retired. Each verdict
+  is closest-evidence-found and none is gfx90c-specific: Origami + the predictor and
+  the 2025 irregular-batched-GEMM work in `kernel_tuning_research.md` §3.4; the MI250X
+  non-temporal experiment and the Tensile `StaggerU` scoping in §4; the
+  `GlobalSplitUAtomicAdd`/`StreamK`/`StreamKAtomic` knob names in §8.7; the LLVM
+  GFX6–GFX9 VGPR-allocation rule in §9.3; oneMKL's `gemm3m` error bounds in
+  `complex_gemm_research_brief.md` §5; AMD measurement methodology in
+  `knowledge_base.md` §8.3; and a closing note in `potential_configs.md` §R33. The
+  pass **changes no route** and adds no module.
+
 #### Legality gate closed + tile ceilings (2026-10-18)
 - The gate census is now **0 MISS / 0 FALSE REJECTION** (3349 configs, 3217
   built, 132 empty; was 79 refused + **53 MISS**) from three calibrated rules:

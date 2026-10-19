@@ -88,6 +88,13 @@ real counterpart. The "÷4" applies to *complex-MAC throughput*, not to BLAS-8 G
   inputs, and must report max/relative error against the application's tolerance;
   do not assume the 25 % arithmetic saving becomes a 25 % kernel speedup — extra
   adds, temporaries, registers and traffic can erase it, especially at small K.
+- **Quantitative form of the caveat (oneMKL's rounding model).** oneMKL documents
+  first-order componentwise bounds for its `gemm3m`, illustrative of the 3M error
+  model: `‖Ĉr−Cr‖∞ ≤ 2(n+1)u·‖A‖∞‖B‖∞ + O(u²)` and
+  `‖Ĉi−Ci‖∞ ≤ 4(n+4)u·‖A‖∞‖B‖∞ + O(u²)`, with `u` the unit roundoff. These are
+  theoretical, not measured gfx90c errors, but they are the reason a 3M experiment
+  needs a high-precision reference on cancellation-heavy data
+  ([oneMKL gemm3m](https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2026-0/cblas-gemm3m.html)).
 
 ## 6. Measured gfx90c complex GEMM (first-party, this repo)
 From the project registry (`gfx90c_results/registry.db`; this is a first-party
@@ -206,7 +213,9 @@ ceiling and its levers are concurrency and independent work, not arithmetic tric
   accumulators, doubling the logical storage. A larger tile improves reuse/ILP but
   lowers resident waves. Keep the project's measured **32×32** reference winner as
   a reference, not a literature-proven optimum; sweep adjacent legal tiles and
-  inspect spills **[CHECK] no published gfx90c FP64 optimal tile found**.
+  inspect spills **[CHECK] no published gfx90c FP64 optimal tile found**. Upstream
+  `vega10`/`vega20` non-MFMA rank-1 solutions are *implementation* evidence — the
+  donors of `potential_configs.md` §6 Route A — not a published optimum.
 - **Complex-double is a standard tuning target, not a solved one.** CLBlast
   supports precision `6464` (complex-double) with its own tunable GEMM parameters
   ([CLBlast](https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md)), and

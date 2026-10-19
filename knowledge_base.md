@@ -632,6 +632,19 @@ external standard. The one transferable rule: distinguish a first-run clock
 transition from a wave tail, and retain raw samples rather than only a best time
 ([CUTLASS methodology](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/gemm_performance_measurement_methodology_guidelines.html)).
 
+**AMD-specific methodology (still no GCN5 constant).** AMD's own guidance is closer
+in kind than CUTLASS but is still not a gfx90c constant: Tensile's defaults are
+`NumWarmups=0`, `NumBenchmarks=1`, `SleepPercent=300`, `PinClocks=False` — defaults,
+not proof of statistical adequacy; AMD's MI300 max-FLOPS example runs each GEMM
+~1 s with ~25 % warmup / 75 % measurement; and AMD Primbench reduces noise with
+adaptive timed batches, a coefficient-of-variation threshold, a minimum runtime,
+initial warmup and clock/temperature awareness. Adopt the *procedure* — warm to
+stable clocks, batch long enough to amortise the timer, randomise candidate order,
+repeat independent rounds, keep raw samples and spread — never a copied count
+([Tensile Common.py](https://github.com/ROCm/rocm-libraries/blob/develop/shared/tensile/Tensile/Common.py),
+[AMD max-FLOPS](https://rocm.blogs.amd.com/software-tools-optimization/measuring-max-achievable-flops-part2/README.html),
+[Primbench](https://rocm.docs.amd.com/projects/primbench/en/latest/conceptual/primbench-noise-reduction.html)).
+
 ### 8.4 Do not cite — unverified claims that circulate in this project
 
 Claims that have been searched for and **not** confirmed. Citing them is a

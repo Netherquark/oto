@@ -169,7 +169,9 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   gfx90c gain. Cache-oblivious blocking (recursive blocking + Peano-curve order) is
   the [GPU-general] version (Bader & Zenger, URL). Compare row/col/grouped 4/8,
   X/Y rectangular swizzle and (optionally) Morton on gfx90c; test cache-resident/
-  reused operands separately from rotating/streaming buffers.
+  reused operands separately from rotating/streaming buffers. Tensile's own source
+  notes that a **Z-order mapping was not faster than blocking** in the cases its
+  comment references and needs extra address arithmetic (`Tensile/Common.py`).
 - **Randomise the timing order, then repeat.** The gfx90c test for any
   mapping/traversal claim is: hold tile, depth, memory policy and input-cache state
   fixed, vary only the order, randomise the measurement order, and repeat. **If the
@@ -182,12 +184,20 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   do **not** optimise `T mod 7` alone — a divisible grid can still lose to spills,
   poor memory access or unequal block times. **[CHECK] no published formula
   predicts actual gfx90c throughput from grid shape + CU count + WG size alone.**
+  Closest AMD work is **Origami**, an analytical GEMM-configuration *latency*
+  model — but its documented supported-GPU list **excludes gfx900/gfx90c**, so it
+  is not validated for this APU and stays background (Origami, URL; AMD GPU specs,
+  URL).
 - **Mixed/irregular workgroup sizes.** No strong published study shows mixed
   96×96 and 128×96 tiles generally win on GCN5; tall-skinny GEMM work (Ernst
   et al., URL) is **[Transfer only]** and its mixed-tile results include Volta.
-  Mixed tiles cost extra launches over disjoint output regions or a dynamic
-  scheduler, plus edge-handling and imbalance. Sweep uniform tiles with the
-  predictor first; pursue mixed tiles only on repeatable material underfill.
+  The closest 2025 work on load-balanced small/irregular batched GEMM proposes
+  adaptive tiling and multi-threaded kernels with AMD/NVIDIA evaluation, but its
+  abstract does not establish gfx90c specifically, or a single-grid mix of 96×96
+  and 128×96 tiles (URL). Mixed tiles cost extra launches over disjoint output
+  regions or a dynamic scheduler, plus edge-handling and imbalance. Sweep uniform
+  tiles with the predictor first; pursue mixed tiles only on repeatable material
+  underfill.
 
 ## 4. Tensile knob mechanics
 
@@ -333,8 +343,15 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   **1 MiB L2** there is no universal published result; measure default / NT-A /
   NT-B / both under cache-resident *and* rotating-buffer cases, and inspect the
   emitted modifiers (complex side: `complex_gemm_research_brief.md` §10).
+  The closest AMD measurement is a **CDNA2 MI250X finite-difference stencil**
+  (not GEMM, not GCN5): NT-store-only **1.19×** over that test's baseline and a
+  combined tiling/reordered-loads/NT-store variant **1.44×**, with the authors
+  cautioning these are not validated performance numbers (AMD GPUOpen, URL). AMD
+  evidence, but it must not transfer to gfx90c by assumption.
 - **`StaggerU` is not a no-op until measured.** It offsets K-loop start positions
-  among workgroups to disperse correlated traffic. It **cannot be dismissed as a
+  among workgroups to disperse correlated traffic. Tensile's own source scopes the
+  benefit to `TLU=0` and **large power-of-two K**, where the strides risk poor
+  DRAM/cache/TLB behaviour (`Tensile/Common.py`). It **cannot be dismissed as a
   no-op merely because the device has 7 CUs or ~42 GB/s** — that is an argument,
   not a measurement. Test with tile/depth fixed, compare repeat times and any
   memory counters, and prune only on a repeatable null (the §8.4 probe).
@@ -529,7 +546,9 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   reports peak speedups up to **14×/6.7×** over 32,824 geometries — explicitly
   **not gfx90c performance evidence**; Tensile's `StreamK` is MFMA-gated on this
   ISA (§4). The transferable idea is work-centric decomposition, which `GSU>1`
-  approximates.
+  approximates. Tensile's source exposes `GlobalSplitUAtomicAdd`, `StreamK` and
+  `StreamKAtomic`; their existence proves the paths are *implemented*, not that
+  any variant works or performs on gfx90c (`Tensile/Common.py`).
 - **Persistence does not create parallelism.** A persistent work queue reduces
   scheduling overhead and improves balance *only when many tasks exist*. With few
   output blocks, persistent scheduling over the same output tiles + K partition
@@ -567,6 +586,9 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - FOSS United — Season of Commits 2026: Porting ROCm to gfx90c (same ISA as gfx900; HBM ~400 GB/s vs APU DDR4 30–40 GB/s): https://fossunited.org
 - LLVM review D100126 (gfx90c code object v2 backwards compatibility): https://reviews.llvm.org/D100126
 - GPUOpen — RDNA Architecture whitepaper (32 LDS banks "same as Vega", bank-conflict warning): https://gpuopen.com/download/RDNA_Architecture_public.pdf
+- Origami — analytical GEMM-configuration *latency* model (documented supported-GPU list **excludes gfx900/gfx90c**): https://github.com/ROCm/rocm-libraries/blob/develop/shared/origami/README.md
+- AMD GPU architecture specifications (per-architecture CU/clock tables): https://rocm.docs.amd.com/en/latest/reference/gpu-specs.html
+- AMD ROCm GEMM optimisation guide (physical VGPR allocation alongside LLVM): https://rocm-handbook.amd.com/projects/amd-rocm-optimization-guide/en/develop/patterns/examples/matrix-multiply-optimization.html
 
 **Occupancy / quantization**
 - GPUOpen — Occupancy explained: https://gpuopen.com/learn/occupancy-explained
@@ -580,6 +602,7 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - NVIDIA — thread-group ID swizzling (rectangular grouping vs Morton, **[Transfer only]**): https://developer.nvidia.com/blog/optimizing-compute-shaders-for-l2-locality-using-thread-group-id-swizzling
 - Bader & Zenger — cache-oblivious matrix multiplication (recursive blocking + Peano order, [GPU-general]): https://www.sciencedirect.com/science/article/pii/S0024379506001595
 - Ernst et al. — tall-skinny GEMM on GPUs (unusual-shape mappings/autotuning, **[Transfer only]**): https://journals.sagepub.com/doi/10.1177/1094342020965661
+- "Load-balanced small/irregular batched GEMM" (2025; adaptive tiling + multi-threaded kernels, AMD/NVIDIA evaluation, **[Transfer only]** — abstract does not establish gfx90c or a single-grid 96×96 + 128×96 mix): https://www.sciencedirect.com/science/article/pii/S138376212500013X
 
 **Complex GEMM**
 - "Flexible Performant GEMM Kernels on GPUs" (SplitComplex vs InterleavedComplex): https://ieeexplore.ieee.org/document/9655458
@@ -590,6 +613,8 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - rocBLAS programming guide (Tensile complex problem types): https://rocm.docs.amd.com/projects/rocblas/
 - Higham — three-multiply complex matrix multiplication (up to 25 % saving, **lower numerical stability**): https://epubs.siam.org/doi/10.1137/0613043
 - CLBlast tuning docs (staged GEMM tuning; precision `6464` complex-double): https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md
+- oneMKL `gemm3m` docs (illustrative first-order componentwise error bounds; theoretical, not measured): https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2026-0/cblas-gemm3m.html
+- BLIS (Van Zee & van de Geijn, TOMS 2015; register-resident microkernel principle — CPU tiles do not prescribe GPU tiles): https://doi.org/10.1145/2764454
 - **First-party companion brief:** `complex_gemm_research_brief.md` (repo root) —
   BLAS-8 accounting, the four-FMA complex MAC (MAC_F32C.py/MAC_F64C.py), 3M/4M
   instruction counts, MAGMA/Fermi + Ozaki routes. The single citation anchor for
@@ -614,6 +639,9 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - ATLAS (empirical BLAS optimisation): https://www.sciencedirect.com/science/article/pii/S0167819100000879
 - Ansor / AutoTVM (learned cost model + evolutionary search): https://arxiv.org/abs/2006.06762
 - Willemsen et al. — Bayesian/surrogate GPU-kernel autotuning: https://arxiv.org/abs/2111.14991
+- AMD GPUOpen — MI250X/CDNA2 finite-difference **non-temporal-store** experiment (NT-store-only 1.19×, combined tiling/reordered-loads/NT-stores 1.44×; explicitly not validated performance numbers; **not GCN5, not GEMM**): https://gpuopen.com/learn/amd-lab-notes/amd-lab-notes-finite-difference-docs-laplacian_part3/
+- AMD — measuring max achievable FLOPS, part 2 (MI300 example: ~1 s per GEMM, ~25 % warmup / 75 % measurement; example, not a GCN5 constant): https://rocm.blogs.amd.com/software-tools-optimization/measuring-max-achievable-flops-part2/README.html
+- AMD Primbench — noise reduction (adaptive timed batches, coefficient-of-variation threshold, minimum runtime, initial warmup, clock/temperature awareness): https://rocm.docs.amd.com/projects/primbench/en/latest/conceptual/primbench-noise-reduction.html
 
 **Tensile (local checkout at `TENSILE_ROOT`)**
 - `Tensile/Common.py:511-519` (PGR cost), `:551-556` (`1LDSBuffer`), `:906-946` (`StaggerU`), `:975-981` (`WorkGroupMapping`), `:983` (`MaxOccupancy`), `:1358/:1360` (`LdsPad` comments), `:1542-1629` (defaults)
@@ -697,7 +725,11 @@ Its ledger rows that §9 above did not already carry:| Claim that circulates | W
   all ten rows of the AMD/ORNL GFX9 table, and
   `python3 -m oto.harness.asm_occupancy --check-calibration` reports **10/10**.
   Granule 8/16 mispredicts V = 28/36/84. `oto/harness/asm_occupancy.py` is the
-  home; do not re-open.
+  home; do not re-open. **LLVM documents the same physical allocation** for
+  GFX6–GFX9 — VGPRs are allocated in four-register units, the encoded count
+  approximately `ceil(vgprs_used/4) - 1`, so the *allocated* register count is not
+  the source-level accumulator count (LLVM AMDGPUUsage, URL; AMD ROCm GEMM
+  optimisation guide, URL).
 - **Occupancy is not the problem it was framed as.** `corpus2.md` inherited the
   "low occupancy" framing. Measured over 5,757 emitted kernels: **LDS capacity
   binds 61.7%**, VGPR 22.4%, and only 2.1% run at ≤3 waves/CU

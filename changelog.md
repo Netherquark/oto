@@ -9,6 +9,30 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the fourteen residual literature questions folded; the second raw
+  file retired.** `gfx90c_gcn5_gemm_residual_14q_caveman_full.md` (the `/caveman full`
+  answer pass over the questions the first review left open) is gone. Every verdict is
+  *closest-evidence-found, none gfx90c-specific*, and each now sits inline in its owner
+  as a durable `[CHECK]` rationale:
+  * `kernel_tuning_research.md` — **§3.4** Origami as the closest analytical GEMM
+    model (its documented supported-GPU list excludes gfx900/gfx90c) and the 2025
+    irregular-batched-GEMM paper as the closest mixed-tile work, plus the Tensile
+    Z-order note; **§4** the AMD MI250X/CDNA2 non-temporal experiment (AMD evidence,
+    but not GCN5 or GEMM) and the Tensile scoping of `StaggerU` to `TLU=0`,
+    large-power-of-two K; **§8.7** the `GlobalSplitUAtomicAdd`/`StreamK`/`StreamKAtomic`
+    knob names (existence ≠ performance); **§9.3** the LLVM GFX6–GFX9 VGPR-allocation
+    rule (four-register units, encoded ≈ `ceil(vgprs/4)-1`) as corroboration of the
+    project's granule-4 model; Sources groups extended.
+  * `complex_gemm_research_brief.md` **§5** — oneMKL's illustrative first-order
+    `gemm3m` componentwise error bounds, the quantitative form of the Higham caveat.
+  * `knowledge_base.md` **§8.3** — AMD-specific measurement methodology (Tensile
+    defaults `NumWarmups=0`/`NumBenchmarks=1`, the MI300 ~1 s / ~25 %-warmup example,
+    and Primbench adaptive noise reduction), adopted as *procedure*, never as a copied
+    count.
+  * `potential_configs.md` **§R33** — a closing note recording that the residual pass
+    turns four open `[CHECK]`s into cited "closest evidence" statements and **changes
+    no route**. No new module, so `claude.md` §2.2 / runbook / agent-reference rows are
+    unchanged.
 - **2026-10-19 — the GCN5 GEMM literature review folded, section by section, into
   its owners; the raw file retired.** `gfx90c_gcn5_gemm_literature_caveman_full.md`
   (a `/caveman full` external pass over rasterisation/wave quantisation, complex and
