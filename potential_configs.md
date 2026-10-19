@@ -47,7 +47,15 @@ The driver had no way to notice. **Fixed** in `oto/runners/phases.py`
 (`cf18277`): `ABORT_AFTER_CONSECUTIVE_EMPTY = 5`, a refused tile
 (`skipped_illegal` / `skipped_by_user`) does **not** count toward the streak, and
 an aborted run finalises as **`failed`** with an `abort_reason` rather than as
-`interrupted`. Pinned by `tests/test_phase1_integration.py::GpuLossAbortTests`.
+`interrupted`. The streak counts only phases whose client actually ran: a tile
+that never launched the client failed at kernel generation and carries a
+per-config verdict, not evidence that the device is gone. Tensile's
+`loading config file .../ClientParameters.ini` line is the signal — present in
+every phase that produced a measurement and in none of the 951 that did not,
+corpus-wide — so the void run's GPU loss still trips it while
+run_20261018_004835's three and run_20261017_092909's five consecutive
+unbuildable tiles do not. Pinned by
+`tests/test_phase1_integration.py::GpuLossAbortTests`.
 
 **Cause 2: the mutation arm cannot see the cells it exists to fix.** Of that
 run's 412 candidates, every single one went to a small cell that already beat the

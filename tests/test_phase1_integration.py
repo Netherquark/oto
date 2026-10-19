@@ -810,15 +810,19 @@ class ReadOnlyRegistryTests(Harness):
 # ------------------------------------------------------------------- GPU loss
 
 class GpuLossAbortTests(Harness):
-    """A long streak of empty phases must abort the run, not burn the night.
+    """A long streak of client-run phases that measure nothing must abort the run.
 
     The 2026-10-19 overnight run lost the GPU after its first phase: every later
     client aborted in ``Tensile::Client::GetHardware`` (``hipErrorNoDevice``,
     SIGABRT / exit 134), so 413 of 414 phases wrote no measurement and 9h47m of
-    budget produced nothing but void phases. A phase that measures nothing is
-    normal once (a refused tile); a *streak* is the only signal the loop ever
-    gets that the device is gone. Without this guard the loop happily iterates
-    the remaining deck against a dead GPU.
+    budget produced nothing but void phases. Without this guard the loop happily
+    iterates the remaining deck against a dead GPU.
+
+    The streak counts only phases whose client *ran*: a Tensile refusal is a
+    decided outcome, and a phase that never launched the client died at kernel
+    generation -- a per-config verdict, not a lost device. Both distinctions are
+    pinned below, because counting either one aborts healthy runs (see
+    ``test_a_streak_of_build_failures_does_not_abort``).
     """
 
     def _driver(self, run_id="run_gpu_loss"):
@@ -867,6 +871,19 @@ class GpuLossAbortTests(Harness):
         self.write_overlay(driver.run_dir.name, rows)
         return rows
 
+    @staticmethod
+    def _client_ran(run_dir, phase_id, extra=""):
+        """Write a phase dir whose log shows Tensile launched the client.
+
+        The invocation line is exactly what the guard reads: it separates "the
+        client ran and measured nothing" (the device is gone) from "the tile
+        never built" (a per-config verdict that must not abort a run).
+        """
+        d = Path(run_dir) / phase_id
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "stdout.log").write_text(
+            "loading config file .../ClientParameters.ini\n" + extra)
+
     def _run_status(self, run_id):
         import json
         import sqlite3
@@ -885,12 +902,12 @@ class GpuLossAbortTests(Harness):
         def fake_execute(phase, run_dir):
             pid = phase["phase_id"]
             executed.append(pid)
-            # Mirror the real failure: Tensile records the client's SIGABRT line
-            # in the phase stdout and writes no 2_BenchmarkData CSV at all.
-            d = run_dir / pid
-            d.mkdir(parents=True, exist_ok=True)
-            (d / "stdout.log").write_text(
-                "clientExit=1 (ERROR) ... exited with code 134\n")
+            # Mirror the real failure: Tensile's driver hands the config to the
+            # client, the client aborts at the probe with a SIGABRT, and no
+            # 2_BenchmarkData CSV is written at all.
+            self._client_ran(run_dir, pid,
+                             "clientExit=1 (ERROR) ... exited with code 134\n"
+                             "HIP error: hipErrorNoDevice\n")
             return {"status": "failed", "returncode": 134, "csv_count": 0}
 
         driver.execute_phase = fake_execute
@@ -907,14 +924,76 @@ class GpuLossAbortTests(Harness):
                          "a GPU-loss abort is a failed run, not an interrupt")
         self.assertIn("abort_reason", meta)
 
+    def test_a_client_reached_streak_aborts_without_probe_markers(self):
+        """The probe markers only sharpen the message; they must not gate it.
+
+        One of the void run's client-reached phases logged neither
+        ``exited with code 134`` nor ``hipErrorNoDevice`` -- its log simply ended
+        at ``Log level: Debug``. Deciding the abort on the markers would have
+        missed that phase and kept the night burning.
+        """
+        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        driver = self._driver("run_gpu_no_probe")
+        self._deck(driver, n=8)
+        executed = []
+
+        def fake_execute(phase, run_dir):
+            pid = phase["phase_id"]
+            executed.append(pid)
+            self._client_ran(run_dir, pid, "Log level: Debug\n")
+            return {"status": "timeout", "csv_count": 0}
+
+        driver.execute_phase = fake_execute
+        driver.run_phases()
+        self.assertEqual(len(executed), ABORT_AFTER_CONSECUTIVE_EMPTY)
+        self.assertTrue(driver._stop_requested)
+        self.assertIn("consecutive phases produced no measurement",
+                      driver._abort_note)
+
+    def test_a_streak_of_build_failures_does_not_abort(self):
+        """run_20261017_092909 pinned: five unbuildable tiles in a row is a deck
+        verdict, not a lost GPU.
+
+        Its first five executed phases failed with "Generating kernel source
+        resulted in error 4" and no client ever ran, yet the run went on to
+        complete 400 phases and supply the corpus's A/B -- and
+        run_20261018_004835 opened with the same failure three phases deep. A
+        guard that counts them aborts a healthy run.
+        """
+        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        driver = self._driver("run_build_fail")
+        n = ABORT_AFTER_CONSECUTIVE_EMPTY + 3
+        self._deck(driver, n=n)
+        executed = []
+
+        def fake_execute(phase, run_dir):
+            pid = phase["phase_id"]
+            executed.append(pid)
+            d = run_dir / pid
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "stdout.log").write_text(
+                "# Filtering processing errors... Done in 0.0 secs\n"
+                "Generating kernel source resulted in error 4\n")
+            return {"status": "failed", "returncode": 1, "csv_count": 0}
+
+        driver.execute_phase = fake_execute
+        driver.run_phases()
+        self.assertEqual(len(executed), n,
+                         "a build failure is not evidence the GPU is gone")
+        self.assertFalse(driver._stop_requested)
+        self.assertIsNone(driver._abort_note)
+        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")
+
     def test_a_measured_phase_resets_the_streak(self):
         driver = self._driver("run_gpu_reset")
         self._deck(driver, n=8)
         executed = []
 
         def fake_execute(phase, run_dir):
-            executed.append(phase["phase_id"])
-            ok = len(executed) % 5 == 0      # 4 empty, then one real result
+            pid = phase["phase_id"]
+            executed.append(pid)
+            ok = len(executed) % 5 == 0      # 4 client-run empties, then a result
+            self._client_ran(run_dir, pid)
             return {"status": "success" if ok else "failed",
                     "returncode": 0 if ok else 134,
                     "csv_count": 1 if ok else 0}
@@ -942,8 +1021,12 @@ class GpuLossAbortTests(Harness):
         from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
         driver = self._driver("run_gpu_short")
         self._deck(driver, n=ABORT_AFTER_CONSECUTIVE_EMPTY - 1)
-        driver.execute_phase = lambda phase, run_dir: {
-            "status": "failed", "returncode": 134, "csv_count": 0}
+
+        def fake_execute(phase, run_dir):
+            self._client_ran(run_dir, phase["phase_id"])
+            return {"status": "failed", "returncode": 134, "csv_count": 0}
+
+        driver.execute_phase = fake_execute
         driver.run_phases()
         self.assertFalse(driver._stop_requested, "aborted below the threshold")
         self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")

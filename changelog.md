@@ -9,6 +9,30 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the GPU-loss guard no longer aborts a healthy run.** The
+  guard added to stop the void run (`cf18277`) counted *any* phase that wrote
+  no CSV, which is the wrong signal: `run_20261018_004835` opened with three
+  consecutive empty phases and `run_20261017_092909` with five, yet both went on
+  to complete 400+ phases and supply the corpus's A/B. A guard that aborts on
+  five of them would have killed a run whose only crime was a deck of
+  unbuildable tiles. The discriminator is physical, not statistical: a phase
+  that never launched the benchmark client failed at kernel generation
+  ("Generating kernel source resulted in error 4") and carries a per-config
+  verdict, never evidence about the device; only a phase whose client ran and
+  measured nothing means the GPU is gone. The driver prints
+  `loading config file .../ClientParameters.ini` immediately before launching
+  the client, so that line is the test: present in every one of the 7,087
+  phases that produced a measurement and in none of the 951 that did not. The
+  void run's own evidence (both saved stdout tails) carried it too, including a
+  phase whose log named neither `exited with code 134` nor `hipErrorNoDevice`,
+  so the probe markers remain message-only. `_phase_produced_no_measurement`
+  now takes the phase id and consults `_client_reached`; `_track_empty_streak`,
+  `_client_aborted_at_probe` and a shared `_phase_stdout` reader follow. The
+  threshold stays at 5. Pinned by `GpuLossAbortTests` (a client-reached streak
+  aborts with or without probe markers; a build-failure streak does not; a lone
+  result resets; a refused tile does not count; a deck shorter than the
+  threshold still completes). No new module, so `claude.md` §2.2 / runbook /
+  agent-reference rows are unchanged.
 - **2026-10-19 — the void run is purged from every live store.** The lesson of
   `run_20261019_002432` is already frozen (the GPU-loss guard, next entry); the
   run itself was pure noise and is gone: 1111 `records` and its `runs` row

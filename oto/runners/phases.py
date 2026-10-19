@@ -22,19 +22,30 @@ import yaml
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
 
-#: Consecutive executed phases that produce no measurement before the harness
-#: declares the GPU lost and aborts the run. A single empty phase is normal (a
-#: tile Tensile refuses, or a one-off client hiccup); a long *streak* is a
-#: systemic break. The 2026-10-19 overnight run lost the device after its first
-#: phase and burned 9h47m emitting 413 void phases whose client aborted in
-#: ``Tensile::Client::GetHardware`` with ``hipErrorNoDevice`` -- a whole night of
-#: budget for nothing, which is exactly what this guard exists to prevent.
+#: Consecutive executed phases that *launched the client and measured nothing*
+#: before the harness declares the GPU lost and aborts the run. The 2026-10-19
+#: overnight run lost the device after its first phase and burned 9h47m emitting
+#: 413 void phases whose client aborted in ``Tensile::Client::GetHardware`` with
+#: ``hipErrorNoDevice`` -- a whole night of budget for nothing, which is exactly
+#: what this guard exists to prevent.
 ABORT_AFTER_CONSECUTIVE_EMPTY = 5
+
+#: Tensile prints this from its driver immediately before handing a phase's
+#: config to the benchmark client, so its presence means the client *ran*. A
+#: phase without it died at kernel generation and carries a per-config verdict
+#: ("Generating kernel source resulted in error 4"), never evidence about the
+#: device: run_20261018_004835 opened with three such phases, run_20261017_092909
+#: with five, and both went on to complete. Census over all 10,232 phase dirs:
+#: the marker is present in every phase that produced a measurement and in none
+#: of the 951 that did not -- the only client-reached-and-empty phases on record
+#: are the void run's.
+_CLIENT_INVOCATION_MARKERS = ("loading config file",)
 
 #: Signatures of a client-side abort at the hardware probe (SIGABRT, exit 134)
 #: rather than a per-tile refusal. Tensile prints "exited with code 134" into the
-#: phase's stdout.log; the core dump carries the ``hipErrorNoDevice`` text. Only
-#: used to sharpen the abort message, never to decide the abort itself.
+#: phase's stdout.log; the core dump carries the ``hipErrorNoDevice`` text. Not
+#: reliable enough to *decide* the abort -- one of the void run's client-reached
+#: phases named neither -- so it only sharpens the abort message.
 _CLIENT_ABORT_MARKERS = ("exited with code 134", "hipErrorNoDevice")
 
 
@@ -286,26 +297,31 @@ class PhaseMixin:
     ) -> Optional[int]:
         """Advance the no-measurement streak; abort and return None when full."""
         empty_streak = (empty_streak + 1
-                        if self._phase_produced_no_measurement(result)
+                        if self._phase_produced_no_measurement(result, phase_id)
                         else 0)
         if empty_streak >= ABORT_AFTER_CONSECUTIVE_EMPTY:
             self._abort_run(phase_id, empty_streak)
             return None
         return empty_streak
 
-    def _phase_produced_no_measurement(self, result: Dict[str, Any]) -> bool:
-        """True when an executed phase yielded no benchmark data at all.
+    def _phase_produced_no_measurement(self, result: Dict[str, Any],
+                                       phase_id: str) -> bool:
+        """True when the client ran a phase and measured nothing.
 
-        A phase that Tensile refused (``skipped_illegal``) is a *decided* outcome
-        and does not count; a timeout, a crash, or a client abort leaves zero CSVs
-        in ``2_BenchmarkData`` and does.
+        Deliberately narrow, because the loop aborts on a streak of these: the
+        only claim a phase makes about *the device* is that its client ran and
+        left no benchmark CSV. A Tensile refusal (``skipped_illegal``) is a
+        decided outcome, and a phase that never launched the client failed to
+        build -- a per-config verdict, not a lost GPU.
         """
         if result.get("status") in ("skipped_illegal", "skipped_by_user"):
             return False
-        return not result.get("csv_count")
+        if result.get("csv_count"):
+            return False
+        return self._client_reached(phase_id)
 
     def _abort_run(self, phase_id: str, streak: int) -> None:
-        """Stop the run when consecutive phases measure nothing (GPU lost).
+        """Stop the run when consecutive client-run phases measure nothing.
 
         Refusing to continue is the point: without this the loop happily spends
         hours writing phases whose client never reaches the GPU. The run is
@@ -324,16 +340,25 @@ class PhaseMixin:
         self._abort_note = note
         self._stop_requested = True
 
+    def _client_reached(self, phase_id: str) -> bool:
+        """Whether a phase's log shows Tensile launched the benchmark client."""
+        text = self._phase_stdout(phase_id)
+        return any(marker in text for marker in _CLIENT_INVOCATION_MARKERS)
+
     def _client_aborted_at_probe(self, phase_id: str) -> bool:
-        """Whether a phase's stdout records a client abort at the hardware probe."""
+        """Whether a phase's log records a client abort at the hardware probe."""
+        text = self._phase_stdout(phase_id)
+        return any(marker in text for marker in _CLIENT_ABORT_MARKERS)
+
+    def _phase_stdout(self, phase_id: str) -> str:
+        """A phase's Tensile stdout, or ``""`` when there is none to read."""
         if self.run_dir is None:
-            return False
+            return ""
         try:
-            text = (self.run_dir / phase_id / "stdout.log").read_text(
+            return (self.run_dir / phase_id / "stdout.log").read_text(
                 errors="ignore")
         except OSError:
-            return False
-        return any(marker in text for marker in _CLIENT_ABORT_MARKERS)
+            return ""
 
     def _filter_target_phases(
         self,
