@@ -31,7 +31,9 @@ mechanics (`kernel_tuning_research.md` §4).
 ## R34 — the overnight run failed twice, and both causes are now fixed
 
 **Cause 1: it measured nothing, and the driver called that `completed`.**
-`run_20261019_002432` ran 9 h 47 m, produced 409 phase directories, one partial
+`run_20261019_002432` (since purged from the registry and run tree; only its
+abort transcript survives, under `gfx90c_results/purge_backup_*/`) ran 9 h 47 m,
+produced 409 phase directories, one partial
 result CSV and **413 core dumps**, and was filed `status=completed`. The cores
 backtrace `#6 __cxa_throw → #7 Tensile::Client::GetHardware → #8 main`, and the
 core strings carry `Error 100(hipErrorNoDevice)` at

@@ -9,6 +9,21 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the void run is purged from every live store.** The lesson of
+  `run_20261019_002432` is already frozen (the GPU-loss guard, next entry); the
+  run itself was pure noise and is gone: 1111 `records` and its `runs` row
+  deleted from `registry.db` (24754 records / 34 runs remain, the 1137 shared
+  `phases` definitions untouched — phase rows are corpus-global, not
+  run-scoped), its phantom key dropped from `analysis/kernel_db.json`, its
+  486 MB run tree removed, and the top-level
+  `gfx90c_results/acceptance_report.{json,html}` regenerated from the last good
+  run (`run_20261018_004835`, 20 WIN / 18 TIE / 0 LOSS, "9h 3m") so the
+  canonical scoreboard no longer names a run that measured nothing. Verdicts
+  were whole-DB and never affected; only the report's timing/label sections had
+  been polluted. A 160 KB backstop (the GetHardware abort transcript, the run's
+  own report, a 412-entry manifest) is kept out of the tree at
+  `gfx90c_results/purge_backup_20261019_155626/` — the run id lives on only in
+  this log and in §R34, as history.
 - **2026-10-19 — the virgin axes are re-decked, and one of them is closed by
   proof.** `potential_configs.md` rewrite 7 (§R34–§R39) carries the two-cause
   diagnosis of the "zero improvement" night, the honest 18-cell tie table, and
