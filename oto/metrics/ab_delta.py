@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The native-vs-spoof A/B delta: the arithmetic every acceptance number rests on.
 
-Owns: ``compute_native_vs_spoof_delta`` -- per-cell pairing of the native arm against the recalled gfx900 floor under one of nine aggregation bases, with the optional telemetry clock correction applied to BOTH arms against ONE shared reference clock.
+Owns: ``compute_native_vs_spoof_delta`` -- per-cell pairing of the native arm against the recalled gfx900 floor under one of nine aggregation bases, with the optional telemetry clock correction applied to BOTH arms against ONE shared reference clock -- and ``cells_not_beating_floor`` (the same pairing, reduced to the set of cells the port has not yet won).
 Does NOT own: the records it is fed (oto.metrics.analytics), the clocks (oto.runners.clocks), or the verdict threshold (oto.metrics.ab_audit).
 Public API: ABDeltaMixin."""
 
@@ -233,6 +233,32 @@ class ABDeltaMixin:
         """
         return _pair_cells(native_records, spoof_records, agg,
                            tie_band_pct, sclk_by_phase, sclk_ref)
+
+    def cells_not_beating_floor(
+            self,
+            native_records: List[Dict[str, Any]],
+            spoof_records: List[Dict[str, Any]],
+            tie_band_pct: float = 5.0
+    ) -> Dict[str, Dict[str, Any]]:
+        """Cells whose native winner has not yet beaten the recalled floor.
+
+        Under ``agg="winner"`` BOTH arms are graded on their best per-kernel
+        median, so a cell appears here exactly when the best kernel this port
+        has ever measured on it fails to beat the best kernel the gfx900 floor
+        ships by more than the tie band -- i.e. when the cell is a TIE or a
+        LOSS in the A/B report.
+
+        This is the campaign's *objective* restated as a set: the point of the
+        port is to beat the floor, so a tied cell is unfinished however healthy
+        its percentage of the family ceiling looks. Returns ``{}`` when either
+        arm is empty (no frozen floor recalled, or no native measurements),
+        which the caller must read as "cannot judge" rather than "all good".
+        """
+        deltas = _pair_cells(native_records, spoof_records, agg="winner",
+                             tie_band_pct=tie_band_pct,
+                             sclk_by_phase=None, sclk_ref=None)
+        return {e["cell_key"]: e for e in deltas.values()
+                if e.get("verdict") != "WIN"}
 
 
 def _clock_basis_values(

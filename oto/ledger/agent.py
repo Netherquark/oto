@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pathlib import Path
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device.peaks import FAMILY_DTYPE_CHAR, cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.harvest import HarvestMixin
 from oto.ledger.mutator import Mutator, Proposal
@@ -101,6 +101,10 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         self.band_pct: Optional[float] = band_pct
         self._band_resolved: bool = band_pct is not None
         self._band_computing: bool = False
+        #: `(iteration, {FAMILY:SIDE -> A/B entry})` of cells that have not yet
+        #: beaten the floor; empty means unreadable, and `_floor_losers` caches
+        #: the scan per iteration because it walks every run (~90s).
+        self._floor_losers_cache: Optional[Tuple[int, Dict[str, Any]]] = None
 
     def band(self) -> Optional[float]:
         """The measured acceptance band, computed at most once, or None.
@@ -144,6 +148,54 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         if not self.mutator.ledger_available():
             return True
         return not self.has_outcome_signal
+
+    def _floor_losers(self) -> Dict[str, Any]:
+        """Cells that have not yet beaten the recalled floor, by ``FAMILY:SIDE``.
+
+        The floor is the frozen gfx900 shipped deck; ``cells_not_beating_floor``
+        pairs it against every native record under the `winner` basis, so the
+        set names the cells where this port's best kernel still fails to beat
+        the floor's best. Cached per iteration (the scan is ~90s); an empty
+        result means the floor is unavailable and the caller must fall back to
+        the ceiling rule rather than conclude that nothing is left to do.
+        """
+        if (self._floor_losers_cache is not None
+                and self._floor_losers_cache[0] == self.iteration):
+            return self._floor_losers_cache[1]
+        losers: Dict[str, Any] = {}
+        try:
+            import oto.metrics.ab_audit as ab_audit
+            native, floor, _chain = ab_audit.arm_record_sets(self.base_dir)
+            losers = self.analytics.cells_not_beating_floor(native, floor)
+        except Exception as e:
+            print(f"[floor] cannot read the reference floor ({e}); mutation "
+                  f"targeting falls back to the ceiling rule alone")
+        self._floor_losers_cache = (self.iteration, losers)
+        return losers
+
+    def _cell_settled(self, winner_info: Dict[str, Any]) -> bool:
+        """Whether a cell is finished and must NOT be mutated.
+
+        A cell earns a mutation for either of two independent reasons: it is
+        still below its family's realistic ceiling, or it has not yet beaten the
+        gfx900 floor. The second check runs *after* the ceiling rather than
+        instead of it, because the ceilings are measured-empirical snapshots and
+        the large cells have moved above their published value. Under the
+        ceiling rule alone those cells are marked settled, so the mutation arm
+        never proposes for them -- which is exactly what the 2026-10-18 run
+        did: all 412 of its candidates went to small cells that already beat the
+        floor by 100%+, and the tied large cells received none at all.
+
+        When the floor cannot be read the ceiling rule stands alone, so an
+        offline or floor-less corpus behaves exactly as before.
+        """
+        if winner_info.get("is_below_ceiling") is not False:
+            return False
+        losers = self._floor_losers()
+        if not losers:
+            return True
+        key = cell_key(winner_info.get("family"), winner_info.get("shape"))
+        return key is None or key not in losers
 
     def _collect_below_ceiling(self, all_analytics: List[CellAnalytics]) -> List[Dict[str, Any]]:
         """Collect cells that are below the realistic ceiling."""
@@ -277,7 +329,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         shape = winner_info["shape"]
         winner_config = winner_info.get("config", {})
 
-        if winner_info.get("is_below_ceiling") is False:
+        if self._cell_settled(winner_info):
             return [], [], 0, []
 
         mutants, sweep_shapes, cell_state = self._prepare_mutants(
@@ -336,7 +388,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
             rejected_non_novel += rejected
             ungraded_cells.extend(ungraded)
 
-            if winner_info.get("is_below_ceiling") is False:
+            if self._cell_settled(winner_info):
                 settled_cells.append(cell_key)
 
         if self.mutator and replayed:

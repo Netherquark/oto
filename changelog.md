@@ -9,6 +9,29 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-19 — the mutation arm can finally see the cells it exists to fix.**
+  Every one of `run_20261018_004835`'s 412 candidates went to a cell that was
+  already *below* its family ceiling -- 155 to SS:256, 67 to CC:192, 41 to
+  ZZ:128, 39 to HH:256, 37 to DD:192 -- and the 18 cells that only TIE the gfx900
+  floor got none at all. The mechanism is one line: `_mutate_cell` returned early
+  when `is_below_ceiling is False`, and `is_below_ceiling` is measured against
+  `REALISTIC_CEILINGS`, a measured-empirical snapshot the large cells have since
+  *passed* (SS:1024 measures 1135 against a published 1118.7), so the cells that
+  tie the floor are exactly the cells the arm refuses to touch. Targeting is now
+  floor-relative as well: a cell earns a mutation if it is below its ceiling OR
+  has not yet beaten the recalled floor, via
+  `ABDeltaMixin.cells_not_beating_floor` (`agg="winner"`, so both arms are graded
+  on their best per-kernel median) read once per iteration by
+  `ConvergenceAgent._floor_losers`. On the live corpus that set is precisely the
+  18 TIE cells -- DD/HH/HH_HPA/HS_HPA/SS/CC at 1024-4096, all within +0.1% to
+  +4.6% of the floor and inside the report's +/-5% tie band. Two guards keep it
+  safe: the floor is only consulted after the ceiling test, and an unreadable
+  floor (no frozen reference recalled) leaves the ceiling rule exactly as it was,
+  so an offline corpus cannot flood the deck. Pinned by
+  `tests/test_mutation_arm.py::FloorRelativeTargetingTests` (a tie is mutated; a
+  winner is settled; an unreadable floor keeps the old rule; a below-ceiling cell
+  never pays for the corpus-wide scan) and
+  `tests/test_ab_audit.py::TestCellsNotBeatingFloor`.
 - **2026-10-19 — the overnight run can no longer burn a night on a lost GPU.**
   `run_20261019_002432` measured *nothing*: after its first phase the device
   disappeared from HIP and 413 of 414 clients aborted in

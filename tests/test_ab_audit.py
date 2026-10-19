@@ -147,5 +147,65 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual(verdict(21.0, band_pct=20.2), "WIN")
 
 
+def _cell_rec(family, side, gflops, tag):
+    """A minimal benchmark record for one (family, shape) cell.
+
+    Enough of the schema for `ab_delta._collect_raw_data`: a family stamp, a
+    cube `ProblemType`, one GFLOPS sample, and a distinct (run, phase, fp) so
+    the sample forms its own per-kernel group.
+    """
+    return {
+        "family": family,
+        "ProblemType": f"{side}x{side}x{side}",
+        "GFLOPS": gflops,
+        "run_id": f"run_{tag}",
+        "phase_id": f"phase_{tag}",
+        "fingerprint": f"fp_{tag}",
+    }
+
+
+class TestCellsNotBeatingFloor(unittest.TestCase):
+    """The campaign objective, reduced to a set: which cells have not yet won.
+
+    `ConvergenceAgent._cell_settled` reads this so a cell that only TIES the
+    gfx900 floor stays mutable even after it climbs above its family's
+    published realistic ceiling. Without it the tied large cells are marked
+    settled and the mutation arm never proposes for them -- which is what the
+    2026-10-18 run did with all 412 of its candidates.
+    """
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        from oto.ledger.registry import SQLiteRegistry
+        from oto.metrics.analytics import AnalyticsEngine
+        self.tmp = Path(tempfile.mkdtemp(prefix="oto_abdelta_"))
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.engine = AnalyticsEngine(SQLiteRegistry(self.tmp), self.tmp)
+
+    def test_a_tie_is_reported_and_a_win_is_not(self):
+        floor = [_cell_rec("SS", 128, 100.0, "f_ss"),
+                 _cell_rec("CC", 128, 200.0, "f_cc")]
+        native = [_cell_rec("SS", 128, 101.0, "n_ss"),
+                  _cell_rec("CC", 128, 260.0, "n_cc")]
+        losers = self.engine.cells_not_beating_floor(native, floor)
+        self.assertEqual(set(losers), {"SS:128"})
+        self.assertEqual(losers["SS:128"]["verdict"], "TIE")
+        self.assertEqual(losers["SS:128"]["family"], "SS")
+
+    def test_a_loss_is_reported(self):
+        losers = self.engine.cells_not_beating_floor(
+            [_cell_rec("SS", 128, 80.0, "n_ss")],
+            [_cell_rec("SS", 128, 100.0, "f_ss")])
+        self.assertEqual(losers["SS:128"]["verdict"], "LOSS")
+
+    def test_no_floor_yields_the_empty_set(self):
+        """Empty must read as "cannot judge", never as "everything won"."""
+        self.assertEqual(
+            self.engine.cells_not_beating_floor(
+                [_cell_rec("SS", 128, 100.0, "n_ss")], []),
+            {})
+
+
 if __name__ == "__main__":
     unittest.main()

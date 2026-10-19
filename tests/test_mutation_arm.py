@@ -355,5 +355,73 @@ class NoCorpusLiteralsTests(unittest.TestCase):
                       "the scanner is not detecting the token it exists to detect")
 
 
+#: A cell whose measured best has climbed above its family's published
+#: realistic ceiling. `REALISTIC_CEILINGS["SS"]` was measured before the port
+#: learned to hold 1135 GFLOPS on this cell, and nothing recomputes it, so
+#: `is_below_ceiling` is False and the ceiling rule alone marks the cell settled.
+AT_CEILING_TIED = {
+    "ss_1024x1024x1024": {
+        "family": "SS",
+        "dtype": "s",
+        "shape": "1024x1024x1024",
+        "fp": "tiedfp",
+        "median_gflops": 1135.0,
+        "pct_of_ceiling": 101.5,
+        "is_below_ceiling": False,
+        "bound_class": "ALU",
+        "config": {"MacroTile": "128x128x8", "ThreadTile": "8x8"},
+    }
+}
+
+
+class FloorRelativeTargetingTests(AgentTestCase):
+    """The objective is to beat the floor, so a TIE is not a finished cell.
+
+    The 2026-10-18 run is the reason these exist: every one of its 412
+    candidates went to a small cell that already beat the floor by 100%+, and
+    the large tied cells got none, because `is_below_ceiling` was False on all
+    of them. These pin the second, floor-relative settling reason that keeps
+    such a cell mutable.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.calls = []
+
+    def _stub_floor(self, mapping):
+        """Install a floor reading without walking the corpus (~90s)."""
+        def fake():
+            self.calls.append(1)
+            return mapping
+        self.agent._floor_losers = fake
+
+    def test_a_tied_cell_is_still_mutated(self):
+        self.make_agent([{"MacroTile": "128x128x16"}])
+        self._stub_floor({"SS:1024": {"verdict": "TIE"}})
+        emitted = self.agent.mutate_and_feed(AT_CEILING_TIED)
+        self.assertGreaterEqual(len(emitted), 1,
+                                "an at-ceiling cell that only ties got no candidate")
+        self.assertTrue(self.calls, "the floor was never consulted")
+
+    def test_a_cell_that_beats_the_floor_is_settled(self):
+        self.make_agent([{"MacroTile": "128x128x16"}])
+        self._stub_floor({"ZZ:128": {"verdict": "TIE"}})   # a different cell
+        self.assertEqual(self.agent.mutate_and_feed(AT_CEILING_TIED), [])
+
+    def test_an_unreadable_floor_keeps_the_ceiling_rule(self):
+        """Empty means "cannot judge", so the old rule must stand unchanged."""
+        self.make_agent([{"MacroTile": "128x128x16"}])
+        self._stub_floor({})
+        self.assertEqual(self.agent.mutate_and_feed(AT_CEILING_TIED), [])
+
+    def test_a_below_ceiling_cell_never_pays_for_the_floor_scan(self):
+        self.make_agent([{"MacroTile": "64x64x16"}])
+        self._stub_floor({"ZZ:128": {}})
+        emitted = self.agent.mutate_and_feed(WINNERS)   # is_below_ceiling True
+        self.assertGreaterEqual(len(emitted), 1)
+        self.assertEqual(self.calls, [],
+                         "a below-ceiling cell triggered the corpus-wide scan")
+
+
 if __name__ == "__main__":
     unittest.main()
