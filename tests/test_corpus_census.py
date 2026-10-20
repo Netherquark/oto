@@ -53,6 +53,8 @@ def database(tmp_path):
                  **{**GEOM_A, "DepthU": "0"}),
             _row(shape="32x4096x1", median=800.0, best=1400.0, phase="p5",
                  **GEOM_B),
+            _row(median=1200.0, best=1250.0, family="HH", typecode="HHS",
+                 phase="p6", **GEOM_A),
         ],
         "gfx900_ref_locked_x": [
             _row(median=950.0, best=990.0, family="SS", typecode="SB",
@@ -65,16 +67,24 @@ def database(tmp_path):
 def test_load_rows_splits_native_and_floor(database):
     native = cc.load_rows(database)
     assert {row["side"] for row in native} == {"native"}
-    assert len(native) == 5
+    assert len(native) == 6
     every = cc.load_rows(database, side="all")
     assert {row["side"] for row in every} == {"native", "floor"}
-    assert len(every) == 6
+    assert len(every) == 7
     with pytest.raises(ValueError):
         cc.load_rows(database, side="bogus")
 
 
+def test_resolve_family_aliases():
+    assert cc.resolve_family("hh_hpa") == ("HH", "HHS")
+    assert cc.resolve_family("HS-HPA") == ("HH", "HSS")
+    assert cc.resolve_family("HHS") == ("HH", "HHS")
+    assert cc.resolve_family("SS") == ("SS", None)
+    assert cc.resolve_family(None) == (None, None)
+
+
 def test_axis_census_uses_median_and_skips_placeholders(database):
-    rows = cc.load_rows(database)
+    rows = [r for r in cc.load_rows(database) if r["family"] == "SS"]
     census = {(r["axis"], r["value"]): r for r in cc.axis_census(rows)}
     # two rows at DepthU 8: the best median is 1100, never the 1300 best seed
     assert census[("DepthU", "8")]["n"] == 2
@@ -108,10 +118,23 @@ def test_cell_history_is_per_geometry_and_includes_floor(database):
     assert len(cc.cell_history(rows, "SS", 1024, top=1)["geometries"]) == 1
 
 
+def test_cell_history_typecode_selects_one_block(database):
+    rows = cc.load_rows(database, side="all")
+    hpa = cc.cell_history(rows, "HH", 1024, typecode="HHS")
+    assert hpa["n_geometries"] == 1
+    assert hpa["geometries"][0]["gflops"] == 1200.0
+    assert cc.cell_history(rows, "HH", 1024,
+                           typecode="HSS")["n_attempts"] == 0
+
+
 def test_cli_cell_knob_and_json(database, capsys, tmp_path):
     out = tmp_path / "census.json"
     assert cc.main(["--db", database, "--cell", "SS:1024", "--top", "1"]) == 0
     assert "floor best" in capsys.readouterr().out
+
+    # the deck's HPA family spelling resolves to the HHS block, not empty HH
+    assert cc.main(["--db", database, "--cell", "HH_HPA:1024"]) == 0
+    assert "1200.0" in capsys.readouterr().out
 
     assert cc.main(["--db", database, "--knob", "DepthU", "--family", "SS"]) == 0
     text = capsys.readouterr().out

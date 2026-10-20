@@ -12,8 +12,8 @@ diff (``oto.harness.cell_knob_diff``), the forward-knob legality domain
 (``oto.tools.deck_review legality``), or the regression verdicts
 (``oto.harness.regression_matrix``).
 
-Public API: load_rows, group_rows, axis_census, geometry_census, cell_history,
-main.
+Public API: load_rows, group_rows, resolve_family, axis_census,
+geometry_census, cell_history, main.
 
 Why this exists: candidate generation starts by asking "has this cell, at this
 geometry, on this axis value, already been measured -- and how did it score?"
@@ -23,7 +23,9 @@ one CPU-only read of it, and it writes nothing except ``--json``.
 Every statistic is the seed **median** (``gflops_median``), the repo's standing
 basis; ``gflops_best`` is only a fallback when a row carries no median. Rows are
 grouped by ``family/typecode`` because that is the attribution ground truth:
-the HH-HPA and HS-HPA kernels share family ``HH`` and differ only by typecode.
+the HH-HPA and HS-HPA kernels share family ``HH`` and differ only by typecode,
+so ``--family HH_HPA`` and ``--cell HH_HPA:1024`` are resolved to that block
+(``resolve_family``) rather than silently reading an empty HH cell.
 
 CPU only, read-only, never benchmarks.
 
@@ -31,6 +33,7 @@ CPU only, read-only, never benchmarks.
     python3 -m oto.harness.corpus_census --family SS --top 20
     python3 -m oto.harness.corpus_census --knob DepthU --family HH
     python3 -m oto.harness.corpus_census --cell SS:1024
+    python3 -m oto.harness.corpus_census --cell HH_HPA:1024
     python3 -m oto.harness.corpus_census --typecode HHS
     python3 -m oto.harness.corpus_census --json out.json
 """
@@ -68,6 +71,18 @@ GEOMETRY_KEYS = ("MacroTile", "ThreadTile", "DepthU", "VectorWidth",
 #: The JSON/output field names for the same six knobs.
 GEOMETRY_FIELDS = ("macro_tile", "thread_tile", "depth_u", "vector_width",
                    "global_split_u", "work_group")
+
+#: Family spellings the deck uses that are not the ``kernel_db`` family field.
+#: ``kernel_db`` collapses HH_HPA/HS_HPA into family ``HH`` (they differ only by
+#: typecode), so a caller asking for the deck family must be resolved to
+#: ``(family, typecode)``. Plain families and typecodes map through unchanged.
+FAMILY_ALIASES = {
+    "HH_HPA": ("HH", "HHS"),
+    "HS_HPA": ("HH", "HSS"),
+    "SB": ("SS", "SB"), "DB": ("DD", "DB"), "HB": ("HH", "HB"),
+    "CB": ("CC", "CB"), "ZB": ("ZZ", "ZB"),
+    "HHS": ("HH", "HHS"), "HSS": ("HH", "HSS"),
+}
 
 _FAMILY_ORDER = {f: i for i, f in enumerate(FAMILY_SHAPES)}
 
@@ -156,6 +171,19 @@ def group_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]
     return {label: groups[label] for label in sorted(groups, key=_group_sort)}
 
 
+def resolve_family(token: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    """``(family, typecode)`` for a family name, typecode or deck alias.
+
+    ``HH_HPA`` / ``HS_HPA`` are not ``kernel_db`` family values; they resolve to
+    ``(HH, HHS)`` / ``(HH, HSS)``. Plain families resolve with no typecode, so
+    ``HH`` still means every HH block.
+    """
+    if not token:
+        return None, None
+    key = token.upper().replace("-", "_")
+    return FAMILY_ALIASES.get(key, (key, None))
+
+
 def axis_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """One record per (group, axis, value): how often, and the best median.
 
@@ -229,21 +257,27 @@ def _attempt(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
-                 top: int = 12) -> Dict[str, Any]:
+                 typecode: Optional[str] = None, top: int = 12) \
+        -> Dict[str, Any]:
     """Every geometry measured on ``family:side``, best median first.
 
-    Repeated measurement of one geometry is collapsed into that geometry's
-    record (``n`` rows, ``gflops`` the best of them), because replication is
-    evidence about noise, not a distinct candidate. ``top=0`` returns every
-    geometry. Non-cube shapes have no cell and are excluded by
-    ``oto.device.peaks.cell_key``. The floor reference is computed from rows
-    tagged ``side='floor'``; it is absent when the caller loaded only native
-    rows.
+    ``typecode`` restricts the history to one block (``HHS`` for HH_HPA,
+    ``HSS`` for HS_HPA); it is how a caller separates families that share the
+    ``kernel_db`` family field. Repeated measurement of one geometry is
+    collapsed into that geometry's record (``n`` rows, ``gflops`` the best of
+    them), because replication is evidence about noise, not a distinct
+    candidate. ``top=0`` returns every geometry. Non-cube shapes have no cell
+    and are excluded by ``oto.device.peaks.cell_key``. The floor reference is
+    computed from rows tagged ``side='floor'``; it is absent when the caller
+    loaded only native rows.
     """
     key = f"{family.upper()}:{int(side)}"
+    wanted = typecode.upper() if typecode else None
     native, floor = [], []
     for row in rows:
         if cell_key(row.get("family"), row.get("shape")) != key:
+            continue
+        if wanted and str(row.get("typecode") or "").upper() != wanted:
             continue
         if _gflops(row) <= 0:
             continue
@@ -263,7 +297,8 @@ def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
     ordered = sorted(stats.values(), key=lambda record: -record["gflops"])
     floor_rows = [_attempt(row) for row in floor]
     floor_rows.sort(key=lambda record: -record["gflops"])
-    return {"cell": key, "n_attempts": len(native),
+    label = f"{family.upper()}/{wanted}:{int(side)}" if wanted else key
+    return {"cell": key, "label": label, "n_attempts": len(native),
             "n_geometries": len(stats),
             "geometries": ordered if top <= 0 else ordered[:top],
             "floor_best": floor_rows[0] if floor_rows else None}
@@ -319,7 +354,8 @@ def _print_geometries(records: Sequence[Dict[str, Any]], top: int) -> None:
 
 def _print_cell(history: Dict[str, Any]) -> None:
     """Print one cell's geometry history and the floor reference."""
-    print(f"### {history['cell']}  native rows={history['n_attempts']}  "
+    print(f"### {history.get('label', history['cell'])}  "
+          f"native rows={history['n_attempts']}  "
           f"geometries={history['n_geometries']}")
     floor = history.get("floor_best")
     if floor:
@@ -330,16 +366,16 @@ def _print_cell(history: Dict[str, Any]) -> None:
               f"{_geometry_text(record)}")
 
 
-def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]]) \
-        -> Dict[str, Any]:
+def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]],
+             family: Optional[str], typecode: Optional[str],
+             side: Optional[int] = None) -> Dict[str, Any]:
     """The ``--json`` document for the arguments in force."""
     payload: Dict[str, Any] = {"meta": {"db": str(args.db),
-                                        "family": args.family,
-                                        "typecode": args.typecode}}
-    if args.cell:
-        family, _, side = args.cell.partition(":")
-        payload["cell"] = cell_history(rows, family, int(side),
-                                       top=args.top)
+                                        "family": family,
+                                        "typecode": typecode}}
+    if side is not None:
+        payload["cell"] = cell_history(rows, family, side,
+                                       typecode=typecode, top=args.top)
         return payload
     if args.knob:
         payload["axes"] = [record for record in axis_census(rows)
@@ -354,9 +390,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--db", default=str(DEFAULT_DB),
                     help="kernel_db.json to read")
-    ap.add_argument("--family", help="only this family (SS, HH, CC, ...)")
+    ap.add_argument("--family",
+                    help="family, typecode or deck alias (SS, HHS, HH_HPA)")
     ap.add_argument("--typecode", help="only this typecode (SB, HHS, ...)")
-    ap.add_argument("--cell", help="one cell's history, FAMILY:SIDE (SS:1024)")
+    ap.add_argument("--cell",
+                    help="one cell's history, FAMILY:SIDE (SS:1024, HH_HPA:1024)")
     ap.add_argument("--knob", choices=list(AXES), help="only this axis")
     ap.add_argument("--top", type=int, default=8,
                     help="rows/values per block; 0 = all (default 8)")
@@ -364,23 +402,31 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     help="write the same data as JSON to this path")
     args = ap.parse_args(argv)
 
+    side: Optional[int] = None
     if args.cell:
-        family, _, side = args.cell.partition(":")
-        if not family or not side.isdigit():
+        token, _, cell_side = args.cell.partition(":")
+        family, typecode = resolve_family(token)
+        if not family or not cell_side.isdigit():
             ap.error("--cell must be FAMILY:SIDE, e.g. SS:1024")
+        side = int(cell_side)
         rows = load_rows(args.db, side="all")
     else:
+        family, typecode = resolve_family(args.family)
         rows = load_rows(args.db, side="native")
-        if args.family:
+        if family or typecode:
             rows = [r for r in rows
-                    if str(r.get("family") or "").upper() == args.family.upper()]
-        if args.typecode:
-            rows = [r for r in rows
-                    if str(r.get("typecode") or "").upper()
-                    == args.typecode.upper()]
+                    if (not family or str(r.get("family") or "").upper()
+                        == family)
+                    and (not typecode or str(r.get("typecode") or "").upper()
+                         == typecode)]
+    if args.typecode:
+        typecode = args.typecode.upper()
+        rows = [r for r in rows
+                if str(r.get("typecode") or "").upper() == typecode]
 
-    if args.cell:
-        _print_cell(cell_history(rows, family, int(side), top=args.top))
+    if side is not None:
+        _print_cell(cell_history(rows, family, side, typecode=typecode,
+                                 top=args.top))
     else:
         axes = [r for r in axis_census(rows)
                 if not args.knob or r["axis"] == args.knob]
@@ -390,7 +436,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.json_path:
         with open(args.json_path, "w") as handle:
-            json.dump(_payload(args, rows), handle, indent=2, sort_keys=True)
+            json.dump(_payload(args, rows, family, typecode, side), handle,
+                      indent=2, sort_keys=True)
     return 0
 
 

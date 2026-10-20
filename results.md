@@ -538,7 +538,8 @@ Three readings from the current corpus:
   `HHS` and `HSS`, both under family `HH`. Their best geometries are
   64×128 / TT4×8 / DU16 and 64×64 / TT4×4 / DU16 (medians 1447.0 and 1441.2),
   neither of which is the HH block's 128×128 / TT8×8 winner. Read them with
-  `--typecode HHS` / `HSS`; an `HH` aggregate cannot see them.
+  `--typecode HHS` / `HSS` or the deck spelling `--cell HH_HPA:1024`; an `HH`
+  aggregate cannot see them.
 - **The winner tile is not the frontier tile.** Every family's best median sits
   at the geometry its winners already use (128×128 for SS/HH, 64×64 for DD/CC,
   32×32 for ZZ), not at the frontier. Every measured geometry above 16384

@@ -50,8 +50,9 @@ on that cell, the row count behind each, and the floor's best; `--family` /
 axis; `--knob` narrows to one. This is the empirical half of
 `potential_configs.md` §R41 (the axes the corpus has finished with); the
 mechanism half is the gate. It reads `kernel_db.json` only and writes nothing
-except `--json`. `--typecode HHS`/`HSS` is how the HPA blocks are read — they
-share family `HH` but not a geometry history.
+except `--json`. `--typecode HHS`/`HSS` (or the deck spelling `--cell
+HH_HPA:1024`) is how the HPA blocks are read — they share family `HH` but not a
+geometry history.
 
 **1. `score` — never trust the headline.** The acceptance report grades on
 `agg="winner"` = *best per-kernel median*, which is an **order statistic**: the

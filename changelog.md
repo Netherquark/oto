@@ -16,10 +16,13 @@ and NOT the experimental data (that is `results.md`).
   per `family/typecode`, every structural axis value with its best seed-median
   and every geometry with its row count; `--cell FAM:side`, the same for one
   cell next to the floor's best. It groups by typecode because the HPA blocks
-  (`HH/HHS`, `HH/HSS`) share family `HH` but not a geometry history, and it
-  ranks on the median, never the best seed. Pinned by
+  (`HH/HHS`, `HH/HSS`) share family `HH` but not a geometry history, and
+  `resolve_family` maps the deck's `HH_HPA`/`HS_HPA` spellings (and bare
+  typecodes) onto that block, so a cell read cannot silently return an empty
+  `HH` cell. It ranks on the median, never the best seed. Pinned by
   `tests/test_corpus_census.py` on a synthetic database (median basis, geometry
-  collapse, placeholder/zero skip, cube-cell filter, CLI/JSON paths). Registered
+  collapse, placeholder/zero skip, cube-cell filter, HPA alias resolution,
+  CLI/JSON paths). Registered
   in `claude.md` §2.2, `docs/harness_runbook.md` (the census is question 0
   before `deck_review`) and `docs/agent_reference.md`; `oto/README.md`
   regenerated.
