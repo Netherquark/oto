@@ -27,6 +27,9 @@ from oto.runners.driver import TensileDriver
 #: ``latest_run_id`` away from the run the operator meant.
 READ_ONLY_STAGES = {"2", "candidate", "4", "retirement", "5", "analytics",
                     "7", "report"}
+#: Stages that only validate. An invocation that stops after one of these needs
+#: no run directory; creating one would leave a phantom 'started' run behind.
+PREFLIGHT_STAGES = {"1", "preflight", "manifest"}
 
 #: Families, longest-first, so ``HH_HPA`` is not matched by the ``HH`` prefix test.
 _FAMILY_TOKENS = ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ")
@@ -39,22 +42,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 # ------------------------------------------------------------- stage handlers
 
+def _ends_after_preflight(args, stage: set) -> bool:
+    """True when Stage 1 is the last thing this invocation will do."""
+    return (bool(args.preflight or stage & PREFLIGHT_STAGES)
+            and not (stage - PREFLIGHT_STAGES))
+
+
 def _stage_preflight(driver, args, stage) -> Optional[int]:
     """Stage 1: Phase-0 preflight. Returns an exit code, or None to continue.
 
     ``--preflight`` alone stops here; as a gate for a later stage it returns None
     so the rest of the table still runs.
     """
-    if not (args.preflight or "1" in stage or "preflight" in stage
-            or "manifest" in stage):
+    if not (args.preflight or stage & PREFLIGHT_STAGES):
         return None
     ok = driver.run_preflight()
     if not ok:
         return 1
-    keys = {"1", "preflight", "manifest"}
-    if not (stage - keys):
-        return 0
-    return None
+    return 0 if _ends_after_preflight(args, stage) else None
 
 
 def _stage_report(driver, args, stage) -> Optional[int]:
@@ -286,13 +291,15 @@ def main() -> int:
 
     stage = set(args.stage or [])
     report_only = args.report is not None or bool(stage & READ_ONLY_STAGES)
+    preflight_only = _ends_after_preflight(args, stage)
 
     driver = TensileDriver(
         base_dir=args.base_dir,
         phase_timeout_s=args.phase_timeout,
         tensile_root=args.tensile_root,
         cooldown_s=args.cooldown,
-        create_run=not (args.dry_run or report_only or args.gfx900_reference)
+        create_run=not (args.dry_run or report_only or args.gfx900_reference
+                        or preflight_only)
     )
     driver._live_interval = max(float(args.live_interval), 1.0)
     driver._live_enabled = (args.live == "on")

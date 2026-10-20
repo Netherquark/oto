@@ -402,3 +402,16 @@ class TestEveryDeckRowIsGenerative:
                    {k: v for k, v in e.items()
                     if k not in ("fam", "pattern", "note")})]
         assert bad == [], f"PLAN_BATCH rows refused by the gate: {bad}"
+
+
+class TestDeckLoader:
+    def test_accepts_a_deck_list_and_a_seed_overlay(self, tmp_path):
+        """The preflight must be able to check the launch set, not just the deck."""
+        from oto.checks.candidates import load_deck
+        row = {"phase_id": "phase_x", "config": {}}
+        deck = tmp_path / "deck.yaml"
+        deck.write_text(yaml.safe_dump([row]))
+        overlay = tmp_path / "overlay.yaml"
+        overlay.write_text(yaml.safe_dump({"run_id": "seed", "phases": [row]}))
+        assert load_deck(deck) == [row]
+        assert load_deck(overlay) == [row]

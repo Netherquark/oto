@@ -161,11 +161,13 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 - Real benchmarking happens in the user's TTY only
 - CPU-only legality proofs: `validate_config`, `ldspad_feasible`, `occupancy_feasible`
 
-## The 10h+ overnight run command
+## The overnight run command
 
 ```bash
 # CPU-only (any session)
+python3 -m oto.harness.generate_candidates          # wire the seed overlay
 python3 check_candidates.py --quiet
+python3 check_candidates.py --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
 python3 -m oto.harness.generate_candidates --dry-run
 PYTHONPATH=. python3 oto/runners/cli.py --preflight
 
@@ -173,11 +175,12 @@ PYTHONPATH=. python3 oto/runners/cli.py --preflight
 python3 port_tensile.py --auto --budget 10 --yes
 ```
 
-Sizing: `check_candidates.py --quiet` prints the `phases.yaml` count and
-`generate_candidates --dry-run` prints `TOTAL candidates=…`; the run's phase count
-is their sum — read those two lines rather than trusting a literal pinned here
-(`claude.md`: "Never write a corpus count down — anywhere"). At the current
-deck that is ~12–14 h wall clock.
+The overlay is gitignored, so wiring it in is a required step, not a no-op.
+The run's phase count is the committed deck plus the overlay rows; read the
+overlay count and the dry-run's "would append N" line (0 after a correct wire)
+rather than trusting a literal pinned here (`claude.md`: "Never write a corpus
+count down — anywhere"). `--budget 10` makes the run exit once the deck is
+exhausted.
 Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
 
 ## Post-run read guide

@@ -252,5 +252,29 @@ class TestCliOptionSurface(unittest.TestCase):
         self.assertIn("opt_in_identical_skip=not args.force", src)
 
 
+class TestPreflightNeedsNoRunDir(unittest.TestCase):
+    """A preflight-only invocation must not leave a phantom 'started' run.
+
+    The driver creates its run directory in ``__init__``; before this predicate
+    existed, every documented ``--preflight`` left an empty run behind that the
+    next launch then had to clean up as 'interrupted'.
+    """
+
+    @staticmethod
+    def _ends(preflight, stage):
+        from oto.runners.cli import _ends_after_preflight
+        return _ends_after_preflight(mock.Mock(preflight=preflight), set(stage))
+
+    def test_preflight_alone_and_stage_1_stop_without_a_run(self):
+        self.assertTrue(self._ends(True, ()))
+        self.assertTrue(self._ends(True, ("1",)))
+        self.assertTrue(self._ends(False, ("1",)))
+
+    def test_a_stage_that_needs_a_run_is_not_preflight_only(self):
+        self.assertFalse(self._ends(True, ("3",)))
+        self.assertFalse(self._ends(False, ("3",)))
+        self.assertFalse(self._ends(True, ("preflight", "2")))
+
+
 if __name__ == "__main__":
     unittest.main()

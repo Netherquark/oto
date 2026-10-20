@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-20 — the preflight can check the launch set, not just the deck.**
+  `check_candidates.py --deck` accepted only a bare phase list, so pointing it
+  at a seed overlay crashed on the overlay's top-level `run_id`/`note` keys.
+  `load_deck` now accepts both shapes, and the overnight checklist sweeps
+  `phases.yaml` and the overlay together. That sweep found 3 long-stale
+  gate-illegal rows still sitting in the overlay (CC 128×128 accumulator over
+  budget, two patterns; SS 128×128 at LocalSplitU 2 over the LDS budget). All
+  three were `skipped_illegal` in `run_20261019_180048` and are no longer
+  emitted by the candidate pool, so they were pruned from the seed overlay
+  (timestamped backup alongside it). Pinned by
+  `tests/test_generate_candidates.py::TestDeckLoader`.
+
+  The documented preflight also constructed the driver with `create_run=True`,
+  so every invocation left an empty `started` run in the registry that the next
+  launch had to clean up as interrupted. `_ends_after_preflight` now makes a
+  preflight-only (or `--stage 1`) invocation read-only; the ledger records only
+  real runs. Pinned by
+  `tests/test_interactive_keys.py::TestPreflightNeedsNoRunDir`.
+
 - **2026-10-20 — the corpus history is now a tool, and it corrected one stale
   frontier number.** Candidate generation kept re-deriving "has this cell, at
   this geometry, on this axis value, already been measured, and how did it

@@ -9,7 +9,7 @@ candidate it just produced, so a deck that would die mid-run with Tensile
 Does NOT own: producing candidates (oto.tensile.candidate), the gates themselves
 (oto.tensile.gates -- assembly, loads, occupancy), or the ledger (oto.ledger).
 
-Public API: main.
+Public API: main, load_deck.
 
 The gates run in the orchestrator's own order (illegal knobs, tile divisibility,
 assembly class, classic-load divisibility, the LDS footprint, then register-file
@@ -20,6 +20,7 @@ have reported. The occupancy gate is a calibrated model, not Tensile's verdict;
     python3 check_candidates.py                      # sweep phases.yaml
     python3 check_candidates.py --family ZZ
     python3 check_candidates.py --deck other.yaml
+    python3 check_candidates.py --deck gfx90c_results/overlays/phases.seed.overlay.yaml
     python3 check_candidates.py --quiet              # only print failures
     python3 check_candidates.py --json out.json
 
@@ -154,6 +155,18 @@ def self_inconsistencies(phase: dict) -> list:
     return problems
 
 
+def load_deck(path: Path) -> list:
+    """The phase list from a deck (a YAML list) or a seed overlay.
+
+    An overlay is keyed by run metadata with the phases under ``phases``; a
+    deck is the bare list. Accepting both is what lets the preflight validate
+    the *launch set* (``phases.yaml`` plus the overlay) instead of only the
+    committed deck.
+    """
+    loaded = yaml.safe_load(path.read_text())
+    return loaded.get("phases", []) if isinstance(loaded, dict) else loaded
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -175,7 +188,7 @@ def main() -> int:
             deck = [d for d in deck if d.get("family", "").upper() == args.family.upper()]
     else:
         source = args.deck
-        deck = yaml.safe_load(args.deck.read_text())
+        deck = load_deck(args.deck)
 
     checked = skipped = 0
     fails: list[tuple[str, list]] = []

@@ -192,13 +192,14 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    `port_tensile.py --preflight` and `consolidate.py all --commit` refuse a
    deck that breaks the grid.
 
-### 5. Ship the S:512 / HH_HPA:4096 probes
+### 5. Ship the legal tile frontier (§R40)
 
-Authoritative green-lighted next step (user runs in a TTY):
-`python3 port_tensile.py --auto --yes --budget 10 --mutation-budget 2 --live off`
-with seed overlay = N1–N5 + **N6** (SS:512 vw4 floor kernel) + **N7**
-(the HH_HPA:4096 stranded winner carried as a deck D-row). After the run,
-rebuild the matrix (`step 1`) and re-check parity (`step 3`).
+Authoritative green-lighted next step (user runs in a TTY): wire the seed
+overlay (`python3 -m oto.harness.generate_candidates`; the overlay is
+gitignored, so this is required), run the CPU-only preflight, then
+`python3 port_tensile.py --auto --budget 10 --yes`. The deck rationale and its
+four-outcome reading are in `potential_configs.md` §R40. After the run, rebuild
+the matrix (`step 1`) and re-check parity (`step 3`).
 
 ## Why medians, not best seeds
 
