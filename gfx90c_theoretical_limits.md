@@ -176,6 +176,45 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
 - **DDR cells (GEMV/batch) never compare to the ALU roof** — refer them to `t_min`
   (§3) with BW=42 and the measured GEMV band (64×4096×1 → 1199–1311 ≈ 40 GB/s).
 
+### 5.1 The tile frontier bounds what geometry can reach
+
+The bars above assume a family can allocate the tile its lane efficiency needs.
+Two independent rules bound that, and both are enforced by `oto.tensile.gates`:
+
+1. **The accumulator file**: `weight × MT0 × MT1 × LocalSplitU < 65536` (4 VGPR
+   per complex-single accumulator, 8 per complex-double, 2 per FP32, 1 per FP16).
+2. **The classic load structure**: Tensile emits an operand load only when the
+   per-k-slice element count and `NumThreads × GlobalLoadVectorWidth` are
+   commensurate, which pins `MT1 × GLVW` to the thread tile's accumulator count
+   times the depth and then requires one tile side to be an integer multiple of
+   the other (`oto.tensile.gates.loads`; the derivation and the exact predicate
+   live in `oto/harness/candidate_rows.py` above `_FRONTIER`).
+
+Sweeping MT0,MT1 over 64…512 step 8, ten thread tiles, every legal vector width
+and DepthU 8/16/32 through the real gate (`tests/test_tile_frontier.py`) admits
+**no tile above 16384 elements for CC, DD or ZZ at all**, and exactly one shape
+above it for the real families:
+
+| family | largest legal MacroTile | elements | measured best GFLOPS |
+|---|---|---|---|
+| SS | 256×128 (VW2, or VW4 under `AssertFree1ElementMultiple: 2`) | 32768 | 1187.2 |
+| HH | 256×128 at DU16, 64×512 at DU8 | 32768 | 2749.3 |
+| HH_HPA / HS_HPA | 256×128 | 32768 | 1399.9 / 1303.1 |
+| DD | 128×128 | 16384 | 98.8 (98 % of peak) |
+| CC | 128×64 / 64×128 | 8192 | 346.7 |
+| ZZ | 64×64 | 4096 | 24.5 |
+
+**Consequence for the ORANGE cells.** DD is at 98 % of its peak at its largest
+legal tile, so it is done. CC and ZZ are not going to climb: their bars (1118.7
+and 98.6) were derived by borrowing SS/DD lane efficiency at SS/DD *tile sizes*,
+and those families cannot allocate them — the complex accumulator is what runs
+the register file out. The largest legal CC tile measures 288–347 GFLOPS and the
+largest legal ZZ tile 23–24.5, and every forwarded knob has already been probed
+on those geometries at 0.83–0.98 of base (`potential_configs.md` §R37/§R41). So
+CC and ZZ are ORANGE **by construction of the bar**, not by a tuning failure.
+Re-deriving those two bars (or keeping them as an aspiration) is a user decision
+(`potential_configs.md` §9); this file does not change them unilaterally.
+
 ## 6. Open verification gaps and decisions
 
 ### 6.1 DECISION REQUIRED — the ZZ LDS byte count, and what it is and is not

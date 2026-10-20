@@ -165,7 +165,12 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    <module:attr>` applies a `config -> Optional[bool]` predicate to the corpus
    and prints its false rejections (must be 0) and catches; the `builtin_rules`
    registry ships the shipped rules as views of the gate plus the rejected
-   `nt_budget` counter-example.
+   `nt_budget` counter-example. A candidate is also bounded by the classic
+   global-load divisibility rule (`oto.tensile.gates.loads`): above 16384
+   elements only 256×128 / 128×256 survive (plus 64×512 at DU8 for the
+   16-bit-input families), and CC, DD and ZZ admit none at all —
+   `gfx90c_theoretical_limits.md` §5.1, pinned by
+   `tests/test_tile_frontier.py`.
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or

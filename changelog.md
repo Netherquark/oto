@@ -9,6 +9,45 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-20 — the geometry axis the deck never reached: legality, not
+  preference, kept every tile small.** The 18 ties survived §R37's knob sweep
+  because that sweep is about knobs; the geometry they sit on was never varied.
+  Every tile above 16384 elements in the corpus (140 distinct SS geometries,
+  9345 rows, 21 areas) carries ThreadTile 16×8 — 128 accumulators a thread
+  against the winner's 64 — so the 30 % drop at 256×128 was a two-factor
+  experiment and "big tiles are worse" was read off it. From the emitted code
+  objects: SS 256×128/16×8 has 199 VGPR and 1 workgroup resident against the
+  winner's 113 and 2, i.e. it lost half its residency by construction, and
+  HH's large point kept its residency only because it ran at VW4/VW2 instead of
+  the winner's VW8. 256×128 at VW8 was never emitted for any family, and the
+  reason is the gate: Tensile's classic load structure pins `MT1 × GLVW` to the
+  thread tile's accumulator count times the depth and then needs one tile side
+  to be an integer multiple of the other, so a sweep of MT 64…512, ten thread
+  tiles, every legal vector width and DepthU 8/16/32 through the real gate
+  admits **no** tile above 16384 elements for CC, DD or ZZ and exactly one shape
+  for the real families — 256×128 / 128×256 at VW2, or at VW4 under
+  `AssertFree1ElementMultiple`, plus 64×512 at DU8 for the 16-bit families. The
+  ceiling consequence is `gfx90c_theoretical_limits.md` §5.1 (CC's 1118.7 and
+  ZZ's 98.6 bars are unreachable by geometry, and that is a bar decision, not a
+  tuning failure); the deck reasoning and the four-outcome reading are
+  `potential_configs.md` §R40, the finished axes are §R41. `candidate_rows`
+  gains `_FRONTIER` (22 tiles), the assertion axis on 8 measured winners, a
+  half-thread-tile control that separates area from register pressure, and
+  `WorkGroupMapping` 2/3 on the frontier and on DD's wave-quantisation
+  ties: 241 new distinct configs, ≈5 h at the
+  measured 78 s per executed phase. Two deck bugs fell out: `TARGET_CELLS` was
+  missing DD 768/1024/1365 and HH 4096, so three of DD's four ties and HH's
+  largest could never be measured by any generated row, and
+  `PATTERNS["HS_HPA"]` restated slot 2 in slot 4, halving that family's pattern
+  coverage. Pinned by `tests/test_tile_frontier.py` (the exhaustive sweep, the
+  named near misses, the three retired illegal tiles, and the assertion as the
+  mechanism). `test_element_assertions.py`'s shipped-row guard also moves from
+  `TARGET_CELLS` to each row's emitted shape list, because `_offer_row` filters
+  the target sides through `_shapes_satisfying_assertions`; the invariant stays
+  the same (every shape a row is measured on must satisfy its assertions) and a
+  row that loses a cell to its own assertion must now say so in its note. New
+  test file only, no new module, so `claude.md` §2.2 and the runbook §-list are
+  unchanged; `docs/agent_reference.md` gains the test row.
 - **2026-10-19 — the GPU-loss guard no longer aborts a healthy run.** The
   guard added to stop the void run (`cf18277`) counted *any* phase that wrote
   no CSV, which is the wrong signal: `run_20261018_004835` opened with three

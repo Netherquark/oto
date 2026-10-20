@@ -52,6 +52,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
+| `tests/test_tile_frontier.py` | The legal MacroTile frontier above 16384 elements |
 | `tests/test_db_mutator.py` | GlobalSplitU ban guard |
 | `tests/test_deck_review.py` | Deck-review scores counter guard |
 | `tests/test_function_length.py` | AC 1b (functions ≤ 60 lines) |
@@ -78,6 +79,11 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
    are *unreachable*, not merely unmeasured: the launch boundary does not forward
    them, so a candidate naming one benchmarks at the default. See R16.)
 6. **Empty on cc/zz**: no LdsPad; on then on for ss/hh — structural blind spot.
+7. **MacroTile area above 16384 is legal only for 256×128 / 128×256** (VW2, or
+   VW4 under `AssertFree1ElementMultiple`), plus 64×512 / 512×64 at DU8 for the
+   16-bit-input families. CC, DD and ZZ admit **no** legal tile above 16384 at
+   all, so their ORANGE cells are a bar artifact — `gfx90c_theoretical_limits.md`
+   §5.1, deck in `candidate_rows._FRONTIER`.
 
 ## Verdict bases (per `oto/metrics/ab_delta.py`)
 

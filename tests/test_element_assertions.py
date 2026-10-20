@@ -22,9 +22,10 @@ What is covered:
   is not a multiple of GSU does not mean what it says;
 * "1 means no assertion" -- a config that omits every assertion must pass on any
   size, including the awkward ones;
-* the shipped PLAN_BATCH rows really do hold on every shape they are offered
-  across. This is the regression guard for the CC:256 steal batch: it passes
-  today, and the test says so explicitly rather than leaving it to inspection.
+* the shipped assertion rows really hold on every shape they are measured on,
+  and a row that loses a cell to its own assertion says so in its note. This is
+  the regression guard for the CC:256 steal batch: it passes today, and the
+  test says so explicitly rather than leaving it to inspection.
 
 CPU only. No GPU, no Tensile run.
 """
@@ -39,7 +40,7 @@ sys.path.insert(0, str(REPO))
 
 from oto.harness.candidate_pool import (  # noqa: E402
     _assertion_failures, _shapes_satisfying_assertions)
-from oto.harness.candidate_rows import PLAN_BATCH, TARGET_CELLS  # noqa: E402
+from oto.harness.candidate_rows import TARGET_CELLS  # noqa: E402
 
 
 def _sides(fam: str) -> tuple:
@@ -111,23 +112,44 @@ def test_row_is_dropped_only_when_no_shape_survives():
 
 # ------------------------------------------------------- shipped rows hold
 
-def test_every_shipped_assertion_row_holds_on_every_shape_it_targets():
-    """The regression guard for the CC:256 steal batch (PLAN_BATCH, R8)."""
-    checked = 0
-    for row in PLAN_BATCH:
-        af0 = row.get("AssertFree0ElementMultiple", 1)
-        af1 = row.get("AssertFree1ElementMultiple", 1)
-        if af0 == 1 and af1 == 1:
-            continue
-        for side in _sides(row["fam"]):
-            checked += 1
-            assert _assertion_failures(row, side) == [], (
-                f"{row['fam']}:{side} -- a shipped assertion row does not hold "
-                f"on a shape it is offered across. That is the "
-                f"silently-wrong-results case. row note: {row.get('note')!r}")
+def test_every_shipped_assertion_row_holds_on_every_shape_it_carries():
+    """The regression guard for the CC:256 steal batch (PLAN_BATCH, R8).
 
-    assert checked > 0, (
-        "no PLAN_BATCH row carries an assertion; if that is intentional, say so "
+    2026-10-20 (R40): checked against each row's *emitted* shape list rather
+    than `TARGET_CELLS`, because `_offer_row` filters the target list through
+    `_shapes_satisfying_assertions` before the row is built. That filter is why
+    a shipped assertion can never be silently wrong on a shape it is measured
+    on; what it can do is cost a cell, so the second half asserts the loss is
+    reported in the row note instead of disappearing. The invariant is
+    unchanged and is now end-to-end: every shape a row is measured on satisfies
+    that row's assertions.
+    """
+    from oto.harness.candidate_pool import iter_candidates
+
+    checked = asserted = 0
+    for row in iter_candidates():
+        config = row["config"]
+        if (config.get("AssertFree0ElementMultiple", 1) == 1
+                and config.get("AssertFree1ElementMultiple", 1) == 1):
+            continue
+        asserted += 1
+        assert row["shapes"], f"assertion row with no survivable shape: {row}"
+        offered = len(TARGET_CELLS[config["FamilyLabel"]])
+        if len(row["shapes"]) < offered:
+            assert "assertion filter" in row.get("note", ""), (
+                "a row that lost a cell to its own assertion must say so in its "
+                f"note: {row.get('note')!r}")
+        for shape in row["shapes"]:
+            checked += 1
+            side = int(shape.split("x")[0])
+            assert _assertion_failures(config, side) == [], (
+                f"{config['FamilyLabel']}:{side} -- a shipped assertion row does "
+                "not hold on a shape it is measured on. That is the "
+                "silently-wrong-results case. "
+                f"row note: {row.get('note')!r}")
+
+    assert asserted and checked, (
+        "no emitted row carries an assertion; if that is intentional, say so "
         "here rather than letting the guard rot into a no-op")
 
 

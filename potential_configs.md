@@ -10,7 +10,11 @@ virgin-axis readings the plan was built on, because that probe generation was
 built on the wrong contraction pattern at half the winner's vector width (§R35).
 §R36 is the honest 18-cell tie table: most of it is inside the measurement band,
 not behind a geometry. §R37 is the only virgin forwarded surface left, now in the
-deck. §R38 says what this deck cannot fix, §R39 is the TTY checklist.
+deck. §R38 says what this deck cannot fix, §R39 is the TTY checklist. §R40 is the
+axis the deck never reached — MacroTile area above 16384, which legality rather
+than preference had kept closed — and the deck that now reaches it. §R41 is the
+list of axes the corpus has finished with, so the next run cannot re-spend on
+them.
 
 The earlier rewrite-6 findings stand: the legality gate is closed (0 misses, 0
 false rejections, was 53 — §R24); the tile axes have provable ceilings and the
@@ -25,6 +29,89 @@ gates. Does not own: ceilings and verdict bars
 facts (`gfx90c_theoretical_limits.md` §1–§3), the per-cell winners
 (`gfx90c_results/analysis/cells_resolved.full.txt`), or the durable Tensile
 mechanics (`kernel_tuning_research.md` §4).
+
+---
+
+## R40 — the geometry axis was never tested, and legality is why
+
+**The corpus has never measured a large tile and a small thread tile at the same
+time.** 140 distinct SS geometries, 9345 rows, 21 tile areas — and *every* tile
+above 16384 elements carries ThreadTile 16×8: 128 accumulators a thread against
+the winner's 64. The 30 % drop at 256×128 (802 vs 1187 GFLOPS) is a two-factor
+experiment, and "big tiles are worse" was read off it. Read off the emitted code
+objects, the confound is the whole effect:
+
+| config | VGPR | LDS/group | residency |
+|---|---|---|---|
+| SS 128×128 TT8×8 DU8 (winner) | 113 | 16384 | 2 groups × 4 waves = **8 waves** |
+| SS 256×128 TT16×8 DU8 | 199 | 28736 | 1 group × 4 waves = **4 waves** |
+| HH 128×128 TT8×8 DU16 (winner) | 63 | 24832 | 2 groups × 4 waves = **8 waves** |
+| HH 256×128 TT16×8 DU8 | 105 | 14336 | 2 groups × 4 waves = 8 waves |
+
+So SS's only large-tile point lost half its residency by construction, and HH's
+kept its residency but ran at VW4/VW2 (8 or 4 B) instead of the winner's VW8
+(16 B, the load cap). **256×128 at VW8 had never been emitted for any family**,
+and the reason is not the deck: it is illegal. `gates/loads.py` refuses it, and
+so does every other large tile — see §5.1 of `gfx90c_theoretical_limits.md` for
+the resulting per-family area cap. Above 16384 elements the gate admits exactly
+
+* SS: 256×128 and 128×256 (VW2 outright, VW4 under `AssertFree1ElementMultiple`),
+* HH / HH_HPA / HS_HPA: the same pair at DU16, plus 64×512 / 512×64 at DU8,
+* CC, DD, ZZ: **nothing**.
+
+**So the frontier is 22 tiles, not a sample of a big space**, and the whole
+remaining geometry question fits in it. `_FRONTIER` emits them; 241 new
+configs of deck in total:
+
+| block | rows | what it answers |
+|---|---|---|
+| frontier, 22 tiles × 4 patterns | 88 | is 32768 elements better than 16384 at 64 accumulators a thread? |
+| `AssertFree0/1ElementMultiple` ∈ {2,4,8} on 8 measured winners × 4 patterns | 93 | it appears in 37 of 7622 emitted configs: what does `GuaranteeNoPartial` (the dropped free-dimension predication) buy on geometry already known to be good? |
+| the frontier at half the thread tile (256×128 / 8×4, 32 accumulators) × 4 patterns | 16 | separates "the area is bad" from "the registers ran out" — same area, half the pressure |
+| `WorkGroupMapping` 2 and 3 on the frontier, and on DD's winner | 44 | 1 and 8 both lose to 4; the middle was never emitted, and the tile order changes at 2× area. DD's four ties are wave quantisation on 768/1000/1365, the one cell class a raster knob can still move |
+
+**How to read the result.** It is a designed experiment, so each outcome has one
+reading, and three of the four are informative:
+
+| 256×128/8×8 | 256×128/8×4 | conclusion |
+|---|---|---|
+| beats 128×128 | — | the area wall was register pressure; re-open every family's area ladder |
+| loses | beats 128×128 | same: pressure, not area |
+| loses | loses | 16384 is a real optimum for this part, and the 18 ties are noise (§R38, §R36) — stop looking at geometry |
+| ties | ties | inside the ±16.45 % band; needs replication, not another geometry |
+
+**Two deck bugs found while building it, both fixed here.** `TARGET_CELLS` was
+missing DD 768/1024/1365 and HH 4096, so *no generated row could ever be measured
+on those tie cells* — three of the four `DD` ties and one `HH` tie were
+unreachable by construction. And `PATTERNS["HS_HPA"]` restated `Alik_Bljk` in
+slot 4, so the family covered three of the four contraction patterns.
+
+**Budget.** 241 distinct new configs at the measured 78 s per executed phase is
+≈5 h. `--budget 10` stays, so the run simply exits when the deck is exhausted;
+padding it to 10 h would mean re-measuring the axes §R41 has closed.
+
+---
+
+## R41 — axes the corpus has finished with
+
+Each row is a knob or an axis that a previous plan expected to pay, and the
+measurement that ends it. Re-emitting any of these costs a night and cannot win.
+
+| axis | best found | the number that closes it |
+|---|---|---|
+| `LdsPadA`/`LdsPadB` | 0/0, every family | non-zero pad always loses: CC 346.7→313.4, HH 2749→2240, DD 98.8→97.9 |
+| `GlobalSplitU` | 1, every cell | SS:1024 G1 1135 / G2 936 / G4 740; DD:2048 99 / 95 / 95 |
+| `StaggerU` | 32 | 32 in 7532 of 7622 configs; 0/8/16 measured and lost |
+| `NumLoadsCoalesced` | 1 | closed by proof, `gates/loads.py::_nlca_stage` |
+| `WorkGroupMapping` 1 / 8 / −4 | 4 | 4 beats 1 (92 rows), 8 (80) and −4 (2) by 8–20 % in every cell; **2 and 3 are untried and are in the §R40 deck** |
+| ZZ tile geometry | 32×32×8 | flat 24–25 GFLOPS across 17 distinct geometries, 23.1–24.5 — no tie cell to win (§5.1) |
+| DD tile geometry | 64×64 / 128×128 | 98.8 GFLOPS = 98 % of the FP64 peak; its 4 ties are wave quantisation, and the deck carries 32×64 / 48×64 / 64×48 for them |
+| CC tile geometry | 64×64 | no legal tile above 8192 elements (§5.1), and 128×64 / 64×128 both measure worse than 64×64 |
+
+Unchanged and still open, deliberately: the knobs the launch boundary does not
+forward (`1LDSBuffer`, `DepthULdsDivisor`, `TransposeLDS`, `LocalSplitU`) stay
+§R16/§R20 — a deck row carrying one is a silent no-op, so none is emitted. The
+38 pending proposals and the `tie_band_pct = 5.0` decision are §R36/§R38.
 
 ---
 

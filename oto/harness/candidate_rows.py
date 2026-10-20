@@ -147,7 +147,10 @@ PATTERNS = {
     "CC": ("Ailk_Bjlk", "Alik_Bjlk", "Ailk_Bljk", "Alik_Bljk"),
     "ZZ": ("Alik_Bjlk", "Ailk_Bjlk", "Alik_Bljk", "Ailk_Bljk"),
     "HH_HPA": ("Ailk_Bljk", "Alik_Bjlk", "Ailk_Bjlk", "Alik_Bljk"),
-    "HS_HPA": ("Ailk_Bjlk", "Alik_Bljk", "Alik_Bjlk", "Alik_Bljk"),
+    # 2026-10-20 (§R40): slot 4 restated slot 2, so the family covered only
+    # three of the four contraction patterns. Winners stay in slots 1-2 (the
+    # wide and narrow rows read [:2] and [0]).
+    "HS_HPA": ("Ailk_Bjlk", "Alik_Bljk", "Alik_Bjlk", "Ailk_Bljk"),
 }
 
 # Target cells: family -> side list. Union of the user's three lists (far below
@@ -155,15 +158,17 @@ PATTERNS = {
 # left alone (DD:768/1024/1365/192:768 etc stay settled). 2026-10-09: DD:256
 # and HH:256 joined (§14.5 Group A wave-fill — DD:192/256 GSU2, HH:256/512 via
 # 64x64 alternates only).
-
+# 2026-10-20 (§R40): the list must cover every cell the report scores, or a
+# candidate for that cell is never measured. DD's 768/1024/1365 and HH's 4096
+# tie the floor but were absent, so no DD/HH row emitted here reached them.
 TARGET_CELLS = {
     "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
-    "DD": [192, 256, 2048],
-    "HH": [256, 512, 1024, 2048],
+    "DD": [192, 256, 768, 1024, 1365, 2048],
+    "HH": [256, 512, 1024, 2048, 4096],
     "CC": [192, 256, 512, 1024, 2048],
     "ZZ": [128, 192, 256, 512, 1024],
-    "HH_HPA": [512, 2048, 4096],
-    "HS_HPA": [512, 2048],
+    "HH_HPA": [512, 1024, 2048, 4096],
+    "HS_HPA": [512, 1024, 2048],
 }
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
@@ -641,3 +646,169 @@ for _fam, _pat, _tile, _tt, _vw, _du, _sides in _TIE_WINNERS:
                            "ThreadTile": _tt, "VectorWidth": _vw,
                            "DepthU": _du, **_kw,
                            "note": "2026-10-19 virgin-axis: " + _note})
+
+
+# --- the reachable tile frontier, and the assertion that unlocks it (§R40) ---
+#
+# WHY EVERY TIE SURVIVED THE KNOB SWEEPS, AND WHY "TRY A BIGGER TILE" WAS
+# NEVER ACTUALLY TESTED. §R37 re-probed each forwarded knob on the tied cells'
+# winner geometry and every probe measured 0.83-0.98 of its base. That is a
+# real result, but it is a statement about *knobs*, not about geometry: the
+# winners all sit at a 128x128 (SS/HH) or 64x64 (CC/DD) tile, and the corpus
+# holds exactly two tiles above 16384 elements -- 128x256 and 256x128, both
+# with ThreadTile 16x8, i.e. 128 accumulators a thread against the winner's 64.
+# Read off the emitted code objects, that confound is the whole effect:
+#
+#   SS 128x128 TT8x8  DU8   vgpr 113  LDS 16384  -> 2 WGs x 4 waves =  8 waves
+#   SS 256x128 TT16x8 DU8   vgpr 199  LDS 28736  -> 1 WG  x 4 waves =  4 waves
+#   HH 128x128 TT8x8  DU16  vgpr  63  LDS 24832  -> 2 WGs x 4 waves =  8 waves
+#   HH 256x128 TT16x8 DU8   vgpr 105  LDS 14336  -> 2 WGs x 4 waves =  8 waves
+#
+# so SS's only large-tile point loses half its residency by construction, and
+# HH's ran at VW4 (8 B) instead of the winner's VW8 (16 B == the load cap):
+# 256x128 at VW8 was never emitted for any family.
+#
+# It was never emitted because it is *illegal*, and that is the real finding.
+# `gates/loads.py` ports SolutionStructs' classic load structure, where operand
+# B's load is legal only when `MT1*DepthU` and `NumThreads*GLVW` are
+# commensurate. With GLVW == VectorWidth, ThreadTile t0xt1 and LocalSplitU 1
+# that reduces to one line:
+#
+#     MT1 * GLVW  ==  t0 * t1 * DepthU          (the no-assertion case)
+#
+# because then NumThreads*GLVW == MT0*DepthU exactly, so operand A balances for
+# *any* MT0 and operand B balances iff MT0/MT1 is an integer. Every other
+# combination either fails the divisibility stage or -- at MT0/MT1 = 2, 4, ...
+# -- leaves GLVW_eff = GLVW/pv unequal to VectorWidth, which Tensile refuses
+# unless `AssertFree0/1ElementMultiple` certifies the free dimension is a
+# multiple of the wide load (SolutionStructs:4583-4596). Sweeping MT0, MT1 in
+# [64, 512] step 8, ten thread tiles, every legal vector width and DepthU
+# 8/16/32 through the real gate (`tests/test_tile_frontier.py` ships the sweep)
+# returns exactly two supra-16384 tiles for SS -- 256x128 and its mirror -- and
+# four for each 16-bit-input family: the same pair plus 64x512 / 512x64, whose
+# 8x depth lets the pv case land on GLVW_eff == 1 with no assertion at all.
+#
+# So the frontier below is the whole remaining geometry space, not a sample of
+# it. Each 2:1 tile is measured twice -- at the halved vector width (legal
+# outright) and at the full width (legal only under the assertion) -- so the
+# load width is a controlled variable and not a confound. The assertion itself
+# is the second virgin axis: it appears in 37 of 7622 emitted configs. It is
+# what Tensile's `GuaranteeNoPartial` reads, so setting it lets the kernel drop
+# the per-tile free-dimension predication -- and it is the only way to reach the
+# full load width at 2x area.
+#
+# The frontier also closes the two families that look worst on the report. CC's
+# accumulator cap is MTarea < 16384 and its no-assertion rule is MT1*GLVW ==
+# 4*4*8 = 128, so its widest legal tiles are 128x64 (VW2) and 64x128 (VW1),
+# both already measured and both worse than 64x64. ZZ's rule is the same with
+# VW 1, MT1 = 128, and the 8192-element accumulator cap then refuses 64x128, so
+# its largest legal tile is 64x64 -- also measured. The 1118.7 GFLOPS CC bar and
+# the 98.6 GFLOPS ZZ bar are therefore unreachable by construction, not by
+# tuning; `gfx90c_theoretical_limits.md` §5.1 owns that conclusion.
+_FRONTIER: Dict[str, Tuple[str, Tuple[Tuple[str, str, int, int, Dict[str, Any]], ...]]] = {
+    "SS": ("float32, DU8 (the deepest depth with (m+n)*8*4 <= 16384 above 128 wide)",
+           (("256x128x8", "8x8", 2, 8, {}),
+            ("128x256x8", "8x8", 2, 8, {}),
+            ("256x128x8", "8x8", 4, 8, {"AssertFree1ElementMultiple": 2}),
+            ("128x256x8", "8x8", 4, 8, {"AssertFree0ElementMultiple": 2}))),
+    "HH": ("float16, DU16 at 2:1; DU8 also admits a 4:1 tile with no assertion "
+           "at all, which is the clean area-versus-aspect control",
+           (("256x128x16", "8x8", 4, 16, {}),
+            ("128x256x16", "8x8", 4, 16, {}),
+            ("256x128x16", "8x8", 8, 16, {"AssertFree1ElementMultiple": 4}),
+            ("128x256x16", "8x8", 8, 16, {"AssertFree0ElementMultiple": 4}),
+            ("64x512x8", "8x8", 8, 8, {}),
+            ("512x64x8", "8x8", 8, 8, {}))),
+    "HH_HPA": ("fp16 in / fp32 accumulate: 2:1 under the assertion, and the "
+               "4:1 DU8 tile that needs none",
+               (("256x128x16", "4x8", 2, 16, {}),
+                ("128x256x16", "4x8", 2, 16, {}),
+                ("256x128x16", "4x8", 4, 16, {"AssertFree1ElementMultiple": 2}),
+                ("128x256x16", "4x8", 4, 16, {"AssertFree0ElementMultiple": 2}),
+                ("64x512x8", "8x8", 8, 8, {}),
+                ("512x64x8", "8x8", 8, 8, {}))),
+    "HS_HPA": ("fp16 in / fp32 accumulate with an fp32 B operand: the fp32 "
+               "operand doubles the LDS footprint, so only VW2 stays legal",
+               (("256x128x8", "8x4", 2, 8, {}),
+                ("128x256x8", "8x4", 2, 8, {}),
+                ("256x128x16", "8x4", 2, 16, {}),
+                ("128x256x16", "8x4", 2, 16, {}),
+                ("64x512x8", "8x8", 2, 8, {}),
+                ("512x64x8", "8x8", 2, 8, {}))),
+}
+
+#: The assertion axis on the *measured* winners: same tile, same threads, only
+#: the free-dimension guarantee changes, so any delta is codegen (the dropped
+#: edge predication) and not geometry. `8` is the largest value every measured
+#: side satisfies except 1365, which `_shapes_satisfying_assertions` then drops
+#: from the row instead of silently measuring a false assertion.
+_AF_TILES: Tuple[Tuple[str, str, str, int, int], ...] = (
+    ("SS", "128x128x8", "8x8", 4, 8),
+    ("SS", "128x128x16", "8x8", 4, 16),
+    ("HH", "128x128x16", "8x8", 8, 16),
+    ("CC", "64x64x8", "4x4", 2, 8),
+    ("DD", "64x64x8", "4x4", 2, 8),
+    ("ZZ", "64x64x8", "4x4", 1, 8),
+    ("HH_HPA", "64x128x16", "4x8", 4, 16),
+    ("HS_HPA", "128x64x16", "8x4", 4, 16),
+)
+_AF_LEVELS: Tuple[int, ...] = (2, 4, 8)
+
+for _fam, (_why, _tiles) in _FRONTIER.items():
+    for _tile, _tt, _vw, _du, _extra in _tiles:
+        for _pat in PATTERNS[_fam]:
+            PLAN_BATCH.append({
+                "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+                "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du, **_extra,
+                "note": f"2026-10-20 frontier: {_why}"})
+for _fam, _tile, _tt, _vw, _du in _AF_TILES:
+    for _lvl in _AF_LEVELS:
+        for _pat in PATTERNS[_fam]:
+            PLAN_BATCH.append({
+                "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+                "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+                "AssertFree0ElementMultiple": _lvl,
+                "AssertFree1ElementMultiple": _lvl,
+                "note": f"2026-10-20 assertion axis: both free dims "
+                        f"asserted a multiple of {_lvl}"})
+#: The raster rows. WGM 1 and 8 both lose to 4 on every family and 2 and 3 were
+#: never emitted; the two places it can still matter are the frontier (the tile
+#: order changes at 2x area) and DD, whose four ties are wave quantisation on
+#: the sides no power-of-two tile divides and which is otherwise at 98 % of its
+#: peak. DD's winner is here rather than in `_FRONTIER` because DD has no legal
+#: tile above 16384 -- it is the only row in this batch that reaches 1365.
+_WGM_ROWS: Tuple[Tuple[str, str, str, int, int, Dict[str, Any]], ...] = (
+    *((fam, tile, tt, vw, du, extra)
+      for fam in ("SS", "HH")
+      for tile, tt, vw, du, extra in _FRONTIER[fam][1]),
+    ("DD", "64x64x8", "4x4", 2, 8, {}),
+)
+for _fam, _tile, _tt, _vw, _du, _extra in _WGM_ROWS:
+    for _wgm in (2, 3):
+        for _pat in PATTERNS[_fam][:2]:
+            PLAN_BATCH.append({
+                "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+                "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+                "WorkGroupMapping": _wgm, **_extra,
+                "note": f"2026-10-20 frontier raster: WGM={_wgm} (untried)"})
+
+#: The frontier at half the thread tile: same 256x128 area, 32 accumulators a
+#: thread instead of 64, 1024 threads in a single workgroup. This is the
+#: control that separates "the area is bad" from "the registers ran out" --
+#: with only these four rows a loss at 256x128/8x8 and a win at 256x128/8x4 is
+#: unambiguously a residency effect. HH needs the free-dimension assertion at
+#: VW4 for the same load-divisibility reason as the frontier itself.
+_FRONTIER_THREAD_CONTROLS: Tuple[
+        Tuple[str, str, str, int, int, Dict[str, Any]], ...] = (
+    ("SS", "256x128x8", "8x4", 2, 8, {}),
+    ("SS", "128x256x8", "4x8", 2, 8, {}),
+    ("HH", "256x128x16", "8x4", 4, 16, {"AssertFree1ElementMultiple": 2}),
+    ("HH", "128x256x16", "4x8", 4, 16, {"AssertFree0ElementMultiple": 2}),
+)
+for _fam, _tile, _tt, _vw, _du, _extra in _FRONTIER_THREAD_CONTROLS:
+    for _pat in PATTERNS[_fam]:
+        PLAN_BATCH.append({
+            "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+            "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du, **_extra,
+            "note": "2026-10-20 frontier thread control: half the accumulators "
+                    "at the same area"})
