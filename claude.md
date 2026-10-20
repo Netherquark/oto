@@ -226,6 +226,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Need | Run |
 |---|---|
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
+| What has the corpus already measured on this family/cell, at which geometry or axis value, and how did it score? | `python3 -m oto.harness.corpus_census` (`--family SS`, `--typecode HHS`, `--cell SS:1024`, `--knob DepthU`, `--json out.json`) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`) |
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |

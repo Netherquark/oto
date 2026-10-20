@@ -14,6 +14,7 @@ oto/harness/gate_calibration.py   # gate-vs-corpus agreement census (false rejec
 oto/harness/failure_triage.py     # empty-phase reason census (why did a phase produce nothing)
 oto/harness/rule_calibration.py   # probe a *proposed* rule in isolation (false rejections + catches)
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
+oto/harness/corpus_census.py      # corpus history: axis/geometry coverage + per-cell geometry history
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
@@ -30,16 +31,27 @@ repo's canonical sources (`oto.device.peaks`, `oto.tensile.library_parity`) — 
 can never disagree with the shipped grid (knowledge_base.md §6.1). Cache paths are
 listed above.
 
-## The three questions, before you deck anything
+## The pre-deck questions
 
-`oto/tools/deck_review` is the pre-flight for candidate generation. It answers
-the three questions in order, all CPU-only and read-only:
+The corpus census comes first; `oto/tools/deck_review` then answers the three
+questions in order. All are CPU-only and read-only:
 
 ```bash
+python3 -m oto.harness.corpus_census --cell SS:1024   # what has already been tried?
 python3 -m oto.tools.deck_review score            # is the floor actually beaten?
 python3 -m oto.tools.deck_review legality         # is this knob domain deck-safe?
 python3 -m oto.tools.deck_review flood --cap 24   # where is the GPU budget going?
 ```
+
+**0. `corpus_census` — has this already been measured?** Read the cell before
+choosing a knob. `--cell FAM:side` lists every geometry the corpus has measured
+on that cell, the row count behind each, and the floor's best; `--family` /
+`--typecode` print the distinct value and best seed-median for every structural
+axis; `--knob` narrows to one. This is the empirical half of
+`potential_configs.md` §R41 (the axes the corpus has finished with); the
+mechanism half is the gate. It reads `kernel_db.json` only and writes nothing
+except `--json`. `--typecode HHS`/`HSS` is how the HPA blocks are read — they
+share family `HH` but not a geometry history.
 
 **1. `score` — never trust the headline.** The acceptance report grades on
 `agg="winner"` = *best per-kernel median*, which is an **order statistic**: the

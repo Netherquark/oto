@@ -420,6 +420,9 @@ bytes-per-element:
 | C | 64x64x8 | 4x4 | 79 | 12 | 16384 | 360.9 |
 | Z | 32x32x8 | 2x2 | 63 | 8 | 24960 | 24.7 |
 
+The live version of this table — full geometries, not `(MT, TT, VW)` triples —
+is `python3 -m oto.harness.corpus_census`; §15 records what that read settled.
+
 ### 13.4 CC:256's former LOSS was a candidate sweep-order defect — now TIE
 
 `gfx90c_results/acceptance_report.json`, run `run_20261015_041159` (current):
@@ -519,3 +522,31 @@ not a regression from these rules.
   `DD` 16, `CC` 13–16 and **`ZZ` 5** (`potential_configs.md` §R28). A WIN on
   `CC`/`DD`/`ZZ` therefore says "this deck beat the floor", not "the family is
   exhausted".
+
+## 15. The corpus read back as history (2026-10-20)
+
+`python3 -m oto.harness.corpus_census` reads `kernel_db.json` as a search
+history rather than a scoreboard: per `family/typecode` it reports every
+structural axis value with its best seed-median, and every geometry with the
+rows behind it; `--cell FAM:side` does the same for one cell next to the floor's
+best. It is the CPU-only step before choosing a candidate, and the tool-side
+home of the closed axes in `potential_configs.md` §R41.
+
+Three readings from the current corpus:
+
+- **The HPA blocks are separate histories.** `HH_HPA` and `HS_HPA` are typecodes
+  `HHS` and `HSS`, both under family `HH`. Their best geometries are
+  64×128 / TT4×8 / DU16 and 64×64 / TT4×4 / DU16 (medians 1447.0 and 1441.2),
+  neither of which is the HH block's 128×128 / TT8×8 winner. Read them with
+  `--typecode HHS` / `HSS`; an `HH` aggregate cannot see them.
+- **The winner tile is not the frontier tile.** Every family's best median sits
+  at the geometry its winners already use (128×128 for SS/HH, 64×64 for DD/CC,
+  32×32 for ZZ), not at the frontier. Every measured geometry above 16384
+  elements carries TT 16×8 or 8×16, and at SS:1024 that tile has 4 rows behind
+  681.3 against the 128×128's 98 rows behind 1135.1. That is the §R40 confound;
+  the frontier deck is what turns it into a clean two-factor experiment.
+- **No settled axis moves a cell.** On every structural axis in the census, the
+  highest best-median belongs to a value the family's winners already use; no
+  untried value of a measured axis is hiding above them. This is the empirical
+  half of §R41 — spend on the unmeasured frontier and the assertion axis, not on
+  another value of a settled knob.

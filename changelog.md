@@ -9,6 +9,29 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-20 — the corpus history is now a tool, and it corrected one stale
+  frontier number.** Candidate generation kept re-deriving "has this cell, at
+  this geometry, on this axis value, already been measured, and how did it
+  score?" with a throwaway script. `oto/harness/corpus_census.py` is that read:
+  per `family/typecode`, every structural axis value with its best seed-median
+  and every geometry with its row count; `--cell FAM:side`, the same for one
+  cell next to the floor's best. It groups by typecode because the HPA blocks
+  (`HH/HHS`, `HH/HSS`) share family `HH` but not a geometry history, and it
+  ranks on the median, never the best seed. Pinned by
+  `tests/test_corpus_census.py` on a synthetic database (median basis, geometry
+  collapse, placeholder/zero skip, cube-cell filter, CLI/JSON paths). Registered
+  in `claude.md` §2.2, `docs/harness_runbook.md` (the census is question 0
+  before `deck_review`) and `docs/agent_reference.md`; `oto/README.md`
+  regenerated.
+
+  The first corpus read also fixed `gfx90c_theoretical_limits.md` §5.1: its
+  "measured best" column was the family best at *any* tile, not at the frontier
+  tile, and the HPA entries (1399.9 / 1303.1) were mid-ladder geometries, not
+  family bests. The column is now labelled accordingly with the measured HPA
+  bests (1447.0 / 1441.2), and the section states that no HPA 256×128 row has
+  been measured yet — the §R40 frontier deck carries it. The durable readings
+  are `results.md` §15.
+
 - **2026-10-20 — the geometry axis the deck never reached: legality, not
   preference, kept every tile small.** The 18 ties survived §R37's knob sweep
   because that sweep is about knobs; the geometry they sit on was never varied.

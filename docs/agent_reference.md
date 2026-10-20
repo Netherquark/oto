@@ -7,6 +7,10 @@ Real benchmarking happens in the user's TTY only.
 ## Quick Start
 
 ```bash
+# 0. What has the corpus already measured here?
+python3 -m oto.harness.corpus_census --cell SS:1024
+python3 -m oto.harness.corpus_census --family SS --knob DepthU
+
 # 1. Is the environment healthy?
 python3 -m oto.tools.deck_review score
 python3 -m oto.tools.deck_review legality
@@ -44,6 +48,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/tensile/gates/assembly.py` | Assembly-class gate (MFMA rejection is here) |
 | `oto/tools/deck_review.py` | The three pre-deck questions; its legality census draws the device-truth domain |
 | `oto/harness/kernel_db.py` | kernel_db.json builder |
+| `oto/harness/corpus_census.py` | Corpus history: axis/geometry coverage and per-cell geometry history, from kernel_db |
 | `oto/harness/gate_calibration.py` | Gate-vs-corpus agreement census: false rejections (gate too strict) and misses (gate too loose) |
 | `oto/harness/rule_calibration.py` | Probe a proposed gate rule in isolation: false rejections (must be 0) + empty-phase catches, by family |
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
@@ -53,6 +58,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
 | `tests/test_tile_frontier.py` | The legal MacroTile frontier above 16384 elements |
+| `tests/test_corpus_census.py` | Corpus-history census: median basis, geometry collapse, per-cell history |
 | `tests/test_db_mutator.py` | GlobalSplitU ban guard |
 | `tests/test_deck_review.py` | Deck-review scores counter guard |
 | `tests/test_function_length.py` | AC 1b (functions ≤ 60 lines) |
@@ -118,6 +124,12 @@ class; `potential_configs.md` §R17 reads it into a route:
 | `near` | same tile, a VectorWidth/DepthU step apart | the width/depth step |
 | `retile` | native ties on a *different*, smaller tile | a tile probe, not a width probe |
 | `no-floor` | the family ships no floor arm (HPA) | nothing — native is already above the ceiling |
+
+Before proposing the probe, read the cell's full history:
+`python3 -m oto.harness.corpus_census --cell FAM:side` lists every geometry the
+corpus has measured on that cell, the row count behind each, and the floor's
+best — so a `retile` route cannot re-propose a geometry that already lost, and
+`potential_configs.md` §R41's closed axes stay closed.
 
 ## Do not search
 

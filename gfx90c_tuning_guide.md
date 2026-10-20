@@ -205,12 +205,18 @@ the old `phase_auto_1_hh` rows are gone from SS:1024. Unit tests:
 | lever | winner | evidence (all-run kernel_db sweep) |
 |---|---|---|
 | direction | `Ailk_Bjlk` (**NT**) dominates | the only non-NT winners: DD:192 `Alik_Bljk` (TT), the DD/Z:1024 `64x32` TN pocket; the spoof is NT-everywhere too |
-| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range |
+| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range; the area is also legality-bounded — above 16384 elements only 256×128 / 128×256 survive (64×512 / 512×64 at DU8 for 16-bit inputs), and CC/DD/ZZ admit none (`gfx90c_theoretical_limits.md` §5.1) |
 | VectorWidth | pinned to the 16-B cap: S vw4, H vw8, C vw2, D vw1-2, Z vw1, HPA vw4 | not free; the cap is hardware |
 | DepthU | 8 for S/D/C/Z, 16 for H/HPA | family-locked, not a sweep knob |
-| WorkGroupMapping | 4 everywhere; **8 is a real CC lever** | CC:512 WGM8 > WGM4 within-run |
-| GlobalSplitU | 1 in all winners so far | the single untested wave-fill axis (Group A) |
+| WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`potential_configs.md` §R41) | 2 and 3 are untested and decked (§R40) |
+| GlobalSplitU | 1 at every winner | closed: SS:1024 G1 1135 / G2 936 / G4 740; DD:2048 99 / 95 / 95 (§R41) |
 | register hygiene | real families saturate; complex cap at the throughput wall (under investigation) | M1/M3 |
+
+Read the per-cell history before proposing anything:
+`python3 -m oto.harness.corpus_census --cell FAM:side` prints every geometry
+already measured on that cell and the rows behind it. The HPA blocks are
+`HH/HHS` and `HH/HSS` — same family, different geometry history, so never read
+them from an `HH` aggregate.
 
 ## 5. Why "nothing moved": the four mechanisms
 
@@ -515,7 +521,11 @@ Tensile error 4.
 
 **Step 1 — pick the cell.** Read the scoreboard (§5) and `cell_knob_diff` (§8).
 Tune only **active** cells: winners below their family's §5 ceiling and outside
-the ±2 % tie band. Walls (M1) and settled cells are skipped.
+the ±2 % tie band. Walls (M1) and settled cells are skipped. Then read the
+cell's history with `python3 -m oto.harness.corpus_census --cell FAM:side`:
+it names every geometry already measured there and the evidence behind each,
+so you neither re-propose a losing geometry nor re-spend a closed axis
+(`potential_configs.md` §R41).
 
 **Step 2 — choose the knob (mechanism first).** Match the knob to the failure
 mode named in §5/§11's mechanism column, not to a blind sweep:

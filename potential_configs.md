@@ -96,6 +96,8 @@ padding it to 10 h would mean re-measuring the axes §R41 has closed.
 
 Each row is a knob or an axis that a previous plan expected to pay, and the
 measurement that ends it. Re-emitting any of these costs a night and cannot win.
+The empirical read behind each row is `python3 -m oto.harness.corpus_census`
+(`results.md` §15); re-run it before re-opening one.
 
 | axis | best found | the number that closes it |
 |---|---|---|

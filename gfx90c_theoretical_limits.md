@@ -195,14 +195,20 @@ and DepthU 8/16/32 through the real gate (`tests/test_tile_frontier.py`) admits
 **no tile above 16384 elements for CC, DD or ZZ at all**, and exactly one shape
 above it for the real families:
 
-| family | largest legal MacroTile | elements | measured best GFLOPS |
+| family | largest legal MacroTile | elements | family best measured (any tile) |
 |---|---|---|---|
 | SS | 256×128 (VW2, or VW4 under `AssertFree1ElementMultiple: 2`) | 32768 | 1187.2 |
 | HH | 256×128 at DU16, 64×512 at DU8 | 32768 | 2749.3 |
-| HH_HPA / HS_HPA | 256×128 | 32768 | 1399.9 / 1303.1 |
+| HH_HPA / HS_HPA | 256×128 | 32768 | 1447.0 / 1441.2 |
 | DD | 128×128 | 16384 | 98.8 (98 % of peak) |
 | CC | 128×64 / 64×128 | 8192 | 346.7 |
 | ZZ | 64×64 | 4096 | 24.5 |
+
+The last column is the family's best measured seed-median at **any** tile, not
+at the frontier tile — which is the point: SS's and HH's bests sit at 128×128,
+and the frontier's own medians are lower (802.2 for SS 256×128, 2239.8 for HH).
+No HPA row at 256×128 has been measured yet; the §R40 frontier deck carries it,
+so that cell is a pending measurement, not a wall.
 
 **Consequence for the ORANGE cells.** DD is at 98 % of its peak at its largest
 legal tile, so it is done. CC and ZZ are not going to climb: their bars (1118.7

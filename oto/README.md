@@ -126,6 +126,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``harness/candidate_pool.py`` — The candidate loaders and the new module's helpers.
 * ``harness/candidate_rows.py`` — The candidate row builders: per-family tile ladders and the auto rows.
 * ``harness/cell_knob_diff.py`` — Per-cell native-vs-floor winner knob fingerprint diff.
+* ``harness/corpus_census.py`` — Corpus census: what the corpus has ever measured, per family and per cell.
 * ``harness/failure_triage.py`` — Failed-candidate triage: which phases produced nothing, and why.
 * ``harness/gate_calibration.py`` — Gate calibration: do the launch gates agree with what Tensile actually built?
 * ``harness/generate_candidates.py`` — The candidate-generator CLI.

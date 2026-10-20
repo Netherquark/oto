@@ -1,0 +1,398 @@
+#!/usr/bin/env python3
+"""Corpus census: what the corpus has ever measured, per family and per cell.
+
+Owns: reading ``gfx90c_results/analysis/kernel_db.json`` back as a history --
+the distinct values each structural axis has held and the best seed-median
+GFLOP/s at each, the distinct geometries and their best, and every geometry
+measured on one cell next to the floor's best.
+
+Does NOT own: the database builder (``oto.harness.kernel_db``), the per-cell
+winner resolution (``oto.harness.resolve_cells``), the native-vs-floor knob
+diff (``oto.harness.cell_knob_diff``), the forward-knob legality domain
+(``oto.tools.deck_review legality``), or the regression verdicts
+(``oto.harness.regression_matrix``).
+
+Public API: load_rows, group_rows, axis_census, geometry_census, cell_history,
+main.
+
+Why this exists: candidate generation starts by asking "has this cell, at this
+geometry, on this axis value, already been measured -- and how did it score?"
+That answer used to be re-derived with a throwaway script per run. This is the
+one CPU-only read of it, and it writes nothing except ``--json``.
+
+Every statistic is the seed **median** (``gflops_median``), the repo's standing
+basis; ``gflops_best`` is only a fallback when a row carries no median. Rows are
+grouped by ``family/typecode`` because that is the attribution ground truth:
+the HH-HPA and HS-HPA kernels share family ``HH`` and differ only by typecode.
+
+CPU only, read-only, never benchmarks.
+
+    python3 -m oto.harness.corpus_census                     # axes + geometries
+    python3 -m oto.harness.corpus_census --family SS --top 20
+    python3 -m oto.harness.corpus_census --knob DepthU --family HH
+    python3 -m oto.harness.corpus_census --cell SS:1024
+    python3 -m oto.harness.corpus_census --typecode HHS
+    python3 -m oto.harness.corpus_census --json out.json
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+_HERE = Path(__file__).resolve().parents[2]
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
+
+DEFAULT_DB = _HERE / "gfx90c_results" / "analysis" / "kernel_db.json"
+
+#: The structural axes this census reports. The forward-knob domain
+#: (WorkGroupMapping, LdsPad, StaggerU, ...) is deliberately absent: those are
+#: not in ``kernel_db`` rows, and their coverage question is owned by
+#: ``oto.tools.deck_review legality`` and ``allruns.py``.
+AXES: Tuple[str, ...] = (
+    "MacroTile", "MacroTile area", "ThreadTile", "ThreadTile area",
+    "DepthU", "VectorWidth", "GlobalSplitU", "WorkGroup",
+)
+
+#: The full-geometry identity used by ``geometry_census`` and ``cell_history``.
+GEOMETRY_KEYS = ("MacroTile", "ThreadTile", "DepthU", "VectorWidth",
+                 "GlobalSplitU", "WorkGroup")
+#: The JSON/output field names for the same six knobs.
+GEOMETRY_FIELDS = ("macro_tile", "thread_tile", "depth_u", "vector_width",
+                   "global_split_u", "work_group")
+
+_FAMILY_ORDER = {f: i for i, f in enumerate(FAMILY_SHAPES)}
+
+
+def _ints(value: Any) -> Tuple[int, ...]:
+    """The integers in a kernel_db tile field (``'[128, 128]'`` or ``'8'``)."""
+    return tuple(int(x) for x in re.findall(r"-?\d+", str(value or "")))
+
+
+def _raw(row: Dict[str, Any], key: str) -> Optional[str]:
+    """A row's value for one axis, or None when it carries no usable value."""
+    value = row.get(key)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return None if text in ("", "None", "0") else text
+
+
+def _tile_area(row: Dict[str, Any], key: str) -> Optional[int]:
+    """Product of a two-element tile field, or None."""
+    parts = _ints(row.get(key))
+    return parts[0] * parts[1] if len(parts) >= 2 else None
+
+
+def _axis_value(row: Dict[str, Any], axis: str) -> Optional[Any]:
+    """One row's value on a named axis from ``AXES``."""
+    if axis == "MacroTile area":
+        return _tile_area(row, "MacroTile")
+    if axis == "ThreadTile area":
+        return _tile_area(row, "ThreadTile")
+    return _raw(row, axis)
+
+
+def _gflops(row: Dict[str, Any]) -> float:
+    """The row's seed-median GFLOP/s, falling back to its best seed."""
+    for key in ("gflops_median", "gflops_best"):
+        try:
+            value = float(row.get(key) or 0.0)
+        except (TypeError, ValueError):
+            value = 0.0
+        if value > 0:
+            return value
+    return 0.0
+
+
+def _group_label(row: Dict[str, Any]) -> str:
+    """``family/typecode`` -- the attribution-aware census group."""
+    family = str(row.get("family") or "?").upper()
+    typecode = str(row.get("typecode") or "?").upper()
+    return f"{family}/{typecode}"
+
+
+def _group_sort(label: str) -> Tuple[int, str]:
+    family, _, typecode = label.partition("/")
+    return (_FAMILY_ORDER.get(family, len(_FAMILY_ORDER)), typecode)
+
+
+def load_rows(db_path: Optional[str] = None, side: str = "native") \
+        -> List[Dict[str, Any]]:
+    """Flatten ``kernel_db.json`` into rows tagged ``side`` (native / floor).
+
+    ``side`` is ``native`` (default: every ``run_*`` key), ``floor`` (every
+    ``gfx900_ref_*`` key) or ``all``. A row is a dict from the database plus
+    ``side`` and ``run``.
+    """
+    path = Path(db_path) if db_path else DEFAULT_DB
+    if side not in ("native", "floor", "all"):
+        raise ValueError(f"side must be native/floor/all, not {side!r}")
+    with open(path) as handle:
+        database = json.load(handle)
+    rows: List[Dict[str, Any]] = []
+    for run_id, run_rows in database.items():
+        run_side = "floor" if run_id.startswith("gfx900_ref") else "native"
+        if side != "all" and run_side != side:
+            continue
+        for row in run_rows:
+            rows.append({**row, "side": run_side, "run": run_id})
+    return rows
+
+
+def group_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    """``{family/typecode: rows}`` in canonical family order."""
+    groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        groups[_group_label(row)].append(row)
+    return {label: groups[label] for label in sorted(groups, key=_group_sort)}
+
+
+def axis_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """One record per (group, axis, value): how often, and the best median.
+
+    ``best`` is the maximum seed-median GFLOP/s measured at that value, so an
+    axis value the corpus has never scored cannot be read as a winner. Missing
+    or zero-score axis values are skipped, not counted as a value.
+    """
+    out: List[Dict[str, Any]] = []
+    for label, group in group_rows(rows).items():
+        family, _, typecode = label.partition("/")
+        for axis in AXES:
+            stats: Dict[Any, Dict[str, Any]] = {}
+            for row in group:
+                if _gflops(row) <= 0:
+                    continue
+                value = _axis_value(row, axis)
+                if value is None:
+                    continue
+                stat = stats.setdefault(value, {"value": value, "n": 0,
+                                                "best": 0.0})
+                stat["n"] += 1
+                stat["best"] = max(stat["best"], _gflops(row))
+            for stat in stats.values():
+                out.append({"family": family, "typecode": typecode,
+                            "axis": axis, **stat})
+    return out
+
+
+def _geometry(row: Dict[str, Any]) -> Tuple[Optional[str], ...]:
+    return tuple(_raw(row, key) for key in GEOMETRY_KEYS)
+
+
+def _geometry_fields(row: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    """A row's six geometry knobs under their output field names."""
+    return dict(zip(GEOMETRY_FIELDS, _geometry(row)))
+
+
+def geometry_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """One record per (group, full geometry): row count and best median.
+
+    A "geometry" is the tuple in ``GEOMETRY_KEYS`` -- what the deck calls a
+    tile, not a cell. Unscored rows and rows with no geometry at all are
+    skipped.
+    """
+    out: List[Dict[str, Any]] = []
+    for label, group in group_rows(rows).items():
+        family, _, typecode = label.partition("/")
+        stats: Dict[Tuple[Optional[str], ...], Dict[str, Any]] = {}
+        for row in group:
+            if _gflops(row) <= 0:
+                continue
+            geometry = _geometry(row)
+            if all(part is None for part in geometry):
+                continue
+            if geometry not in stats:
+                stats[geometry] = {"n": 0, "best": 0.0}
+                stats[geometry].update(_geometry_fields(row))
+            stats[geometry]["n"] += 1
+            stats[geometry]["best"] = max(stats[geometry]["best"],
+                                          _gflops(row))
+        for stat in stats.values():
+            out.append({"family": family, "typecode": typecode, **stat})
+    return out
+
+
+def _attempt(row: Dict[str, Any]) -> Dict[str, Any]:
+    """The compact per-attempt record printed by ``cell_history``."""
+    return {"gflops": _gflops(row), "n_seeds": row.get("n_seeds"),
+            "phase": row.get("phase"), "run": row.get("run"),
+            **_geometry_fields(row)}
+
+
+def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
+                 top: int = 12) -> Dict[str, Any]:
+    """Every geometry measured on ``family:side``, best median first.
+
+    Repeated measurement of one geometry is collapsed into that geometry's
+    record (``n`` rows, ``gflops`` the best of them), because replication is
+    evidence about noise, not a distinct candidate. ``top=0`` returns every
+    geometry. Non-cube shapes have no cell and are excluded by
+    ``oto.device.peaks.cell_key``. The floor reference is computed from rows
+    tagged ``side='floor'``; it is absent when the caller loaded only native
+    rows.
+    """
+    key = f"{family.upper()}:{int(side)}"
+    native, floor = [], []
+    for row in rows:
+        if cell_key(row.get("family"), row.get("shape")) != key:
+            continue
+        if _gflops(row) <= 0:
+            continue
+        (floor if row.get("side") == "floor" else native).append(row)
+    stats: Dict[Tuple[Optional[str], ...], Dict[str, Any]] = {}
+    for row in native:
+        geometry = _geometry(row)
+        if geometry not in stats:
+            stats[geometry] = {"gflops": 0.0, "n": 0, "n_seeds": None,
+                               "phase": None, "run": None,
+                               **_geometry_fields(row)}
+        record = stats[geometry]
+        record["n"] += 1
+        if _gflops(row) > record["gflops"]:
+            record.update(gflops=_gflops(row), n_seeds=row.get("n_seeds"),
+                          phase=row.get("phase"), run=row.get("run"))
+    ordered = sorted(stats.values(), key=lambda record: -record["gflops"])
+    floor_rows = [_attempt(row) for row in floor]
+    floor_rows.sort(key=lambda record: -record["gflops"])
+    return {"cell": key, "n_attempts": len(native),
+            "n_geometries": len(stats),
+            "geometries": ordered if top <= 0 else ordered[:top],
+            "floor_best": floor_rows[0] if floor_rows else None}
+
+
+def _fmt(value: Optional[Any]) -> str:
+    return "-" if value is None else str(value)
+
+
+def _geometry_text(record: Dict[str, Any]) -> str:
+    return (f"MT={_fmt(record.get('macro_tile'))} "
+            f"TT={_fmt(record.get('thread_tile'))} "
+            f"DU={_fmt(record.get('depth_u'))} "
+            f"VW={_fmt(record.get('vector_width'))} "
+            f"GSU={_fmt(record.get('global_split_u'))} "
+            f"WG={_fmt(record.get('work_group'))}")
+
+
+def _print_axes(records: Sequence[Dict[str, Any]], top: int) -> None:
+    """Print one line per (group, axis), values ranked by best median."""
+    by_group: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        by_group[f"{record['family']}/{record['typecode']}"].append(record)
+    for label in sorted(by_group, key=_group_sort):
+        print(f"\n### {label}")
+        by_axis: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for record in by_group[label]:
+            by_axis[record["axis"]].append(record)
+        for axis in AXES:
+            values = sorted(by_axis.get(axis, []),
+                            key=lambda r: (-r["best"], -r["n"]))
+            if not values:
+                continue
+            shown = values if top <= 0 else values[:top]
+            cells = " | ".join(f"{_fmt(v['value'])} {v['best']:.1f} "
+                               f"(n={v['n']})" for v in shown)
+            print(f"  {axis:16s} {len(values):3d} values: {cells}")
+
+
+def _print_geometries(records: Sequence[Dict[str, Any]], top: int) -> None:
+    """Print each group's geometries, best median first."""
+    by_group: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        by_group[f"{record['family']}/{record['typecode']}"].append(record)
+    for label in sorted(by_group, key=_group_sort):
+        values = sorted(by_group[label], key=lambda r: -r["best"])
+        print(f"\n### {label}: {len(values)} distinct geometries")
+        shown = values if top <= 0 else values[:top]
+        for record in shown:
+            print(f"  {record['best']:9.1f}  n={record['n']:5d}  "
+                  f"{_geometry_text(record)}")
+
+
+def _print_cell(history: Dict[str, Any]) -> None:
+    """Print one cell's geometry history and the floor reference."""
+    print(f"### {history['cell']}  native rows={history['n_attempts']}  "
+          f"geometries={history['n_geometries']}")
+    floor = history.get("floor_best")
+    if floor:
+        print(f"  floor best {floor['gflops']:8.1f}  {_geometry_text(floor)}")
+    for record in history["geometries"]:
+        seeds = f"n={record['n_seeds']}" if record.get("n_seeds") else ""
+        print(f"  {record['gflops']:9.1f}  rows={record['n']:4d} {seeds:7s}  "
+              f"{_geometry_text(record)}")
+
+
+def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]]) \
+        -> Dict[str, Any]:
+    """The ``--json`` document for the arguments in force."""
+    payload: Dict[str, Any] = {"meta": {"db": str(args.db),
+                                        "family": args.family,
+                                        "typecode": args.typecode}}
+    if args.cell:
+        family, _, side = args.cell.partition(":")
+        payload["cell"] = cell_history(rows, family, int(side),
+                                       top=args.top)
+        return payload
+    if args.knob:
+        payload["axes"] = [record for record in axis_census(rows)
+                           if record["axis"] == args.knob]
+    else:
+        payload["axes"] = axis_census(rows)
+        payload["geometries"] = geometry_census(rows)
+    return payload
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--db", default=str(DEFAULT_DB),
+                    help="kernel_db.json to read")
+    ap.add_argument("--family", help="only this family (SS, HH, CC, ...)")
+    ap.add_argument("--typecode", help="only this typecode (SB, HHS, ...)")
+    ap.add_argument("--cell", help="one cell's history, FAMILY:SIDE (SS:1024)")
+    ap.add_argument("--knob", choices=list(AXES), help="only this axis")
+    ap.add_argument("--top", type=int, default=8,
+                    help="rows/values per block; 0 = all (default 8)")
+    ap.add_argument("--json", dest="json_path",
+                    help="write the same data as JSON to this path")
+    args = ap.parse_args(argv)
+
+    if args.cell:
+        family, _, side = args.cell.partition(":")
+        if not family or not side.isdigit():
+            ap.error("--cell must be FAMILY:SIDE, e.g. SS:1024")
+        rows = load_rows(args.db, side="all")
+    else:
+        rows = load_rows(args.db, side="native")
+        if args.family:
+            rows = [r for r in rows
+                    if str(r.get("family") or "").upper() == args.family.upper()]
+        if args.typecode:
+            rows = [r for r in rows
+                    if str(r.get("typecode") or "").upper()
+                    == args.typecode.upper()]
+
+    if args.cell:
+        _print_cell(cell_history(rows, family, int(side), top=args.top))
+    else:
+        axes = [r for r in axis_census(rows)
+                if not args.knob or r["axis"] == args.knob]
+        _print_axes(axes, args.top)
+        if not args.knob:
+            _print_geometries(geometry_census(rows), args.top)
+
+    if args.json_path:
+        with open(args.json_path, "w") as handle:
+            json.dump(_payload(args, rows), handle, indent=2, sort_keys=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
