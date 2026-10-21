@@ -9,6 +9,13 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (cont.) — FractionalLoad + TransposeLDS wired.** Both were in
+  `NOT_FORWARDED_KNOBS`; they are now forwarded and probed (10 rows) on the
+  winner geometries. `db_knobs` gains `FractionalLoad (0,1,2)` and
+  `TransposeLDS (-1,0,1)`. The remaining coupled knobs (`1LDSBuffer`,
+  `DepthULdsDivisor`) need `ScheduleInnerAccuracy` forwarding and are documented
+  as pending in §R44.
+
 - **2026-10-21 — virgin-knob batch and straggler analysis.** `potential_configs.md`
   gains §R42 (five straggler classes: complex memory/occupancy, small-cell
   residency, noise ties, unmeasured frontier, virgin knobs) with per-class root

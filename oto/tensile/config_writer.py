@@ -112,6 +112,7 @@ FORWARDED_KNOBS = (
     "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode",
     "FractionalLoad", "NonTemporalA", "NonTemporalB",
     "AssertFree1ElementMultiple",
+    "TransposeLDS",
 ) + FORWARDED_GROUP_C_KNOBS
 
 #: Valid Tensile parameters a builder may name, which the launch boundary does
@@ -123,7 +124,7 @@ FORWARDED_KNOBS = (
 NOT_FORWARDED_KNOBS = (
     "WaveSeparateGlobalReadA", "WaveSeparateGlobalReadB",
     "ThreadSeparateGlobalReadA", "ThreadSeparateGlobalReadB",
-    "1LDSBuffer", "TransposeLDS", "UnrollMajorLDSA", "UnrollMajorLDSB",
+    "1LDSBuffer", "UnrollMajorLDSA", "UnrollMajorLDSB",
     "LdsBlockSizePerPadA", "LdsBlockSizePerPadB",
     "DirectToVgprA", "DirectToVgprB",
     "GlobalReadPerMfma", "LocalWritePerMfma", "DepthULdsDivisor",

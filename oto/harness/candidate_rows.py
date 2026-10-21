@@ -874,3 +874,22 @@ for _fam, _tile, _tt, _vw, _du in (
         "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
         "DepthU": _du, "PrefetchGlobalRead": 2,
         "note": "R45 virgin: PrefetchGlobalRead=2 (2x prefetch, gated)"})
+
+# 2026-10-21 R44/R45 (cont.) -- FractionalLoad=2 and TransposeLDS=1, now that
+# both are forwarded. FractionalLoad frees the DepthU choice on ragged M/N/K;
+# TransposeLDS aligns the LDS layout with MFMA-free VALU reads (TLU=0 only).
+for _fam, _tile, _tt, _vw, _du in (
+    ("CC", "64x64x8", "4x4", 2, 8),
+    ("ZZ", "32x32x8", "2x2", 1, 8),
+    ("SS", "128x128x8", "8x8", 4, 8),
+    ("HH", "128x128x16", "8x8", 8, 16),
+    ("DD", "64x64x8", "4x4", 2, 8),
+):
+    PLAN_BATCH.append({"fam": _fam, "pattern": "Ailk_Bjlk" if _fam != "ZZ" else "Alik_Bjlk",
+        "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+        "DepthU": _du, "FractionalLoad": 2,
+        "note": "R45 virgin: FractionalLoad=2 (ragged edge handling)"})
+    PLAN_BATCH.append({"fam": _fam, "pattern": "Ailk_Bjlk" if _fam != "ZZ" else "Alik_Bjlk",
+        "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+        "DepthU": _du, "TransposeLDS": 1,
+        "note": "R45 virgin: TransposeLDS=1 (VALU-aligned LDS layout)"})

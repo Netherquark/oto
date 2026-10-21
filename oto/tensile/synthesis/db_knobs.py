@@ -36,6 +36,8 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "LdsPadB": (0, 1, 2, 4),
     "PrefetchGlobalRead": (0, 1, 2),
     "PrefetchLocalRead": (0, 1),
+    "FractionalLoad": (0, 1, 2),
+    "TransposeLDS": (-1, 0, 1),
     "GlobalLoadVectorWidthA": (1, 2, 4),
     "GlobalLoadVectorWidthB": (1, 2, 4),
     "NLCA": (-1, 1, 2, 3),
