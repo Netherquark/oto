@@ -107,8 +107,15 @@ def main() -> int:
            "counts are never quoted here -- they go wrong the day a file moves.\n",
            "\n"]
     # One ``##`` section per package, its modules then its nested sub-packages.
-    # The oto/ root holds only __init__.py and _map.py, both in SKIP, so it has
-    # no section of its own.
+    # The oto/ root holds __init__.py and _map.py (both in SKIP) plus the
+    # project-wide plumbing modules, which get their own section first.
+    root_modules = [path for path in sorted(HERE.glob("*.py"))
+                     if path.name not in SKIP]
+    if root_modules:
+        out.append("## oto/ -- the package root\n\n")
+        for path in root_modules:
+            out.append(_entry(path))
+        out.append("\n")
     for sub, title in PACKAGES:
         base = HERE / sub
         if not base.is_dir():

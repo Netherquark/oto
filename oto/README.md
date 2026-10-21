@@ -6,6 +6,10 @@ Each entry is the first sentence of that module's docstring, so the
 only way to make this file stale is to delete the docstring. Line
 counts are never quoted here -- they go wrong the day a file moves.
 
+## oto/ -- the package root
+
+* ``yamlio.py`` — The project's YAML reader: libyaml when it is there, cached by content.
+
 ## oto/device/ — hardware facts
 
 * ``device/peaks.py`` — Hardware peaks and the canonical cell/family vocabulary.
