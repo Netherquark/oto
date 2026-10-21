@@ -1437,6 +1437,12 @@ post-fix HH-family median as the new baseline; the pre-fix HH numbers in rewrite
 
 ### R2 — the twelve ORANGE cells: 11 are a yardstick artefact, 1 is real.
 
+> **SUPERSEDED 2026-10-21 by §R47/§R48**: the "yardstick artefact" was a
+> **4x unit error in the bar** (the client reports complex GEMMs at 2 flops per
+> MAC), not a yardstick problem. The ORANGE list is **three** cells
+> (`SS:256`, `HH:256`, `CC:192`), and the ten complex cells are at 80-97 % of
+> the FMA roof. The table below is kept as it was measured on 2026-10-18.
+
 `acceptance_report.json` reports **0 RED / 12 ORANGE (<50 % of the family's
 realistic ceiling)**. Investigated on the latest data — the user's reading is
 correct: they are non-blockers, and they are *bad kernels in absolute terms while

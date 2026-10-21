@@ -9,6 +9,19 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 (5th) — the doc sweep: every stale conclusion now points at
+  its correction.** The /tmp probes are gone (their capabilities are
+  `oto.harness.tensile_oracle` and `oto.harness.deck_check`), and the docs
+  ecosystem now carries the *reasons*, not just the numbers: the tuning
+  guide's knob table says **which class** each axis with no variance is in
+  (never drawn / never reached Tensile / refused by our own gate -- only the
+  first kind is "open"), its §9.1 virgin-axis census carries the **status of
+  every row** (closed by measurement, unreachable, or decked-and-unmeasured),
+  M1 is qualified by the environment band (on the 16 identical-config cells
+  the delta spans 17.5 points, so a tie there is a measurement of the
+  machine), §10's sizing rule and the mutator's behaviour are current, and
+  `potential_configs.md` §R2 is marked superseded beside F5.
+
 - **2026-10-22 (4th) — the /tmp probing machinery is now the harness, and
   the launch backstop lost a rule.** The four throwaway probes written in
   `/tmp` (the Tensile derived-LDS probe, the WGM legality probe, the

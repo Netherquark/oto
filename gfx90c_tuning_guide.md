@@ -64,6 +64,27 @@ refused exactly the legal swizzle values, which is why swizzle forwarding looked
 "blocked" — was fixed 2026-10-09. The generator no longer strips the trio; tests
 lock the writer, the gate and the generator.
 
+**Why an axis has no variance (read this before calling an axis "closed").**
+Three different causes look identical in the corpus, and the 2026-10-21 pass
+separated them:
+
+1. **Never drawn** -- the knob is forwarded and legal, the mutator simply never
+   proposed it (`FractionalLoad`, `MaxOccupancy`, `PrefetchGlobalRead=2`,
+   `NLCA=-1`, `StaggerUMapping` 1/2, `NonTemporalA/B`). These are *open*, and
+   the R47 batch decks them.
+2. **Never reached Tensile** -- the knob was *declared* forwarded but the writer
+   never emitted it, so every phase benchmarked at the default
+   (`TransposeLDS`, `NonTemporalC/D`). A silent placebo: the manifest claimed
+   a treatment that never ran. Fixed 2026-10-21; the fork-surface test
+   (`tests/test_writer_forwards_sweep_knobs.py`) is what pins it now.
+3. **Refused by our own gate** -- the config was legal and the knob was
+   forwarded, but a gate rule turned it away (`StaggerU=0`: the swizzle gate
+   read Tensile's *force* as a reject). Fixed 2026-10-21.
+
+Only an axis in class 1 that has been *measured* is closed. The rule for
+deciding which class an axis is in: ask Tensile
+(`python3 -m oto.harness.tensile_oracle`), not the census.
+
 ### 1.1 Primary-source legal domains (Tensile's own `validParameters`)
 
 The domains in `oto/tensile/synthesis/db_knobs.py` are a *narrowing* of Tensile's
@@ -74,7 +95,7 @@ the symbol names are the citation.
 
 | knob | Tensile-legal values | what we sample | narrowing rationale |
 |---|---|---|---|
-| `StaggerU` | `[0,2,4,8,16,32,64]` | `0,8,16,32` | even clicks only; the odd ones are noise |
+| `StaggerU` | `[0,2,4,8,16,32,64]` | `0,8,16,32` | even clicks only; the odd ones are noise. **`0` was never measured**: our own swizzle gate read Tensile's *force* as a reject and refused every `StaggerU=0` config (fixed 2026-10-21); it is now decked |
 | `StaggerUStride` | `[0,16,32,64,128,256,512,1024,2048]` | `0,64,128,256` | Tensile **silently raises SUS to a whole multiple of `DepthU*bpe`**, so a draw of 256 collapses to 64 at DU16/bpe4 — most of a coarse domain is one point (P §0 R6) |
 | `StaggerUMapping` | `[0,1,2,3,4]` | `0,1,2` | 3/4 are debug/special |
 | `GlobalSplitU` | `1…4096` | `1,2,4` on SS/DD; **`1` only** on CC/ZZ/HH/HH_HPA/HS_HPA | **family-restricted, and the two restrictions are not the same.** Tensile allows `>1` only for single, 8-bit float, double+BufferStore, Assembly-with-half-accumulate, `_GlobalAccumulation`, or MFMA; gfx90c has no MFMA. *Structural*: complex (`CC`/`ZZ`) and half-with-f32-accumulate (`HH_HPA`/`HS_HPA`) can never run it. *Deck state*: `HH` is hardware-legal but banned by decision, because `>1` on half Assembly also needs `AssertFree0ElementMultiple>=2` and the HH deck ships `AF0EM=1` — lift it the day an HH candidate carries `AF0EM>=2`. Single home: `db_knobs.FAMILY_KNOB_DOMAINS`, read via `forward_domain` |
@@ -88,11 +109,11 @@ the symbol names are the citation.
 | `VectorWidth` | `[-1,1,2,3,4,6,8,16]` | per-family | same 16-B cap |
 | `LdsPad{A,B}` | `-1…127` | `0,1,2,4` | `-1` means "same as VectorWidth if TLU=0 else 0" — derivable, not worth a draw; `1` is reported as the value the floor never uses (§9.1, `check`) |
 | `LdsBlockSizePerPad{A,B}` | `[-1,0,64,128,256,512,1024,2048,4096]` | **not sampled** | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Virgin (§9.1) |
-| `TransposeLDS` | `[-1,1,0]` | **not sampled** | TLU=0 matrices only; aligns LDS layout with VALU reads in the absence of MFMA |
+| `TransposeLDS` | `[-1,1,0]` | **not sampled** | TLU=0 matrices only; aligns LDS layout with VALU reads in the absence of MFMA. **Never reached Tensile**: the knob was declared forwarded but the writer never emitted it (fixed 2026-10-21). `1` is the MFMA path and is refused; `-1` is decked |
 | `UnrollMajorLDS{A,B}` | `[False,True]` | **not sampled** | "beneficial for smaller data types"; relieves `VgprForLocalReadPacking` |
 | `WaveSeparateGlobalRead{A,B}` | `[0,1]` | **not sampled** | splits LDS by wave → fewer cross-wave bank collisions (§9.1) |
 | `ThreadSeparateGlobalRead{A,B}` | `[0,1,2,4]` | **not sampled** | `2` is documented to pair with `WaveSeparateGlobalRead` |
-| `NonTemporal{A,B,C,D}` | `0…7` | **not sampled** | 1=`glc`, 2=`slc`, 3=both; cache-hint bits matter on a 1 MiB L2 |
+| `NonTemporal{A,B,C,D}` | `0…7` | **not sampled** | 1=`glc`, 2=`slc`, 3=both; cache-hint bits matter on a 1 MiB L2. **C and D never reached Tensile** (declared, never emitted -- fixed 2026-10-21); A and B were forwarded but never drawn |
 | `WorkGroupMapping` | `-1024…1024` | `1,2,3,4,-1,-4` | **8 is the floor's dominant value only because it was tuned for 56–60 CUs**; on 7 CUs it asks for 8 workgroups in the J-column before wrapping. Negatives swap wg0/wg1 — geometrically neutral on square tiles, and the negative family has *never* been generated |
 | `MaxOccupancy` | `1…40` | **not sampled** | cap LDS to buy occupancy |
 | `InnerUnroll` | `[1,2,4,8,16,32,64]` | per-tile | — |
@@ -232,6 +253,17 @@ them from an `HH` aggregate.
 arms sit on the SAME wall within ±5 %: SS:768 −0.5 %, SS:1365 −2.9 % (pre-fold
 signs; rebuilt db now shows SS:1000 −2.9 % / SS:1024 −3.1 %, tie band). **No
 config mutation moves these.** The user's "bunch of ties" is mostly this.
+
+> **M1 needs a qualifier (2026-10-21).** "Both arms sit on the same wall" is
+> true of the *config* and false of the *measurement*. On the 16 cells where the
+> two arms run the **same config** — 9 of the 15 ties — the delta spans
+> **+1.1 % to +18.6 %**: a 17.5-point environment band against a ±5 % verdict
+> band, with no clock telemetry on the floor side (`spoof_clock_coverage` 0.0),
+> so no cell is clock-corrected. A tie on an identical cell is a measurement
+> of the machine, not of the kernel, and a "WIN" on one is an environment win.
+> **Read the verdict against the gap, not against the band**
+> (`oto.harness.resolve_cells --taxonomy` prints the gap next to the delta;
+> `potential_configs.md` §R47.2, §R48.5).
 
 **M2 — wave quantization on the small cells.** 192/256 cubes with sensible tiles
 physically cannot produce ≥ 40 waves (the arithmetic, per cell, is in
@@ -477,6 +509,21 @@ the floor manifests before spending a run on it.
 | `StaggerUMapping` | ~0 everywhere (`check`) | Tensile's own `Perf/*.yaml` recommends `[0,1]`; the floor sits essentially entirely at the unexplored end of the vendor's own recommendation. Correctly opened in `db_knobs` |
 | `NLCA = -1` | never (−1 ≠ 3) | "-1 = largest number of reads along the coalesced dimension" is the *least*-coalesced regime, a different point in the space, not a synonym |
 
+**Status as of 2026-10-21 (what happened to each row).** The table says what
+the *floor* never moves; it does not say what the *native* arm has since
+measured, and the two are different questions. The R47 batch decked the rows
+that were open-but-unreached; the 2026-10-20 run and the R48 analysis closed
+the rest:
+
+| row | state now |
+|---|---|
+| `LdsPadA/B = 1` | **closed by measurement** — 0.95-1.0 of base on the complex tiles (pads do not move them) |
+| `TransposeLDS=1` | **unreachable** — the MFMA path; gfx90c has no MFMA, and the gate now refuses it. The legal value is `-1` (unroll-major LDS on the NT operand), which is decked |
+| `NonTemporalA/B/C/D` | **decked, never measured** — and C/D had never even reached Tensile before 2026-10-21 (declared, never emitted: a silent placebo) |
+| `MaxOccupancy < 40`, `PrefetchGlobalRead=2`, `StaggerUMapping`, `NLCA=-1`, `FractionalLoad=2` | **decked, never measured** (the R47 batch) |
+| `StaggerU=0` | **not in this table, and it should have been** — the floor does not move it, and our own gate refused it until 2026-10-21, so it has never been measured either. Now decked |
+| `1LDSBuffer=1`, `DepthULdsDivisor` | **still unreachable** — they need `ScheduleInnerAccuracy` 2/3, which the port does not forward. The machinery exists (`oto.tensile.gates.occupancy` models the LDS budget); the forwarding does not |
+
 **Caveat on the whole table.** "Zero variance in the floor" is not "safe to
 turn on". Every row above changes memory traffic, LDS residency or issue
 density, so each needs a paired measurement against its own baseline in the
@@ -503,13 +550,15 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
 
 1. Real benchmarks run in the USER's TTY — never from a GUI session
    (GNOME constraint; CPU-only PoCs are safe).
-2. Generator deck: seed overlay ships **295 rows (5 curated + 290 in-grid
-   candidates, regenerated 2026-10-09 night — incl. the beat-the-spoof batch:
-   CC/ZZ pads, PGR/PLR/GLVW/NLCA, CC WGM8 steal-adapt, SS GSU4 wave-fill,
-   HH:256/DD:256 targets, Group C swizzle probes)**. Keep the pool for the run;
-   strip `phase_cand_*` ids AFTER the run to keep later runs light (mirror
-   preserves them) — `oto/harness/generate_candidates.py --prune-candidates`
-   (archives first).
+2. Generator deck: `phases.yaml` ships **284 rows**; the seed overlay adds
+   **1101** (of which **401 are unmeasured** — the R47 axes that were never
+   varied, the R48 geometries for the three ORANGE cells, and the R49 ranked
+   unexplored space of those cells: ~9 h of new work at the measured 83 s per
+   phase). Regenerate it every run (`oto.harness.generate_candidates`, which is
+   idempotent, appends only what is missing and **prunes the rows the launch
+   gate refuses**). Keep the pool for the run; strip `phase_cand_*` ids AFTER
+   the run to keep later runs light (the mirror preserves them) —
+   `oto.harness.generate_candidates --prune-candidates` (archives first).
 3. Mutations are **DB-hooked** (`oto/tensile/synthesis/db.py`): every iteration synthesises
    novel wide (DB tile donors × forward draws) + narrow (single-knob deltas on
    pads/PGR/PLR/NLCA/WGM/StaggerU/GLVW) + direction (floor-steal) mutants for
@@ -518,19 +567,28 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    applies to a mutation) and are gated + novelty-checked before emission, so
    the arm never re-measures a tried config and never decays. The old sampler
    (tile+split only, manifest-only) is the fallback when the DB is unavailable.
+   **The narrow pass visits the knobs in a seeded shuffle and round-robins their
+   legal values, and takes at most half the budget** (2026-10-21). In dict
+   order the first knobs ate the whole budget: when the R45 batch added ten
+   knobs, **GlobalSplitU was never drawn at all** — the wave-fill lever
+   silently vanished from the search, and the 2026-10-20 run produced 702 deck
+   phases and **10** mutator phases. The shuffle keeps a run reproducible while
+   spreading the budget over the axes, and the cap leaves room for the wide
+   (tile-donor) pass, which is the only one that moves the geometry.
 4. Judge within-run only; ≥3 seeds; median; ±2 % tie band; walls are ties
    (M1), not failures.
 5. Acceptance = ceiling model (L §5); parity CLI exits 0; kernel_db rebuilt
    before any verdict quote.
 6. New numbers must be kernel-typecode-attributable (ground-truth §3) and
    clock-flagged (M4).
-7. **Sizing (10+ h, packed):** iteration 1 = deck(**40** phases, `phases.yaml`)
-   + seed overlay (**295** rows = 5 curated + 290 in-grid,
-   `gfx90c_results/overlays/phases.seed.overlay.yaml`) = **335 phases ≈ 6.5 h**;
-   `--budget 10` → **~15–20 h**. The per-tier counts are read live — the deck
-   from `phases.yaml` and the seed overlay via
-   `oto/harness/generate_candidates.py` / `oto/runners/auto_prompt._read_counts`
-   — never transcribed here; `--budget <hours>` governs the run. The DB mutator's
+7. **Sizing (10+ h, packed):** the deck (`phases.yaml`, 284 rows) plus the
+   seed overlay (`gfx90c_results/overlays/phases.seed.overlay.yaml`, 1101 rows
+   of which **401 are unmeasured**) = **401 new phases ≈ 9 h** at the measured
+   83 s per phase, and the DB mutator adds ~10 per iteration on top. The
+   per-tier counts are read live — the deck from `phases.yaml` and the seed
+   overlay via `oto/harness/generate_candidates.py` /
+   `oto/runners/auto_prompt._read_counts` — never transcribed here;
+   `--budget <iterations>` governs the run. The DB mutator's
    novelty throttle keeps each mutation iteration ~1-2 h without starving the
    wall families.
 
