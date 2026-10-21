@@ -24,17 +24,22 @@ DASHBOARD_CSS = """
             --background: #f4f4f4;
             --layer-01: #ffffff;
             --layer-02: #f4f4f4;
+            --layer-03: #ffffff;
+            --field: #f4f4f4;
             --text-primary: #161616;
             --text-secondary: #525252;
+            --text-placeholder: #8d8d8d;
+            --icon-primary: #525252;
             --border-subtle: #e0e0e0;
             --border-strong: #8d8d8d;
+            --link-primary: #0f62fe;
             --interactive: #0f62fe;
             --interactive-hover: #0043ce;
             --focus: #0f62fe;
             --support-success: #24a148;
             --support-error: #da1e28;
             --support-info: #0f62fe;
-            --support-warning: #b28600;
+            --support-warning: #8e6a00;
             --tag-success-bg: #defbe6;
             --tag-error-bg: #fff1f1;
             --tag-info-bg: #edf5ff;
@@ -46,22 +51,27 @@ DASHBOARD_CSS = """
             color-scheme: light;
         }
         [data-theme="dark"] {
-            --background: #121212;
-            --layer-01: #1e1e1e;
-            --layer-02: #2a2a2a;
+            --background: #161616;
+            --layer-01: #262626;
+            --layer-02: #393939;
+            --layer-03: #525252;
+            --field: #262626;
             --text-primary: #f4f4f4;
-            --text-secondary: #a8a8a8;
-            --border-subtle: #333333;
+            --text-secondary: #c6c6c6;
+            --text-placeholder: #8d8d8d;
+            --icon-primary: #c6c6c6;
+            --border-subtle: #393939;
             --border-strong: #6f6f6f;
+            --link-primary: #78a9ff;
             --interactive: #0f62fe;
             --interactive-hover: #0043ce;
             --focus: #78a9ff;
-            --support-success: #42be65;
-            --support-error: #fa4d56;
+            --support-success: #24a148;
+            --support-error: #da1e28;
             --support-info: #78a9ff;
             --support-warning: #f1c21b;
-            --tag-success-bg: #0a2b12;
-            --tag-error-bg: #3a1212;
+            --tag-success-bg: #12261a;
+            --tag-error-bg: #2d1214;
             --tag-info-bg: #0f2b4d;
             --tag-warning-bg: #33270a;
             --track: #393939;
@@ -72,22 +82,27 @@ DASHBOARD_CSS = """
         }
         @media (prefers-color-scheme: dark) {
             :root:not([data-theme="light"]) {
-                --background: #121212;
-                --layer-01: #1e1e1e;
-                --layer-02: #2a2a2a;
+                --background: #161616;
+                --layer-01: #262626;
+                --layer-02: #393939;
+                --layer-03: #525252;
+                --field: #262626;
                 --text-primary: #f4f4f4;
-                --text-secondary: #a8a8a8;
-                --border-subtle: #333333;
+                --text-secondary: #c6c6c6;
+                --text-placeholder: #8d8d8d;
+                --icon-primary: #c6c6c6;
+                --border-subtle: #393939;
                 --border-strong: #6f6f6f;
+                --link-primary: #78a9ff;
                 --interactive: #0f62fe;
                 --interactive-hover: #0043ce;
                 --focus: #78a9ff;
-                --support-success: #42be65;
-                --support-error: #fa4d56;
+                --support-success: #24a148;
+                --support-error: #da1e28;
                 --support-info: #78a9ff;
                 --support-warning: #f1c21b;
-                --tag-success-bg: #0a2b12;
-                --tag-error-bg: #3a1212;
+                --tag-success-bg: #12261a;
+                --tag-error-bg: #2d1214;
                 --tag-info-bg: #0f2b4d;
                 --tag-warning-bg: #33270a;
                 --track: #393939;
@@ -225,6 +240,37 @@ DASHBOARD_CSS = """
         .tag-tie { color: var(--support-info); background: var(--tag-info-bg); }
         .tag-loss { color: var(--support-error); background: var(--tag-error-bg); }
         .tag-orange { color: var(--support-warning); background: var(--tag-warning-bg); }
+        .section-note {
+            margin: 0 0 16px 0;
+            font-size: 14px;
+            line-height: 20px;
+            color: var(--text-secondary);
+        }
+        .section-note strong { color: var(--text-primary); font-weight: 600; }
+        .figure-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .figure {
+            margin: 0;
+            border: 1px solid var(--border-subtle);
+            background: var(--layer-01);
+        }
+        .figure img {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #ffffff;
+        }
+        .figure figcaption {
+            padding: 8px 12px;
+            font-size: 12px;
+            line-height: 16px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-subtle);
+        }
         .bar-wrap { display: inline-flex; align-items: center; gap: 4px; }
         .bar {
             display: inline-block;
@@ -276,6 +322,7 @@ DASHBOARD_CSS = """
         @media (max-width: 640px) {
             .metrics { grid-template-columns: 1fr 1fr; }
             .shell { padding: 0 8px; }
+            .figure-grid { grid-template-columns: 1fr; }
             .page { padding: 8px; }
             thead th, tbody td { padding-left: 8px; padding-right: 8px; }
         }

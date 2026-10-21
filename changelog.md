@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 (2nd) — the acceptance report carries the coverage figures.**
+  A new **Problem-space coverage** section sits under the A/B table: the legal
+  geometry space of every cell with the measured part painted by value, the
+  never-measured part hatched, the local maxima ringed green and the local
+  minima ringed red, plus a dense summary table (legal / measured /
+  unexplored / % unexplored / best / peaks / traps) and the headline
+  "**89 % of the legal geometries have never been run**". The numbers come from
+  the coverage tool's hand-off file (`gfx90c_results/analysis/coverage/
+  coverage.json`), so the report never re-derives them; the figures are linked
+  relative to the report file, so the report works from the run directory too.
+  The stylesheet follows the Carbon design language: the dark theme is now the
+  Gray 100 token set (#161616 / #262626 / #393939 / #525252, text #f4f4f4 /
+  #c6c6c6 / #8d8d8d, border #393939 / #6f6f6f), the light theme carries the
+  missing semantic tokens (--layer-03, --text-placeholder, --link-primary,
+  --field, --icon-primary), and the new section uses 1px borders, 0px radius,
+  no shadows, 14px productive text and 2/4/8/16 spacing. Pinned by
+  `tests/test_report_coverage.py`.
+
 - **2026-10-22 — the coverage graphs: the problem space as a 2D picture.**
   `oto.harness.coverage_graph` draws, for every contract cell, the legal
   geometry space projected onto (macro-tile area x accumulators per thread),

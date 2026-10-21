@@ -47,6 +47,7 @@ import html
 import json
 import math
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -416,6 +417,20 @@ Red ring = a local minimum (a trap: every measured neighbour is faster).</p>
     (out_dir / "index.html").write_text(page)
 
 
+def _write_data(entries: List[Dict[str, Any]], out_dir: Path) -> None:
+    """The numbers behind the figures, as JSON.
+
+    The acceptance report embeds the figures and prints their numbers; it must
+    not re-derive them (the legal-space sweep takes minutes). This file is
+    the hand-off between the two.
+    """
+    payload = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "rows": entries,
+    }
+    (out_dir / "coverage.json").write_text(json.dumps(payload, indent=1))
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -465,7 +480,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if not args.no_svg:
         out_dir.mkdir(parents=True, exist_ok=True)
         _index_page(entries, out_dir)
-        print(f"\nwrote {len(entries)} figure(s) + index.html -> {out_dir}")
+        _write_data(entries, out_dir)
+        print(f"\nwrote {len(entries)} figure(s) + index.html + coverage.json"
+              f" -> {out_dir}")
     return 0
 
 

@@ -73,6 +73,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``metrics/render_status.py`` — The run-status text renderings and the live TTY panel.
 * ``metrics/report.py`` — Stage 7 acceptance report: the verdict compute and the JSON writer.
 * ``metrics/report_css.py`` — The dashboard's static assets: CSS and the three inline scripts.
+* ``metrics/report_figures.py`` — The acceptance report's problem-space coverage section.
 * ``metrics/report_html.py`` — The acceptance dashboard renderer (JSON payload -> one HTML file).
 * ``metrics/report_models.py`` — The report's two payload dataclasses.
 * ``metrics/report_sections.py`` — The dashboard's HTML section builders.

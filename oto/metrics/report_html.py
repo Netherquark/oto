@@ -3,9 +3,11 @@
 
 Owns: ``write_html_report`` and the pure sub-builders it composes -- the A/B
 head-to-head sections, the family coverage matrix (data prep + rendered rows),
-and the document template. Nothing here writes anything but the final file.
+the problem-space coverage section (report_figures) and the document template.
+Nothing here writes anything but the final file.
 Does NOT own: the report payload (report_models), the section builders
-(report_sections), or the static assets (report_css).
+(report_sections), the coverage figures themselves (report_figures reads
+oto.harness.coverage_graph's hand-off) or the static assets (report_css).
 Public API: HtmlMixin.
 """
 
@@ -16,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from oto.metrics.report_css import (DASHBOARD_CSS, JS_ROW_EXPAND,
                                      JS_THEME_INIT, JS_THEME_TOGGLE)
+from oto.metrics.report_figures import coverage_section
 from oto.metrics.report_models import AcceptanceReport
 
 
@@ -291,8 +294,10 @@ class HtmlMixin:
 
     def _document_tail(self, section_cell_status: str, section_explore: str,
                        section_coverage_matrix: str,
-                       section_telemetry: str) -> str:
+                       section_telemetry: str,
+                       section_coverage_figures: str = "") -> str:
         return f"""
+        {section_coverage_figures}
         {section_cell_status}
 
         {section_explore}
@@ -304,6 +309,10 @@ class HtmlMixin:
     {JS_THEME_TOGGLE}
 </body>
 </html>"""
+
+    def _report_base_dir(self) -> Path:
+        """The repo root the report is written for (the figures live under it)."""
+        return Path(getattr(self, "base_dir", None) or Path.cwd())
 
     def write_html_report(self, report: AcceptanceReport,
                           html_path: Path) -> None:
@@ -333,6 +342,8 @@ class HtmlMixin:
         section_explore = self._problem_space_section(report)
         section_coverage_matrix = self._coverage_matrix_section(report)
         section_telemetry = self._telemetry_section(report)
+        section_coverage_figures = coverage_section(
+            self._report_base_dir(), html_path)
 
         html = "".join((
             self._document_head(report, now, self._provenance_line(report)),
@@ -342,7 +353,8 @@ class HtmlMixin:
             self._family_matrix_section(family_rows),
             self._ab_section(verdict_sections),
             self._document_tail(section_cell_status, section_explore,
-                                section_coverage_matrix, section_telemetry),
+                                section_coverage_matrix, section_telemetry,
+                                section_coverage_figures),
         ))
 
         with open(html_path, "w") as f:
