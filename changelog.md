@@ -9,6 +9,34 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 (6th) — the deck check's first refusal: `TransposeLDS` is
+  unreachable on gfx90c, and three "virgin axes" were never virgin.** The
+  pre-run sweep (70 of 401 rows) asked Tensile about a Z 32x32 phase carrying
+  `TransposeLDS=-1` and Tensile refused it: *"didn't support UnrollMajorLDS
+  in VALU mode yet"* (`SolutionStructs:2890`). `-1` **forces**
+  `UnrollMajorLDS` (`:3874-3875`), and the classic (non-MFMA) path rejects
+  `UnrollMajorLDS` and `LdsBlockSizePerPad` outright (`:2890-2892`). So
+  `TransposeLDS=1` (the MFMA path) and `TransposeLDS=-1` (which forces the
+  rejected knob) are **both** illegal here, and with them the whole
+  unroll-major-LDS family. The gate now refuses both values; the R47 batch's
+  `TransposeLDS=-1` rows are struck and the overlay's 7 of them were pruned
+  automatically (1101 -> 1094 rows). The tuning guide's knob table and its
+  §9.1 census now say **unreachable** for `TransposeLDS`,
+  `UnrollMajorLDS{A,B}` and `LdsBlockSizePerPad{A,B}` -- they were listed as
+  virgin axes, and an unreachable axis is a different thing from an untried
+  one.
+
+  **The sweep was stopped after 75 of the 401 rows** (the operator ended it;
+  74 accepted, 1 refused). Its partial result is kept in
+  `gfx90c_results/analysis/deck_check.json` in the tool's own format, so a
+  later run **resumes** from row 76 rather than re-probing the first 75, and
+  the refusals accumulate across a resumed sweep. The 75 rows covered the CC,
+  DD, SS, HH, ZZ winner geometries and the HPA block -- every one Tensile
+  accepted except the `TransposeLDS` row. **The R49 batch (the ranked
+  unexplored space of the three ORANGE cells) is therefore still unprobed**:
+  the deck check has not yet asked Tensile about the geometries the next run
+  is aimed at.
+
 - **2026-10-22 (5th) — the doc sweep: every stale conclusion now points at
   its correction.** The /tmp probes are gone (their capabilities are
   `oto.harness.tensile_oracle` and `oto.harness.deck_check`), and the docs

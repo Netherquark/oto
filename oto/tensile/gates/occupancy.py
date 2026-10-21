@@ -655,12 +655,19 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
         return False, f"StoreCInUnroll must be a bool (have {sci!r})"
 
-    # TransposeLDS=1 is the MFMA path ("TransposeLds Supports only in
-    # MatrixInstruction=1", SolutionStructs:4519-4521). gfx90c has no MFMA
-    # (no v_mfma_*), so that value is a guaranteed "0 valid solutions" for
-    # every phase that carries it. The other two values are legal here:
-    # TransposeLDS=-1 forces UnrollMajorLDS on the non-transposed operand
-    # (":3874-3875"), which is a real, untried knob on this part.
+    # TransposeLDS is unreachable on gfx90c, in BOTH of its non-zero values:
+    #   * 1 is the MFMA path ("TransposeLds Supports only in
+    #     MatrixInstruction=1", SolutionStructs:4519-4521) and gfx90c has no
+    #     MFMA (no v_mfma_*);
+    #   * -1 forces UnrollMajorLDS on the non-transposed operand
+    #     (":3874-3875"), and the classic (VALU) path rejects UnrollMajorLDS
+    #     outright -- "didn't support UnrollMajorLDS in VALU mode yet"
+    #     (":2890").
+    # The deck check found the second one: a Z 32x32/2x2 phase with
+    # TransposeLDS=-1 was refused by Tensile with exactly that message
+    # (2026-10-22). The same reject applies to UnrollMajorLDSA/B and
+    # LdsBlockSizePerPadA/B (":2890-2892"), which is why those two are
+    # *unreachable* rather than "virgin" in the tuning guide's §9.1.
     tlds = config.get("TransposeLDS")
     if tlds is not None:
         tv, err = _int_or_reject(tlds, "TransposeLDS")
@@ -668,8 +675,12 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
             return False, err
         if tv == 1:
             return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           "(SolutionStructs:4519-4521) and gfx90c has no MFMA; "
-                           "use -1 (unroll-major LDS on the NT operand) or 0")
+                           "(SolutionStructs:4519-4521) and gfx90c has no MFMA")
+        if tv == -1:
+            return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
+                           "classic (VALU) path rejects: 'didn't support "
+                           "UnrollMajorLDS in VALU mode yet' "
+                           "(SolutionStructs:2890)")
     return True, ""
 
 

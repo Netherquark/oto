@@ -165,14 +165,23 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
         checked.append({"phase_id": row.get("phase_id", ""),
                         "ok": bool(verdict.get("tensile", {}).get("ok")),
                         "reason": verdict.get("tensile", {}).get("reason")})
-    previous = []
+    previous, previous_refusals, note = [], [], ""
     if result_path and result_path.is_file():
         try:
-            previous = json.loads(result_path.read_text()).get("checked", [])
+            old = json.loads(result_path.read_text())
+            previous = old.get("checked", []) if isinstance(old.get("checked"), list) else []
+            previous_refusals = old.get("refusals", []) or []
+            note = old.get("note", "")
         except (OSError, ValueError):
-            previous = []
+            pass
+    # The refusals accumulate: a sweep that is stopped and resumed must not
+    # lose the refusal it already found.
+    known = {r.get("phase_id") for r in previous_refusals}
+    merged = previous_refusals + [r for r in refusals
+                                  if r.get("phase_id") not in known]
     return {"checked": previous + checked, "probed": len(rows),
-            "refusals": refusals, "seconds": round(time.time() - started, 1)}
+            "refusals": merged, "seconds": round(time.time() - started, 1),
+            "note": note}
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

@@ -901,10 +901,11 @@ for _fam, _tile, _tt, _vw, _du in (
         "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
         "DepthU": _du, "FractionalLoad": 2,
         "note": "R45 virgin: FractionalLoad=2 (ragged edge handling)"})
-    PLAN_BATCH.append({"fam": _fam, "pattern": "Ailk_Bjlk" if _fam != "ZZ" else "Alik_Bjlk",
-        "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
-        "DepthU": _du, "TransposeLDS": -1,
-        "note": "R45 virgin: TransposeLDS=-1 (unroll-major LDS on the NT operand)"})
+    # TransposeLDS is NOT probed: it is unreachable on gfx90c in both of its
+    # non-zero values -- 1 is the MFMA path and -1 forces UnrollMajorLDS, which
+    # the classic VALU path rejects ("didn't support UnrollMajorLDS in VALU
+    # mode yet", SolutionStructs:2890). The deck check found the second one on
+    # 2026-10-22; the gate now refuses both.
 
 # 2026-10-21 R47 -- the batch the *corrected* analysis asks for.
 #
