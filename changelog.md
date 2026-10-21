@@ -33,7 +33,8 @@ and NOT the experimental data (that is `results.md`).
   the old domain. `tests/conftest.py` registers the `serial` and `preflight`
   markers and the rule that keeps a repo-tree-writing test out of a
   distributed run; `pytest.ini` records the layout; `OTO_GUARD_FILES=1`
-  narrows the tree-walking guards to the changed files.
+  narrows the tree-walking guards to the changed files. The live run panel
+  also gained the per-tier bars and a repaint when a phase lands.
 
 - **2026-10-21 (6th) — the straggler list re-derived, the deck aimed at what
   is actually behind, and the coverage map.** `potential_configs.md` §R47 is

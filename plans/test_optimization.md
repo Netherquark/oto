@@ -45,7 +45,14 @@ exploring the axes the cells need.
    `test_function_length` and `test_pyflakes` to the files git reports as
    changed: 2.11 s -> 0.70 s. The full scan stays the default, because a
    guard that only looks at what you touched is not a guard.
-6. **The preflight marker.** `pytest -m preflight` is the subset the
+6. **The live run panel** (`oto.metrics.render_status`, `oto.runners.phases`).
+   The panel now shows the **per-tier bars** (ILLEGAL / UNDER-SPECIFIED /
+   UNREPRODUCIBLE: decided of total) instead of only the aggregate
+   "decided 720/2285", and the driver **repaints it the moment a phase
+   lands** rather than up to an interval later -- a long run spends most of
+   its time in one tier, and the aggregate alone does not say where.
+   `pytest -n auto` gives the *test* run a live progress line for free.
+7. **The preflight marker.** `pytest -m preflight` is the subset the
    overnight checklist runs (177 tests, 36 s). The file list lives in
    `tests/conftest.py`, so the marker and the checklist cannot drift.
 
@@ -97,8 +104,5 @@ full suite.
   into the same memo.
 - The `serial` marker is unused: the first test that writes into the repo
   tree should carry it, and the mechanism is already in place.
-- **The live progress bar** (`oto.metrics.render_status.LiveStatus`):
-  the panel repaints on a background thread; the improvement is to repaint
-  immediately after each phase completes (a driver hook) and to show a
-  per-tier bar (decided/corpus) instead of only the aggregate. `pytest -n
-  auto` also gives the *test* run a live progress line for free.
+- The live progress bar is **done** (below): the panel repaints when a phase
+  lands, and it shows the per-tier bars.

@@ -83,6 +83,13 @@ def render_compact(rep: Dict[str, Any]) -> str:
            else "unknown")
     lines.append(f"    elapsed   {fmt_duration(rep['elapsed_minutes'])}"
                  f"   ETA {eta}")
+    # The per-tier bars: which part of the reference chain is decided and
+    # which is still outstanding. The aggregate "decided 12/38" alone does
+    # not say *where* the run is, and a long run spends most of its time in
+    # one tier.
+    for label, done, total in rep.get("tier_rows", []) or []:
+        pct = (100.0 * done / total) if total else 0.0
+        lines.append(f"    {label:<18}{bar(pct, 12)} {done}/{total}")
     th = rep.get("thermals")
     if th and th.get("temp"):
         lines.append(f"    thermals  {th['temp']}  {th['power']}  {th['sclk']}")

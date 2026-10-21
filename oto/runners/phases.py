@@ -275,6 +275,13 @@ class PhaseMixin:
 
             result = self.execute_phase(phase, self.run_dir)
             results.append(result)
+            # Repaint the live panel the moment a phase lands, so the
+            # "decided" count moves when the work moves rather than up to
+            # an interval later. The panel is optional (no TTY, no panel),
+            # and the refresh is a no-op when it is not running.
+            panel = getattr(self, "_live_status", None)
+            if panel is not None:
+                panel.refresh()
 
             executed_count, refused_count = self._update_counters(
                 result, executed_count, refused_count)
