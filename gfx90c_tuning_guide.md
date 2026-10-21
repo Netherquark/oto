@@ -108,9 +108,9 @@ the symbol names are the citation.
 | `LocalReadVectorWidth` | `[-1,1,2,4,8,16]` | tied to `VectorWidth` | — |
 | `VectorWidth` | `[-1,1,2,3,4,6,8,16]` | per-family | same 16-B cap |
 | `LdsPad{A,B}` | `-1…127` | `0,1,2,4` | `-1` means "same as VectorWidth if TLU=0 else 0" — derivable, not worth a draw; `1` is reported as the value the floor never uses (§9.1, `check`) |
-| `LdsBlockSizePerPad{A,B}` | `[-1,0,64,128,256,512,1024,2048,4096]` | **not sampled** | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Virgin (§9.1) |
-| `TransposeLDS` | `[-1,1,0]` | **not sampled** | TLU=0 matrices only; aligns LDS layout with VALU reads in the absence of MFMA. **Never reached Tensile**: the knob was declared forwarded but the writer never emitted it (fixed 2026-10-21). `1` is the MFMA path and is refused; `-1` is decked |
-| `UnrollMajorLDS{A,B}` | `[False,True]` | **not sampled** | "beneficial for smaller data types"; relieves `VgprForLocalReadPacking` |
+| `LdsBlockSizePerPad{A,B}` | `[-1,0,64,128,256,512,1024,2048,4096]` | **unreachable** | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. **Tensile rejects it on the classic path** ("didn't support LdsBlockSizePerPad in VALU mode yet", `SolutionStructs:2891`) — unreachable, not virgin (§9.1) |
+| `TransposeLDS` | `[-1,1,0]` | **unreachable** | **never reached Tensile** (declared, never emitted -- fixed 2026-10-21) -- and when it finally did, Tensile refused **both** non-zero values: `1` is the MFMA path and `−1` forces `UnrollMajorLDS`, which the classic VALU path rejects (`SolutionStructs:2890`). The gate refuses both |
+| `UnrollMajorLDS{A,B}` | `[False,True]` | **unreachable** | "beneficial for smaller data types"; relieves `VgprForLocalReadPacking`. **Tensile rejects it on the classic path** ("didn't support UnrollMajorLDS in VALU mode yet", `SolutionStructs:2890`); it is also what `TransposeLDS=-1` would force |
 | `WaveSeparateGlobalRead{A,B}` | `[0,1]` | **not sampled** | splits LDS by wave → fewer cross-wave bank collisions (§9.1) |
 | `ThreadSeparateGlobalRead{A,B}` | `[0,1,2,4]` | **not sampled** | `2` is documented to pair with `WaveSeparateGlobalRead` |
 | `NonTemporal{A,B,C,D}` | `0…7` | **not sampled** | 1=`glc`, 2=`slc`, 3=both; cache-hint bits matter on a 1 MiB L2. **C and D never reached Tensile** (declared, never emitted -- fixed 2026-10-21); A and B were forwarded but never drawn |
@@ -494,15 +494,15 @@ the floor manifests before spending a run on it.
 |---|---|---|
 | `1LDSBuffer=1` | never | **halves LDS → doubles occupancy.** Requires `ScheduleInnerAccuracy` 2 or 3 |
 | `DepthULdsDivisor` (2, 4) | never | cuts LDS 2×/4×. Requires SIA=3 + `TransposeLDS` + `PrefetchGlobalRead≠2` + `DirectToLds=0` |
-| `LdsBlockSizePerPadA/B` | 0 everywhere | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Composes with `LdsPad`, which Group C already forwards |
+| `LdsBlockSizePerPadA/B` | 0 everywhere | per-block padding *without* redesigning the tile; must be ≥ `unrollDepth*bpe`. Composes with `LdsPad`, which Group C already forwards. **But it is unreachable**: Tensile rejects it on the classic path (`SolutionStructs:2891`) |
 | `WaveSeparateGlobalReadA/B` | 0 everywhere | splits the LDS buffer by wave → fewer cross-wave bank collisions (K §2 phase model) |
 | `ThreadSeparateGlobalReadA/B` | 0 everywhere | `2` is documented to pair with `WaveSeparateGlobalRead` |
-| `UnrollMajorLDSA/B` | 0 everywhere | relieves `VgprForLocalReadPacking`; "beneficial for smaller data types" |
+| `UnrollMajorLDSA/B` | 0 everywhere | relieves `VgprForLocalReadPacking`; "beneficial for smaller data types". **Unreachable**: Tensile rejects it on the classic path (`SolutionStructs:2890`) |
 | `NonTemporalA/B/C/D` (1–3) | 0 everywhere | `glc`/`slc` cache hints; on a **1 MiB L2** the pollution control is plausibly worth more than on a discrete part with 32 MiB |
 | `FractionalLoad=2` | never (only {0,1}) | frees the `DepthU` choice on ragged M/N/K by moving the edge handling into a temp VGPR |
 | `PersistentKernel` | 0 everywhere | amortises tile assignment; on a 4-tile grid the assignment is a real fraction of the launch |
 | `MaxOccupancy < 40` | 40 | deliberately cap LDS to raise occupancy |
-| `TransposeLDS=1` | 0 | TLU=0 only; aligns the LDS layout with MFMA-free VALU reads |
+| `TransposeLDS` (1, −1) | 0 | TLU=0 only; aligns the LDS layout with MFMA-free VALU reads. **Unreachable**: `1` is the MFMA path, `−1` forces `UnrollMajorLDS` (both rejected by Tensile on this part) |
 | `PrefetchGlobalRead=2` | 0 | deeper prefetch; conditional on the 16 384-B/WG budget |
 | `GlobalReadPerMfma` / `LocalWritePerMfma` | 1 / −1 | **names are MFMA-era but the knobs are general** — they throttle global/LDS issue density, which is the thing to schedule on a machine with no MFMA |
 | `LdsPadA/B = 1` | {0,2,4} (`check`) | Group C forwards pads but the domains still omit 1 |
@@ -518,7 +518,7 @@ the rest:
 | row | state now |
 |---|---|
 | `LdsPadA/B = 1` | **closed by measurement** — 0.95-1.0 of base on the complex tiles (pads do not move them) |
-| `TransposeLDS=1` | **unreachable** — the MFMA path; gfx90c has no MFMA, and the gate now refuses it. The legal value is `-1` (unroll-major LDS on the NT operand), which is decked |
+| `TransposeLDS` (1 and −1) | **unreachable** — `1` is the MFMA path (no MFMA on gfx90c) and `−1` forces `UnrollMajorLDS`, which the classic VALU path rejects ("didn't support UnrollMajorLDS in VALU mode yet", `SolutionStructs:2890`). The deck check found the second one on 2026-10-22; the gate now refuses both |
 | `NonTemporalA/B/C/D` | **decked, never measured** — and C/D had never even reached Tensile before 2026-10-21 (declared, never emitted: a silent placebo) |
 | `MaxOccupancy < 40`, `PrefetchGlobalRead=2`, `StaggerUMapping`, `NLCA=-1`, `FractionalLoad=2` | **decked, never measured** (the R47 batch) |
 | `StaggerU=0` | **not in this table, and it should have been** — the floor does not move it, and our own gate refused it until 2026-10-21, so it has never been measured either. Now decked |

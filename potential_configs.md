@@ -2514,7 +2514,11 @@ forwarded 2026-10-09). The rest are in `NOT_FORWARDED_KNOBS`.
 TransposeLDS, FractionalLoad, LdsBlockSizePerPad, Wave/ThreadSeparateGlobalRead,
 UnrollMajorLDS, NonTemporal, MaxOccupancy, PersistentKernel, PrefetchGlobalRead=2,
 StaggerUMapping, NLCA=-1, LdsPad=1, AssertFree) behind `ldspad_feasible` and
-probe one row per case.
+probe one row per case. **Updated 2026-10-22 (R47/R48):** of that list,
+`TransposeLDS`, `UnrollMajorLDS*` and `LdsBlockSizePerPad*` are **unreachable**
+(Tensile's classic path rejects them -- `SolutionStructs:2890-2892`, found by
+the deck check), `LdsPad=1` is **closed** (measured, no effect), and the rest
+were **wired and decked** by the R47 batch.
 
 ---
 
@@ -2812,7 +2816,7 @@ on this part and are legal:
 | knob | values | on which cells | why it might move |
 |---|---|---|---|
 | `StaggerU=0` | 0 | every winner | the store stagger is off: on a 1 MB L2 with 7 CUs the 56-CU-tuned stagger may be spreading the wrong way. **Never measured** (the gate refused it) |
-| `TransposeLDS=-1` | -1 | SS/HH/DD/CC/ZZ winners | unroll-major LDS on the NT operand: a different LDS layout, different bank behaviour. **Never measured** (the knob was never emitted; the value 1 is the MFMA path and is refused) |
+| `TransposeLDS=-1` | -1 | SS/HH/DD/CC/ZZ winners | **STRUCK 2026-10-22: unreachable.** The deck check asked Tensile and it refused: `-1` forces `UnrollMajorLDS`, and the classic (VALU) path rejects that outright ("didn't support UnrollMajorLDS in VALU mode yet", `SolutionStructs:2890`). `1` is the MFMA path, which gfx90c does not have. The whole unroll-major-LDS family (`UnrollMajorLDS*`, `LdsBlockSizePerPad*`, `TransposeLDS`) is therefore **unreachable on this part**, not virgin. The gate now refuses both values |
 | `NonTemporalC/D` | 1, 2, 4 | SS:512/1024, CC:512, HH:1024 | glc/slc on the C operand: L2 pollution control on a 1 MB L2. **Never measured** (the knob was never emitted) |
 | `LdsPadA/B` | 1, 2, 4 | every winner | bank conflicts on 8/16-B complex elements. Measured 0.95-1.0 of base -- closed |
 | `PrefetchGlobalRead=2` | 2 | SS:512/1024, HH:512/1024 | 2-deep global prefetch: more latency hiding at the cost of LDS. Legal on the 64 KB LDS only where the doubled tile fits (gated) |
