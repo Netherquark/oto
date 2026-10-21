@@ -34,6 +34,50 @@ def _overlay_path() -> Path:
     return cli.OVERLAY_PATH
 
 
+def _illegal_rows(phases: List[Dict[str, Any]]) -> List[Tuple[str, str]]:
+    """The rows the launch gate would refuse, as (phase_id, reason).
+
+    The overlay is the deck the next run executes, so a row in it that the
+    gate refuses is a phase that burns a launch slot to be told it is illegal.
+    The gate is the same one the launch boundary uses, so this is exactly the
+    set of rows that would come back as "skipped_illegal".
+    """
+    import contextlib
+    import io
+
+    from oto.tensile.config_writer import _launch_gate_refusal
+
+    out: List[Tuple[str, str]] = []
+    for phase in phases:
+        with contextlib.redirect_stdout(io.StringIO()):
+            reason = _launch_gate_refusal(None, phase)
+        if reason:
+            out.append((str(phase.get("phase_id", "")), reason))
+    return out
+
+
+def _drop_illegal_stored(payload: Dict[str, Any]
+                         ) -> Tuple[List[Dict[str, Any]], List[Tuple[str, str]]]:
+    """Remove the stored rows the launch gate refuses; report what went.
+
+    A row in the overlay that the gate refuses is a launch slot spent to be
+    told the config is illegal, and a manifest that claims a config ran when
+    it was refused. The gate's verdicts move as the rules are corrected, so
+    the stored deck is re-checked against the *current* gate, not just the
+    pool.
+    """
+    stored = list(payload.get("phases", []))
+    illegal = _illegal_rows(stored)
+    if illegal:
+        refused = {i for i, _ in illegal}
+        stored = [p for p in stored if str(p.get("phase_id", "")) not in refused]
+        payload["phases"] = stored
+        print(f"dropped {len(illegal)} stored row(s) the launch gate refuses: "
+              f"{', '.join(i for i, _ in illegal[:6])}"
+              f"{' ...' if len(illegal) > 6 else ''}")
+    return stored, illegal
+
+
 def _write_overlay(rows: List[Dict[str, Any]], dry_run: bool) -> int:
     """Append in-grid candidate rows to the persistent seed overlay.
 
@@ -41,23 +85,36 @@ def _write_overlay(rows: List[Dict[str, Any]], dry_run: bool) -> int:
     tests/test_library_parity.py: no contraction, no extension), so the whole
     pool is safe to merge. Rows already scheduled (by phase_id or fp) are
     skipped.
+
+    Rows the launch gate refuses are dropped -- both the new ones and any
+    already stored. A deck row that cannot launch is a wasted slot and a
+    misleading manifest ("this config was run" when it was refused), and the
+    gate's verdicts change as the rules are corrected (2026-10-21: the
+    per-thread occupancy limit retired three SS frontier rows and the swizzle
+    rule un-retired the no-swizzle arm), so the stored deck has to be
+    re-checked against the current gate, not just against the pool.
     """
     payload = __yaml_load(_overlay_path(), fallback={"phases": []})
     if not isinstance(payload, dict):
         payload = {"phases": []}
-    existing_ids = {str(p.get("phase_id", "")) for p in payload.get("phases", [])}
-    existing_fps = {str(p.get("fp", "")) for p in payload.get("phases", [])}
+    stored, stored_illegal = _drop_illegal_stored(payload)
+    rows = [r for r in rows if not _illegal_rows([r])]
+    existing_ids = {str(p.get("phase_id", "")) for p in stored}
+    existing_fps = {str(p.get("fp", "")) for p in stored}
     added = [r for r in rows
              if r["phase_id"] not in existing_ids and r["fp"] not in existing_fps]
     if dry_run:
         return len(added)
-    if not added:
+    if not added and not stored_illegal:
         return 0
-    payload.setdefault("phases", []).extend(added)
+    if added:
+        payload.setdefault("phases", []).extend(added)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     payload["note"] = (payload.get("note", "") +
                        f"\nAppended {len(added)} generated candidates at "
-                       f"{stamp} by oto.harness.generate_candidates")
+                       f"{stamp} by oto.harness.generate_candidates"
+                       + (f"\nDropped {len(stored_illegal)} stored row(s) the "
+                          f"launch gate refuses at {stamp}" if stored_illegal else ""))
     import yaml
     with open(_overlay_path(), "w") as f:
         yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)

@@ -9,6 +9,29 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (6th) — the straggler list re-derived, the deck aimed at what
+  is actually behind, and the coverage map.** `potential_configs.md` §R47 is
+  the corrected reading of the corpus, and it changes the plan: (1) **CC and ZZ
+  are at the hardware roof** (80-97 % of the FMA roof, not 20-24 %) because
+  the client reports complex GEMMs at 2 flops per complex MAC and the bar was
+  the BLAS-8 peak -- so the ORANGE list is 3 cells, not 12, and §R42's Class A
+  and §R43's 3M/split-K routes are struck; (2) **9 of the 15 ties run the
+  floor's own config** and 4 have no floor arm at all, and the 16 identical-
+  config cells' deltas span **+1.1 % to +18.6 %** -- the environment band is
+  17.5 points wide against a +/-5 % verdict band, and the floor arm has no
+  clock telemetry, so the verdicts cannot see a win; (3) the "virgin" axes
+  included three that were never varied (see the 5th entry). New tools:
+  `oto.harness.coverage_map` (the legal geometry space per cell, what the
+  corpus measured inside it, and the legal-but-unmeasured geometries ranked by
+  their neighbours' score -- the local-minimum finder; coverage is 8-13 % of
+  the legal space) and `resolve_cells --taxonomy` (what each verdict is made
+  of). The R47 batch adds 55 new rows: WGM 2/3/-1/-4 (the floor's 56-CU knob
+  on a 7-CU part), StaggerU=0, TransposeLDS=-1, NonTemporalC 1/2,
+  MaxOccupancy 16/32, and the small cells' winner tiles with the thread tiles
+  the coverage map found legal and unmeasured. The overlay now prunes the rows
+  the launch gate refuses (15 of them, including the 12 SS frontier rows that
+  died with error 4 in the 2026-10-20 run): 804 rows, 0 illegal.
+
 - **2026-10-21 (5th) — three silent placebos and one contradictory knob.**
   (a) **TransposeLDS was declared forwarded but never emitted** -- the writer's
   fork surface had no entry for it, so the 5 R45 rows probing it would have

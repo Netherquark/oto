@@ -51,6 +51,8 @@ if str(_HERE) not in sys.path:
 
 import yaml  # noqa: E402
 
+from oto.device.peaks import (FAMILY_DTYPES, PEAK_GFLOPS,  # noqa: E402
+                              REALISTIC_CEILINGS, THEORETICAL_PEAKS)
 from oto.tensile.shape_order import shape_order_key  # noqa: E402
 
 # The full structural knob surface — MUST match the yaml emission surface of
@@ -309,9 +311,15 @@ def _cell_row(
     ncfg = _native_config(nwp, nrun, run_scoped, registry, run_global,
                           native_kb_cfg)
     scfg = _spoof_config(key, floor_best, registry, run_global)
-    fcov = cov.get(fam, {})
-    ceiling = fcov.get("ceiling_gflops") or 0.0
-    peak = fcov.get("theoretical_peak_gflops") or 0.0
+    # The ceilings come from the canonical table (oto.device.peaks), NOT from
+    # the acceptance report's coverage block: the report is a snapshot, and its
+    # complex-family percentages were computed against a 4x-too-large bar until
+    # 2026-10-21 (gfx90c_theoretical_limits.md 5.2). The tables are in
+    # client-reported units, which is the unit the measurement arrives in.
+    ceiling = REALISTIC_CEILINGS.get(fam) or PEAK_GFLOPS.get(
+        FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
+    peak = THEORETICAL_PEAKS.get(fam) or PEAK_GFLOPS.get(
+        FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
     return {
         "family": fam,
         "shape": shp,
@@ -428,6 +436,52 @@ def _table(cells: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _taxonomy(cells: List[Dict[str, Any]]) -> str:
+    """The straggler taxonomy: what the verdict is *made of*, per cell.
+
+    The acceptance verdict compares two arms that were measured in different
+    sessions, on different days, with no clock control on the floor arm. The
+    ``cfg_gap`` says how far the two winners' configs are apart, so the delta
+    can be read for what it is:
+
+    * ``identical`` -- both arms run the SAME config, so the delta is
+      measurement environment, not tuning. The spread over these cells IS the
+      environment band, and it is the yardstick every other delta must clear.
+    * ``near`` / ``retile`` -- the arms run different configs, so the delta is
+      a tuning result.
+    * ``no-floor`` -- the family ships no floor arm (the HPA columns), so the
+      "tie" is against a reference the report cannot even resolve.
+
+    The band is the point: a verdict band of +/-5% means nothing when the same
+    binary measures +1% to +19% in the two arms.
+    """
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for c in cells:
+        groups.setdefault(c["cfg_gap"] or "?", []).append(c)
+    lines = ["", "== tie taxonomy: what each verdict is made of =="]
+    for gap in ("identical", "near", "retile", "no-floor", "?"):
+        items = groups.get(gap)
+        if not items:
+            continue
+        deltas = [c["delta_pct"] for c in items
+                  if c["delta_pct"] is not None]
+        band = (f"{min(deltas):+.1f}% .. {max(deltas):+.1f}%"
+                if deltas else "-")
+        lines.append(f"\n{gap}  n={len(items)}  delta band {band}")
+        for c in sorted(items, key=lambda x: -(x["delta_pct"] or 0.0)):
+            lines.append("   %-6s %-16s %+7.1f%%  %-5s  roof %5.1f%% of %s"
+                         % (c["family"], c["shape"], c["delta_pct"] or 0.0,
+                            c["verdict"], c["pct_theoretical"] or 0.0,
+                            "theoretical"))
+    identical = [c["delta_pct"] for c in groups.get("identical", [])
+                 if c["delta_pct"] is not None]
+    if len(identical) >= 2:
+        lines.append("")
+        lines.append("environment band (identical configs, so pure measurement): "
+                     f"{max(identical) - min(identical):.1f} points wide")
+    return "\n".join(lines)
+
+
 def _tsv(cells: List[Dict[str, Any]]) -> str:
     head = ("family\tshape\tdtype\tverdict\tcfg_gap\tdelta_pct\tnative_median\tnative_value"
             "\tspoof_median\tspoof_value\tpct_ceiling\tpct_theoretical"
@@ -465,6 +519,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--no-json", action="store_true", help="do not write the JSON cache")
     ap.add_argument("--no-text", action="store_true", help="do not write the text table")
     ap.add_argument("--no-table", action="store_true", help="do not print the table to stdout")
+    ap.add_argument("--taxonomy", action="store_true",
+                    help="also print the tie taxonomy (what each verdict is made of)")
     args = ap.parse_args(argv)
 
     base = args.base_dir or str(_HERE)
@@ -472,6 +528,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if not args.no_table:
         print(_table(cells))
+    if args.taxonomy:
+        print(_taxonomy(cells))
 
     def _write(flag_off: bool, path: str, payload: str) -> None:
         if flag_off:

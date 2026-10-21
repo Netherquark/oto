@@ -905,3 +905,104 @@ for _fam, _tile, _tt, _vw, _du in (
         "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
         "DepthU": _du, "TransposeLDS": -1,
         "note": "R45 virgin: TransposeLDS=-1 (unroll-major LDS on the NT operand)"})
+
+# 2026-10-21 R47 -- the batch the *corrected* analysis asks for.
+#
+# §R47 re-read the corpus with the complex families scored in the unit the
+# client reports (CC/ZZ are at 80-97 % of the roof, not 20 %), and with the
+# tie taxonomy: 9 of the 15 ties run the floor's own config, so the delta
+# there is measurement environment (17.5 points wide) and not tuning. The
+# cells that really are behind are SS:256, HH:256 and CC:192, and the axes
+# that have never actually been varied are StaggerU=0 (the gate used to refuse
+# it), TransposeLDS (never emitted), NonTemporalC/D (never emitted) and the
+# WorkGroupMapping values other than 1 and 4 (a 56-CU knob on a 7-CU part).
+#
+# Every row below is a CONFIG on a geometry the corpus already reaches, so the
+# only new machinery is the launch itself. The batch is gate-clean by
+# construction: `tests/test_generate_candidates.py` pins it.
+
+#: The winner geometry per family, as the corpus has measured it (the cell's
+#: best seed-median geometry; `kernel_db.json`). These are the geometries the
+#: untried axes are worth probing on.
+_R47_WINNERS: Tuple[Tuple[str, str, str, int, int], ...] = (
+    ("SS", "128x128x8", "8x8", 4, 8),
+    ("HH", "128x128x16", "8x8", 8, 16),
+    ("DD", "64x64x8", "4x4", 2, 8),
+    ("CC", "64x64x8", "4x4", 2, 8),
+    ("ZZ", "32x32x8", "2x2", 1, 8),
+    ("HH_HPA", "64x128x16", "4x8", 4, 16),
+    ("HS_HPA", "64x128x16", "4x8", 4, 16),
+)
+
+#: (1) The WorkGroupMapping axis. The floor's configs are tuned for 56 CUs;
+#: this part has 7. WGM 1 and 4 are measured, 2/3/-1/-4 are not, and the tile
+#: grid on 7 CUs is exactly where the mapping matters.
+for _fam, _tile, _tt, _vw, _du in _R47_WINNERS:
+    for _wgm in (2, 3, -1, -4):
+        PLAN_BATCH.append({
+            "fam": _fam, "pattern": PATTERNS[_fam][0], "MacroTile": _tile,
+            "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+            "WorkGroupMapping": _wgm,
+            "note": f"R47: WGM={_wgm} on the {fam} winner (7-CU tile grid)"})
+
+#: (2) The axes that were never varied because they were *declared* but not
+#: reachable: StaggerU=0 (the store stagger off -- the gate used to refuse it),
+#: TransposeLDS=-1 (unroll-major LDS on the NT operand; 1 is the MFMA path and
+#: is refused), NonTemporalC 1/2 (glc/slc on the C operand: L2 pollution
+#: control on a 1 MB L2).
+for _fam, _tile, _tt, _vw, _du in _R47_WINNERS:
+    _base = {"fam": _fam, "pattern": PATTERNS[_fam][0], "MacroTile": _tile,
+             "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du}
+    PLAN_BATCH.append({**_base, "StaggerU": 0, "StaggerUMapping": 0,
+                       "StaggerUStride": 0,
+                       "note": f"R47: StaggerU=0 on the {fam} winner (stagger off)"})
+    PLAN_BATCH.append({**_base, "TransposeLDS": -1,
+                       "note": f"R47: TransposeLDS=-1 on the {fam} winner "
+                               f"(unroll-major LDS on the NT operand)"})
+    for _nt in (1, 2):
+        PLAN_BATCH.append({**_base, "NonTemporalC": _nt,
+                           "note": f"R47: NonTemporalC={_nt} on the {fam} winner "
+                                   f"(C-operand L2 flavour)"})
+
+#: (3) MaxOccupancy: Tensile reserves LDS to *limit* the workgroups per CU.
+#: On a 7-CU part the opposite may be wanted (or the reservation may be what
+#: caps residency at the small cells), so 16 and 32 are worth one probe each.
+for _fam, _tile, _tt, _vw, _du in _R47_WINNERS:
+    for _mo in (16, 32):
+        PLAN_BATCH.append({
+            "fam": _fam, "pattern": PATTERNS[_fam][0], "MacroTile": _tile,
+            "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+            "MaxOccupancy": _mo,
+            "note": f"R47: MaxOccupancy={_mo} on the {fam} winner (LDS reservation)"})
+
+#: (4) The small cells: the *winner tile* with the thread tiles the coverage
+#: map found legal, unmeasured, and adjacent to the winner
+#: (`oto.harness.coverage_map`). SS:256's winner is 96x96/6x6 (412 GFLOPS) and
+#: the same tile with 4x6 / 6x4 / 8x6 has never been measured; HH:256's winner
+#: is 32x64/4x4 (763) and 32x64/4x8 is unmeasured; CC:192's winner is 64x64
+#: and 64x64/4x2 is unmeasured; DD:192's winner is 32x32/2x2.
+#: Each entry is (family, tile, thread tile, vector width, depth). The thread
+#: tiles are the legal, unmeasured ones next to the winner in the coverage
+#: map -- the classic load structure pins the vector width per thread tile
+#: (MT1 * GLVW == TT0 * TT1 * DepthU), so some of them only exist at the
+#: lower width.
+_R47_SMALL_CELLS: Tuple[Tuple[str, str, str, int, int], ...] = (
+    ("SS", "96x96x16", "4x6", 2, 16),
+    ("SS", "96x96x16", "6x4", 2, 16),
+    ("SS", "96x96x16", "8x6", 2, 16),
+    ("HH", "32x64x16", "8x4", 4, 16),
+    ("HH", "32x64x16", "4x8", 4, 16),
+    ("HH", "32x64x16", "2x4", 2, 16),
+    ("CC", "64x64x8", "4x2", 2, 8),
+    ("CC", "64x64x8", "2x4", 2, 8),
+    ("CC", "64x64x8", "4x8", 2, 8),
+    ("DD", "32x32x8", "2x4", 2, 8),
+    ("DD", "32x32x8", "4x2", 2, 8),
+    ("DD", "32x32x8", "4x4", 2, 8),
+)
+for _fam, _tile, _tt, _vw, _du in _R47_SMALL_CELLS:
+    PLAN_BATCH.append({
+        "fam": _fam, "pattern": PATTERNS[_fam][0], "MacroTile": _tile,
+        "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+        "note": f"R47: {_fam} small cell -- the winner tile with an "
+                f"unmeasured thread tile ({_tt})"})

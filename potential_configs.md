@@ -2670,3 +2670,212 @@ unanswered and are the only items worth external research:
    GCN? All published guidance assumes ≥32 CUs.
 5. Does `1LDSBuffer=1` with `ScheduleInnerAccuracy=2` actually halve LDS on
    gfx90c, or does Tensile ignore it on the assembly path?
+
+---
+
+## R47 — the straggler list, re-derived from the corpus (2026-10-21, 2nd-opinion pass)
+
+§R42 answered the user's "same losers again" complaint by classifying the
+stragglers into five classes and proposing eight routes. Three of those classes
+were **wrong**, and two of the routes were aimed at a bar that did not exist.
+This section is the corrected reading, with the evidence for every claim and
+the batch spec for the next run.
+
+**The three findings that change the plan.**
+
+1. **CC and ZZ were never behind — they are at the hardware roof.** The report
+   scored complex cells against the FP32/FP64 *BLAS-8* peaks (1613 / 101) while
+   the Tensile client reports complex GEMMs at **2 flops per complex MAC** (it
+   charges `2 * packing` flops, and packing is 1 for complex types --
+   `ContractionProblem.cpp:1108`, `DataTypes.hpp:177`). Every benchmark CSV
+   proves it: `TotalFlops == 2*M*N*K` for CC, ZZ, SS and DD alike. A complex MAC
+   is *executed* as four real FMAs = 8 BLAS flops, so a reported complex GFLOPS
+   is 1/4 of its BLAS-8 value, and the report divided every complex utilisation
+   by four. The truth: **CC runs at 80-97 % of the FMA roof and ZZ at 96-97 %**
+   (three independent checks in `gfx90c_theoretical_limits.md` §5.2). The
+   ORANGE list shrinks from **12 cells to 3**: `SS:256`, `HH:256`, `CC:192`.
+   §R42.2 (Class A) and §R43 Routes 1-3 (3M/Karatsuba, non-atomic split-K) are
+   **struck**: they were answers to a mis-scaled bar.
+2. **Most ties carry no kernel difference at all.** `oto.harness.resolve_cells
+   --taxonomy` groups the 38 cells by how far the two arms' winning configs are
+   apart. Of the 15 ties: **9 are `identical`** (the native and floor arms run
+   the *same* config -- the vendor's gfx900 tile transferred unchanged, which is
+   the user's "you didn't alter a single bit" reading, confirmed), 4 are
+   `no-floor` (the HPA columns ship no floor arm, so the "tie" is against a
+   reference the report cannot resolve), 1 is `near` and 1 is `retile`. Only
+   **two** ties are a real kernel difference, and both deltas (+2.2 %, +2.3 %)
+   are inside the environment band.
+3. **The environment band is 17.5 points wide, and the verdict band is 5.** On
+   the 16 `identical` cells -- same binary in both arms -- the delta ranges
+   **+1.1 % to +18.6 %**. That spread is *pure measurement* (different day,
+   different clock, different thermal state), and it is what a tuning win has
+   to clear. The floor arm carries **no clock telemetry at all** (it was
+   measured on 2026-10-03; `spoof_clock_coverage` is 0.0 in every cell), so the
+   A/B cannot be clock-corrected. The "wins" on identical cells (+18.6 % at
+   CC:2048) are environment, exactly like the ties.
+
+**So the 17-hour run did not fail to find tuning wins -- it could not have.**
+It was chasing deltas an order of magnitude smaller than the noise of the
+measurement protocol, on cells that were already at 85-97 % of the roof.
+
+### R47.1 The classes, corrected
+
+| class | cells | the truth | the lever |
+|---|---|---|---|
+| **A. Complex (CC/ZZ)** | 10 cells | **dissolved.** CC 80-97 % and ZZ 96-97 % of the FMA roof; the "ORANGE" was a 4x unit error. The one exception is **CC:192** (29 % of the roof), which is wave-fill-limited like the small SS/HH cells | none for CC:512+; CC:192 only |
+| **B. Small-cell residency** | `SS:256` 25.5 %, `HH:256` 23.7 %, `CC:192` 29.3 % of the roof | **real and physical.** The problem does not fit the machine: a 256³ cube with a 128×128 tile is 4 workgroups for 7 CUs (57 % fill), and the cell then runs at 25-37 % of the roof. Every knob that adds waves (GSU 2/4/8) measures **40-61 GFLOPS against 412** -- the atomic reduction costs more than the wave fill wins | tile/pattern that multiplies the workgroup count without shrinking the tile: **smaller MT with the same TT** (SS 64×64/4×4 = 16 workgroups), and the WGM/traversal axis |
+| **C. The ties** | 15 cells | **not a tuning problem.** 9 identical + 4 no-floor; the identical-cell spread is 17.5 points | **the measurement protocol**, not the kernel: re-measure the floor in-session, clock-normalise both arms, and report the environment band beside every verdict |
+| **D. The frontier** | 256×128 / 128×256 tiles | **the control was impossible.** 256×128 at TT 8×4 is 1024 threads, where the file leaves 64 VGPRs/thread and the thread tile emits 77 -- Tensile's error 4. The 8 SS phases of the 2026-10-20 run died exactly there. The legal 256×128 (TT 8×8, 512 threads) was measured: **802 vs 1187** -- the area is worse, not better | none; the frontier is closed on this part |
+| **E. Virgin knobs** | 22 axes | **partly never varied at all**: `StaggerU=0` was *refused* by a gate that read Tensile's FORCE as a reject (14 deck rows, 98 shape-records, zero measured); `TransposeLDS` and `NonTemporalC/D` were *declared forwarded but never emitted* (silent placebos). Both are fixed now | the real virgin batch is §R47.4 |
+
+### R47.2 Route 1 (new, first): make the A/B able to see a win
+
+Everything else is downstream of this. Today the acceptance verdict compares a
+corpus measured on 2026-10-20/21 against a floor measured on 2026-10-03, with
+no clock on the floor side (`spoof_clock_coverage` 0.0 in all 38 cells) and a
++/-5 % verdict band, while the same binary varies 17.5 points between the two
+arms.
+
+- **Re-measure the floor in the same session.** `port_tensile.py --gfx900-reference`
+  re-benchmarks the shipped gfx900 kernels into a fresh `gfx900_ref_*` run, with
+  telemetry, next to the native arm. The driver's auto loop already attempts
+  the reference chain; the last run's report says the floor re-measurement was
+  *declined*, which is why the run is marked PROVISIONAL. **Declining it is
+  what makes the verdicts unreadable** -- it is the one thing this project can
+  still get for free.
+- **Clock-normalise both arms.** The native arm's busy-clock median in the
+  2026-10-20 run was 1650 MHz (per-phase median 1624 MHz) against the 1800 MHz
+  reference -- a 8-10 % systematic handicap on the native side. With telemetry on
+  both arms the existing `ab_delta` clock correction can do its job (it needs
+  >= 50 % coverage per arm; the native arm had 28.6 %).
+- **Report the environment band.** `resolve_cells --taxonomy` prints it; the
+  acceptance report should carry the identical-config spread next to the
+  verdict band, so a "WIN" on an identical cell is visibly an environment win.
+
+### R47.3 Route 2: the three cells that really are behind
+
+`SS:256` (412 GFLOPS, 25.5 % of the roof), `HH:256` (763, 23.7 %) and
+`CC:192` (118 reported = 473 BLAS-8, 29.3 %) are the only cells with real
+headroom. The corpus answers most of it (best seed-median per geometry,
+`kernel_db.json`):
+
+| cell | winner | MT | TT | workgroups | nearest losers |
+|---|---|---|---|---|---|
+| SS:256 | 412.1 | 96x96 | 6x6 VW2 DU16 | 9 | 64x64/4x4 = 217.3, 128x128/8x8 = 110.0, 32x64/4x4 = 177.3 |
+| HH:256 | 763.4 | 32x64 | 4x4 VW4 DU16 | 32 | 64x64/4x4 = 199.2, 32x32/4x4 = 201.5, 128x128/8x8 = 195.2 |
+| CC:192 | 118.2 | 64x64 | 4x4 VW2 DU8 | 9 | 32x32/4x4 = 113.8, 64x32 = 43.5 |
+| DD:192 | 77.8 | 32x32 | 2x2 VW2 DU8 | 36 | 32x32/4x4 = 58.9, 64x64/4x4 = 62.3 |
+
+**What the table says.** HH:256's winner has *twice* the workgroups of its
+nearest loser (32 against 16) and is 3.8x faster -- the cell is
+wave-quantization-limited and the tile that produces more workgroups wins. SS:256
+is the opposite trade: 96x96 has *fewer* workgroups (9) than 64x64 (16) and
+still wins 1.9x, because S's 4-byte elements make the LDS traffic per FLOP
+twice H's and the bigger tile buys the register blocking back. CC:192's 64x64
+wins over 32x32 by 4 % -- the same workgroup-count trade, and at 9 workgroups
+for 7 CUs the critical path is 2x the ideal.
+
+**So the lever for the small cells is the workgroup count at a fixed FMA:LDS
+ratio, and the two knobs that move it are the tile and the thread tile.**
+`oto.harness.coverage_map` lists what is left: for SS:256 the *legal* 96x96
+tile has never been measured with any thread tile other than 6x6 (4x6, 6x4,
+6x8, 8x6 are legal, unmeasured, and all neighbours of the 412 winner). That is
+the local minimum the map exists to find: the neighbourhood is fast and the
+point itself is untried. Coverage across the deck is 8-13 % of the legal
+geometry space (419 legal geometries for SS, 205 for CC, 302 for DD, 52 for
+ZZ; 15-54 measured per cell) -- the corpus is a thin sample of a large legal
+space, which is the quantitative form of "we are stuck in local minima".
+
+**What is NOT the answer:** GlobalSplitU. Measured on SS:256, GSU 2/4/8 give
+**40-61 GFLOPS against 412** -- the atomic C reduction costs far more than the
+wave fill wins, so the split-K route is dead as a *config* route on this part.
+A non-atomic split-K needs a workspace and a second kernel (new machinery),
+and its ceiling is the 2x fill of CC:192.
+
+
+### R47.4 Route 3: the virgin batch that is actually virgin now
+
+With the placebos fixed (§R47.1 class E), these axes have *never* been measured
+on this part and are legal:
+
+| knob | values | on which cells | why it might move |
+|---|---|---|---|
+| `StaggerU=0` | 0 | every winner | the store stagger is off: on a 1 MB L2 with 7 CUs the 56-CU-tuned stagger may be spreading the wrong way. **Never measured** (the gate refused it) |
+| `TransposeLDS=-1` | -1 | SS/HH/DD/CC/ZZ winners | unroll-major LDS on the NT operand: a different LDS layout, different bank behaviour. **Never measured** (the knob was never emitted; the value 1 is the MFMA path and is refused) |
+| `NonTemporalC/D` | 1, 2, 4 | SS:512/1024, CC:512, HH:1024 | glc/slc on the C operand: L2 pollution control on a 1 MB L2. **Never measured** (the knob was never emitted) |
+| `LdsPadA/B` | 1, 2, 4 | every winner | bank conflicts on 8/16-B complex elements. Measured 0.95-1.0 of base -- closed |
+| `PrefetchGlobalRead=2` | 2 | SS:512/1024, HH:512/1024 | 2-deep global prefetch: more latency hiding at the cost of LDS. Legal on the 64 KB LDS only where the doubled tile fits (gated) |
+| `NLCA=-1` | -1 | 3-load tiles | least-coalesced regime. Measured once, no effect |
+| `MaxOccupancy` | 16, 32 | every winner | Tensile reserves LDS to *limit* occupancy; the opposite of what this machine wants -- but it also caps the workgroups per CU, which may be the residency lever at the small cells |
+| `StaggerUMapping` | 1, 2 | every winner | the swizzle's *mapping* (how the offset is applied) is a separate knob from the stride and has never been varied |
+| `FractionalLoad` | 2 | every winner | ragged-edge loads; no effect on square cells |
+| `WorkGroupMapping` | 2, 3, -1, -4 | SS:512/1024, HH:1024/2048, CC:512/1024, DD:1024 | the traversal order of the tile grid on a **7-CU** part: the gfx900 configs assume 56 CUs. This is the most gfx90c-specific knob in the deck |
+
+Every one of these is a *config*, not new machinery, and every one is now
+verified to reach Tensile (`oto.tensile.config_writer.FORWARDED_KNOBS` is
+pinned to the fork surface by
+`tests/test_writer_forwards_sweep_knobs.py`, which is what caught the
+`TransposeLDS` placebo).
+
+### R47.5 Route 4: what is struck, and why
+
+- **3M / Karatsuba for complex** (§R43 Route 1): struck. At 80-97 % of the roof
+  the 25 % instruction saving cannot be cashed in, and the O(MK+KN+MN) combine
+  is pure overhead at these sizes.
+- **Non-atomic split-K for complex** (§R43 Route 2): struck as a *near-term*
+  route. The atomic GSU path is measured at 40-61 GFLOPS against 412 on
+  SS:256, so the reduction cost dominates; a non-atomic split-K needs a
+  workspace and a second kernel -- new machinery, and the only cell that could
+  use it (CC:192) is worth 2x at most.
+- **"Steal the gfx900 config and tweak it"** (§R26/§R30): still refused, and
+  now with a *measurement* reason rather than a taste reason: the tied cells
+  already run the floor's own config (9 identical cells), so there is nothing
+  left to steal -- and the ones that differ are already at 85-97 % of the roof.
+- **"Wider MacroTile"** (§R40): closed. The 256×128/128×256 control is illegal
+  at 1024 threads (error 4), and the legal 256×128 measures 802 vs 1187.
+
+### R47.6 Questions for a read-only research agent (only what the docs cannot answer)
+
+§R46's five stand. Two more, and one of §R46's is now moot:
+
+1. **(unchanged)** Is there a published GCN5 (gfx900/90c) complex-GEMM tile
+   optimum, or guidance on register blocking for 1/16-rate FP64 on Wave64?
+2. **(unchanged)** Does `NonTemporal` (glc/slc) actually bypass L2 on gfx90c,
+   or only L1?
+3. **(unchanged)** What is the real L2 associativity/line size on gfx90c?
+4. **(unchanged)** Is there a published optimal `WorkGroupMapping` for small
+   CU counts (<= 8) on GCN? All published guidance assumes >= 32 CUs. **This is
+   the one question that matters most now**: WGM is the most gfx90c-specific
+   knob in the deck and the corpus has 1/4/8 measured.
+5. **(unchanged)** Does `1LDSBuffer=1` with `ScheduleInnerAccuracy=2` halve LDS
+   on gfx90c, or does Tensile ignore it on the assembly path?
+6. **(new)** For a wave-quantization-starved cell (a 256³ GEMM on 7 CUs), is
+   there a known-good way to recover the missing waves on GCN5 -- a persistent
+   kernel, a stream-K decomposition, or a two-tile schedule -- given that
+   Tensile's GSU path is atomic and the atomics cost more than the fill wins?
+7. **(new)** What is the published guidance on **measuring** GEMM kernels on a
+   small, thermally-limited APU: how many repeats, what clock normalisation,
+   and what inter-run variation should be treated as noise? The project is
+   currently using a +/-5 % verdict band on a measurement whose run-to-run
+   spread on identical binaries is 17.5 points, and the answer decides whether
+   the next run can produce a single trustworthy WIN.
+
+### R47.7 The batch for the next overnight run
+
+Ordered by expected value, not by novelty:
+
+1. **WGM 2/3/-1/-4 on the 7-CU tile grid** (SS:512/1024/2048, HH:1024/2048,
+   CC:512/1024, DD:1024/2048) -- the only axis where the gfx900 floor is
+   *structurally* wrong for this part.
+2. **The floor re-measurement** (`--gfx900-reference`) so the verdicts can be
+   read at all.
+3. **`StaggerU=0`, `TransposeLDS=-1`, `NonTemporalC/D`, `MaxOccupancy`,
+   `StaggerUMapping`** on the winner geometry of every family -- the axes that
+   have never actually been varied.
+4. **The three small cells** re-measured with the *smaller* tiles the corpus
+   says are better (SS 64×64/4×4, HH 64×64/8×8, CC 64×64 with WGM 2/3), so the
+   cell's winner is chosen on equal footing with the 128×128 row.
+5. **Nothing on CC:512+ and ZZ:512+** -- they are at 80-97 % of the roof.
+
+Rows 1 and 3 are configs; row 2 is a protocol change; row 4 is a re-measure of
+configurations that already exist in the corpus.

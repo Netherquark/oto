@@ -281,6 +281,29 @@ def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
     return VGPR_PER_CU // acc
 
 
+def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
+                          lsu: int) -> Optional[str]:
+    """The register-file rules, in the order Tensile reaches them.
+
+    * the LocalSplitU spelling contradiction (a config that means two things),
+    * the workgroup register file (``weight*MT0*MT1*LSU >= 65536``),
+    * the per-thread occupancy limit (the EMITTED VGPRs against
+      ``65536 // NumThreads``),
+    * the LDS reduction buffer (``LSU*MT0*MT1*computeBytes > 65536``).
+    """
+    reason = _local_split_u_contradiction(config)
+    if reason:
+        return reason
+    mt0, mt1, _tt0, _tt1 = dims
+    reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
+    if reason:
+        return reason
+    reason = _occupancy_limit_check(dims, ch, dims[2], dims[3], lsu)
+    if reason:
+        return reason
+    return _lds_reduction_check(config, ch, mt0, mt1, lsu)
+
+
 def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Register-file gate: reject configs Tensile cannot generate.
 
@@ -325,16 +348,7 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if acc > ACCVGPR_BUDGET:
         return False, _accvgpr_rejection(ch, r, tt0, tt1, acc)
     lsu = local_split_u(config)
-    reason = _local_split_u_contradiction(config)
-    if reason:
-        return False, reason
-    reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
-    if reason:
-        return False, reason
-    reason = _occupancy_limit_check(dims, ch, tt0, tt1, lsu)
-    if reason:
-        return False, reason
-    reason = _lds_reduction_check(config, ch, mt0, mt1, lsu)
+    reason = _register_file_checks(config, dims, ch, r, lsu)
     if reason:
         return False, reason
     ku = depth_u(config)
@@ -517,6 +531,27 @@ def _int_or_reject(value, label: str) -> Tuple[Optional[int], Optional[str]]:
         return None, f"{label} must be an integer (have {value!r})"
 
 
+def _swizzle_domain_check(config: Dict[str, Any]) -> Optional[str]:
+    """The three swizzle knobs' own domains, or None when they are legal.
+
+    Tensile's domains (Common.py:945-947): StaggerU in {0,2,4,8,16,32,64},
+    StaggerUMapping in {0,1,2,3,4}, StaggerUStride in
+    {0,16,32,64,128,256,512,1024,2048}.
+    """
+    for key, domain, cite in (
+            ("StaggerU", STAGGER_U_DOMAIN, "945"),
+            ("StaggerUMapping", STAGGER_MAPPING_DOMAIN, "946"),
+            ("StaggerUStride", STAGGER_STRIDE_DOMAIN, "947")):
+        value = config.get(key)
+        if value is None:
+            continue
+        parsed, err = _int_or_reject(value, key)
+        if err or parsed not in domain:
+            return (f"{key}={parsed} outside Tensile domain {domain} "
+                    f"(Common.py:{cite})")
+    return None
+
+
 def _swizzle_feasible(config: Dict[str, Any], ku: int,
                        bpe: Optional[int]) -> Tuple[bool, str]:
     """The coupled StaggerU / StaggerUMapping / StaggerUStride domains.
@@ -547,29 +582,14 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
     was refused at the launch boundary. Corrected against the pinned checkout
     (Tensile commit e8a8999e).
     """
-    stagger_u = config.get("StaggerU")
-    stagger_mapping = config.get("StaggerUMapping")
-    su = config.get("StaggerUStride")
-    if stagger_u is not None:
-        su_val, err = _int_or_reject(stagger_u, "StaggerU")
-        if err or su_val not in STAGGER_U_DOMAIN:
-            return False, (f"StaggerU={su_val} outside Tensile domain "
-                           f"{STAGGER_U_DOMAIN} (Common.py:945)")
-    if stagger_mapping is not None:
-        sum_val, err = _int_or_reject(stagger_mapping, "StaggerUMapping")
-        if err or sum_val not in STAGGER_MAPPING_DOMAIN:
-            return False, (f"StaggerUMapping={sum_val} outside Tensile domain "
-                           f"{STAGGER_MAPPING_DOMAIN} (Common.py:946)")
-    if su is not None:
-        stride, err = _int_or_reject(su, "StaggerUStride")
-        if err or stride < 0 or stride not in STAGGER_STRIDE_DOMAIN:
-            return False, (f"StaggerUStride={stride} outside Tensile domain "
-                           f"{STAGGER_STRIDE_DOMAIN} (Common.py:947)")
+    domain = _swizzle_domain_check(config)
+    if domain:
+        return False, domain
     # Coupling. Tensile defaults SU=32 (absent SU = >0); absent SU = "stagger on".
-    su_effective = STAGGER_U_DEFAULT if stagger_u is None else int(stagger_u)
-    stride_effective = STAGGER_STRIDE_DEFAULT if su is None else int(su)
-    mapping_effective = (STAGGER_MAPPING_DEFAULT if stagger_mapping is None
-                         else int(stagger_mapping))
+    su_effective = (STAGGER_U_DEFAULT if config.get("StaggerU") is None
+                    else int(config["StaggerU"]))
+    stride_effective = (STAGGER_STRIDE_DEFAULT if config.get("StaggerUStride") is None
+                        else int(config["StaggerUStride"]))
 
     if su_effective == 0:
         # Tensile FORCES the mapping and the stride to 0 here
