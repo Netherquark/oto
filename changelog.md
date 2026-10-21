@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 (3rd) — the deck is sized for the 10 h run, and there is a
+  tool that proves the new candidates build.** Two facts the previous state
+  hid: the overlay's unmeasured work was **114 phases (2.5 h)**, and the
+  auto-mutator contributes only ~10 candidates per iteration (the 2026-10-20
+  run: 702 deck phases completed, 10 mutator phases) — so a 10-iteration
+  budget was *not* a 10 h run. The **R49 batch** adds 300 rows: the ranked
+  unexplored space of the three ORANGE cells, taken from the coverage map
+  (the geometries the corpus has never run on ANY cell of that family, ordered
+  by how well their measured neighbours scored), gate-filtered (16 candidates
+  dropped as load-divisibility-illegal). The deck now carries **401 new
+  phases ≈ 9 h**, plus the mutator's contribution.
+  `oto.harness.deck_check` is the missing "no bugs" gate: it puts every
+  *unmeasured* deck row through Tensile's own kernel writer (the legality
+  oracle) and reports the ones it refuses — the check that would have caught
+  the 8 error-4 phases of the 2026-10-20 run before they cost a launch slot
+  each. It is CPU-only, resumable (it records the rows it probed), and it
+  never launches anything.
+
 - **2026-10-22 (2nd) — the acceptance report carries the coverage figures.**
   A new **Problem-space coverage** section sits under the A/B table: the legal
   geometry space of every cell with the measured part painted by value, the

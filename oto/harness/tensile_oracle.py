@@ -87,6 +87,36 @@ def _capture_derived() -> Tuple[Any, List[Dict[str, Any]]]:
     return original, seen
 
 
+def probe_phase(phase: Dict[str, Any], base_dir: Optional[Path] = None
+                ) -> Dict[str, Any]:
+    """Ask Tensile whether a *phase* (a deck row) builds.
+
+    The phase is written exactly the way the run writes it -- through the
+    driver's own ``_write_phase_config`` -- so the probe exercises the same
+    materialisation the launch boundary will.
+
+    Args:
+        phase: The phase dict (phase_id, label, dtype, shapes, config).
+        base_dir: The repo root.
+
+    Returns:
+        The same dict as :func:`probe_config`.
+    """
+    from oto.runners.driver import TensileDriver
+
+    base = Path(base_dir or _HERE)
+    driver = TensileDriver(base, create_run=False)
+    out_dir = Path(tempfile.mkdtemp(prefix="oto-oracle-"))
+    config_path = out_dir / f"{phase.get('phase_id', 'probe')}.yaml"
+    wrote, refusal = driver._write_phase_config(config_path, phase)
+    if not wrote:
+        return {"config": dict(phase.get("config", {})),
+                "wrote": False, "gate_refusal": refusal,
+                "tensile": {"ok": None, "solutions": 0, "reason": None},
+                "derived": None, "lds_bytes": 0}
+    return _probe_written(config_path, phase.get("config", {}))
+
+
 def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
                  shapes: Optional[Sequence[str]] = None) -> Dict[str, Any]:
     """Ask Tensile what it makes of a config.
@@ -112,19 +142,22 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
 
     driver = TensileDriver(base, create_run=False)
     out_dir = Path(tempfile.mkdtemp(prefix="oto-oracle-"))
+    phase = _phase(config, dtype=str(config.get("DataType", "S")))
+    if shapes:
+        phase["shapes"] = list(shapes)
     config_path = out_dir / f"{phase['phase_id']}.yaml"
     wrote, refusal = driver._write_phase_config(config_path, phase)
-
-    result: Dict[str, Any] = {
-        "config": dict(config),
-        "wrote": bool(wrote),
-        "gate_refusal": refusal,
-        "tensile": {"ok": None, "solutions": 0, "reason": None},
-        "derived": None,
-        "lds_bytes": 0,
-    }
     if not wrote:
-        return result
+        return {"config": dict(config), "wrote": False,
+                "gate_refusal": refusal,
+                "tensile": {"ok": None, "solutions": 0, "reason": None},
+                "derived": None, "lds_bytes": 0}
+    return _probe_written(config_path, config)
+
+
+def _probe_written(config_path: Path, config: Dict[str, Any]) -> Dict[str, Any]:
+    """Run Tensile over a written config and report what it decided."""
+    from oto.checks.tensile_build import _init_tensile, probe_phase_config
 
     _init_tensile()
     original, seen = _capture_derived()
@@ -133,9 +166,16 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
     finally:
         from Tensile.SolutionStructs import Solution
         Solution.assignDerivedParameters = original
-    result["tensile"] = {"ok": probe.get("ok"),
-                         "solutions": probe.get("solutions"),
-                         "reason": probe.get("reason")}
+    result: Dict[str, Any] = {
+        "config": dict(config),
+        "wrote": True,
+        "gate_refusal": None,
+        "tensile": {"ok": probe.get("ok"),
+                    "solutions": probe.get("solutions"),
+                    "reason": probe.get("reason")},
+        "derived": None,
+        "lds_bytes": 0,
+    }
     if seen:
         result["derived"] = seen[-1]
         result["lds_bytes"] = _lds_bytes(seen[-1])
