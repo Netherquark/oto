@@ -17,12 +17,14 @@ oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/corpus_census.py      # corpus history: axis/geometry coverage + per-cell geometry history
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
+oto/harness/coverage_map.py       # legal geometry space per cell + what the corpus measured in it
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
 gfx90c_results/analysis/cells_resolved.json     # cache (winner map; resolve_cells)
 gfx90c_results/analysis/cells_resolved.full.txt # same, human table (potential_configs.md §3)
+gfx90c_results/analysis/coverage_map.json      # cache (legal space + coverage; coverage_map)
 ```
 
 Module list and ownership: see [`oto/README.md`](../oto/README.md) for the harness

@@ -53,6 +53,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/rule_calibration.py` | Probe a proposed gate rule in isolation: false rejections (must be 0) + empty-phase catches, by family |
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
+| `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
@@ -114,6 +115,18 @@ Report `floor_best` as co-primary alongside `winner`.
 | F: persistent fixed grid | conceptual only | all |
 
 ## Reading the deck's stragglers
+
+`python3 -m oto.harness.coverage_map --cell SS:256` answers the question the
+census cannot: not "what has been measured" but "what *could* have been" -- the
+legal geometry space per cell, the part of it the corpus covers (8-13 %), and
+the legal-but-unmeasured geometries ranked by how well their neighbours
+measured. That is the local-minimum finder: the neighbourhood is fast and the
+point itself is untried.
+
+`python3 -m oto.harness.resolve_cells --taxonomy` says what each verdict is
+made of: on the `identical` cells both arms run the *same* config, so their
+delta is measurement environment, and the spread over those cells (17.5
+points) is the band any real win has to clear.
 
 `python3 -m oto.harness.resolve_cells` prints one row per cell with a `cfg_gap`
 class; `potential_configs.md` §R17 reads it into a route:
