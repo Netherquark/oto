@@ -798,10 +798,18 @@ for _fam, _tile, _tt, _vw, _du, _extra in _WGM_ROWS:
 #: with only these four rows a loss at 256x128/8x8 and a win at 256x128/8x4 is
 #: unambiguously a residency effect. HH needs the free-dimension assertion at
 #: VW4 for the same load-divisibility reason as the frontier itself.
+#:
+#: The SS half of the control is GONE, and it was never legal: 256x128 at TT
+#: 8x4 is 1024 threads, and at 1024 threads the file leaves 65536/1024 = 64
+#: VGPRs/thread while the thread tile emits 77 -- Tensile's error 4
+#: ("Generating kernel source resulted in error 4"). The 8 SS rows died that
+#: way in the 2026-10-20 run and the occupancy gate now refuses them before
+#: launch (the per-thread occupancy limit, `gates/occupancy.py`
+#: `_occupancy_limit_check`). The control is not "bad", it is impossible on
+#: this part: at 256x128 the only thread tile that fits 1024 threads needs
+#: more than 64 VGPRs/thread. HH's control survives (H 8x4 emits 57).
 _FRONTIER_THREAD_CONTROLS: Tuple[
         Tuple[str, str, str, int, int, Dict[str, Any]], ...] = (
-    ("SS", "256x128x8", "8x4", 2, 8, {}),
-    ("SS", "128x256x8", "4x8", 2, 8, {}),
     ("HH", "256x128x16", "8x4", 4, 16, {"AssertFree1ElementMultiple": 2}),
     ("HH", "128x256x16", "4x8", 4, 16, {"AssertFree0ElementMultiple": 2}),
 )

@@ -70,7 +70,7 @@ from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
                          MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
                          MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
                          compute_bytes, depth_u, lds_base_bytes, local_split_u,
-                         measured_accvgpr, num_threads)
+                         measured_accvgpr, num_threads, per_thread_vgpr)
 
 #: Legal StaggerU values (Tensile Common.py:945).
 STAGGER_U_DOMAIN = (0, 2, 4, 8, 16, 32, 64)
@@ -187,6 +187,22 @@ def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
         f"(overflowedResources / the 'Occupancy limit' in KernelWriterAssembly "
         f"functionSuffix) with no room left for operands. Reduce MacroTile area "
         f"(<= {VGPR_PER_CU // r} elements per workgroup) or drop LocalSplitU."
+    )
+
+
+def _occupancy_limit_rejection(ch: str, tt0: int, tt1: int, vgpr: int,
+                                nt: int) -> str:
+    """Reject text for a kernel whose per-thread VGPRs do not fit the file."""
+    return (
+        f"ThreadTile {tt0}x{tt1} emits {vgpr} VGPRs/thread and the workgroup "
+        f"has {nt} threads: Tensile's occupancy limit is "
+        f"65536 // {nt} = {VGPR_PER_CU // nt} VGPRs/thread, so the workgroup "
+        f"needs {vgpr * nt} VGPRs against the file's {VGPR_PER_CU}. Tensile "
+        f"raises 'Generating kernel source resulted in error 4' "
+        f"(KernelWriterAssembly.functionSuffix: "
+        f"numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1). "
+        f"Use a smaller thread tile, a smaller MacroTile, or a tile with more "
+        f"threads per element."
     )
 
 
@@ -312,6 +328,9 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
     if reason:
         return False, reason
+    reason = _occupancy_limit_check(dims, ch, tt0, tt1, lsu)
+    if reason:
+        return False, reason
     reason = _lds_reduction_check(config, ch, mt0, mt1, lsu)
     if reason:
         return False, reason
@@ -338,6 +357,34 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> Optional[str]:
     if weight * mt0 * mt1 * lsu >= VGPR_PER_CU:
         return _workgroup_vgpr_rejection(
             ch, weight, mt0, mt1, lsu, num_threads(dims, lsu))
+    return None
+
+
+def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> Optional[str]:
+    """Reason when the EMITTED per-thread VGPRs do not fit the workgroup.
+
+    Tensile's error-4 test (``KernelWriterAssembly.functionSuffix``) is
+
+        vgprPerThreadPerOccupancy = 65536 // NumThreads
+        numWorkGroupsPerCU = vgprPerThreadPerOccupancy // max(vgpr, agpr)
+        if numWorkGroupsPerCU < 1: overflowedResources = 4
+
+    The *emitted* ``vgpr`` (accumulators **plus** the A/B operand fragments and
+    the addresses) has to fit in ``65536 // NumThreads``. The accumulator-only
+    rules miss this: SS 256x128 with TT 8x4 emits 79 VGPRs/thread over 1024
+    threads (64 VGPRs/thread available) and dies with error 4, while its
+    accumulator total is only 32768 -- half the file, so both accumulator rules
+    pass it. The classic path has no arch accumulator registers (``agpr`` is 0),
+    so the test is on ``vgpr`` alone.
+    """
+    nt = num_threads(dims, lsu)
+    if nt <= 0:
+        return None
+    vgpr = per_thread_vgpr(ch, tt0, tt1)
+    if not vgpr:
+        return None
+    if VGPR_PER_CU // nt < vgpr:
+        return _occupancy_limit_rejection(ch, tt0, tt1, vgpr, nt)
     return None
 
 

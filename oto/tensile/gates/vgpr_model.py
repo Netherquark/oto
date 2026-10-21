@@ -13,7 +13,8 @@ Public API: GLOBAL_LOAD_BYTE_CAP, FAMILY_BYTES_PER_ELEMENT, VGPR_PER_CU,
 MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT, ACCVGPR_BUDGET, LDS_BUDGET,
 MAX_LDS_BYTES, BYTES_PER_ELEMENT, COMPUTE_BYTES_PER_ELEMENT, VGPR_BUDGET,
 MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE, measured_accvgpr, depth_u,
-lds_base_bytes, local_split_u, num_threads, is_hpa, compute_bytes.
+lds_base_bytes, local_split_u, num_threads, per_thread_vgpr, is_hpa,
+compute_bytes.
 """
 
 from __future__ import annotations
@@ -108,21 +109,26 @@ MEASURED_VGPR = {
 }
 
 #: Measured TOTAL per-thread VGPRs (kernarg + operand + accumulator), read
-#: 2026-10-09 from the run corpus' emitted code objects with
+#: 2026-10-21 from the run corpus' emitted code objects with
 #: `python3 -m oto.harness.measure_vgprs` (llvm-readelf on the Tensile assembly
-#: .o metadata, CPU-only). Prefer the dtype-keyed table over MEASURED_VGPR
-#: (which is the weight-8 complex table used when no dtype is in hand).
+#: .o metadata, CPU-only) over 4419 code objects. These are the corpus MEDIANs
+#: per (dtype, thread tile): a median, not a worst case, because the occupancy
+#: gate needs a representative number -- a pessimistic one refuses kernels
+#: Tensile builds (Z 2x2 measures 63, not 71, and a 64x64/2x2 workgroup of
+#: 1024 threads has exactly 64 VGPRs/thread to spend). Prefer the dtype-keyed
+#: table over MEASURED_VGPR (which is the weight-8 complex table used when no
+#: dtype is in hand).
 MEASURED_VGPR_BY_DTYPE = {
-    "S": {(2, 2): 26, (2, 4): 43, (4, 2): 43, (4, 4): 47, (4, 6): 65,
-          (4, 8): 77, (6, 4): 65, (6, 6): 83, (8, 4): 79, (8, 8): 119,
+    "S": {(2, 2): 24, (2, 4): 43, (4, 2): 43, (4, 4): 47, (4, 6): 65,
+          (4, 8): 77, (6, 4): 65, (6, 6): 83, (8, 4): 77, (8, 8): 113,
           (8, 16): 199, (16, 8): 199},
-    "D": {(2, 2): 39, (2, 4): 53, (4, 2): 53, (4, 4): 79, (4, 8): 131,
+    "D": {(2, 2): 35, (2, 4): 53, (4, 2): 53, (4, 4): 79, (4, 8): 131,
           (8, 4): 131, (8, 8): 215},
     "H": {(2, 2): 21, (4, 4): 35, (4, 8): 57, (6, 6): 48, (8, 4): 57,
           (8, 8): 65, (8, 16): 105, (16, 8): 105},
     "C": {(2, 2): 39, (2, 4): 59, (4, 2): 59, (4, 4): 79, (4, 8): 134,
           (8, 4): 134},
-    "Z": {(2, 2): 71, (2, 4): 99, (4, 2): 99, (2, 8): 171, (4, 4): 167},
+    "Z": {(2, 2): 63, (2, 4): 99, (4, 2): 99, (2, 8): 171, (4, 4): 167},
 }
 
 
@@ -283,4 +289,54 @@ def num_threads(dims: Tuple[int, int, int, int], lsu: int) -> int:
     if min(mt0, mt1, tt0, tt1) <= 0:
         return 0
     return (mt0 // tt0) * (mt1 // tt1) * lsu
+
+
+def per_thread_vgpr(ch: str, tt0: int, tt1: int) -> int:
+    """The kernel's per-thread VGPR count, as Tensile would emit it.
+
+    Tensile's error-4 test (``KernelWriterAssembly.functionSuffix``) is
+
+        vgprPerThreadPerOccupancy = 65536 // NumThreads
+        numWorkGroupsPerCU = vgprPerThreadPerOccupancy // max(vgpr, agpr)
+        if numWorkGroupsPerCU < 1: overflowedResources = 4
+
+    so the *emitted* per-thread VGPR count -- not just the accumulators -- has
+    to fit in ``65536 // NumThreads``. The classic (non-MFMA) path has no arch
+    accumulator registers, so ``agpr`` is 0 and the test is on ``vgpr`` alone.
+
+    Args:
+        ch: The dtype char ("S", "D", "H", "C", "Z").
+        tt0, tt1: The thread-tile dimensions.
+
+    Returns:
+        The measured per-thread VGPR total when the corpus has one for this
+        (dtype, thread tile), else a conservative upper bound (the
+        accumulators plus the largest operand overhead ever measured for this
+        dtype) so the caller errs toward refusing, never toward admitting an
+        error-4 kernel.
+    """
+    measured = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt0, tt1))
+    if measured is not None:
+        return measured
+    weight = VGPR_PER_ELEMENT.get(ch)
+    if not weight:
+        return 0
+    acc = tt0 * tt1 * weight
+    return acc + _max_operand_overhead(ch)
+
+
+def _max_operand_overhead(ch: str) -> int:
+    """The largest (measured total - accumulators) ever seen for a dtype.
+
+    The operand fragments (A/B tiles, addresses, the alpha/beta path) cost more
+    VGPRs than the accumulators alone, and the cost grows with the thread
+    tile. For an unmeasured thread tile the largest observed overhead is the
+    only defensible bound: it may refuse a kernel Tensile would accept, but it
+    never admits one Tensile refuses with error 4.
+    """
+    weight = VGPR_PER_ELEMENT.get(ch) or 0
+    overheads = [total - (tt0 * tt1 * weight)
+                 for (tt0, tt1), total in
+                 (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).items()]
+    return max(overheads) if overheads else 0
 

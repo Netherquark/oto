@@ -9,6 +9,26 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (4th) — the missing error-4 rule, and the frontier control
+  that was never legal.** Tensile's error 4 is
+  `numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1`
+  (`KernelWriterAssembly.functionSuffix`): the *emitted* per-thread VGPR
+  count -- accumulators **plus** operand fragments and addresses -- has to fit
+  in `65536 // NumThreads`. The gate modelled the accumulators only, so it
+  passed configs Tensile kills: the 8 SS frontier phases of the 2026-10-20 run
+  (256x128 and 128x256 at TT 8x4/4x8 = 1024 threads, 77 VGPRs/thread against
+  64 available) died with "Generating kernel source resulted in error 4" and
+  the run paid for them. New rule
+  (`gates/occupancy.py::_occupancy_limit_check`, estimator
+  `vgpr_model.per_thread_vgpr`); the measured VGPR table is now the corpus
+  **median** per (dtype, thread tile) (Z 2x2 measures 63, not 71 -- the old
+  value refused a kernel Tensile builds). Gate calibration over the whole
+  corpus: **4419 agree / 140 refused / 0 MISS / 0 false rejections**. The 8 SS
+  "half the accumulators at the same area" control rows are removed from the
+  batch: at 256x128 the only thread tile that fits 1024 threads needs more
+  than 64 VGPRs/thread, so the control is impossible on this part. The HH
+  control survives (H 8x4 emits 57).
+
 - **2026-10-21 (3rd) — the "no-swizzle" arm was dead on arrival: the gate
   read Tensile's FORCE as a reject.** `SolutionStructs:3334-3336` *forces*
   `StaggerUMapping = 0` and `StaggerUStride = 0` when `StaggerU == 0`; the

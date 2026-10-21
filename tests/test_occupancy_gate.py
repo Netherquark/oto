@@ -539,8 +539,10 @@ class TestLdsReductionBuffer(unittest.TestCase):
     """
 
     def test_oversized_reduction_is_refused(self):
+        # TT 8x8 so the *reduction* rule is the binding one: at 1024 threads
+        # (TT 4x4) the per-thread occupancy limit fires first and says so.
         ok, why = occupancy_feasible(
-            cfg("S", "128x128x8", "4x4", LocalSplitU=2, WorkGroup=[32, 32, 2]))
+            cfg("S", "128x128x8", "8x8", LocalSplitU=2, WorkGroup=[16, 16, 2]))
         self.assertFalse(ok)
         self.assertIn("reduction", why)
 
