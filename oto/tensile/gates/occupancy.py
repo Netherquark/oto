@@ -448,8 +448,9 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
 
     Tensile source (SolutionStructs:3326-3342, Common.py:945-947, 1599-1601):
 
-      * StaggerUStride=0 is only valid if StaggerU=0.
-      * StaggerU=0 forces StaggerUMapping=0 and StaggerUStride=0.
+      * StaggerUStride=0 is only valid if StaggerU=0 -- the ONE reject.
+      * StaggerU=0 FORCES StaggerUMapping=0 and StaggerUStride=0
+        (":3334-3336"); it does not reject them.
       * StaggerUStride>0 requires staggerStrideShift = ceil(log2(SUS/(DU*bpe)))
         >= 0, i.e. SUS > 0.5*DepthU*bpeAB (the ":3342" reject). Tensile then
         internally raises SUS to a whole multiple of DepthU*bpe.
@@ -457,11 +458,19 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
         :data:`STAGGER_MAPPING_DOMAIN`, SUS in :data:`STAGGER_STRIDE_DOMAIN`.
         SU requires BufferLoad==1 and is silently ignored otherwise.
 
-    Why an earlier revision was wrong: it had the SUS bound BACKWARDS (it
-    rejected SUS >= DepthU*bpe, i.e. exactly the legal swizzle values), which is
-    why Group C swizzle forwarding was blocked -- every legal StaggerUStride was
-    refused at the launch boundary. Corrected 2026-10-09 against the pinned
-    checkout (Tensile commit e8a8999e).
+    Why this was wrong until 2026-10-21: it read Tensile's FORCE as a reject
+    ("StaggerUStride=256 requires StaggerU>0") and so refused every config with
+    StaggerU=0 and the default stride 256. Tensile accepts those -- it zeroes
+    the stride itself. The refusal was a false rejection that killed the whole
+    "no-swizzle" arm: 14 deck rows (98 shape-records across the runs) were
+    refused at the launch boundary as "skipped_illegal", so the axis was never
+    measured at all.
+
+    An earlier revision (2026-10-09) had the SUS bound BACKWARDS as well (it
+    rejected SUS >= DepthU*bpe, i.e. exactly the legal swizzle values), which
+    is why Group C swizzle forwarding was blocked -- every legal StaggerUStride
+    was refused at the launch boundary. Corrected against the pinned checkout
+    (Tensile commit e8a8999e).
     """
     stagger_u = config.get("StaggerU")
     stagger_mapping = config.get("StaggerUMapping")
@@ -488,16 +497,14 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
                          else int(stagger_mapping))
 
     if su_effective == 0:
-        if mapping_effective != 0:
-            return False, (f"StaggerUMapping={mapping_effective} requires "
-                           f"StaggerU>0 (SolutionStructs:3333-3334)")
-        if stride_effective != 0:
-            return False, (f"StaggerUStride={stride_effective} requires "
-                           f"StaggerU>0 (SolutionStructs:3326-3327)")
-    elif stride_effective == 0:
+        # Tensile FORCES the mapping and the stride to 0 here
+        # (SolutionStructs:3334-3336). Whatever the config carried is
+        # overwritten, not rejected -- so neither is a reason to refuse.
+        return True, ""
+    if stride_effective == 0:
         return False, (f"StaggerUStride=0 is only valid if StaggerU is 0 "
-                       f"(have StaggerU={su_effective}; SolutionStructs:3326-3327)")
-    elif ku > 0 and bpe and stride_effective < ku * bpe:
+                       f"(have StaggerU={su_effective}; SolutionStructs:3325-3326)")
+    if ku > 0 and bpe and stride_effective < ku * bpe:
         return False, (f"StaggerUStride={stride_effective} < DepthU({ku})*{bpe}B; "
                        f"Tensile requires StaggerUStride >= DepthU*BytesPerElement "
                        f"when StaggerU>0 (staggerStrideShift >= 0, SolutionStructs:3336-3342)")

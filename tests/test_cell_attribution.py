@@ -201,12 +201,16 @@ def test_ldspad_feasible_stagger_and_af0em_rejects():
     # SUS>0 but below the 0.5*DepthU*bpe floor -> reject.
     ok, reason = ldspad_feasible({**base, "StaggerUStride": 16})
     assert not ok and "StaggerUStride" in reason
-    # SU=0 forces SUS=0: SU=0 with SUS=256 -> reject.
+    # SU=0 does NOT reject the stride or the mapping: Tensile FORCES both to 0
+    # (SolutionStructs:3334-3336) and overwrites whatever the config carried.
+    # The gate used to read that force as a reject and killed the whole
+    # "no-swizzle" arm (14 deck rows, never measured).
     ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUStride": 256})
-    assert not ok and "StaggerU" in reason
-    # SU=0 with SUM=1 -> reject (mapping requires SU>0).
+    assert ok, reason
     ok, reason = ldspad_feasible({**base, "StaggerU": 0, "StaggerUMapping": 1})
-    assert not ok and "StaggerUMapping" in reason
+    assert ok, reason
+    ok, reason = ldspad_feasible({**base, "StaggerU": 0})
+    assert ok, reason
     # Out-of-domain values -> reject.
     ok, reason = ldspad_feasible({**base, "StaggerU": 3})
     assert not ok and "StaggerU" in reason

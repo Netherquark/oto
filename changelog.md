@@ -9,6 +9,19 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (3rd) — the "no-swizzle" arm was dead on arrival: the gate
+  read Tensile's FORCE as a reject.** `SolutionStructs:3334-3336` *forces*
+  `StaggerUMapping = 0` and `StaggerUStride = 0` when `StaggerU == 0`; the
+  only reject is `StaggerUStride == 0` with `StaggerU != 0`. The swizzle gate
+  had the rule inverted ("StaggerUStride=256 requires StaggerU>0"), so every
+  `StaggerU=0` config was refused at the launch boundary as
+  "forwarded-knob illegal" — **14 deck rows, 98 shape-records across the runs,
+  zero measured**. The `swStaggerU0` axis (stagger off) has therefore never
+  run once. Fixed in `oto.tensile.gates.occupancy._swizzle_feasible`; the
+  deck and the 764-row overlay now pass the launch gate 284/284 and 764/764
+  (was 270/284 and 750/764). The test that pinned the wrong behaviour
+  (`tests/test_cell_attribution.py`) now pins Tensile's rule.
+
 - **2026-10-21 (2nd) — the complex families were being scored against a 4×
   bar (accounting fix).** Tensile's client charges **2 flops per MAC for every
   dtype**, complex included (`ContractionProblem::flopCount` = `2 *
