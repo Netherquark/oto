@@ -25,7 +25,13 @@ and NOT the experimental data (that is `results.md`).
   missing semantic tokens (--layer-03, --text-placeholder, --link-primary,
   --field, --icon-primary), and the new section uses 1px borders, 0px radius,
   no shadows, 14px productive text and 2/4/8/16 spacing. Pinned by
-  `tests/test_report_coverage.py`.
+  `tests/test_report_coverage.py`. The figures are an **expandable list by
+  family**: each family is a native `<details>` group whose summary carries the
+  family's own numbers ("5 cells · 24 of 205 geometries measured per cell
+  (88% unexplored) · 5 peaks / 0 traps") and whose body holds the figures for
+  every matrix size in that family. The per-cell share is a per-cell number --
+  the legal space is the same for every cell of a family, so summing it across
+  cells would divide one cell's measurement count by the family's whole space.
 
 - **2026-10-22 — the coverage graphs: the problem space as a 2D picture.**
   `oto.harness.coverage_graph` draws, for every contract cell, the legal
