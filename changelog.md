@@ -9,6 +9,36 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (8th) — the legality oracle, and the three ORANGE cells
+  triaged.** `oto.harness.tensile_oracle` is the /tmp probing machinery
+  formalised: it asks **Tensile itself** whether a config builds, prints the
+  LDS it allocated, and puts our gate's verdict beside Tensile's -- so a
+  legality question the CPU gates cannot answer ("does Tensile accept a
+  negative WorkGroupMapping?", "how much LDS does this tile get?", "is
+  TransposeLDS=1 legal without MFMA?") has one home instead of a throwaway
+  script. It immediately found a **real load-gate bug**: `totalVectorsCoalesced`
+  was modelled as the *coalesced* part alone (the depth, for an NT operand)
+  instead of `totalElements // glvw_effective`, so the NLCA divisibility was
+  checked against the wrong number; the corpus's 109 apparent false
+  rejections collapsed to 0 once the model and the measurement agreed
+  (calibration: 4419 agree / 140 refused / **0 MISS / 0 false rejections**).
+  The contract-pattern vocabulary moved to `oto.tensile.patterns` (one
+  spelling, one meaning: the problem type's transpose flags and Tensile's
+  *layout* flags TLUA/TLUB are NOT the same thing -- the solution built for
+  `Alik_Bjlk` carries `TransposeA: true, TransposeB: true` but `TLUA: false,
+  TLUB: true`).
+  `potential_configs.md` §R48 triages the three remaining ORANGE cells
+  (`SS:256`, `HH:256`, `CC:192`) with a control experiment -- the *same
+  binary* at a shape that fills the machine -- and shows the winners are at
+  53-83 % of their own fill-and-waste bound, i.e. the cells are starved, not
+  badly tuned; the reachable headroom is 1.1-1.5x and the 17 R48 rows are the
+  geometries that get it. The **steal route is closed by measurement**: the
+  gfx900 floor's best on the three ORANGE cells is 2.7-3.8x *below* the
+  native (124.3 vs 412.1, 202.0 vs 763.4, 43.2 vs 118.2), and on the big
+  cells the native already runs the floor's own config. The tuning guide's
+  M3 ("the complex throughput wall") is retired -- it was the unit error --
+  and the theoretical limits' ORANGE consequence is corrected.
+
 - **2026-10-21 (7th) — the test suite is 9x faster, and the five failures
   it was carrying were a mutator that had stopped searching.** `plans/
   test_optimization.md` is executed: the dominant cost was **YAML parsing**,

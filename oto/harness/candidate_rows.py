@@ -1006,3 +1006,57 @@ for _fam, _tile, _tt, _vw, _du in _R47_SMALL_CELLS:
         "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
         "note": f"R47: {_fam} small cell -- the winner tile with an "
                 f"unmeasured thread tile ({_tt})"})
+
+# 2026-10-21 R48 -- the three cells that are really behind, aimed by the
+# fill/waste arithmetic (potential_configs.md R48).
+#
+# The graded number on a small cell is NOT the kernel's quality: the SAME
+# binary that scores 412 at SS:256 scores 981 at SS:4096. What the cell costs
+# is the wave quantisation (workgroups vs 7 CUs) and the edge waste (a tile
+# that does not divide the shape). Both are geometry, so both are reachable:
+#
+#   SS:256  winner 96x96/6x6, 9 workgroups (2 waves, 64% fill) and a 1.27x
+#          edge waste -> 83% of its own bound. The untried lever is the
+#          REGISTER BLOCKING inside that tile: 8x6 and 6x8 keep the tile (and
+#          the fill) but raise the FMA:LDS ratio from 3.0 to 3.4 per float.
+#   HH:256  winner 32x64/4x4, 32 workgroups (91% fill, no waste) but only
+#          2.0 FMAs per LDS float -> 64% of its bound. 8x4 and 4x8 keep the
+#          workgroup count and raise the ratio to 2.67; 64x32/4x8 is the
+#          transposed tile with the same 32 workgroups and a different wave
+#          layout.
+#   CC:192  winner 64x64/4x4, 9 workgroups (64% fill) -> 53% of its bound.
+#          The lever is a tile with MORE workgroups (32x64, 64x32 -> 18 and
+#          24) and the other thread tiles of 64x64.
+#
+# Every row is legal by the real gate (tests/test_generate_candidates.py
+# pins the batch gate-clean) and every one is a *geometry* the corpus has
+# never measured on that cell.
+_R48_SMALL_CELL_ROWS: Tuple[
+        Tuple[str, str, str, int, int, str, Dict[str, Any]], ...] = (
+    # SS:256 -- the 96x96 tile, other register blockings
+    ("SS", "96x96x16", "8x6", 2, 16, "Ailk_Bjlk", {}),
+    ("SS", "96x96x16", "6x8", 2, 16, "Ailk_Bjlk", {}),
+    ("SS", "96x96x8", "8x6", 2, 8, "Ailk_Bjlk", {}),
+    ("SS", "96x96x8", "6x8", 2, 8, "Ailk_Bjlk", {}),
+    ("SS", "96x96x16", "4x6", 2, 16, "Ailk_Bjlk", {}),
+    # HH:256 -- the 32x64 tile, other register blockings, and its transpose
+    ("HH", "32x64x16", "8x4", 4, 16, "Ailk_Bjlk", {}),
+    ("HH", "32x64x16", "4x8", 4, 16, "Ailk_Bjlk", {}),
+    ("HH", "64x32x16", "4x8", 4, 16, "Ailk_Bjlk", {}),
+    ("HH", "64x32x16", "8x4", 4, 16, "Ailk_Bjlk", {}),
+    ("HH", "32x64x16", "4x4", 4, 16, "Alik_Bjlk", {}),
+    # CC:192 -- more workgroups, and the other thread tiles of the winner
+    ("CC", "32x64x8", "4x4", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x32x8", "4x4", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x64x8", "4x2", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x64x8", "2x4", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x64x8", "4x8", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x64x8", "8x4", 2, 8, "Ailk_Bjlk", {}),
+    ("CC", "64x64x16", "4x4", 2, 16, "Ailk_Bjlk", {}),
+)
+for _fam, _tile, _tt, _vw, _du, _pat, _extra in _R48_SMALL_CELL_ROWS:
+    PLAN_BATCH.append({
+        "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+        "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du, **_extra,
+        "note": f"R48: {_fam} small cell -- fill/waste arithmetic, an "
+                f"unmeasured geometry"})

@@ -18,6 +18,7 @@ oto/harness/corpus_census.py      # corpus history: axis/geometry coverage + per
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/harness/coverage_map.py       # legal geometry space per cell + what the corpus measured in it
+oto/harness/tensile_oracle.py     # the legality oracle: Tensile's own verdict on a config
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)

@@ -227,7 +227,9 @@ signs; rebuilt db now shows SS:1000 −2.9 % / SS:1024 −3.1 %, tie band). **No
 config mutation moves these.** The user's "bunch of ties" is mostly this.
 
 **M2 — wave quantization on the small cells.** 192/256 cubes with sensible tiles
-physically cannot produce ≥ 40 waves:
+physically cannot produce ≥ 40 waves (the arithmetic, per cell, is in
+`potential_configs.md` §R48.2 -- the winners are at 53-83 % of their own
+fill-and-waste bound, so the cells are starved, not badly tuned):
 
 | cell | winner (tt) | waves | waves/SIMD | ~residency |
 |---|---|---|---|---|
@@ -242,18 +244,30 @@ SS:256 makes 412/1613 while SS:1024 makes 1135/1613 at ~91 % residency — **the
 gap IS the residency gap.** The lever: smaller tiles keeping ≥4 waves/thread in
 flight, or GlobalSplitU to turn waves over K (Group A).
 
-**M3 — the Tensile complex throughput wall (CC/ZZ).** CC caps ≈290–318 and ZZ
-≈21–24; the gfx900 ships hit the same plateau (CC:512 317.8, ZZ:1024 22.6).
-The 4-real-MAC-per-complex-MAC ALU cost is irreducible — the complex MAC loop
-is exactly four `v_mac_f32`, `KernelWriterAssembly.py:14975-14978` — so the
-shortfall is **memory/occupancy**, not instruction count (P §2, reopened
-2026-10-09). Working mechanisms, in order of confidence: 8/16-B LDS elements at
-LdsPad=0 (bank conflicts — small pads {1,2,4} never benchmarked); the 2×
-register footprint under PGR=1 everywhere (PGR=0 never shipped on complex);
-GSU=1 everywhere (complex GSU>1 is validator-legal via MultipleBuffer,
-`SolutionStructs.py:2958-2976/3543-3553`); Z stuck at VW1. Resolution path:
-Group C pads → GSU wave-fill → PGR/NLCA — the wall is **open** until those land,
-not "by construction".
+**M3 — RETIRED 2026-10-21: there is no complex throughput wall; the
+plateau was a unit error.** CC caps ≈290–318 and ZZ ≈21–24 *as reported*, and
+the gfx900 ships hit the same reported plateau (CC:512 317.8, ZZ:1024 22.6) --
+which is what made it look like a hardware wall. But the Tensile client charges
+**2 flops per MAC for every dtype**, complex included
+(`ContractionProblem.cpp:1108`: `2 * DataTypeInfo::packing`, packing is 1 for
+complex types), while a complex MAC is *executed* as four real FMAs = 8 BLAS
+flops. A reported complex GFLOPS is therefore **¼ of its BLAS-8 value**, and
+the plateau was being compared against a BLAS-8 roof. The truth: **CC runs at
+80-97 % of the FP32 FMA roof and ZZ at 96-97 % of the FP64 roof**
+(`gfx90c_theoretical_limits.md` §5.2, three independent checks). There is no
+wall to break; the complex cells were the *best* cells in the corpus, and the
+ORANGE list shrank from twelve cells to three (`SS:256`, `HH:256`, `CC:192`).
+The 4-real-MAC-per-complex-MAC ALU cost is irreducible and irrelevant to the
+verdict, because both the ceiling and the measurement are in the same unit.
+
+The 3M/Karatsuba and split-K routes that were proposed against this "wall"
+(`potential_configs.md` §R43 Routes 1-2) are struck: at 97 % of the roof there
+is nothing for a 25 % instruction saving to win. What is *still* true of the
+complex families: GSU>1 is validator-legal via MultipleBuffer
+(`SolutionStructs.py:2958-2976/3543-3553`) but the atomics cost more than the
+wave fill wins (measured: SS:256 GSU 2/4/8 give 40-61 GFLOPS against 412), Z
+is stuck at VW1, and the complex accumulator footprint is 2x (8 VGPRs per
+element) -- which is why the *tile* is capped at 128x64 (CC) and 64x64 (ZZ).
 
 **M4 — suppressed clock.** The newest run measured at 1.175 GHz
 (`native_clock_coverage: 0.53`) ≈ **1.53× slow** vs 1.8 GHz reference. Its

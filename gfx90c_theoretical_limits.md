@@ -221,15 +221,19 @@ No HPA row at 256×128 has been measured yet; the §R40 frontier deck carries it
 so that cell is a pending measurement, not a wall.
 
 **Consequence for the ORANGE cells.** DD is at 98 % of its peak at its largest
-legal tile, so it is done. CC and ZZ are not going to climb: their bars (1118.7
-and 98.6) were derived by borrowing SS/DD lane efficiency at SS/DD *tile sizes*,
-and those families cannot allocate them — the complex accumulator is what runs
-the register file out. The largest legal CC tile measures 288–347 GFLOPS and the
-largest legal ZZ tile 23–24.5, and every forwarded knob has already been probed
-on those geometries at 0.83–0.98 of base (`potential_configs.md` §R37/§R41). So
-CC and ZZ are ORANGE **by construction of the bar**, not by a tuning failure.
-Re-deriving those two bars (or keeping them as an aspiration) is a user decision
-(`potential_configs.md` §9); this file does not change them unilaterally.
+legal tile, so it is done. **CC and ZZ are also done — but for the opposite
+reason to the one recorded before 2026-10-21.** The earlier text here said the
+complex families were ORANGE "by construction of the bar" (their bars were
+borrowed from SS/DD at tile sizes the complex accumulator cannot allocate). The
+bar was the thing that was wrong: it was the *BLAS-8* roof compared against a
+*client-reported* number (§5.2). In the client's own unit, CC sits at 80-97 %
+of the FP32 FMA roof and ZZ at 96-97 % of the FP64 roof — the best-utilised
+families in the corpus, not the worst. The tile cap is real (the 2x/4x
+accumulator footprint is what runs the register file out, so CC's widest legal
+tile is 128×64 and ZZ's is 64×64), but the cap is not a *shortfall*: those
+tiles already run at 80-97 % of the pipe. The ORANGE cells are the three
+small ones — `SS:256`, `HH:256`, `CC:192` — and they are starved by wave
+quantisation, not by a bad kernel (`potential_configs.md` §R48).
 
 ### 5.2 The complex families are at the roof, not at 20% (2026-10-21 correction)
 

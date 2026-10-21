@@ -2421,7 +2421,7 @@ and the remaining lever. Nothing below re-derives hardware; it cites
 
 | class | cells | measured | §5 bar | verdict |
 |---|---|---|---|---|
-| **A. Complex memory/occupancy** | CC:192/256/512/1024/2048, ZZ:128/192/256/512/1024 | CC 118–347, ZZ 16.8–24.5 | 1118.7, 98.6 | ORANGE by construction of the bar (§5.1) — the bar borrows SS/DD lane efficiency at SS/DD tile sizes the complex families cannot allocate |
+| **A. Complex memory/occupancy** | CC:192/256/512/1024/2048, ZZ:128/192/256/512/1024 | CC 118–347, ZZ 16.8–24.5 | 1118.7, 98.6 | **SUPERSEDED by §R47**: the bar was the BLAS-8 roof against a client-reported number (÷4), so CC/ZZ are at 80-97 % of the FMA roof and only **CC:192** is still ORANGE |
 | **B. Small-cell residency** | SS:256 (412), HH:256 (763), DD:192 (76), CC:192 (118) | 36–79 % of bar | — | geometry cannot fill the machine (M2): 128³ at 256³ = 4 waves/SIMD |
 | **C. Noise ties** | 18 cells (SS 3, HH 3, HPA 2, HS 2, DD 4, CC 1, ZZ 0 in the tie table) | ±0.1…+4.6 % | — | inside ±16.45 % band; need replication, not new geometry |
 | **D. Unmeasured frontier** | SS/HH/HPA at 256×128/128×256 (32768 elements) | 802.2 (SS 256×128 TT16×8) | — | confounded: large tile × large thread tile; the §R40 deck separates area from register pressure |
@@ -2879,3 +2879,154 @@ Ordered by expected value, not by novelty:
 
 Rows 1 and 3 are configs; row 2 is a protocol change; row 4 is a re-measure of
 configurations that already exist in the corpus.
+
+---
+
+## R48 — the three remaining ORANGE cells, triaged (2026-10-21)
+
+With the complex accounting corrected (§R47, `gfx90c_theoretical_limits.md`
+§5.2), the ORANGE list is **three cells**: `SS:256` (36.8 % of the ceiling),
+`HH:256` (31.0 %) and `CC:192` (42.3 %). This section triages each one, with
+the arithmetic that says how much is actually reachable and which config gets
+it. The method: **the same binary at a shape that fills the machine** is the
+control. A kernel that is merely "bad" would score badly at every size; a
+kernel that is *fine* and *starved* scores badly only where the problem does
+not fill 7 CUs.
+
+### R48.1 The control experiment
+
+| family | geometry | 192³ | 256³ | 512³ | 1024³ | 2048³ | 4096³ |
+|---|---|---|---|---|---|---|---|
+| SS | 96×96 6×6 vw2 | 341.8 | **412.1** | 682.4 | 921.9 | 895.7 | 981.4 |
+| HH | 32×64 4×4 vw4 | – | **763.4** | 564.9 | 1304.4 | 1188.2 | 1201.3 |
+| CC | 64×64 4×4 vw2 | **118.2** | 228.8 | 322.0 | 344.0 | 346.7 | – |
+
+**The kernels are not bad.** The SS:256 winner scores 981 GFLOPS (61 % of the
+roof) at 4096³; the HH:256 winner scores 1304 at 1024³; the CC:192 winner
+scores 347 at 2048³. Each is a *good* kernel that the small shape cannot feed.
+
+### R48.2 What the small shapes cost, exactly
+
+For a tile `mt×mt` on a cube of side `S` on 7 CUs:
+
+- workgroups `W = ceil(S/mt0) · ceil(S/mt1)`; waves `= ceil(W/7)`;
+- **fill efficiency** `= W / (waves · 7)` (how evenly the waves fill the CUs);
+- **edge waste** `= (ceil(S/mt0)·mt0 · ceil(S/mt1)·mt1) / S²` (a tile that does
+  not divide the shape computes the corners twice);
+- the bound below is *the same kernel's* big-shape number, scaled by fill and
+  de-scaled by waste.
+
+| cell | tile / thread tile | W | waves | fill | waste | bound | measured | % of bound |
+|---|---|---|---|---|---|---|---|---|
+| SS:256 | 96×96 / 6×6 | 9 | 2 | 64 % | 1.27 | 498 | **412.1** | **83 %** |
+| SS:256 | 64×64 / 4×4 | 16 | 3 | 76 % | 1.00 | 922 | 217.3 | 24 % |
+| SS:256 | 128×128 / 8×8 | 4 | 1 | 57 % | 1.00 | 691 | 110.0 | 16 % |
+| HH:256 | 32×64 / 4×4 | 32 | 5 | 91 % | 1.00 | 1193 | **763.4** | **64 %** |
+| HH:256 | 64×64 / 4×4 | 16 | 3 | 76 % | 1.00 | 1967 | 199.2 | 10 % |
+| HH:256 | 32×32 / 4×4 | 64 | 10 | 91 % | 1.00 | 2361 | 201.5 | 9 % |
+| CC:192 | 64×64 / 4×4 | 9 | 2 | 64 % | 1.00 | 223 | **118.2** | **53 %** |
+| CC:192 | 32×32 / 4×4 | 36 | 6 | 86 % | 1.00 | 297 | 113.8 | 38 % |
+| CC:192 | 32×32 / 2×2 | 36 | 6 | 86 % | 1.00 | 297 | 32.7 | 11 % |
+
+Two readings fall out of the table:
+
+1. **The cell's winner is already near its own bound** (83 % on SS:256), so the
+   "36.8 % of the ceiling" is mostly *physics*, not a bad kernel: a 256³ GEMM
+   cannot keep 7 CUs busy (9 workgroups for 7 CUs) and 96 does not divide 256.
+2. **The losers lose for a different reason than the winner.** SS:256's
+   64×64 tile has the *better* fill (76 %) and no waste, and still scores 24 %
+   of its bound: its FMA:LDS ratio is 2.0 per float against the winner's 3.0,
+   because 4×4 accumulators per thread fetch 4+4 floats. The 128×128 tile has
+   the best ratio (4.0) and only 4 workgroups — 57 % fill — and scores 16 % of
+   its bound. **The small cells want a large tile AND many workgroups, and
+   those two wants fight**: the tile is bounded by the register file and by
+   the wave count (a 64×64 tile at 4×4 is 256 threads = 4 waves; at 8×8 it is
+   64 threads = 1 wave, which the corpus measured at 81 GFLOPS -- too few
+   waves to hide anything).
+
+### R48.3 What each cell can still win, and the config that wins it
+
+| cell | reachable | the route | the configs (R48 batch) |
+|---|---|---|---|
+| **SS:256** | 412 → ~460-500 (1.1-1.2x) | keep the 96×96 tile (the fill and the waste are already paid for) and raise the **register blocking** inside it: 8×6 and 6×8 lift the FMA:LDS ratio from 3.0 to 3.4 per float at the same workgroup count | 96×96/8×6, 96×96/6×8 (DU8 and DU16), 96×96/4×6 |
+| **HH:256** | 763 → ~950-1100 (1.25-1.45x) | keep the 32 workgroups (91 % fill, no waste) and raise the register blocking: 8×4 and 4×8 lift the ratio 2.0 → 2.67; and probe the **transposed tile** 64×32/4×8 (same 32 workgroups, a different wave layout) | 32×64/8×4, 32×64/4×8, 64×32/4×8, 64×32/8×4, 32×64/4×4 in the TT pattern |
+| **CC:192** | 118 → ~160-180 (1.4-1.5x) | the fill is the binding term (9 workgroups, 64 %), so **more workgroups**: 32×64 (18) and 64×32 (24) at the winner's register blocking, plus the other thread tiles of 64×64 | 32×64/4×4, 64×32/4×4, 64×64/4×2, 64×64/2×4, 64×64/4×8, 64×64/8×4, 64×64/4×4 at DU16 |
+
+The corpus has **never measured any of these 17 geometries on these three
+cells** (checked against `kernel_db.json`); the coverage map lists them as the
+top unexplored neighbours of each cell's winner. They are the whole of the
+remaining headroom on the three ORANGE cells, and they cost 17 phases.
+
+**What is NOT the answer: GlobalSplitU.** Measured on SS:256, GSU 2/4/8 give
+**40-61 GFLOPS against 412**: the atomic C reduction costs far more than the
+wave fill wins, on this part. And a non-atomic split-K (workspace + a second
+kernel) is new machinery for a ≤1.5x gain on one cell. The one thing that
+*would* fix the small cells is a **persistent / stream-K schedule** -- a
+workgroup that walks several tiles so the machine is never idle -- and Tensile
+exposes neither on the gfx90c path (`PersistentKernel` is in
+`NOT_FORWARDED_KNOBS`, `StreamK` is not forwarded either).
+
+### R48.4 The steal route, settled by measurement
+
+The request was: for the *worst* native losers, take the gfx900 winner and
+adapt it to gfx90c. The floor's own numbers on the three ORANGE cells:
+
+| cell | floor best | native best | ratio |
+|---|---|---|---|
+| SS:256 | 124.3 | 412.1 | native **3.3x better** |
+| HH:256 | 202.0 | 763.4 | native **3.8x better** |
+| CC:192 | 43.2 | 118.2 | native **2.7x better** |
+
+The floor's gfx900 configs are *worse* on exactly the cells that are behind,
+because they were tuned for 56 CUs and a 1-D raster: on a 7-CU part with a
+256³ problem they lose 3-4x. There is nothing to steal **into** these cells.
+And on the cells where the floor *is* competitive (the big ones), the native
+already runs the floor's own config (the nine `identical` ties, §R47) -- there
+is nothing left to steal there either. **The steal route is closed by
+measurement, not by taste**; the only "steal" that survives is the *tile shape*
+the floor uses, which the corpus has already swept.
+
+### R48.5 The ties, one by one
+
+From `resolve_cells --taxonomy` (the gap is how far the two arms' winning
+configs are apart):
+
+| cell | native | floor | delta | gap | roof (theoretical) | reading |
+|---|---|---|---|---|---|---|
+| CC:512 | 322.0 | 308.4 | +4.4 % | identical | 79.9 % | environment, not tuning |
+| DD:768 | 94.7 | 91.6 | +3.4 % | identical | 93.8 % | environment |
+| DD:1024 | 94.1 | 91.7 | +2.6 % | identical | 93.2 % | environment |
+| DD:1365 | 89.1 | 87.2 | +2.2 % | **retile** (32×32 vs 64×64) | 88.2 % | a real difference, inside the band |
+| DD:2048 | 98.8 | 96.6 | +2.3 % | **near** (vw2 vs vw1) | 97.9 % | a real difference, inside the band |
+| HH:1024 | 2581.9 | 2548.5 | +1.3 % | identical | 80.0 % | environment |
+| HH:2048 | 2670.9 | 2575.2 | +3.7 % | identical | 82.8 % | environment |
+| HH:4096 | 2749.3 | 2662.0 | +3.3 % | identical | 85.2 % | environment |
+| HH_HPA:1024 | 1454.8 | 1445.5 | +0.6 % | **no floor** | 90.2 % | nothing to compare against |
+| HH_HPA:2048 | 1388.0 | 1381.1 | +0.5 % | **no floor** | 86.0 % | nothing to compare against |
+| HS_HPA:1024 | 1429.7 | 1428.7 | +0.1 % | **no floor** | 88.6 % | nothing to compare against |
+| HS_HPA:2048 | 1388.9 | 1344.2 | +3.3 % | **no floor** | 86.1 % | nothing to compare against |
+| SS:768 | 1108.2 | 1095.9 | +1.1 % | identical | 68.7 % | environment |
+| SS:1365 | 1114.5 | 1069.8 | +4.2 % | identical | 69.1 % | environment |
+| SS:2048 | 1168.3 | 1151.3 | +1.5 % | identical | 72.4 % | environment |
+
+Read the "identical" rows as a *measurement* of the protocol, not of the
+kernels: the two arms run the same binary and still differ by +1.1 % to
++4.4 %, and across the sixteen identical cells the spread is **17.5 points**
+(+1.1 % to +18.6 %). A verdict band of ±5 % is therefore narrower than the
+protocol's own noise: **a "WIN" on an identical cell is an environment win,
+and a "TIE" is an absence of evidence.** The fix is the protocol (re-measure
+the floor in-session, clock-normalise both arms -- §R47.2), not a new kernel.
+
+The two cells with a *real* difference (DD:1365, DD:2048) are both at 88-98 %
+of the FP64 roof, where the FP64 pipe is already the limit: DD is at 97.9 % of
+its theoretical peak on DD:2048. There is no 5 % to find there.
+
+### R48.6 The batch for the next overnight run
+
+1. **The 17 R48 rows** (the three ORANGE cells' untried geometries) -- the only
+   rows that can move a graded cell.
+2. **The R47 batch** (WGM 2/3/-1/-4, StaggerU=0, TransposeLDS=-1,
+   NonTemporalC, MaxOccupancy, StaggerUMapping) -- the axes that have never
+   been varied on the *tied* cells, where the tie is environment today and a
+   real win needs a different binary.
+3. **Nothing on CC:512+ and ZZ:512+**: 80-97 % of the FMA roof, no headroom.

@@ -21,6 +21,7 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from .memo import memo_gate
+from ..patterns import pattern_of, tlu_flags  # noqa: E402
 from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
                          knob_int, local_split_u)
 
@@ -134,11 +135,13 @@ def _glvw_for(config: Dict[str, Any], tc: str, default: int) -> int:
 def _transposes(config: Dict[str, Any]) -> Tuple[bool, bool]:
     """(TLUA, TLUB) from the contraction pattern or the label.
 
-    ``Ailk``/``Bjlk`` is the "contiguous-in-k for that operand" form; a config
-    that names neither falls back to the NT default.
+    These are Tensile's *layout* flags (TLUA/TLUB), which the loads gate
+    needs and which are NOT the problem type's transpose flags: the solution
+    built for ``Alik_Bjlk`` carries ``TransposeA: true, TransposeB: true``
+    but ``TLUA: false, TLUB: true``. The spelling is read from the canonical
+    map (``oto.tensile.patterns``), so the two readings cannot drift.
     """
-    pattern = str(config.get("ContractionPattern", config.get("label", "Ailk_Bjlk")))
-    return "Ailk" in pattern, "Bjlk" in pattern
+    return tlu_flags(pattern_of(config))
 
 
 def _nlca_for(config: Dict[str, Any], tc: str) -> int:
@@ -196,8 +199,28 @@ class _Operand:
         return self.num_threads * self.glvw
 
     @property
+    def _glvw_effective(self) -> int:
+        """The load width Tensile actually uses (reduced by ``pv``).
+
+        SolutionStructs:2016-2033: when the operand is smaller than one load
+        wave, Tensile divides the load vector width (and the wave size) by the
+        partial-vector factor ``pv`` before the divisibility checks.
+        """
+        if self.total_elements < self.num_thread_grtw:
+            return max(1, self.glvw // self._pv)
+        return self.glvw
+
+    @property
     def total_vectors_coalesced(self) -> int:
-        return self.total_elements_coalesced // self.glvw
+        """The coalesced vector count, as SolutionStructs computes it.
+
+        Tensile divides the WHOLE operand (coalesced x perpendicular) by the
+        effective load width (SolutionStructs:2035, the call site in the
+        DepthU search). Reading only the coalesced part -- the depth, for an
+        NT operand -- is a different number, and it is the one the NLCA
+        divisibility is checked against, so the check came out wrong.
+        """
+        return self.total_elements // self._glvw_effective
 
     @property
     def _pv(self) -> int:

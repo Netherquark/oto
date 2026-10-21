@@ -21,6 +21,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tensile/legality.py`` — The legality prior: manifest-derived legal domain, and source-cited walls.
 * ``tensile/library.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
 * ``tensile/library_parity.py`` — The coverage-parity rule: what the produced TensileLibrary may address.
+* ``tensile/patterns.py`` — The contraction-pattern vocabulary: one spelling, one meaning.
 * ``tensile/shape_order.py`` — Canonical numeric ordering for Tensile problem-shape strings.
 * ``tensile/shipped_library.py`` — The shipped gfx900 library: locating it, parsing it, rebuiling a kernel from its name.
 
@@ -28,6 +29,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 * ``tensile/gates/assembly.py`` — The assembly-class gate: is this GEMM class legal on gfx90c at all?
 * ``tensile/gates/loads.py`` — Classic-path global-load divisibility, and the 16 B load-width cap.
+* ``tensile/gates/memo.py`` — A content-keyed memo for the pure legality gates.
 * ``tensile/gates/occupancy.py`` — Register-file and LDS occupancy gates.
 * ``tensile/gates/vgpr_model.py`` — The measured VGPR model: tables and budgets the occupancy gate cites.
 
@@ -137,4 +139,5 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``harness/regression_matrix.py`` — Deck-vs-floor-vs-all-time cell regression matrix.
 * ``harness/resolve_cells.py`` — Per-cell native-vs-floor winner resolution on the full knob surface.
 * ``harness/rule_calibration.py`` — Rule calibration: would a *proposed* gate rule add false rejections?
+* ``harness/tensile_oracle.py`` — The legality oracle: ask Tensile itself whether a config builds.
 

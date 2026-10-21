@@ -59,6 +59,8 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
+| `oto/harness/tensile_oracle.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
+| `oto/tensile/patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/conftest.py` | The `serial` / `preflight` markers, the serial rule, the corpus fixtures |
@@ -121,6 +123,13 @@ Report `floor_best` as co-primary alongside `winner`.
 | F: persistent fixed grid | conceptual only | all |
 
 ## Reading the deck's stragglers
+
+`python3 -m oto.harness.tensile_oracle --dtype Z --macro 64x64x8 --thread 2x2
+--vw 1 --du 8` asks **Tensile itself** whether a config builds, what LDS it
+allocated and what our gate said -- the way to settle a legality question the
+CPU gates cannot answer (it is what found the load-divisibility bug: the gate
+modelled `totalVectorsCoalesced` as the coalesced part alone, so its NLCA check
+was against the wrong number).
 
 `python3 -m oto.harness.coverage_map --cell SS:256` answers the question the
 census cannot: not "what has been measured" but "what *could* have been" -- the
