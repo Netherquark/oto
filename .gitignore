@@ -92,6 +92,10 @@ unified_measurements.csv
 *.pre_rewrite_*
 synthesis.py.bak2
 
+# Tensile's build scratch: the kernel writer drops the .s/.o/.co it compiled
+# into the working directory when the legality oracle runs from the repo root.
+assembly/
+
 # archive (raw corpora, live locally, never committed)
 archive/
 command.txt
