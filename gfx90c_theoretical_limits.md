@@ -151,7 +151,18 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
 (lane-class efficiency × §2 roof). Exact values below are canonical in
 `oto.device.peaks.REALISTIC_CEILINGS`; this table quotes them:
 
-| family | theoretical @1800 | realistic ceiling | basis |
+> **UNIT — read this before quoting a complex number (2026-10-21, §5.2).**
+> This table is in **BLAS-8 GFLOPS** (8·M·N·K for a complex GEMM, 2·M·N·K for a
+> real one) — the unit the *hardware roof* is stated in. The Tensile **client
+> does not report complex GEMMs in that unit**: it charges `2 · packing` flops
+> per MAC with `packing == 1` for complex types (`ContractionProblem::flopCount`,
+> `DataTypes.hpp:177`), so a reported complex GFLOPS is **1/4 of its BLAS-8
+> value**. The acceptance tables in `oto.device.peaks` therefore carry the
+> complex ceilings in client-reported units (CC 403.25 / 279.675,
+> ZZ 25.25 / 24.65) — the same unit the measurement arrives in. The real
+> families are 1:1 in both.
+
+| family | theoretical @1800 (BLAS-8) | realistic ceiling (BLAS-8) | basis |
 |---|---|---|---|
 | SS | 1613 | **1118.7** (accept ≥ 69%) | measured-empirical (peak 1119) |
 | DD | 101 | **98.6** (accept ≥ 95%) | measured-empirical |
@@ -177,7 +188,6 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
   (§3) with BW=42 and the measured GEMV band (64×4096×1 → 1199–1311 ≈ 40 GB/s).
 
 ### 5.1 The tile frontier bounds what geometry can reach
-
 The bars above assume a family can allocate the tile its lane efficiency needs.
 Two independent rules bound that, and both are enforced by `oto.tensile.gates`:
 
@@ -220,6 +230,50 @@ on those geometries at 0.83–0.98 of base (`potential_configs.md` §R37/§R41).
 CC and ZZ are ORANGE **by construction of the bar**, not by a tuning failure.
 Re-deriving those two bars (or keeping them as an aspiration) is a user decision
 (`potential_configs.md` §9); this file does not change them unilaterally.
+
+### 5.2 The complex families are at the roof, not at 20% (2026-10-21 correction)
+
+The 2026-10-10 rewrite of this file "corrected" the complex accounting to
+BLAS-8 on the physics side (a complex MAC is four real FMAs = 8 BLAS flops, so
+CGEMM's ceiling is the FP32 roof) but never checked **which unit the client
+prints**. It prints 2 flops per complex MAC. Every complex cell was therefore
+scored against a bar 4× its own size:
+
+| cell | reported GFLOPS | scored vs §5 (BLAS-8) | scored in the client's unit | % of the real roof |
+|---|---|---|---|---|
+| CC 512³ | 322.0 | 20.0% | 115.1% of 279.675 | **79.9%** of 1613 |
+| CC 2048³ | 346.7 | 21.5% | 124.0% of 279.675 | **86.0%** of 1613 |
+| ZZ 512³ | 24.3 | 24.1% | 98.6% of 24.65 | **96.2%** of 101 |
+| ZZ 1024³ | 24.5 | 24.2% | 99.4% of 24.65 | **97.0%** of 101 |
+
+Three independent checks agree:
+
+1. **The client's own numbers.** Every benchmark CSV carries
+   `TotalFlops = 2·M·N·K` for *every* family — CC 192³ → 14,155,776 = 2·192³,
+   ZZ 128³ → 4,194,304 = 2·128³, SS 256³ → 33,554,432 = 2·256³.
+2. **The time.** CC at 512³ takes 0.834 ms (2·512³ / 322 GFLOPS). The FP32 pipe
+   needs 8·512³/1613 = 0.666 ms for the same work, so the kernel runs at **80%
+   of the FMA roof**. ZZ at 1024³ takes 87.65 ms against an 85.05 ms FP64 roof —
+   **97%**.
+3. **The occupancy.** CC's winner (64×64, TT 4×4, 79 VGPRs/thread) puts 3
+   workgroups per CU = 3 waves/SIMD — *more* residency than SS's 128×128 winner
+   (119 VGPRs, 2 waves/SIMD), which is why CC's 80% beats SS's 69%.
+
+Consequences, all of which the code now carries:
+
+- The **ORANGE list shrinks from 12 cells to 3**: `SS:256` (36.8%),
+  `HH:256` (31.0%) and `CC:192` (29.3% of the roof). CC:256 and every ZZ cell
+  are GREEN.
+- **CC and ZZ are not a tuning problem.** The 3M/Karatsuba and split-K routes
+  in `potential_configs.md` §R43 were proposed against the 20% reading; at
+  80-97% of the roof there is at most 3-20% to win, and 3M's 25% instruction
+  saving cannot be cashed in. Both are struck (§R47).
+- The **"CC cannot allocate a big tile"** argument in `potential_configs.md`
+  §R42.2 is true and irrelevant: the tile cap is real (128×64 is the widest
+  legal CC tile), but the bar it was compared against was 4× too big.
+- The fix is one table: `oto.device.peaks.REPORTED_TO_BLAS8` (CC/ZZ = 4.0) with
+  the ceilings derived from it, pinned by
+  `tests/test_complex_flop_accounting.py`.
 
 ## 6. Open verification gaps and decisions
 

@@ -9,6 +9,26 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (2nd) — the complex families were being scored against a 4×
+  bar (accounting fix).** Tensile's client charges **2 flops per MAC for every
+  dtype**, complex included (`ContractionProblem::flopCount` = `2 *
+  DataTypeInfo::packing`, packing == 1 for complexSingle/complexDouble), while
+  a complex MAC is *executed* as four real FMAs = 8 BLAS flops. Every
+  benchmark CSV proves it: `TotalFlops == 2·M·N·K` for CC, ZZ, SS and DD
+  alike. So a reported complex GFLOPS is **1/4 of its BLAS-8 value**, and
+  scoring CC against the FP32 roof (1613) and ZZ against the FP64 roof (101)
+  divided their real utilisation by four. The truth: **CC runs at 80-97% of
+  the FMA roof and ZZ at 96-97%**, not the 20-24% the report printed. Fix:
+  `oto.device.peaks.REPORTED_TO_BLAS8` (CC/ZZ = 4.0) with
+  `REALISTIC_CEILINGS` / `THEORETICAL_PEAKS` derived from the BLAS-8 tables,
+  so every ceiling is in the unit the measurement arrives in; pinned by
+  `tests/test_complex_flop_accounting.py`. Consequences: the ORANGE list
+  shrinks **from 12 cells to 3** (`SS:256`, `HH:256`, `CC:192`); CC:256 and
+  every ZZ cell are GREEN; `potential_configs.md` §R42 Class A and §R43
+  Routes 1-3 (3M/Karatsuba, split-K for complex) are struck as answering a
+  mis-scaled bar; `gfx90c_theoretical_limits.md` gains §5.2 with the three
+  independent checks (client `TotalFlops`, wall-clock vs roof time, occupancy).
+
 - **2026-10-21 (cont.) — FractionalLoad + TransposeLDS wired.** Both were in
   `NOT_FORWARDED_KNOBS`; they are now forwarded and probed (10 rows) on the
   winner geometries. `db_knobs` gains `FractionalLoad (0,1,2)` and

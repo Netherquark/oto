@@ -11,7 +11,8 @@ Does NOT own: the gates that use those limits (oto.tensile.gates), any measureme
 or statistics (oto.metrics), or the refactor-2 device-profile seam.
 
 Public API: PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
-REALISTIC_CEILINGS, THEORETICAL_PEAKS, kernel_typecode,
+REPORTED_TO_BLAS8, blas8_gflops, REALISTIC_CEILINGS, REALISTIC_CEILINGS_BLAS8,
+THEORETICAL_PEAKS, THEORETICAL_PEAKS_BLAS8, kernel_typecode,
 family_from_kernel_name, dtype_from_kernel_name, cube_side, cell_key,
 shipped_cells, shipped_cell_set, kernel_key.
 """
@@ -78,12 +79,53 @@ FAMILY_DTYPES = {
     "HS_HPA": "FP32",  # FP16 in, FP32 out/acc → FP32 pipe
 }
 
+#: Client-reported GFLOPS -> BLAS-8 GFLOPS, per family.
+#:
+#: The Tensile client charges **2 flops per MAC for every dtype**, the
+#: complex ones included: ``ContractionProblem::flopCount`` multiplies
+#: ``flopsPerMac()`` by the problem sizes, and ``flopsPerMac()`` is
+#: ``2 * DataTypeInfo::packing`` with ``packing == 1`` for complexSingle and
+#: complexDouble (``Tensile/Source/lib/source/ContractionProblem.cpp:1108``,
+#: ``Tensile/Source/lib/include/Tensile/DataTypes.hpp:177``). The corpus proves
+#: it: every benchmark CSV carries ``TotalFlops == 2*M*N*K`` for *every*
+#: family, complex included (e.g. CC 192^3 -> 14,155,776 = 2*192^3).
+#:
+#: A complex MAC is EXECUTED as four real FMAs = 8 BLAS flops, so a reported
+#: complex GFLOPS is **1/4 of its BLAS-8 value**. The hardware roof is stated
+#: in BLAS-8 (1613 FP32 / 101 FP64), so the complex ceilings below are
+#: carried in client-reported units (BLAS-8 / 4) -- the same unit the
+#: measurement arrives in. Everything real is 1:1.
+#:
+#: Reading the unit wrong is a 4x error in the loudest direction: it made CC
+#: and ZZ look like 20-24% of their roof when they run at 80-97% of it (see
+#: ``gfx90c_theoretical_limits.md`` §5.2).
+REPORTED_TO_BLAS8 = {
+    "SS": 1.0, "DD": 1.0, "HH": 1.0, "HH_HPA": 1.0, "HS_HPA": 1.0,
+    "CC": 4.0, "ZZ": 4.0,
+}
+
+
+def blas8_gflops(family: str, reported: float) -> float:
+    """A client-reported GFLOPS figure in BLAS-8 units (complex x4).
+
+    Args:
+        family: Canonical family key ("CC", "ZZ", "SS", ...).
+        reported: The GFLOPS number the Tensile client printed.
+
+    Returns:
+        The same throughput in BLAS-8 GFLOPS, which is the unit the hardware
+        roof (:data:`PEAK_GFLOPS`) is stated in.
+    """
+    return reported * REPORTED_TO_BLAS8.get(family.upper(), 1.0)
+
+
 # Realistic acceptance ceilings, family-keyed (gfx90c_theoretical_limits.md §5,
 # which quotes these exact values). Measured-empirical on this box (precise
 # measured bests: FP32 1118.7, FP64 98.6, HH 2461.0, BF16 1109, INT8 881);
 # ZZ ≈ DD, CC/HPAs ≈ SS (derived-analytical). BF16/INT8 have no families of
 # their own — listed so the code table is complete vs the doc.
-REALISTIC_CEILINGS = {
+#: The physical (BLAS-8) values; the reported-unit table below is derived.
+REALISTIC_CEILINGS_BLAS8 = {
     "SS": 1118.7,
     "DD": 98.6,
     "HH": 2461.0,
@@ -95,9 +137,18 @@ REALISTIC_CEILINGS = {
     "INT8": 881,
 }
 
+#: The same ceilings in the unit the measurement arrives in (client-reported
+#: GFLOPS). The complex entries are BLAS-8 / 4 -- see
+#: :data:`REPORTED_TO_BLAS8` for why.
+REALISTIC_CEILINGS = {
+    fam: value / REPORTED_TO_BLAS8.get(fam, 1.0)
+    for fam, value in REALISTIC_CEILINGS_BLAS8.items()
+}
+
 # Theoretical ALU peaks per family (BLAS flop count @1800 MHz)
 # From gfx90c_theoretical_limits.md §2
-THEORETICAL_PEAKS = {
+#: The physical (BLAS-8) peaks; the reported-unit table below is derived.
+THEORETICAL_PEAKS_BLAS8 = {
     "SS": 1613,
     "DD": 101,
     "CC": 1613,   # complex single (C) → FP32 pipe
@@ -107,6 +158,12 @@ THEORETICAL_PEAKS = {
     "HS_HPA": 1613,  # FP16 in, FP32 out/acc → FP32 pipe
     "BF16": 1613,  # no v_pk_fma_bf16 → FP32 rate
     "INT8": 1613,  # no dp4a on gfx90c → FP32 pipe (upper bound)
+}
+
+#: The same peaks in client-reported units (complex = BLAS-8 / 4).
+THEORETICAL_PEAKS = {
+    fam: value / REPORTED_TO_BLAS8.get(fam, 1.0)
+    for fam, value in THEORETICAL_PEAKS_BLAS8.items()
 }
 
 # Hardware constants
