@@ -270,7 +270,8 @@ class DBMutator(DbPatternsMixin):
 
     # -- forward-knob draws ---------------------------------------------
 
-    def _narrow_mutants(self, family: str, parent_config: Dict[str, Any]
+    def _narrow_mutants(self, family: str, parent_config: Dict[str, Any],
+                        rng: random.Random, limit: Optional[int] = None
                         ) -> List[Tuple[Dict[str, Any], float]]:
         """Single-knob deltas on the parent's forward knobs (priority 1.0).
 
@@ -283,12 +284,33 @@ class DBMutator(DbPatternsMixin):
         mutator offer GLVW=2 beside VectorWidth 4, or NLCA=3 to a tile with one
         load -- refuses the launch boundary then absorbed one draw at a time
         (potential_configs.md §R23).
+
+        The knobs are visited in a **seeded shuffle**, round-robin over their
+        legal values, and the pass is capped at ``limit`` candidates. All three
+        matter: in dict order the first few knobs eat the whole budget, so an
+        axis late in the dict is never drawn at all -- when the 2026-10-21
+        batch added ten knobs (pads, asserts, non-temporal, MaxOccupancy), the
+        *GlobalSplitU* axis (the wave-fill lever the small cells need) went
+        undrawn and the mutator spent its whole budget on pads. The shuffle
+        keeps the run reproducible while spreading the budget over the axes,
+        and the cap leaves room for the wide (tile-donor) pass.
         """
+        per_knob: List[Tuple[str, List[Any]]] = []
+        knobs = list(FORWARD_KNOB_DOMAINS)
+        rng.shuffle(knobs)
+        for knob in knobs:
+            values = [v for v in self._joint_domain(family, knob, parent_config)
+                      if v != parent_config.get(knob)]
+            if values:
+                per_knob.append((knob, values))
         out: List[Tuple[Dict[str, Any], float]] = []
-        for knob in FORWARD_KNOB_DOMAINS:
-            for v in self._joint_domain(family, knob, parent_config):
-                if v != parent_config.get(knob):
-                    out.append(({**parent_config, knob: v}, 1.0))
+        depth = max((len(v) for _k, v in per_knob), default=0)
+        for i in range(depth):
+            for knob, values in per_knob:
+                if i < len(values):
+                    out.append(({**parent_config, knob: values[i]}, 1.0))
+                    if limit is not None and len(out) >= limit:
+                        return out
         return out
 
     def _wide_mutants(self, family: str, parent_config: Dict[str, Any],
@@ -324,7 +346,17 @@ class DBMutator(DbPatternsMixin):
         # Priority order: narrow (1.0) > direction (0.9) > wide (0.6). The sort
         # below is stable, so the order within a priority is the order below.
         cands: List[Tuple[Dict[str, Any], float]] = []
-        cands.extend(self._narrow_mutants(family, parent_config))
+        # The narrow pass may take at most half the budget: the wide pass
+        # (DB tile donors) is the only one that moves the *geometry*, and a
+        # mutator that never changes the tile cannot leave a local minimum.
+        # The rest of the narrow candidates are kept as a TOP-UP (priority
+        # 0.55, below the wide pass) for the families whose DB has no donor
+        # tile -- otherwise the HPA columns would return fewer mutants than
+        # the budget asks for.
+        narrow = self._narrow_mutants(family, parent_config, rng)
+        primary = max(1, n // 2)
+        cands.extend((knobs, 1.0) for knobs, _p in narrow[:primary])
+        cands.extend((knobs, 0.55) for knobs, _p in narrow[primary:])
 
         floor = self.floor_winner(family, shape)
         if floor:

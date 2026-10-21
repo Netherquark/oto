@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from oto import yamlio  # noqa: E402
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
 
@@ -112,7 +113,7 @@ class HarvestMixin:
         if phases_path.exists():
             try:
                 with open(phases_path, "r") as f:
-                    phases = yaml.safe_load(f) or []
+                    phases = yamlio.load_yaml_text(f.read()) or []
                 for p in phases:
                     if isinstance(p, dict) and p.get("fp") == analytics.config_fp:
                         return p.get("config", {})

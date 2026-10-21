@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from oto import yamlio  # noqa: E402
 #: The project root, resolved from this module's location.
 BASE = Path(__file__).resolve().parents[2]
 
@@ -55,7 +56,7 @@ def _resolved_config(phase_dir: Path) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     for yml in sorted(phase_dir.glob("*.yaml")):
         try:
-            doc = yaml.safe_load(yml.read_text(errors="ignore"))
+            doc = yamlio.load_yaml_text(yml.read_text(errors="ignore"))
         except Exception:
             continue
         entries = doc if isinstance(doc, list) else [doc]

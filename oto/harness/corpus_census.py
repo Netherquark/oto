@@ -52,6 +52,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 
 DEFAULT_DB = _HERE / "gfx90c_results" / "analysis" / "kernel_db.json"
@@ -151,8 +152,7 @@ def load_rows(db_path: Optional[str] = None, side: str = "native") \
     path = Path(db_path) if db_path else DEFAULT_DB
     if side not in ("native", "floor", "all"):
         raise ValueError(f"side must be native/floor/all, not {side!r}")
-    with open(path) as handle:
-        database = json.load(handle)
+    database = read_kernel_db(str(path))
     rows: List[Dict[str, Any]] = []
     for run_id, run_rows in database.items():
         run_side = "floor" if run_id.startswith("gfx900_ref") else "native"

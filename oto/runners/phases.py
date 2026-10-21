@@ -22,6 +22,7 @@ import yaml
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
 
+from oto import yamlio  # noqa: E402
 #: Consecutive executed phases that *launched the client and measured nothing*
 #: before the harness declares the GPU lost and aborts the run. The 2026-10-19
 #: overnight run lost the device after its first phase and burned 9h47m emitting
@@ -72,7 +73,7 @@ class PhaseMixin:
         phases: List[Dict[str, Any]] = []
         if phases_path.exists():
             with open(phases_path, "r") as f:
-                phases = yaml.safe_load(f) or []
+                phases = yamlio.load_yaml_text(f.read()) or []
 
         if explicit_deck or not include_overlay:
             return phases
@@ -146,7 +147,7 @@ class PhaseMixin:
             return []
         try:
             with open(path) as f:
-                payload = yaml.safe_load(f) or {}
+                payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
         except Exception as e:
             print(f"[overlay] seed overlay unreadable, ignoring: {e}")
@@ -170,7 +171,7 @@ class PhaseMixin:
                 pass
         try:
             with open(path) as f:
-                payload = yaml.safe_load(f) or {}
+                payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
         except Exception as e:
             print(f"[overlay] unreadable, ignoring: {e}")

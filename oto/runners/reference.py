@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import oto.tensile.library as tlib
 
 
+from oto import yamlio  # noqa: E402
 def _deck_content_fps(deck: List[Dict[str, Any]]) -> Dict[str, str]:
     """phase_key -> config fingerprint (undotted keys only)."""
     fps: Dict[str, str] = {}
@@ -140,7 +141,7 @@ class ReferenceMixin:
         manifest = tlib.load_shipped_manifest(self.base_dir, refresh=False)
 
         with open(base_dir / "phases_reference.yaml") as f:
-            deck = yaml.safe_load(f) or []
+            deck = yamlio.load_yaml_text(f.read()) or []
 
         # A triaged resume rebuilds the deck from the shipped manifest; the
         # content comparison then decides what still needs running.
@@ -482,7 +483,7 @@ class ReferenceMixin:
             deck_path = (self.base_dir / "gfx90c_runs" / rid
                          / "phases_reference.yaml")
             try:
-                for ph in yaml.safe_load(deck_path.read_text()) or []:
+                for ph in yamlio.load_yaml(deck_path) or []:
                     universe.setdefault(tlib.phase_key(ph), ph)
             except Exception:
                 continue

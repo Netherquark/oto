@@ -35,6 +35,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from oto import yamlio  # noqa: E402
 #: Re-measure the cells that previously ran with a config our own extractors got
 #: wrong. These measurements are the ones everything downstream trusts.
 QUESTION_ILLEGAL = "rerun_illegal"
@@ -115,7 +116,7 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     for rid in chain:
         p = base / "gfx90c_runs" / rid / "phases_reference.yaml"
         try:
-            for ph in yaml.safe_load(p.read_text()) or []:
+            for ph in yamlio.load_yaml(p) or []:
                 universe.setdefault(tlib.phase_key(ph), ph)
         except Exception:
             continue

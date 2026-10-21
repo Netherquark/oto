@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import oto.tensile.library as tlib  # noqa: E402
 
+from oto import yamlio  # noqa: E402
 # Re-exported for the pre-split import surface; the implementations live in
 # oto.metrics.read_thermals / oto.metrics.run_plan.
 from oto.metrics.read_thermals import read_thermals
@@ -511,7 +512,7 @@ def _get_deck_size(base: Path, plan: RunPlan) -> int:
         if deck_path.is_file():
             import yaml
             try:
-                doc = yaml.safe_load(deck_path.read_text()) or []
+                doc = yamlio.load_yaml(deck_path) or []
                 deck_size = len(doc) if isinstance(doc, list) else 0
             except Exception:
                 deck_size = 0

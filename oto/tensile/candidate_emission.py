@@ -26,6 +26,7 @@ import yaml
 from oto.tensile.candidate_config import CandidateConfig
 from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.tensile.gates.loads import cap_vector_width
+from oto import yamlio  # noqa: E402
 from oto.tensile.gates.occupancy import (  # noqa: E402
     occupancy_feasible, occupancy_workgroups_per_cu)
 
@@ -93,7 +94,7 @@ class CandidateEmitMixin:
         existing_phases = []
         if target_yaml.exists():
             with open(target_yaml, "r") as f:
-                existing_phases = yaml.safe_load(f) or []
+                existing_phases = yamlio.load_yaml_text(f.read()) or []
         existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
         existing_ids = {
             p.get("phase_id"): p.get("fp") for p in existing_phases if isinstance(p, dict)

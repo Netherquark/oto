@@ -34,18 +34,19 @@ import yaml
 from oto.device.peaks import shipped_cells
 from oto.tensile.library_parity import load_pipeline_phases, parity_report, phases_cells
 
+from oto import yamlio  # noqa: E402
 DEFAULT_BASE = Path(__file__).resolve().parents[2]
 
 
 def _load_manifests(args) -> list:
     if args.phases:
-        return yaml.safe_load(Path(args.phases).read_text()) or []
+        return yamlio.load_yaml(Path(args.phases)) or []
 
     merged = load_pipeline_phases(args.base_dir, run_id=args.run_id,
                                   include_seed=not args.no_seed)
 
     for extra in args.overlay or ():
-        doc = yaml.safe_load(Path(extra).read_text())
+        doc = yamlio.load_yaml(Path(extra))
         entries = doc.get("phases") if isinstance(doc, dict) else None
         if isinstance(entries, dict):
             entries = list(entries.values())

@@ -9,6 +9,32 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (7th) — the test suite is 9x faster, and the five failures
+  it was carrying were a mutator that had stopped searching.** `plans/
+  test_optimization.md` is executed: the dominant cost was **YAML parsing**,
+  not the gates, so `oto.yamlio` (the canonical reader: libyaml when it is
+  there, memoised by content) replaces every `yaml.safe_load` in `oto/`, the
+  corpus reads are memoised (`ab_records.arm_record_sets` on a corpus stamp;
+  `kernel_db.read_kernel_db` for the 18 MB JSON), and the three pure
+  legality gates are cached by config content (`oto.tensile.gates.memo`).
+  **The full suite went from 20 m 01 s with 5 failures to 2 m 10 s with 902
+  passing** (1 m 27 s with `pytest -n auto`; `pytest -m preflight` is the
+  36 s pre-run subset). The five failures were real defects, not stale
+  tests: (a) the narrow mutation pass walked `FORWARD_KNOB_DOMAINS` in dict
+  order, so the ten knobs the R45 batch added took the whole budget and
+  **GlobalSplitU -- the wave-fill lever the small cells need -- was never
+  drawn again**; the pass now visits the knobs in a seeded shuffle,
+  round-robins their legal values, and takes at most half the budget so the
+  wide (tile-donor) pass gets the rest; (b) the `nt_budget` rule was probed
+  and rejected on 2026-10-18 against a *wrong* measurement (Z tt2x2 emits
+  63 VGPRs, not 71) and is now **adopted** -- it is the per-thread occupancy
+  limit the gate enforces, and it fires on the 8 phases that died with
+  error 4 in the 2026-10-20 run; (c) `NLCA=-1` is legal and the test pinned
+  the old domain. `tests/conftest.py` registers the `serial` and `preflight`
+  markers and the rule that keeps a repo-tree-writing test out of a
+  distributed run; `pytest.ini` records the layout; `OTO_GUARD_FILES=1`
+  narrows the tree-walking guards to the changed files.
+
 - **2026-10-21 (6th) — the straggler list re-derived, the deck aimed at what
   is actually behind, and the coverage map.** `potential_configs.md` §R47 is
   the corrected reading of the corpus, and it changes the plan: (1) **CC and ZZ

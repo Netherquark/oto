@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
 
+from oto import yamlio  # noqa: E402
 from oto.device.peaks import (FAMILY_DTYPES, FAMILY_DTYPE_CHAR,  # noqa: E402
                               FAMILY_SHAPES)
 from oto.ledger.registry import fingerprint_config  # noqa: E402
@@ -99,10 +100,9 @@ def _load_deck_fps() -> Set[str]:
 
 
 def __yaml_load(path: Path, fallback: Any = []) -> Any:
-    import yaml
+    """Read a YAML file with the canonical reader (libyaml + content cache)."""
     try:
-        with open(path) as f:
-            return yaml.safe_load(f) or fallback
+        return yamlio.load_yaml_cached(path) or fallback
     except Exception:
         return fallback
 

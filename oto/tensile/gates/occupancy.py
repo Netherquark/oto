@@ -58,7 +58,7 @@ old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model
 post-mortem in potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible, occupancy_workgroups_per_cu,
 dtype_char, tile_dims, refuses_workgroup_register_file,
-refuses_lds_reduction_buffer.
+refuses_per_thread_occupancy_limit, refuses_lds_reduction_buffer.
 """
 
 from __future__ import annotations
@@ -66,6 +66,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Optional, Tuple
 
+from .memo import memo_gate
 from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
                          MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
                          MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
@@ -304,6 +305,7 @@ def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
     return _lds_reduction_check(config, ch, mt0, mt1, lsu)
 
 
+@memo_gate
 def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Register-file gate: reject configs Tensile cannot generate.
 
@@ -468,6 +470,34 @@ def refuses_workgroup_register_file(config: Dict[str, Any]) -> Optional[bool]:
         return None
     return _workgroup_file_check(
         dims, mt0, mt1, weight, local_split_u(config), ch) is not None
+
+
+def refuses_per_thread_occupancy_limit(config: Dict[str, Any]) -> Optional[bool]:
+    """The per-thread occupancy limit (Tensile's error 4) as a predicate.
+
+    ``None`` when the config cannot be modelled (unreadable tile dims), else
+    whether the EMITTED per-thread VGPRs do not fit ``65536 // NumThreads``.
+
+    This is the rule that was *probed and rejected* on 2026-10-18 and
+    **adopted** on 2026-10-21: the probe said it would refuse one phase
+    Tensile built (complex Z tt2x2 at 64x64, 1024 threads, "71 VGPRs"), but
+    the measured value was wrong -- that kernel emits **63** VGPRs (read out
+    of its own code object), which fits the 64 VGPRs/thread a 1024-thread
+    workgroup has. With the measured table corrected, the rule refuses
+    exactly the phases that die: SS 256x128 at tt8x4 (77 VGPRs/thread over
+    1024 threads), the 8 phases of run_20261020_214103 that errored out.
+    """
+    dims = tile_dims(config)
+    if not dims:
+        return None
+    _mt0, _mt1, tt0, tt1 = dims
+    nt = num_threads(dims, local_split_u(config))
+    if nt <= 0:
+        return None
+    vgpr = per_thread_vgpr(dtype_char(config), tt0, tt1)
+    if not vgpr:
+        return None
+    return VGPR_PER_CU // nt < vgpr
 
 
 def refuses_lds_reduction_buffer(config: Dict[str, Any]) -> Optional[bool]:
@@ -643,6 +673,7 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
+@memo_gate
 def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Group C legality gate for the forwarded LDS-pad / RCT knobs.
 

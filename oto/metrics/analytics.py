@@ -21,6 +21,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Set
 
+from oto import yamlio  # noqa: E402
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
 
@@ -106,7 +107,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
             if phases_path.exists():
                 import yaml
                 with open(phases_path, 'r') as f:
-                    self._phases_cache = yaml.safe_load(f) or []
+                    self._phases_cache = yamlio.load_yaml_text(f.read()) or []
             else:
                 self._phases_cache = []
         return self._phases_cache

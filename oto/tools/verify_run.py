@@ -43,6 +43,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from oto import yamlio  # noqa: E402
 BASE = Path(__file__).resolve().parents[2]
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
@@ -255,7 +256,7 @@ def cheapest(family: Optional[str] = None, n: int = 5,
     deck_path = base / "phases.yaml"
     if not deck_path.is_file():
         return []
-    phases = yaml.safe_load(deck_path.read_text()) or []
+    phases = yamlio.load_yaml(deck_path) or []
 
     # Families are labelled "ZZ" but Tensile's DataType is "Z"; the mapping
     # belongs to oto.device.peaks, so accept either and let it resolve.

@@ -10,7 +10,7 @@ Does NOT own: the verdicts (oto.metrics.ab_audit), the regression rules
 (oto.harness.regression_matrix), or the candidate deck
 (oto.harness.candidate_rows).
 
-Public API: load_kernel_db, build_kernel_db, main.
+Public API: load_kernel_db, read_kernel_db, build_kernel_db, main.
 
 The structural config comes from each folder's ``Data/00_Final.yaml``; the gfx900
 floor config is rebuilt from the solution name when the folder is absent. Dtype
@@ -324,6 +324,45 @@ def build_kernel_db(base_dir: str,
     return cache
 
 
+#: The parsed cache, keyed by (path, size, mtime). The file is 18 MB of JSON
+#: and every census, resolver and coverage map parses it; the corpus does not
+#: change inside a session, so one parse serves them all.
+_LOADED_CACHE: Dict[Tuple[str, int, float], Dict[str, List[Dict[str, Any]]]] = {}
+
+
+def read_kernel_db(cache_path: str) -> Dict[str, List[Dict[str, Any]]]:
+    """Read the cached kernel DB, memoised, without ever rebuilding it.
+
+    The read-only sibling of :func:`load_kernel_db`: the analysis tools want
+    the cache that is on disk (and an empty mapping when there is none), not a
+    rebuild. The parse is memoised on (path, size, mtime), so the 18 MB of
+    JSON is read once per session and a rewritten cache is re-read.
+
+    Args:
+        cache_path: The ``kernel_db.json`` to read.
+
+    Returns:
+        The ``run_id -> rows`` mapping (empty when the file is absent).
+    """
+    path = Path(cache_path)
+    if not path.is_file():
+        return {}
+    try:
+        stat = path.stat()
+        key = (str(path.resolve()), stat.st_size, stat.st_mtime)
+        hit = _LOADED_CACHE.get(key)
+        if hit is not None:
+            return hit
+        with open(path) as f:
+            doc = json.load(f)
+        if len(_LOADED_CACHE) > 4:
+            _LOADED_CACHE.clear()
+        _LOADED_CACHE[key] = doc
+        return doc
+    except (OSError, ValueError):
+        return {}
+
+
 def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
                    rebuild: bool = False,
                    run_ids: Optional[Sequence[str]] = None,
@@ -335,11 +374,25 @@ def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
     absent, so a fresh checkout can regenerate without a prior artifact.
     The rebuild writes the cache atomically (temp file + rename), so a reader
     that opens the cache mid-rebuild never sees a torn JSON blob.
+
+    The parsed document is memoised on (path, size, mtime): a rewritten cache
+    is re-read, and a reader that arrives during a rebuild sees the old
+    document rather than a torn one.
     """
-    if not rebuild and Path(cache_path).is_file():
+    path = Path(cache_path)
+    if not rebuild and path.is_file():
         try:
-            with open(cache_path) as f:
-                return json.load(f)
+            stat = path.stat()
+            key = (str(path.resolve()), stat.st_size, stat.st_mtime)
+            hit = _LOADED_CACHE.get(key)
+            if hit is not None:
+                return hit
+            with open(path) as f:
+                doc = json.load(f)
+            if len(_LOADED_CACHE) > 4:
+                _LOADED_CACHE.clear()
+            _LOADED_CACHE[key] = doc
+            return doc
         except (OSError, ValueError):
             pass
     if base_dir is None:

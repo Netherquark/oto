@@ -90,10 +90,13 @@ class TestDBMutatorSynthesis(unittest.TestCase):
                 if knob in mut:
                     touched.add(knob)
         # The narrow pass draws single-knob deltas across the forward domain,
-        # so several forward knobs must be represented in one batch.
-        self.assertTrue(
-            {"LdsPadA", "LdsPadB", "PrefetchGlobalRead"} & touched,
-            f"forward knobs missing from {sorted(touched)}")
+        # so several *different* forward knobs must be represented in one
+        # batch. Which knobs they are is not fixed: the pass visits them in a
+        # seeded shuffle (so an axis late in the dict is not starved), so the
+        # durable property is the VARIETY, not a particular set.
+        self.assertGreaterEqual(
+            len(touched), 3,
+            f"only {len(touched)} forward knob(s) represented: {sorted(touched)}")
 
     def test_wide_mutants_use_db_tile_donors(self):
         """Wide mutants include tiles from the DB's measured winners, not just
@@ -304,9 +307,12 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
         # NLCA must divide the tile's load count (SolutionStructs:2058). A
         # 128x128x8 tile at ThreadTile 8x8 / VectorWidth 4 has exactly one
         # load per operand, so {2,3} -- two thirds of the domain -- is refused.
-        self.assertEqual(forward_domain("SS", "NLCA"), (1, 2, 3))
+        # -1 is Tensile's "least coalesced" value (Common.py:1323 allows
+        # range(-1, 65)) and is legal here: with one load it degenerates to
+        # the same single load.
+        self.assertEqual(forward_domain("SS", "NLCA"), (-1, 1, 2, 3))
         self.assertEqual(
-            self.db._joint_domain("SS", "NLCA", PARENTS["SS"]), (1,))
+            self.db._joint_domain("SS", "NLCA", PARENTS["SS"]), (-1, 1))
 
         # The StaggerU trio moves as one (SolutionStructs:3326-3342): the
         # parent's absent StaggerU means Tensile's default 32 ("stagger on"),

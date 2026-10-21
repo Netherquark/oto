@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from oto import yamlio  # noqa: E402
 # Repo-root import (kept so the module also runs as
 # `python3 oto/harness/resolve_cells.py`; under `python3 -m oto.harness.resolve_cells`
 # the repo root is already on the path, and kernel_db.py and friends bootstrap the
@@ -51,6 +52,7 @@ if str(_HERE) not in sys.path:
 
 import yaml  # noqa: E402
 
+from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import (FAMILY_DTYPES, PEAK_GFLOPS,  # noqa: E402
                               REALISTIC_CEILINGS, THEORETICAL_PEAKS)
 from oto.tensile.shape_order import shape_order_key  # noqa: E402
@@ -102,7 +104,7 @@ def parse_run_config_yaml(path: str) -> Optional[Dict[str, Any]]:
     """
     try:
         with open(path) as f:
-            doc = yaml.safe_load(f)
+            doc = yamlio.load_yaml_text(f.read())
     except Exception:
         return None
     try:
@@ -187,8 +189,7 @@ def _load_kernel_db(
     db_path: str
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     """Read kernel_db.json -> (gfx900_ref floor rows, native phase->config map)."""
-    with open(db_path) as f:
-        kdb = json.load(f)
+    kdb = read_kernel_db(db_path)
     floor_rows: List[Dict[str, Any]] = []
     native_kb_cfg: Dict[str, Dict[str, Any]] = {}
     for rid, rows in kdb.items():

@@ -169,26 +169,27 @@ def load_pipeline_phases(base_dir: Optional[str] = None,
     in that run's per-run overlay (phases.<run_id>.overlay.yaml).
     """
     import glob
-    import yaml as _yaml
 
     from pathlib import Path
+
+    from oto import yamlio as _yamlio
 
     base = Path(base_dir or Path(__file__).resolve().parents[2])
     deck: List[Dict[str, Any]] = []
     deck_path = base / "phases.yaml"
     if deck_path.exists():
-        deck = _yaml.safe_load(deck_path.read_text()) or []
+        deck = _yamlio.load_yaml(deck_path) or []
 
     merged: List[Dict[str, Any]] = list(deck)
 
     if run_id:
         for ov_path in sorted((base / "gfx90c_results" / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
-            _merge(merged, _yaml.safe_load(_read(ov_path)), f"run_overlay:{run_id}")
+            _merge(merged, _yamlio.load_yaml_text(_read(ov_path)), f"run_overlay:{run_id}")
 
     if include_seed:
         seed_path = base / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
         if seed_path.exists():
-            doc = _yaml.safe_load(seed_path.read_text())
+            doc = _yamlio.load_yaml(seed_path)
             _merge(merged, doc, "seed_overlay")
     return merged
 

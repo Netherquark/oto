@@ -35,6 +35,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from oto import yamlio  # noqa: E402
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
@@ -123,7 +124,7 @@ def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
         if cfg_yaml.exists():
             import yaml
             try:
-                cfgd = yaml.safe_load(cfg_yaml.read_text()) or {}
+                cfgd = yamlio.load_yaml(cfg_yaml) or {}
                 ttr = str(cfgd.get("ThreadTile") or cfgd.get("thread_tile") or "")
                 m2 = re.search(r"(\d+)x(\d+)", ttr.replace(",", "x"))
                 if m2:

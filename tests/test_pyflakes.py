@@ -9,6 +9,7 @@ unused locals, or empty f-strings.
 from __future__ import annotations
 
 import re
+import os
 import subprocess
 import sys
 
@@ -55,10 +56,24 @@ def _run_pyflakes(files):
     return undefined, redef, local, fstring
 
 
+def _changed_python_files() -> list:
+    """The repo-relative Python files git reports as modified or staged."""
+    import subprocess
+
+    out = subprocess.run(["git", "status", "--porcelain"],
+                         capture_output=True, text=True, check=False).stdout
+    return [line[3:].strip() for line in out.splitlines()
+            if line[3:].strip().endswith(".py")]
+
+
 def test_pyflakes_dangerous_categories_zero():
     """All four dangerous pyflakes categories must be zero."""
     files = [f for f in __import__("subprocess").run(
         ["git", "ls-files", "*.py"], capture_output=True, text=True).stdout.split()]
+    if os.environ.get("OTO_GUARD_FILES") == "1":
+        # The fast path: check what you touched, not the whole tree.
+        changed = set(_changed_python_files())
+        files = [f for f in files if f in changed]
 
     undefined, redef, local, fstring = _run_pyflakes(files)
 

@@ -51,6 +51,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from oto import yamlio  # noqa: E402
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
@@ -123,7 +124,7 @@ def read_phase_config(path: Path, phase_id: str) -> Optional[Dict[str, Any]]:
     or has no BenchmarkProblems block.
     """
     try:
-        doc = yaml.safe_load(Path(path).read_text())
+        doc = yamlio.load_yaml(Path(path))
         pt, body = doc["BenchmarkProblems"][0][0], doc["BenchmarkProblems"][0][1]
     except (OSError, ValueError, TypeError, KeyError, IndexError):
         return None

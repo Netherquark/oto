@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from oto import yamlio  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_TENSILE_ROOT = Path(
     os.environ.get("TENSILE_ROOT", "")
@@ -280,7 +281,7 @@ def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
     """
     tensile = _tensile_pipeline()
 
-    cfg = yaml.safe_load(phase_yaml.read_text())
+    cfg = yamlio.load_yaml(phase_yaml)
     problems = cfg.get("BenchmarkProblems") or []
     if not problems:
         return {"ok": False, "reason": "phase config has no BenchmarkProblems section"}
@@ -452,7 +453,7 @@ def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -
 
 # --------------------------------------------------------------------------
 def select_phases(args: argparse.Namespace) -> List[Dict[str, Any]]:
-    deck = yaml.safe_load((REPO / "phases.yaml").read_text()) or []
+    deck = yamlio.load_yaml(REPO / "phases.yaml") or []
     if args.phase_id:
         deck = [p for p in deck if p.get("phase_id") == args.phase_id]
         if not deck:

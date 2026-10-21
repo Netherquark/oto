@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
 
+from oto import yamlio  # noqa: E402
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
 
@@ -450,7 +451,7 @@ class Mutator(MutatorOutcomesMixin):
             return []
         try:
             with open(path) as f:
-                payload = yaml.safe_load(f) or {}
+                payload = yamlio.load_yaml_text(f.read()) or {}
         except Exception:
             return []
         return payload.get("phases", []) or []

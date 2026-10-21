@@ -23,9 +23,12 @@ PYTHONPATH=. python3 oto/runners/cli.py --preflight
 
 # 3. Pyflakes safety net (fast, CPU-only)
 python3 -m pytest tests/test_pyflakes.py tests/test_function_length.py -q
+OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_function_length.py -q  # changed files only
 
-# 4. Full test suite
+# 4. Full test suite (2m10s serial, 1m27s with -n auto)
 python3 -m pytest -q
+python3 -m pytest -q -n auto          # distributed (pytest-xdist)
+python3 -m pytest -q -m preflight      # the pre-run subset the checklist runs (36 s)
 
 # 5. Gate calibration / failure triage (CPU-only, read-only)
 python3 -m oto.harness.gate_calibration --population ours
@@ -42,6 +45,8 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `tensile_tuning_context.md` | Stage 0–3 search order + NOT VERIFIED note |
 | (research corpus: deleted — durable facts promoted to this doc + gfx90c_tuning_guide.md + tensile_tuning_context.md) | absorbed |
 | `oto/device/peaks.py` | Hardware peaks + canonical vocabulary |
+| `oto/yamlio.py` | The project's YAML reader: libyaml when present, memoised by content |
+| `oto/tensile/gates/memo.py` | The content-keyed memo the pure legality gates use |
 | `oto/tensile/decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |
 | `oto/tensile/gates/occupancy.py` | LDS + VGPR occupancy gate |
 | `oto/tensile/gates/loads.py` | Classic-path global-load divisibility + 16B cap |
@@ -56,6 +61,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
+| `tests/conftest.py` | The `serial` / `preflight` markers, the serial rule, the corpus fixtures |
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
 | `tests/test_tile_frontier.py` | The legal MacroTile frontier above 16384 elements |
@@ -176,6 +182,11 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 - **Any `pytest` invocation during programming takes minutes and must be run in
   the background** (background mode) so the conversation is not blocked; read the
   result when it completes. Never sleep/poll for it.
+- **The suite is fast now** (2 m 10 s serial, 1 m 27 s with `-n auto`,
+  36 s for `-m preflight`): the YAML reader uses libyaml, the corpus reads are
+  memoised and the legality gates are cached by config content. A run that
+  takes longer than that is doing something new -- check the durations
+  (`pytest --durations=10`) before assuming the machine is slow.
 
 ## The overnight run command
 

@@ -153,35 +153,24 @@ def _refuses_apm2(config: Dict[str, Any]) -> Optional[bool]:
 
 
 def _refuses_nt_budget(config: Dict[str, Any]) -> Optional[bool]:
-    """REJECTED candidate: ``min(256, 65536 // NumThreads)`` under the total.
+    """ADOPTED 2026-10-21: the per-thread occupancy limit (Tensile's error 4).
 
-    A per-thread VGPR ceiling one could read Tensile as imposing once the
-    workgroup-file bound is known. Probed 2026-10-18: it would refuse **1** phase
-    Tensile built (complex ``Z`` tt2x2 at 64x64, NumThreads 1024 -> budget 64
-    against a measured 71 VGPRs), so it adds a false rejection and must not land.
-    Kept as the worked counter-example of a probe that fails the 0 rule
-    (``kernel_tuning_research.md`` §4).
+    ``min(256, 65536 // NumThreads)`` is the budget the EMITTED per-thread
+    VGPRs must fit. This was probed and REJECTED on 2026-10-18 because it
+    would refuse one phase Tensile built (complex ``Z`` tt2x2 at 64x64,
+    NumThreads 1024 -> budget 64 against a "measured 71 VGPRs") -- the 71 was
+    wrong: that kernel emits **63** VGPRs (read out of its own code object),
+    which fits. With the measured table corrected the rule refuses exactly the
+    phases that die: SS 256x128 at tt8x4 (77 VGPRs/thread over 1024
+    threads), the 8 phases of run_20261020_214103 that errored out.
+
+    The rule is now a *view* of the shipped gate
+    (``gates/occupancy.refuses_per_thread_occupancy_limit``), so the probe and
+    the gate cannot drift.
     """
-    from oto.tensile.gates.occupancy import dtype_char, tile_dims
-    from oto.tensile.gates.vgpr_model import (MAX_VGPR_PER_THREAD,
-                                              MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU,
-                                              VGPR_PER_ELEMENT, local_split_u)
+    from oto.tensile.gates.occupancy import refuses_per_thread_occupancy_limit
 
-    dims = tile_dims(config)
-    if not dims:
-        return None
-    mt0, mt1, tt0, tt1 = dims
-    num_threads = (mt0 // tt0) * (mt1 // tt1) * local_split_u(config)
-    if num_threads <= 0:
-        return None
-    ch = dtype_char(config)
-    total = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt0, tt1))
-    if total is None:
-        weight = VGPR_PER_ELEMENT.get(ch)
-        total = tt0 * tt1 * weight if weight else None
-    if not total:
-        return None
-    return total > min(MAX_VGPR_PER_THREAD, VGPR_PER_CU // num_threads)
+    return refuses_per_thread_occupancy_limit(config)
 
 
 def builtin_rules() -> Dict[str, Rule]:
@@ -190,8 +179,9 @@ def builtin_rules() -> Dict[str, Rule]:
     ``workgroup_file`` and ``lds_reduction`` are *views* of the shipped gate:
     they call ``occupancy``'s own predicate helpers, so a drift between the rule
     a future agent probes and the rule the gate enforces is impossible.
-    ``apm2`` is the generator-seam rule. ``nt_budget`` is the candidate that was
-    probed and rejected (see :func:`_refuses_nt_budget`).
+    ``apm2`` is the generator-seam rule. ``nt_budget`` is the per-thread
+    occupancy limit, adopted 2026-10-21 after the measured VGPR table was
+    corrected (see :func:`_refuses_nt_budget`).
     """
     from oto.tensile.gates.occupancy import (refuses_lds_reduction_buffer,
                                              refuses_workgroup_register_file)

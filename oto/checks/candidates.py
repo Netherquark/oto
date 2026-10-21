@@ -40,6 +40,7 @@ from pathlib import Path
 
 import yaml
 
+from oto import yamlio  # noqa: E402
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
@@ -163,7 +164,7 @@ def load_deck(path: Path) -> list:
     the *launch set* (``phases.yaml`` plus the overlay) instead of only the
     committed deck.
     """
-    loaded = yaml.safe_load(path.read_text())
+    loaded = yamlio.load_yaml(path)
     return loaded.get("phases", []) if isinstance(loaded, dict) else loaded
 
 

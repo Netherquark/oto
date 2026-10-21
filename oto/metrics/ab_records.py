@@ -138,6 +138,38 @@ def arm_records(driver, runs: Iterable[str], arm: str,
         recs.extend(phase_records(driver, base / "gfx90c_runs" / run, arm))
     return recs
 
+#: The last computed record sets, keyed by the corpus stamp. The corpus walk
+#: reads every run directory's benchmark CSVs plus the registry: ~76 s, and
+#: five coverage tests each wanted it. The corpus does not change inside a
+#: session, so the sets are memoised on a stamp that *does* change when it
+#: does (a new run directory, or a registry write).
+_RECORD_SETS_CACHE: Dict[Tuple[Any, ...], Tuple[List[Dict[str, Any]],
+                                               List[Dict[str, Any]],
+                                               List[str]]] = {}
+
+
+def _corpus_stamp(base: Path) -> Tuple[Any, ...]:
+    """A cheap key that changes whenever the corpus changes.
+
+    Returns:
+        (base, run count, newest run mtime, registry size and mtime).
+    """
+    runs = [d for d in (base / "gfx90c_runs").glob("run_*") if d.is_dir()]
+    newest = 0.0
+    for run in runs:
+        try:
+            newest = max(newest, run.stat().st_mtime)
+        except OSError:
+            continue
+    db = base / "gfx90c_results" / "registry.db"
+    try:
+        stat = db.stat()
+        db_stamp: Tuple[Any, ...] = (stat.st_size, stat.st_mtime)
+    except OSError:
+        db_stamp = (0, 0.0)
+    return (str(base), len(runs), newest, db_stamp)
+
+
 def arm_record_sets(base: Path = BASE) -> Tuple[List[Dict[str, Any]],
                                                 List[Dict[str, Any]],
                                                 List[str]]:
@@ -150,7 +182,15 @@ def arm_record_sets(base: Path = BASE) -> Tuple[List[Dict[str, Any]],
     Factored out so the measured band has exactly one definition: a coverage
     report that recomputed its own inputs from a different subset would grade
     against a band the audit never used.
+
+    The result is memoised on the corpus stamp (see :func:`_corpus_stamp`):
+    the walk costs ~76 s and every caller wants the same records. The returned
+    lists are shared, so a caller must treat them as read-only.
     """
+    key = _corpus_stamp(base)
+    cached = _RECORD_SETS_CACHE.get(key)
+    if cached is not None:
+        return cached
     driver = _driver(base)
     native = arm_records(
         driver,
@@ -161,6 +201,9 @@ def arm_record_sets(base: Path = BASE) -> Tuple[List[Dict[str, Any]],
              if (base / "gfx90c_runs" / r).is_dir()]
     floor = arm_records(driver, chain, "spoof", base)
     floor += _registry_records(driver, base, want_arm="spoof")
+    if len(_RECORD_SETS_CACHE) > 4:
+        _RECORD_SETS_CACHE.clear()
+    _RECORD_SETS_CACHE[key] = (native, floor, chain)
     return native, floor, chain
 
 def _registry_records(driver, base: Path, want_arm: str) -> List[Dict[str, Any]]:

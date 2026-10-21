@@ -16,6 +16,7 @@ from pathlib import Path
 
 import yaml
 
+from oto import yamlio  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
@@ -113,13 +114,13 @@ def phases_from(path):
     phases = []
     for f in sorted(Path(path).glob("*/phases_reference.yaml")):
         try:
-            phases.extend(yaml.safe_load(f.read_text()) or [])
+            phases.extend(yamlio.load_yaml_text(f.read()) or [])
         except Exception:
             continue
     return phases
 
 
-all_phases = yaml.safe_load((ROOT / "phases.yaml").read_text()) or []
+all_phases = yamlio.load_yaml(ROOT / "phases.yaml") or []
 all_phases += phases_from(ROOT / "gfx90c_runs")
 all_phases += phases_from(ROOT / "gfx90c_results" / "gfx900_ref_locked_52149f315d")
 print(f"phases under test: {len(all_phases)}")

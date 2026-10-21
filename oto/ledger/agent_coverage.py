@@ -19,6 +19,7 @@ import yaml
 import oto.metrics.coverage as coverage
 
 
+from oto import yamlio  # noqa: E402
 class CoverageMixin:
     """Coverage guidance, mixed into ConvergenceAgent."""
 
@@ -37,7 +38,7 @@ class CoverageMixin:
             if path.exists():
                 try:
                     with open(path) as f:
-                        phases = yaml.safe_load(f) or []
+                        phases = yamlio.load_yaml_text(f.read()) or []
                 except Exception:
                     phases = []
             self._shape_sweeps_cache = synthesis.family_shape_sweeps(phases)

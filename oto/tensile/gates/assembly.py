@@ -52,6 +52,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Optional, Tuple
 
+from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
@@ -166,6 +167,7 @@ def _stagger_rejection(config: Dict[str, Any],
     return None
 
 
+@memo_gate
 def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Return (True, "") if config is a legal gfx90c Assembly GEMM class.
 

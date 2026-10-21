@@ -12,6 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from oto import yamlio  # noqa: E402
 from oto.metrics.ab_audit import (  # noqa: E402
     BASE as _AB_BASE, _driver, _registry_records, phase_records,
 )
@@ -90,7 +91,7 @@ def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
         if not path.is_file():
             continue
         try:
-            entries = yaml.safe_load(path.read_text()) or []
+            entries = yamlio.load_yaml(path) or []
         except Exception:
             continue
         for p in entries:

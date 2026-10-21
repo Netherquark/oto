@@ -20,6 +20,7 @@ import math
 import re
 from typing import Any, Dict, Optional, Tuple
 
+from .memo import memo_gate
 from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
                          knob_int, local_split_u)
 
@@ -389,6 +390,7 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
     return vw
 
 
+@memo_gate
 def validate_tensile_loads(config: Dict[str, Any]) -> Tuple[bool, str]:
     """Faithful port of Tensile classic-path divisibility.
 

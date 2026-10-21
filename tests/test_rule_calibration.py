@@ -154,11 +154,27 @@ class TestBuiltinsMatchTheGate(unittest.TestCase):
         self.assertFalse(rule({"AggressivePerfMode": 1}))
         self.assertTrue(rule({"AggressivePerfMode": 2}))
 
-    def test_nt_budget_builtin_is_the_documented_rejected_candidate(self):
-        # Z tt2x2 at 64x64 -> NumThreads 1024 -> budget 64 vs measured 71.
+    def test_nt_budget_builtin_fires_on_the_phase_that_died(self):
+        """The per-thread occupancy limit, after the measured table was fixed.
+
+        It was probed and rejected on 2026-10-18 because it seemed to refuse
+        a phase Tensile built (Z tt2x2 at 64x64, 1024 threads, "71 VGPRs").
+        That measurement was wrong: the kernel emits **63** VGPRs, which fits
+        the 64 a 1024-thread workgroup has. The rule now fires on exactly the
+        phases that died with error 4 (SS 256x128 at tt8x4: 77 VGPRs/thread).
+        """
         rule = rc.builtin_rules()["nt_budget"]
-        self.assertTrue(rule({"DataType": "z", "MacroTile": "64x64x8",
-                              "ThreadTile": "2x2"}))
+        # The phase that built: 63 VGPRs/thread over 1024 threads -> fits.
+        self.assertFalse(rule({"DataType": "z", "MacroTile": "64x64x8",
+                               "ThreadTile": "2x2"}))
+        # The phases that died with error 4 in run_20261020_214103.
+        self.assertTrue(rule({"DataType": "s", "MacroTile": "256x128x8",
+                              "ThreadTile": "8x4"}))
+        self.assertTrue(rule({"DataType": "s", "MacroTile": "128x256x8",
+                              "ThreadTile": "4x8"}))
+        # The winner geometry: 119 VGPRs/thread over 256 threads -> fits.
+        self.assertFalse(rule({"DataType": "s", "MacroTile": "128x128x8",
+                               "ThreadTile": "8x8"}))
 
 
 class TestLoadRule(unittest.TestCase):

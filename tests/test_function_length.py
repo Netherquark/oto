@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import List, Optional
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -34,9 +35,19 @@ REPO = Path(__file__).resolve().parent.parent
 MAX_FUNCTION_LINES = 60
 
 
-def _functions():
-    """Every (file, name, lineno, span) function in the oto package."""
-    for path in sorted((REPO / "oto").rglob("*.py")):
+def _functions(only: Optional[List[str]] = None):
+    """Every (file, name, lineno, span) function in the oto package.
+
+    Args:
+        only: When given, the repo-relative paths to scan instead of the whole
+            tree (the ``OTO_GUARD_FILES=1`` fast path: the guard then checks
+            what you touched, not everything).
+    """
+    if only:
+        paths = [REPO / rel for rel in only]
+    else:
+        paths = sorted((REPO / "oto").rglob("*.py"))
+    for path in paths:
         if "__pycache__" in path.parts:
             continue
         try:
@@ -49,11 +60,11 @@ def _functions():
                 yield path.relative_to(REPO), node.name, node.lineno, span
 
 
-def test_no_function_exceeds_the_line_limit():
+def test_no_function_exceeds_the_line_limit(changed_python_files):
     """AC 1b: no function in oto/**/*.py spans more than 60 lines."""
     offenders = [
         (path, name, lineno, span)
-        for path, name, lineno, span in _functions()
+        for path, name, lineno, span in _functions(changed_python_files or None)
         if span > MAX_FUNCTION_LINES
     ]
     assert not offenders, (

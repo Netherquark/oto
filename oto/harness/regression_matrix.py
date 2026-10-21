@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import yaml
 
+from oto import yamlio  # noqa: E402
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
 
@@ -119,7 +120,7 @@ def _split_native_spoof(db: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
 def _deck_phase_ids(base_dir: str) -> Set[str]:
     """The shipped deck's phase ids (the authoritative coverage universe)."""
     text = (Path(base_dir) / "phases.yaml").read_text()
-    return {p.get("phase_id") for p in (yaml.safe_load(text) or [])}
+    return {p.get("phase_id") for p in (yamlio.load_yaml_text(text) or [])}
 
 
 def _bucket_rows(
