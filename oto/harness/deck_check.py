@@ -7,6 +7,7 @@ and reports the rows it refuses.
 Does NOT own: the legality gates (oto.tensile.gates), the oracle's probe
 (oto.harness.tensile_oracle), the corpus (oto.harness.kernel_db) or the
 registry (oto.ledger.registry).
+Public API: check, unmeasured_rows, measured_fingerprints, main.
 
 Why: the CPU gates are *models* of Tensile. A model that says "legal" and a
 Tensile that says "0 solutions" costs a launch slot and a wasted phase in the

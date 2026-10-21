@@ -9,6 +9,7 @@ figures together.
 Does NOT own: the legal space itself (oto.harness.coverage_map), the corpus
 (oto.harness.kernel_db), the candidate deck (oto.harness.candidate_rows) or
 the verdicts (oto.metrics.ab_audit).
+Public API: legal_geometries, measured_geometries, coverage_row, main.
 
 Why a 2D picture: the corpus is a *thin sample* of a large legal space --
 8-13 % of it -- and that number is unreadable on its own. Projected onto

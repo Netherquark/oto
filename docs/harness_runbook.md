@@ -206,6 +206,12 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 
 ### 5. Ask Tensile, not the model (the legality oracle)
 
+> The three implementation modules behind this section -- `oto.yamlio` (the
+> libyaml reader every YAML read goes through), `oto.tensile.patterns` (one
+> spelling, one meaning for the contraction patterns) and
+> `oto.tensile.gates.memo` (the content-keyed cache the gates use) -- are
+> listed in `oto/README.md` and `docs/agent_reference.md`.
+
 The gates are **models** of Tensile. A model that says "legal" while Tensile
 says "0 valid solutions" costs a launch slot and a wasted phase -- the
 2026-10-20 run spent 8 phases on tiles that cannot be built. So every

@@ -12,6 +12,7 @@ config materialisation (oto.tensile.config_writer), the Tensile pipeline
 (oto.checks.tensile_build), or the corpus-wide agreement census
 (oto.harness.gate_calibration -- that one sweeps the corpus; this one answers
 about a single config).
+Public API: probe_config, probe_phase, main.
 
 Why it exists: the CPU gates are *models* of Tensile, and a model is only as
 good as the cases it has been checked against. Whenever a question came up

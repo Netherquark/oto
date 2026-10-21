@@ -8,6 +8,7 @@ section: a dense summary table and the figure grid).
 Does NOT own: the figures (oto.harness.coverage_graph writes them), the
 report payload (oto.metrics.report_models) or the stylesheet
 (oto.metrics.report_css).
+Public API: coverage_rows, coverage_section, coverage_dir.
 
 Why the section exists: the acceptance report said *how fast* the best kernel
 on each cell is, and nothing about *how much of the space was searched*. Those
