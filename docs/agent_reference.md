@@ -160,6 +160,9 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 - `check_candidates.py`, `generate_candidates --dry-run`, and `--preflight` are safe
 - Real benchmarking happens in the user's TTY only
 - CPU-only legality proofs: `validate_config`, `ldspad_feasible`, `occupancy_feasible`
+- **Any `pytest` invocation during programming takes minutes and must be run in
+  the background** (background mode) so the conversation is not blocked; read the
+  result when it completes. Never sleep/poll for it.
 
 ## The overnight run command
 
