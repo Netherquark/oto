@@ -233,8 +233,15 @@ ceiling and its levers are concurrency and independent work, not arithmetic tric
 ## Quantitative guidance
 - Ceilings (BLAS-8): **CGEMM = FP32 peak ≈ 1613 GFLOPS; ZGEMM = FP64 peak ≈ 101 GFLOPS**
   on gfx90c; complex-MAC rate = GFLOPS/8 (≈202 / ≈12.6 G MAC/s).
-- Realistic acceptance bars track the real families: **CGEMM ≈ SGEMM ≈ 1119 GFLOPS;
-  ZGEMM ≈ DGEMM ≈ 98.6 GFLOPS**; current first-party complex results (~354 / ~22.5) are
-  ~25% of that — the headroom is tuning, not algorithm.
+- Realistic acceptance bars track the real families **in the unit the client
+  reports**: **CGEMM ≈ SGEMM ≈ 1119 GFLOPS; ZGEMM ≈ DGEMM ≈ 98.6 GFLOPS** in
+  BLAS-8, which is **279.7 / 24.65** in the client's own count (Tensile charges
+  2 flops per MAC for complex types, so a reported complex GFLOPS is ¼ of its
+  BLAS-8 value -- `ContractionProblem.cpp:1108`). The first-party complex
+  results (~346.7 / ~24.5 reported) are therefore **124 % / 99 % of their
+  bars** -- the complex families are at 80-97 % of the FMA roof, and the
+  "~25 % of the ceiling" reading was the unit error corrected on 2026-10-21
+  (`gfx90c_theoretical_limits.md` §5.2). **The headroom is not in the complex
+  families at all**; it is in the three small cells (SS:256, HH:256, CC:192).
 - Split choice: fused **4M** per MAC; consider **3M** only for large-K GEMMs where the
   O(N²) combine is negligible and the three real GEMMs run near their own efficiency.

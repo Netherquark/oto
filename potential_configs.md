@@ -1734,14 +1734,19 @@ its emphasis. Occupancy is *shape-limited*, not resource-starved, and the
 binding constraint is LDS capacity — which is the one thing raising `ThreadTile`
 makes worse.
 
-**F5. Complex runs at 20–25% of an achievable ceiling that no tile in the legal
-space can reach, and the reason is instruction count.** See §6. CC's best
-measured kernel is 360.9 GF/s (MT64x64x8/TT4x4, 79 VGPR, 12 waves/CU) against a
-1118.7 bar; ZZ's is 24.7 (MT32x32x8/TT2x2, 63 VGPR, 8 waves/CU) against 98.6.
-The corpus's ridge table places the ALU ridge beyond the accumulator cap for Z.
-**The gap is not closable by ThreadTile search alone** — which is why the deck
-must spend its budget on the un-varied knobs and on the larger-MacroTile /
-same-accumulator corner (F3), not on more ThreadTile widths.
+**F5. SUPERSEDED 2026-10-21 (§R47): the complex families are at 80-97 % of
+the FMA roof; the "20-25 % of the ceiling" was a 4x unit error in the bar.**
+The text this finding replaced read: *CC's best measured kernel is 360.9 GF/s
+(MT64x64x8/TT4x4, 79 VGPR, 12 waves/CU) against a 1118.7 bar; ZZ's is 24.7
+(MT32x32x8/TT2x2, 63 VGPR, 8 waves/CU) against 98.6; the gap is not closable
+by ThreadTile search alone.* Both bars were the BLAS-8 roof compared against a
+client-reported number (Tensile charges 2 flops per complex MAC, so a reported
+complex GFLOPS is ¼ of its BLAS-8 value). In the client's own unit the bars
+are 279.7 and 24.65, and the corpus's 346.7 / 24.5 are **124 % / 99 % of
+them** -- 86 % and 97 % of the FP32/FP64 FMA roofs
+(`gfx90c_theoretical_limits.md` §5.2). The conclusion is unchanged in *shape*
+(the complex tile cap is real) and reversed in *sign* (the complex cells are not
+short of headroom; the three small cells are).
 
 ---
 

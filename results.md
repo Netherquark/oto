@@ -484,6 +484,13 @@ this section is the measured evidence and the provenance.
 
 ### 14.1 The twelve ORANGE cells are the two issue-bound families
 
+> **SUPERSEDED 2026-10-21 by §16**: the ten complex ORANGE cells were a
+> **4x unit error** in the bar (the client reports complex GEMMs at 2 flops
+> per MAC, so a reported complex GFLOPS is ¼ of its BLAS-8 value, and the bar
+> was the BLAS-8 roof). CC and ZZ are at 80-97 % of the FMA roof; the
+> ORANGE list is **three** cells. The record below is kept as it was measured
+> on 2026-10-18.
+
 `per_family_coverage`, best median per graded size, `%` of the realistic ceiling:
 
 | family | 128 | 192 | 256 | 512 | 768 | 1000 | 1024 | 1365 | 2048 | 4096 |
@@ -551,3 +558,60 @@ Three readings from the current corpus:
   untried value of a measured axis is hiding above them. This is the empirical
   half of §R41 — spend on the unmeasured frontier and the assertion axis, not on
   another value of a settled knob.
+
+## 16. The corrected reading: three ORANGE cells, not twelve (2026-10-21)
+
+The same corpus, re-scored. The change is **not** in the measurements: it is in
+the unit the complex families are scored against.
+
+**The finding.** Tensile's client charges **2 flops per MAC for every dtype**,
+complex included (`ContractionProblem::flopCount` = `2 * DataTypeInfo::packing`,
+and packing is 1 for complexSingle/complexDouble;
+`Tensile/Source/lib/include/Tensile/DataTypes.hpp:177`). A complex MAC is
+*executed* as four real FMAs = 8 BLAS flops, so **a reported complex GFLOPS is
+¼ of its BLAS-8 value**. Every benchmark CSV proves it: `TotalFlops == 2*M*N*K`
+for CC, ZZ, SS and DD alike (CC 192³ -> 14,155,776 = 2*192³). The acceptance
+report compared the complex families against the **BLAS-8** roof (1613 / 101),
+dividing their utilisation by four.
+
+Three independent checks agree on the truth:
+
+1. **The client's own numbers** (`TotalFlops = 2*M*N*K` for every family).
+2. **The wall clock**: CC at 512³ takes 0.834 ms (2*512³ / 322 GFLOPS); the
+   FP32 pipe needs 8*512³/1613 = 0.666 ms for the same work, so the kernel runs
+   at **80 % of the FMA roof**. ZZ at 1024³ takes 87.65 ms against an 85.05 ms
+   FP64 roof — **97 %**.
+3. **The occupancy**: CC's winner (64×64, TT 4×4, 79 VGPRs) puts 3 workgroups
+   per CU = 3 waves/SIMD, *more* than SS's 128×128 winner (119 VGPRs, 2
+   waves/SIMD) — which is why complex beats SS's 69 %.
+
+**The corrected per-family table** (client-reported GFLOPS; the bar is the
+client's own unit -- 279.7 for CC, 24.65 for ZZ):
+
+| family | 192 | 256 | 512 | 768 | 1000 | 1024 | 1365 | 2048 | 4096 |
+|---|---|---|---|---|---|---|---|---|---|
+| CC | **42.3** | 81.8 | 115.1 | — | — | 123.0 | — | 124.0 | — |
+| ZZ | 84.4 | 90.9 | 98.6 | — | — | 99.4 | — | — | — |
+| SS | 30.6 | **36.8** | 78.1 | 99.1 | 103.1 | 108.1 | 99.6 | 104.4 | 108.4 |
+| HH | — | **31.0** | 68.4 | — | — | 104.9 | — | 108.5 | 111.7 |
+| DD | 79.0 | 87.1 | 97.1 | 96.0 | — | 95.4 | 90.4 | 100.2 | — |
+
+**The ORANGE list is three cells**: `SS:256` (36.8 %), `HH:256` (31.0 %) and
+`CC:192` (42.3 %). Every CC and ZZ cell from 256³ up is GREEN, and the complex
+families are the *best* utilised in the corpus.
+
+**What it changes for the tuning.** §14.1's reading ("the complex cells are
+issue-rate walls; the resolution path is pads/GSU/PGR") was a consequence of
+the mis-scaled bar, and the work it proposed (3M/Karatsuba, split-K, the
+complex knob sweep) is withdrawn: there is nothing to win at 97 % of the pipe.
+The headroom is in the two small cubes plus `CC:192`, and the arithmetic of
+*why* is in `potential_configs.md` §R48.2: the winners are at 53-83 % of their
+own fill-and-waste bound, so the cells are **starved, not badly tuned** -- the
+same kernel that scores 412 at SS:256 scores 981 at SS:4096.
+
+**The A/B protocol is the other half.** Nine of the fifteen ties run the
+floor's *own* config on both arms, and across those identical cells the delta
+spans **+1.1 % to +18.6 %** -- a 17.5-point environment band against a
+±5 % verdict band, with no clock telemetry on the floor side. A verdict on an
+identical cell is a measurement of the machine, not of the kernel
+(`potential_configs.md` §R47.2, §R48.5).

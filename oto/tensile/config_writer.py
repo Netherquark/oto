@@ -53,6 +53,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from oto.tensile.gates.assembly import assembly_class_valid
+from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.patterns import TRANSPOSE_MAP as _PATTERN_TRANSPOSE_MAP  # noqa: E402
 from oto.tensile.patterns import transposes as _pattern_transposes  # noqa: E402
 from oto.tensile.gates.occupancy import (ldspad_feasible,
@@ -461,7 +462,13 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
     label = phase.get("label", "")
     dtype = phase.get("dtype", "S").lower()
     gate_config = {**config, "DataType": dtype, "label": label}
+    # The load divisibility gate belongs in the backstop: a config that
+    # violates it yields "0 valid solutions" from Tensile, which costs a launch
+    # slot and produces nothing. The generator asks the same question
+    # (CandidateGenerator.validate_config), so this closes the hole for any
+    # config that reaches the launch boundary by another route.
     for gate_name, gate in (("assembly-class", assembly_class_valid),
+                            ("load divisibility", validate_tensile_loads),
                             ("occupancy", occupancy_feasible)):
         gate_ok, gate_reason = gate(gate_config)
         if not gate_ok:

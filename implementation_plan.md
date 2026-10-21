@@ -161,7 +161,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
   gate-refused under any contraction pattern. Candidate pool 405 → 416.
 - Live report `run_20261018_004835` reads **20 WIN / 18 TIE / 0 LOSS** (0 RED /
   12 ORANGE, **PROVISIONAL** floor): `CC:256` moved **TIE → WIN (+7.8 %)**, the
-  R8 steal landing. Evidence `results.md` §14; reading `potential_configs.md`
+  R8 steal landing. (The 12 ORANGE were re-scored on 2026-10-21: ten of them
+  were a 4x unit error in the complex bar, and the list is **three** cells --
+  `results.md` §16.) Evidence `results.md` §14; reading `potential_configs.md`
   §R24–§R32 (rewrite 6).
 - The rule-calibration machinery behind those three rules is now a repo tool,
   **`oto.harness.rule_calibration`**: it probes any candidate

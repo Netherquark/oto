@@ -60,6 +60,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
 | `oto/harness/tensile_oracle.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
+| `oto/harness/deck_check.py` | The pre-run sweep: every *unmeasured* deck row through Tensile's kernel writer, resumable, CPU-only |
 | `oto/harness/coverage_graph.py` | The coverage graphs: the legal geometry space per cell as a 2D picture, with the unexplored part hatched, the peaks ringed green and the traps ringed red |
 | `oto/metrics/report_figures.py` | The acceptance report's problem-space coverage section (the figures + their numbers) |
 | `oto/tensile/patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |

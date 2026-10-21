@@ -19,6 +19,7 @@ oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floo
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/harness/coverage_map.py       # legal geometry space per cell + what the corpus measured in it
 oto/harness/tensile_oracle.py     # the legality oracle: Tensile's own verdict on a config
+oto/harness/deck_check.py          # the pre-run sweep: every unmeasured deck row through Tensile
 oto/harness/coverage_graph.py      # the coverage graphs: the legal space, what is unexplored, the peaks and the traps
 oto/metrics/report_figures.py        # the report's problem-space coverage section (reads the figures' hand-off)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
@@ -203,7 +204,48 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    `port_tensile.py --preflight` and `consolidate.py all --commit` refuse a
    deck that breaks the grid.
 
-### 5. Ship the legal tile frontier (§R40)
+### 5. Ask Tensile, not the model (the legality oracle)
+
+The gates are **models** of Tensile. A model that says "legal" while Tensile
+says "0 valid solutions" costs a launch slot and a wasted phase -- the
+2026-10-20 run spent 8 phases on tiles that cannot be built. So every
+legality question that the model cannot answer is settled by asking Tensile:
+
+```bash
+# one config: does Tensile build it, and what did it derive?
+python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 \
+    --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value] [--pattern Alik_Bjlk]
+
+# every UNMEASURED deck row (the pre-run sweep; ~75 s/row, resumable, CPU-only)
+python3 -m oto.harness.deck_check --family CC --limit 10
+python3 -m oto.harness.deck_check --json gfx90c_results/analysis/deck_check.json
+```
+
+The oracle prints **both** verdicts side by side -- the launch gate's and
+Tensile's -- plus the LDS allocation Tensile derived, so a disagreement says
+which of the two is wrong. It is how the load-divisibility bug was found
+(the gate modelled `totalVectorsCoalesced` as the coalesced part alone), and
+how the `TransposeLDS=1` / `StaggerU=0` / `NonTemporalC` axes were found to
+have been *declared but never emitted* (silent placebos).
+
+**When you add a knob, prove it three ways:** it is in `FORWARDED_KNOBS`, the
+fork surface test pins it (`tests/test_writer_forwards_sweep_knobs.py`), and
+the oracle shows Tensile receiving it.
+
+### 6. Know the space before you search it
+
+```bash
+python3 -m oto.harness.coverage_map --family SS --cell SS:256   # legal space + gaps
+python3 -m oto.harness.coverage_graph                            # the pictures
+```
+
+The coverage map answers "what has NOT been measured" (87-93 % of the legal
+geometry space, per cell) and the graph answers it as a picture: the legal
+space is a band, the corpus has measured a thin strip through it, and the
+traps (a legal configuration whose measured neighbours are all faster) sit
+*inside* that strip. The R49 deck batch is that list, ranked.
+
+### 7. Ship the legal tile frontier (§R40)
 
 Authoritative green-lighted next step (user runs in a TTY): wire the seed
 overlay (`python3 -m oto.harness.generate_candidates`; the overlay is

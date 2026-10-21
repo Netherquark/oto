@@ -9,6 +9,33 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 (4th) — the /tmp probing machinery is now the harness, and
+  the launch backstop lost a rule.** The four throwaway probes written in
+  `/tmp` (the Tensile derived-LDS probe, the WGM legality probe, the
+  config-writing probe and the build probe) are now two tools:
+  `oto.harness.tensile_oracle` (ask Tensile about one config: its verdict,
+  the LDS it derived, and our gate's verdict beside it) and
+  `oto.harness.deck_check` (the same, over every *unmeasured* deck row --
+  the pre-run sweep, resumable, CPU-only). The probes in `/tmp` are deleted;
+  their capabilities have one home each. Building them surfaced **two
+  defects**: the oracle's "our gate" line was reporting the *writer's* refusal
+  (the writer does not gate) instead of the launch gate's verdict, and the
+  launch boundary's backstop was **missing the load-divisibility rule** -- so a
+  config that violates it (Tensile: "0 valid solutions") would have been
+  launched and burned a slot. The backstop now runs the loads gate too, and
+  the sweep's own probe sits on a legal config (the test that probes the
+  forwarding surface had to learn the GLVW/VW coupling).
+
+  The docs ecosystem now carries the corrected conclusions rather than the
+  stale ones: the tuning guide's per-family ceiling table and its M3
+  mechanism are corrected (the complex families are at 80-97 % of the FMA
+  roof, and the "complex throughput wall" is retired), the research brief's
+  bars are stated in the client's unit, the research doc's
+  "target V <= 64" rule is marked as an FP32-family rule (the measured ZZ
+  counter-example refutes it for the complex families), `results.md` gains
+  §16 (the corrected reading: **three** ORANGE cells, not twelve) and
+  `potential_configs.md` §R42's finding F5 is marked superseded.
+
 - **2026-10-22 (3rd) — the deck is sized for the 10 h run, and there is a
   tool that proves the new candidates build.** Two facts the previous state
   hid: the overlay's unmeasured work was **114 phases (2.5 h)**, and the

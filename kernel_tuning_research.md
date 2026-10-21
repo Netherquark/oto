@@ -114,12 +114,19 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   (VGPR file 64 KiB/SIMD: ORNL PDF and GPUOpen "Occupancy explained", https://gpuopen.com/learn/occupancy-explained.)
 - **Worked quantization steps**: `V=64 → 4`; `V=68 → 3`; `V=128 → 2`; `V≥256 → 1`. **Four extra registers (`V` 64→68) drop residency 4→3 waves/SIMD — a −25 % cliff with no change in algorithm.** This is *register wave quantization*, the AMD analogue of block/tile quantization (NVIDIA matmul guide, https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html; WaveTune, https://arxiv.org/abs/2604.10187).
 - Real kernels from the campaign's measured tables (M3, `knowledge_base.md` / `potential_configs.md` — numbers referenced, not copied): CC `TT4×4` at **79 VGPR → 3 waves/SIMD**, Z `TT4×4` at **167 VGPR → 1 wave/SIMD**. The 1-wave case issues 1 VALU instruction per 4 cycles instead of back-to-back → **≤25 % of peak VALU issue**, independent of cache behavior.
+  > **Measured counter-example (2026-10-21).** The inference does not transfer
+  > to the FP64 pipe: the ZZ winner (`TT4×4`, 167 VGPR, 1 wave/SIMD) measures
+  > **97 % of the FP64 roof** (24.5 reported = 98 BLAS-8 GFLOPS against a
+  > 101 roof). The 1-instruction-per-4-cycles figure is the *FP32* issue rate;
+  > the FP64 unit's 1/16 rate already prices the same 4-cycle occupancy, so
+  > counting it twice double-counts the pipe. The rule below (target V ≤ 64) is
+  > therefore an FP32-family rule, and the complex families do not follow it.
 
 ### 3.2 Why ≥4 waves, and when more doesn't help
 
 - GCN's 1-inst/4-cycles-per-wave issue (§1) means **4 waves/SIMD is the issue-saturation point**; below it, the SIMD idles by construction (Wronski 2014, https://bartwronski.com/2014/03/27/gcn-two-ways-of-latency-hiding-and-wave-occupancy).
 - Above it, extra occupancy buys **latency hiding**, not ALU throughput: *"ALU-bound workloads don't benefit from higher occupancy"* — GPUOpen "Occupancy explained" (https://gpuopen.com/learn/occupancy-explained) and "Optimizing GPU occupancy … large thread groups" (https://gpuopen.com/learn/optimizing-gpu-occupancy-resource-usage-large-thread-groups).
-- **Practical rule for M3**: target `V ≤ 64` (→4 waves) for compute-bound CC/DD/ZZ cells before chasing larger tiles; a macro-tile win that pushes `V` across a 4→3 or 3→2 boundary can be a net loss — this is exactly what the M2 gates are for.
+- **Practical rule (FP32 families)**: target `V ≤ 64` (→4 waves) for compute-bound SS/DD cells before chasing larger tiles; a macro-tile win that pushes `V` across a 4→3 or 3→2 boundary can be a net loss — this is exactly what the M2 gates are for. **It does not apply to the complex families** (see the counter-example above: ZZ wins at V=167 with 1 wave/SIMD, because the FP64 pipe is priced at 1/16 already).
 
 ### 3.3 LDS as the second limiter (and the model's three byte tables)
 

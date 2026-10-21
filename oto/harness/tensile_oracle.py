@@ -87,6 +87,19 @@ def _capture_derived() -> Tuple[Any, List[Dict[str, Any]]]:
     return original, seen
 
 
+def _launch_gate_verdict(phase: Dict[str, Any]) -> Optional[str]:
+    """The launch boundary's own verdict on a phase, or None when it is legal.
+
+    The driver refuses a phase with ``_launch_gate_refusal`` *before* it
+    writes a config; the writer itself does not gate. Asking the writer
+    whether it wrote the file would therefore report "legal" for a phase the
+    run would refuse, so the gate is asked directly here.
+    """
+    from oto.tensile.config_writer import _launch_gate_refusal
+
+    return _launch_gate_refusal(None, phase)
+
+
 def probe_phase(phase: Dict[str, Any], base_dir: Optional[Path] = None
                 ) -> Dict[str, Any]:
     """Ask Tensile whether a *phase* (a deck row) builds.
@@ -108,6 +121,12 @@ def probe_phase(phase: Dict[str, Any], base_dir: Optional[Path] = None
     driver = TensileDriver(base, create_run=False)
     out_dir = Path(tempfile.mkdtemp(prefix="oto-oracle-"))
     config_path = out_dir / f"{phase.get('phase_id', 'probe')}.yaml"
+    gate = _launch_gate_verdict(phase)
+    if gate:
+        return {"config": dict(phase.get("config", {})),
+                "wrote": False, "gate_refusal": gate,
+                "tensile": {"ok": None, "solutions": 0, "reason": None},
+                "derived": None, "lds_bytes": 0}
     wrote, refusal = driver._write_phase_config(config_path, phase)
     if not wrote:
         return {"config": dict(phase.get("config", {})),
@@ -146,6 +165,12 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
     if shapes:
         phase["shapes"] = list(shapes)
     config_path = out_dir / f"{phase['phase_id']}.yaml"
+    gate = _launch_gate_verdict(phase)
+    if gate:
+        return {"config": dict(config), "wrote": False,
+                "gate_refusal": gate,
+                "tensile": {"ok": None, "solutions": 0, "reason": None},
+                "derived": None, "lds_bytes": 0}
     wrote, refusal = driver._write_phase_config(config_path, phase)
     if not wrote:
         return {"config": dict(config), "wrote": False,
@@ -272,6 +297,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
               f"  (A {derived.get('LdsNumElementsAlignedA')}, "
               f"B {derived.get('LdsNumElementsAlignedB')}, "
               f"blk {derived.get('LdsOffsetA_Blk')}/{derived.get('LdsOffsetB_Blk')})")
+        print(f"derived     depth {derived.get('DepthU')} (lds {derived.get('_DepthULds')}), "
+              f"pads {derived.get('LdsPadA')}/{derived.get('LdsPadB')}, "
+              f"maxOccupancy {derived.get('MaxOccupancy')}")
     if derived.get("Reject"):
         print(f"reject      {derived['Reject']}")
     return 0

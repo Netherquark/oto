@@ -136,6 +136,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``harness/corpus_census.py`` — Corpus census: what the corpus has ever measured, per family and per cell.
 * ``harness/coverage_graph.py`` — Coverage graphs: the problem space as a 2D picture, and what is unexplored.
 * ``harness/coverage_map.py`` — Coverage map: what the corpus has measured, and what it has not.
+* ``harness/deck_check.py`` — Deck check: does every *unmeasured* deck row actually build in Tensile?
 * ``harness/failure_triage.py`` — Failed-candidate triage: which phases produced nothing, and why.
 * ``harness/gate_calibration.py`` — Gate calibration: do the launch gates agree with what Tensile actually built?
 * ``harness/generate_candidates.py`` — The candidate-generator CLI.

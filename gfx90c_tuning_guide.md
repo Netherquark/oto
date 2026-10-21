@@ -19,9 +19,11 @@
 
 The deck controls **geometry and residency**, not the pipe. Large squares are
 already pinned to the ALU wall (M1). The real headroom is the **small cells**
-(M2: the machine idles below 25 % residency) and the **complex cells**
-(M3: shortfall is memory/occupancy — pads/GSU/PGR axes, reopened 2026-10-09). Everything else is
-measurement hygiene (M4: suppressed clock), not tuning.
+(M2: the machine idles below 25 % residency) and nothing else — **M3 is
+retired**: the complex families are at 80-97 % of the FMA roof, and their
+"shortfall" was a 4x unit error in the bar (2026-10-21,
+`gfx90c_theoretical_limits.md` §5.2). Everything else is measurement hygiene
+(M4: suppressed clock), not tuning.
 
 ## 1. Knob surface — what the deck actually controls
 
@@ -172,14 +174,19 @@ Per-family ceilings @1800 MHz / realistic bar (L §2/§5, the acceptance source)
 | DD | 101 | **98.6** (95 %) | 97.0 @2048 |
 | HH | 3226 | **2461** (72 %) | 2664.9 @4096 |
 | HH_HPA / HS_HPA | 1613 | **1118.7** | 1441 @1024 (above the derived bar — f16 input halves traffic) |
-| CC | 1613 | **1118.7** derived | 318.0 @512 (4-real-MAC floor; gap under investigation — P §2, REOPENED) |
-| ZZ | 101 | **98.6** derived | 24.0 @1024 (same) |
+| CC | 1613 | **279.7** derived (403.25 in BLAS-8) | 346.7 @2048 — **86 % of the FP32 FMA roof** |
+| ZZ | 101 | **24.65** derived (25.25 in BLAS-8) | 24.5 @1024 — **97 % of the FP64 FMA roof** |
 
-CC/ZZ are **not** "permanently orange by construction". The four-`v_mac_f32`
-per-complex-MAC ALU cost is irreducible (`KernelWriterAssembly.py:14975-14978`),
-so the shortfall is memory/occupancy; the gfx900 complex corpus (64 CC + 26 ZZ
-ships) never sampled pads, GSU>1 or PGR≠1, so those axes are the resolution
-path (P §2, the ceiling caveat, reopened 2026-10-09).
+The complex bars are in the **client's own unit**: Tensile charges 2 flops per
+MAC for complex types (`ContractionProblem.cpp:1108`), so a reported complex
+GFLOPS is ¼ of its BLAS-8 value and the bar must be too. The table's SS/DD/HH
+rows are unchanged (their clients report real flops). With the bar corrected,
+**CC and ZZ are the best-utilised families in the corpus, not the worst** — the
+four-`v_mac_f32` per-complex-MAC ALU cost (`KernelWriterAssembly.py:14975-14978`)
+is exactly what the 1613/101 roof already accounts for. The complex tiles stay
+legality-capped (128×64 for CC, 64×64 for ZZ: the 2x/4x accumulator footprint
+runs the register file out), but that cap costs nothing: those tiles already run
+at 80-97 % of the pipe.
 
 ## 3. Typecode = ground truth (attribution rule)
 
@@ -210,7 +217,7 @@ the old `phase_auto_1_hh` rows are gone from SS:1024. Unit tests:
 | DepthU | 8 for S/D/C/Z, 16 for H/HPA | family-locked, not a sweep knob |
 | WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`potential_configs.md` §R41) | 2 and 3 are untested and decked (§R40) |
 | GlobalSplitU | 1 at every winner | closed: SS:1024 G1 1135 / G2 936 / G4 740; DD:2048 99 / 95 / 95 (§R41) |
-| register hygiene | real families saturate; complex cap at the throughput wall (under investigation) | M1/M3 |
+| register hygiene | real families saturate; the complex families saturate too (80-97 % of the FMA roof) | M1 |
 
 Read the per-cell history before proposing anything:
 `python3 -m oto.harness.corpus_census --cell FAM:side` prints every geometry

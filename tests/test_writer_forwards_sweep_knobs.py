@@ -48,6 +48,18 @@ def driver():
 
 
 def _phase(knobs):
+    """A phase carrying the probed knob.
+
+    A global-load width is only legal at VectorWidth or 1 (the shift-ptr rule),
+    so a probe of GLVW=2 has to sit on a VectorWidth=2 config -- otherwise the
+    launch gate refuses the phase before the fork is written and the test
+    cannot see whether the knob was forwarded at all.
+    """
+    knobs = dict(knobs)
+    if "GlobalLoadVectorWidthA" in knobs or "GlobalLoadVectorWidthB" in knobs:
+        knobs["VectorWidth"] = max(knobs.get("VectorWidth", 1),
+                                   max(knobs.get("GlobalLoadVectorWidthA", 1),
+                                       knobs.get("GlobalLoadVectorWidthB", 1)))
     config = {"Architecture": "gfx90c", "DataType": "C",
               "ContractionPattern": "Ailk_Bljk",
               "ProblemType": "1024x1024x1024", "ScheduleName": "isa",
