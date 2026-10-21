@@ -24,3 +24,14 @@
 ## Status
 - pytest-xdist not yet installed (requirements.txt). Add when the parallel run
   is wired into command.txt.
+
+## Coverage / problem-space graphing (future)
+- Build on `oto.harness.corpus_census` (per-geometry, per-axis medians) and
+  `oto.harness.coverage` (if added): emit a (family, shape, tile) coverage matrix
+  showing tested / unexplored / local-min / local-max cells. Keep it CPU-only and
+  text/JSON first (matplotlib optional, not a hard dependency).
+
+## Live progress bar
+- `oto.metrics.render_status.LiveStatus` already repaints on a background thread.
+  Improvement: repaint immediately after each phase completes (driver hook) and
+  show a per-tier bar (decided/corpus) instead of only the aggregate.
