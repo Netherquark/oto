@@ -545,6 +545,24 @@ def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     ch = dtype_char(config)
     bpe = BYTES_PER_ELEMENT.get(ch)
 
+    # PrefetchGlobalRead=2 doubles the LDS prefetch buffer; gate it against
+    # the same budget so a 2-deep prefetch cannot silently overflow LDS.
+    pgr = config.get("PrefetchGlobalRead")
+    if pgr is not None:
+        try:
+            pgr_i = int(pgr)
+        except (TypeError, ValueError):
+            return False, f"PrefetchGlobalRead must be an int (have {pgr!r})"
+        if pgr_i == 2:
+            dims = tile_dims(config)
+            if dims and ku > 0 and bpe:
+                mt0, mt1, _, _ = dims
+                if (mt0 + mt1) * bpe * ku * 2 > LDS_BUDGET:
+                    return False, (
+                        f"PrefetchGlobalRead=2 needs a doubled LDS footprint "
+                        f"({(mt0+mt1)*bpe*ku*2} > {LDS_BUDGET}) on this tile"
+                    )
+
     for gate in (_pads_feasible, _swizzle_feasible):
         ok, reason = gate(config, ku, bpe)
         if not ok:

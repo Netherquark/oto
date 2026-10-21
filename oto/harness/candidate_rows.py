@@ -812,3 +812,65 @@ for _fam, _tile, _tt, _vw, _du, _extra in _FRONTIER_THREAD_CONTROLS:
             "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du, **_extra,
             "note": "2026-10-20 frontier thread control: half the accumulators "
                     "at the same area"})
+
+# 2026-10-21 R44/R45 — virgin-knob probes on the winner geometries.
+# Each knob below has zero variance in the gfx900 floor (tuning guide §9.1) and is
+# now in FORWARD_KNOB_DOMAINS; the rows are gate-verified by
+# tests/test_generate_candidates.py::TestEveryDeckRowIsGenerative.
+# LdsPad=1 (the value the floor never uses), NLCA=-1 (least-coalesced regime),
+# StaggerUMapping=1/2 (vendor-recommended, never measured), MaxOccupancy=16/32
+# (cap LDS to buy occupancy), NonTemporal=1/2/3 (cache hints on 1 MiB L2),
+# PrefetchGlobalRead=2 (gated by the doubled-LDS check in ldspad_feasible).
+for _fam, _tile, _tt, _vw, _du, _pat_list in (
+    ("CC", "64x64x8", "4x4", 2, 8, ("Ailk_Bjlk",)),
+    ("ZZ", "32x32x8", "2x2", 1, 8, ("Alik_Bjlk",)),
+    ("SS", "128x128x8", "8x8", 4, 8, ("Ailk_Bjlk",)),
+    ("HH", "128x128x16", "8x8", 8, 16, ("Ailk_Bjlk",)),
+    ("DD", "64x64x8", "4x4", 2, 8, ("Ailk_Bjlk",)),
+):
+    for _pat in _pat_list:
+        for _pad in (1,):
+            PLAN_BATCH.append({"fam": _fam, "pattern": _pat,
+                "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+                "DepthU": _du, "LdsPadA": _pad,
+                "note": "R45 virgin: LdsPadA=1 (never measured in floor)"})
+            PLAN_BATCH.append({"fam": _fam, "pattern": _pat,
+                "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+                "DepthU": _du, "LdsPadB": _pad,
+                "note": "R45 virgin: LdsPadB=1 (never measured in floor)"})
+        for _sm in (1, 2):
+            PLAN_BATCH.append({"fam": _fam, "pattern": _pat,
+                "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+                "DepthU": _du, "StaggerUMapping": _sm,
+                "note": f"R45 virgin: StaggerUMapping={_sm}"})
+        for _mo in (16, 32):
+            PLAN_BATCH.append({"fam": _fam, "pattern": _pat,
+                "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+                "DepthU": _du, "MaxOccupancy": _mo,
+                "note": f"R45 virgin: MaxOccupancy={_mo}"})
+        for _nt in (1, 2, 3):
+            PLAN_BATCH.append({"fam": _fam, "pattern": _pat,
+                "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+                "DepthU": _du, "NonTemporalC": _nt,
+                "note": f"R45 virgin: NonTemporalC={_nt}"})
+
+# NLCA=-1 (least-coalesced regime) on the 3-load tiles only.
+for _fam, _tile, _tt, _vw, _du in (
+    ("CC", "64x64x8", "4x4", 2, 8),
+    ("ZZ", "32x32x8", "2x2", 1, 8),
+    ("SS", "96x96x16", "6x6", 2, 16),
+):
+    PLAN_BATCH.append({"fam": _fam, "pattern": "Ailk_Bjlk" if _fam != "ZZ" else "Alik_Bjlk",
+        "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+        "DepthU": _du, "NLCA": -1,
+        "note": "R45 virgin: NLCA=-1 (least-coalesced, never measured)"})
+
+# PrefetchGlobalRead=2 on the larger tiles (gated by doubled LDS).
+for _fam, _tile, _tt, _vw, _du in (
+    ("SS", "128x128x8", "8x8", 4, 8),
+    ("HH", "128x128x16", "8x8", 8, 16),
+):
+    PLAN_BATCH.append({"fam": _fam, "pattern": "Ailk_Bjlk",
+        "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
+        "DepthU": _du, "PrefetchGlobalRead": 2,
+        "note": "R45 virgin: PrefetchGlobalRead=2 (2x prefetch, gated)"})

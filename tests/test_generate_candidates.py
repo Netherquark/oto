@@ -301,6 +301,16 @@ class TestBeatTheSpoofInvariants:
         fams = {str(r["config"].get("FamilyLabel", "")).upper() for r in pads}
         assert {"CC", "ZZ"} <= fams, fams
 
+    def test_virgin_knob_rows_emit(self):
+        rows = _rows()
+        assert any(r["config"].get("LdsPadA") == 1 or r["config"].get("LdsPadB") == 1
+                   for r in rows), "LdsPad=1 rows must emit (§R45)"
+        assert any(r["config"].get("NLCA") == -1 for r in rows), "NLCA=-1 rows must emit"
+        assert any(r["config"].get("MaxOccupancy") in (16, 32) for r in rows)
+        assert any(r["config"].get("NonTemporalC") in (1, 2, 3) for r in rows)
+        assert any(r["config"].get("PrefetchGlobalRead") == 2 for r in rows)
+        assert any(r["config"].get("StaggerUMapping") in (1, 2) for r in rows)
+
     def test_plan_batch_residency_rows_emit(self):
         pgr = [r for r in _rows() if r["config"].get("PrefetchGlobalRead") == 0]
         plr = [r for r in _rows() if r["config"].get("PrefetchLocalRead") == 0]
@@ -415,3 +425,18 @@ class TestDeckLoader:
         overlay.write_text(yaml.safe_dump({"run_id": "seed", "phases": [row]}))
         assert load_deck(deck) == [row]
         assert load_deck(overlay) == [row]
+
+
+class TestLdsPadPrefetchGate:
+    def test_pgr2_is_gated_by_doubled_lds(self):
+        from oto.tensile.gates.occupancy import ldspad_feasible
+        base = {"Architecture": "gfx90c", "DataType": "S", "FamilyLabel": "SS",
+                "MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4,
+                "DepthU": 16, "PrefetchGlobalRead": 2}
+        ok_small, _ = ldspad_feasible(base)
+        assert not ok_small
+        base2 = {"Architecture": "gfx90c", "DataType": "S", "FamilyLabel": "SS",
+                 "MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 4,
+                 "DepthU": 4, "PrefetchGlobalRead": 2}
+        ok2, _ = ldspad_feasible(base2)
+        assert ok2

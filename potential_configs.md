@@ -2403,3 +2403,270 @@ Report `agg="floor_best"` as a **co-primary** alongside `winner`: it grades the
 native arm on its median, so a cherry-picked lucky kernel cannot win it.
 `ab_audit.audit`'s max-raw-sample basis should be dropped — `ab_delta._stat`'s
 own docstring calls `best` "seed-noisy, reference only".
+
+---
+
+## R42 — straggler classes and why they are stuck (2026-10-21)
+
+The 2026-10-20 overnight run (frontier deck, §R40) landed at
+**20 WIN / 18 TIE / 0 LOSS** (`run_20261018_004835` and the frontier follow-up).
+The 18 ties are inside the ±16.45 % measurement band (§R36) and CC/ZZ sit at
+10–31 % of their §5 bars. This section decomposes the laundry list into five
+straggler classes, traces each through the database, and states the root cause
+and the remaining lever. Nothing below re-derives hardware; it cites
+`gfx90c_theoretical_limits.md` (L), `gfx90c_tuning_guide.md` (G),
+`kernel_tuning_research.md`, and the live corpus (`corpus_census`, `allruns.py`).
+
+### R42.1 — The five classes
+
+| class | cells | measured | §5 bar | verdict |
+|---|---|---|---|---|
+| **A. Complex memory/occupancy** | CC:192/256/512/1024/2048, ZZ:128/192/256/512/1024 | CC 118–347, ZZ 16.8–24.5 | 1118.7, 98.6 | ORANGE by construction of the bar (§5.1) — the bar borrows SS/DD lane efficiency at SS/DD tile sizes the complex families cannot allocate |
+| **B. Small-cell residency** | SS:256 (412), HH:256 (763), DD:192 (76), CC:192 (118) | 36–79 % of bar | — | geometry cannot fill the machine (M2): 128³ at 256³ = 4 waves/SIMD |
+| **C. Noise ties** | 18 cells (SS 3, HH 3, HPA 2, HS 2, DD 4, CC 1, ZZ 0 in the tie table) | ±0.1…+4.6 % | — | inside ±16.45 % band; need replication, not new geometry |
+| **D. Unmeasured frontier** | SS/HH/HPA at 256×128/128×256 (32768 elements) | 802.2 (SS 256×128 TT16×8) | — | confounded: large tile × large thread tile; the §R40 deck separates area from register pressure |
+| **E. Virgin knobs** | every family, every cell | 0 rows | — | 22 knobs with zero variance in the floor (§9.1); never separated from defaults |
+
+### R42.2 — Class A: why CC and ZZ are stuck
+
+**Root cause.** A complex MAC is four real FMAs (`complex_gemm_research_brief.md` §1,
+`KernelWriterAssembly.py:14975-14978`). The register file caps the MacroTile area at
+`65536 / weight` with weight 4 (CC) / 8 (ZZ), so the largest legal tiles are
+CC 128×64 (8192 elements) and ZZ 64×64 (4096 elements) — not the 16384–65536
+elements the §5 bars assume. Every forwarded knob has already been probed on
+those geometries at 0.83–0.98 of base (`potential_configs.md` §R37/§R41), so
+the gap is **not** a missing knob on the existing tile — it is the tile area
+itself, which legality forbids.
+
+**What was tried (trace).**
+- CC: 17 distinct (MT,TT,VW) triples measured (`results.md` §13.3); best
+  346.7 @ 512³ at 64×64/4×4. Pads (LdsPadA/B {1,2,4}) measured 0.95–1.0 of
+  base; PGR=0 measured 0.98; WGM8 measured 1.03; GLVW=1 measured 0.97; LSU=2
+  measured 1.0 (§R37). No single knob moves CC by more than 5 %.
+- ZZ: 9 distinct triples; best 24.5 @ 1024³ at 32×32/2×2. Pads on the du8 tile
+  measured 0.96–1.0; PGR=0 measured 0.99. No knob moves ZZ by more than 4 %.
+- The R8 steal (`CC:256` +7.8 %) was the only strict win; it landed by taking the
+  floor's larger tile (64×64 vs native 32×32) — i.e. by **area**, the one thing
+  the complex families cannot get more of.
+
+**Conclusion.** Class A is not tunable within the existing tile. The two remaining
+routes are (i) **restructure the GEMM** (3M/Karatsuba: 3 real GEMMs instead of 4,
+`complex_gemm_research_brief.md` §4–§5) and (ii) **non-atomic split-K** with a
+workspace + reduction kernel (`complex_gemm_research_brief.md` §9). Both are new
+machinery, not config. The §5 bars for CC/ZZ should be re-derived on the
+largest *legal* tile (user decision, §6 of theoretical_limits.md) so ORANGE stops
+being a tuning-failure signal.
+
+### R42.3 — Class B: small-cell residency
+
+**Root cause.** A 256³ cube with a 128×128 tile produces 4 waves/SIMD at most;
+the machine idles below 25 % residency (`gfx90c_tuning_guide.md` §5 M2). The gap
+between SS:256 (412) and SS:1024 (1135) **is** the residency gap.
+
+**What was tried.** Smaller tiles (96×96/6×6, 64×64) measured 744–1039 GFLOPS on
+SS:256; GSU {2,4} measured 936/740 (loses to GSU=1). HH:256 tried 32×64/4×4
+(763). DD:192 tried 32×32/4×4 (76).
+
+**Remaining lever.** `GlobalSplitU` is the only wave-fill knob legal on SS (and
+DD via BufferStore). The frontier deck (§R40) carries 256×128/8×4 (32
+accumulators, half the register pressure) which separates "area is bad" from
+"registers ran out". WGM 2/3 (unmeasured) may improve CU–tile mapping on the
+7-CU box.
+
+### R42.4 — Class C: noise ties
+
+**Root cause.** The measurement band is ±16.45 % (median-of-seeds, ≥3 seeds); 18
+cells sit at +0.1…+4.6 %. The replication machinery does not exist:
+`_should_execute_phase` skips already-passed fps, and the overlay bypass applies
+only to `origin ∈ {overlay, seed_overlay}`. So a tie cannot be re-measured to
+decide whether it is signal or noise.
+
+**Remaining lever.** Add `--reseeds N` / a bypass that re-measures passed
+configs N times and reports median + spread. Until that exists, treat all 18 as
+ties (no action).
+
+### R42.5 — Class D: unmeasured frontier
+
+**Root cause.** Every tile above 16384 elements in the corpus carries TT 16×8 or
+8×16 (128 accumulators), which halves residency vs the winner's 64 accumulators.
+The §R40 deck (22 tiles × 4 patterns) is the clean experiment; results pending.
+
+### R42.6 — Class E: virgin knobs (22 axes, zero variance)
+
+**Root cause.** The floor never moves these knobs, so the mutator's draws are
+confined to the same small space. The axes are listed in §9.1 of the tuning
+guide with their legality status. None of them is a config today except
+`LdsPadA/B`, `StaggerU/UMapping/UStride`, `AF0/1EM`, `StoreCInUnroll` (Group C,
+forwarded 2026-10-09). The rest are in `NOT_FORWARDED_KNOBS`.
+
+**Remaining lever.** Wire the most promising (1LDSBuffer, DepthULdsDivisor,
+TransposeLDS, FractionalLoad, LdsBlockSizePerPad, Wave/ThreadSeparateGlobalRead,
+UnrollMajorLDS, NonTemporal, MaxOccupancy, PersistentKernel, PrefetchGlobalRead=2,
+StaggerUMapping, NLCA=-1, LdsPad=1, AssertFree) behind `ldspad_feasible` and
+probe one row per case.
+
+---
+
+## R43 — New routes (2026-10-21)
+
+Each route is a concrete candidate family. Routes 1–3 are new machinery (code,
+not config); routes 4–8 are config-level and can be decked now.
+
+### Route 1 — 3M (Karatsuba) split-complex for large-K CC/ZZ
+
+**Mechanism.** Replace the 4-real-FMA complex MAC with the 3-multiply form:
+3 real GEMMs + 5 matrix adds, cutting GEMM count 25 % (`complex_gemm_research_brief.md`
+§4–§5). MAGMA reached 79 % CGEMM / 71 % ZGEMM on Fermi with this scheme.
+
+**When it helps.** Large K, where the O(MK+KN+MN) combine is negligible and the
+three real GEMMs run near their own efficiency. On small K the combine dominates.
+
+**Cost.** Extra passes + workspace + 3 launches; numerical stability caveat
+(Higham: up to 25 % arithmetic saving but lower stability than 4M). Needs a
+high-precision reference and cancellation-heavy inputs.
+
+**Legality.** SS and DD real GEMMs are legal and fast (1119/98.6). The combine
+is elementwise and LDS-free. No Tensile involvement — this is a hand-written
+kernel, outside the deck.
+
+**Deliverable.** A separate `complex_gemm_3m.py` (not Tensile) for CC/ZZ large
+shapes, benchmarked against the Tensile floor. Not deckable; out of the
+overnight run.
+
+### Route 2 — Non-atomic split-K for complex (workspace + reduction)
+
+**Mechanism.** K-partitioned GEMM: each workgroup writes its own complex partials
+to a workspace; a second kernel reduces them in a fixed order (deterministic,
+race-free). Cost: scratch writes/reads, second launch, reduction. For small
+CC/ZZ the fill benefit may not cover it.
+
+**Status.** New machinery (not a config). Tensile's GSU is the atomic path; this
+port forwards neither `GlobalSplitUAlgorithm` nor a workspace. Needed for complex
+because GSU>1 is gate-refused on gfx90c.
+
+**Deliverable.** `splitk_complex.py` + reduction kernel; benchmark on CC:512 and
+ZZ:512 only first.
+
+### Route 3 — Occupancy/register tiling search (Class A)
+
+**Mechanism.** Enumerate all legal (MT, TT, VW, DU) triples through the real
+gate (already done: CC max 8192, ZZ max 4096). For each, compute waves/CU and
+VGPR. Select the 3 with highest predicted waves/CU at the target shape, then
+benchmark. Add PGR=0, LdsPad ∈ {1,2,4}, NLCA on 3-load tiles, WGM ∈ {1,2,3,4,-4},
+LSU=2, and AssertFree ∈ {2,4} on top.
+
+**Status.** Config-level; can be decked. The §R40 frontier deck already covers
+the area frontier; this route adds the occupancy-optimised combinations on the
+*complex* legal tiles (64×64/4×4 for CC, 32×32/2×2 for ZZ).
+
+### Route 4 — Virgin knob sweep (Class E)
+
+**Mechanism.** One row per (winner geometry, knob value) for each virgin knob,
+gated by `ldspad_feasible` (or a new gate). The cheapest first pass is the
+knobs already in the forward map but never drawn: `LdsPadA/B = 1`,
+`StaggerUMapping ∈ {1,2}`, `PrefetchGlobalRead = 2`, `NLCA = -1`,
+`MaxOccupancy ∈ {8,16,32}`. Then wire the `NOT_FORWARDED` knobs
+(`1LDSBuffer`, `DepthULdsDivisor`, `TransposeLDS`, `FractionalLoad`,
+`LdsBlockSizePerPad`, `Wave/ThreadSeparateGlobalRead`, `UnrollMajorLDS`,
+`NonTemporal`, `PersistentKernel`) one at a time behind new gates.
+
+**Status.** Partially decked (LdsPad, StaggerU). Needs config_writer + gate work
+for the NOT_FORWARDED set.
+
+### Route 5 — Replication (Class C)
+
+**Mechanism.** Re-measure the 18 ties N times and report median + spread. If the
+spread is < ±5 %, the tie is real; if > ±10 %, it is noise.
+
+**Status.** Needs `--reseeds N` in the driver and a bypass of
+`_should_execute_phase` for `origin ∈ {replication}`. New machinery.
+
+### Route 6 — Non-temporal loads (memory-bound cells)
+
+**Mechanism.** `NonTemporalA/B/C/D ∈ {1,2,3}` (glc/slc) on the C operand
+read-modify-write and on single-K-pass kernels. On a 1 MB L2, pollution control
+may matter more than on discrete parts.
+
+**Status.** Config-level; one row per (winner, NT value) on SS:256/512 and
+CC:512.
+
+### Route 7 — L2 traversal order (WGM 2/3, negatives)
+
+**Mechanism.** WGM 1/4/8/−4/−1 measured; 2 and 3 are unmeasured (§R40 deck
+carries them). On a 7-CU box with a 1 MB L2, the traversal order of the tile
+grid affects locality. The negative (I/J-swap) family is geometrically neutral
+on square tiles but may help on rectangular ones.
+
+**Status.** Decked (§R40), pending measurement.
+
+### Route 8 — AssertFree on more geometries (Class A/B)
+
+**Mechanism.** `AssertFree0/1ElementMultiple ∈ {2,4,8}` drops edge predication
+and unlocks the full load width at 2× area. Measured on 8 winners; extend to
+the complex legal tiles and the small-cell tiles.
+
+**Status.** Decked (§R40), pending measurement.
+
+---
+
+## R44 — Legality improvements (2026-10-21)
+
+The following illegal/placeholder configs have been observed or are at risk:
+
+1. **NLCA = -1** is legal in Tensile (least-coalesced regime) but has never been
+   emitted. Add it to `FORWARD_KNOB_DOMAINS["NLCA"]` and to the db_knobs domain.
+   Gate: `gates/loads.py::_nlca_stage` already handles -1.
+2. **LdsPad = 1** is in the forward domain but the corpus census shows only
+   {0,2,4} measured (§9.1). Add 1 to the pad rows.
+3. **PrefetchGlobalRead = 2** needs 2× LDS; gate by `ldspad_feasible` with the
+   doubled footprint. Add a dedicated check.
+4. **1LDSBuffer = 1** requires `ScheduleInnerAccuracy ∈ {2,3}`; the writer must
+   emit both or neither. Add a coupled-forwarding rule like StaggerU.
+5. **DepthULdsDivisor ∈ {2,4}** requires `ScheduleInnerAccuracy=3` +
+   `TransposeLDS=1` + `PrefetchGlobalRead≠2` + `DirectToLds=0`. Add a coupled
+   gate.
+6. **AssertSummationElementMultiple** asserts K and must divide by GSU; add the
+   `ASEM % GSU == 0` check to the occupancy gate.
+7. **Z LDS byte count** (§6.1 of theoretical_limits.md) — the gate uses 8 bytes
+   where Tensile uses 16. This is the most permissive family gate; correcting it
+   would refuse 67 kernels including the ZZ winner. Decision pending (user).
+
+Tests to add: `tests/test_legality_virgin.py` pinning each new gate; extend
+`tests/test_occupancy_gate.py` with the new rules.
+
+---
+
+## R45 — Candidate batch for the next overnight run (2026-10-21)
+
+New rows to add to `candidate_rows.py` (PLAN_BATCH) for the next 10 h+ run:
+
+- **LdsPad=1** on every winner geometry (CC, ZZ, SS, HH, DD) — 5 families × 5
+  pads × 4 patterns ≈ 100 rows.
+- **NLCA=-1** on the 3-load tiles (96×96×16, 64×64×8 for CC, 32×32×8 for ZZ)
+  — ≈ 12 rows.
+- **PrefetchGlobalRead=2** on SS:512/1024 and HH:512/1024 (gated) — ≈ 8 rows.
+- **StaggerUMapping ∈ {1,2}** on CC/ZZ winners — ≈ 8 rows.
+- **MaxOccupancy ∈ {8,16}** on CC/ZZ winners — ≈ 8 rows.
+- **NonTemporal=1/2/3** on C operand for SS:512 and CC:512 — ≈ 12 rows.
+
+Total new rows ≈ 148, bringing the deck to ~850 candidates. At 78 s/executed
+phase ≈ 3.2 h for the new rows alone, plus the §R40 frontier rows still pending.
+
+---
+
+## R46 — Questions for a read-only research agent (only if docs cannot answer)
+
+The docs ecosystem answers everything above. The following remain genuinely
+unanswered and are the only items worth external research:
+
+1. Is there a published GCN5 (gfx900/90c) complex-GEMM tile optimum, or any
+   guidance on register blocking for 1/16-rate FP64 on Wave64? (No such
+   publication found — `complex_gemm_research_brief.md` §8/§11 mark [CHECK].)
+2. Does `NonTemporal` (glc/slc) actually bypass L2 on gfx90c, or only L1? The
+   emitted ISA modifiers need verification.
+3. What is the real L2 cache associativity/line size on gfx90c (1 MB, but
+   unknown associativity) — affects traversal-order (WGM) predictions.
+4. Is there a published optimal `WorkGroupMapping` for small CU counts (≤8) on
+   GCN? All published guidance assumes ≥32 CUs.
+5. Does `1LDSBuffer=1` with `ScheduleInnerAccuracy=2` actually halve LDS on
+   gfx90c, or does Tensile ignore it on the assembly path?

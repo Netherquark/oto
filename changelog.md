@@ -9,6 +9,21 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 — virgin-knob batch and straggler analysis.** `potential_configs.md`
+  gains §R42 (five straggler classes: complex memory/occupancy, small-cell
+  residency, noise ties, unmeasured frontier, virgin knobs) with per-class root
+  causes and measured evidence, §R43 (8 routes: 3M Karatsuba, non-atomic
+  split-K, occupancy tiling, virgin knob sweep, replication, non-temporal loads,
+  WGM 2/3, AssertFree extension), §R44 (legality improvements), §R45 (a ~148-row
+  candidate batch) and §R46 (5 read-only research questions). The deck now carries
+  the R45 batch (LdsPad=1, NLCA=-1, StaggerUMapping=1/2, MaxOccupancy=16/32,
+  NonTemporalC=1/2/3, PrefetchGlobalRead=2) — 747 candidates, 754 overlay rows,
+  0 illegal. `db_knobs.FORWARD_KNOB_DOMAINS` gains NLCA=-1, PrefetchGlobalRead=2,
+  MaxOccupancy, NonTemporalA-D and AssertFree {1,2,4}. `ldspad_feasible` now
+  gates PrefetchGlobalRead=2 against a doubled LDS footprint. Pinned by
+  `tests/test_generate_candidates.py` (gate-clean over PLAN_BATCH) and
+  `tests/test_occupancy_gate.py`.
+
 - **2026-10-20 — the preflight can check the launch set, not just the deck.**
   `check_candidates.py --deck` accepted only a bare phase list, so pointing it
   at a seed overlay crashed on the overlay's top-level `run_id`/`note` keys.

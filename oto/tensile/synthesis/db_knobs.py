@@ -34,19 +34,24 @@ from oto.device.peaks import FAMILY_DTYPE_CHAR
 FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "LdsPadA": (0, 1, 2, 4),
     "LdsPadB": (0, 1, 2, 4),
-    "PrefetchGlobalRead": (0, 1),
+    "PrefetchGlobalRead": (0, 1, 2),
     "PrefetchLocalRead": (0, 1),
     "GlobalLoadVectorWidthA": (1, 2, 4),
     "GlobalLoadVectorWidthB": (1, 2, 4),
-    "NLCA": (1, 2, 3),
+    "NLCA": (-1, 1, 2, 3),
     "WorkGroupMapping": (1, 2, 3, 4, -1, -4),
     "StaggerU": (0, 8, 16, 32),
     "StaggerUMapping": (0, 1, 2),
     "StaggerUStride": (0, 64, 128, 256),
     "DepthU": (4, 8, 16, 32),
     "GlobalSplitU": (1, 2, 4),
-    "AssertFree0ElementMultiple": (1, 2),
-    "AssertFree1ElementMultiple": (1, 2),
+    "AssertFree0ElementMultiple": (1, 2, 4),
+    "AssertFree1ElementMultiple": (1, 2, 4),
+    "MaxOccupancy": (8, 16, 32, 40),
+    "NonTemporalA": (0, 1, 2, 3),
+    "NonTemporalB": (0, 1, 2, 3),
+    "NonTemporalC": (0, 1, 2, 3),
+    "NonTemporalD": (0, 1, 2, 3),
 }
 
 #: Per-family overrides. A family absent here uses FORWARD_KNOB_DOMAINS.
