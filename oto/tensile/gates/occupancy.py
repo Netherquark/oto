@@ -325,6 +325,9 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if acc > ACCVGPR_BUDGET:
         return False, _accvgpr_rejection(ch, r, tt0, tt1, acc)
     lsu = local_split_u(config)
+    reason = _local_split_u_contradiction(config)
+    if reason:
+        return False, reason
     reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
     if reason:
         return False, reason
@@ -343,6 +346,31 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if lds > LDS_BUDGET:
         return False, _lds_rejection(ch, mt0, mt1, ku, lds)
     return True, ""
+
+
+def _local_split_u_contradiction(config: Dict[str, Any]) -> Optional[str]:
+    """Reason when the two spellings of LocalSplitU disagree, else None.
+
+    Tensile reads LocalSplitU from ``WorkGroup[2]`` and has no standalone key,
+    so a config carrying both a ``LocalSplitU`` key and an explicit
+    ``WorkGroup`` has two answers to the same question. The writer folds the
+    key into element [2] (so the knob is honoured rather than dropped), but a
+    row whose two spellings *disagree* is a config that means two different
+    things -- refuse it rather than benchmark one of them by accident.
+    """
+    key = config.get("LocalSplitU")
+    wg = config.get("WorkGroup")
+    if key is None or not isinstance(wg, (list, tuple)) or len(wg) < 3:
+        return None
+    try:
+        want, have = int(key), int(wg[2])
+    except (TypeError, ValueError):
+        return None
+    if want == have:
+        return None
+    return (f"LocalSplitU={want} contradicts WorkGroup[2]={have}: Tensile reads "
+            f"LocalSplitU from WorkGroup[2] and ignores the key, so the config "
+            f"would run as LSU={have}. Use one spelling.")
 
 
 def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> Optional[str]:
@@ -576,6 +604,22 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     sci = config.get("StoreCInUnroll")
     if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
         return False, f"StoreCInUnroll must be a bool (have {sci!r})"
+
+    # TransposeLDS=1 is the MFMA path ("TransposeLds Supports only in
+    # MatrixInstruction=1", SolutionStructs:4519-4521). gfx90c has no MFMA
+    # (no v_mfma_*), so that value is a guaranteed "0 valid solutions" for
+    # every phase that carries it. The other two values are legal here:
+    # TransposeLDS=-1 forces UnrollMajorLDS on the non-transposed operand
+    # (":3874-3875"), which is a real, untried knob on this part.
+    tlds = config.get("TransposeLDS")
+    if tlds is not None:
+        tv, err = _int_or_reject(tlds, "TransposeLDS")
+        if err:
+            return False, err
+        if tv == 1:
+            return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
+                           "(SolutionStructs:4519-4521) and gfx90c has no MFMA; "
+                           "use -1 (unroll-major LDS on the NT operand) or 0")
     return True, ""
 
 

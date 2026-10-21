@@ -551,6 +551,25 @@ class TestLdsReductionBuffer(unittest.TestCase):
             cfg("S", "64x64x8", "4x4", LocalSplitU=2, WorkGroup=[16, 16, 2]))
         self.assertTrue(ok, why)
 
+    def test_the_two_spellings_of_local_split_u_must_agree(self):
+        """Tensile reads LSU from WorkGroup[2]; the key beside it is a no-op.
+
+        The writer folds the key into element [2] so the knob is honoured, and
+        the gate refuses a row whose two spellings disagree -- a config that
+        means two different things must not be benchmarked by accident.
+        """
+        from oto.tensile.config_writer import _fork_thread_macro_workgroup
+        folded = _fork_thread_macro_workgroup(
+            {"WorkGroup": [16, 16, 1], "LocalSplitU": 2}, 4, 4, 64, 64)
+        self.assertEqual(folded["WorkGroup"], [[16, 16, 2]])
+        ok, why = occupancy_feasible(
+            cfg("C", "64x64x8", "4x4", WorkGroup=[16, 16, 1], LocalSplitU=2))
+        self.assertFalse(ok)
+        self.assertIn("LocalSplitU", why)
+        ok, why = occupancy_feasible(
+            cfg("C", "64x64x8", "4x4", WorkGroup=[16, 16, 2], LocalSplitU=2))
+        self.assertTrue(ok, why)
+
     def test_rule_only_applies_when_local_split_u_is_raised(self):
         """LSU 1 has no reduction buffer, however wide the MacroTile."""
         ok, why = occupancy_feasible(cfg("S", "128x128x8", "4x4"))

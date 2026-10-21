@@ -37,7 +37,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "PrefetchGlobalRead": (0, 1, 2),
     "PrefetchLocalRead": (0, 1),
     "FractionalLoad": (0, 1, 2),
-    "TransposeLDS": (-1, 0, 1),
+    "TransposeLDS": (-1, 0),   # 1 is the MFMA path; gfx90c has no MFMA
     "GlobalLoadVectorWidthA": (1, 2, 4),
     "GlobalLoadVectorWidthB": (1, 2, 4),
     "NLCA": (-1, 1, 2, 3),

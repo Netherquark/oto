@@ -9,6 +9,25 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-21 (5th) — three silent placebos and one contradictory knob.**
+  (a) **TransposeLDS was declared forwarded but never emitted** -- the writer's
+  fork surface had no entry for it, so the 5 R45 rows probing it would have
+  benchmarked at the Tensile default while their manifest claimed the
+  treatment ran. It is now emitted, and its legal value on this part is **-1**
+  (unroll-major LDS on the NT operand, `SolutionStructs:3874-3875`): the value
+  1 is the MFMA path ("TransposeLds Supports only in MatrixInstruction=1",
+  `:4519-4521`) and gfx90c has no MFMA, so the gate now refuses it and the
+  rows probe -1. (b) **NonTemporalC/D were never emitted either** -- the R45
+  NonTemporalC rows were placebos; both are real Tensile parameters
+  (`Common.py:1416-1419`, the glc/slc load flavour) and are now forwarded.
+  (c) **The two spellings of LocalSplitU could disagree**: Tensile reads LSU
+  from `WorkGroup[2]` and ignores the key, so a row carrying both
+  (`WorkGroup: [16,16,1]` + `LocalSplitU: 2`) ran at LSU=1 while the manifest
+  said LSU=2. The writer now folds the key into element [2] and the gate
+  refuses a genuine contradiction. The writer's fork-surface test
+  (`tests/test_writer_forwards_sweep_knobs.py`) had been failing on
+  `declared-not-emitted=['TransposeLDS']` since the knob was declared.
+
 - **2026-10-21 (4th) — the missing error-4 rule, and the frontier control
   that was never legal.** Tensile's error 4 is
   `numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1`

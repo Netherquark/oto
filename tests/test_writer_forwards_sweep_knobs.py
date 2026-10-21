@@ -127,10 +127,11 @@ def test_forwarded_knobs_equals_the_fork_surface():
         "NumLoadsCoalescedB": 1, "PrefetchGlobalRead": 1,
         "PrefetchLocalRead": 0, "UseSgprForGRO": 0, "InnerUnroll": 1,
         "MaxOccupancy": 0, "AggressivePerfMode": 1, "FractionalLoad": 0,
-        "NonTemporalA": 0, "NonTemporalB": 0, "AssertFree1ElementMultiple": 1,
+        "NonTemporalA": 0, "NonTemporalB": 0, "NonTemporalC": 0,
+        "NonTemporalD": 0, "AssertFree1ElementMultiple": 1,
         "LdsPadA": 0, "LdsPadB": 0, "AssertFree0ElementMultiple": 1,
         "StaggerU": 0, "StaggerUMapping": 0, "StaggerUStride": 0,
-        "StoreCInUnroll": 0,
+        "StoreCInUnroll": 0, "TransposeLDS": 0,
     }
     fork = config_writer._fork_params(dict(probe), tt0=2, tt1=2,
                                       macro_tile0=64, macro_tile1=64,

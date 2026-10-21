@@ -32,7 +32,10 @@ reaches Tensile rather than being silently dropped at the launch boundary;
 | StaggerU / StaggerUMapping / StaggerUStride | store stagger | ``ldspad_feasible`` | yes (Group C) |
 | AssertFree0ElementMultiple | half Assembly GSU>1 legality | ``ldspad_feasible`` | yes (Group C) |
 | StoreCInUnroll | C-store unrolling | ``ldspad_feasible`` | yes (Group C) |
-| WaveSeparateGlobalRead*, ThreadSeparateGlobalRead*, 1LDSBuffer, TransposeLDS, UnrollMajorLDS*, LdsBlockSizePerPad*, DirectToVgpr*, GlobalReadPerMfma, LocalWritePerMfma, DepthULdsDivisor, PersistentKernel | not reachable | -- | **no** |
+| FractionalLoad | ragged-edge loads | ``ldspad_feasible`` | yes |
+| TransposeLDS | unroll-major LDS on the NT operand (-1); 1 is the MFMA path and is refused | ``ldspad_feasible`` | yes |
+| NonTemporalA/B/C/D | glc/slc load + store flavour | -- | yes |
+| WaveSeparateGlobalRead*, ThreadSeparateGlobalRead*, 1LDSBuffer, UnrollMajorLDS*, LdsBlockSizePerPad*, DirectToVgpr*, GlobalReadPerMfma, LocalWritePerMfma, DepthULdsDivisor, PersistentKernel | not reachable | -- | **no** |
 
 The "yes" rows are enumerated, machine-readably, in ``FORWARDED_KNOBS``; the
 "no" row is ``NOT_FORWARDED_KNOBS``. A candidate naming a "no" knob benchmarks
@@ -110,7 +113,8 @@ FORWARDED_KNOBS = (
     "NumLoadsCoalescedA", "NumLoadsCoalescedB",
     "PrefetchGlobalRead", "PrefetchLocalRead",
     "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode",
-    "FractionalLoad", "NonTemporalA", "NonTemporalB",
+    "FractionalLoad", "NonTemporalA", "NonTemporalB", "NonTemporalC",
+    "NonTemporalD",
     "AssertFree1ElementMultiple",
     "TransposeLDS",
 ) + FORWARDED_GROUP_C_KNOBS
@@ -253,7 +257,15 @@ def _fork_thread_macro_workgroup(
     # benchmark at LSU=1 with no warning. corpus3 Q-D.
     _lsu = int(config["LocalSplitU"]) if "LocalSplitU" in config else 1
     if "WorkGroup" in config and isinstance(config["WorkGroup"], list):
-        fork["WorkGroup"] = [config["WorkGroup"]]
+        wg = list(config["WorkGroup"])
+        # An explicit WorkGroup used to SHADOW a LocalSplitU key beside it, so
+        # the knob was a silent no-op: the row asked for LSU=2 and the kernel
+        # ran at LSU=1. Fold the knob into element [2] instead (Tensile reads
+        # LSU from there), and let the occupancy gate refuse a row whose two
+        # spellings genuinely disagree.
+        if len(wg) >= 3 and _lsu != 1 and int(wg[2]) == 1:
+            wg[2] = _lsu
+        fork["WorkGroup"] = [wg]
     elif macro_tile0 is not None and macro_tile1 is not None and tt0 and tt1:
         fork["WorkGroup"] = [[macro_tile0 // tt0, macro_tile1 // tt1, _lsu]]
     else:
@@ -335,7 +347,8 @@ def _fork_sweep_int_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
     fork: Dict[str, Any] = {}
     for key in ("UseSgprForGRO", "InnerUnroll", "MaxOccupancy",
                 "AggressivePerfMode", "FractionalLoad", "NonTemporalA",
-                "NonTemporalB", "AssertFree1ElementMultiple"):
+                "NonTemporalB", "NonTemporalC", "NonTemporalD",
+                "AssertFree1ElementMultiple", "TransposeLDS"):
         if key in config:
             fork[key] = [int(config[key])]
     return fork
