@@ -60,6 +60,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
 | `oto/harness/tensile_oracle.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
+| `oto/harness/coverage_graph.py` | The coverage graphs: the legal geometry space per cell as a 2D picture, with the unexplored part hatched, the peaks ringed green and the traps ringed red |
 | `oto/tensile/patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
@@ -123,6 +124,16 @@ Report `floor_best` as co-primary alongside `winner`.
 | F: persistent fixed grid | conceptual only | all |
 
 ## Reading the deck's stragglers
+
+`python3 -m oto.harness.coverage_graph` draws the corpus's coverage of the
+problem space: one SVG per contract cell (plus an index page) with the legal
+geometry space projected onto (macro-tile area x accumulators per thread), the
+measured part painted with the value it reached, the legal-but-unmeasured part
+hatched, and the local maxima (peaks) and local minima (traps) ringed. The
+headline it carries: **86-93 % of the legal geometry space has never been
+measured** in every cell but ZZ, and the traps sit *inside* the measured strip
+-- the search keeps falling back on a configuration whose neighbours are
+3-8x faster.
 
 `python3 -m oto.harness.tensile_oracle --dtype Z --macro 64x64x8 --thread 2x2
 --vw 1 --du 8` asks **Tensile itself** whether a config builds, what LDS it

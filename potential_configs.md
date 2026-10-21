@@ -3021,7 +3021,39 @@ The two cells with a *real* difference (DD:1365, DD:2048) are both at 88-98 %
 of the FP64 roof, where the FP64 pipe is already the limit: DD is at 97.9 % of
 its theoretical peak on DD:2048. There is no 5 % to find there.
 
-### R48.6 The batch for the next overnight run
+### R48.6 The coverage graphs: the picture of the problem space
+
+`python3 -m oto.harness.coverage_graph` draws the corpus's coverage of the
+legal geometry space: one SVG per contract cell (plus an index page in
+`gfx90c_results/analysis/coverage/`), the space projected onto (macro-tile area
+x accumulators per thread), the measured part painted with the value it
+reached, the legal-but-unmeasured part hatched, the local maxima ringed green
+and the local minima ringed red. No dependency: the SVG is written by hand.
+
+The picture says three things the numbers do not:
+
+1. **The legal space is a band, not a box.** A big tile is only legal with
+   many accumulators per thread (the register file), and a small tile only with
+   few (the LDS and the load structure). The corpus has measured a **thin strip
+   along the middle of that band**; the hatched regions above and below it --
+   87 % of the space on SS, 92 % on HH and DD, 88 % on CC -- have never been
+   visited. The "the deck already covers the space" feeling is exactly this
+   strip.
+2. **The traps sit inside the strip.** A red ring is a measured bucket whose
+   measured neighbours are all faster. On SS:512 the 4k/8-accumulator bucket is
+   a trap (every neighbour is 2-3x faster) -- the search keeps returning to it
+   because it is *legal and different*, not because it is good.
+3. **The peaks are on the band's edge.** The green rings sit where the legal
+   space narrows: the 2k/32-accumulator bucket on SS:512 is a peak (a small
+   tile, a modest register footprint) and it is the configuration a
+   wave-quantization-limited cell wants (SS:256's winner, §R48.3, is exactly
+   that kind of peak).
+
+The exact per-cell numbers (legal / measured / unexplored, peaks, traps) are
+the tool's text output and the index page's table; the two-dimensional
+picture is what makes "86 % unexplored" mean something.
+
+### R48.7 The batch for the next overnight run
 
 1. **The 17 R48 rows** (the three ORANGE cells' untried geometries) -- the only
    rows that can move a graded cell.

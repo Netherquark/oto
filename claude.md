@@ -227,6 +227,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 |---|---|
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
 | What has the corpus already measured on this family/cell, at which geometry or axis value, and how did it score? | `python3 -m oto.harness.corpus_census` (`--family SS`, `--typecode HHS`, `--cell SS:1024`, `--knob DepthU`, `--json out.json`) |
+| How much of the problem space has been explored, and where are the peaks and the traps? (the graphs) | `python3 -m oto.harness.coverage_graph` (`--family SS`, `--cell HH:256`; writes `gfx90c_results/analysis/coverage/*.svg` + an index page) |
 | Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
 | Run the test suite (2m10s serial, 1m27s with `-n auto`, 36s for `-m preflight`) | `python3 -m pytest -q` (`-n auto` to distribute, `-m preflight` for the pre-run subset) |
 | What is the *legal* geometry space per cell, what has been measured inside it, and which legal geometry is untried but sits next to a fast one? | `python3 -m oto.harness.coverage_map` (`--family SS`, `--cell SS:256`, `--top 12`, `--json out.json`) |

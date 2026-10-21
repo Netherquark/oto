@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-22 — the coverage graphs: the problem space as a 2D picture.**
+  `oto.harness.coverage_graph` draws, for every contract cell, the legal
+  geometry space projected onto (macro-tile area x accumulators per thread),
+  the measured part painted with the value it reached, the legal-but-never-
+  measured part hatched, and the local maxima (green) and local minima (red)
+  ringed. One SVG per cell plus an index page in
+  `gfx90c_results/analysis/coverage/`, written by hand -- no dependency to
+  install. What it shows: the legal space is a **band** (a big tile needs many
+  accumulators per thread, a small tile few), the corpus has measured a
+  **thin strip** along the middle of it, and **86-93 % of the space has never
+  been visited** in every cell but ZZ (69-71 %); the traps sit *inside* the
+  measured strip -- legal configurations whose measured neighbours are 3-8x
+  faster -- and the peaks sit on the band's edge, which is exactly where a
+  wave-quantization-limited cell wants to be. The HPA columns' attribution
+  was fixed on the way (the corpus tells HHS from HSS by typecode alone, so a
+  cell map keyed on the row's family showed them as 100 % unexplored).
+  Pinned by `tests/test_coverage_graph.py`.
+
 - **2026-10-21 (8th) — the legality oracle, and the three ORANGE cells
   triaged.** `oto.harness.tensile_oracle` is the /tmp probing machinery
   formalised: it asks **Tensile itself** whether a config builds, prints the

@@ -145,6 +145,20 @@ def _dims(value: Any) -> Optional[str]:
     return None
 
 
+#: The deck family a corpus row belongs to. The corpus attributes the
+#: half-precision-accumulate kernels to family ``HH`` and tells them apart by
+#: typecode alone (``HHS`` -> HH_HPA, ``HSS`` -> HS_HPA), so a cell-level map
+#: keyed on the row's family would show the HPA columns as 100% unexplored
+#: when they are not.
+_TYPECODE_FAMILY = {"HHS": "HH_HPA", "HSS": "HS_HPA"}
+
+
+def _cell_family(row: Dict[str, Any]) -> str:
+    """The deck family a kernel_db row belongs to."""
+    typecode = str(row.get("typecode") or "").upper()
+    return _TYPECODE_FAMILY.get(typecode) or str(row.get("family") or "")
+
+
 def measured_geometries(db_path: Optional[Path] = None
                          ) -> Dict[Tuple[str, str], Dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
@@ -162,7 +176,7 @@ def measured_geometries(db_path: Optional[Path] = None
     out: Dict[Tuple[str, str], Dict[Geometry, float]] = {}
     for rows in db.values():
         for r in rows:
-            fam = r.get("family")
+            fam = _cell_family(r)
             shape = r.get("shape")
             mt = _dims(r.get("MacroTile"))
             tt = _dims(r.get("ThreadTile"))
