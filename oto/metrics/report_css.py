@@ -247,11 +247,45 @@ DASHBOARD_CSS = """
             color: var(--text-secondary);
         }
         .section-note strong { color: var(--text-primary); font-weight: 600; }
+        .figure-group {
+            margin-top: 8px;
+            border: 1px solid var(--border-subtle);
+            background: var(--layer-01);
+        }
+        .figure-group > summary {
+            display: block;
+            padding: 12px 16px;
+            cursor: pointer;
+            list-style: none;
+            border-bottom: 1px solid transparent;
+        }
+        .figure-group-head {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+        }
+        .figure-group[open] > summary { border-bottom-color: var(--border-subtle); }
+        .figure-group > summary::-webkit-details-marker { display: none; }
+        .figure-group-head::before {
+            content: "\25B8";
+            color: var(--icon-primary);
+            font-size: 12px;
+            width: 12px;
+        }
+        .figure-group[open] .figure-group-head::before { content: "\25BE"; }
+        .figure-group-name { min-width: 72px; }
+        .figure-group-meta { color: var(--text-secondary); }
+        .figure-group-shapes {
+            display: block;
+            margin-top: 4px;
+            padding-left: 88px;
+            font-size: 12px;
+        }
         .figure-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
             gap: 16px;
-            margin-top: 16px;
+            padding: 16px;
         }
         .figure {
             margin: 0;
@@ -323,6 +357,8 @@ DASHBOARD_CSS = """
             .metrics { grid-template-columns: 1fr 1fr; }
             .shell { padding: 0 8px; }
             .figure-grid { grid-template-columns: 1fr; }
+            .figure-group-head { flex-wrap: wrap; gap: 8px; }
+            .figure-group-shapes { padding-left: 0; }
             .page { padding: 8px; }
             thead th, tbody td { padding-left: 8px; padding-right: 8px; }
         }

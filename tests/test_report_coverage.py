@@ -67,8 +67,9 @@ class TestCoverageSection(unittest.TestCase):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
         self.assertIn("Problem-space coverage", html)
-        # 402 unexplored of 471 legal -> 85%
-        self.assertIn("85%", html)
+        # the per-cell share (87% for SS, 71% for ZZ) -- the legal space is
+        # the same for every cell of a family, so the ratio is per cell.
+        self.assertIn("87%", html)
         self.assertIn("never been run", html)
 
     def test_the_section_carries_the_numbers_and_the_figures(self):
@@ -85,6 +86,24 @@ class TestCoverageSection(unittest.TestCase):
                                 / "acceptance_report.html")
         self.assertIn('src="analysis/coverage/SS_256x256x256.svg"', html)
         self.assertNotIn(str(self.tmp), html)
+
+    def test_the_figures_are_grouped_by_family(self):
+        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+                                / "acceptance_report.html")
+        # one expandable group per family, each holding its own figures
+        self.assertEqual(html.count("<details class=\"figure-group\">"), 2)
+        self.assertIn(">SS<", html)
+        self.assertIn(">ZZ<", html)
+        # the summary line carries the family's own numbers
+        self.assertIn("1 cell", html)          # SS has one row in the fixture
+        self.assertIn("419", html)             # legal geometries, per cell
+        self.assertIn("87.1%", html)          # the unexplored share of that cell
+
+    def test_a_family_group_holds_its_own_shapes(self):
+        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+                                / "acceptance_report.html")
+        self.assertIn("256x256x256", html)
+        self.assertIn("1024x1024x1024", html)
 
     def test_the_section_says_what_to_run_when_there_is_nothing(self):
         import tempfile

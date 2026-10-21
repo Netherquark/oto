@@ -61,6 +61,20 @@ def coverage_rows(base_dir: Path) -> List[Dict[str, Any]]:
     return [r for r in (rows or []) if isinstance(r, dict)]
 
 
+def _cell_share(row: Dict[str, Any]) -> float:
+    """The unexplored share of ONE cell's legal space, in percent.
+
+    The legal space is the same for every cell of a family (it does not depend
+    on the shape), while the *measured* geometries differ per cell (the corpus
+    ran each geometry on the cells it was scheduled for). So the ratio is a
+    per-cell number and must never be summed across cells -- doing so divides
+    a cell's own measurement count by the family's whole space.
+    """
+    legal = row.get("n_legal", 0) or 0
+    measured = row.get("n_measured", 0) or 0
+    return (1.0 - measured / legal) * 100.0 if legal else 0.0
+
+
 def _relative_src(base_dir: Path, html_path: Path, name: str) -> str:
     """The figure's path relative to the report file, for an <img src>."""
     target = coverage_dir(base_dir) / name
@@ -113,21 +127,64 @@ def _summary_table(rows: List[Dict[str, Any]], base_dir: Path,
             </div>"""
 
 
-def _figure_grid(rows: List[Dict[str, Any]], base_dir: Path,
+def _figure_tile(row: Dict[str, Any], base_dir: Path,
                  html_path: Path) -> str:
-    """The grid of per-cell coverage figures."""
-    cells = ""
-    for row in rows:
-        name = str(row.get("file", ""))
-        if not name:
-            continue
-        src = _relative_src(base_dir, html_path, name)
-        cells += f"""
+    """One figure tile."""
+    name = str(row.get("file", ""))
+    if not name:
+        return ""
+    src = _relative_src(base_dir, html_path, name)
+    family = html.escape(str(row.get("family", "")))
+    shape = html.escape(str(row.get("shape", "")))
+    return f"""
                 <figure class="figure">
-                    <img src="{src}" alt="Coverage of the legal geometry space for {html.escape(str(row.get('family', '')))} {html.escape(str(row.get('shape', '')))}" loading="lazy">
-                    <figcaption class="mono">{html.escape(str(row.get('family', '')))} {html.escape(str(row.get('shape', '')))} &middot; {row.get('n_measured', 0)}/{row.get('n_legal', 0)} measured &middot; {row.get('peaks', 0)} peak / {row.get('traps', 0)} trap</figcaption>
+                    <img src="{src}" alt="Coverage of the legal geometry space for {family} {shape}" loading="lazy">
+                    <figcaption class="mono">{family} {shape} &middot; {row.get('n_measured', 0)}/{row.get('n_legal', 0)} measured &middot; {row.get('peaks', 0)} peak / {row.get('traps', 0)} trap</figcaption>
                 </figure>"""
-    return f"""<div class="figure-grid">{cells}</div>"""
+
+
+def _family_groups(rows: List[Dict[str, Any]], base_dir: Path,
+                   html_path: Path) -> str:
+    """The expandable list: one group per family, its figures inside.
+
+    A native ``<details>`` is the control (the design language prefers native
+    widgets, and it is keyboard-operable for free). The summary line carries
+    the family's own numbers, so the list is readable without expanding
+    anything.
+    """
+    families: Dict[str, List[Dict[str, Any]]] = {}
+    for row in rows:
+        families.setdefault(str(row.get("family", "")), []).append(row)
+    out = ""
+    for family in sorted(families):
+        items = families[family]
+        # The legal space is the same for every cell of a family, so it is
+        # counted ONCE here; only the measured geometries differ per cell.
+        legal = max(r.get("n_legal", 0) or 0 for r in items)
+        peaks = sum(r.get("peaks", 0) or 0 for r in items)
+        traps = sum(r.get("traps", 0) or 0 for r in items)
+        shapes = ", ".join(str(r.get("shape", "")) for r in items)
+        figures = "".join(_figure_tile(r, base_dir, html_path) for r in items)
+        shares = sorted(_cell_share(r) for r in items)
+        lo = min(r.get("n_measured", 0) or 0 for r in items)
+        hi = max(r.get("n_measured", 0) or 0 for r in items)
+        span = f"{lo}" if lo == hi else f"{lo}-{hi}"
+        share = (f"{shares[0]:.0f}%" if abs(shares[0] - shares[-1]) < 0.5
+                 else f"{shares[0]:.0f}-{shares[-1]:.0f}%")
+        per_cell = (f"{span} of {legal} geometries measured per cell "
+                    f"({share} unexplored)")
+        out += f"""
+            <details class="figure-group">
+                <summary>
+                    <span class="figure-group-head">
+                        <span class="figure-group-name mono strong">{html.escape(family)}</span>
+                        <span class="figure-group-meta">{len(items)} cell{'' if len(items) == 1 else 's'} &middot; {per_cell} &middot; {peaks} peak{'' if peaks == 1 else 's'} / {traps} trap{'' if traps == 1 else 's'}</span>
+                    </span>
+                    <span class="figure-group-shapes mono secondary">{html.escape(shapes)}</span>
+                </summary>
+                <div class="figure-grid">{figures}</div>
+            </details>"""
+    return out
 
 
 def coverage_section(base_dir: Path, html_path: Path) -> str:
@@ -156,20 +213,22 @@ def coverage_section(base_dir: Path, html_path: Path) -> str:
             </div>
         </section>
         """
-    total_legal = sum(r.get("n_legal", 0) or 0 for r in rows)
-    total_measured = sum(r.get("n_measured", 0) or 0 for r in rows)
-    total_open = sum(r.get("unexplored", 0) or 0 for r in rows)
-    share = (total_open / total_legal * 100.0) if total_legal else 0.0
+    shares = sorted(_cell_share(r) for r in rows)
+    measured = [r.get("n_measured", 0) or 0 for r in rows]
+    legal = [r.get("n_legal", 0) or 0 for r in rows]
+    median = shares[len(shares) // 2] if shares else 0.0
     return f"""
         <section class="section">
             <h2 class="section-title">Problem-space coverage</h2>
             <p class="section-note">The legal geometry space of every cell, and
-            the part of it the corpus has measured. <strong>{share:.0f}% of the
-            legal geometries have never been run</strong>
-            ({total_open} of {total_legal}); a green ring is a local maximum
-            (a peak), a red ring a local minimum (a trap &mdash; a legal
-            configuration whose measured neighbours are all faster).</p>
+            the part of it the corpus has measured. <strong>{median:.0f}% of
+            each cell&apos;s legal geometries have never been run</strong>
+            (a median of {median:.0f}% unexplored; {min(measured) if measured else 0}-{max(measured) if measured else 0}
+            of the {min(legal) if legal else 0}-{max(legal) if legal else 0} legal geometries per cell).
+            A green ring is a local maximum (a peak), a red ring a local minimum
+            (a trap &mdash; a legal configuration whose measured neighbours are
+            all faster).</p>
             {_summary_table(rows, base_dir, html_path)}
-            {_figure_grid(rows, base_dir, html_path)}
+            {_family_groups(rows, base_dir, html_path)}
         </section>
         """
