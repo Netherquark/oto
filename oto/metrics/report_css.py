@@ -388,13 +388,13 @@ DASHBOARD_CSS = """
         }
         .figure-family > summary::-webkit-details-marker { display: none; }
         .figure-family > summary::before {
-            content: "\25B8";
+            content: "\\25B8";
             margin-right: 8px;
             font-size: 10px;
             color: var(--icon-primary);
         }
         .figure-family[open] > summary::before {
-            content: "\25BE";
+            content: "\\25BE";
         }
         .figure-family-title {
             display: inline;
@@ -467,12 +467,12 @@ DASHBOARD_CSS = """
             display: none;
         }
         tbody.coverage-group[data-collapsed="false"] .group-row th::after {
-            content: " \25BE";
+            content: " \\25BE";
             font-size: 10px;
             color: var(--icon-primary);
         }
         tbody.coverage-group[data-collapsed="true"] .group-row th::after {
-            content: " \25B8";
+            content: " \\25B8";
             font-size: 10px;
             color: var(--icon-primary);
         }
@@ -491,7 +491,76 @@ DASHBOARD_CSS = """
             position: relative;
         }
         .section.collapsible > .section-title::after {
-            content: "\25BE";
+            content: "\\25BE";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--icon-primary);
+            transition: transform 0.15s ease;
+        }
+        .section.collapsible[data-collapsed="true"] > .section-title::after {
+            transform: translateY(-50%) rotate(-90deg);
+        }
+        .section.collapsible > .section-body {
+            overflow: hidden;
+        }
+        .section.collapsible[data-collapsed="true"] > .section-body {
+            display: none;
+        }
+        .section.collapsible:focus-within > .section-title {
+            outline: 2px solid var(--focus);
+            outline-offset: -2px;
+        }
+        /* Collapsible family groups */
+        tbody.family-group[data-collapsed="true"] .size-row {
+            display: none;
+        }
+        tbody.family-group[data-collapsed="false"] .family-row th::after {
+            content: " \\25BE";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.family-group[data-collapsed="true"] .family-row th::after {
+            content: " \\25B8";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.family-group .family-row {
+            cursor: pointer;
+            user-select: none;
+        }
+        /* Collapsible coverage groups */
+        tbody.coverage-group[data-collapsed="true"] .coverage-row {
+            display: none;
+        }
+        tbody.coverage-group[data-collapsed="false"] .group-row th::after {
+            content: " \\25BE";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.coverage-group[data-collapsed="true"] .group-row th::after {
+            content: " \\25B8";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.coverage-group .group-row {
+            cursor: pointer;
+            user-select: none;
+        }
+        /* Collapsible sections */
+        .section.collapsible {
+            border: 1px solid var(--border-subtle);
+        }
+        .section.collapsible > .section-title {
+            cursor: pointer;
+            user-select: none;
+            padding-right: 32px;
+            position: relative;
+        }
+        .section.collapsible > .section-title::after {
+            content: "\\25BE";
             position: absolute;
             right: 12px;
             top: 50%;
@@ -523,12 +592,12 @@ DASHBOARD_CSS = """
             display: none;
         }
         tbody.family-group[data-collapsed="false"] .family-row th::after {
-            content: " \25BE";
+            content: " \\25BE";
             font-size: 10px;
             color: var(--icon-primary);
         }
         tbody.family-group[data-collapsed="true"] .family-row th::after {
-            content: " \25B8";
+            content: " \\25B8";
             font-size: 10px;
             color: var(--icon-primary);
         }
@@ -852,4 +921,88 @@ JS_COLLAPSIBLE = r"""
         </script>
         """
 
+#: Collapsible section handler + expand-all button.
+JS_COLLAPSIBLE = r"""
+        <script>
+        (function () {
+            // Expand/collapse section on title click
+            document.querySelectorAll('.section.collapsible > .section-title').forEach(function (title) {
+                title.addEventListener('click', function (e) {
+                    if (e.target !== title) return;
+                    var section = title.parentElement;
+                    var collapsed = section.getAttribute('data-collapsed') === 'true';
+                    section.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                    title.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                });
+                title.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        title.click();
+                    }
+                });
+            });
 
+            // Expand/collapse family groups in the family matrix
+            document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                var header = group.querySelector('.family-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand/collapse coverage groups
+            document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                var header = group.querySelector('.group-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand all button
+            var expandBtn = document.getElementById('expand-all');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function () {
+                    var allCollapsed = document.querySelectorAll('.section.collapsible[data-collapsed="true"]');
+                    var isExpanding = allCollapsed.length > 0;
+                    document.querySelectorAll('.section.collapsible').forEach(function (section) {
+                        section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var title = section.querySelector('.section-title');
+                        if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.group-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
+                    expandBtn.setAttribute('aria-label', isExpanding ? 'Collapse all sections' : 'Expand all sections');
+                });
+            }
+        })();
+        </script>
+        """
