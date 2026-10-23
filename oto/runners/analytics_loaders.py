@@ -20,13 +20,23 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.policy import check_retirement_eligibility
+from oto.metrics.protocol import classify
+from oto.tensile.shape_order import ordered_shapes
 
 
 class CorpusMixin:
     """Whole-corpus measurement loading, mixed into TensileDriver."""
 
-    def _load_analytics_from_run(self, run_dir: Optional[Path] = None) -> List[CellAnalytics]:
-        """Load CellAnalytics from all run CSVs in a run directory."""
+    def _load_analytics_from_run(self, run_dir: Optional[Path] = None,
+                                 protocol_basis: str = "family") -> List[CellAnalytics]:
+        """Load CellAnalytics from all run CSVs in a run directory.
+
+        ``protocol_basis`` (§R56.3, default "family") restricts the analytics
+        to phases classified under that invocation form: the coverage/RED/ORANGE
+        basis must be like-for-like, since a single-problem phase inflates the
+        same cell's percentage of ceiling 2-4x without representing a result
+        the floor's protocol can reproduce.
+        """
         run_dir = run_dir or self.run_dir
         all_analytics = []
         if not run_dir:
@@ -46,6 +56,12 @@ class CorpusMixin:
             phase_family = extract_family_from_phase_id(phase_id)
             records = self.analytics.load_benchmark_csv(csv_file)
             cell_map = self.analytics.aggregate_by_cell_typecode(records, phase_family)
+            if not cell_map:
+                continue
+            measured = {shape for (_d, shape, _f, _fam) in cell_map}
+            protocol = classify(phase_family, measured)
+            if protocol_basis and protocol != protocol_basis:
+                continue
 
             for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 analytics_obj = self.analytics.compute_cell_analytics(
@@ -59,7 +75,8 @@ class CorpusMixin:
                 all_analytics.append(analytics_obj)
 
         return all_analytics
-    def _load_analytics_from_registry(self, run_id: Optional[str] = None) -> List[CellAnalytics]:
+    def _load_analytics_from_registry(self, run_id: Optional[str] = None,
+                                      protocol_basis: str = "family") -> List[CellAnalytics]:
         """Load CellAnalytics straight from registry benchmark_result rows.
 
         For merged / draft-imported runs whose per-seed GFLOPS live only in the
@@ -90,6 +107,15 @@ class CorpusMixin:
             phase_family = extract_family_from_phase_id(phase_id)
             cell_map = self.analytics.aggregate_by_cell_typecode(
                 phase_records, phase_family)
+            if not cell_map:
+                continue
+            # The invocation form is derivable here too: a phase's registry
+            # rows carry its own per-shape measurements, so the side set of
+            # the rows IS the phase's measured set (UNLESS proven otherwise).
+            measured = {shape for (_d, shape, _f, _fam) in cell_map}
+            protocol = classify(phase_family, measured)
+            if protocol_basis and protocol != protocol_basis:
+                continue
             for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 all_analytics.append(self.analytics.compute_cell_analytics(
                     dtype=cell_dtype, shape=shape, fp=fp, seeds=seeds,
@@ -104,6 +130,49 @@ class CorpusMixin:
         """
         runs_dir = self.base_dir / "gfx90c_runs"
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
+    def _registry_phase_records(self) -> List[Tuple[str, List[Dict[str, Any]]]]:
+        """Native registry rows grouped per (run, phase), invocation-stamped.
+
+        The rows of one phase prove which sides its invocation measured, so
+        the canonical classifier can derive the invocation form the same way
+        it does for run CSVs (§R56.3): a phase whose measured sides cover its
+        graded cells classifies family; anything else stays honest
+        partial/single/unknown and is excluded from graded bases.
+        """
+        try:
+            db_records = self.registry.read_records(record_type="benchmark_result")
+        except Exception:
+            return []
+        by_phase: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        for rec in db_records:
+            if str(rec.get("arm") or "") == "spoof":
+                continue
+            src_run = str(rec.get("run_id", "") or rec.get("source_run") or "")
+            by_phase.setdefault(
+                (src_run, str(rec.get("phase_id", ""))), []).append(rec)
+        out: List[Tuple[str, List[Dict[str, Any]]]] = []
+        for (src_run, phase_id), phase_recs in sorted(by_phase.items()):
+            phase_family = extract_family_from_phase_id(phase_id)
+            measured = ordered_shapes(
+                {str(r.get("shape", "")) for r in phase_recs if r.get("shape")})
+            protocol = classify(phase_family, measured)
+            stamped = [{
+                "DataType": rec.get("dtype", ""),
+                "ProblemType": rec.get("shape", ""),
+                "fingerprint": rec.get("fp", ""),
+                "GFLOPS": float(rec.get("GFLOPS")
+                                or rec.get("median_gflops") or 0.0),
+                "phase_id": rec.get("phase_id", ""),
+                "cell_key": rec.get("cell_key", ""),
+                "kernel_key": rec.get("kernel_key", ""),
+                "arm": rec.get("arm") or "native",
+                "shapes": measured,
+                "shapes_per_phase": len(measured),
+                "protocol": protocol,
+            } for rec in phase_recs]
+            out.append((src_run, stamped))
+        return out
+
     def _native_records_all_runs(self) -> List[Dict[str, Any]]:
         """Native arm for the acceptance comparison: the whole database.
 
@@ -144,49 +213,41 @@ class CorpusMixin:
             for rec in native:
                 _add(rec, run_dir.name)
 
-        try:
-            db_records = self.registry.read_records(record_type="benchmark_result")
-        except Exception:
-            db_records = []
-        for rec in db_records:
-            if str(rec.get("arm") or "") == "spoof":
-                continue
-            src_run = str(rec.get("run_id", "") or rec.get("source_run") or "")
-            _add({
-                "DataType": rec.get("dtype", ""),
-                "ProblemType": rec.get("shape", ""),
-                "fingerprint": rec.get("fp", ""),
-                "GFLOPS": float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0),
-                "phase_id": rec.get("phase_id", ""),
-                "cell_key": rec.get("cell_key", ""),
-                "kernel_key": rec.get("kernel_key", ""),
-                "arm": rec.get("arm") or "native",
-            }, src_run)
+        for src_run, stamped in self._registry_phase_records():
+            for rec in stamped:
+                _add(rec, src_run)
 
         return records
-    def _native_arm_provenance(self, native_records: List[Dict[str, Any]], agg: str) -> Dict[str, Any]:
+    def _native_arm_provenance(self, native_records: List[Dict[str, Any]], agg: str,
+                               protocol_basis: str = "family") -> Dict[str, Any]:
         """Cite the native arm scope in the report: which runs, how many cells."""
         runs = sorted({str(r.get("source_run") or r.get("run_id") or "") for r in native_records
                        if (r.get("source_run") or r.get("run_id"))})
         return {
             "scope": "whole_db",
             "agg": agg,
+            "protocol_basis": protocol_basis,
             "runs": runs,
             "n_runs": len(runs),
             "n_records": len(native_records),
             "empty": not native_records,
         }
-    def _native_analytics_all_runs(self) -> List[CellAnalytics]:
+    def _native_analytics_all_runs(self, protocol_basis: str = "family") -> List[CellAnalytics]:
         """CellAnalytics for the whole native corpus (drives coverage/RED/ORANGE).
 
         Coverage must reflect every native candidate ever measured, not just the
         current run: a run that deduped or failed all of its phases still has to
-        be graded against the winners it is being compared on.
+        be graded against the winners it is being compared on. Under the
+        like-for-like rule (§R56.3), only phases classified in that invocation
+        form contribute analytics; cross-form phases are excluded by
+        construction rather than filtered after the fact.
         """
         all_analytics: List[CellAnalytics] = []
         for run_dir in self._native_run_dirs():
-            all_analytics.extend(self._load_analytics_from_run(run_dir))
-        all_analytics.extend(self._load_analytics_from_registry())
+            all_analytics.extend(self._load_analytics_from_run(
+                run_dir, protocol_basis=protocol_basis))
+        all_analytics.extend(self._load_analytics_from_registry(
+            protocol_basis=protocol_basis))
         return all_analytics
     def _retire_stable_candidates(self) -> int:
         """

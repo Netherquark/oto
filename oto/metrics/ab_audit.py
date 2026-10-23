@@ -30,18 +30,20 @@ from oto.metrics.ab_records import (_registry_records, arm_record_sets,
                                     arm_records, phase_records, phase_family)
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key
+from oto.metrics.protocol import (FAMILY, PARTIAL, SINGLE, UNKNOWN,
+                                  like_for_like, protocol_of)
 
 BASE = Path(__file__).resolve().parents[2]
 
 __all__ = ["BASE", "TIE_BAND_PCT", "BAND_LO", "BAND_HI", "audit", "cell_deltas",
            "measured_band", "verdict", "arm_record_sets", "reproducible_band",
            "repeat_dispersion", "phase_records", "arm_records", "phase_family",
-           "norm_config", "main"]
+           "norm_config", "protocol_census", "main"]
 
 
 def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
-                agg: str = "best_median",
-                base: Optional[Path] = None) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
+                agg: str = "best_median", base: Optional[Path] = None,
+                protocol_basis: str = "family") -> Dict[Tuple[str, str, str], Dict[str, Any]]:
     """Canonical per-cell native-vs-floor pairing, from already-loaded records.
 
     Split out from `arm_record_sets` so a caller that needs the band *and* the
@@ -56,7 +58,49 @@ def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
     hand-rolled per-cell statistic that could quietly disagree with the report.
     """
     return _driver(Path(base) if base else BASE).analytics.compute_native_vs_spoof_delta(
-        native, floor, agg=agg)
+        native, floor, agg=agg, protocol_basis=protocol_basis)
+
+
+def protocol_census(records: List[Dict[str, Any]]) -> Dict[str, int]:
+    """The invocation-form census of an arm: counts per stamped protocol.
+
+    The audit prints it next to the graded tally so the exclusion the graded
+    basis performs is visible as data, not silently absorbed: under the
+    family basis the cells graded are exactly the family-stamped measurements
+    and everything else shows up here.
+    """
+    census: Dict[str, int] = {}
+    for rec in records:
+        p = protocol_of(rec)
+        census[p] = census.get(p, 0) + 1
+    return census
+
+
+def _records_in_basis(records: List[Dict[str, Any]],
+                      protocol_basis: str) -> List[Dict[str, Any]]:
+    """One arm restricted to the named invocation form ('any' = unfiltered)."""
+    if protocol_basis in (None, "", "any"):
+        return list(records)
+    return [r for r in records if protocol_of(r) == protocol_basis]
+
+
+def _protocol_matched(n: Optional[Dict[str, Any]],
+                      f: Optional[Dict[str, Any]]) -> bool:
+    """Whether one cell's two best records were measured in the same form.
+
+    Stamped protocols decide (§R56.3): two records are matched exactly when
+    both carry the same known invocation form. Records that carry no stamp
+    (legacy syntheses without one) fall back to the count equality the audit
+    has always used, and a record that is stamped versus unstamped is
+    honestly unmatched -- UNKNOWN can neither be asserted to match nor
+    mismatch.
+    """
+    if not (n and f):
+        return False
+    n_p, f_p = protocol_of(n), protocol_of(f)
+    if n_p != UNKNOWN or f_p != UNKNOWN:
+        return like_for_like(n_p, f_p)
+    return n.get("shapes_per_phase") == f.get("shapes_per_phase")
 
 
 def _best_by_cell(
@@ -89,8 +133,7 @@ def _grade_slot(slot: Dict[str, Any], band: float) -> None:
     else:
         slot["delta_pct"] = None
         slot["verdict"] = "UNGRADED"
-    slot["protocol_matched"] = bool(
-        n and f and n["shapes_per_phase"] == f["shapes_per_phase"])
+    slot["protocol_matched"] = _protocol_matched(n, f)
     slot["native_family"] = n.get("phase_family") if n else None
     slot["spoof_family"] = f.get("phase_family") if f else None
     # Same form is necessary but not sufficient: auto-generated and
@@ -151,25 +194,38 @@ def _summary_counts(cells: Dict[str, Dict[str, Any]]) -> Dict[str, int]:
     }
 
 
-def audit(base: Path = BASE, band_pct: Optional[float] = None) -> Dict[str, Any]:
+def audit(base: Path = BASE, band_pct: Optional[float] = None,
+          protocol_basis: str = "family") -> Dict[str, Any]:
     """Classify every cell in both arms.
 
     ``native`` is the whole native corpus and ``floor`` the recalled gfx900
     reference chain; both come from :func:`arm_record_sets`.
+    ``protocol_basis`` is the like-for-like rule (§R56.3, default "family"):
+    the cells classified and graded admit only records stamped with that
+    invocation form, on both arms -- the form the floor itself is measured
+    under. The records the basis excludes are counted, not dropped: the
+    result carries a ``protocol_census`` so the exclusion stays legible.
     """
     native, floor, chain = arm_record_sets(base)
+    census = {"native": protocol_census(native),
+              "spoof": protocol_census(floor)}
 
-    measured_b = measured_band(native, floor, band_pct)
+    native_b = _records_in_basis(native, protocol_basis)
+    floor_b = _records_in_basis(floor, protocol_basis)
+
+    measured_b = measured_band(native_b, floor_b, band_pct)
     band = measured_b["band_pct"]
     # `cross_arm` is recorded in the band payload for the report but is not
     # read here, so it is indexed out of the destructuring rather than bound.
     repeat = measured_b["repeat_dispersion"]
 
-    cells = _best_by_cell(native, floor)
+    cells = _best_by_cell(native_b, floor_b)
     for slot in cells.values():
         _grade_slot(slot, band)
 
     return {
+        "protocol_basis": protocol_basis,
+        "protocol_census": census,
         "floor_chain": chain,
         "band_pct": band,
         "band_source": measured_b["band_source"],
@@ -270,6 +326,9 @@ def _print_proposal_coverage(cov: Dict[str, Any]) -> None:
 def print_report(result: Dict[str, Any]) -> None:
     rb = result["reproducible_band"]
     print(f"floor chain : {result['floor_chain']}")
+    print(f"basis       : {result.get('protocol_basis', '?')} "
+          f"(census native={result.get('protocol_census', {}).get('native')}, "
+          f"floor={result.get('protocol_census', {}).get('spoof')})")
     print(f"tie band    : +/-{result['band_pct']:.1f}% "
           f"({result['band_source']}; shipped default "
           f"+/-{result['shipped_band_pct']:.1f}%)")
@@ -332,9 +391,15 @@ def main() -> int:
     ap.add_argument("--band", type=float, default=None,
                     help=f"override the tie band (default: measured, else "
                          f"+/-{TIE_BAND_PCT})")
+    ap.add_argument("--protocol-basis", default="family",
+                    choices=("family", "any", "single", "partial"),
+                    help="the invocation form the graded cells admit "
+                         "(§R56.3; default family, the form the floor is "
+                         "measured under; 'any' = the legacy unfiltered view)")
     args = ap.parse_args()
 
-    result = audit(base=args.base_dir, band_pct=args.band)
+    result = audit(base=args.base_dir, band_pct=args.band,
+                   protocol_basis=args.protocol_basis)
     if args.arm_classes:
         print(json.dumps(result["reproducible_band"], indent=2))
     else:

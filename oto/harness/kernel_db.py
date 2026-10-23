@@ -58,6 +58,8 @@ from oto.device.peaks import (            # noqa: E402  (path set up above)
     family_from_kernel_name,
     kernel_typecode,
 )
+from oto.metrics.family_attribution import extract_family_from_phase_id  # noqa: E402
+from oto.metrics.protocol import classify_count, problem_count_text      # noqa: E402
 
 ENUM_TO_DTYPE = {0: "S", 1: "D", 2: "C", 3: "Z", 4: "H"}
 # Family token immediately after the phase / probe / auto-pool prefix, so
@@ -103,6 +105,10 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
 
     Text-scan based (same parser the exploration script validated against the
     live corpus) — reads scalars, the ProblemType DataType enum, and the ISA.
+    Also reads the INTENDED PROBLEM COUNT (the number of ``- Exact:`` rows,
+    i.e. how large an invocation the phase declared) as ``ProblemSizesCount``:
+    that count plus the CSV's measured sides is what the invocation-form
+    classifier (oto.metrics.protocol) stamps per row (§R56.3).
     Returns {} on any read failure; callers fall back to their run-level
     default config.
     """
@@ -124,6 +130,9 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
     m = re.search(r"^  ISA: \[([^\]]+)\]", text, re.M)
     if m:
         cfg["ISA"] = m.group(1).split(",")
+    n_problems = problem_count_text(text)
+    if n_problems:
+        cfg["ProblemSizesCount"] = n_problems
     return cfg
 
 
@@ -237,7 +246,9 @@ def _family_and_dtype(cfg: Dict[str, Any], kc: str,
 
 
 def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
-                  phase_id: str) -> Optional[Dict[str, Any]]:
+                  phase_id: str, measured_sides: List[str],
+                  n_problems: Optional[int] = None,
+                  phase_family: str = "") -> Optional[Dict[str, Any]]:
     """One kernel-db row for a (kernel column, shape) group."""
     vals = [v for v, _ in vcfg]
     cfgset = [c for _, c in vcfg]
@@ -248,6 +259,12 @@ def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
     med = (vals[n // 2] + vals[(n - 1) // 2]) / 2.0
     cfg = cfgset[0] if cfgset else {}
     family, dt, dt_enum = _family_and_dtype(cfg, kc, phase_id)
+    # Invocation form (§R56.3): the number of problems the phase asked for
+    # (from its own yaml) plus the sides its CSVs yielded, classified under
+    # the PHASE's family -- the deck intent the phase was launched for, not
+    # the kernel typecode alone (an HPA phase's kernels read 'HH', which
+    # would misgrade its form against the HH contract's five cells).
+    fam_for_protocol = phase_family or (family if family != "?" else "")
     entry: Dict[str, Any] = {
         "phase": phase_id,
         "kernel": kc,
@@ -259,6 +276,9 @@ def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
         "dtype_enum": dt_enum,
         "family": family,
         "typecode": kernel_typecode(kc),
+        "n_problems": n_problems,
+        "protocol": classify_count(fam_for_protocol, n_problems,
+                                   measured_sides),
     }
     for kk in ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU", "GlobalLoadVectorWidthA",
@@ -285,10 +305,28 @@ def phase_survey(phase_dir: str, phase_id: str,
         return []
 
     per_kernel = _accumulate_rows(csvs, phase_dir, folder_yaml, cfg)
+    if not per_kernel:
+        return []
+
+    # The phase's invocation form is a phase-level fact: every row it merged
+    # shares the declared problem count (the sum of its folder yamls' counts
+    # -- almost always one folder; the floor's rejection-dumped phases have no
+    # yaml at all, which leaves the count UNKNOWN and the CSV sides decide)
+    # and its measured side set. Rows inherit it.
+    counts: List[int] = []
+    for ypath in folder_yaml.values():
+        try:
+            counts.append(problem_count_text(Path(ypath).read_text()))
+        except OSError:
+            continue
+    n_problems = sum(counts) or None
+    measured_sides = sorted({s for (_kc, s) in per_kernel})
+    pfam = extract_family_from_phase_id(phase_id)
 
     out: List[Dict[str, Any]] = []
     for (kc, s), vcfg in sorted(per_kernel.items()):
-        entry = _kernel_entry(kc, s, vcfg, phase_id)
+        entry = _kernel_entry(kc, s, vcfg, phase_id, measured_sides,
+                              n_problems=n_problems, phase_family=pfam)
         if entry is not None:
             out.append(entry)
     return out

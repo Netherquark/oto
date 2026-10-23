@@ -544,6 +544,12 @@ they pin the plan's own claims rather than the design's:
 - [ ] `port_tensile.py` + `phases.yaml` driver operational; it is the only entrypoint.
 - [ ] Reference floor fully decided; verdicts
       re-derived per cell vs the recalled `gfx900_ref_*` chain.
+- [x] Verdicts grade like-for-like (§R56.3-A resolved 2026-10-23): one
+      invocation protocol per pairing (`oto/metrics/protocol.py`), stamps in
+      records/kernel_db/payload, mixed + isolated numbers preserved as
+      provenance; the report regen reproduced the honest regrade (19/19/0,
+      7 protocol artefacts un-inflated). R56.3-B (per-cell protocol-normalised
+      quoting from the R50a iso twins) lands after tonight's run.
 - [ ] Native family-matrix phases cover the shipped footprint families (mapped),
       all native `isa`; every replicating family logged at %-of-ceiling.
 - [ ] **Aggregate native library beats the gfx900-spoof floor across the shipped

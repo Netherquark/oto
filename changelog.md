@@ -9,6 +9,44 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-23 (8th) — the like-for-like rule is in the code: §R56.3-A
+  resolved, the acceptance report grades one protocol at a time, and the
+  regen reproduced the honest regrade through the maintained pipeline.**
+  `oto/metrics/protocol.py` is the canonical invocation-form classifier:
+  `family` (covers the family's graded cell list — `FAMILY_CELLS`, moved to
+  `oto.device.peaks` from the deck and re-exported as `TARGET_CELLS`, so the
+  deck and the classifier share one list), `single` (one problem),
+  `partial` (trios/pairs/narrows), `unknown` (not derivable; never graded).
+  The rule is verdicts grade like-for-like (`--protocol-basis family`,
+  default everywhere), classification comes from declared/measured side sets
+  — never phase names (the twin phases proved names lie: the identically
+  named `phase_auto_0_hh_256x256x256_4` ran family in 10-06 and single in
+  10-08). Ground truth before locking: all 3802 floor CSVs measure exactly
+  their family contract, and FAMILY_CELLS (not the 7-side DD contract) is the
+  anchor — the deck's own 6-side DD spans are family form by that rule, and
+  tonight's R50b HPA-512 rows (3-side HS_HPA spans) grade.
+  Wiring: `ab_records`/`reporting` stamp every record (per-phase, CSVs of one
+  phase merged); `ab_delta` filters BOTH arms to the basis with zero risk of
+  cross-form wins, and appends `basis_protocol`, `native_best_any_protocol`
+  (the pre-§R56.3 mixed winner) and `native_isolated_best` to every verdict —
+  nothing previously printed disappears; `ab_audit` grades on the basis and
+  prints a protocol census so exclusions stay legible; `ab_band` pairs
+  same-form by stamp (count fallback); `analytics_loaders` builds RED/ORANGE
+  from the basis (probe phases are honest `unknown` and drop out of coverage;
+  registry rows are grouped per phase and stamped from their own sides);
+  `kernel_db` rows carry `n_problems` + `protocol` (42,192 rows rebuilt:
+  36,901 family / 412 single / 4,879 partial; all 14,019 floor rows family —
+  classified from their CSVs since floor phases carry no Data yaml);
+  `coverage_map` gains `--protocol`. Report regen on the unchanged corpus:
+  38/38 verdict cells, all values re-derived like-for-like — 19 WIN / 19 TIE
+  / 0 LOSS (was 26/12/0) with exactly the seven protocol-inflated artefacts
+  flipping to ties (SS:256 +231.5→+4.7%, CC:192, DD:192, HH:256, HH:2048,
+  HH_HPA 512/4096), honest reference points reproduced exactly (ZZ:128
+  +39.7% WIN), ORANGE list = the full §R50c fill-starved set (now 7 cells at
+  8.4-39.4% of bar), zero dropped rows. Tests: new `tests/test_protocol.py`
+  (classifier over the corpus's real forms) + like-for-like verdict tests in
+  `tests/test_ab_audit.py`; preflight 177 passed.
+
 - **2026-10-23 (7th) — like-for-like regrade: three graded wins were protocol
   artefacts; the R50 batch is committed and the gate is differential-perfect.**
   The 2026-10-22 acceptance regraded every cell on the like-for-like basis —

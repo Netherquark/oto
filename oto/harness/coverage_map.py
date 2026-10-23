@@ -159,12 +159,20 @@ def _cell_family(row: Dict[str, Any]) -> str:
     return _TYPECODE_FAMILY.get(typecode) or str(row.get("family") or "")
 
 
-def measured_geometries(db_path: Optional[Path] = None
-                         ) -> Dict[Tuple[str, str], Dict[Geometry, float]]:
+def measured_geometries(db_path: Optional[Path] = None,
+                        protocol: str = "family"
+                        ) -> Dict[Tuple[str, str], Dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
 
     Args:
         db_path: The kernel_db cache; the repo default when None.
+        protocol: The invocation form the "measured" best admits (§R56.3,
+            default "family": like-for-like with the floor, so the
+            neighbour-finder ranks against values reproducible under the
+            deck protocol rather than against 2-4x-inflated single-problem
+            readings). "any" restores the unfiltered corpus view; other
+            values select that form, and rows WITHOUT a stamp (pre-§R56.3
+            caches) count as "unknown" and are admitted only under "any".
 
     Returns:
         The measured geometry map, empty when the cache does not exist.
@@ -176,6 +184,8 @@ def measured_geometries(db_path: Optional[Path] = None
     out: Dict[Tuple[str, str], Dict[Geometry, float]] = {}
     for rows in db.values():
         for r in rows:
+            if protocol != "any" and r.get("protocol", "unknown") != protocol:
+                continue
             fam = _cell_family(r)
             shape = r.get("shape")
             mt = _dims(r.get("MacroTile"))
@@ -281,6 +291,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--cell", help="one cell, 'FAMILY:side' (e.g. SS:256)")
     ap.add_argument("--top", type=int, default=8,
                     help="how many unexplored geometries to list per cell")
+    ap.add_argument("--protocol", default="family",
+                    help="the invocation form the measured best admits "
+                         "(§R56.3; default family, like-for-like with the "
+                         "floor; 'any' = the unfiltered corpus view)")
     ap.add_argument("--json", type=Path, help="write the map here")
     args = ap.parse_args(argv)
 
@@ -291,7 +305,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         fams = [fam]
         side = int(side)
 
-    measured = measured_geometries()
+    measured = measured_geometries(protocol=args.protocol)
     rows: List[Dict[str, Any]] = []
     for fam in fams:
         legal = legal_geometries(fam)

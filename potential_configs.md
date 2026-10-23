@@ -3341,10 +3341,36 @@ Per-run empties: 10-15 31/612, 10-17 31/395, 10-18 7/412, 10-20 8/715,
 
 ### R56.3 The two grading fixes to wire next (non-blocker, listed for the record)
 
-**A (reporter):** the acceptance report's per-cell winner basis must be
-restricted to family-protocol phases (like-for-like basis) — the data needed
-is the phase-shape histogram already in kernel_db; the regrade table this
-section carries is the reference until then.
+**A (reporter): RESOLVED 2026-10-23 — like-for-like graded basis wired
+end-to-end.** `oto/metrics/protocol.py` now owns the canonical
+invocation-form classifier; every record, kernel_db row and report payload
+carries it. The rule (verified against the corpus before locking):
+
+- `FAMILY` — the invocation covers the family's graded cell list
+  (`FAMILY_CELLS`, single-sourced in `oto.device.peaks` and re-exported by the
+  deck as `TARGET_CELLS`). This is deliberately not the benchmark contract
+  (`FAMILY_SHAPES`): DD's contract has 7 sides but grades 6 cells, HS_HPA's 4
+  but grades 3 — anchoring on the contract would exclude exactly the deck's
+  own wide spans (and the R50b HPA-512 rows tonight) from the graded basis,
+  which the run data shows is wrong.
+- `SINGLE` — one problem (§R50 iso evidence). `PARTIAL` — the trio/pair
+  containers and all-but-one narrows (§R53 showed their readings swap across
+  runs). `UNKNOWN` — not derivable; never admitted to a graded basis.
+- Ground truth used to settle it: all 3802 floor CSVs measure exactly their
+  family contract (family-only arm by construction), and the twin phases
+  `phase_auto_0_hh_256x256x256_4` (family, 5 problems in run_20261006_122020;
+  single in run_20261008_005217) prove phase names never encode protocol —
+  hence classification from declared/measured side sets, never names.
+
+Grading (default basis `family`, `--protocol-basis` selects otherwise): the
+verdict pairs only same-protocol records on both arms; the pre-basis
+mixed winner and the isolated single-problem reading stay in the payload as
+`native_best_any_protocol` / `native_isolated_best` (nothing previously
+printed disappears). Stamps land in `ab_records`/`ab_delta`/`ab_audit`/
+`ab_band`/`reporting`/`analytics_loaders` (RED/ORANGE basis) /
+`kernel_db` (`n_problems` + `protocol` per row) / `coverage_map`
+(`--protocol`, default family). §56.3-B (per-cell protocol-normalised
+quoting from the R50a iso twins) remains open pending tonight's run.
 
 **B (calibration):** the deck's iso rows (R50a) plus the §R50.3 TTY
 instrumentation decide the SS/HH/CC/DD five-cell story inside one run; after

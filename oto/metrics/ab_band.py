@@ -21,6 +21,19 @@ from typing import Any, Dict, List, Optional, Tuple
 from oto.metrics.ab_identity import _pair_key
 from oto.device.peaks import cell_key
 from oto.metrics.policy import aggregate_cell
+from oto.metrics.protocol import UNKNOWN, SINGLE
+
+
+def _form_key(rec: Dict[str, Any]) -> Any:
+    """The group form: the stamped protocol, else the legacy count.
+
+    UNKNOWN stamps group together (they are the same honest absence of
+    information), which is the pre-§R56.3 behavior for count==0 rows.
+    """
+    p = rec.get("protocol")
+    if p is None:
+        return rec.get("shapes_per_phase")
+    return p if p != UNKNOWN else rec.get("shapes_per_phase")
 
 #: The census thresholds; the tie band that supersedes them lives here too.
 
@@ -34,6 +47,21 @@ BAND_LO, BAND_HI = 10, 90
 
 def _pct(values: List[float], p: float) -> float:
     return sorted(values)[min(len(values) - 1, int(p / 100.0 * len(values)))]
+
+
+def _same_form(nrec: Dict[str, Any], frec: Dict[str, Any]) -> bool:
+    """Do two records' invocations have the same form (§R56.3)?
+
+    Stamped protocols decide when either side carries one (the canonical
+    classifier); a call whose records carry only the older
+    ``shapes_per_phase`` count falls back to count equality. A stamp versus
+    UNKNOWN is honestly not same-form -- UNKNOWN can neither be asserted to
+    match nor mismatch.
+    """
+    n_p, f_p = nrec.get("protocol"), frec.get("protocol")
+    if n_p is not None or f_p is not None:
+        return n_p == f_p
+    return nrec.get("shapes_per_phase") == frec.get("shapes_per_phase")
 
 
 def reproducible_band(native: List[Dict[str, Any]],
@@ -65,7 +93,7 @@ def reproducible_band(native: List[Dict[str, Any]],
         if fr <= 0:
             continue
         ratio = nr / fr
-        same_form = (nrecs[0]["shapes_per_phase"] == frecs[0]["shapes_per_phase"])
+        same_form = _same_form(nrecs[0], frecs[0])
         (matched if same_form else mismatched).append(ratio)
 
     def summarise(vals: List[float]) -> Dict[str, Any]:
@@ -95,7 +123,8 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
     coefficient of variation. This is the real noise floor, and it is far above
     the shipped default: repeats of an identical kernel at an identical shape
     can reach a CV comparable to the gap being judged. A verdict whose margin
-    sits inside that tail is not evidence.
+    sits inside that tail is not evidence. The form key is the stamped
+    protocol (§R56.3) falling back to the older shapes_per_phase count.
     """
     groups: Dict[Tuple[Any, ...], List[float]] = defaultdict(list)
     for r in recs:
@@ -103,7 +132,7 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
         if v <= 0:
             continue
         groups[(r.get("source_run"), r["DataType"], r["ProblemType"],
-                r.get("kernel_key"), r.get("shapes_per_phase"))].append(v)
+                r.get("kernel_key"), _form_key(r))].append(v)
     cvs: List[float] = []
     worst: Dict[str, float] = {}
     for key, vals in groups.items():
@@ -114,7 +143,7 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
             continue
         cv = statistics.pstdev(vals) / mean * 100.0
         cvs.append(cv)
-        form = "single" if key[4] == 1 else "multi"
+        form = "single" if key[4] in (SINGLE, 1) else "multi"
         worst[form] = max(worst.get(form, 0.0), cv)
     if not cvs:
         return {"n": 0}

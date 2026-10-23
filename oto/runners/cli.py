@@ -67,7 +67,8 @@ def _stage_report(driver, args, stage) -> Optional[int]:
     if args.report is None and "7" not in stage and "report" not in stage:
         return None
     result = driver.regenerate_report(args.report if args.report else None,
-                                     native_agg=args.native_agg)
+                                     native_agg=args.native_agg,
+                                     protocol_basis=args.protocol_basis)
     return 0 if result else 1
 
 

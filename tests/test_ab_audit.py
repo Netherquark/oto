@@ -147,12 +147,13 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual(verdict(21.0, band_pct=20.2), "WIN")
 
 
-def _cell_rec(family, side, gflops, tag):
+def _cell_rec(family, side, gflops, tag, protocol="family"):
     """A minimal benchmark record for one (family, shape) cell.
 
     Enough of the schema for `ab_delta._collect_raw_data`: a family stamp, a
-    cube `ProblemType`, one GFLOPS sample, and a distinct (run, phase, fp) so
-    the sample forms its own per-kernel group.
+    cube `ProblemType`, one GFLOPS sample, a distinct (run, phase, fp) so
+    the sample forms its own per-kernel group, and the invocation form stamp
+    the like-for-like rule (§R56.3) grades on.
     """
     return {
         "family": family,
@@ -161,6 +162,7 @@ def _cell_rec(family, side, gflops, tag):
         "run_id": f"run_{tag}",
         "phase_id": f"phase_{tag}",
         "fingerprint": f"fp_{tag}",
+        "protocol": protocol,
     }
 
 
@@ -205,6 +207,80 @@ class TestCellsNotBeatingFloor(unittest.TestCase):
             self.engine.cells_not_beating_floor(
                 [_cell_rec("SS", 128, 100.0, "n_ss")], []),
             {})
+
+
+class TestLikeForLikeBasis(unittest.TestCase):
+    """The like-for-like rule (§R56.3): a graded pairing matches forms.
+
+    The corpus measured the same configs 2-4x faster under one-problem
+    invocations than the family-wide protocol, so a delta pairing a native
+    single-problem phase against the family-protocol floor measures the
+    protocol. Under the default family basis those singles must never decide
+    a verdict -- but they stay in the payload as provenance, and the old
+    mixed basis is available exactly as 'any'.
+    """
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        from oto.ledger.registry import SQLiteRegistry
+        from oto.metrics.analytics import AnalyticsEngine
+        self.tmp = Path(tempfile.mkdtemp(prefix="oto_l4l_"))
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.engine = AnalyticsEngine(SQLiteRegistry(self.tmp), self.tmp)
+
+    def test_single_problem_inflation_never_wins(self):
+        """The single-problem reading (SS:256 at 412 vs floor 124) cannot win.
+
+        Same-config A/B evidence: the iso single read 412.1, its family twin
+        98.5-129.9, floor 124.1. A single-problem phase "winning" is the
+        protocol artefact; the graded verdict must come from the family
+        reading.
+        """
+        single = _cell_rec("SS", 256, 412.1, "n_iso", protocol="single")
+        family_k = _cell_rec("SS", 256, 98.5, "n_fam", protocol="family")
+        floor = [_cell_rec("SS", 256, 124.1, "f_ss")]
+        deltas = self.engine.compute_native_vs_spoof_delta(
+            [single, family_k], floor, agg="winner")
+        entry = deltas[("S", "256x256x256", "cell_SS_256")]
+        self.assertEqual(entry["basis_protocol"], "family")
+        # 98.5/124.1 = 0.794 -> LOSS outside the 5% band: the like-for-like
+        # grading is honest even when it is unflattering.
+        self.assertEqual(entry["verdict"], "LOSS")
+        self.assertEqual(entry["native_value"], 98.5)
+        # The mixed and isolated numbers stay visible, never graded.
+        self.assertEqual(entry["native_best_any_protocol"], 412.1)
+        self.assertEqual(entry["native_isolated_best"], 412.1)
+
+    def test_partial_phase_never_grades(self):
+        """A trio/partial container is excluded from the graded basis."""
+        trio = _cell_rec("DD", 192, 77.8, "n_trio", protocol="partial")
+        native = [_cell_rec("DD", 192, 21.0, "n_fam"), trio]
+        deltas = self.engine.compute_native_vs_spoof_delta(
+            native, [_cell_rec("DD", 192, 21.4, "f_dd")], agg="winner")
+        entry = deltas[("D", "192x192x192", "cell_DD_192")]
+        self.assertEqual(entry["native_value"], 21.0)
+        self.assertEqual(entry["native_best_any_protocol"], 77.8)
+
+    def test_any_basis_reproduces_the_mixed_pairing(self):
+        """protocol_basis='any' grades exactly like the pre-§R56.3 report."""
+        single = _cell_rec("SS", 256, 412.1, "n_iso", protocol="single")
+        family_k = _cell_rec("SS", 256, 98.5, "n_fam")
+        deltas = self.engine.compute_native_vs_spoof_delta(
+            [single, family_k], [_cell_rec("SS", 256, 124.1, "f_ss")],
+            agg="winner", protocol_basis="any")
+        entry = deltas[("S", "256x256x256", "cell_SS_256")]
+        self.assertEqual(entry["basis_protocol"], "any")
+        self.assertEqual(entry["verdict"], "WIN")
+        self.assertEqual(entry["native_value"], 412.1)
+
+    def test_unstamped_native_never_enters_the_family_basis(self):
+        """A record without a stamp is UNKNOWN, and UNKNOWN cannot grade."""
+        unstamped = _cell_rec("SS", 256, 5000.0, "n_old")
+        del unstamped["protocol"]
+        deltas = self.engine.compute_native_vs_spoof_delta(
+            [unstamped], [_cell_rec("SS", 256, 124.1, "f_ss")], agg="winner")
+        self.assertEqual(deltas, {})
 
 
 if __name__ == "__main__":

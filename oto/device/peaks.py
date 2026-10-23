@@ -49,6 +49,24 @@ FAMILY_SHAPES = {
     "HS_HPA": [512, 1024, 2048, 4096],
 }
 
+# The graded cell list per family: the cells the campaign actually grades
+# (verdicts, coverage, the deck's wide spans). Distinct from FAMILY_SHAPES
+# where the benchmark contract is wider than the graded cells -- the DD:512
+# and HS_HPA:4096 bands are contract members the deck does not grade, and the
+# like-for-like protocol rule (oto.metrics.protocol) anchors FAMILY on this
+# list so a "wide" native invocation and the gf900 floor share a definition
+# per family. Owned here because it is contract vocabulary, not deck text;
+# candidate_rows re-exports it as TARGET_CELLS for the deck generator.
+FAMILY_CELLS = {
+    "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
+    "DD": [192, 256, 768, 1024, 1365, 2048],
+    "HH": [256, 512, 1024, 2048, 4096],
+    "CC": [192, 256, 512, 1024, 2048],
+    "ZZ": [128, 192, 256, 512, 1024],
+    "HH_HPA": [512, 1024, 2048, 4096],
+    "HS_HPA": [512, 1024, 2048],
+}
+
 # Complex families run at the REAL rate of their lane class
 # (complex MAC = 4 real FMAs in Tensile expansion)
 # DataType C = complexSingle (FP32 pipe), DataType Z = complexDouble (FP64 pipe)

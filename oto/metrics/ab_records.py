@@ -23,6 +23,7 @@ from oto.metrics.ab_identity import (AbIdentityMixin, _driver,
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.policy import aggregate_cell
+from oto.metrics.protocol import UNKNOWN, classify
 from oto.tensile.shape_order import ordered_shapes
 
 #: The project root, resolved from this module's location.
@@ -48,10 +49,9 @@ def phase_family(phase_id: str) -> str:
         return "unknown"
     return "auto" if pid.startswith("phase_auto") else "deck"
 
-def _phase_csv_records(driver, csv_file: Path, phase: Optional[Dict[str, Any]],
-                       phase_id: str, force_arm: str,
-                       declared: List[str], run_name: str) -> List[Dict[str, Any]]:
-    """Records for one phase's benchmark CSV, keyed by (dtype, shape, fp, family).
+def _phase_cell_map(driver, csv_files: List[Path], phase_id: str
+                    ) -> Dict[Tuple[str, str, str, str], Any]:
+    """One phase's seed lists keyed (dtype, shape, fp, family), CSVs merged.
 
     Typecode-first cell attribution (the §13.2 rule) via
     ``aggregate_by_cell_typecode`` -- the same resolver
@@ -59,53 +59,93 @@ def _phase_csv_records(driver, csv_file: Path, phase: Optional[Dict[str, Any]],
     is what silently folded every HH_HPA / HS_HPA kernel into the plain HH cells
     and left the eight HPA contract cells with no arm at all: their kernel
     typecode reads 'HH', so only the explicit HPA family stamp keeps them apart.
-    That must not depend on which code path built the records.
+    That must not depend on which code path built the records. A phase that
+    wrote more than one benchmark CSV still carries ONE invocation form, so its
+    seeds merge across the CSVs before aggregation.
     """
-    # The phase's family (HPA included), not its dtype.
     phase_fam = extract_family_from_phase_id(phase_id)
-    cell_map = driver.analytics.aggregate_by_cell_typecode(
-        driver.analytics.load_benchmark_csv(csv_file),
-        phase_family=phase_fam,
-    )
+    cell_map: Dict[Tuple[str, str, str, str], Any] = {}
+    for csv_file in csv_files:
+        cm = driver.analytics.aggregate_by_cell_typecode(
+            driver.analytics.load_benchmark_csv(csv_file),
+            phase_family=phase_fam,
+        )
+        for key, seeds in (cm or {}).items():
+            cell_map.setdefault(key, []).extend(seeds)
+    return cell_map
+
+
+def _phase_csv_records(driver, csv_files: List[Path],
+                       phase: Optional[Dict[str, Any]],
+                       phase_id: str, force_arm: str,
+                       declared: List[str], run_name: str) -> List[Dict[str, Any]]:
+    """Records for one phase's benchmark CSVs, keyed by (dtype, shape, fp, family).
+
+    One record per (dtype, shape, config fingerprint), carrying the phase's
+    median, its resolved config and the invocation form stamp (§R56.3) it was
+    measured under.
+    """
+    cell_map = _phase_cell_map(driver, csv_files, phase_id)
     if not cell_map:
         return []
 
     # The phase's own resolved YAML wins over phases.yaml: floor phases are
     # not in the deck at all, and a deck entry can drift from what Tensile
     # actually ran.
-    resolved = _resolved_config(csv_file.parent)
+    resolved = _resolved_config(csv_files[0].parent)
     config = resolved or dict((phase or {}).get("config") or {})
     stamps_phase = phase or {"config": config, "family": ""}
 
     # Measured shapes are authoritative: a phase can emit fewer shapes than
-    # it declared if Tensile rejected one.
+    # it declared if Tensile rejected one. The classifier runs once per phase;
+    # every record it produced shares the stamp.
     measured = ordered_shapes({shape for (_d, shape, _f, _fam) in cell_map})
+    protocol = classify(extract_family_from_phase_id(phase_id),
+                        measured, declared)
 
-    out: List[Dict[str, Any]] = []
-    for (cell_dtype, shape, fp, family), seeds in cell_map.items():
-        rec = {
-            "DataType": cell_dtype,
-            "ProblemType": shape,
-            "fingerprint": fp,
-            "family": family,
-            "kernel_key": kernel_key(config),
-            "norm_config": norm_config(config, fp),
-            "config": config,
-            "GFLOPS": aggregate_cell(seeds).median,
-            "phase_id": phase_id,
-            "phase_family": phase_family(phase_id),
-            "arm": force_arm,
-            "source_run": run_name,
-            "shapes": measured,
-            "shapes_per_phase": len(measured),
-            "declared_shapes": declared,
-            "n_seeds": len(seeds),
-        }
-        rec.update(driver._named_cell_stamps(
-            {**stamps_phase, "shapes": measured, "family": family.lower()},
-            arm=force_arm))
-        out.append(rec)
-    return out
+    return [_one_csv_record(cell_dtype, shape, fp, family, seeds,
+                            config, stamps_phase, phase_id, force_arm,
+                            run_name, measured, declared, protocol)
+            for (cell_dtype, shape, fp, family), seeds in cell_map.items()]
+
+
+def _one_csv_record(cell_dtype: str, shape: str, fp: str, family: str,
+                    seeds: List[Any], config: Dict[str, Any],
+                    stamps_phase: Dict[str, Any], phase_id: str,
+                    force_arm: str, run_name: str, measured: List[str],
+                    declared: List[str], protocol: str) -> Dict[str, Any]:
+    """One (cell, config) record out of an aggregated phase cell-map."""
+    rec = {
+        "DataType": cell_dtype,
+        "ProblemType": shape,
+        "fingerprint": fp,
+        "family": family,
+        "kernel_key": kernel_key(config),
+        "norm_config": norm_config(config, fp),
+        "config": config,
+        "GFLOPS": aggregate_cell(seeds).median,
+        "phase_id": phase_id,
+        "phase_family": phase_family(phase_id),
+        "arm": force_arm,
+        "source_run": run_name,
+        "shapes": measured,
+        "shapes_per_phase": len(measured),
+        "declared_shapes": declared,
+        "protocol": protocol,
+        "n_seeds": len(seeds),
+    }
+    rec.update(driver._named_cell_stamps(
+        {**stamps_phase, "shapes": measured, "family": family.lower()},
+        arm=force_arm))
+    return rec
+
+
+def _phase_csv_files(run_dir: Path) -> Iterable[Tuple[str, List[Path]]]:
+    """(phase_id, csv files) grouped per phase directory (ISOform, one each)."""
+    groups: Dict[str, List[Path]] = {}
+    for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
+        groups.setdefault(csv_file.parent.parent.name, []).append(csv_file)
+    return sorted(groups.items())
 
 
 def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]:
@@ -121,11 +161,10 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]
         return out
     manifest = {str(p.get("phase_id", "")): p
                 for p in driver.load_phases_manifest()}
-    for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
-        phase_id = csv_file.parent.parent.name
+    for phase_id, csv_files in _phase_csv_files(run_dir):
         phase = manifest.get(phase_id)
         declared = [str(s) for s in (phase or {}).get("shapes", []) or []]
-        out.extend(_phase_csv_records(driver, csv_file, phase, phase_id,
+        out.extend(_phase_csv_records(driver, csv_files, phase, phase_id,
                                       force_arm, declared, run_dir.name))
     return out
 
@@ -238,6 +277,7 @@ def _registry_records(driver, base: Path, want_arm: str) -> List[Dict[str, Any]]
             "shapes": [shape] if shape else [],
             "shapes_per_phase": 0,   # 0 == unknown, never asserted either way
             "declared_shapes": [],
+            "protocol": UNKNOWN,     # never asserted into a graded basis
             "n_seeds": 1,
             "cell_key": r.get("cell_key") or "",
             "kernel_key": r.get("kernel_key", ""),

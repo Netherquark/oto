@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """The native-vs-spoof A/B delta: the arithmetic every acceptance number rests on.
 
-Owns: ``compute_native_vs_spoof_delta`` -- per-cell pairing of the native arm against the recalled gfx900 floor under one of nine aggregation bases, with the optional telemetry clock correction applied to BOTH arms against ONE shared reference clock -- and ``cells_not_beating_floor`` (the same pairing, reduced to the set of cells the port has not yet won).
+Owns: ``compute_native_vs_spoof_delta`` -- per-cell pairing of the native arm
+against the recalled gfx900 floor under one of nine aggregation bases, with the
+optional telemetry clock correction applied to BOTH arms against ONE shared
+reference clock -- and ``cells_not_beating_floor`` (the same pairing, reduced to
+the set of cells the port has not yet won). Both grade like-for-like (§R56.3):
+``protocol_basis="family"`` admits only records whose invocation form matches
+across arms; cross-form evidence is carried as provenance fields, never graded.
 Does NOT own: the records it is fed (oto.metrics.analytics), the clocks (oto.runners.clocks), or the verdict threshold (oto.metrics.ab_audit).
 Public API: ABDeltaMixin."""
 
@@ -14,6 +20,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
                               REALISTIC_CEILINGS, cell_key, cube_side)
 from oto.metrics.family_attribution import resolve_cell_family
+from oto.metrics.protocol import SINGLE, protocol_of
 
 #: The coverage floor lives with the engine that aggregates coverage
 #: (oto.metrics.analytics); imported at call time to keep this module free of a
@@ -214,7 +221,8 @@ class ABDeltaMixin:
             agg: str = "winner",
             tie_band_pct: float = 5.0,
             sclk_by_phase: Optional[Dict[Tuple[str, str], float]] = None,
-            sclk_ref: Optional[float] = None
+            sclk_ref: Optional[float] = None,
+            protocol_basis: str = "family",
         ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
         """per-cell native-vs-spoof pairing; see the module docstring.
 
@@ -222,6 +230,14 @@ class ABDeltaMixin:
         — the mapping key cell_key = "FAMILY:SIDE" synthesized from the
         authoritative config identity (never re-derived from phase_id text, so
         HH_HPA/HS_HPA stay distinct).
+
+        ``protocol_basis`` is the like-for-like rule (§R56.3): when set to a
+        protocol value (default "family") only records stamped with that
+        invocation form admit to the graded pairing, on BOTH arms — the floor is
+        family-only by construction, and a native single/partial reading never
+        grades against it. "any" reproduces the pre-§R56.3 corpus-wide pairing,
+        which is kept for provenance as the `native_best_any_protocol` field
+        rather than as a verdict basis.
 
         Every statistic is derived per-kernel-median-first, so a single lucky
         seed can never decide a verdict. The nine bases and their asymmetry are
@@ -232,21 +248,24 @@ class ABDeltaMixin:
         candidate, whatever run produced it.
         """
         return _pair_cells(native_records, spoof_records, agg,
-                           tie_band_pct, sclk_by_phase, sclk_ref)
+                           tie_band_pct, sclk_by_phase, sclk_ref,
+                           protocol_basis)
 
     def cells_not_beating_floor(
             self,
             native_records: List[Dict[str, Any]],
             spoof_records: List[Dict[str, Any]],
-            tie_band_pct: float = 5.0
+            tie_band_pct: float = 5.0,
+            protocol_basis: str = "family",
     ) -> Dict[str, Dict[str, Any]]:
         """Cells whose native winner has not yet beaten the recalled floor.
 
         Under ``agg="winner"`` BOTH arms are graded on their best per-kernel
         median, so a cell appears here exactly when the best kernel this port
-        has ever measured on it fails to beat the best kernel the gfx900 floor
-        ships by more than the tie band -- i.e. when the cell is a TIE or a
-        LOSS in the A/B report.
+        has ever measured on it (within ``protocol_basis``, default the
+        like-for-like family basis, §R56.3) fails to beat the best kernel the
+        gfx900 floor ships by more than the tie band -- i.e. when the cell is a
+        TIE or a LOSS in the A/B report.
 
         This is the campaign's *objective* restated as a set: the point of the
         port is to beat the floor, so a tied cell is unfinished however healthy
@@ -256,7 +275,8 @@ class ABDeltaMixin:
         """
         deltas = _pair_cells(native_records, spoof_records, agg="winner",
                              tie_band_pct=tie_band_pct,
-                             sclk_by_phase=None, sclk_ref=None)
+                             sclk_by_phase=None, sclk_ref=None,
+                             protocol_basis=protocol_basis)
         return {e["cell_key"]: e for e in deltas.values()
                 if e.get("verdict") != "WIN"}
 
@@ -364,6 +384,41 @@ def _delta_entry(
     return entry
 
 
+def _basis_collects(
+        native_records: List[Dict[str, Any]],
+        spoof_records: List[Dict[str, Any]],
+        protocol_basis: str,
+        sclk_by_phase: Optional[Dict[Tuple[str, str], float]],
+        sclk_ref: Optional[float],
+) -> Tuple[str, Dict[Tuple[str, int], Dict[str, Any]],
+           Dict[Tuple[str, int], Dict[str, Any]], Any, Any]:
+    """Collect per-cell stats for one pairing under the like-for-like rule.
+
+    Returns ``(basis, native_stats, spoof_stats, any_stats, iso_stats)``.
+    With ``protocol_basis`` None/""/"any" both arms are unfiltered — the exact
+    pre-§R56.3 numbers — and the provenance stats are the unfiltered ones
+    themselves. Otherwise both arms are filtered to that invocation form
+    (usually FAMILY, the form the floor is measured under), and two extra
+    unfiltered native walks carry provenance: the mixed-basis winner
+    (``any_stats``) and the best isolated single-problem reading
+    (``iso_stats``).
+    """
+    if protocol_basis in (None, "", "any"):
+        return ("any",
+                _collect(native_records, sclk_by_phase, sclk_ref),
+                _collect(spoof_records, sclk_by_phase, sclk_ref),
+                None, None)
+    ns = _collect([r for r in native_records if protocol_of(r) == protocol_basis],
+                  sclk_by_phase, sclk_ref)
+    ss = _collect([r for r in spoof_records if protocol_of(r) == protocol_basis],
+                  sclk_by_phase, sclk_ref)
+    any_stats = _collect(native_records, sclk_by_phase, sclk_ref)
+    iso_stats = (_collect([r for r in native_records if protocol_of(r) == SINGLE],
+                          sclk_by_phase, sclk_ref)
+                 if protocol_basis != SINGLE else ns)
+    return protocol_basis, ns, ss, any_stats, iso_stats
+
+
 def _pair_cells(
         native_records: List[Dict[str, Any]],
         spoof_records: List[Dict[str, Any]],
@@ -371,6 +426,7 @@ def _pair_cells(
         tie_band_pct: float,
         sclk_by_phase: Optional[Dict[Tuple[str, str], float]],
         sclk_ref: Optional[float],
+        protocol_basis: str = "family",
     ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
     """Pair the two arms per cell and grade each pair.
 
@@ -379,13 +435,14 @@ def _pair_cells(
     cells of its own (every phase deduped as
     identical_fp_already_passed) while the historical winners remain the real
     native candidates — so winners, including older winner runs, are picked
-    across the whole record set.
+    across the whole record set. Grading and its provenance envelopes come
+    from :func:`_basis_collects`.
 
     When a clock basis is asked for but only one arm is clock-covered, NEITHER
     is adjusted (see _clock_basis_values).
     """
-    ns = _collect(native_records, sclk_by_phase, sclk_ref)
-    ss = _collect(spoof_records, sclk_by_phase, sclk_ref)
+    basis, ns, ss, any_stats, iso_stats = _basis_collects(
+        native_records, spoof_records, protocol_basis, sclk_by_phase, sclk_ref)
 
     deltas: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
     for key in sorted(set(ss) & set(ns)):
@@ -400,7 +457,14 @@ def _pair_cells(
         tie = abs(delta_pct) <= tie_band_pct
         verdict = "TIE" if tie else ("WIN" if ratio > 1.0 else "LOSS")
         dtype = FAMILY_DTYPE_CHAR.get(fam, "")
-        deltas[(dtype, f"{side}x{side}x{side}", f"cell_{fam}_{side}")] = \
-            _delta_entry(fam, side, dtype, nv, sv, native_val, spoof_val,
-                         delta_pct, tie, verdict, agg, sclk_ref, clock_ok)
+        entry = _delta_entry(fam, side, dtype, nv, sv, native_val, spoof_val,
+                             delta_pct, tie, verdict, agg, sclk_ref, clock_ok)
+        entry["basis_protocol"] = basis
+        entry["native_best_any_protocol"] = (
+            any_stats[key]["best_median"] if any_stats and key in any_stats
+            else native_val)
+        entry["native_isolated_best"] = (
+            iso_stats[key]["best_median"] if iso_stats and key in iso_stats
+            else (native_val if basis == SINGLE else 0.0))
+        deltas[(dtype, f"{side}x{side}x{side}", f"cell_{fam}_{side}")] = entry
     return deltas

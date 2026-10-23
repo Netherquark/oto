@@ -76,6 +76,14 @@ class ABVerdict:
     n_native_runs: int = 0
     n_native_kernels: int = 0
     n_spoof_kernels: int = 0
+    # Like-for-like provenance (§R56.3). The verdict is graded inside one
+    # invocation form (basis_protocol, default "family"): both arms measured
+    # under the family-wide protocol the floor uses. The two companion numbers
+    # keep everything the pre-§R56.3 reports printed still visible: the old
+    # protocol-mixed winner and the best isolated single-problem reading.
+    basis_protocol: str = "family"
+    native_best_any_protocol: float = 0.0  # pre-§R56.3 mixed-basis winner
+    native_isolated_best: float = 0.0      # best 1-problem reading
 
 
 @dataclass

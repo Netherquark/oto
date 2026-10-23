@@ -15,7 +15,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES  # noqa: E402
+from oto.device.peaks import FAMILY_CELLS, FAMILY_DTYPE_CHAR, FAMILY_SHAPES  # noqa: E402
 from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.config_writer import NOT_FORWARDED_KNOBS  # noqa: E402
 
@@ -161,15 +161,10 @@ PATTERNS = {
 # 2026-10-20 (§R40): the list must cover every cell the report scores, or a
 # candidate for that cell is never measured. DD's 768/1024/1365 and HH's 4096
 # tie the floor but were absent, so no DD/HH row emitted here reached them.
-TARGET_CELLS = {
-    "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
-    "DD": [192, 256, 768, 1024, 1365, 2048],
-    "HH": [256, 512, 1024, 2048, 4096],
-    "CC": [192, 256, 512, 1024, 2048],
-    "ZZ": [128, 192, 256, 512, 1024],
-    "HH_HPA": [512, 1024, 2048, 4096],
-    "HS_HPA": [512, 1024, 2048],
-}
+# 2026-10-23 (§R56.3-A): the list itself moved to the device contract
+# vocabulary (oto.device.peaks FAMILY_CELLS) so the deck and the like-for-like
+# protocol classifier share one definition; the export name stays TARGET_CELLS.
+TARGET_CELLS = dict(FAMILY_CELLS)
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
 NARROW_NEIGHBOURS: Dict[str, Dict[str, List[Any]]] = {

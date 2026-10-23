@@ -20,7 +20,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.metrics.policy import aggregate_cell
+from oto.metrics.protocol import UNKNOWN, classify
 from oto.metrics.report import ABVerdict
+from oto.tensile.shape_order import ordered_shapes
 
 
 class ReportingMixin:
@@ -34,7 +36,8 @@ class ReportingMixin:
         force_arm ('native'|'spoof') overrides arm discrimination — used to
         classify an entire run as one arm (e.g. the recalled gfx900 reference
         run is entirely the spoof floor).
-        Returns (native_records, spoof_records) with per-cell medians.
+        Returns (native_records, spoof_records) with per-cell medians and the
+        per-phase invocation-form stamp (§R56.3).
         """
         native_records: List[Dict[str, Any]] = []
         spoof_records: List[Dict[str, Any]] = []
@@ -47,45 +50,86 @@ class ReportingMixin:
         phases_by_id = {str(p.get("phase_id", "")): p
                         for p in self.load_phases_manifest()}
 
+        phase_csvs: Dict[str, List[Path]] = {}
         for csv_file in sorted(list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
                                + list(run_dir.glob("probe_*/2_BenchmarkData/*.csv"))):
-            phase_id = csv_file.parent.parent.name
-            # Resolve arm: config Architecture gfx900 == spoof, else native
+            phase_csvs.setdefault(csv_file.parent.parent.name, []).append(csv_file)
+
+        for phase_id, csv_files in sorted(phase_csvs.items()):
             phase = phases_by_id.get(phase_id)
-            arch = ""
-            if phase:
-                arch = str(phase.get("config", {}).get("Architecture", ""))
-            is_spoof = "gfx900" in arch
-            if force_arm == "native":
-                is_spoof = False
-            elif force_arm == "spoof":
-                is_spoof = True
-            # Family/dtype per row from the kernel typecode (ground truth), with
-            # the phase-level family from phase_id text as fallback — never the
-            # reverse. This is the fix for the phase_auto_* pool resolving to
-            # family 'auto' -> dtype 'S' and dumping HH/CC/DD kernels into SS
-            # cells (§13.2).
-            phase_family = extract_family_from_phase_id(phase_id)
-            records = self.analytics.load_benchmark_csv(csv_file)
-            cell_map = self.analytics.aggregate_by_cell_typecode(records, phase_family)
-            for (cell_dtype, shape, fp, family), seeds in cell_map.items():
-                agg = aggregate_cell(seeds)
-                rec = {
-                    "DataType": cell_dtype,
-                    "ProblemType": shape,
-                    "fingerprint": fp,
-                    "GFLOPS": agg.median,
-                    "phase_id": phase_id,
-                    "family": family,
-                }
-                rec.update(self._named_cell_stamps(
-                    phase or {"config": {}, "shapes": [shape], "family": family.lower()},
-                    arm="spoof" if is_spoof else "native"))
-                if is_spoof:
-                    spoof_records.append(rec)
-                else:
-                    native_records.append(rec)
+            is_spoof = self._phase_arm(phase_id, phase, force_arm)
+            out_recs = self._phase_cell_records(phase_id, csv_files, phase,
+                                                is_spoof)
+            if is_spoof:
+                spoof_records.extend(out_recs)
+            else:
+                native_records.extend(out_recs)
         return native_records, spoof_records
+
+    def _phase_arm(self, phase_id: str, phase: Optional[Dict[str, Any]],
+                   force_arm: Optional[str]) -> bool:
+        """Resolve one phase's arm: config Architecture gfx900 == spoof.
+
+        force_arm ('native'|'spoof') overrides arm discrimination — used to
+        classify an entire run as one arm (e.g. the recalled gfx900 reference
+        run is entirely the spoof floor).
+        """
+        arch = str((phase or {}).get("config", {}).get("Architecture", ""))
+        is_spoof = "gfx900" in arch
+        if force_arm == "native":
+            return False
+        if force_arm == "spoof":
+            return True
+        return is_spoof
+
+    def _phase_cell_records(self, phase_id: str, csv_files: List[Path],
+                            phase: Optional[Dict[str, Any]],
+                            is_spoof: bool) -> List[Dict[str, Any]]:
+        """One phase's merged per-cell records with its invocation-form stamp.
+
+        Family/dtype per row from the kernel typecode (ground truth), with the
+        phase-level family from phase_id text as fallback — never the
+        reverse: this is the fix for the phase_auto_* pool resolving to
+        family 'auto' -> dtype 'S' and dumping HH/CC/DD kernels into SS
+        cells (§13.2). The seed lists of the phase's CSVs merge first (one
+        phase carries ONE invocation form), and the classifier runs once;
+        every record the phase produced shares its stamp (§R56.3).
+        """
+        phase_family = extract_family_from_phase_id(phase_id)
+        cell_map: Dict[Tuple[str, str, str, str], Any] = {}
+        for csv_file in csv_files:
+            cm = self.analytics.aggregate_by_cell_typecode(
+                self.analytics.load_benchmark_csv(csv_file), phase_family)
+            for map_key, seeds in (cm or {}).items():
+                cell_map.setdefault(map_key, []).extend(seeds)
+        if not cell_map:
+            return []
+        measured = ordered_shapes(
+            {shape for (_d, shape, _f, _fam) in cell_map})
+        declared = [str(s) for s in (phase or {}).get("shapes", []) or []]
+        protocol = classify(phase_family, measured, declared)
+        arm = "spoof" if is_spoof else "native"
+        out: List[Dict[str, Any]] = []
+        for (cell_dtype, shape, fp, family), seeds in cell_map.items():
+            agg = aggregate_cell(seeds)
+            rec = {
+                "DataType": cell_dtype,
+                "ProblemType": shape,
+                "fingerprint": fp,
+                "GFLOPS": agg.median,
+                "phase_id": phase_id,
+                "family": family,
+                "shapes": measured,
+                "shapes_per_phase": len(measured),
+                "declared_shapes": declared,
+                "protocol": protocol,
+            }
+            rec.update(self._named_cell_stamps(
+                phase or {"config": {}, "shapes": [shape],
+                          "family": family.lower()},
+                arm=arm))
+            out.append(rec)
+        return out
     def _ab_records_from_registry(self, run_id: str, force_arm: str = "native") -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build native/spoof per-cell records from registry benchmark_result rows.
 
@@ -111,6 +155,9 @@ class ReportingMixin:
                 "fingerprint": rec.get("fp", ""),
                 "GFLOPS": gflops,
                 "phase_id": rec.get("phase_id", ""),
+                "shapes": [rec.get("shape", "")] if rec.get("shape") else [],
+                "shapes_per_phase": 0,   # 0 == unknown, never asserted either way
+                "protocol": UNKNOWN,     # registry rows carry no shape list
             }
             norm["cell_key"] = rec.get("cell_key", cell_key(
                 rec.get("config", {}).get("FamilyLabel", ""), rec.get("shape", "")))
@@ -122,11 +169,16 @@ class ReportingMixin:
                 native_records.append(norm)
         return native_records, spoof_records
     def _compute_ab_verdicts(self, run_id: str, run_dir: Optional[Path] = None,
-                              agg: str = "winner") -> List[Any]:
+                              agg: str = "winner",
+                              protocol_basis: str = "family") -> List[Any]:
         """Compute native-vs-spoof A/B verdicts for a run.
 
         Native arm = the WHOLE database (every run's CSVs + every registry
         benchmark_result row). Spoof arm = the latest completed gfx900 reference run.
+        ``protocol_basis`` is the like-for-like rule (§R56.3): the graded
+        pairing admits only records stamped with that invocation form; the
+        pre-basis mixed winner stays visible per verdict as
+        ``native_best_any_protocol``.
         """
         self._sclk_cache = None
         self._thermal_cache = None
@@ -149,7 +201,8 @@ class ReportingMixin:
 
         deltas = self.analytics.compute_native_vs_spoof_delta(
             native_records, spoof_records, agg=agg,
-            sclk_by_phase=sclk_by_phase, sclk_ref=sclk_ref)
+            sclk_by_phase=sclk_by_phase, sclk_ref=sclk_ref,
+            protocol_basis=protocol_basis)
         thermal_by_phase = self._thermal_map(ref_run_ids)
 
         return self._build_verdicts(deltas, thermal_by_phase, agg)
@@ -252,6 +305,9 @@ class ReportingMixin:
                 n_native_runs=d.get("n_native_runs", 0),
                 n_native_kernels=d.get("n_native_kernels", 0),
                 n_spoof_kernels=d.get("n_spoof_kernels", 0),
+                basis_protocol=d.get("basis_protocol", "family"),
+                native_best_any_protocol=d.get("native_best_any_protocol", 0.0),
+                native_isolated_best=d.get("native_isolated_best", 0.0),
                 clock_adjusted=d.get("clock_adjusted", False),
                 native_clock_coverage=d.get("native_clock_coverage", 0.0),
                 spoof_clock_coverage=d.get("spoof_clock_coverage", 0.0),
@@ -264,9 +320,18 @@ class ReportingMixin:
                 spoof_temp_max_c=s_temp_max,
             ))
         return verdicts
-    def _report_inputs(self, run_id: str):
-        """The analytics-derived inputs the report is generated from."""
-        all_analytics = self._native_analytics_all_runs()
+    def _report_inputs(self, run_id: str, protocol_basis: str = "family"):
+        """The analytics-derived inputs the report is generated from.
+
+        The analytics basis is like-for-like (§R56.3): only phases measured
+        under ``protocol_basis`` drive the RED/ORANGE coverage classification.
+        The degenerate fallback keeps its unfiltered walk so that an empty
+        like-for-like corpus still reports "nothing measured" loudly, but the
+        per-call fallback hides nothing: its analytics phase count is what the
+        provenance prints.
+        """
+        all_analytics = self._native_analytics_all_runs(
+            protocol_basis=protocol_basis)
         if not all_analytics:
             # Degenerate: nothing measured anywhere. Say so loudly rather
             # than emitting a clean-looking all-zero grid.
@@ -291,12 +356,15 @@ class ReportingMixin:
             family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
         return family_timing
 
-    def _report_native_arm(self, ab_verdicts, native_agg: str):
+    def _report_native_arm(self, ab_verdicts, native_agg: str,
+                           protocol_basis: str = "family"):
         """Provenance summary + the empty-arm warning.
 
         Must precede provenance: this is what populates _native_arm_records.
         """
-        native_arm = self._native_arm_provenance(self._native_arm_records, native_agg)
+        native_arm = self._native_arm_provenance(self._native_arm_records,
+                                                 native_agg,
+                                                 protocol_basis=protocol_basis)
         if native_arm["empty"]:
             print("[report] WARNING: native arm is EMPTY across the whole database — "
                   "every coverage/RED number below is 0 because nothing was ever "
@@ -329,8 +397,42 @@ class ReportingMixin:
                 "native_runs": native_arm["runs"],
                 "overall_pass": report.overall_pass, "summary": report.summary}
 
+    def _report_run_id(self, run_id: Optional[str],
+                       run_dir: Optional[Path]) -> Optional[str]:
+        """Resolve the run the report is about (never a floor run).
+
+        arm="native": the subject of the A/B must be a native run. See
+        registry.latest_run_id -- the newest row overall is usually the
+        gfx900 floor, which would be scored against itself.
+        """
+        if run_id is not None:
+            return run_id
+        return (run_dir.name if run_dir is not None
+                else self.registry.latest_run_id(arm="native"))
+
+    def _report_payload(self, run_id: str, ab_verdicts, native_arm,
+                        all_analytics, cell_status, family_timing,
+                        execution_timing) -> Any:
+        """Assemble the reporter's payload dataclass for one report."""
+        return self.reporter.generate_acceptance_report(
+            run_id=run_id,
+            ab_verdicts=ab_verdicts,
+            all_analytics=all_analytics,
+            red_list=cell_status["red"],
+            orange_list=cell_status["orange"],
+            family_timing=family_timing,
+            execution_timing=execution_timing,
+            reference_run_id=self._last_ab_reference_run_id,
+            native_arm=native_arm,
+            reference_floor_status=getattr(
+                self, "_reference_floor_status", "not attempted"),
+            reference_floor_authoritative=getattr(
+                self, "_reference_floor_authoritative", True),
+        )
+
     def generate_acceptance_report(self, run_dir: Optional[Path] = None, run_id: Optional[str] = None,
-                                    native_agg: str = "winner") -> Optional[Dict[str, Any]]:
+                                    native_agg: str = "winner",
+                                    protocol_basis: str = "family") -> Optional[Dict[str, Any]]:
         """
         Generate the acceptance report (JSON + HTML) from run data.
         Installed in run_auto, the --targets path, and the SIGINT handler so a
@@ -347,42 +449,32 @@ class ReportingMixin:
 
         native_agg: which cell statistic picks the winner on both arms —
         'best' | 'median' | 'throttle'.
+
+        protocol_basis: the like-for-like rule (§R56.3, default "family"):
+        verdicts pair only records measured under the named invocation form;
+        cross-form readings remain in the payload as provenance fields, never
+        as a graded basis. "any" reproduces the pre-§R56.3 pairing.
         """
         try:
             if run_dir is None:
                 run_dir = self.run_dir
-            if run_id is None:
-                # arm="native": the subject of the A/B must be a native run. See
-                # registry.latest_run_id -- the newest row overall is usually the
-                # gfx900 floor, which would be scored against itself.
-                run_id = (run_dir.name if run_dir is not None
-                          else self.registry.latest_run_id(arm="native"))
+            run_id = self._report_run_id(run_id, run_dir)
             if not run_id:
                 print("Report generation: no run_id available")
                 return None
 
             all_analytics, cell_status, family_timing, execution_timing = \
-                self._report_inputs(run_id)
+                self._report_inputs(run_id, protocol_basis=protocol_basis)
 
             # Must precede provenance: this is what populates _native_arm_records.
-            ab_verdicts = self._compute_ab_verdicts(run_id, run_dir, agg=native_agg)
-            native_arm = self._report_native_arm(ab_verdicts, native_agg)
+            ab_verdicts = self._compute_ab_verdicts(run_id, run_dir, agg=native_agg,
+                                                    protocol_basis=protocol_basis)
+            native_arm = self._report_native_arm(ab_verdicts, native_agg,
+                                                 protocol_basis=protocol_basis)
 
-            report = self.reporter.generate_acceptance_report(
-                run_id=run_id,
-                ab_verdicts=ab_verdicts,
-                all_analytics=all_analytics,
-                red_list=cell_status["red"],
-                orange_list=cell_status["orange"],
-                family_timing=family_timing,
-                execution_timing=execution_timing,
-                reference_run_id=self._last_ab_reference_run_id,
-                native_arm=native_arm,
-                reference_floor_status=getattr(
-                    self, "_reference_floor_status", "not attempted"),
-                reference_floor_authoritative=getattr(
-                    self, "_reference_floor_authoritative", True),
-            )
+            report = self._report_payload(
+                run_id, ab_verdicts, native_arm, all_analytics, cell_status,
+                family_timing, execution_timing)
             return self._emit_report(run_id, run_dir, report, ab_verdicts,
                                      native_arm, all_analytics,
                                      cell_status["red"])
@@ -390,7 +482,8 @@ class ReportingMixin:
             print(f"Report generation error: {e}")
             return None
     def regenerate_report(self, run_id: Optional[str] = None,
-                          native_agg: str = "winner") -> Optional[Dict[str, Any]]:
+                          native_agg: str = "winner",
+                          protocol_basis: str = "family") -> Optional[Dict[str, Any]]:
         """Regenerate the acceptance report for a run from the registry.
 
         With no run_id, uses the most recently registered run. Reports land in
@@ -409,4 +502,5 @@ class ReportingMixin:
             run_dir = None
         print(f"Regenerating acceptance report for run {run_id}")
         return self.generate_acceptance_report(run_dir=run_dir, run_id=run_id,
-                                              native_agg=native_agg)
+                                              native_agg=native_agg,
+                                              protocol_basis=protocol_basis)

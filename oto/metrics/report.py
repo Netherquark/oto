@@ -43,6 +43,9 @@ _VERDICT_FIELDS = (
     "native_temp_max_c", "spoof_temp_max_c", "family", "delta_pct", "tie",
     "verdict", "native_runs", "native_winner_run", "native_winner_phase",
     "n_native_runs", "n_native_kernels", "n_spoof_kernels",
+    # appended 2026-10-23 (§R56.3) -- like-for-like provenance; appended here
+    # and in ABVerdict so the JSON's existing key order is stable.
+    "basis_protocol", "native_best_any_protocol", "native_isolated_best",
 )
 
 

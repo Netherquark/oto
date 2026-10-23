@@ -84,7 +84,10 @@ def test_every_native_winner_resolves_full_config(evidence):
     # acceptance report this resolver ran against; if the winner moves again this
     # assert is the first thing that goes, and the new depth is in the phase name.
     assert by[("ZZ", "1024x1024x1024")]["native_config"]["DepthU"] == 8
-    assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [32, 64]
+    # HH:256's like-for-like winner (§R56.3: family-protocol phases only) is
+    # the 64x32 tile from a family span, not the 32x64 single-problem phase
+    # the pre-basis winners read (763.4) from.
+    assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [64, 32]
 
 
 def test_cfg_gap_classifies_every_cell(evidence):

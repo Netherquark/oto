@@ -266,6 +266,18 @@ def _add_agg_flag(parser: argparse.ArgumentParser) -> None:
              "always spans the whole database, so the report may be won by an "
              "older run."
     )
+    parser.add_argument(
+        "--protocol-basis",
+        choices=("family", "any", "single", "partial"),
+        default="family",
+        help="The invocation form verdicts admit (§R56.3): 'family' (default) "
+             "grades only records measured under the family-wide protocol the "
+             "gfx900 floor itself uses -- the like-for-like basis; the "
+             "pre-basis mixed winner stays in the payload as "
+             "native_best_any_protocol. 'single' pairs only single-problem "
+             "records; 'any' reproduces the pre-§R56.3 unfiltered pairing "
+             "for reference."
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
