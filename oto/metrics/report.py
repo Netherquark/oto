@@ -320,17 +320,6 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             output_path = self.base_dir / "gfx90c_results" / "acceptance_report.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Serialize all_analytics minimally for the "Problem space explored" section
-        # Only the fields needed: dtype, shape, family
-        all_analytics_serialized = []
-        if report.all_analytics:
-            for a in report.all_analytics:
-                all_analytics_serialized.append({
-                    "dtype": a.dtype,
-                    "shape": a.shape,
-                    "family": a.family,
-                })
-
         report_dict = {
             "timestamp": report.timestamp,
             "run_id": report.run_id,
@@ -351,7 +340,6 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
                 "rocm_prefixes": (report.shipped_manifest or {}).get("rocm_prefixes", []),
                 "generated_at": (report.shipped_manifest or {}).get("generated_at", ""),
             },
-            "all_analytics": all_analytics_serialized,
             "overall_pass": report.overall_pass,
             "summary": report.summary
         }
