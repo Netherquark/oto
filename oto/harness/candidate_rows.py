@@ -1389,3 +1389,169 @@ for _fam, _tile, _tt, _vw, _du in _R49_UNEXPLORED:
         "fam": _fam, "pattern": "Ailk_Bjlk", "MacroTile": _tile,
         "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
         "note": "R49: the ranked unexplored space of the ORANGE cell"})
+
+
+# --- 2026-10-23 R50 -- the like-for-like batch (potential_configs.md §R55) ---
+# The 2026-10-22 like-for-like regrade (§R50) measured the four ORANGE
+# "winners" as protocol artefacts: the corpus bests of SS:256, CC:192, DD:192
+# and HH:256 are single-problem-phase readings, while the floor arm was only
+# ever measured under the family protocol, so each was graded WIN at
+# +174-279% that a same-config A/B collapses to a tie (HH:256's 32x64x16/4x4
+# read 763.4 single-problem and 194-206 family-protocol across three runs --
+# same client params, 3.7-3.9x).  The batch answers with three small tiers.
+#
+# R50a -- iso-protocol calibration: one shapes-narrowed phase per affected
+# cell, cloning the config that holds the single-problem corpus best, so one
+# run measures BOTH protocols on the SAME config and the A/B verdict stops
+# depending on which run happened to hold each evidence row.  WorkGroupMapping
+# is stated explicitly on every clone: the single-problem-era winners ran
+# WGM8/4 while the ladder emits no WGM key, so the explicit key also keeps the
+# clone's config fingerprint distinct from the family-wide row it would
+# otherwise collapse into.
+#
+# R50b (below it) -- the HPA 512-band geometry push: the only cells with
+# real headroom left (38-39% of the family bar like-for-like, vs 76%+ at
+# every larger size).  These rows span the family, so they re-measure the
+# 1024+ winners as a stability side effect.
+#
+# R50c (last) -- the fill-starved micro-cube knob salvo: the five cells whose
+# like-for-like state is 8-28% of bar get 1-knob variants (WGM, residency
+# clamp, pads, unroll) on their measured winner geometry -- the cheapest work
+# that can still move them, since the geometry itself is already at its
+# fill-friendly minimum.
+AUTO_EXPLICIT["SS"] += [{
+    "shapes": ["256x256x256"], "pattern": "Ailk_Bjlk",
+    "MacroTile": "96x96x16", "ThreadTile": "6x6",
+    "VectorWidth": 2, "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 8,
+    "note": "R50a: SS:256 iso-protocol calibration, draft-42 WGM8 clone "
+            "(412 single-problem vs 98 family, same config)"},
+    {
+    "shapes": ["256x256x256"], "pattern": "Ailk_Bjlk",
+    "MacroTile": "32x64x8", "ThreadTile": "4x8",
+    "VectorWidth": 4, "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+    "note": "R50a: SS:256 iso-protocol calibration, family-protocol winner"},
+]
+AUTO_EXPLICIT["CC"] = [{
+    "shapes": ["192x192x192"], "pattern": "Ailk_Bljk",
+    "MacroTile": "64x64x8", "ThreadTile": "4x4",
+    "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 8,
+    "note": "R50a: CC:192 iso-protocol calibration, trialD1 WGM8 clone "
+            "(118.2 single-problem)"},
+    {
+    "shapes": ["192x192x192"], "pattern": "Ailk_Bjlk",
+    "MacroTile": "32x32x8", "ThreadTile": "4x4",
+    "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+    "note": "R50a: CC:192 iso-protocol calibration, family winner copy"},
+]
+AUTO_EXPLICIT["HH"] = [{
+    "shapes": ["256x256x256"], "pattern": "Ailk_Bjlk",
+    "MacroTile": "32x64x16", "ThreadTile": "4x4",
+    "VectorWidth": 4, "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+    "note": "R50a: HH:256 iso-protocol calibration, the config whose 763.4 "
+            "single-problem / 194 family split proved the protocol artefact"},
+]
+AUTO_EXPLICIT["DD"] = [{
+    "shapes": ["192x192x192"], "pattern": "Alik_Bljk",
+    "MacroTile": "32x32x16", "ThreadTile": "2x2",
+    "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+    "note": "R50a: DD:192 iso-protocol calibration, trio-phase winner clone"},
+]
+AUTO_EXPLICIT["ZZ"] = [{
+    "shapes": ["128x128x128"], "pattern": "Alik_Bjlk",
+    "MacroTile": "32x32x16", "ThreadTile": "2x2",
+    "VectorWidth": 1, "DepthU": 16, "GlobalSplitU": 1, "WorkGroupMapping": 4,
+    "note": "R50a: ZZ:128 iso-protocol calibration, single-problem winner "
+            "geometry"}]
+
+# R50b -- the HPA 512-band push.  HH_HPA/HS_HPA:512 are the two cells with
+# real like-for-like headroom (38-39% of the 1118.7 GFLOPS bar at :512 while
+# :1024 and up hold 123-130%).  The measured :512 winners are 64x128x16/4x8
+# (HH_HPA 484, 2026-10-19) and the 128-deep variants; the unexplored legal
+# space around them is what the coverage maps rank highest (HH_HPA:512 was
+# 91% unexplored at 589 legal configs).  VW is capped at 4 for HS_HPA
+# (operand B is fp32, 4 x 4 B == the 16 B load cap); VW8 is fp16-only
+# (2 B x 8 == the cap), so it runs on HH_HPA only.
+_R50_HPA: Tuple[Tuple[str, str, str, str, int, int, Dict[str, Any]], ...] = (
+    ("HH_HPA", "Ailk_Bjlk", "64x64x16", "4x4", 4, 16, {}),
+    ("HH_HPA", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, {}),
+    ("HH_HPA", "Ailk_Bjlk", "64x64x16", "4x4", 2, 16, {}),
+    ("HH_HPA", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, {"WorkGroupMapping": 2}),
+    ("HH_HPA", "Ailk_Bjlk", "128x128x16", "8x8", 8, 16, {}),
+    ("HH_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 2, 8, {}),
+    ("HH_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 4, 16, {"WorkGroupMapping": 2}),
+    ("HH_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 4, 16, {"WorkGroupMapping": 8}),
+    ("HH_HPA", "Ailk_Bjlk", "128x64x16", "8x4", 4, 16, {}),
+    ("HH_HPA", "Ailk_Bjlk", "96x96x16", "6x6", 2, 16, {}),
+    ("HH_HPA", "Ailk_Bjlk", "32x64x16", "4x8", 2, 16, {}),
+    # HS_HPA mirrors (VW <= 4 everywhere: operand B is fp32).
+    ("HS_HPA", "Ailk_Bjlk", "64x64x16", "4x4", 4, 16, {}),
+    ("HS_HPA", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, {}),
+    ("HS_HPA", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, {}),
+    ("HS_HPA", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, {}),
+    ("HS_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 2, 8, {}),
+    ("HS_HPA", "Ailk_Bjlk", "64x128x16", "4x8", 4, 16, {"WorkGroupMapping": 2}),
+    ("HS_HPA", "Ailk_Bjlk", "128x64x16", "8x4", 4, 16, {}),
+    ("HS_HPA", "Ailk_Bjlk", "96x96x16", "6x6", 2, 16, {}),
+    ("HS_HPA", "Ailk_Bjlk", "32x64x16", "4x8", 2, 16, {}),
+)
+for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_HPA:
+    # HPA templates default GLVW=2 (a 4 B fp16 load); anything wider must pin
+    # GLVWA/B to the vector width or the load gate refuses the row.
+    _glvw = ({"GlobalLoadVectorWidthA": _vw, "GlobalLoadVectorWidthB": _vw}
+             if _vw > 2 else {})
+    PLAN_BATCH.append({
+        "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+        "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+        **_glvw, **_extra,
+        "note": "R50b: HPA 512-band geometry push"})
+
+# R50c -- micro-cube knob salvo on the five fill-starved cells.  The like-for-
+# like winners are all single-WG-wave geometries; the remaining legal levers
+# are scheduling and residency, not geometry: WorkGroupMapping order, the
+# MaxOccupancy residency clamp, LdsPad bank offsets and InnerUnroll.  Each row
+# is 1 knob on the measured winner tile, so any delta is attributable.
+_R50_KNOBS: Tuple[Tuple[str, str, str, str, int, int, Dict[str, Any]], ...] = (
+    # SS:256 -- winner 32x64x8/4x8/4/8 (129.9 family, tie like-for-like).
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"WorkGroupMapping": 2}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"WorkGroupMapping": 8}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"MaxOccupancy": 4}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"MaxOccupancy": 8}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"InnerUnroll": 2}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"NonTemporalA": 1}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"LdsPadA": 1}),
+    ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"LdsPadB": 1}),
+    # SS:512 -- 78.7% bar, weakest SS cell; WGM variants on the 128x128x8
+    # winner tie-adapt tile (NonTemporal/MaxO/IU already emitted in R16).
+    ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, {"WorkGroupMapping": 2}),
+    ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, {"WorkGroupMapping": -4}),
+    # CC:192 -- winner 32x32x8/4x4/2/8 (45.0 family).
+    ("CC", "Ailk_Bjlk", "32x32x8", "4x4", 2, 8, {"WorkGroupMapping": 2}),
+    ("CC", "Ailk_Bjlk", "32x32x8", "4x4", 2, 8, {"WorkGroupMapping": 8}),
+    ("CC", "Ailk_Bjlk", "32x32x8", "4x4", 2, 8, {"MaxOccupancy": 8}),
+    ("CC", "Ailk_Bjlk", "32x32x8", "4x4", 2, 8, {"InnerUnroll": 2}),
+    ("CC", "Ailk_Bjlk", "32x32x8", "4x4", 2, 8, {"LdsPadA": 1}),
+    # HH:256 -- family winner 32x64x16/4x4/4/16 (194-206 family).
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"WorkGroupMapping": 2}),
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"WorkGroupMapping": 8}),
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"MaxOccupancy": 4}),
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"MaxOccupancy": 8}),
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"InnerUnroll": 2}),
+    ("HH", "Ailk_Bjlk", "32x64x16", "4x4", 4, 16, {"LdsPadA": 1}),
+    # DD:192 -- winner 32x32x8/4x2/2/8 (21.1, tie like-for-like; floor 21.4).
+    ("DD", "Ailk_Bjlk", "32x32x8", "4x2", 2, 8, {"WorkGroupMapping": 2}),
+    ("DD", "Ailk_Bjlk", "32x32x8", "4x2", 2, 8, {"WorkGroupMapping": 8}),
+    ("DD", "Ailk_Bjlk", "32x32x8", "4x2", 2, 8, {"MaxOccupancy": 8}),
+    ("DD", "Ailk_Bjlk", "32x32x8", "4x2", 2, 8, {"InnerUnroll": 2}),
+    ("DD", "Ailk_Bjlk", "32x32x8", "4x2", 2, 8, {"LdsPadA": 1}),
+    # ZZ:128 -- 6.9 family winner 32x32x16/2x2/1/16 (WIN +40% but 28% bar).
+    ("ZZ", "Alik_Bjlk", "32x32x16", "2x2", 1, 16, {"WorkGroupMapping": 2}),
+    ("ZZ", "Alik_Bjlk", "32x32x16", "2x2", 1, 16, {"MaxOccupancy": 8}),
+    ("ZZ", "Alik_Bjlk", "32x32x16", "2x2", 1, 16, {"InnerUnroll": 2}),
+    ("ZZ", "Alik_Bjlk", "32x32x16", "2x2", 1, 16, {"LdsPadA": 1}),
+)
+for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_KNOBS:
+    PLAN_BATCH.append({
+        "fam": _fam, "pattern": _pat, "MacroTile": _tile,
+        "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
+        **_extra,
+        "note": "R50c: micro-cube knob salvo on the like-for-like winner"})

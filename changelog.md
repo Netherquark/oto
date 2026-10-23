@@ -9,6 +9,39 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-23 (7th) — like-for-like regrade: three graded wins were protocol
+  artefacts; the R50 batch is committed and the gate is differential-perfect.**
+  The 2026-10-22 acceptance regraded every cell on the like-for-like basis —
+  only family-protocol phases (the multi-shape client invocation the floor arm
+  is entirely measured under) — and SS:256, CC:192 and DD:192 fell from
+  +173-279% WINs to ties: their corpus "winners" (403.6, 118.2, 77.8) are
+  single-problem-phase readings, and nothing single-problem has ever been
+  graded against a single-problem floor. The proof is same-config-same-client:
+  HH:256's 32x64x16/4x4/VW4/DU16 reads 763.4 single-problem (run_20261008_005217)
+  and 188.9/206.5/194.0 family in three other runs; SS's 96x96/6x6 reads
+  412.1 vs 98.5 *inside one run* (09-20). The honest scorecard is 22 WIN /
+  16 TIE / 0 LOSS with the real straggler list at 8.4-39.4% of bar
+  (SS:256, CC:192, DD:192 — newly flagged —, HH:256, ZZ:128, HH_HPA:512,
+  HS_HPA:512); all twelve ties are >=90%-of-roof ties. `potential_configs.md`
+  rewrite 8 owns the whole analysis (§R50-R56). The R50 deck
+  (`oto/harness/candidate_rows.py`) adds 52 measured-new phases: four
+  iso-protocol calibration rows (single-problem clones of the affected cells'
+  winning configs so one run measures both protocols on the same config), 21
+  HPA-512-band rows (the one class with headroom, 91% of its 589-legal space
+  unexplored, including the first HPA VW8 tile; GlobalLoadVectorWidth pinned
+  to the vector width above VW2 — 5 rows the load gate refused before Tensile
+  saw them, exactly the historical `GLVW % pv` failure class, live-proofing
+  the rule), and 27 micro-cube knob rows. Preflight: pool 1141; the overlay
+  check is 1146/0 illegal; the unmeasured deck is exactly those 52 rows; the
+  corpus-wide gate calibration is **0 misses / 0 false rejections over 5662
+  native phases** (the 43+172 reference-side entries are the pre-rule
+  09-25..09-29 gfx900 replay era, documented in §R56). The failed-candidate
+  triage closed the last historical classes: the recent-run tracebacks are
+  loky semlock teardown noise, the `Kernel Uses 131072 > 65536` class was
+  killed by the template's PGR/LdsPad state (10-22 ran 1103 phases with ZERO
+  empty), and error-4 / GLVW%pv / unknown-knob classes all predate their
+  rules.
+
 - **2026-10-22 (6th) — the deck check's first refusal: `TransposeLDS` is
   unreachable on gfx90c, and three "virgin axes" were never virgin.** The
   pre-run sweep (70 of 401 rows) asked Tensile about a Z 32x32 phase carrying

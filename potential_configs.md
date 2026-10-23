@@ -1,27 +1,34 @@
-# Candidate deck for the gfx90c Vega-7 port — rewrite 7 (2026-10-19)
+# Candidate deck for the gfx90c Vega-7 port — rewrite 8 (2026-10-23)
 
-Supersedes rewrite 6 (R24–R33, kept below for history). **What is new here:** the
-overnight run that "improved nothing" is explained twice over. First it *measured*
-nothing: a lost GPU under the full GNOME/Wayland compositor made Tensile abort in
-`GetHardware` on 409 of 414 phases and the driver still filed the run `completed`
-(§R34). Then the part that did run could not have helped, because the mutation arm
-never proposed for the cells that tie the floor (§R34) — and neither could the
-virgin-axis readings the plan was built on, because that probe generation was
-built on the wrong contraction pattern at half the winner's vector width (§R35).
-§R36 is the honest 18-cell tie table: most of it is inside the measurement band,
-not behind a geometry. §R37 is the only virgin forwarded surface left, now in the
-deck. §R38 says what this deck cannot fix, §R39 is the TTY checklist. §R40 is the
-axis the deck never reached — MacroTile area above 16384, which legality rather
-than preference had kept closed — and the deck that now reaches it. §R41 is the
-list of axes the corpus has finished with, so the next run cannot re-spend on
-them.
+Supersedes rewrite 7 (R34–R49, kept below for history). **What is new here:** the
+grade-6 acceptance report's headline wins are re-read against the *measurement
+protocol* and three of them are measurement artefacts (§R50). Every phase in the
+corpus that holds the four ORANGE cells' "winning" numbers was run under a
+**single-problem invocation**, while the whole floor arm was measured under the
+**family-protocol invocation** (one client process, 5–8 problem sizes); the same
+config under the two protocols differs by 2.1–4.2×, and run_20261008_005217
+reproves it same-config-same-client in one night (HH:256's 32x64x16/4x4/VW4/DU16:
+763.4 single-problem vs 188.9–206.5 family across three other runs). §R50 regrades
+the whole table like-for-like: 22 WIN / 16 TIE / 0 LOSS, and moves the honest
+straggler list to SS:256 **11.6 %**, HH:256 **8.4 %**, CC:192 **16.1 %**,
+DD:192 **21.3 %** (never previously flagged), ZZ:128 27.8 %, HH_HPA:512 39.4 %,
+HS_HPA:512 38.2 % of bar. §R51 types the straggler classes and what each class's
+work actually is; §R52 closes the tie list (all twelve ties are ≥90 %-of-roof
+ties, config work exhausted); §R53 records which kernel types have won, per
+family, across all 30 native runs; §R54 is the cover-map reading and the R50 deck
+now committed to the repo (iso calibration, HPA 512-band push, micro-cube knobs -
+52 new phases, 0 gate refusals, 0 Tensile refusals); §R55 spec's the overnight
+TTY run; §R56 closes the failed-candidate triage: gate calibration is now 0
+misses / 0 false-rejections over 5662 native phases and every historical failure
+class maps to a rule that exists today.
 
-The earlier rewrite-6 findings stand: the legality gate is closed (0 misses, 0
-false rejections, was 53 — §R24); the tile axes have provable ceilings and the
-"wider MacroTile" route is dead for CC and ZZ (§R27); the straggler classes and
-the reasoning that **no steal is justified** are §R26; the ledger trace is §R28;
-the dead complex rows were replaced by the widest *legal* tiles (§R30); and §R33
-maps the GCN5 GEMM literature review onto these routes.
+Rewrite-7 content stands: the honest tie table (§R36), the virgin-knob batch
+(§R37), the supra-16384 frontier (§R40), the finished axes (§R41), the ORANGE
+geometry batches and their results (§R44–R49).
+
+The pre-rewrite-7 findings stand: gate closed (§R24); no steal was justified
+under the *progress* reading (§R26) — §R54.3 now documents the steal *decision*
+post-regrade; the ledger trace is §R28; the GCN5 literature map is §R33.
 
 **Owns:** the candidate deck, the routes, the search rules, and the reading of the
 gates. Does not own: ceilings and verdict bars
@@ -3077,3 +3084,269 @@ picture is what makes "86 % unexplored" mean something.
    been varied on the *tied* cells, where the tie is environment today and a
    real win needs a different binary.
 3. **Nothing on CC:512+ and ZZ:512+**: 80-97 % of the FMA roof, no headroom.
+
+---
+
+## R50 — like-for-like: the verdict table is protocol-mixed, three wins are artefacts
+
+### R50.1 The protocol split, proven same-config-same-client
+
+The native arm's per-cell "winner" numbers come from two different client
+invocations, and the A/B grades native (say, single-problem) against a floor
+that only ever ran the other way:
+
+* **single-problem phases** — `ClientParameters.ini` is the identical file
+  (`num-benchmarks=8`, `num-warmups=0`, `num-enqueues-per-sync=1`,
+  `num-syncs-per-benchmark=1`, `use-gpu-timer=True`, `sleep-percent=50`)
+  with a **1-row problem list**: `phase_auto_0_S_256x256x256_42` (run 09-20)
+  and the 10 iso phases of run_20261008_005217 measured the 256-cell kernels
+  cold-start-to-cold-start, 8 back-to-back reps.
+* **family-protocol phases** — the same INI with a **5–8-row problem list**
+  (`ProblemSizes` = the contract shape list); every-floor phase and every
+  `phase_cand_*`/`phase_ss_*` deck phase since 10-06.
+
+Same config evidence, three independent:
+
+1. SS 96x96x16/6x6/VW2/DU16/WGM8, within run_20260920_235815: **412.1** med in
+   its single-problem phase, **98.5** med in the family phase — 4.18x, same
+   binary, same process settings. (`00_Final.yaml` diff of the draft _42 kernel
+   vs the modern deck kernel: only `WorkGroupMapping 8 vs 4` differs.)
+2. HH 32x64x16/4x4/VW4/DU16 (WGM4): **763.4** single-problem (10-08_005217)
+   vs **188.9 / 206.5 / 194.0** family (09-20 / 10-06 / 10-22) — 3.7–3.9x.
+3. HH_HPA 128x128x8/8x8: **853.4** single (10-15) vs **440.8–537.7** family
+   (10-06, 10-22) — 1.6–1.9x; HS_HPA 128x128x8: **820.4** vs **427.8**.
+
+The mega-shapes invert: SS 96x96x16 single-problem read **404** at 1024 while
+family-protocol reads **818–1210** there — short invocations never reach boost
+clocks; this is the *under*-direction of the same clock artifact.
+
+### R50.2 The regrade (family-protocol rows only, vs the family-protocol floor)
+
+| cell | corpus "win" | protocol | like-for-like | floor | honest Δ vs floor | % bar honest |
+|------|-------------|----------|---------------|-------|------------------|--------------|
+| SS:256 | 403.6 | SINGLE | 129.9 | 124.1 | **+4.7% tie** (was +225%) | 11.6% |
+| CC:192 | 118.2 | SINGLE | 45.0 | 43.2 | **+4.0% tie** (was +173%) | 16.1% |
+| DD:192 | 77.8 | trio-era | 21.0 | 21.4 | **−1.7% tie** (was +264%) | 21.3% |
+| HH:256 | 763.4 | SINGLE | 206.5 | 201.5 | **+2.5% tie** (was +279%) | 8.4% |
+| HH_HPA:512 | 853.4 | SINGLE | 440.8 | — | no floor | 39.4% |
+| HS_HPA:512 | 820.4 | SINGLE | 427.8 | — | no floor | 38.2% |
+| ZZ:128 | 15.1 | SINGLE | 6.9 | 4.9 | **+39.7% WIN** | 27.8% |
+
+Everything else keeps its verdict and now measures family-protocol on both
+sides: **22 WIN / 16 TIE / 0 LOSS** (was graded 26/12). Whole-family honest
+readings: SS 512−4096 +7.3 to +11.9% (WIN), CC 256/1024/2048 +6.9/+14.1/+17.7%,
+ZZ 192/256/512/1024 +40.8/+28.1/+18.3/+8.1%, DD 256/512 +19.3/+6.5%, HH
+512/2048/4096 +20.8/+5.0/+6.1%; ties per §R52. No cell is a LOSS like-for-like.
+
+The wrong-protocol readings also caused two report-side consequences: the
+ORANGE %bar for the small cubes dropped 2–3.6x (SS:256 36.1→11.6 %, HH:256
+31.0→8.4 %, CC:192 42.3→16.1 %), and **DD:192 was never flagged at all** (its
+79% bar came from a trio container phase) though it sits at 21.3 %.
+
+### R50.3 Why the protocols differ — the clock hypothesis, and the TTY experiment
+
+Single-problem invocations hold 8 back-to-back reps of one problem (seconds of
+continuous work on large shapes, tens of ms on small ones); family-protocol
+invocations interleave 8 problems with `sleep-percent=50` spacing and repeat per
+seed. gfx90c is an iGPU on an always-on power domain: short kernels into
+sleeps plausibly park SCLK. That one mechanism explains:
+small shapes reading 2–4x LOW in family phases, big shapes reading HIGH there
+(their problems run late in a long, warm process), and single-problem mega-shape
+phases reading LOW (32 ms of work never leaves idle clocks).
+
+CPU-side evidence cannot decide it. The TTY run §R55 carries three cheap
+instrumented checks: (1) `hardware-monitor=True` on the SS 8-shape family
+phase — log SCLK per problem; (2) the same phase with `sleep-percent=0`;
+(3) `num-warmups=8` variant. If the 256 problem's reading moves with either
+knob, the whole straggler class is a measurement problem, not a kernel problem.
+
+### R50.4 What the regrade does NOT change
+
+DD:192's +264% trio reading was also config-inconsistent (the trio container
+phases ran 192/256/2048 only, 1 seed each, and the same config's 192/256
+readings *swap* across runs — 77.8/30.3 in 10-15 vs 19.6/80.5 in 10-17, with
+the problem ORDER differing between those runs' CSVs). Trio/aniso container
+phases are unusable as evidence either way; treat every `phase_cand_*`
+container with a partial shape list as unmeasured for verdict purposes.
+
+## R51 — typed straggler classes (the tracker; each class's work)
+
+| # | class | cells | honest state | the work that moves it |
+|---|-------|-------|--------------|------------------------|
+| P1 | protocol victims | SS:256, CC:192, DD:192, HH:256 | 11.6/16.1/21.3/8.4 % bar, ties at ±5% | R50a iso calibration rows + §R50.3 TTY instrument; config work closed (the winners already twin the floor, §R54.3) |
+| P2 | HPA 512-band | HH_HPA:512, HS_HPA:512 | 39.4/38.2 % bar while :1024+ hold 123–130% | R50b geometry push (21 rows): the :1024+ winner family (64x128x16/4x8) needs its DU8/VW2/WGM variants measured at :512; coverage says 91% of 589-legal space unexplored |
+| P3 | fill-starved micro-cubes | SS:256, HH:256, CC:192, DD:192, ZZ:128 | same rows as P1 + ZZ:128 (27.8% bar, honest WIN +40%) | R50c knob salvo: WGM/residency/pads/unroll on the measured winners — the geometry itself is at its fill-friendly minimum (9 WGs on 7 CUs for the 64-side tiles) |
+| P4 | roof ties | SS:768, SS:1365, CC:512, DD:768/1024/1365/2048, HH:1024, HPA 1024/2048 | +0.2 to +3.9% over floor, 90–115% of bar | none — config work exhausted (§R52); only floor re-measurement tightens the verdict |
+| P5 | non-contract measured | SS:128/192, ragged 32/64x4096x4096, 128x128x2048 | bookkeeping rows | none; keep out of verdict grading |
+| P6 | measurement-integrity debt | all | floor was never single-problem measured; trio/1-seed containers trash reproducibility | §R55 TTY: floor iso replay under both protocols for the 5 shipped families; retire sub-4-seed container |
+
+## R52 — the twelve ties are roof ties (config work exhausted)
+
+With like-for-like medians against each family's empirical bar
+(REALISTIC_CEILINGS): SS:768 99.1%, SS:1365 99.6%, CC:512 115%, DD:768 94.3%,
+DD:1024 93.0%, DD:1365 90.4%, DD:2048 97.7%, HH:1024 104.9%, HH_HPA 1024/2048
+130/124%, HS_HPA 1024/2048 127/124% — every tie ≥90% of the *empirical* roof
+and the deltas (−0.5% to +4.7%) sit inside the ±5% band. Nothing in the
+geometry/forward-knob space is untested on these cells: the R16 tie-adapt batch,
+the R40 frontier (workgroup-residency duality), the R43/R47 axis batches and
+the R44/R45 virgin knobs have all covered them (assertions, NonTemporal,
+StaggerU, WGM, pads, LSU, PGR, InnerUnroll). The honest interpretation: the
+native port is at the FMA roof on twelve cells and cannot move them by making a
+*different kernel*; only floor re-measurement (protocol parity) can tighten a
+verdict.
+
+## R53 — which kernel types have won, family by family, 30 runs
+
+* SS (fp32): since the R49 batch, **128x128x8 / 8x8 / VW4 / DU8** — won 512–4096
+  (78.7–111% bar; 880–1242 vs floor 801–1121). WGM4 default; the DU16/16x8/8x16
+  TT variants of the same tile all lost to DU8. PGR+NonTemporal variants did not
+  beat the default.
+* HH (fp16): **128x128x16 / 8x8 / VW8 / DU16** won 2048/4096 (2790/2831 =
+  113–115% bar) and **256x128x16 / 8x8 / VW8 / DU16** won 1024 (2563 = 105%).
+  VW8 (16 B loads) is the whole story: the VW4 twins read 4–13% less at every
+  size ≥1024.
+* CC (complex): **64x64x8 / 4x4 / VW2 / DU8** unchanged since 10-13; nothing
+  has beaten it at any size; 512+ is at/above the complex roof.
+* DD (fp64): **64x64x8 / 4x4 / VW2 / DU8** (+ the 64x32 family) — identical to
+  the floor's own geometry; 94–98% of bar, ties.
+* ZZ (complex double): **32x32x16 / 2x2 / VW1** — the 128 cell is 27.8% bar
+  (both arms poor), 1024 holds 24.5 = 99.2% of its small empirical bar.
+* HPA: **64x128x16 / 4x8 / VW4 / DU16** and 128x64x16/8x4 twins → 123–130% of
+  the fp32-adapted bar at ≥1024. THE gap is at :512 only (39%): the same tiles
+  read 404–540 there; no shallower/different-depth variant has been tried at
+  VW4+GLVW4 (everything prior was GLVW-default-2 or VW2) — that is R50b.
+
+## R54 — the committed R50 batch, cover maps, and the steal decision
+
+### R54.1 The deck rows now in `oto/harness/candidate_rows.py` (52 emitted)
+
+* **R50a — iso-protocol calibration (4 emitted, AUTO_EXPLICIT tier):**
+  shapes-narrowed single-problem clones of the four affected cells'
+  single-problem-winning configs (SS 96x96x16/6x6/WGM8, CC 64x64x8/4x4/WGM8,
+  HH 32x64x16/4x4/WGM4, ZZ 32x32x16/2x2/VW1) so the NEXT run measures both
+  protocols on the same configs. The three family-winner clones (SS 32x64x8,
+  CC 32x32x8, DD 32x32x16) fingerprint-collapsed into their existing family
+  rows — the wide rows already carry those shapes, so the iso view lives in
+  the run's per-shape rows anyway.
+* **R50b — HPA 512-band push (21 rows, 21 emitted):** 64x64x8/(16), 32x64x16,
+  96x96x16, 128x64x16, 64x128x16 WGM2/WGM8/DU8 variants and the 128x128x16
+  VW8 tile on both HPA families (GLVWA/B pinned, which the HPA template needs
+  above VW2 — 5 rows were refused pre-fix and are documented as the GLVW%
+  pv law's natural correction). One row is the first HPA VW8 tile ever
+  scheduled.
+* **R50c — micro-cube knob salvo (27 rows):** on each P3 cell's measured
+  winner tile: WorkGroupMapping {2,8}, MaxOccupancy {4,8}, InnerUnroll 2,
+  NonTemporalA, LdsPadA/B 1 (per-family gate-checked subset).
+
+Preflight on the committed rows: `generate_candidates --dry-run` → pool 1141,
+52 would-append; `check_candidates.py` → **284 checked (phases.yaml) + 1146
+checked (overlay), 0 illegal**; real-Tensile deck_check probe → **52/52
+built, 0 refusals** (`gfx90c_results/analysis/deck_check_r50.log`; includes
+the HPA VW8 tile). The unmeasured deck is exactly those 52 rows — everything
+older was measured by run_20261022.
+
+### R54.2 The cover maps, re-read under like-for-like
+
+The per-cell coverage maps (`gfx90c_results/analysis/coverage/`) rank the
+unexplored legal space, but colour by the same protocol-mixed "best" — the
+measured rows that hold a flash point on the small cubes are the
+single-problem readings. Under like-for-like: SS 87% / CC 88% / HH 92% /
+DD 91–93% of legal space unexplored, HH_HPA:512 91% of 589, ZZ only 52 legal
+cells (fully explored). Kernel-type insight: the SS:512 "trap" ring is the
+4k/8-accumulator bucket whose 96x96-class neighbours all measure faster —
+and the 96x96x16/6x6 tile that flashes at SS:256 is exactly a
+protocol-artefact flash. The map's *ranks* (which neighbour of a winner is
+unexplored) remain valid; its *colours* on P1 cells do not, until the
+protocol is normalised.
+
+### R54.3 The steal decision, post-regrade (worst-losers only)
+
+The steal route (re-emit the floor's winning gfx900 config natively with
+documented gfx90c adaptations) was reserved for cells the native corpus could
+not approach. The regrade sharpened what "cannot approach" means, and the
+floor winners are already twinned everywhere it matters:
+
+| cell | floor winner (family-protocol) | native like-for-like | twin? |
+|------|-------------------------------|---------------------|-------|
+| SS:256 | 32x64x8 / 4x4 / VW4 / DU8 = 124.1 | 32x64x8 / 4x8 / VW4 / DU8 = 129.9 | yes (+4.7%) |
+| HH:256 | 32x32x16 / 4x4 / VW4 / DU16 = 201.5 | 32x64x16 / 4x4 / VW4 / DU16 = 206.5 | yes (same 32-wide family, +2.5%) |
+| CC:192 | 32x32x8 / 4x4 / VW2 / DU8 = 43.2 | same config = 45.0 | exact twin (+4.0%) |
+| DD:192 | 64x64x8 / 4x4 / VW1 / DU8 = 21.4 | 64x64x8/4x4 = 20.7–21.1 native | yes (parity) |
+| ZZ:128 | 64x64x16 / 4x4 / VW1 / DU16 = 4.9 | 32x32x16/2x2/1/16 = 6.9 | native beats it +40% |
+
+Every floored straggler already contains the floor's winning geometry
+natively; the *remaining* deficits are P1/P3/P2-class work (protocol parity,
+HPA 512 geometry), not config theft. **The steal route stays closed for the
+floored cells, opened for nothing new** — the documented adaptations that
+would be needed (§R26) remain on file for the one class the corpus genuinely
+cannot reach: none, after R50b.
+
+## R55 — the overnight TTY run
+
+Deck state after this session: 60 R50 rows authored (7 iso + 21 HPA + 32
+knobs); the first draft refused 5 HPA rows on the load gate's GLVW law
+(templates default GLVW=2 on fp16, so a VW4/8 row must pin
+GlobalLoadVectorWidth{A,B}) — the final set is 0-refused; 3 winner-config iso
+clones (SS:256 32x64x8, CC:192 32x32x8, DD:192 32x32x16) fingerprint-collapsed
+into their existing family-wide rows, and the rest fingerprint-deduped —
+**52 phases appended**, which is also exactly the unmeasured deck: everything
+older has a measurement. Pool = 1141 fingerprinted candidates,
+budget-trimmed by the round-robin to the
+`--budget` value at launch. The run remains the standing TTY command:
+`python3 port_tensile.py --auto --budget 10 --yes` (checklist in
+`command.txt`, untracked). Post-run reads that this deck makes
+more valuable than usual: (1) the R50a iso rows' single-problem medians vs
+their family twins — quantifies the split natively, per cell, in one run;
+(2) `hardware-monitor` on one family phase for the clock hypothesis (§R50.3);
+(3) the R50b HPA rows at :512 (goal: >600 family-protocol, i.e. 52%+, moving
+HH_HPA:512/HS_HPA:512 off the straggler list); (4) R50c knob deltas on the
+micro-cubes; (5) re-run `oto.metrics.ab_audit` with the family-protocol
+winner basis (§R56.3-B) so the next acceptance report grades like-for-like.
+
+## R56 — failed-candidate triage and legality state
+
+### R56.1 Gate calibration over the full corpus (2026-10-23)
+
+`oto.harness.gate_calibration --population all`: 46 runs, 12545 phases, 10230
+with a launch config. **OURS (native): 5662 phases — 0 MISS, 0 FALSE
+REJECTION.** REFERENCE (gfx900 replay): 172 misses / 43 false rejections —
+all from the 09-25→09-29 floor-replay campaign, a different template era
+(GSU8, mt36, vw1-loads) that predates every rule; these remain documented as
+not our generator's population. The decision rule (§R23: false-rejection
+count ZERO on our corpus) holds.
+
+### R56.2 The failed-candidate classes, triaged (failure_triage)
+
+Per-run empties: 10-15 31/612, 10-17 31/395, 10-18 7/412, 10-20 8/715,
+**10-22 0/1103**. Classes:
+
+* `stderr non-empty: Traceback` — **muted noise**: Python 3.14 multiprocessing
+  `resource_tracker` semlock teardown spam; the *real* stdout for those phases
+  is "Generating kernel source resulted in error 4" (the error-4 class,
+  already ruled 10-21 (4th)).
+* `Kernel Uses 131072 > 65536 bytes of LDS` — 13 phases in the 10-15/10-17
+  era, all PGR=1-template 128x128x16 fp32 tiles; the current template's
+  allocator case (`lds_base * ku ≤ 16384` conservatively) plus PGR default now
+  make the class dead: 10-22 (the first run fully on the current template)
+  had ZERO of them. Closed by template change, not a new rule.
+* `GlobalLoadVectorWidth* must be == VectorWidth` and `GLVW % pv` — 202+62+
+  corpus-wide, all in old eras; the loads gate's GLVW verbatim + pv-stage
+  rules now refuse them pre-Tensile. Verified live during this session's deck
+  build: 5 HPA rows refused with exactly this text before touching Tensile.
+* `Valid parameters are [...]` (128, all 10-15-ish) — unknown-knob typo era;
+  NOT_FORWARDED strip prevents the class in the current template.
+* error-4 on `128x256x8/4x8` rows — Tensile-writer refusal, 4–8 phases 10-20;
+  rows dropped/superseded in the current deck by the R49 128x64/256x128
+  frontier twins.
+
+### R56.3 The two grading fixes to wire next (non-blocker, listed for the record)
+
+**A (reporter):** the acceptance report's per-cell winner basis must be
+restricted to family-protocol phases (like-for-like basis) — the data needed
+is the phase-shape histogram already in kernel_db; the regrade table this
+section carries is the reference until then.
+
+**B (calibration):** the deck's iso rows (R50a) plus the §R50.3 TTY
+instrumentation decide the SS/HH/CC/DD five-cell story inside one run; after
+that, verdicts can quote a per-cell protocol-normalised basis with the raw
+both-protocol readings attached.
