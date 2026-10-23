@@ -193,13 +193,13 @@ def _coverage_appendix(rows: List[Dict[str, Any]], base_dir: Path,
         items = families[family]
         figures = "".join(_figure_tile(r, base_dir, html_path) for r in items)
         groups += f"""
-            <div class="figure-family">
-                <h3 class="figure-family-title">
+            <details class="figure-family">
+                <summary class="figure-family-title">
                     <span class="mono strong">{html.escape(family)}</span>
                     <span class="secondary">{len(items)} cell{'' if len(items) == 1 else 's'}</span>
-                </h3>
+                </summary>
                 <div class="figure-grid">{figures}</div>
-            </div>"""
+            </details>"""
     return f"""
             <details class="figure-appendix">
                 <summary>

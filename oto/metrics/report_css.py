@@ -349,20 +349,43 @@ DASHBOARD_CSS = """
             border-top: 1px solid var(--border-subtle);
         }
         .figure-family + .figure-family {
-            margin-top: 24px;
-            padding-top: 16px;
+            margin-top: 16px;
             border-top: 1px solid var(--border-subtle);
+            padding-top: 16px;
+        }
+        .figure-family > summary {
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 0;
+            list-style: none;
+            font-size: 14px;
+            line-height: 18px;
+            font-weight: 600;
+        }
+        .figure-family > summary::-webkit-details-marker { display: none; }
+        .figure-family > summary::before {
+            content: "\25B8";
+            margin-right: 8px;
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        .figure-family[open] > summary::before {
+            content: "\25BE";
         }
         .figure-family-title {
+            display: inline;
             margin: 0 0 8px 0;
             font-size: 14px;
             line-height: 18px;
             font-weight: 600;
         }
-        .figure-family-title .secondary {
+        .figure-family .secondary {
             margin-left: 8px;
             font-weight: 400;
             color: var(--text-secondary);
+        }
+        .figure-family > .figure-grid {
+            margin-top: 8px;
         }
         .figure-grid {
             display: grid;
