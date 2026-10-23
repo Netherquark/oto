@@ -1550,3 +1550,28 @@ for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_KNOBS:
         "ThreadTile": _tt, "VectorWidth": _vw, "DepthU": _du,
         **_extra,
         "note": "R50c: micro-cube knob salvo on the like-for-like winner"})
+
+# R50d -- the coverage-graph hole-fill (potential_configs.md §R57).  The one
+# virgin geometry class the 2026-10-22 coverage maps and the kernel_db
+# census agree on: between the two measured-fast 128x128 accumulator classes
+# (acc/thread 16 and 64 -- the census reads 140-201 and 120-403 across the
+# measured shapes) the acc-32 rung -- ThreadTile 8x4 on a 128x128 tile, 512
+# threads in one work-group -- has never been measured in either HPA family
+# at any side.  R50b put TT 4x8 and 8x8 on 128-wide tiles but skipped this
+# one.  The load law MT1*GLVW == TT0*TT1*DepthU admits the VW2 row outright
+# (128*2 == 32*8) and, with GlobalLoadVectorWidth pinned to 4 (the R50b
+# pattern), the VW4 twin (128*4 == 32*16) -- so the load width stays a
+# controlled variable, not a confound.
+_R50_D: Tuple[Tuple[str, int, int, Dict[str, Any]], ...] = (
+    ("HS_HPA", 2, 8, {}),
+    ("HS_HPA", 4, 16, {"GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4}),
+    ("HH_HPA", 2, 8, {}),
+    ("HH_HPA", 4, 16, {"GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4}),
+)
+for _fam, _vw, _du, _extra in _R50_D:
+    PLAN_BATCH.append({
+        "fam": _fam, "pattern": "Ailk_Bjlk", "MacroTile": "128x128x8",
+        "ThreadTile": "8x4", "VectorWidth": _vw, "DepthU": _du,
+        **_extra,
+        "note": "R50d: coverage hole-fill, the 128x128/8x4 (acc 32) class "
+                "between the measured-fast acc-16 and acc-64 classes"})

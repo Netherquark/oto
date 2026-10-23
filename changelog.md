@@ -9,6 +9,23 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-24 (9th) — the coverage maps re-read on the like-for-like census;
+  one genuine hole found and filled with R50d (4 rows, appended after the
+  R50 batch).** The §R57 study (see `potential_configs.md` §R57) crosses the
+  2026-10-22 coverage SVGs with
+  `oto.harness.coverage_map.measured_geometries()` post-§R56.3-A (family
+  protocol only) per graded ORANGE cell: the SVGs' corner hatches on
+  the big tiles are bucket-rounding artefacts, the micro-cube holes are knob
+  territory (R50c owns the legal salvo there), and the one class both views
+  agree is virgin: **the 128x128 tile at acc/thread 32 (ThreadTile 8x4)** on
+  both HPA families — measured fast at acc-16 (302–343) and acc-64 (256–403)
+  rungs, never at the rung between them, at any side. The load law admits
+  128x128x8/8x4/VW2/DU8 outright and the VW4/GLVW4-pinned twin;
+  `oto/harness/candidate_rows.py` grows four `R50d` rows (HS_HPA/HH_HPA,
+  family-span shapes so §R56.3-A stamps them family). Verify: dry-run
+  pool 1141 → 1145, would-append exactly 4, zero refusals; full preflight
+  177 passed.
+
 - **2026-10-23 (8th) — the like-for-like rule is in the code: §R56.3-A
   resolved, the acceptance report grades one protocol at a time, and the
   regen reproduced the honest regrade through the maintained pipeline.**

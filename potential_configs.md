@@ -3376,3 +3376,50 @@ quoting from the R50a iso twins) remains open pending tonight's run.
 instrumentation decide the SS/HH/CC/DD five-cell story inside one run; after
 that, verdicts can quote a per-cell protocol-normalised basis with the raw
 both-protocol readings attached.
+
+## R57 — the coverage maps re-read on the census: finding the last fill, and R50d (2026-10-24)
+
+The per-cell SVGs in `gfx90c_results/analysis/coverage/` (§R48.6/R54.2 own the
+drawing rules) are the 2026-10-22 snapshot, pre-R50 and pre-regrade — their
+"best" column is mixed-protocol and their corner buckets wobble with the area
+bucketing. So this pass re-reads them against the *authoritative* per-cell
+config census: `coverage_map.measured_geometries()` post-§R56.3-A (family
+protocol only). The census is what the deck dedupes against; the SVGs supply
+the picture. Verdict per graded ORANGE cell:
+
+| cell | census geoms | the picture says | the census says |
+|------|----|----|----|
+| SS:256 | 223 | 87 % unexplored; hot rung (8k,32); everything ≥16k slow | every legal class the load law admits outright is measured; near-winner gaps are DU/WGM-variant territory (R50c salvo) |
+| CC:192 | 86 | 88 %; one 4k/16 ridge, holes at (4k,8/32/64) | the 64x64 acc-32/64 holes are the assertion-only axis (the frontier block: CC's no-assertion law forces TT=16 at 64 wide); 96x96 mirror measured-slower |
+| DD:192 | 27 | wide band, 92 % unexplored | (2k,16)-(8k,16) ridge measured; unexplored = big-tile assertion cases DD cannot reach (no tile >16384 legal, §R48) |
+| HH:256 | 213 | outlier sibling: cloud sits on small tiles, big-tile diagonal slow *at 256* | 128x128/4x4 measured 190.9, 8x8=183 at 256 (slower than the 32x64 winner family, not virgin); the acc-32 rung 128x64x8x4=193.6 is measured |
+| ZZ:128 | **15** | tiniest terrain: 52 legal, 16 buckets | 15 of 52 configs measured; remaining classes violate the ZZ load law outright or sit under one wave — auto's neighbour finder owns them (ranks family-protocol now, §R56.3-A) |
+| HH_HPA:512 | 106 | 91 % unexplored | one true hole left near the winner |
+| HS_HPA:512 | 111 | 91 % unexplored | same hole |
+
+**The hole the two views agree on (R50d).** On both HPA families, the
+128x128-area column is measured fast at acc/thread 16 (HS 302–343, HH_HPA
+302–323) and at acc/thread 64 (HS 256–343, HH_HPA 325–403) — and *nothing at
+acc/thread 32*: ThreadTile 8x4 on a 128x128 tile (512 threads, one work-group,
+32 accumulators a thread) has never been measured in either family at any
+side, and it is not in R50b (which puts TT 4x8 and 8x8 on 128-wide tiles).
+The load law (`MT1*GLVW == TT0*TT1*DepthU`, the frontier block) admits
+128x128x8 / 8x4 / VW2 / DU8 outright (128·2 == 32·8), and the VW4 twin under
+pinned `GlobalLoadVectorWidth{A,B}` (128·4 == 32·16). R50d is exactly those
+four rows in `oto/harness/candidate_rows.py` (family-span shapes — the same
+§R56.3-A rule stamps them `family`). Emits verified: pool 1141 → 1145, dry-run
+would append exactly 4, zero refusals, no fingerprint collapses; full preflight
+177 passed. Cost: ~7 min of the run.
+
+**What was considered and refused to keep the deck honest:** a ZZ family
+completion sweep (36 configs — cheap in absolute terms but each is a
+law-violation or sub-wave tile, the worst odds on the deck); SS/CC/DD
+micro-islands (knob territory — R50c already owns the legal salvo there);
+256-wide tiles at :512 (the 2026-10-20 frontier already measured them —
+census 267–337 at HS:512, 316–350 at HH_HPA:512 — the SVG's corner hatch was
+the bucket-rounding illusion this section exists to dispel).
+
+Post-run reading (extends §R55's list): the R50d rows' :512 medians against
+the 427.8/440.8 family winners, then regenerate the maps
+(`oto.harness.coverage_map` + `oto.harness.coverage_graph`) — the fresh SVGs
+replace the stale mixed-basis colours wholesale.
