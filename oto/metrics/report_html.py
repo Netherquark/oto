@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto.metrics.report_css import (DASHBOARD_CSS, JS_THEME_INIT,
-                                     JS_THEME_TOGGLE)
+                                     JS_THEME_TOGGLE, JS_COLLAPSIBLE)
 from oto.metrics.report_figures import coverage_section
 from oto.metrics.report_models import AcceptanceReport
 
@@ -197,6 +197,7 @@ class HtmlMixin:
             <span class="shell-sub">Acceptance dashboard</span>
         </div>
         <div class="shell-actions">
+            <button id="expand-all" class="theme-toggle" type="button" aria-label="Expand all sections">Expand all</button>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode">☾</button>
         </div>
     </div>
@@ -244,36 +245,44 @@ class HtmlMixin:
 
     def _family_matrix_section(self, family_rows: str) -> str:
         return f"""
-        <section class="section">
-            <h2 class="section-title">Family matrix coverage &amp; peak utilization</h2>
-            <p class="section-note">Each family row is a subtotal. The indented
-            rows underneath are the per-kernel-size measurements behind it, so
-            the breakdown is visible without opening anything.</p>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Family / kernel size</th>
-                            <th>Coverage (cells / footprint)</th>
-                            <th>Measured best median</th>
-                            <th>Realistic ceiling</th>
-                            <th>Theoretical peak</th>
-                            <th>Ceiling utilization</th>
-                            <th>% of theoretical</th>
-                        </tr>
-                    </thead>
-                    {family_rows}
-                </table>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Family matrix coverage & peak utilization
+            </h2>
+            <div class="section-body">
+                <p class="section-note">Each family row is a subtotal. The indented
+                rows underneath are the per-kernel-size measurements behind it, so
+                the breakdown is visible without opening anything.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Family / kernel size</th>
+                                <th>Coverage (cells / footprint)</th>
+                                <th>Measured best median</th>
+                                <th>Realistic ceiling</th>
+                                <th>Theoretical peak</th>
+                                <th>Ceiling utilization</th>
+                                <th>% of theoretical</th>
+                            </tr>
+                        </thead>
+                        {family_rows}
+                    </table>
+                </div>
             </div>
         </section>
 """
 
     def _ab_section(self, verdict_sections: str) -> str:
         return f"""
-        <section class="section">
-            <h2 class="section-title">Native vs spoof A/B head-to-head</h2>
-            <div class="table-wrap">
-                {verdict_sections if verdict_sections else '<p class="empty">No native-vs-shipped-floor comparisons registered yet — run <code>--gfx900-reference</code> (established once, recalled forever) then a candidate run.</p>'}
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Native vs spoof A/B head-to-head
+            </h2>
+            <div class="section-body">
+                <div class="table-wrap">
+                    {verdict_sections if verdict_sections else '<p class="empty">No native-vs-shipped-floor comparisons registered yet — run <code>--gfx900-reference</code> (established once, recalled forever) then a candidate run.</p>'}
+                </div>
             </div>
         </section>
 """
@@ -292,6 +301,7 @@ class HtmlMixin:
     </main>
 
     {JS_THEME_TOGGLE}
+    {JS_COLLAPSIBLE}
 </body>
 </html>"""
 

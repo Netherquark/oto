@@ -8,8 +8,48 @@ exact whitespace here, so any edit must be diffed against the rendered
 dashboard.
 Does NOT own: the document skeleton (report_html) or the section markup
 (report_sections).
-Public API: DASHBOARD_CSS, JS_THEME_INIT, JS_THEME_TOGGLE.
+Public API: DASHBOARD_CSS, JS_THEME_INIT, JS_THEME_TOGGLE, JS_COLLAPSIBLE.
 """
+ 
+#: Collapsible section handler + expand-all button.
+JS_COLLAPSIBLE = r"""
+        <script>
+        (function () {
+            // Expand/collapse section on title click
+            document.querySelectorAll('.section.collapsible > .section-title').forEach(function (title) {
+                title.addEventListener('click', function (e) {
+                    if (e.target !== title) return;
+                    var section = title.parentElement;
+                    var collapsed = section.getAttribute('data-collapsed') === 'true';
+                    section.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                    title.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                });
+                title.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        title.click();
+                    }
+                });
+            });
+
+            // Expand all button
+            var expandBtn = document.getElementById('expand-all');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function () {
+                    var allCollapsed = document.querySelectorAll('.section.collapsible[data-collapsed="true"]');
+                    var isExpanding = allCollapsed.length > 0;
+                    document.querySelectorAll('.section.collapsible').forEach(function (section) {
+                        section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var title = section.querySelector('.section-title');
+                        if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                });
+            }
+        })();
+        </script>
+        """
+
 
 #: The whole dashboard stylesheet. NOTE: the dark palette is declared twice --
 #: once as an explicit ``[data-theme="dark"]`` override and again inside the
@@ -352,6 +392,39 @@ DASHBOARD_CSS = """
             font-variant-numeric: tabular-nums;
             color: var(--text-primary);
         }
+        /* Collapsible sections */
+        .section.collapsible {
+            border: 1px solid var(--border-subtle);
+        }
+        .section.collapsible > .section-title {
+            cursor: pointer;
+            user-select: none;
+            padding-right: 32px;
+            position: relative;
+        }
+        .section.collapsible > .section-title::after {
+            content: "\25BE";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--icon-primary);
+            transition: transform 0.15s ease;
+        }
+        .section.collapsible[data-collapsed="true"] > .section-title::after {
+            transform: translateY(-50%) rotate(-90deg);
+        }
+        .section.collapsible > .section-body {
+            overflow: hidden;
+        }
+        .section.collapsible[data-collapsed="true"] > .section-body {
+            display: none;
+        }
+        .section.collapsible:focus-within > .section-title {
+            outline: 2px solid var(--focus);
+            outline-offset: -2px;
+        }
         .empty {
             padding: 24px 16px;
             text-align: center;
@@ -371,6 +444,46 @@ DASHBOARD_CSS = """
             tbody th[scope="row"] { padding-left: 20px; }
         }
         """
+ 
+#: Collapsible section handler + expand-all button.
+JS_COLLAPSIBLE = r"""
+        <script>
+        (function () {
+            // Expand/collapse section on title click
+            document.querySelectorAll('.section.collapsible > .section-title').forEach(function (title) {
+                title.addEventListener('click', function (e) {
+                    if (e.target !== title) return;
+                    var section = title.parentElement;
+                    var collapsed = section.getAttribute('data-collapsed') === 'true';
+                    section.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                    title.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                });
+                title.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        title.click();
+                    }
+                });
+            });
+
+            // Expand all button
+            var expandBtn = document.getElementById('expand-all');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function () {
+                    var allCollapsed = document.querySelectorAll('.section.collapsible[data-collapsed="true"]');
+                    var isExpanding = allCollapsed.length > 0;
+                    document.querySelectorAll('.section.collapsible').forEach(function (section) {
+                        section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var title = section.querySelector('.section-title');
+                        if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                });
+            }
+        })();
+        </script>
+        """
+
 
 #: Theme bootstrap, run before first paint so there is no flash.
 JS_THEME_INIT = """
@@ -383,6 +496,46 @@ JS_THEME_INIT = """
         })();
         </script>
         """
+ 
+#: Collapsible section handler + expand-all button.
+JS_COLLAPSIBLE = r"""
+        <script>
+        (function () {
+            // Expand/collapse section on title click
+            document.querySelectorAll('.section.collapsible > .section-title').forEach(function (title) {
+                title.addEventListener('click', function (e) {
+                    if (e.target !== title) return;
+                    var section = title.parentElement;
+                    var collapsed = section.getAttribute('data-collapsed') === 'true';
+                    section.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                    title.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                });
+                title.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        title.click();
+                    }
+                });
+            });
+
+            // Expand all button
+            var expandBtn = document.getElementById('expand-all');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function () {
+                    var allCollapsed = document.querySelectorAll('.section.collapsible[data-collapsed="true"]');
+                    var isExpanding = allCollapsed.length > 0;
+                    document.querySelectorAll('.section.collapsible').forEach(function (section) {
+                        section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var title = section.querySelector('.section-title');
+                        if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                });
+            }
+        })();
+        </script>
+        """
+
 
 #: The theme-toggle button handler.
 JS_THEME_TOGGLE = r"""
@@ -412,4 +565,44 @@ JS_THEME_TOGGLE = r"""
         })();
         </script>
         """
+ 
+#: Collapsible section handler + expand-all button.
+JS_COLLAPSIBLE = r"""
+        <script>
+        (function () {
+            // Expand/collapse section on title click
+            document.querySelectorAll('.section.collapsible > .section-title').forEach(function (title) {
+                title.addEventListener('click', function (e) {
+                    if (e.target !== title) return;
+                    var section = title.parentElement;
+                    var collapsed = section.getAttribute('data-collapsed') === 'true';
+                    section.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                    title.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                });
+                title.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        title.click();
+                    }
+                });
+            });
+
+            // Expand all button
+            var expandBtn = document.getElementById('expand-all');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function () {
+                    var allCollapsed = document.querySelectorAll('.section.collapsible[data-collapsed="true"]');
+                    var isExpanding = allCollapsed.length > 0;
+                    document.querySelectorAll('.section.collapsible').forEach(function (section) {
+                        section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var title = section.querySelector('.section-title');
+                        if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                });
+            }
+        })();
+        </script>
+        """
+
 

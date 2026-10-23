@@ -226,28 +226,36 @@ def coverage_section(base_dir: Path, html_path: Path) -> str:
     rows = coverage_rows(base_dir)
     if not rows:
         return """
-        <section class="section">
-            <h2 class="section-title">Problem-space coverage</h2>
-            <div class="table-wrap">
-                <table><tbody>
-                <tr><td class="empty">No coverage figures yet &mdash; run
-                <code>python3 -m oto.harness.coverage_graph</code> to sweep the
-                legal geometry space and draw them.</td></tr>
-                </tbody></table>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Problem-space coverage
+            </h2>
+            <div class="section-body">
+                <div class="table-wrap">
+                    <table><tbody>
+                    <tr><td class="empty">No coverage figures yet &mdash; run
+                    <code>python3 -m oto.harness.coverage_graph</code> to sweep the
+                    legal geometry space and draw them.</td></tr>
+                    </tbody></table>
+                </div>
             </div>
         </section>
         """
     shares = sorted(_cell_share(r) for r in rows)
     median = shares[len(shares) // 2] if shares else 0.0
     return f"""
-        <section class="section">
-            <h2 class="section-title">Problem-space coverage</h2>
-            <p class="section-note">Each row is one cell; the legal space is
-            family-wide, so the unexplored share is per cell. <strong>Median
-            {median:.0f}% of each cell&apos;s legal geometries have never been
-            run.</strong> A green ring is a peak; a red ring is a trap. The maps
-            are in the appendix below the table.</p>
-            {_coverage_table(rows)}
-            {_coverage_appendix(rows, base_dir, html_path)}
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Problem-space coverage
+            </h2>
+            <div class="section-body">
+                <p class="section-note">Each row is one cell; the legal space is
+                family-wide, so the unexplored share is per cell. <strong>Median
+                {median:.0f}% of each cell&apos;s legal geometries have never been
+                run.</strong> A green ring is a peak; a red ring is a trap. The maps
+                are in the appendix below the table.</p>
+                {_coverage_table(rows)}
+                {_coverage_appendix(rows, base_dir, html_path)}
+            </div>
         </section>
         """

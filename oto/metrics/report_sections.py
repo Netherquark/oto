@@ -171,12 +171,12 @@ class SectionMixin:
         """
 
     def _problem_space_section(self, report) -> str:
-        """Problem-space table derived from the recorded cell analytics."""
-        cells = report.all_analytics or []
+        """Problem-space table derived from the per-cell verdicts."""
+        verdicts = report.per_cell_verdicts or []
         groups = {}
-        for c in cells:
-            label = (c.family or c.dtype or "unknown").upper()
-            groups.setdefault(label, []).append(c)
+        for v in verdicts:
+            label = (v.family or v.dtype or "unknown").upper()
+            groups.setdefault(label, []).append(v.shape)
 
         empty = ("<section class=\"section\"><h2 class=\"section-title\">Problem "
                  "space explored</h2><div class=\"table-wrap\"><table><tbody>"
@@ -188,8 +188,7 @@ class SectionMixin:
         cov = report.per_family_coverage or {}
         rows = ""
         for label in sorted(groups):
-            cg = groups[label]
-            shapes = ", ".join(ordered_shapes({c.shape for c in cg}))
+            shapes = ", ".join(ordered_shapes(set(groups[label])))
             entry = cov.get(label)
             if entry:
                 footprint = (f"{entry['coverage_pct']:.1f}% "
@@ -201,7 +200,7 @@ class SectionMixin:
                 <tr>
                     <td class="mono strong">{label}</td>
                     <td class="mono">{shapes}</td>
-                    <td class="num strong">{len(cg)}</td>
+                    <td class="num strong">{len(groups[label])}</td>
                     <td class="num">{footprint}</td>
                 </tr>"""
         return f"""
