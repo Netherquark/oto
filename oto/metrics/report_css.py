@@ -32,6 +32,24 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
+            // Expand/collapse coverage groups in the coverage table
+            document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                var header = group.querySelector('.group-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
             // Expand/collapse family groups in the family matrix
             document.querySelectorAll('tbody.family-group').forEach(function (group) {
                 var header = group.querySelector('.family-row');
@@ -64,6 +82,11 @@ JS_COLLAPSIBLE = r"""
                     document.querySelectorAll('tbody.family-group').forEach(function (group) {
                         group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.group-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
@@ -439,6 +462,24 @@ DASHBOARD_CSS = """
             font-variant-numeric: tabular-nums;
             color: var(--text-primary);
         }
+        /* Collapsible coverage groups */
+        tbody.coverage-group[data-collapsed="true"] .coverage-row {
+            display: none;
+        }
+        tbody.coverage-group[data-collapsed="false"] .group-row th::after {
+            content: " \25BE";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.coverage-group[data-collapsed="true"] .group-row th::after {
+            content: " \25B8";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.coverage-group .group-row {
+            cursor: pointer;
+            user-select: none;
+        }
         /* Collapsible sections */
         .section.collapsible {
             border: 1px solid var(--border-subtle);
@@ -531,6 +572,24 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
+            // Expand/collapse coverage groups in the coverage table
+            document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                var header = group.querySelector('.group-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
             // Expand/collapse family groups in the family matrix
             document.querySelectorAll('tbody.family-group').forEach(function (group) {
                 var header = group.querySelector('.family-row');
@@ -563,6 +622,11 @@ JS_COLLAPSIBLE = r"""
                     document.querySelectorAll('tbody.family-group').forEach(function (group) {
                         group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.group-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
@@ -607,6 +671,24 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
+            // Expand/collapse coverage groups in the coverage table
+            document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                var header = group.querySelector('.group-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
             // Expand/collapse family groups in the family matrix
             document.querySelectorAll('tbody.family-group').forEach(function (group) {
                 var header = group.querySelector('.family-row');
@@ -639,6 +721,11 @@ JS_COLLAPSIBLE = r"""
                     document.querySelectorAll('tbody.family-group').forEach(function (group) {
                         group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.group-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
@@ -700,6 +787,24 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
+            // Expand/collapse coverage groups in the coverage table
+            document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                var header = group.querySelector('.group-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
             // Expand/collapse family groups in the family matrix
             document.querySelectorAll('tbody.family-group').forEach(function (group) {
                 var header = group.querySelector('.family-row');
@@ -732,6 +837,11 @@ JS_COLLAPSIBLE = r"""
                     document.querySelectorAll('tbody.family-group').forEach(function (group) {
                         group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.coverage-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.group-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';

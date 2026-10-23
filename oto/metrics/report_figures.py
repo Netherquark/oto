@@ -119,8 +119,8 @@ def _coverage_table(rows: List[Dict[str, Any]]) -> str:
     for family in sorted(families):
         items = families[family]
         body += f"""
-            <tbody class="coverage-group">
-                <tr class="group-row">
+            <tbody class="coverage-group" data-collapsed="true">
+                <tr class="group-row" tabindex="0" role="button" aria-expanded="false">
                     <th colspan="7" scope="rowgroup">
                         <span class="group-name mono strong">{html.escape(family)}</span>
                         <span class="group-meta">{_family_meta(items)}</span>
