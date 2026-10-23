@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The dashboard's static assets: CSS and the three inline scripts.
+"""The dashboard's static assets: CSS and the two inline scripts.
 
 Owns: every byte of the dashboard's presentation that is not data. They are
 constants rather than code so the renderer stays readable and so a presentation
@@ -8,7 +8,7 @@ exact whitespace here, so any edit must be diffed against the rendered
 dashboard.
 Does NOT own: the document skeleton (report_html) or the section markup
 (report_sections).
-Public API: DASHBOARD_CSS, JS_THEME_INIT, JS_THEME_TOGGLE, JS_ROW_EXPAND.
+Public API: DASHBOARD_CSS, JS_THEME_INIT, JS_THEME_TOGGLE.
 """
 
 #: The whole dashboard stylesheet. NOTE: the dark palette is declared twice --
@@ -241,45 +241,65 @@ DASHBOARD_CSS = """
         .tag-loss { color: var(--support-error); background: var(--tag-error-bg); }
         .tag-orange { color: var(--support-warning); background: var(--tag-warning-bg); }
         .section-note {
-            margin: 0 0 16px 0;
+            margin: 0;
+            padding: 12px 16px;
             font-size: 14px;
             line-height: 20px;
             color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
         }
         .section-note strong { color: var(--text-primary); font-weight: 600; }
-        .figure-group {
-            margin-top: 8px;
+        tbody th[scope="row"], tbody th[scope="rowgroup"] {
+            padding: 6px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            text-align: left;
+            vertical-align: middle;
+        }
+        .family-row > *, .group-row > th {
+            background: var(--layer-02);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .family-row > th, .group-row > th { font-weight: 600; }
+        tbody th[scope="row"] { padding-left: 32px; font-weight: 400; }
+        .group-row > th { padding: 8px 16px; }
+        .group-row .group-name { margin-right: 12px; }
+        .group-row .group-meta { font-weight: 400; color: var(--text-secondary); }
+        tbody.family-group + tbody.family-group > tr:first-child > *,
+        tbody.coverage-group + tbody.coverage-group > tr:first-child > * {
+            border-top: 2px solid var(--border-strong);
+        }
+        .figure-appendix {
+            margin-top: 12px;
             border: 1px solid var(--border-subtle);
             background: var(--layer-01);
         }
-        .figure-group > summary {
+        .figure-appendix > summary { padding: 12px 16px; cursor: pointer; }
+        .figure-appendix-title { font-weight: 600; }
+        .figure-appendix-meta {
             display: block;
-            padding: 12px 16px;
-            cursor: pointer;
-            list-style: none;
-            border-bottom: 1px solid transparent;
-        }
-        .figure-group-head {
-            display: flex;
-            align-items: baseline;
-            gap: 16px;
-        }
-        .figure-group[open] > summary { border-bottom-color: var(--border-subtle); }
-        .figure-group > summary::-webkit-details-marker { display: none; }
-        .figure-group-head::before {
-            content: "\25B8";
-            color: var(--icon-primary);
+            padding-left: 20px;
+            color: var(--text-secondary);
             font-size: 12px;
-            width: 12px;
         }
-        .figure-group[open] .figure-group-head::before { content: "\25BE"; }
-        .figure-group-name { min-width: 72px; }
-        .figure-group-meta { color: var(--text-secondary); }
-        .figure-group-shapes {
-            display: block;
-            margin-top: 4px;
-            padding-left: 88px;
-            font-size: 12px;
+        .figure-appendix-body {
+            padding: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+        .figure-family + .figure-family {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+        .figure-family-title {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            line-height: 18px;
+            font-weight: 600;
+        }
+        .figure-family-title .secondary {
+            margin-left: 8px;
+            font-weight: 400;
+            color: var(--text-secondary);
         }
         .figure-grid {
             display: grid;
@@ -332,22 +352,6 @@ DASHBOARD_CSS = """
             font-variant-numeric: tabular-nums;
             color: var(--text-primary);
         }
-        .row-toggle {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            margin-right: 4px;
-            font-size: 12px;
-            line-height: 1;
-            color: var(--interactive);
-            font-family: var(--font-mono);
-            vertical-align: baseline;
-        }
-        .family-detail td { padding: 0; }
-        .size-table { margin: 4px 12px 12px 44px; width: calc(100% - 56px); min-width: 460px; }
-        .size-table thead th { background: var(--layer-02); }
-        .size-table tbody tr:last-child td { border-bottom: none; }
         .empty {
             padding: 24px 16px;
             text-align: center;
@@ -357,10 +361,14 @@ DASHBOARD_CSS = """
             .metrics { grid-template-columns: 1fr 1fr; }
             .shell { padding: 0 8px; }
             .figure-grid { grid-template-columns: 1fr; }
-            .figure-group-head { flex-wrap: wrap; gap: 8px; }
-            .figure-group-shapes { padding-left: 0; }
+            .group-row .group-meta { display: block; margin: 2px 0 0 0; }
+            .figure-appendix-meta { padding-left: 0; }
             .page { padding: 8px; }
-            thead th, tbody td { padding-left: 8px; padding-right: 8px; }
+            thead th, tbody td, tbody th[scope="row"], tbody th[scope="rowgroup"] {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            tbody th[scope="row"] { padding-left: 20px; }
         }
         """
 
@@ -405,21 +413,3 @@ JS_THEME_TOGGLE = r"""
         </script>
         """
 
-#: Row expansion for the per-size detail rows.
-JS_ROW_EXPAND = r"""
-        <script>
-        (function () {
-            var toggles = document.querySelectorAll('.row-toggle');
-            Array.prototype.forEach.call(toggles, function (btn) {
-                btn.addEventListener('click', function () {
-                    var target = document.getElementById(btn.getAttribute('data-target'));
-                    var expanded = btn.getAttribute('aria-expanded') === 'true';
-                    var open = !expanded;
-                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-                    btn.querySelector('.caret').innerHTML = open ? '\u25BE' : '\u25B8';
-                    if (target) target.hidden = !open;
-                });
-            });
-        })();
-        </script>
-        """

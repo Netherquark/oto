@@ -267,3 +267,22 @@ Best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
 "win" flips sign between bases (best-seed −31% vs median +2.5%). Median-first
 is the standing rule everywhere in this repo (`changelog.md`;
 `potential_configs.md` §6 states the median-of-seeds basis).
+## Visual/layout regression check (`oto.harness.visual_check`)
+
+After regenerating `acceptance_report.html`, run the visual check to catch
+layout regressions at desktop (1440px) and mobile (390px) viewports:
+
+```bash
+python3 -m oto.harness.visual_check gfx90c_runs/.../acceptance_report.html
+# or served:
+python3 -m http.server 8765 &
+python3 -m oto.harness.visual_check gfx90c_runs/.../acceptance_report.html --url http://127.0.0.1:8765
+```
+
+Checks performed:
+- No page-level horizontal overflow at either viewport
+- Table wrappers correctly scroll (table wider than wrapper)
+- Metric grid has 6 columns (desktop) / 2 columns (mobile)
+- Key sections present: Family matrix, Problem-space coverage
+
+Pinned by `tests/test_visual_check.py` (runs on the latest report artifact).

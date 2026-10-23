@@ -16,8 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from oto.metrics.report_css import (DASHBOARD_CSS, JS_ROW_EXPAND,
-                                     JS_THEME_INIT, JS_THEME_TOGGLE)
+from oto.metrics.report_css import (DASHBOARD_CSS, JS_THEME_INIT,
+                                     JS_THEME_TOGGLE)
 from oto.metrics.report_figures import coverage_section
 from oto.metrics.report_models import AcceptanceReport
 
@@ -125,66 +125,51 @@ class HtmlMixin:
                 "marker_left": marker_left, "marker_left_theo": marker_left_theo}
 
 
-    def _family_matrix_rows(self, family_data, size_data, scale, scale_theo, marker_left, marker_left_theo) -> str:
-        """The family matrix's rows, with expandable per-size detail rows."""
-        family_rows = ""
+    def _util_bar(self, pct: float, scale: float, marker_left: float,
+                  viz: str) -> str:
+        """One utilization bar, drawn against the shared scale."""
+        width = pct / scale * 100.0
+        return (f'<span class="bar-wrap"><span class="bar">'
+                f'<span class="bar-fill {viz}" style="width: {width:.1f}%;"></span>'
+                f'<span class="bar-marker" style="left: {marker_left:.1f}%;"></span>'
+                f'</span><span class="bar-label">{pct:.1f}%</span></span>')
+
+    def _family_matrix_rows(self, family_data, size_data, scale, scale_theo,
+                            marker_left, marker_left_theo) -> str:
+        """Family subtotal rows, each followed by its always-visible size rows.
+
+        The old version hid the size rows behind a 7x12 caret and rendered a
+        nested table inside a detail row. That made the most useful breakdown
+        the least discoverable part of the section. The family row is now a
+        visible subtotal; the size rows are ordinary rows underneath it, so the
+        table is readable without discovering or operating a control.
+        """
+        rows = []
         for fam, cov, best, ceil, theo, pct, pct_theo in family_data:
-            bar_width = pct / scale*100.0; bar_width_theo = pct_theo/scale_theo*100.0
-            expand_id = f"fam-{fam}"; sizes = size_data.get(fam, []); detail_html = ""
-            if sizes:
-                size_rows = ""
-                for size_key, s, sb, spct, spct_theo in sizes:
-                    sw = spct / scale * 100.0
-                    sw_theo = spct_theo / scale_theo * 100.0
-                    size_rows += f"""
-                    <tr>
-                        <td class="mono secondary">k={size_key}</td>
-                        <td class="num">{s.get('cells', 0)}</td>
-                        <td class="num strong">{sb:.1f}</td>
-                        <td class="num secondary">{ceil:.1f}</td>
-                        <td class="num secondary">{theo:.1f}</td>
-                        <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {sw:.1f}%;"></span><span class="bar-marker" style="left: {marker_left:.1f}%;"></span></span><span class="bar-label">{spct:.1f}%</span></span></td>
-                        <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz2" style="width: {sw_theo:.1f}%;"></span><span class="bar-marker" style="left: {marker_left_theo:.1f}%;"></span></span><span class="bar-label">{spct_theo:.1f}%</span></span></td>
-                    </tr>
-                    """
-                detail_html = f"""
-                <tr class="family-detail" id="{expand_id}" hidden>
-                    <td colspan="7">
-                        <table class="size-table">
-                            <thead>
-                                <tr>
-                                    <th>Kernel size</th>
-                                    <th>Cells</th>
-                                    <th>Best median</th>
-                                    <th>Realistic ceiling</th>
-                                    <th>Theoretical peak</th>
-                                    <th>Ceiling utilization</th>
-                                    <th>% of theoretical</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {size_rows}
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
-                """
-            family_rows += f"""
-            <tr class="family-row">
-                <td class="mono strong">
-                    {f'<button type="button" class="row-toggle" aria-expanded="false" aria-controls="{expand_id}" data-target="{expand_id}"><span class="caret" aria-hidden="true">&#9656;</span></button>' if sizes else ''}
-                    {fam}
-                </td>
-                <td class="num">{cov.get('deck_cells_measured', 0)} / {cov.get('deck_cells', 0)} <span class="mono secondary" title="distinct shipped gfx900 kernels in the pinned manifest for this family">{cov.get('expected_kernels', 0)} shipped</span></td>
-                <td class="num strong">{best:.1f}</td>
-                <td class="num secondary">{ceil:.1f}</td>
-                <td class="num secondary">{theo:.1f}</td>
-                <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {bar_width:.1f}%;"></span><span class="bar-marker" style="left: {marker_left:.1f}%;"></span></span><span class="bar-label">{pct:.1f}%</span></span></td>
-                <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz2" style="width: {bar_width_theo:.1f}%;"></span><span class="bar-marker" style="left: {marker_left_theo:.1f}%;"></span></span><span class="bar-label">{pct_theo:.1f}%</span></span></td>
-            </tr>
-            {detail_html}
-            """
-        return family_rows
+            rows.append(f"""
+            <tbody class="family-group">
+                <tr class="family-row">
+                    <th scope="rowgroup" class="mono strong">{fam}</th>
+                    <td class="num">{cov.get('deck_cells_measured', 0)} / {cov.get('deck_cells', 0)} <span class="mono secondary" title="distinct shipped gfx900 kernels in the pinned manifest for this family">{cov.get('expected_kernels', 0)} shipped</span></td>
+                    <td class="num strong">{best:.1f}</td>
+                    <td class="num secondary">{ceil:.1f}</td>
+                    <td class="num secondary">{theo:.1f}</td>
+                    <td>{self._util_bar(pct, scale, marker_left, 'bar-viz1')}</td>
+                    <td>{self._util_bar(pct_theo, scale_theo, marker_left_theo, 'bar-viz2')}</td>
+                </tr>""")
+            for size_key, s, sb, spct, spct_theo in size_data.get(fam, []):
+                rows.append(f"""
+                <tr class="size-row">
+                    <th scope="row" class="mono">k={size_key}</th>
+                    <td class="num">{s.get('cells', 0)}</td>
+                    <td class="num strong">{sb:.1f}</td>
+                    <td class="num secondary">{ceil:.1f}</td>
+                    <td class="num secondary">{theo:.1f}</td>
+                    <td>{self._util_bar(spct, scale, marker_left, 'bar-viz1')}</td>
+                    <td>{self._util_bar(spct_theo, scale_theo, marker_left_theo, 'bar-viz2')}</td>
+                </tr>""")
+            rows.append("            </tbody>")
+        return "".join(rows)
 
 
     # -- document template fragments ---------------------------------------
@@ -261,11 +246,14 @@ class HtmlMixin:
         return f"""
         <section class="section">
             <h2 class="section-title">Family matrix coverage &amp; peak utilization</h2>
+            <p class="section-note">Each family row is a subtotal. The indented
+            rows underneath are the per-kernel-size measurements behind it, so
+            the breakdown is visible without opening anything.</p>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Family</th>
+                            <th>Family / kernel size</th>
                             <th>Coverage (cells / footprint)</th>
                             <th>Measured best median</th>
                             <th>Realistic ceiling</th>
@@ -274,9 +262,7 @@ class HtmlMixin:
                             <th>% of theoretical</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {family_rows}
-                    </tbody>
+                    {family_rows}
                 </table>
             </div>
         </section>
@@ -305,7 +291,6 @@ class HtmlMixin:
         {section_telemetry}
     </main>
 
-    {JS_ROW_EXPAND}
     {JS_THEME_TOGGLE}
 </body>
 </html>"""

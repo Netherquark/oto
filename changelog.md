@@ -3501,3 +3501,22 @@ the pre-built seed pool.
   (`test_generate_candidates.py` + `test_library_parity.py`): 38 passed.
 - The dry run now reports the full pool (would append the rows the old cap had
   been dropping); `--max-fp 300` reproduces the old behaviour exactly.
+
+- **2026-10-23 — the acceptance report refactor: two hidden submenus removed,
+  redundant layers collapsed, visual/layout checks added.** The Family matrix
+  replaced its per-size caret/nested-table with an always-visible hierarchical
+  table (`<tbody class="family-group">` per family, `<tr class="size-row">`
+  indented underneath) — 42 size rows are now scannable without a control. The
+  Problem-space coverage collapsed three parallel representations (summary
+  table + 7 family `<details>` + 38 figure captions) into one grouped table
+  (`<tbody class="coverage-group">` with `<tr class="group-row">` subtotals
+  and `<tr class="coverage-row">` cells) and one appendix
+  (`<details class="figure-appendix">` with `<h3 class="figure-family-title">`
+  per family). Removed: `JS_ROW_EXPAND` script, `.row-toggle` button,
+  `.family-detail` / `.size-table` / `.figure-group` CSS, the broken
+  `\x15B8` caret escape, and the duplicate `Best measured` column from the
+  coverage table (performance belongs in the Family matrix). Added:
+  `oto.harness.visual_check` (playwright-based desktop/mobile viewport test),
+  `tests/test_visual_check.py`, and a section-note explaining each table's
+  structure. Preflight: `generate_candidates --dry-run` 1089, `check_candidates
+  --quiet` 0 illegal, full suite 922 passed / 8 skipped.

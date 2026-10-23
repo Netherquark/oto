@@ -3,7 +3,7 @@
 
 Owns: ``coverage_rows`` (the per-cell coverage numbers, read from the
 coverage tool's hand-off file) and ``coverage_section`` (the rendered
-section: a dense summary table and the figure grid).
+section: one grouped coverage table, plus the maps in one appendix).
 
 Does NOT own: the figures (oto.harness.coverage_graph writes them), the
 report payload (oto.metrics.report_models) or the stylesheet
@@ -86,44 +86,77 @@ def _relative_src(base_dir: Path, html_path: Path, name: str) -> str:
     return html.escape(rel.replace(os.sep, "/"))
 
 
-def _summary_table(rows: List[Dict[str, Any]], base_dir: Path,
-                   html_path: Path) -> str:
-    """The dense per-cell coverage table."""
-    body = ""
+def _family_meta(items: List[Dict[str, Any]]) -> str:
+    """One family's coverage summary, for its group row in the cell table."""
+    legal = max(r.get("n_legal", 0) or 0 for r in items)
+    measured = [r.get("n_measured", 0) or 0 for r in items]
+    shares = sorted(_cell_share(r) for r in items)
+    lo, hi = min(measured), max(measured)
+    span = f"{lo}" if lo == hi else f"{lo}-{hi}"
+    share = (f"{shares[0]:.0f}%" if abs(shares[0] - shares[-1]) < 0.5
+             else f"{shares[0]:.0f}-{shares[-1]:.0f}%")
+    peaks = sum(r.get("peaks", 0) or 0 for r in items)
+    traps = sum(r.get("traps", 0) or 0 for r in items)
+    return (f"{len(items)} cell{'' if len(items) == 1 else 's'} &middot; "
+            f"{legal} legal per cell &middot; {span} measured per cell "
+            f"&middot; {share} unexplored &middot; "
+            f"{peaks} peak{'' if peaks == 1 else 's'} / "
+            f"{traps} trap{'' if traps == 1 else 's'}")
+
+
+def _coverage_table(rows: List[Dict[str, Any]]) -> str:
+    """The per-cell coverage table, grouped by family.
+
+    The family group row is a non-interactive summary. It replaces the old
+    second table of family summaries *and* the seven per-family ``<details>``
+    blocks: the data and the family roll-up now live in one hierarchy.
+    """
+    families: Dict[str, List[Dict[str, Any]]] = {}
     for row in rows:
-        legal = row.get("n_legal", 0) or 0
-        measured = row.get("n_measured", 0) or 0
-        pct = row.get("pct_unexplored", 0.0) or 0.0
+        families.setdefault(str(row.get("family", "")), []).append(row)
+
+    body = ""
+    for family in sorted(families):
+        items = families[family]
         body += f"""
-                <tr>
-                    <td class="mono strong">{html.escape(str(row.get('family', '')))}</td>
-                    <td class="mono">{html.escape(str(row.get('shape', '')))}</td>
+            <tbody class="coverage-group">
+                <tr class="group-row">
+                    <th colspan="7" scope="rowgroup">
+                        <span class="group-name mono strong">{html.escape(family)}</span>
+                        <span class="group-meta">{_family_meta(items)}</span>
+                    </th>
+                </tr>"""
+        for row in items:
+            legal = row.get("n_legal", 0) or 0
+            measured = row.get("n_measured", 0) or 0
+            unexplored = row.get("unexplored", legal - measured)
+            pct = row.get("pct_unexplored", _cell_share(row)) or 0.0
+            body += f"""
+                <tr class="coverage-row">
+                    <th scope="row" class="mono">{html.escape(str(row.get('shape', '')))}</th>
                     <td class="num">{legal}</td>
                     <td class="num">{measured}</td>
-                    <td class="num strong">{legal - measured}</td>
-                    <td class="num"><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {min(100.0, pct):.1f}%;"></span></span><span class="bar-label">{pct:.1f}%</span></span></td>
-                    <td class="num strong">{row.get('best', 0.0):.1f}</td>
+                    <td class="num strong">{unexplored}</td>
+                    <td><span class="bar-wrap"><span class="bar"><span class="bar-fill bar-viz1" style="width: {min(100.0, pct):.1f}%;"></span></span><span class="bar-label">{pct:.1f}%</span></span></td>
                     <td class="num">{row.get('peaks', 0)}</td>
                     <td class="num">{row.get('traps', 0)}</td>
                 </tr>"""
+        body += "            </tbody>"
     return f"""
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Family</th>
-                            <th>Cell</th>
+                            <th>Family / cell</th>
                             <th>Legal geometries</th>
                             <th>Measured</th>
                             <th>Unexplored</th>
                             <th>% unexplored</th>
-                            <th>Best measured</th>
                             <th>Peaks</th>
                             <th>Traps</th>
                         </tr>
                     </thead>
-                    <tbody>{body}
-                    </tbody>
+                    {body}
                 </table>
             </div>"""
 
@@ -139,53 +172,43 @@ def _figure_tile(row: Dict[str, Any], base_dir: Path,
     shape = html.escape(str(row.get("shape", "")))
     return f"""
                 <figure class="figure">
-                    <img src="{src}" alt="Coverage of the legal geometry space for {family} {shape}" loading="lazy">
-                    <figcaption class="mono">{family} {shape} &middot; {row.get('n_measured', 0)}/{row.get('n_legal', 0)} measured &middot; {row.get('peaks', 0)} peak / {row.get('traps', 0)} trap</figcaption>
+                    <img src="{src}" alt="Coverage of the legal geometry space for {family} {shape}" width="634" height="450" loading="lazy">
+                    <figcaption class="mono">{shape}</figcaption>
                 </figure>"""
 
 
-def _family_groups(rows: List[Dict[str, Any]], base_dir: Path,
-                   html_path: Path) -> str:
-    """The expandable list: one group per family, its figures inside.
+def _coverage_appendix(rows: List[Dict[str, Any]], base_dir: Path,
+                       html_path: Path) -> str:
+    """The coverage maps, in one appendix instead of seven disclosures.
 
-    A native ``<details>`` is the control (the design language prefers native
-    widgets, and it is keyboard-operable for free). The summary line carries
-    the family's own numbers, so the list is readable without expanding
-    anything.
+    The table above is the primary data. The maps are supporting evidence, so
+    they sit behind one clearly-labelled native disclosure, grouped by family
+    with a heading rather than another layer of controls.
     """
     families: Dict[str, List[Dict[str, Any]]] = {}
     for row in rows:
         families.setdefault(str(row.get("family", "")), []).append(row)
-    out = ""
+    groups = ""
     for family in sorted(families):
         items = families[family]
-        # The legal space is the same for every cell of a family, so it is
-        # counted ONCE here; only the measured geometries differ per cell.
-        legal = max(r.get("n_legal", 0) or 0 for r in items)
-        peaks = sum(r.get("peaks", 0) or 0 for r in items)
-        traps = sum(r.get("traps", 0) or 0 for r in items)
-        shapes = ", ".join(str(r.get("shape", "")) for r in items)
         figures = "".join(_figure_tile(r, base_dir, html_path) for r in items)
-        shares = sorted(_cell_share(r) for r in items)
-        lo = min(r.get("n_measured", 0) or 0 for r in items)
-        hi = max(r.get("n_measured", 0) or 0 for r in items)
-        span = f"{lo}" if lo == hi else f"{lo}-{hi}"
-        share = (f"{shares[0]:.0f}%" if abs(shares[0] - shares[-1]) < 0.5
-                 else f"{shares[0]:.0f}-{shares[-1]:.0f}%")
-        per_cell = (f"{span} of {legal} geometries measured per cell "
-                    f"({share} unexplored)")
-        out += f"""
-            <details class="figure-group">
-                <summary>
-                    <span class="figure-group-head">
-                        <span class="figure-group-name mono strong">{html.escape(family)}</span>
-                        <span class="figure-group-meta">{len(items)} cell{'' if len(items) == 1 else 's'} &middot; {per_cell} &middot; {peaks} peak{'' if peaks == 1 else 's'} / {traps} trap{'' if traps == 1 else 's'}</span>
-                    </span>
-                    <span class="figure-group-shapes mono secondary">{html.escape(shapes)}</span>
-                </summary>
+        groups += f"""
+            <div class="figure-family">
+                <h3 class="figure-family-title">
+                    <span class="mono strong">{html.escape(family)}</span>
+                    <span class="secondary">{len(items)} cell{'' if len(items) == 1 else 's'}</span>
+                </h3>
                 <div class="figure-grid">{figures}</div>
+            </div>"""
+    return f"""
+            <details class="figure-appendix">
+                <summary>
+                    <span class="figure-appendix-title">Coverage maps</span>
+                    <span class="figure-appendix-meta">{len(rows)} cells &middot; open to inspect each cell&apos;s legal geometry space</span>
+                </summary>
+                <div class="figure-appendix-body">{groups}
+                </div>
             </details>"""
-    return out
 
 
 def coverage_section(base_dir: Path, html_path: Path) -> str:
@@ -215,21 +238,16 @@ def coverage_section(base_dir: Path, html_path: Path) -> str:
         </section>
         """
     shares = sorted(_cell_share(r) for r in rows)
-    measured = [r.get("n_measured", 0) or 0 for r in rows]
-    legal = [r.get("n_legal", 0) or 0 for r in rows]
     median = shares[len(shares) // 2] if shares else 0.0
     return f"""
         <section class="section">
             <h2 class="section-title">Problem-space coverage</h2>
-            <p class="section-note">The legal geometry space of every cell, and
-            the part of it the corpus has measured. <strong>{median:.0f}% of
-            each cell&apos;s legal geometries have never been run</strong>
-            (a median of {median:.0f}% unexplored; {min(measured) if measured else 0}-{max(measured) if measured else 0}
-            of the {min(legal) if legal else 0}-{max(legal) if legal else 0} legal geometries per cell).
-            A green ring is a local maximum (a peak), a red ring a local minimum
-            (a trap &mdash; a legal configuration whose measured neighbours are
-            all faster).</p>
-            {_summary_table(rows, base_dir, html_path)}
-            {_family_groups(rows, base_dir, html_path)}
+            <p class="section-note">Each row is one cell; the legal space is
+            family-wide, so the unexplored share is per cell. <strong>Median
+            {median:.0f}% of each cell&apos;s legal geometries have never been
+            run.</strong> A green ring is a peak; a red ring is a trap. The maps
+            are in the appendix below the table.</p>
+            {_coverage_table(rows)}
+            {_coverage_appendix(rows, base_dir, html_path)}
         </section>
         """

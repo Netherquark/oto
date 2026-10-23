@@ -243,3 +243,30 @@ PYTHONPATH=. python3 oto/runners/cli.py --native-agg floor_best
 
 Report `floor_best` as co-primary alongside `winner`. Look for `LdsPad` win on
 CC/ZZ/DD (bank-conflict lever) and `FractionalLoad=2` on ragged shapes.
+## Report regeneration & visual check
+
+After a run completes and the JSON payload is written, regenerate the HTML
+dashboard and run the visual check:
+
+```bash
+# From repo root; regenerates acceptance_report.html in the run dir
+python3 - <<'PY'
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '.')
+from oto.metrics.report_models import ABVerdict, AcceptanceReport
+from oto.metrics.report import AcceptanceReporter
+run = Path('gfx90c_runs/run_...')  # the run ID
+payload = json.loads((run / 'acceptance_report.json').read_text())
+payload['per_cell_verdicts'] = [ABVerdict(**v) for v in payload.get('per_cell_verdicts', [])]
+report = AcceptanceReport(**payload)
+AcceptanceReporter(Path('.').resolve()).write_html_report(report, run / 'acceptance_report.html')
+PY
+
+# Visual/layout regression check (requires playwright + chromium)
+python3 -m oto.harness.visual_check gfx90c_runs/run_.../acceptance_report.html
+```
+
+The visual check validates no horizontal overflow, correct table scrolling,
+metric grid column counts, and section presence at desktop (1440px) and mobile
+(390px) viewports.

@@ -70,16 +70,19 @@ class TestCoverageSection(unittest.TestCase):
         # the per-cell share (87% for SS, 71% for ZZ) -- the legal space is
         # the same for every cell of a family, so the ratio is per cell.
         self.assertIn("87%", html)
-        self.assertIn("never been run", html)
+        self.assertIn("never been", html)
+        self.assertIn("run.", html)
 
     def test_the_section_carries_the_numbers_and_the_figures(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
         self.assertIn("419", html)      # legal geometries
         self.assertIn("54", html)       # measured
-        self.assertIn("412.1", html)    # best measured (one decimal)
         self.assertIn("figure-grid", html)
         self.assertIn("SS_256x256x256.svg", html)
+        # performance belongs to the family matrix; the coverage table owns
+        # only the search numbers.
+        self.assertNotIn("412.1", html)
 
     def test_figure_paths_are_relative_to_the_report(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
@@ -90,14 +93,18 @@ class TestCoverageSection(unittest.TestCase):
     def test_the_figures_are_grouped_by_family(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
-        # one expandable group per family, each holding its own figures
-        self.assertEqual(html.count("<details class=\"figure-group\">"), 2)
+        # one appendix, then a heading per family: no nested per-family
+        # disclosure controls and no second copy of the table.
+        self.assertEqual(html.count("<details class=\"figure-appendix\">"), 1)
+        self.assertEqual(html.count("class=\"figure-family\""), 2)
+        self.assertNotIn("figure-group", html)
         self.assertIn(">SS<", html)
         self.assertIn(">ZZ<", html)
-        # the summary line carries the family's own numbers
+        # the family group row carries the family's own numbers
+        self.assertIn("class=\"coverage-group\"", html)
         self.assertIn("1 cell", html)          # SS has one row in the fixture
         self.assertIn("419", html)             # legal geometries, per cell
-        self.assertIn("87.1%", html)          # the unexplored share of that cell
+        self.assertIn("87.1%", html)           # the unexplored share of that cell
 
     def test_a_family_group_holds_its_own_shapes(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
