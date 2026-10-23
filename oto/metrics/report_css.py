@@ -32,7 +32,25 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
-            // Expand all button
+            // Expand/collapse family groups in the family matrix
+            document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                var header = group.querySelector('.family-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand all button (includes family groups)
             var expandBtn = document.getElementById('expand-all');
             if (expandBtn) {
                 expandBtn.addEventListener('click', function () {
@@ -42,6 +60,11 @@ JS_COLLAPSIBLE = r"""
                         section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var title = section.querySelector('.section-title');
                         if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
                 });
@@ -430,6 +453,24 @@ DASHBOARD_CSS = """
             text-align: center;
             color: var(--text-secondary);
         }
+        /* Collapsible family groups in the family matrix */
+        tbody.family-group[data-collapsed="true"] .size-row {
+            display: none;
+        }
+        tbody.family-group[data-collapsed="false"] .family-row th::after {
+            content: " \25BE";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.family-group[data-collapsed="true"] .family-row th::after {
+            content: " \25B8";
+            font-size: 10px;
+            color: var(--icon-primary);
+        }
+        tbody.family-group .family-row {
+            cursor: pointer;
+            user-select: none;
+        }
         @media (max-width: 640px) {
             .metrics { grid-template-columns: 1fr 1fr; }
             .shell { padding: 0 8px; }
@@ -466,7 +507,25 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
-            // Expand all button
+            // Expand/collapse family groups in the family matrix
+            document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                var header = group.querySelector('.family-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand all button (includes family groups)
             var expandBtn = document.getElementById('expand-all');
             if (expandBtn) {
                 expandBtn.addEventListener('click', function () {
@@ -476,6 +535,11 @@ JS_COLLAPSIBLE = r"""
                         section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var title = section.querySelector('.section-title');
                         if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
                 });
@@ -518,7 +582,25 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
-            // Expand all button
+            // Expand/collapse family groups in the family matrix
+            document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                var header = group.querySelector('.family-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand all button (includes family groups)
             var expandBtn = document.getElementById('expand-all');
             if (expandBtn) {
                 expandBtn.addEventListener('click', function () {
@@ -528,6 +610,11 @@ JS_COLLAPSIBLE = r"""
                         section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var title = section.querySelector('.section-title');
                         if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
                 });
@@ -587,7 +674,25 @@ JS_COLLAPSIBLE = r"""
                 });
             });
 
-            // Expand all button
+            // Expand/collapse family groups in the family matrix
+            document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                var header = group.querySelector('.family-row');
+                if (header) {
+                    header.addEventListener('click', function (e) {
+                        var collapsed = group.getAttribute('data-collapsed') === 'true';
+                        group.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                        header.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+                    });
+                    header.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            header.click();
+                        }
+                    });
+                }
+            });
+
+            // Expand all button (includes family groups)
             var expandBtn = document.getElementById('expand-all');
             if (expandBtn) {
                 expandBtn.addEventListener('click', function () {
@@ -597,6 +702,11 @@ JS_COLLAPSIBLE = r"""
                         section.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
                         var title = section.querySelector('.section-title');
                         if (title) title.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
+                    });
+                    document.querySelectorAll('tbody.family-group').forEach(function (group) {
+                        group.setAttribute('data-collapsed', isExpanding ? 'false' : 'true');
+                        var header = group.querySelector('.family-row');
+                        if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
                     expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
                 });

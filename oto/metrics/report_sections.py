@@ -77,8 +77,8 @@ class SectionMixin:
             for label, value, detail in rows
         )
         return f"""
-        <section class="section">
-            <h2 class="section-title">Execution time</h2>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">Execution time</h2>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>Scope</th><th>Wall clock</th><th>Detail</th></tr></thead>
@@ -150,8 +150,8 @@ class SectionMixin:
             row_html = '<tr><td colspan="5" class="empty">No missing or below-threshold cells — every gfx900 contract cell covered at/above the bar.</td></tr>'
 
         return f"""
-        <section class="section">
-            <h2 class="section-title">gfx900 contract cells (RED = missing, ORANGE = &lt;50% ceiling)</h2>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">gfx900 contract cells (RED = missing, ORANGE = &lt;50% ceiling)</h2>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -178,10 +178,10 @@ class SectionMixin:
             label = (v.family or v.dtype or "unknown").upper()
             groups.setdefault(label, []).append(v.shape)
 
-        empty = ("<section class=\"section\"><h2 class=\"section-title\">Problem "
-                 "space explored</h2><div class=\"table-wrap\"><table><tbody>"
+        empty = ("<section class=\"section collapsible\" data-collapsed=\"true\"><h2 class=\"section-title\" tabindex=\"0\" role=\"button\" aria-expanded=\"false\">Problem "
+                 "space explored</h2><div class=\"section-body\"><div class=\"table-wrap\"><table><tbody>"
                  "<tr><td class=\"empty\">No analytics recorded yet.</td></tr>"
-                 "</tbody></table></div></section>")
+                 "</tbody></table></div></div></section>")
         if not groups:
             return empty
 
@@ -204,8 +204,8 @@ class SectionMixin:
                     <td class="num">{footprint}</td>
                 </tr>"""
         return f"""
-        <section class="section">
-            <h2 class="section-title">Problem space explored</h2>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">Problem space explored</h2>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -223,6 +223,40 @@ class SectionMixin:
         </section>
         """
 
+    def _coverage_matrix_row(self, fam, cov, t):
+        """Build one row for the coverage matrix table."""
+        if cov is not None:
+            completed = (f"{cov['deck_cells_measured']} / {cov['deck_cells']} deck"
+                         f" <span class=\"mono secondary\" title=\"measured config-cells vs shipped kernels\">"
+                         f"{cov['measured_cells']} / {cov['expected_kernels']} kernels</span>")
+            measured = cov["measured_cells"] > 0
+        else:
+            completed = f"{t['cells'] if t else 0} / —"
+            measured = bool(t and t["cells"])
+        mean_sec = f"{t['mean_sec']:.1f}" if t else "—"
+        total_min = f"{t['total_min']:.1f}" if t else "—"
+        if measured:
+            tag, status = "tag tag-pass", "Active"
+        else:
+            tag, status = "tag tag-info", "No data"
+        return f"""
+                <tr>
+                    <td class="mono strong">{fam}</td>
+                    <td class="num">{completed}</td>
+                    <td class="num">{mean_sec}</td>
+                    <td class="num">{total_min}</td>
+                    <td><span class="{tag}">{status}</span></td>
+                </tr>"""
+
+    def _coverage_matrix_rows(self, report, fam_keys, timing):
+        """Build all rows for the coverage matrix table."""
+        rows = ""
+        for fam in sorted(fam_keys):
+            cov = report.per_family_coverage.get(fam)
+            t = timing.get(fam)
+            rows += self._coverage_matrix_row(fam, cov, t)
+        return rows
+
     def _coverage_matrix_section(self, report) -> str:
         """Coverage + exec-time matrix from registry timing."""
         timing = report.family_timing or {}
@@ -236,35 +270,31 @@ class SectionMixin:
         if not fam_keys:
             return empty
 
-        rows = ""
-        for fam in sorted(fam_keys):
-            cov = report.per_family_coverage.get(fam)
-            t = timing.get(fam)
-            if cov is not None:
-                completed = (f"{cov['deck_cells_measured']} / {cov['deck_cells']} deck"
-                             f" <span class=\"mono secondary\" title=\"measured config-cells vs shipped kernels\">"
-                             f"{cov['measured_cells']} / {cov['expected_kernels']} kernels</span>")
-                measured = cov["measured_cells"] > 0
-            else:
-                completed = f"{t['cells'] if t else 0} / —"
-                measured = bool(t and t["cells"])
-            mean_sec = f"{t['mean_sec']:.1f}" if t else "—"
-            total_min = f"{t['total_min']:.1f}" if t else "—"
-            if measured:
-                tag = "tag tag-pass"
-                status = "Active"
-            else:
-                tag = "tag tag-info"
-                status = "No data"
-            rows += f"""
-                <tr>
-                    <td class="mono strong">{fam}</td>
-                    <td class="num">{completed}</td>
-                    <td class="num">{mean_sec}</td>
-                    <td class="num">{total_min}</td>
-                    <td><span class="{tag}">{status}</span></td>
-                </tr>"""
-        return f"""<section class="section"><h2 class="section-title">Coverage matrix &amp; execution time</h2><div class="table-wrap"><table><thead><tr><th>Family</th><th>Completed cells</th><th>Mean time / cell (s)</th><th>Total time (min)</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table></div></section>"""
+        rows = self._coverage_matrix_rows(report, fam_keys, timing)
+        return f"""
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Coverage matrix & execution time
+            </h2>
+            <div class="section-body">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Family</th>
+                                <th>Completed cells</th>
+                                <th>Mean time / cell (s)</th>
+                                <th>Total time (min)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        """
 
     def _load_run_telemetry(self, run_dir) -> Optional[Dict[str, Dict[str, float]]]:
         """Parse logs/telemetry.csv from the run directory (median + peak per metric)."""
@@ -307,10 +337,10 @@ class SectionMixin:
         """Telemetry table derived from the run's telemetry.csv (drop fabricated values)."""
         stats = self._load_run_telemetry(report.run_dir)
 
-        empty = ("<section class=\"section\"><h2 class=\"section-title\">Telemetry "
-                 "insights (gfx90c APU)</h2><div class=\"table-wrap\"><table><tbody>"
+        empty = ("<section class=\"section collapsible\" data-collapsed=\"true\"><h2 class=\"section-title\" tabindex=\"0\" role=\"button\" aria-expanded=\"false\">Telemetry "
+                 "insights (gfx90c APU)</h2><div class=\"section-body\"><div class=\"table-wrap\"><table><tbody>"
                  "<tr><td class=\"empty\">No telemetry CSV recorded for this run.</td>"
-                 "</tr></tbody></table></div></section>")
+                 "</tr></tbody></table></div></div></section>")
         if not stats:
             return empty
 
@@ -340,8 +370,8 @@ class SectionMixin:
                     <td class="num">{s['peak']} {units[col]}</td>
                 </tr>"""
         return f"""
-        <section class="section">
-            <h2 class="section-title">Telemetry insights (gfx90c APU)</h2>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">Telemetry insights (gfx90c APU)</h2>
             <div class="table-wrap">
                 <table>
                     <thead>

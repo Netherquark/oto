@@ -61,10 +61,13 @@ class HtmlMixin:
         for fam in sorted(verdict_families):
             fam_rows = "".join(verdict_families[fam])
             verdict_sections += f"""
-        <section class="section">
-            <h2 class="section-title">Native vs spoof A/B &mdash; {fam}</h2>
-            <div class="table-wrap">
-                <table>
+        <section class="section collapsible" data-collapsed="true">
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
+                Native vs spoof A/B &mdash; {fam}
+            </h2>
+            <div class="section-body">
+                <div class="table-wrap">
+                    <table>
                     <thead>
                         <tr>
                             <th>Dtype</th>
@@ -79,6 +82,7 @@ class HtmlMixin:
                     <tbody>{fam_rows}
                     </tbody>
                 </table>
+                </div>
             </div>
         </section>
         """
@@ -147,8 +151,8 @@ class HtmlMixin:
         rows = []
         for fam, cov, best, ceil, theo, pct, pct_theo in family_data:
             rows.append(f"""
-            <tbody class="family-group">
-                <tr class="family-row">
+            <tbody class="family-group" data-collapsed="true">
+                <tr class="family-row" tabindex="0" role="button" aria-expanded="false">
                     <th scope="rowgroup" class="mono strong">{fam}</th>
                     <td class="num">{cov.get('deck_cells_measured', 0)} / {cov.get('deck_cells', 0)} <span class="mono secondary" title="distinct shipped gfx900 kernels in the pinned manifest for this family">{cov.get('expected_kernels', 0)} shipped</span></td>
                     <td class="num strong">{best:.1f}</td>
