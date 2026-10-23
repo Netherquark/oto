@@ -66,7 +66,8 @@ JS_COLLAPSIBLE = r"""
                         var header = group.querySelector('.family-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
-                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                    expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
+                    expandBtn.setAttribute('aria-label', isExpanding ? 'Collapse all sections' : 'Expand all sections');
                 });
             }
         })();
@@ -564,7 +565,8 @@ JS_COLLAPSIBLE = r"""
                         var header = group.querySelector('.family-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
-                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                    expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
+                    expandBtn.setAttribute('aria-label', isExpanding ? 'Collapse all sections' : 'Expand all sections');
                 });
             }
         })();
@@ -639,7 +641,8 @@ JS_COLLAPSIBLE = r"""
                         var header = group.querySelector('.family-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
-                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                    expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
+                    expandBtn.setAttribute('aria-label', isExpanding ? 'Collapse all sections' : 'Expand all sections');
                 });
             }
         })();
@@ -731,7 +734,8 @@ JS_COLLAPSIBLE = r"""
                         var header = group.querySelector('.family-row');
                         if (header) header.setAttribute('aria-expanded', isExpanding ? 'true' : 'false');
                     });
-                    expandBtn.textContent = isExpanding ? 'Collapse all' : 'Expand all';
+                    expandBtn.textContent = isExpanding ? '\u25B4' : '\u25BE';
+                    expandBtn.setAttribute('aria-label', isExpanding ? 'Collapse all sections' : 'Expand all sections');
                 });
             }
         })();

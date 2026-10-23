@@ -201,7 +201,7 @@ class HtmlMixin:
             <span class="shell-sub">Acceptance dashboard</span>
         </div>
         <div class="shell-actions">
-            <button id="expand-all" class="theme-toggle" type="button" aria-label="Expand all sections">Expand all</button>
+            <button id="expand-all" class="theme-toggle" type="button" aria-label="Expand all sections">&#9662;</button>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode">☾</button>
         </div>
     </div>
