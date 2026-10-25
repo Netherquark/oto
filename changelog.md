@@ -9,6 +9,37 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-28 (11th) — user-provided ROCm + rocm-libraries super-repo
+  support.** `oto.runners.toolchain.resolve_tensile_root` now discovers Tensile
+  under `projects/Tensile`, `shared/Tensile`, or `Tensile/` of a
+  rocm-libraries checkout (in addition to a standalone checkout), and
+  `oto.tensile.best_library._ensure_tensile_importable` honours `TENSILE_ROOT`
+  / `OTO_TENSILE_ROOT` plus the super-repo layouts and the dotenv-loaded
+  value. ROCm paths continue to resolve from explicit env (`.env` or shell) via
+  `resolve_rocm_paths()` with native fallback (hipconfig / PATH), so a
+  user-supplied ROCm 7.x (TheRock or system) is used as-is; the 6.4.4
+  codegen path remains the verified baseline. New tests: none added (existing
+  `test_best_library` + `test_interactive_keys` cover the surface).
+
+- **2026-10-27 (10th) — best-effort gfx90c TensileLibrary.dat generator
+  (`--best-library`).** New CPU-only command carving the winner set from the
+  full kernel database (all runs, all protocols): one family-protocol winner
+  per shipped cell (38 cells, 19 distinct configs) with an honest fallback
+  chain (native basis-filtered -> native any-protocol -> floor row -> first
+  gate-legal family-deck tile), normalised through the same launch gates, then
+  emitted as per-family library-logic YAMLs in the Tensile-confirmed schema
+  (derived ProblemType state, `ProblemType: derive` solutions, `Matching`
+  table) and built with `TensileCreateLibrary --merge-files
+  --code-object-version=V4` into `TensileLibrary.dat` +
+  `TensileLibrary_gfx90c.co` under `gfx90c_results/best_effort_library/`
+  (default). `--protocol-basis` is honoured (family default; `any` reproduces
+  the pre-basis mixed view). Parity (no contraction/extension vs the shipped
+  grid) and the anti-alias scan are gated; a per-cell provenance manifest
+  (`best_effort_library.json`) is written. New module `oto/tensile/best_library.py`,
+  driver method `SynthesisMixin.synthesize_best_library`, flag `--best-library
+  [DEST]`, handler `_stage_best_library`; tests in `tests/test_best_library.py`
+  (6 cases). Function-length AC preserved (all helpers ≤60 lines).
+
 - **2026-10-24 (9th) — the coverage maps re-read on the like-for-like census;
   one genuine hole found and filled with R50d (4 rows, appended after the
   R50 batch).** The §R57 study (see `potential_configs.md` §R57) crosses the

@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 import oto.tensile.library as tlib
+import oto.tensile.best_library as bestlib
 
 
 class SynthesisMixin:
@@ -131,3 +132,14 @@ class SynthesisMixin:
 
         # 4. Regression gate: verify full shipped gfx900 footprint coverage
         return self._library_result(final_lib_dir)
+
+    def synthesize_best_library(self, dest: Optional[Path] = None,
+                                protocol_basis: str = "family") -> Dict[str, Any]:
+        """Carve a best-effort gfx90c TensileLibrary.dat from the full db."""
+        dest = Path(dest) if dest else (self.base_dir / "gfx90c_results"
+                                       / "best_effort_library")
+        result = bestlib.build_best_library(
+            self.base_dir, dest, basis=protocol_basis,
+            tensile_root=getattr(self, "tensile_root", None))
+        print(f"Best-effort library: {result}")
+        return result

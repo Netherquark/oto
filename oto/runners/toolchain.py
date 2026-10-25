@@ -64,10 +64,18 @@ def require_tensile_root(explicit: Optional[Path],
     if not candidate:
         raise ValueError(
             "TENSILE_ROOT is not set. Configure it in the repo-root `.env` "
-            "(TENSILE_ROOT=<path to Tensile checkout>), export it, or pass "
-            "--tensile-root."
+            "(TENSILE_ROOT=<path to Tensile checkout or rocm-libraries root>), "
+            "export it, or pass --tensile-root."
         )
     resolved = Path(candidate).resolve()
+    # Support both the standalone Tensile checkout and the rocm-libraries
+    # super-repo layout, where Tensile lives under projects/ or shared/.
+    if not (resolved / "Tensile" / "bin" / "Tensile").exists():
+        for sub in ("projects/Tensile", "shared/Tensile", "Tensile"):
+            alt = resolved / sub
+            if (alt / "Tensile" / "bin" / "Tensile").exists():
+                resolved = alt
+                break
     if not (resolved / "Tensile" / "bin" / "Tensile").exists():
         raise ValueError(
             f"TENSILE_ROOT {resolved} has no Tensile/bin/Tensile. Fix the "
