@@ -26,7 +26,7 @@ from oto.runners.driver import TensileDriver
 #: read-only query pollutes the ledger with an empty run and shifts
 #: ``latest_run_id`` away from the run the operator meant.
 READ_ONLY_STAGES = {"2", "candidate", "4", "retirement", "5", "analytics",
-                    "7", "report"}
+                    "7", "report", "library", "best-library"}
 #: Stages that only validate. An invocation that stops after one of these needs
 #: no run directory; creating one would leave a phantom 'started' run behind.
 PREFLIGHT_STAGES = {"1", "preflight", "manifest"}
@@ -70,6 +70,23 @@ def _stage_report(driver, args, stage) -> Optional[int]:
                                      native_agg=args.native_agg,
                                      protocol_basis=args.protocol_basis)
     return 0 if result else 1
+
+
+def _stage_best_library(driver, args, stage) -> Optional[int]:
+    """Build a best-effort gfx90c TensileLibrary.dat from the full db."""
+    if (args.best_library is None and "library" not in stage
+            and "best-library" not in stage and "best_library" not in stage):
+        return None
+    dest = args.best_library if args.best_library else None
+    # Default to the across-all-runs view ("any") unless the caller explicitly
+    # chose a protocol basis on the command line.
+    if "--protocol-basis" in sys.argv or "--protocol_basis" in sys.argv:
+        basis = args.protocol_basis
+    else:
+        basis = "any"
+    result = driver.synthesize_best_library(dest, protocol_basis=basis)
+    print(f"Best-effort library result: {result}")
+    return 0 if result.get("status") != "failed" else 1
 
 
 def _stage_synthesis(driver, args, stage) -> Optional[int]:
@@ -291,7 +308,8 @@ def main() -> int:
     args = parser.parse_args()
 
     stage = set(args.stage or [])
-    report_only = args.report is not None or bool(stage & READ_ONLY_STAGES)
+    report_only = (args.report is not None or args.best_library is not None
+                   or bool(stage & READ_ONLY_STAGES))
     preflight_only = _ends_after_preflight(args, stage)
 
     driver = TensileDriver(
@@ -308,8 +326,8 @@ def main() -> int:
     # A table, in stage order. Each handler declares the flags it owns and
     # returns None to fall through, so a new flag cannot be declared without
     # being consulted somewhere (guarded by test_interactive_keys.py).
-    for handler in (_stage_preflight, _stage_report, _stage_synthesis,
-                    _stage_candidate_plan, _stage_retirement,
+    for handler in (_stage_preflight, _stage_report, _stage_best_library,
+                    _stage_synthesis, _stage_candidate_plan, _stage_retirement,
                     _stage_analytics, _stage_gfx900_reference):
         code = handler(driver, args, stage)
         if code is not None:

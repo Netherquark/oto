@@ -1,0 +1,457 @@
+"""Best-effort gfx90c ``TensileLibrary.dat`` carved from the full kernel database.
+
+Owns: reading the complete measured corpus (``kernel_db.json``, every run, every
+protocol), picking the best family-protocol config per shipped cell (with an
+honest fallback chain), deduplicating configs per family, emitting the
+per-family library-logic YAMLs in the Tensile-confirmed schema, and driving
+``TensileCreateLibrary --merge-files --code-object-version=V4`` to produce
+``TensileLibrary.dat`` + ``TensileLibrary_gfx90c.co`` under the chosen
+destination. Also owns the per-cell provenance manifest and the parity /
+anti-alias gates.
+
+Does NOT own: the kernel database (oto.harness.kernel_db), the protocol stamp
+(oto.metrics.protocol), the launch gates (oto.tensile.gates), or the Tensile
+environment (oto.runners.toolchain).
+
+Public API: ``cell_solution_map``, ``dedupe_configs``, ``emit_logic_yaml``,
+``build_best_library``.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import yaml
+
+from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES
+from oto.harness.coverage_map import _cell_family
+from oto.harness.kernel_db import read_kernel_db
+from oto.metrics.protocol import UNKNOWN, protocol_of
+from oto.tensile.library_parity import parity_report
+from oto.tensile.synthesis.db import DBMutator
+
+def _tensile_candidates() -> List[str]:
+    cands = []
+    for var in ("TENSILE_ROOT", "OTO_TENSILE_ROOT"):
+        v = os.environ.get(var)
+        if v:
+            cands.append(v)
+    # rocm-libraries super-repo layouts: Tensile may live under these subpaths.
+    for base in list(cands):
+        for sub in ("", "projects/Tensile", "shared/Tensile"):
+            p = os.path.join(base, sub) if sub else base
+            if os.path.isdir(os.path.join(p, "Tensile", "bin")):
+                cands.append(p)
+    cands.append("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
+    # try dotenv-loaded value
+    try:
+        from oto.runners.toolchain import DEFAULT_TENSILE_ROOT
+        if DEFAULT_TENSILE_ROOT is not None:
+            cands.append(str(DEFAULT_TENSILE_ROOT))
+    except Exception:
+        pass
+    return cands
+
+_TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
+                       if os.path.isdir(os.path.join(c, "Tensile", "bin"))]
+
+# Shipped cells: (family, "SxSxS") for every family's FAMILY_SHAPES.
+SHIPPED_CELLS: Set[Tuple[str, str]] = {
+    (f, f"{s}x{s}x{s}") for f, ss in FAMILY_SHAPES.items() for s in ss
+}
+
+
+def _expand_tensile_root(root: str) -> List[str]:
+    out = []
+    for sub in ("", "projects/Tensile", "shared/Tensile"):
+        p = os.path.join(root, sub) if sub else root
+        if os.path.isdir(os.path.join(p, "Tensile", "bin")):
+            out.append(p)
+    return out if out else [root]
+
+
+def _ensure_tensile_importable(tensile_root: Optional[Path] = None) -> None:
+    roots = []
+    if tensile_root is not None:
+        roots += _expand_tensile_root(str(tensile_root))
+    for r in _TENSILE_CANDIDATES:
+        roots += _expand_tensile_root(r)
+    for r in roots:
+        if r and r not in sys.path:
+            sys.path.insert(0, r)
+    _ = __import__("Tensile.SolutionStructs", fromlist=["ProblemType"])
+
+
+def _best_row(rows: List[Dict[str, Any]], basis: str) -> Optional[Dict[str, Any]]:
+    eligible = []
+    for r in rows:
+        p = protocol_of(r)
+        if basis == "any":
+            if p != UNKNOWN:
+                eligible.append(r)
+        elif p == basis:
+            eligible.append(r)
+    if not eligible:
+        return None
+    return max(eligible, key=lambda r: float(r.get("gflops_median") or 0.0))
+
+
+def _cell_rows_from_db(db: Dict[str, Any], basis: str) -> Dict[Tuple[str, str], Dict[str, List[Dict[str, Any]]]]:
+    pools: Dict[Tuple[str, str], Dict[str, List[Dict[str, Any]]]] = {}
+    for run_id, rlist in db.items():
+        is_floor = str(run_id).startswith("gfx900_ref")
+        for r in rlist:
+            fam = _cell_family(r)
+            shape = r.get("shape")
+            if not fam or not shape:
+                continue
+            cell = (fam, shape)
+            if cell not in SHIPPED_CELLS:
+                continue
+            pool = pools.setdefault(cell, {"native_basis": [], "native_any": [], "floor": []})
+            rr = dict(r)
+            rr["_run"] = run_id
+            if is_floor:
+                pool["floor"].append(rr)
+            else:
+                pool["native_any"].append(rr)
+                p = protocol_of(r)
+                if basis == "any" or p == basis:
+                    pool["native_basis"].append(rr)
+    return pools
+
+
+def _carve_one_cell(cell, pool, mut, sched, ldspad_feasible, basis):
+    """Return (info_dict, step_label, refused_flag, refused_entry)."""
+    from oto.tensile.decks import FAMILY_DECKS
+    fam = cell[0]
+    chain = [
+        ("native_basis", _best_row(pool["native_basis"], basis)),
+        ("native_any", _best_row(pool["native_any"], "any")),
+        ("floor", _best_row(pool["floor"], "any")),
+    ]
+    deck_entry = None
+    for cand in FAMILY_DECKS.get(fam, []):
+        cfg = {**mut._template(fam), **mut._normalize_tile(cand)}
+        ok, _ = sched.validate_config(cfg)
+        if ok:
+            ok, _ = ldspad_feasible(cfg)
+        if ok:
+            deck_entry = cand
+            break
+    chain.append(("deck_fallback", deck_entry))
+
+    for step, row in chain:
+        if row is None:
+            continue
+        cand_cfg = {**mut._template(fam), **mut._normalize_tile(row)}
+        ok, _ = sched.validate_config(cand_cfg)
+        if ok:
+            ok, _ = ldspad_feasible(cand_cfg)
+        if ok:
+            return cand_cfg, step, row, None
+
+    refused_entry = {"cell": f"{cell[0]}:{cell[1]}", "reason": "no gate-legal candidate in chain"}
+    return None, None, None, refused_entry
+
+
+def _provenance(cell, step, row, basis):
+    fam = cell[0]
+    prov = {"chain_step": step, "family": fam, "shape": cell[1]}
+    if step in ("native_basis", "native_any"):
+        prov.update({
+            "run": row.get("_run") if isinstance(row, dict) else None,
+            "protocol": row.get("protocol"),
+            "gflops_median": row.get("gflops_median"),
+            "phase": row.get("phase"),
+            "n_problems": row.get("n_problems"),
+        })
+    elif step == "floor":
+        prov.update({
+            "run": "gfx900_ref (floor)",
+            "protocol": row.get("protocol"),
+            "gflops_median": row.get("gflops_median"),
+            "phase": row.get("phase"),
+        })
+    else:
+        prov.update({"run": "deck fallback", "protocol": "n/a"})
+    return prov
+
+
+def cell_solution_map(base_dir: Path, basis: str = "family",
+                      kernel_db_path: Optional[Path] = None) -> Tuple[
+        Dict[Tuple[str, str], Dict[str, Any]],
+        List[Dict[str, Any]], Dict[str, Any]]:
+    base_dir = Path(base_dir)
+    db_path = Path(kernel_db_path) if kernel_db_path else (
+        base_dir / "gfx90c_results" / "analysis" / "kernel_db.json")
+    db = read_kernel_db(db_path)
+    pools = _cell_rows_from_db(db, basis)
+
+    mut = DBMutator(base_dir, None)
+    sched = mut._scheduler()
+    from oto.tensile.gates.occupancy import ldspad_feasible
+
+    cell_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    refused: List[Dict[str, Any]] = []
+    stats: Dict[str, Any] = {
+        "basis": basis, "cells": len(SHIPPED_CELLS),
+        "native_basis_winners": 0, "native_any_winners": 0,
+        "floor_winners": 0, "deck_fallbacks": 0, "refused": 0,
+    }
+
+    for cell in sorted(SHIPPED_CELLS, key=lambda c: (c[0], c[1])):
+        pool = pools.get(cell, {"native_basis": [], "native_any": [], "floor": []})
+        cand_cfg, step, row, refused_entry = _carve_one_cell(
+            cell, pool, mut, sched, ldspad_feasible, basis)
+        if refused_entry is not None:
+            refused.append(refused_entry)
+            stats["refused"] += 1
+            continue
+        prov = _provenance(cell, step, row, basis)
+        if step == "native_basis":
+            stats["native_basis_winners"] += 1
+        elif step == "native_any":
+            stats["native_any_winners"] += 1
+        elif step == "floor":
+            stats["floor_winners"] += 1
+        else:
+            stats["deck_fallbacks"] += 1
+        cell_map[cell] = {"config": cand_cfg, "provenance": prov, "chain": step}
+
+    stats["refused"] = len(refused)
+    return cell_map, refused, stats
+
+
+def mut_key(cfg: Dict[str, Any]) -> str:
+    return DBMutator(".", None)._tile_key(cfg)
+
+
+def dedupe_configs(cell_map: Dict[Tuple[str, str], Dict[str, Any]]) -> Tuple[
+        Dict[str, List[Dict[str, Any]]], Dict[str, List[Tuple[str, str]]]]:
+    families: Dict[str, List[Dict[str, Any]]] = {}
+    cells_by_key: Dict[str, List[Tuple[str, str]]] = {}
+    for cell, info in cell_map.items():
+        cfg = info["config"]
+        fam = cell[0]
+        key = mut_key(cfg)
+        bucket = families.setdefault(fam, [])
+        if key not in {mut_key(c) for c in bucket}:
+            bucket.append(cfg)
+        cells_by_key.setdefault(key, []).append(cell)
+    return families, cells_by_key
+
+
+def _problem_type_state(fam: str, tensile_root: Optional[Path] = None) -> Dict[str, Any]:
+    _ensure_tensile_importable(tensile_root)
+    from Tensile.SolutionStructs import ProblemType
+    from Tensile.LibraryIO import updateProblemDatatypes
+    dtype_char = FAMILY_DTYPE_CHAR.get(fam, "S")
+    is_hpa = "HPA" in fam
+    is_hs = fam == "HS_HPA"
+    pt = ProblemType({
+        "OperationType": "GEMM",
+        "DataType": dtype_char,
+        "TransposeA": False,
+        "TransposeB": True,
+        "UseBeta": True,
+        "Batched": True,
+        "HighPrecisionAccumulate": is_hpa,
+        **({"DestDataType": "s", "ComputeDataType": "s"} if is_hs else {}),
+    })
+    state = dict(pt.state)
+    updateProblemDatatypes(state)
+    return state
+
+
+def _state_sol(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    sol = dict(cfg)
+    mt = [int(x) for x in str(cfg["MacroTile"]).split("x")]
+    sol["MacroTile"] = mt[:2]
+    sol["ThreadTile"] = [int(x) for x in str(cfg["ThreadTile"]).split("x")]
+    if "WorkGroup" in cfg:
+        sol["WorkGroup"] = [int(x) for x in str(cfg["WorkGroup"]).split("x")]
+    sol["ProblemType"] = "derive"
+    sol["KernelLanguage"] = "Assembly"
+    return sol
+
+
+def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root):
+    sols = families[fam]
+    state_sols = [_state_sol(cfg) for cfg in sols]
+
+    table = []
+    for cell, info in cell_map.items():
+        if cell[0] != fam:
+            continue
+        cfg = info["config"]
+        idx = None
+        for i, c in enumerate(sols):
+            if mut_key(c) == mut_key(cfg):
+                idx = i
+                break
+        if idx is None:
+            continue
+        s = int(cell[1].split("x")[0])
+        speed = info["provenance"].get("gflops_median")
+        table.append([[s, s, s, 1], [idx, round(float(speed or 0.0), 1)]])
+
+    root = {
+        "MinimumRequiredVersion": "4.44.0",
+        "CustomKernelName": f"gfx90c_{fam}_lib",
+        "ScheduleName": "isa",
+        "ArchitectureName": "gfx90c",
+        "DeviceNames": ["gfx90c"],
+        "ProblemType": _problem_type_state(fam, tensile_root),
+        "Solutions": state_sols,
+        "LibraryType": "Matching",
+        "Library": {"indexOrder": [2, 3, 1, 0], "table": table,
+                    "distance": "Equality"},
+    }
+    (dest_logic_dir / f"gfx90c_{fam}.yaml").write_text(
+        yaml.safe_dump(root, sort_keys=False))
+
+    winning_shapes = sorted({cell[1] for cell in cell_map if cell[0] == fam})
+    return {
+        "phase_id": f"best-library-{fam}",
+        "config": {"FamilyLabel": fam},
+        "shapes": winning_shapes,
+    }
+
+
+def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
+                    dest_logic_dir: Path,
+                    tensile_root: Optional[Path] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    dest_logic_dir = Path(dest_logic_dir)
+    dest_logic_dir.mkdir(parents=True, exist_ok=True)
+    families, _ = dedupe_configs(cell_map)
+
+    phases: List[Dict[str, Any]] = []
+    for fam in sorted(families):
+        phase = _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root)
+        phases.append(phase)
+
+    parity = parity_report(phases)
+    return phases, parity
+
+
+def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> Tuple[bool, List[str]]:
+    anti_alias_passed = True
+    leak_files: List[str] = []
+    for path in list(Path(logic_dir).glob("*.yaml")) + list(Path(final_lib_dir).glob("*")):
+        if path.is_file():
+            try:
+                content = path.read_text(errors="ignore")
+                if "gfx900" in content or "vega10" in content:
+                    anti_alias_passed = False
+                    leak_files.append(str(path))
+            except Exception:
+                pass
+    return anti_alias_passed, leak_files
+
+
+def _tensile_env(tensile_root: Path) -> Dict[str, str]:
+    from oto.runners.toolchain import resolve_rocm_paths
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{tensile_root}:{env.get('PYTHONPATH', '')}".strip(":")
+    try:
+        rocm = resolve_rocm_paths()
+        env["ROCM_PATH"] = rocm.get("ROCM_PATH", env.get("ROCM_PATH", ""))
+        env["HIP_PATH"] = rocm.get("HIP_PATH", env.get("HIP_PATH", ""))
+    except Exception:
+        pass
+    for cand in ("/usr/lib64/rocm/llvm/lib/clang", "/opt/rocm/llvm/lib/clang"):
+        if os.path.isdir(cand):
+            for ver in sorted(os.listdir(cand), reverse=True):
+                bc = os.path.join(cand, ver, "amdgcn", "bitcode")
+                if os.path.isdir(bc):
+                    env.setdefault("HIP_DEVICE_LIB_PATH", bc)
+                    env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
+                    break
+    llvm_bin = "/usr/lib64/rocm/llvm/bin"
+    if os.path.isdir(llvm_bin) and llvm_bin not in env.get("PATH", ""):
+        env["PATH"] = f"{llvm_bin}:{env.get('PATH', '')}"
+    return env
+
+
+def _run_tcl(tensile_root, logic_dir, final_lib_dir):
+    tensile_root = Path(tensile_root)
+    tcl_bin = tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
+    if not tcl_bin.exists():
+        return False, True, f"TensileCreateLibrary not found at {tcl_bin}"
+    env = _tensile_env(tensile_root)
+    cmd = [sys.executable, str(tcl_bin), "--architecture=gfx90c",
+           "--code-object-version=V4", "--merge-files",
+           str(logic_dir), str(final_lib_dir), "HIP"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env,
+                              cwd=str(tensile_root), timeout=3600)
+    except Exception as exc:  # pragma: no cover - defensive
+        return True, True, str(exc)
+    if proc.returncode != 0:
+        return True, True, (proc.stderr or "")[-1500:]
+    return True, False, None
+
+
+def build_best_library(base_dir: Path, dest: Path, basis: str = "family",
+                       tensile_root: Optional[Path] = None,
+                       kernel_db_path: Optional[Path] = None) -> Dict[str, Any]:
+    base_dir = Path(base_dir)
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    logic_dir = dest / "3_LibraryLogic"
+    final_lib_dir = dest / "FinalLibrary"
+    logic_dir.mkdir(parents=True, exist_ok=True)
+    final_lib_dir.mkdir(parents=True, exist_ok=True)
+
+    cell_map, refused, stats = cell_solution_map(base_dir, basis, kernel_db_path)
+    phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root)
+
+    anti_alias_passed, leak_files = anti_alias_scan(logic_dir, final_lib_dir)
+
+    tcl_ran = False
+    tcl_failed = False
+    tcl_error = None
+    if tensile_root is not None:
+        tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir)
+
+    manifest = {
+        "basis": basis,
+        "cells": len(cell_map),
+        "refused": refused,
+        "stats": stats,
+        "parity": parity,
+        "anti_alias_passed": anti_alias_passed,
+        "anti_alias_leaks": leak_files,
+        "tcl_ran": tcl_ran,
+        "tcl_failed": tcl_failed,
+        "tcl_error": tcl_error,
+        "per_cell": [
+            {"cell": f"{c[0]}:{c[1]}", "chain": info["chain"],
+             "provenance": info["provenance"],
+             "config": info["config"]}
+            for c, info in sorted(cell_map.items())
+        ],
+    }
+    (dest / "best_effort_library.json").write_text(json.dumps(manifest, indent=2, default=str))
+
+    status = "success"
+    if tcl_failed or refused or not parity.get("parity_ok", False):
+        status = "partial"
+    return {
+        "status": status,
+        "dest": str(dest),
+        "cells": len(cell_map),
+        "refused": len(refused),
+        "parity_ok": parity.get("parity_ok", False),
+        "anti_alias_passed": anti_alias_passed,
+        "tcl_ran": tcl_ran,
+        "tcl_failed": tcl_failed,
+        "tcl_error": tcl_error,
+        "library_path": str(final_lib_dir) if (tcl_ran and not tcl_failed) else None,
+    }
