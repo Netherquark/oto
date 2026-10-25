@@ -373,7 +373,16 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
                     env.setdefault("HIP_DEVICE_LIB_PATH", bc)
                     env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
                     break
-    llvm_bin = "/usr/lib64/rocm/llvm/bin"
+    # user-provided ROCm: ensure its own headers are on the include path so the
+    # compiler does not fall back to a mismatched system /usr/include/hip.
+    rocm_path = env.get("ROCM_PATH", "")
+    if rocm_path and os.path.isdir(os.path.join(rocm_path, "include")):
+        inc = os.path.join(rocm_path, "include")
+        env["CPLUS_INCLUDE_PATH"] = inc + (":" + env["CPLUS_INCLUDE_PATH"] if env.get("CPLUS_INCLUDE_PATH") else "")
+        env["C_INCLUDE_PATH"] = inc + (":" + env["C_INCLUDE_PATH"] if env.get("C_INCLUDE_PATH") else "")
+        env.setdefault("HIP_DEVICE_LIB_PATH", os.path.join(rocm_path, "lib", "llvm", "amdgcn", "bitcode"))
+        env.setdefault("ROCM_DEVICE_LIB_PATH", os.path.join(rocm_path, "lib", "llvm", "amdgcn", "bitcode"))
+    llvm_bin = env.get("ROCM_LLVM_BIN", "/usr/lib64/rocm/llvm/bin")
     if os.path.isdir(llvm_bin) and llvm_bin not in env.get("PATH", ""):
         env["PATH"] = f"{llvm_bin}:{env.get('PATH', '')}"
     return env
