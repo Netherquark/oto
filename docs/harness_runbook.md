@@ -171,7 +171,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    python3 -m pytest -q tests/test_library_parity.py
    ```
    The suite is CPU-only and fast (2 m 10 s serial, 1 m 27 s with
-   `pytest -n auto`, 36 s for `pytest -m preflight`): the YAML reader uses
+   `pytest -n auto`, 37 s for `pytest -m preflight`): the YAML reader uses
    libyaml, the corpus reads are memoised and the legality gates are cached
    by config content. `OTO_GUARD_FILES=1` narrows the tree-walking guards
    (`test_function_length`, `test_pyflakes`) to the files git reports as

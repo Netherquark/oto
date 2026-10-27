@@ -28,7 +28,7 @@ OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_function_l
 # 4. Full test suite (2m10s serial, 1m27s with -n auto)
 python3 -m pytest -q
 python3 -m pytest -q -n auto          # distributed (pytest-xdist)
-python3 -m pytest -q -m preflight      # the pre-run subset the checklist runs (36 s)
+python3 -m pytest -q -m preflight      # the pre-run subset the checklist runs (37 s)
 
 # 5. Gate calibration / failure triage (CPU-only, read-only)
 python3 -m oto.harness.gate_calibration --population ours
@@ -205,7 +205,7 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
   the background** (background mode) so the conversation is not blocked; read the
   result when it completes. Never sleep/poll for it.
 - **The suite is fast now** (2 m 10 s serial, 1 m 27 s with `-n auto`,
-  36 s for `-m preflight`): the YAML reader uses libyaml, the corpus reads are
+  37 s for `-m preflight`): the YAML reader uses libyaml, the corpus reads are
   memoised and the legality gates are cached by config content. A run that
   takes longer than that is doing something new -- check the durations
   (`pytest --durations=10`) before assuming the machine is slow.
