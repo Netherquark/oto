@@ -136,8 +136,7 @@ class SynthesisMixin:
     def synthesize_best_library(self, dest: Optional[Path] = None,
                                 protocol_basis: str = "family") -> Dict[str, Any]:
         """Carve a best-effort gfx90c TensileLibrary.dat from the full db."""
-        dest = Path(dest) if dest else (self.base_dir / "gfx90c_results"
-                                       / "best_effort_library")
+        dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
             tensile_root=getattr(self, "tensile_root", None))

@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-10-29 (12th) — best-effort build fixed on system ROCm; default
+  destination made explicit.** `_tensile_env` no longer prepends
+  compiler-default system includes (`/usr/include`, `/usr/local/include`) to
+  `CPLUS_INCLUDE_PATH` / `C_INCLUDE_PATH`. With `ROCM_PATH=/usr` the old code
+  duplicated `/usr/include`, so Clang's libstdc++ shim skipped the real header
+  via `#include_next <math.h>` and `TensileCreateLibrary` died with
+  `fatal error: 'math.h' file not found`. The default output is now a named
+  constant (`DEFAULT_BEST_LIBRARY_SUBDIR` /
+  `default_best_library_dest()`): `gfx90c_results/best_effort_library/`, used by
+  both the CLI and `build_best_library`. Verified end-to-end with the system
+  ROCm toolchain: 38 cells, 19 configs, 0 refused, parity + anti-alias pass,
+  `TensileCreateLibrary` succeeds, and the result is
+  `FinalLibrary/library/TensileLibrary.dat` +
+  `TensileLibrary_gfx90c.co`. New tests cover the system-include guard, the
+  user-ROCm include path, and the default destination (9 cases in
+  `tests/test_best_library.py`). `library_path` now points at the directory
+  that actually contains `TensileLibrary.dat`.
+
 - **2026-10-28 (11th) — user-provided ROCm + rocm-libraries super-repo
   support.** `oto.runners.toolchain.resolve_tensile_root` now discovers Tensile
   under `projects/Tensile`, `shared/Tensile`, or `Tensile/` of a

@@ -14,7 +14,7 @@ Does NOT own: the kernel database (oto.harness.kernel_db), the protocol stamp
 environment (oto.runners.toolchain).
 
 Public API: ``cell_solution_map``, ``dedupe_configs``, ``emit_logic_yaml``,
-``build_best_library``.
+``default_best_library_dest``, ``build_best_library``.
 """
 
 from __future__ import annotations
@@ -64,6 +64,14 @@ _TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
 SHIPPED_CELLS: Set[Tuple[str, str]] = {
     (f, f"{s}x{s}x{s}") for f, ss in FAMILY_SHAPES.items() for s in ss
 }
+
+#: Default output location, relative to the oto checkout.
+DEFAULT_BEST_LIBRARY_SUBDIR = Path("gfx90c_results") / "best_effort_library"
+
+
+def default_best_library_dest(base_dir: Path) -> Path:
+    """Return the default destination for ``--best-library``."""
+    return Path(base_dir) / DEFAULT_BEST_LIBRARY_SUBDIR
 
 
 def _expand_tensile_root(root: str) -> List[str]:
@@ -375,13 +383,23 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
                     break
     # user-provided ROCm: ensure its own headers are on the include path so the
     # compiler does not fall back to a mismatched system /usr/include/hip.
+    #
+    # Never prepend a compiler-default system include. Clang's libstdc++ shim
+    # uses ``#include_next <math.h>``; duplicating /usr/include puts the same
+    # directory twice in the search path and makes include_next skip the real
+    # header ("fatal error: 'math.h' file not found").
     rocm_path = env.get("ROCM_PATH", "")
-    if rocm_path and os.path.isdir(os.path.join(rocm_path, "include")):
-        inc = os.path.join(rocm_path, "include")
+    inc = os.path.join(rocm_path, "include") if rocm_path else ""
+    system_includes = {os.path.realpath("/usr/include"),
+                       os.path.realpath("/usr/local/include")}
+    if inc and os.path.isdir(inc) and os.path.realpath(inc) not in system_includes:
         env["CPLUS_INCLUDE_PATH"] = inc + (":" + env["CPLUS_INCLUDE_PATH"] if env.get("CPLUS_INCLUDE_PATH") else "")
         env["C_INCLUDE_PATH"] = inc + (":" + env["C_INCLUDE_PATH"] if env.get("C_INCLUDE_PATH") else "")
-        env.setdefault("HIP_DEVICE_LIB_PATH", os.path.join(rocm_path, "lib", "llvm", "amdgcn", "bitcode"))
-        env.setdefault("ROCM_DEVICE_LIB_PATH", os.path.join(rocm_path, "lib", "llvm", "amdgcn", "bitcode"))
+    if rocm_path:
+        device_lib = os.path.join(rocm_path, "lib", "llvm", "amdgcn", "bitcode")
+        if os.path.isdir(device_lib):
+            env.setdefault("HIP_DEVICE_LIB_PATH", device_lib)
+            env.setdefault("ROCM_DEVICE_LIB_PATH", device_lib)
     llvm_bin = env.get("ROCM_LLVM_BIN", "/usr/lib64/rocm/llvm/bin")
     if os.path.isdir(llvm_bin) and llvm_bin not in env.get("PATH", ""):
         env["PATH"] = f"{llvm_bin}:{env.get('PATH', '')}"
@@ -407,11 +425,12 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir):
     return True, False, None
 
 
-def build_best_library(base_dir: Path, dest: Path, basis: str = "family",
+def build_best_library(base_dir: Path, dest: Optional[Path] = None,
+                       basis: str = "family",
                        tensile_root: Optional[Path] = None,
                        kernel_db_path: Optional[Path] = None) -> Dict[str, Any]:
     base_dir = Path(base_dir)
-    dest = Path(dest)
+    dest = Path(dest) if dest is not None else default_best_library_dest(base_dir)
     dest.mkdir(parents=True, exist_ok=True)
     logic_dir = dest / "3_LibraryLogic"
     final_lib_dir = dest / "FinalLibrary"
@@ -462,5 +481,5 @@ def build_best_library(base_dir: Path, dest: Path, basis: str = "family",
         "tcl_ran": tcl_ran,
         "tcl_failed": tcl_failed,
         "tcl_error": tcl_error,
-        "library_path": str(final_lib_dir) if (tcl_ran and not tcl_failed) else None,
+        "library_path": str(final_lib_dir / "library") if (tcl_ran and not tcl_failed) else None,
     }

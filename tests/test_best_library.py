@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from oto.tensile.best_library import (
-    SHIPPED_CELLS, build_best_library, cell_solution_map, dedupe_configs,
-    emit_logic_yaml,
+    SHIPPED_CELLS, _tensile_env, build_best_library, cell_solution_map,
+    default_best_library_dest, dedupe_configs, emit_logic_yaml,
 )
 
 
@@ -56,3 +56,38 @@ def test_build_best_library_carve_only(tmp_path):
 def test_basis_any_runs():
     cm, refused, stats = cell_solution_map(Path("."), "any")
     assert len(cm) == 38 and refused == []
+
+
+def test_default_best_library_dest_is_under_gfx90c_results(tmp_path):
+    assert default_best_library_dest(tmp_path) == (
+        tmp_path / "gfx90c_results" / "best_effort_library")
+
+
+def test_tensile_env_keeps_system_include_out_of_prepend_path(monkeypatch):
+    """A /usr ROCM_PATH must not duplicate /usr/include (breaks include_next)."""
+    monkeypatch.delenv("CPLUS_INCLUDE_PATH", raising=False)
+    monkeypatch.delenv("C_INCLUDE_PATH", raising=False)
+    monkeypatch.setattr(
+        "oto.runners.toolchain.resolve_rocm_paths",
+        lambda: {"ROCM_PATH": "/usr", "HIP_PATH": "/usr"},
+    )
+    env = _tensile_env(Path("/tmp/Tensile"))
+    for var in ("CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH"):
+        entries = [p for p in env.get(var, "").split(":") if p]
+        assert "/usr/include" not in entries
+
+
+def test_tensile_env_prepends_user_rocm_include(tmp_path, monkeypatch):
+    rocm = tmp_path / "rocm"
+    inc = rocm / "include"
+    inc.mkdir(parents=True)
+    (rocm / "lib" / "llvm" / "amdgcn" / "bitcode").mkdir(parents=True)
+    monkeypatch.delenv("CPLUS_INCLUDE_PATH", raising=False)
+    monkeypatch.delenv("C_INCLUDE_PATH", raising=False)
+    monkeypatch.setattr(
+        "oto.runners.toolchain.resolve_rocm_paths",
+        lambda: {"ROCM_PATH": str(rocm), "HIP_PATH": str(rocm)},
+    )
+    env = _tensile_env(Path("/tmp/Tensile"))
+    assert env["CPLUS_INCLUDE_PATH"].split(":")[0] == str(inc)
+    assert env["C_INCLUDE_PATH"].split(":")[0] == str(inc)
