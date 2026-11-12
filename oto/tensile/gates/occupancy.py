@@ -658,9 +658,9 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
         return False, f"StoreCInUnroll must be a bool (have {sci!r})"
 
-    # TransposeLDS is unreachable on gfx90c, in BOTH of its non-zero values:
+    # TransposeLDS is unreachable on the device, in BOTH of its non-zero values:
     #   * 1 is the MFMA path ("TransposeLds Supports only in
-    #     MatrixInstruction=1", SolutionStructs:4519-4521) and gfx90c has no
+    #     MatrixInstruction=1", SolutionStructs:4519-4521) and the device has no
     #     MFMA (no v_mfma_*);
     #   * -1 forces UnrollMajorLDS on the non-transposed operand
     #     (":3874-3875"), and the classic (VALU) path rejects UnrollMajorLDS

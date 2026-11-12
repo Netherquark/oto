@@ -163,7 +163,7 @@ class CandidateGenerator(CandidateEmitMixin):
     # ------------------------------------------------------------------ gates
 
     def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, str]:
-        """Is this candidate legal to launch on gfx90c?
+        """Is this candidate legal to launch on the device?
 
         Why an orchestrator and not a gate: the three gate families each answer
         one question (is the class legal, does the classic load path divide, is
@@ -244,7 +244,7 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     return _parse(shape_str)
 
 
-#: Knobs gfx90c has no hardware path for; a candidate carrying any of
+#: Knobs the device has no hardware path for; a candidate carrying any of
 #: them is refused before the deck is written.
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
@@ -377,7 +377,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (gfx90c).
+    """Modelled workgroups-per-CU from the register file (the device).
 
     Why it delegates: the previous version inferred threads from ThreadTile via
     a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore

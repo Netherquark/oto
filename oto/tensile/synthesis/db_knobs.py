@@ -20,7 +20,7 @@ from oto.device.peaks import FAMILY_DTYPE_CHAR
 
 #: Forward knobs the manifest sampler cannot reach, with their legal domains.
 #: Values are the Tensile-legal value sets (Common.py) intersected with what
-#: the gfx90c gates admit. This is the NARROW mutation space.
+#: the the device gates admit. This is the NARROW mutation space.
 #:
 #: 2026-10-16 revisions (potential_configs.md §0 R6):
 #: * ``StaggerUStride`` (0,64,128,256). Tensile silently raises SUS to a whole
@@ -70,7 +70,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
 #: *Structural* -- ``>1`` can never run on this device, so offering it only burns
 #: a draw. Tensile's own rule (SolutionStructs:3553) allows GSU only for single,
 #: 8-bit float, double-with-BufferStore, Assembly-with-half-accumulate,
-#: ``_GlobalAccumulation``, or MFMA. gfx90c has no MFMA, which leaves:
+#: ``_GlobalAccumulation``, or MFMA. the device has no MFMA, which leaves:
 #:   - ``CC`` / ``ZZ`` (complex) -- never legal.
 #:   - ``HH_HPA`` / ``HS_HPA`` (half in, **f32** accumulate) -- never legal.
 #:

@@ -38,3 +38,25 @@ def test_profile_switching_restores_gfx90c():
     assert load_profile("gfx90c").num_cus == 7
     set_profile(p1)
     assert load_profile("gfx90c").num_cus == 7
+
+
+def test_gfx90c_profile_restored_after_second():
+    """After testing with gfx906, restoring gfx90c profile keeps gates working."""
+    from oto.device.loader import load_profile
+    from oto.tensile.gates.vgpr_model import set_profile
+    p1 = load_profile("gfx90c")
+    p2 = load_profile("gfx906")
+    set_profile(p2)
+    assert p2.num_cus == 64
+    set_profile(p1)
+    assert p1.num_cus == 7
+    # gates still work after restore
+    cfg = {"DataType": "S", "MacroTile": "64x64x8", "ThreadTile": "4x4",
+           "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1,
+           "WorkGroup": "16x16x1", "WorkGroupMapping": 4}
+    from oto.tensile.gates.assembly import assembly_class_valid
+    from oto.tensile.gates.occupancy import occupancy_feasible, ldspad_feasible
+    ok1, _ = assembly_class_valid(cfg)
+    ok2, _ = occupancy_feasible(cfg)
+    ok3, _ = ldspad_feasible(cfg)
+    assert isinstance(ok1, bool) and isinstance(ok2, bool) and isinstance(ok3, bool)

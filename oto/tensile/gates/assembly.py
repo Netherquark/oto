@@ -1,4 +1,4 @@
-"""The assembly-class gate: is this GEMM class legal on gfx90c at all?
+"""The assembly-class gate: is this GEMM class legal on the device at all?
 
 Owns: ``assembly_class_valid``, the single source of truth for both seams (the
 candidate generator's ``validate_config`` and the launch boundary's config
@@ -56,7 +56,7 @@ from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
 from oto.device.loader import default_profile as _asm_dp
 
-#: Refactor 2: device feature flags come from the profile (default gfx90c).
+#: Refactor 2: device feature flags come from the profile (default the device).
 _ASM_PROFILE = _asm_dp()
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
@@ -177,7 +177,7 @@ def _stagger_rejection(config: Dict[str, Any],
 @memo_gate
 def assembly_class_valid(config: Dict[str, Any],
                         profile=None) -> Tuple[bool, str]:
-    """Return (True, "") if config is a legal gfx90c Assembly GEMM class.
+    """Return (True, "") if config is a legal the device Assembly GEMM class.
 
     CLASS-BASED validity -- single source of truth for both seams (scheduler
     validate_config + the config writer). Any cell that falls in an illegal

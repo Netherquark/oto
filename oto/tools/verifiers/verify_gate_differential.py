@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 ORIG = Path("/tmp/opencode/scheduler_orig.py")
 
 # Load the original scheduler.py as module "scheduler_orig", with its
-# `from gfx90c_common import ...` redirected at the new peaks module.
+# `from the device_common import ...` redirected at the new peaks module.
 import types
 import subprocess
 

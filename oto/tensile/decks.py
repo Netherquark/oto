@@ -579,7 +579,7 @@ KNOB_SWEEPS: List[Dict[str, Any]] = [
         "why": "The only knob that changes the load shape for non-divisible "
                "tails, which is what every odd cell size is (256, 192, 1365).",
     },
-    # ---- Store side. NonTemporalA/B bypass L2; gfx90c has 1 MB of L2 and the
+    # ---- Store side. NonTemporalA/B bypass L2; the device has 1 MB of L2 and the
     # winners sit at 16-25 KB of LDS, so L2 residency is worth an experiment
     # rather than an assumption.
     {

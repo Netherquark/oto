@@ -23,7 +23,7 @@ import re
 from typing import Dict, Set, Tuple
 
 # Refactor 2: source device facts from the default profile so the profile is the
-# single source of truth. Falls back to the gfx90c literals if the profile
+# single source of truth. Falls back to the the device literals if the profile
 # cannot be loaded (e.g. during bootstrap).
 try:
     from oto.device.loader import default_profile as _peaks_dp
@@ -196,7 +196,7 @@ def cell_key(family: object, shape: object) -> "str | None":
 
 
 def shipped_cells() -> Dict[str, Dict[str, str]]:
-    """The canonical gfx90c "shape x dtype" coverage grid (the coverage-parity rule).
+    """The canonical the device "shape x dtype" coverage grid (the coverage-parity rule).
 
     This is the *single* definition of what the produced gfx90c TensileLibrary
     may address: the exact cell set the shipped gfx900 library addresses today.

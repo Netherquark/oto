@@ -1,4 +1,4 @@
-"""Device facts: the gfx90c hardware peak table and cell/family vocabulary.
+"""Device facts: the the device hardware peak table and cell/family vocabulary.
 
 This is the ONLY package in oto that may hold a numeric hardware constant, and
 the seam Refactor 2 will use to make the driver device-agnostic. Refactor 2

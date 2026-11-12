@@ -14,7 +14,7 @@ import subprocess
 
 
 def detect_codename() -> str:
-    """Return the GPU codename (e.g. 'gfx90c') from rocminfo, or 'gfx90c' fallback."""
+    """Return the GPU codename (e.g. 'the device') from rocminfo, or 'the device' fallback."""
     rocminfo = shutil.which("rocminfo")
     if rocminfo:
         try:
