@@ -374,18 +374,36 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
     env["PYTHONPATH"] = f"{tensile_root}:{env.get('PYTHONPATH', '')}".strip(":")
     try:
         rocm = resolve_rocm_paths()
-        env["ROCM_PATH"] = rocm.get("ROCM_PATH", env.get("ROCM_PATH", ""))
-        env["HIP_PATH"] = rocm.get("HIP_PATH", env.get("HIP_PATH", ""))
+        # A user-provided ROCM_PATH (shell or .env) must stay the toolchain
+        # root: a half-overridden tree (TheRock compiler + system HIP headers
+        # from hipconfig's HIP_PATH=/usr) fails in the device compile.
+        user_root = os.environ.get("ROCM_PATH", "").strip()
+        if user_root and os.path.isdir(user_root):
+            env["ROCM_PATH"] = user_root
+            env["HIP_PATH"] = os.environ.get("HIP_PATH", "").strip() or user_root
+        else:
+            env["ROCM_PATH"] = rocm.get("ROCM_PATH", env.get("ROCM_PATH", ""))
+            env["HIP_PATH"] = rocm.get("HIP_PATH", env.get("HIP_PATH", ""))
     except Exception:
         pass
-    for cand in ("/usr/lib64/rocm/llvm/lib/clang", "/opt/rocm/llvm/lib/clang"):
-        if os.path.isdir(cand):
-            for ver in sorted(os.listdir(cand), reverse=True):
-                bc = os.path.join(cand, ver, "amdgcn", "bitcode")
-                if os.path.isdir(bc):
-                    env.setdefault("HIP_DEVICE_LIB_PATH", bc)
-                    env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
-                    break
+    rocm_for_libs = env.get("ROCM_PATH", "")
+    # Prefer the user's own device-library bitcode (TheRock ships it under
+    # lib/llvm/amdgcn/bitcode). Fall back to a system ROCm only when the
+    # user's tree does not carry it.
+    own_bitcode = os.path.join(rocm_for_libs, "lib", "llvm", "amdgcn",
+                               "bitcode") if rocm_for_libs else ""
+    if own_bitcode and os.path.isdir(own_bitcode):
+        env["HIP_DEVICE_LIB_PATH"] = os.environ.get("HIP_DEVICE_LIB_PATH") or own_bitcode
+        env["ROCM_DEVICE_LIB_PATH"] = os.environ.get("ROCM_DEVICE_LIB_PATH") or own_bitcode
+    else:
+        for cand in ("/usr/lib64/rocm/llvm/lib/clang", "/opt/rocm/llvm/lib/clang"):
+            if os.path.isdir(cand):
+                for ver in sorted(os.listdir(cand), reverse=True):
+                    bc = os.path.join(cand, ver, "amdgcn", "bitcode")
+                    if os.path.isdir(bc):
+                        env.setdefault("HIP_DEVICE_LIB_PATH", bc)
+                        env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
+                        break
     # user-provided ROCm: ensure its own headers are on the include path so the
     # compiler does not fall back to a mismatched system /usr/include/hip.
     #
@@ -433,7 +451,10 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
     except Exception as exc:  # pragma: no cover - defensive
         return True, True, str(exc)
     if proc.returncode != 0:
-        return True, True, (proc.stderr or "")[-1500:]
+        # Tensile prints its traceback on stdout, not stderr; capture both or
+        # the failure is undiagnosable (observed: empty tcl_error with rc=1).
+        tail = (proc.stderr or "") + "\n" + (proc.stdout or "")
+        return True, True, tail.strip()[-1500:]
     return True, False, None
 
 
