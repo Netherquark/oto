@@ -69,9 +69,11 @@ def require_tensile_root(explicit: Optional[Path],
         )
     resolved = Path(candidate).resolve()
     # Support both the standalone Tensile checkout and the rocm-libraries
-    # super-repo layout, where Tensile lives under projects/ or shared/.
+    # super-repo layout, where Tensile lives under projects/ or shared/
+    # (the super repo spells it "shared/tensile", all lowercase).
     if not (resolved / "Tensile" / "bin" / "Tensile").exists():
-        for sub in ("projects/Tensile", "shared/Tensile", "Tensile"):
+        for sub in ("projects/Tensile", "shared/Tensile", "shared/tensile",
+                    "Tensile"):
             alt = resolved / sub
             if (alt / "Tensile" / "bin" / "Tensile").exists():
                 resolved = alt

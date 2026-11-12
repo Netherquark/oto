@@ -43,7 +43,8 @@ def _tensile_candidates() -> List[str]:
             cands.append(v)
     # rocm-libraries super-repo layouts: Tensile may live under these subpaths.
     for base in list(cands):
-        for sub in ("", "projects/Tensile", "shared/Tensile"):
+        for sub in ("", "projects/Tensile", "shared/Tensile",
+                    "shared/tensile"):
             p = os.path.join(base, sub) if sub else base
             if os.path.isdir(os.path.join(p, "Tensile", "bin")):
                 cands.append(p)
@@ -76,7 +77,8 @@ def default_best_library_dest(base_dir: Path) -> Path:
 
 def _expand_tensile_root(root: str) -> List[str]:
     out = []
-    for sub in ("", "projects/Tensile", "shared/Tensile"):
+    for sub in ("", "projects/Tensile", "shared/Tensile",
+                    "shared/tensile"):
         p = os.path.join(root, sub) if sub else root
         if os.path.isdir(os.path.join(p, "Tensile", "bin")):
             out.append(p)
