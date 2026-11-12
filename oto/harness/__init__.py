@@ -1,7 +1,7 @@
 """harness — agentic kernel-tuning harness.
 
 Ground-truth measurement DB, candidate-gap analysis and per-cell winner
-resolution for the device kernel tuning, built for future agents (and humans)
+resolution for gfx90c kernel tuning, built for future agents (and humans)
 doing candidate generation. Read-only over the live run corpus; never
 benchmarks, never touches a GPU.
 

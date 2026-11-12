@@ -188,7 +188,7 @@ class HtmlMixin:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tensile the device Port Acceptance Dashboard</title>
+    <title>Tensile gfx90c Port Acceptance Dashboard</title>
     {JS_THEME_INIT}
     <style>
 {DASHBOARD_CSS}
@@ -197,7 +197,7 @@ class HtmlMixin:
 <body>
     <div class="shell">
         <div class="shell-group">
-            <span class="shell-title">AMD the device Tensile Port</span>
+            <span class="shell-title">AMD gfx90c Tensile Port</span>
             <span class="shell-sub">Acceptance dashboard</span>
         </div>
         <div class="shell-actions">

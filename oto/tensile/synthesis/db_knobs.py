@@ -20,7 +20,7 @@ from oto.device.peaks import FAMILY_DTYPE_CHAR
 
 #: Forward knobs the manifest sampler cannot reach, with their legal domains.
 #: Values are the Tensile-legal value sets (Common.py) intersected with what
-#: the the device gates admit. This is the NARROW mutation space.
+#: the gfx90c gates admit. This is the NARROW mutation space.
 #:
 #: 2026-10-16 revisions (potential_configs.md §0 R6):
 #: * ``StaggerUStride`` (0,64,128,256). Tensile silently raises SUS to a whole
@@ -37,7 +37,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "PrefetchGlobalRead": (0, 1, 2),
     "PrefetchLocalRead": (0, 1),
     "FractionalLoad": (0, 1, 2),
-    "TransposeLDS": (-1, 0),   # 1 is the MFMA path; the device has no MFMA
+    "TransposeLDS": (-1, 0),   # 1 is the MFMA path; gfx90c has no MFMA
     "GlobalLoadVectorWidthA": (1, 2, 4),
     "GlobalLoadVectorWidthB": (1, 2, 4),
     "NLCA": (-1, 1, 2, 3),
@@ -70,7 +70,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
 #: *Structural* -- ``>1`` can never run on this device, so offering it only burns
 #: a draw. Tensile's own rule (SolutionStructs:3553) allows GSU only for single,
 #: 8-bit float, double-with-BufferStore, Assembly-with-half-accumulate,
-#: ``_GlobalAccumulation``, or MFMA. the device has no MFMA, which leaves:
+#: ``_GlobalAccumulation``, or MFMA. gfx90c has no MFMA, which leaves:
 #:   - ``CC`` / ``ZZ`` (complex) -- never legal.
 #:   - ``HH_HPA`` / ``HS_HPA`` (half in, **f32** accumulate) -- never legal.
 #:
@@ -111,7 +111,7 @@ FAMILY_KNOB_DOMAINS: Dict[str, Dict[str, Tuple[Any, ...]]] = {
 def forward_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     """The legal draw set for ``knob`` in ``family`` (family override wins).
 
-    Calibrated on the device hardware facts, not on what the gfx900 floor chose.
+    Calibrated on gfx90c hardware facts, not on what the gfx900 floor chose.
     This is the *mutator's* set: it is narrowed per family so a draw the gate
     would refuse anyway does not burn one of the five draws an iteration gets.
     """
@@ -128,7 +128,7 @@ def census_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     The drawing mutator and the legality census want opposite things from a
     domain. The mutator wants ``forward_domain`` — narrow, so a value the gate
     refuses never wastes a draw. The census wants the *device truth*: a value
-    refused by a structural class rule ("illegal on the device", "no
+    refused by a structural class rule ("illegal on gfx90c", "no
     MatrixInstruction") must still be **reported with its rule**, or a reader
     mistakes a deliberately-narrowed domain for a dead axis and "fixes" it.
     ``GlobalSplitU>1`` on CC/ZZ is exactly that case: structurally illegal

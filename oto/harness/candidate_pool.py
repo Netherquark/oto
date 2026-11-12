@@ -77,7 +77,7 @@ def _label_for(fam: str, pattern: str, knobs: Dict[str, Any]) -> str:
 
 def _base_config(fam: str) -> Dict[str, Any]:
     return {
-        "Architecture": "the device",
+        "Architecture": "gfx90c",
         "DataType": FAMILY_DTYPE[fam],
         "FamilyLabel": fam,
         "ScheduleName": "isa",

@@ -47,7 +47,7 @@ class TelemetrySampler:
                     hwmon = hwmon_dirs[0] if hwmon_dirs else None
                     return card, hwmon
         # Fallback: /sys/class/hwmon entry named "amdgpu". Its resolved path is
-        # .../<pci-dev>/hwmon/hwmonN, so the device dir is parent.parent
+        # .../<pci-dev>/hwmon/hwmonN, so gfx90c dir is parent.parent
         # (NO "/device" suffix — that would double-append and never resolve).
         hwmon_base = Path("/sys/class/hwmon")
         if hwmon_base.exists():

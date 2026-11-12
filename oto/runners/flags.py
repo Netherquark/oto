@@ -241,7 +241,7 @@ def _add_run_flags(parser: argparse.ArgumentParser) -> None:
         const="",
         default=None,
         metavar="DEST",
-        help="Carve a best-effort the device TensileLibrary.dat from the full "
+        help="Carve a best-effort gfx90c TensileLibrary.dat from the full "
              "kernel database (CPU-only). Optional DEST (default "
              "gfx90c_results/best_effort_library). Defaults to the "
              "across-all-runs view (any protocol); override with "
@@ -313,7 +313,7 @@ def build_parser() -> argparse.ArgumentParser:
         An ``ArgumentParser`` with every flag the driver accepts.
     """
     parser = argparse.ArgumentParser(
-        description="port_tensile.py — oto driver for the device Tensile port"
+        description="port_tensile.py — oto driver for gfx90c Tensile port"
     )
     _add_scope_flags(parser)
     _add_auto_flags(parser)

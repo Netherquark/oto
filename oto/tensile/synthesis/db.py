@@ -142,7 +142,7 @@ class DBMutator(DbPatternsMixin):
 
     def _template(self, family: str) -> Dict[str, Any]:
         return {
-            "Architecture": "the device",
+            "Architecture": "gfx90c",
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "FamilyLabel": family,
             "ScheduleName": "isa",

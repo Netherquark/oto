@@ -220,7 +220,7 @@ class CandidateEmitMixin:
     def _build_family_template(self, family: str, pattern: str, shape: str) -> Dict:
         """Build candidate template for family phases."""
         return {
-            "Architecture": "the device",
+            "Architecture": "gfx90c",
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -392,7 +392,7 @@ class CandidateEmitMixin:
     def _build_template(self, family: str, pattern: str, shape: str) -> Dict[str, Any]:
         """Build candidate template."""
         return {
-            "Architecture": "the device",
+            "Architecture": "gfx90c",
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -428,7 +428,7 @@ class CandidateEmitMixin:
                 for shape in trial.get("shapes", base_shapes or
                                        ["1024x1024x1024"]):
                     template = {
-                        "Architecture": "the device",
+                        "Architecture": "gfx90c",
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
@@ -465,7 +465,7 @@ class CandidateEmitMixin:
 # Kept out of CandidateGenerator so a caller can ask "is this single knob
 # illegal / does this tile divide" without constructing a generator.
 
-#: Knobs the device has no hardware path for.
+#: Knobs gfx90c has no hardware path for.
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
 
@@ -573,7 +573,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (the device).
+    """Modelled workgroups-per-CU from the register file (gfx90c).
 
     Why it delegates: the previous version inferred threads from ThreadTile via
     a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore

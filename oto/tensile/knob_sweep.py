@@ -144,7 +144,7 @@ def _emit_baselines(
             for pattern in patterns:
                 for shape in shapes:
                     template = {
-                        "Architecture": "the device",
+                        "Architecture": "gfx90c",
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
@@ -185,7 +185,7 @@ def _emit_sweeps(
                         knobs.update(value)
                         for shape in shapes:
                             template = {
-                                "Architecture": "the device",
+                                "Architecture": "gfx90c",
                                 "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                                 "ContractionPattern": pattern,
                                 "ProblemType": shape,
@@ -219,7 +219,7 @@ def _emit_trials(
         for pattern in patterns:
             for shape in trial.get("shapes", shapes):
                 template = {
-                    "Architecture": "the device",
+                    "Architecture": "gfx90c",
                     "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                     "ContractionPattern": pattern,
                     "ProblemType": shape,

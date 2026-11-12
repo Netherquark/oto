@@ -56,7 +56,7 @@ def _tensile_command(
     cmd = [
         sys.executable,
         str(tensile_bin),
-        "--arch", "the device",
+        "--arch", getattr(getattr(driver, "profile", None), "codename", "gfx90c"),
         "--cxx-compiler", "hipcc",
         "--c-compiler", "hipcc",
     ]

@@ -30,13 +30,13 @@ class SynthesisMixin:
     def _emit_family_logic(self, logic_dir: Path) -> None:
         """Placeholder logic definitions for the 7 dtype families."""
         for fam in ["SS", "DD", "HH", "ZZ", "CC", "HH_HPA", "HS_HPA"]:
-            logic_file = logic_dir / f"the device_{fam}.yaml"
+            logic_file = logic_dir / f"gfx90c_{fam}.yaml"
             logic_content = {
                 "MinimumRequiredVersion": "4.44.0",
-                "CustomKernelName": f"the device_{fam}_lib",
+                "CustomKernelName": f"gfx90c_{fam}_lib",
                 "ScheduleName": "isa",
-                "Architecture": "the device",
-                "DeviceNames": ["the device"],
+                "Architecture": "gfx90c",
+                "DeviceNames": ["gfx90c"],
                 "Solutions": self.scheduler.family_decks.get(fam, [])
             }
             with open(logic_file, "w") as f:
@@ -48,7 +48,7 @@ class SynthesisMixin:
         cmd = [
             sys.executable,
             str(tcl_bin),
-            "--architecture=the device",
+            "--architecture=gfx90c",
             "--merge-files",
             str(logic_dir),
             str(final_lib_dir)
@@ -98,7 +98,7 @@ class SynthesisMixin:
         Synthesize final HIP library (Stage 6):
         - Query certified winners from DB
         - Emit per-family logic YAML files into 3_LibraryLogic/
-        - Invoke TensileCreateLibrary --architecture=the device --merge-files
+        - Invoke TensileCreateLibrary --architecture=gfx90c --merge-files
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
         - Enforce the shipped gfx900 footprint regression gate
         """
@@ -137,7 +137,7 @@ class SynthesisMixin:
 
     def synthesize_best_library(self, dest: Optional[Path] = None,
                                 protocol_basis: str = "family") -> Dict[str, Any]:
-        """Carve a best-effort the device TensileLibrary.dat from the full db."""
+        """Carve a best-effort gfx90c TensileLibrary.dat from the full db."""
         dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
@@ -154,7 +154,7 @@ class SynthesisMixin:
             profile = load_profile_from_starter(starter)
             text = starter.read_text()
         else:
-            profile = load_profile("the device")
+            profile = load_profile("gfx90c")
             text = ""
         researcher = make_researcher(starter_text=text)
         result = agent_meta.run(profile, text, research=researcher)

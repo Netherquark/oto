@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 ORIG = Path("/tmp/opencode/scheduler_orig.py")
 
 # Load the original scheduler.py as module "scheduler_orig", with its
-# `from the device_common import ...` redirected at the new peaks module.
+# `from gfx90c_common import ...` redirected at the new peaks module.
 import types
 import subprocess
 
@@ -158,7 +158,7 @@ SUMS = [None, 0, 1, 4]
 PADS = [None, 0, 1, 4]
 AF0EM = [None, 1, 2]
 SCI = [None, 0, 1, True, False]
-ARCHS = ["the device", "gfx900", None]
+ARCHS = ["gfx90c", "gfx900", None]
 
 cfgs = []
 for dt in ("S", "D", "H", "Z", "C", "I8", "SS", "HH", "ZZ", "HH_HPA", None):

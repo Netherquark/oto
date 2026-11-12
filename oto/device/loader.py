@@ -90,5 +90,5 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] =
 
 
 def default_profile():
-    """The the device profile used as the default when no device is specified."""
+    """The gfx90c profile used as the default when no device is specified."""
     return load_profile("gfx90c")

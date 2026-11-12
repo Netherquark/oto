@@ -226,7 +226,7 @@ def _lds_bytes(state: Dict[str, Any]) -> int:
 def _config_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     """The config dict the CLI describes."""
     config: Dict[str, Any] = {
-        "Architecture": "the device",
+        "Architecture": "gfx90c",
         "DataType": args.dtype,
         "FamilyLabel": args.family or args.dtype,
         "ScheduleName": "isa",

@@ -25,7 +25,7 @@ from oto.metrics.policy import should_run
 from oto import yamlio  # noqa: E402
 #: Consecutive executed phases that *launched the client and measured nothing*
 #: before the harness declares the GPU lost and aborts the run. The 2026-10-19
-#: overnight run lost the device after its first phase and burned 9h47m emitting
+#: overnight run lost gfx90c after its first phase and burned 9h47m emitting
 #: 413 void phases whose client aborted in ``Tensile::Client::GetHardware`` with
 #: ``hipErrorNoDevice`` -- a whole night of budget for nothing, which is exactly
 #: what this guard exists to prevent.
@@ -254,7 +254,7 @@ class PhaseMixin:
         """Walk the deck; return ``(results, (executed, skipped, refused))``.
 
         Halts early on a user stop, an end-after-iteration request, or the
-        GPU-loss guard: consecutive phases that measure nothing mean the device
+        GPU-loss guard: consecutive phases that measure nothing mean gfx90c
         is gone, and continuing would spend the budget on void phases.
         """
         results: List[Dict[str, Any]] = []
@@ -317,7 +317,7 @@ class PhaseMixin:
         """True when the client ran a phase and measured nothing.
 
         Deliberately narrow, because the loop aborts on a streak of these: the
-        only claim a phase makes about *the device* is that its client ran and
+        only claim a phase makes about *gfx90c* is that its client ran and
         left no benchmark CSV. A Tensile refusal (``skipped_illegal``) is a
         decided outcome, and a phase that never launched the client failed to
         build -- a per-config verdict, not a lost GPU.

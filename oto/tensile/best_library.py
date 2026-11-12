@@ -1,11 +1,11 @@
-"""Best-effort the device ``TensileLibrary.dat`` carved from the full kernel database.
+"""Best-effort gfx90c ``TensileLibrary.dat`` carved from the full kernel database.
 
 Owns: reading the complete measured corpus (``kernel_db.json``, every run, every
 protocol), picking the best family-protocol config per shipped cell (with an
 honest fallback chain), deduplicating configs per family, emitting the
 per-family library-logic YAMLs in the Tensile-confirmed schema, and driving
 ``TensileCreateLibrary --merge-files --code-object-version=V4`` to produce
-``TensileLibrary.dat`` + ``TensileLibrary_the device.co`` under the chosen
+``TensileLibrary.dat`` + ``TensileLibrary_gfx90c.co`` under the chosen
 destination. Also owns the per-cell provenance manifest and the parity /
 anti-alias gates.
 
@@ -311,17 +311,17 @@ def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root):
 
     root = {
         "MinimumRequiredVersion": "4.44.0",
-        "CustomKernelName": f"the device_{fam}_lib",
+        "CustomKernelName": f"gfx90c_{fam}_lib",
         "ScheduleName": "isa",
-        "ArchitectureName": "the device",
-        "DeviceNames": ["the device"],
+        "ArchitectureName": "gfx90c",
+        "DeviceNames": ["gfx90c"],
         "ProblemType": _problem_type_state(fam, tensile_root),
         "Solutions": state_sols,
         "LibraryType": "Matching",
         "Library": {"indexOrder": [2, 3, 1, 0], "table": table,
                     "distance": "Equality"},
     }
-    (dest_logic_dir / f"the device_{fam}.yaml").write_text(
+    (dest_logic_dir / f"gfx90c_{fam}.yaml").write_text(
         yaml.safe_dump(root, sort_keys=False))
 
     winning_shapes = sorted({cell[1] for cell in cell_map if cell[0] == fam})
@@ -412,7 +412,7 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir):
     if not tcl_bin.exists():
         return False, True, f"TensileCreateLibrary not found at {tcl_bin}"
     env = _tensile_env(tensile_root)
-    cmd = [sys.executable, str(tcl_bin), "--architecture=the device",
+    cmd = [sys.executable, str(tcl_bin), "--architecture=gfx90c",
            "--code-object-version=V4", "--merge-files",
            str(logic_dir), str(final_lib_dir), "HIP"]
     try:

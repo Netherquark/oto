@@ -163,7 +163,7 @@ class CandidateGenerator(CandidateEmitMixin):
     # ------------------------------------------------------------------ gates
 
     def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, str]:
-        """Is this candidate legal to launch on the device?
+        """Is this candidate legal to launch on gfx90c?
 
         Why an orchestrator and not a gate: the three gate families each answer
         one question (is the class legal, does the classic load path divide, is
@@ -186,7 +186,7 @@ class CandidateGenerator(CandidateEmitMixin):
         """
         knob = _illegal_knob(config)
         if knob is not None:
-            return False, f"Illegal knob {knob} for the device"
+            return False, f"Illegal knob {knob} for gfx90c"
         if _assert_size_multiple_disabled(config):
             return False, "AssertSizeMultiple: [1] causes crashes"
         crash = _non_generative_knob_rejection(config)
@@ -244,7 +244,7 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     return _parse(shape_str)
 
 
-#: Knobs the device has no hardware path for; a candidate carrying any of
+#: Knobs gfx90c has no hardware path for; a candidate carrying any of
 #: them is refused before the deck is written.
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
@@ -377,7 +377,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (the device).
+    """Modelled workgroups-per-CU from the register file (gfx90c).
 
     Why it delegates: the previous version inferred threads from ThreadTile via
     a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore
