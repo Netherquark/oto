@@ -103,13 +103,13 @@ def _phase_csv_records(driver, csv_files: List[Path],
     protocol = classify(extract_family_from_phase_id(phase_id),
                         measured, declared)
 
-    return [_one_csv_record(cell_dtype, shape, fp, family, seeds,
+    return [_one_csv_record(driver, cell_dtype, shape, fp, family, seeds,
                             config, stamps_phase, phase_id, force_arm,
                             run_name, measured, declared, protocol)
             for (cell_dtype, shape, fp, family), seeds in cell_map.items()]
 
 
-def _one_csv_record(cell_dtype: str, shape: str, fp: str, family: str,
+def _one_csv_record(driver: Any, cell_dtype: str, shape: str, fp: str, family: str,
                     seeds: List[Any], config: Dict[str, Any],
                     stamps_phase: Dict[str, Any], phase_id: str,
                     force_arm: str, run_name: str, measured: List[str],
@@ -134,9 +134,13 @@ def _one_csv_record(cell_dtype: str, shape: str, fp: str, family: str,
         "protocol": protocol,
         "n_seeds": len(seeds),
     }
-    rec.update(driver._named_cell_stamps(
-        {**stamps_phase, "shapes": measured, "family": family.lower()},
-        arm=force_arm))
+    if driver is not None and hasattr(driver, "_named_cell_stamps"):
+        try:
+            rec.update(driver._named_cell_stamps(
+                {**stamps_phase, "shapes": measured, "family": family.lower()},
+                arm=force_arm))
+        except Exception:
+            pass
     return rec
 
 
