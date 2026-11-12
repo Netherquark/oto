@@ -60,3 +60,23 @@ def test_gfx90c_profile_restored_after_second():
     ok2, _ = occupancy_feasible(cfg)
     ok3, _ = ldspad_feasible(cfg)
     assert isinstance(ok1, bool) and isinstance(ok2, bool) and isinstance(ok3, bool)
+
+
+import pytest
+
+@pytest.mark.parametrize("codename", ["gfx90c", "gfx906"])
+def test_gates_dont_crash_on_profile(codename):
+    """Gates evaluate without crashing on any registered profile."""
+    from oto.device.loader import load_profile
+    from oto.tensile.gates.vgpr_model import set_profile
+    from oto.tensile.gates.assembly import assembly_class_valid
+    from oto.tensile.gates.occupancy import occupancy_feasible, ldspad_feasible
+    prof = load_profile(codename)
+    set_profile(prof)
+    cfg = {"DataType": "S", "MacroTile": "64x64x8", "ThreadTile": "4x4",
+           "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1,
+           "WorkGroup": "16x16x1", "WorkGroupMapping": 4}
+    for fn in (assembly_class_valid, occupancy_feasible, ldspad_feasible):
+        ok, _ = fn(cfg, profile=prof)
+        assert isinstance(ok, bool)
+    set_profile(load_profile("gfx90c"))
