@@ -1,7 +1,7 @@
 """Automated potential_configs.md generator from run outputs.
 
-Owns: synthesising a potential_configs.md from kernel_db + ledger + profile.
-Does NOT own: the workflow or the agents.
+Owns: synthesising a potential_configs.md skeleton from kernel_db + profile +
+the measured corpus. Does NOT own the workflow or the agents.
 
 Public API: generate(profile, base_dir) -> str.
 """
@@ -26,11 +26,32 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
         f"- codename: {profile.codename}",
         f"- num_cus: {profile.num_cus}",
         f"- max_clock_mhz: {profile.max_clock_mhz}",
+        f"- families: {', '.join(sorted(profile.family_shapes))}",
         "",
     ]
     kb = base_dir / "gfx90c_results" / "analysis" / "kernel_db.json"
     if kb.exists():
-        import json as _j
-        db = _j.loads(kb.read_text())
-        parts.append(f"## Corpus: {len(db)} runs")
+        try:
+            db = json.loads(kb.read_text())
+            total_rows = sum(len(v) for v in db.values())
+            parts.append("## Corpus")
+            parts.append(f"- runs: {len(db)}")
+            parts.append(f"- kernel-shape rows: {total_rows}")
+            parts.append("")
+            # per-run summary
+            parts.append("## Per-run row counts")
+            for run_id in sorted(db):
+                parts.append(f"- {run_id}: {len(db[run_id])} rows")
+            parts.append("")
+        except (json.JSONDecodeError, OSError):
+            parts.append("## Corpus: (unreadable)")
+            parts.append("")
+    else:
+        parts.append("## Corpus: (no kernel_db.json found)")
+        parts.append("")
+    # ceilings
+    parts.append("## Realistic ceilings (client-reported units)")
+    for fam in sorted(profile.realistic_ceilings):
+        parts.append(f"- {fam}: {profile.realistic_ceilings[fam]}")
+    parts.append("")
     return "\n".join(parts) + "\n"
