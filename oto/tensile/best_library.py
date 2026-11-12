@@ -406,7 +406,7 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
     return env
 
 
-def _run_tcl(tensile_root, logic_dir, final_lib_dir):
+def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename="gfx90c"):
     tensile_root = Path(tensile_root)
     tcl_bin = tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
     if not tcl_bin.exists():
@@ -447,7 +447,7 @@ def build_best_library(base_dir: Path, dest: Optional[Path] = None,
     tcl_failed = False
     tcl_error = None
     if tensile_root is not None:
-        tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir)
+        tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir, codename)
 
     manifest = {
         "basis": basis,
