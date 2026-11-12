@@ -31,6 +31,17 @@ try:
 except Exception:  # pragma: no cover
     GLOBAL_LOAD_BYTE_CAP = 16
 
+
+def set_profile(profile) -> None:
+    """Re-bind the module-level device constants to ``profile`` (Refactor 2)."""
+    global GLOBAL_LOAD_BYTE_CAP, VGPR_PER_CU, LDS_PER_CU_KB
+    try:
+        GLOBAL_LOAD_BYTE_CAP = profile.global_load_byte_cap
+        VGPR_PER_CU = profile.vgpr_per_cu
+        LDS_PER_CU_KB = profile.lds_per_cu_kb
+    except Exception:
+        pass
+
 #: Bytes per element per family, matching the dtype table in
 #: `validate_tensile_loads`. Cross-checked against ``Tensile.DataType.properties``
 #: (``numBytes() == reg * 4``) by tests.test_measurement_integrity -- do not
