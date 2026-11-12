@@ -9,7 +9,7 @@ Public API: generate(profile, starter_text, research=None) -> str.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from oto.device.profile import DeviceProfile
 

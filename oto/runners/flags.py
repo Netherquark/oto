@@ -247,6 +247,16 @@ def _add_run_flags(parser: argparse.ArgumentParser) -> None:
              "across-all-runs view (any protocol); override with "
              "--protocol-basis."
     )
+    parser.add_argument(
+        "--generate-device-docs",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="STARTER",
+        help="Run agent-1 + agent-2 to generate device-specific docs from a "
+             "starter file (Refactor 2). Optional STARTER path; API key from "
+             "starter or OTO_API_KEY env."
+    )
 
 
 def _add_agg_flag(parser: argparse.ArgumentParser) -> None:

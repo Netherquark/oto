@@ -26,7 +26,8 @@ from oto.runners.driver import TensileDriver
 #: read-only query pollutes the ledger with an empty run and shifts
 #: ``latest_run_id`` away from the run the operator meant.
 READ_ONLY_STAGES = {"2", "candidate", "4", "retirement", "5", "analytics",
-                    "7", "report", "library", "best-library"}
+                    "7", "report", "library", "best-library",
+                    "generate-device-docs", "generate_device_docs"}
 #: Stages that only validate. An invocation that stops after one of these needs
 #: no run directory; creating one would leave a phantom 'started' run behind.
 PREFLIGHT_STAGES = {"1", "preflight", "manifest"}
@@ -86,6 +87,16 @@ def _stage_best_library(driver, args, stage) -> Optional[int]:
         basis = "any"
     result = driver.synthesize_best_library(dest, protocol_basis=basis)
     print(f"Best-effort library result: {result}")
+    return 0 if result.get("status") != "failed" else 1
+
+def _stage_generate_device_docs(driver, args, stage) -> Optional[int]:
+    """Generate device-specific docs via agent-1 + agent-2."""
+    if (args.generate_device_docs is None and "generate-device-docs" not in stage
+            and "generate_device_docs" not in stage):
+        return None
+    starter = args.generate_device_docs if args.generate_device_docs else None
+    result = driver.generate_device_docs(starter)
+    print(f"Device docs result: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
@@ -309,6 +320,7 @@ def main() -> int:
 
     stage = set(args.stage or [])
     report_only = (args.report is not None or args.best_library is not None
+                   or args.generate_device_docs is not None
                    or bool(stage & READ_ONLY_STAGES))
     preflight_only = _ends_after_preflight(args, stage)
 
@@ -328,6 +340,7 @@ def main() -> int:
     # returns None to fall through, so a new flag cannot be declared without
     # being consulted somewhere (guarded by test_interactive_keys.py).
     for handler in (_stage_preflight, _stage_report, _stage_best_library,
+                    _stage_generate_device_docs,
                     _stage_synthesis, _stage_candidate_plan, _stage_retirement,
                     _stage_analytics, _stage_gfx900_reference):
         code = handler(driver, args, stage)

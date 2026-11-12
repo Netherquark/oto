@@ -20,6 +20,8 @@ import yaml
 
 import oto.tensile.library as tlib
 import oto.tensile.best_library as bestlib
+from oto.agents import meta as agent_meta
+from oto.agents.research import make_researcher
 
 
 class SynthesisMixin:
@@ -142,3 +144,26 @@ class SynthesisMixin:
             tensile_root=getattr(self, "tensile_root", None))
         print(f"Best-effort library: {result}")
         return result
+
+    def generate_device_docs(self, starter_path=None) -> Dict[str, Any]:
+        """Run agent-1 + agent-2 to generate device-specific docs."""
+        from oto.device.loader import load_profile, load_profile_from_starter
+        from pathlib import Path
+        starter = Path(starter_path) if starter_path else None
+        if starter and starter.exists():
+            profile = load_profile_from_starter(starter)
+            text = starter.read_text()
+        else:
+            profile = load_profile("gfx90c")
+            text = ""
+        researcher = make_researcher(starter_text=text)
+        result = agent_meta.run(profile, text, research=researcher)
+        # write docs
+        out_dir = self.base_dir
+        tl_path = out_dir / f"{profile.codename}_theoretical_limits.md"
+        tc_path = out_dir / f"{profile.codename}_tuning_context.md"
+        tl_path.write_text(result["theoretical_limits"])
+        tc_path.write_text(result["tuning_context"])
+        print(f"Generated {tl_path} and {tc_path}")
+        return {"status": "success", "profile": profile.codename,
+                "docs": [str(tl_path), str(tc_path)]}
