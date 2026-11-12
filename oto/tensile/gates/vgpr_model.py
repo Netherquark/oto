@@ -23,8 +23,13 @@ from typing import Any, Dict, Optional, Tuple
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
-#: `validate_tensile_loads` rejects anything above it.
-GLOBAL_LOAD_BYTE_CAP = 16
+#: `validate_tensile_loads` rejects anything above it. (Refactor 2: sourced
+#: from the default profile; module global kept for backward compat.)
+try:
+    from oto.device.loader import default_profile as _vgpr_dp
+    GLOBAL_LOAD_BYTE_CAP = _vgpr_dp().global_load_byte_cap
+except Exception:  # pragma: no cover
+    GLOBAL_LOAD_BYTE_CAP = 16
 
 #: Bytes per element per family, matching the dtype table in
 #: `validate_tensile_loads`. Cross-checked against ``Tensile.DataType.properties``
@@ -41,7 +46,11 @@ FAMILY_BYTES_PER_ELEMENT = {
 # capped at 256 VGPRs. Tensile enforces that cap when generating assembly and
 # raises instead of emitting a kernel
 # (KernelWriterAssembly: "total vgpr: N not in [0, 256]").
-VGPR_PER_CU = 65536
+try:
+    from oto.device.loader import default_profile as _vgpr_dp2
+    VGPR_PER_CU = _vgpr_dp2().vgpr_per_cu
+except Exception:  # pragma: no cover
+    VGPR_PER_CU = 65536
 MAX_VGPR_PER_THREAD = 256
 #: Effective VGPRs consumed per thread-tile element, per dtype char.
 VGPR_PER_ELEMENT = {"S": 1, "D": 2, "H": 1, "B": 1, "I8": 1, "C": 4, "Z": 8}
