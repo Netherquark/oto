@@ -318,7 +318,8 @@ def main() -> int:
         tensile_root=args.tensile_root,
         cooldown_s=args.cooldown,
         create_run=not (args.dry_run or report_only or args.gfx900_reference
-                        or preflight_only)
+                        or preflight_only),
+        codename=args.codename,
     )
     driver._live_interval = max(float(args.live_interval), 1.0)
     driver._live_enabled = (args.live == "on")

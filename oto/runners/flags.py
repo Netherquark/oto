@@ -312,4 +312,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_reference_run_flags(parser)
     _add_run_flags(parser)
     _add_agg_flag(parser)
+    parser.add_argument(
+        "--codename",
+        default=None,
+        metavar="CODENAME",
+        help="GPU codename (auto-detected from rocminfo when omitted). "
+             "Loads profiles/<codename>.json. Refactor 2 device selector."
+    )
     return parser
