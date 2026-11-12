@@ -242,3 +242,40 @@ def kernel_key(cfg: object) -> str:
         if cfg.get(k) is not None:
             parts.append(f"{k}={cfg[k]}")
     return "|".join(parts)
+
+
+def set_profile(profile) -> None:
+    """Re-bind module-level device constants to ``profile`` (Refactor 2).
+
+    Consumers that read ``oto.device.peaks`` globals pick up the new device
+    without code changes; call this before importing consumer modules.
+    """
+    global PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_CELLS, FAMILY_DTYPE_CHAR
+    global FAMILY_DTYPES, REALISTIC_CEILINGS, REALISTIC_CEILINGS_BLAS8
+    global REPORTED_TO_BLAS8, THEORETICAL_PEAKS, THEORETICAL_PEAKS_BLAS8
+    global FAMILY_BYTES_PER_ELEMENT, NUM_CUS, NUM_SIMDS_PER_CU, LANES_PER_SIMD
+    global MAX_WAVES_PER_CU, MAX_CLOCK_MHZ, LDS_PER_CU_KB, L2_SIZE_KB
+    global VGPR_PER_CU, GLOBAL_LOAD_BYTE_CAP
+    try:
+        PEAK_GFLOPS = dict(profile.peak_gflops)
+        FAMILY_SHAPES = {k: list(v) for k, v in profile.family_shapes.items()}
+        FAMILY_CELLS = {k: list(v) for k, v in profile.family_cells.items()}
+        FAMILY_DTYPE_CHAR = dict(profile.family_dtype_char)
+        FAMILY_DTYPES = dict(profile.family_dtypes)
+        REALISTIC_CEILINGS = dict(profile.realistic_ceilings)
+        REALISTIC_CEILINGS_BLAS8 = dict(profile.realistic_ceilings_blas8)
+        REPORTED_TO_BLAS8 = dict(profile.reported_to_blas8)
+        THEORETICAL_PEAKS = dict(profile.theoretical_peaks)
+        THEORETICAL_PEAKS_BLAS8 = dict(profile.theoretical_peaks_blas8)
+        FAMILY_BYTES_PER_ELEMENT = dict(profile.family_bytes_per_element)
+        NUM_CUS = profile.num_cus
+        NUM_SIMDS_PER_CU = profile.simds_per_cu
+        LANES_PER_SIMD = profile.lanes_per_simd
+        MAX_WAVES_PER_CU = profile.max_waves_per_cu
+        MAX_CLOCK_MHZ = profile.max_clock_mhz
+        LDS_PER_CU_KB = profile.lds_per_cu_kb
+        L2_SIZE_KB = profile.l2_size_kb
+        VGPR_PER_CU = profile.vgpr_per_cu
+        GLOBAL_LOAD_BYTE_CAP = profile.global_load_byte_cap
+    except Exception:
+        pass
