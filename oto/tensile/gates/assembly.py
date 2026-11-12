@@ -54,6 +54,10 @@ from typing import Any, Dict, Optional, Tuple
 
 from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
+from oto.device.loader import default_profile as _asm_dp
+
+#: Refactor 2: device feature flags come from the profile (default gfx90c).
+_ASM_PROFILE = _asm_dp()
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
 #: :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT`, which is an LDS
@@ -110,7 +114,10 @@ def _is_hpa(config: Dict[str, Any], dtype_upper: str) -> bool:
 
 
 def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
-                   gsu: int) -> Optional[str]:
+                   gsu: int, profile=None) -> Optional[str]:
+    global _ASM_PROFILE
+    if profile is not None:
+        _ASM_PROFILE = profile
     """GlobalSplitU class rejection text, or None when GSU is legal here.
 
     Rules:
@@ -126,13 +133,13 @@ def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
     is_hpa = _is_hpa(config, dtype_upper)
     is_hs_hpa = is_hpa and dtype_upper in ("H", "B")
 
-    if dtype_upper in ("Z", "C") and gsu > 1:
+    if dtype_upper in ("Z", "C") and gsu > 1 and not _ASM_PROFILE.has_mfma:
         return (f"GlobalSplitU={gsu} on complex {dtype_upper}: illegal on "
-                "gfx90c (no MatrixInstruction; SolutionStructs:3553)")
+                f"{_ASM_PROFILE.codename} (no MatrixInstruction; SolutionStructs:3553)")
 
-    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1:
+    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1 and not _ASM_PROFILE.has_mfma:
         return (f"GlobalSplitU={gsu} on half with f32 accumulate "
-                "(HPA): illegal on gfx90c (needs half/mixed compute or "
+                f"(HPA): illegal on {_ASM_PROFILE.codename} (needs half/mixed compute or "
                 "MFMA; SolutionStructs:3553)")
 
     if dtype_upper in ("H", "B") and gsu > 1:
@@ -168,7 +175,8 @@ def _stagger_rejection(config: Dict[str, Any],
 
 
 @memo_gate
-def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
+def assembly_class_valid(config: Dict[str, Any],
+                        profile=None) -> Tuple[bool, str]:
     """Return (True, "") if config is a legal gfx90c Assembly GEMM class.
 
     CLASS-BASED validity -- single source of truth for both seams (scheduler
@@ -189,7 +197,7 @@ def assembly_class_valid(config: Dict[str, Any]) -> Tuple[bool, str]:
     # DepthU is named but unparsable raises here rather than falling through to
     # a "legal" verdict from a later rule.
     depth_u = assembly_depth_u(config)
-    reject = _gsu_rejection(config, dtype_upper, gsu)
+    reject = _gsu_rejection(config, dtype_upper, gsu, profile)
     if reject is not None:
         return False, reject
     reject = _stagger_rejection(config, depth_u)
