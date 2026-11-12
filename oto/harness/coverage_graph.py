@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import sys
 from datetime import datetime
 from pathlib import Path

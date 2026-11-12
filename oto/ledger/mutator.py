@@ -12,11 +12,13 @@ Public API: Mutator, Proposal, classify_outcome (re-exported).
 
 from __future__ import annotations
 
+import json
 import random
+import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Set
 
 from oto import yamlio  # noqa: E402
 # `yaml` is imported lazily, inside the functions that use it, so that
@@ -29,7 +31,7 @@ from oto.ledger.mutator_outcomes import (OUTCOME_FUNCTIONAL,  # noqa: E402
                                         OUTCOME_NON_FUNCTIONAL,
                                         OUTCOME_PENDING, TERMINAL_OUTCOMES,
                                         MutatorOutcomesMixin,
-                                        classify_outcome)
+                                        _per_cell_medians, classify_outcome)
 from oto.metrics.analytics import AnalyticsEngine
 from oto.tensile.legality import TEMPLATE_KEYS
 
@@ -442,6 +444,7 @@ class Mutator(MutatorOutcomesMixin):
 
     def load_overlay(self, run_id: str) -> List[Dict[str, Any]]:
         """Read back one run's overlay, or [] if there is none."""
+        import yaml
 
         path = self.base_dir / "gfx90c_results" / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():

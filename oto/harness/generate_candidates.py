@@ -16,14 +16,16 @@ import argparse
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from oto.harness.candidate_overlay import (  # noqa: E402
     OVERLAY_PATH, _prune_candidates_from_seed, _round_robin_prune, _summarise,
     _write_overlay)
-from oto.harness.candidate_pool import (iter_candidates, _strip_not_forwarded)
+from oto.harness.candidate_pool import (__yaml_load,  # noqa: E402
+                                        iter_candidates, _narrow_row_gen,
+                                        _strip_not_forwarded)
 from oto.harness.candidate_rows import (TARGET_CELLS,  # noqa: E402
                                         _pad_rows)
 

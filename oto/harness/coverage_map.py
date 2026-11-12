@@ -35,12 +35,13 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
 from oto.harness.candidate_pool import _base_config, _strip_not_forwarded  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402

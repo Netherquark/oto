@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from oto.device.peaks import FAMILY_CELLS, FAMILY_DTYPE_CHAR  # noqa: E402
+from oto.device.peaks import FAMILY_CELLS, FAMILY_DTYPE_CHAR, FAMILY_SHAPES  # noqa: E402
+from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.config_writer import NOT_FORWARDED_KNOBS  # noqa: E402
 
 #: Family label -> the Tensile dtype char, for the generated config's

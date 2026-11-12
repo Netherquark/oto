@@ -7,10 +7,16 @@ Public API: read_thermals."""
 
 from __future__ import annotations
 
+import math
+import os
+import sqlite3
 import statistics
 import sys
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:

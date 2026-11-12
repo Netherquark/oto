@@ -17,11 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
-from oto.metrics.ab_identity import (_driver,
-                                        _resolved_config,
+from oto.metrics.ab_identity import (AbIdentityMixin, _driver,
+                                        _pair_key, _resolved_config,
                                         norm_config)
 from oto.metrics.analytics import extract_family_from_phase_id
-from oto.device.peaks import kernel_key
+from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
 from oto.tensile.shape_order import ordered_shapes

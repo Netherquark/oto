@@ -19,13 +19,16 @@ import csv
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Set
 
 from oto import yamlio  # noqa: E402
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, PEAK_GFLOPS, REALISTIC_CEILINGS)
+from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
+                              PEAK_GFLOPS, REALISTIC_CEILINGS,
+                              DTYPE_TO_FAMILY, cube_side,
+                              family_from_kernel_name, kernel_typecode)
 from oto.metrics.ab_delta import ABDeltaMixin
 from oto.metrics.cell_status import CellStatusMixin
 from oto.metrics.family_attribution import (FAMILY_TO_DTYPE,
@@ -102,6 +105,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         if self._phases_cache is None:
             phases_path = self.base_dir / "phases.yaml"
             if phases_path.exists():
+                import yaml
                 with open(phases_path, 'r') as f:
                     self._phases_cache = yamlio.load_yaml_text(f.read()) or []
             else:

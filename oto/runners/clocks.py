@@ -97,6 +97,7 @@ class ClockMixin:
         per-phase tagging (the phase_id column), since those rows cannot be
         attributed to a phase at all.
         """
+        import csv
 
         path = Path(run_dir) / "logs" / "telemetry.csv"
         if not path.is_file():

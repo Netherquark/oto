@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 
+from oto.device.peaks import FAMILY_DTYPE_CHAR
 
 #: Forward knobs the manifest sampler cannot reach, with their legal domains.
 #: Values are the Tensile-legal value sets (Common.py) intersected with what

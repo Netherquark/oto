@@ -25,6 +25,7 @@ import yaml
 
 from oto.tensile.candidate_config import CandidateConfig
 from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.tensile.gates.loads import cap_vector_width
 from oto import yamlio  # noqa: E402
 from oto.tensile.gates.occupancy import (  # noqa: E402
     occupancy_feasible, occupancy_workgroups_per_cu)
@@ -303,7 +304,7 @@ class CandidateEmitMixin:
         Separate from generate_family_phases: iterates KNOB_SWEEP_BASES x KNOB_SWEEPS.
         width_override on a sweep row is honoured before validation.
         """
-        from oto.tensile.decks import KNOB_SWEEP_BASES
+        from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
         fams = families or list(KNOB_SWEEP_BASES)
         pats = patterns or ["Ailk_Bljk"]

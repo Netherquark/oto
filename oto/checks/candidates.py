@@ -38,6 +38,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import yaml
 
 from oto import yamlio  # noqa: E402
 BASE = Path(__file__).resolve().parents[2]

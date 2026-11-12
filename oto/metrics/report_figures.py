@@ -29,7 +29,7 @@ import html
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 #: Where the coverage tool writes its figures and its hand-off file.
 COVERAGE_DIR = Path("gfx90c_results") / "analysis" / "coverage"

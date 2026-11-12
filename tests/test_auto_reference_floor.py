@@ -25,6 +25,7 @@ from unittest import mock
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
+import oto.runners.cli  # noqa: E402
 from oto.runners.cli import TensileDriver  # noqa: E402
 from oto.runners.auto_prompt import AutoPlan  # noqa: E402
 

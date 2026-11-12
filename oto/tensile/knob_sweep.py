@@ -241,6 +241,7 @@ def _dry_run(gen: CandidateGenerator, families: List[str],
              include_baseline: bool = False, include_trials: bool = False
              ) -> tuple[List[Dict[str, Any]], List[str]]:
     """Validate sweep combinations without writing manifest. Returns: (emitted, refused)."""
+    from oto.tensile.decks import DECISION_TRIAL_TILES, KNOB_SWEEPS, KNOB_SWEEP_BASES
     emitted: List[Dict[str, Any]] = []
     refused: List[str] = []
     if include_baseline:

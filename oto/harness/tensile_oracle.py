@@ -151,6 +151,7 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
         A dict with our gate's verdict, Tensile's verdict, the derived fields
         Tensile computed, and the register pools it allocated.
     """
+    from oto.checks.tensile_build import _init_tensile, probe_phase_config
     from oto.runners.driver import TensileDriver
 
     base = Path(base_dir or _HERE)

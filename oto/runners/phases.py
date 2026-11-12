@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import yaml
 
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run

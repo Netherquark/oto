@@ -16,10 +16,15 @@ _parse_ts, _jittery, read_thermals, main.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import oto.tensile.library as tlib  # noqa: E402
 
@@ -505,6 +510,7 @@ def _get_deck_size(base: Path, plan: RunPlan) -> int:
     if not deck_size:
         deck_path = base / "phases.yaml"
         if deck_path.is_file():
+            import yaml
             try:
                 doc = yamlio.load_yaml(deck_path) or []
                 deck_size = len(doc) if isinstance(doc, list) else 0

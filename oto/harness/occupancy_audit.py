@@ -45,7 +45,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import LDS_PER_CU_KB, MAX_WAVES_PER_CU  # noqa: E402
+from oto.device.peaks import LDS_PER_CU_KB, MAX_WAVES_PER_CU, NUM_CUS  # noqa: E402
 from oto.tensile.gates.vgpr_model import (  # noqa: E402
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,

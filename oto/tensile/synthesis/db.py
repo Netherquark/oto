@@ -51,7 +51,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
-                                            _DONOR_POOL, FAMILY_DTYPE_CHAR,
+                                            _DONOR_POOL, _FORWARD_DRAWS,
+                                            FAMILY_DTYPE_CHAR,
                                             FORWARD_KNOB_DOMAINS)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS

@@ -48,7 +48,7 @@ sys.path.insert(0, str(BASE))
 from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.tensile.synthesis.db_knobs import (  # noqa: E402
-    FORWARD_KNOB_DOMAINS)
+    FORWARD_KNOB_DOMAINS, forward_domain)
 
 #: The A/B bases, lenient to strict, with what each one actually asks. The
 #: names and their meaning live in `oto.metrics.ab_delta._stat`; this is the

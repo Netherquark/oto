@@ -43,6 +43,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import yaml
 
 from oto import yamlio  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
@@ -146,6 +147,7 @@ def _tensile_pipeline() -> Tuple[Any, Any, Any, Any, Any]:
     from Tensile.BenchmarkProblems import constructForkPermutations
     from Tensile.SolutionStructs import Solution
     from Tensile.TensileCreateLibrary import KernelWriterAssembly, markDuplicateKernels
+    from Tensile.BenchmarkProblems import BenchmarkProcess  # noqa: F401
     from Tensile import BenchmarkProblems as BP
 
     return (BP, constructForkPermutations, Solution, KernelWriterAssembly,

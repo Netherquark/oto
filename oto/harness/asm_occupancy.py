@@ -50,6 +50,7 @@ if str(_HERE) not in sys.path:
 from oto.device.peaks import (  # noqa: E402
     LDS_PER_CU_KB,
     MAX_WAVES_PER_CU,
+    NUM_CUS,
     NUM_SIMDS_PER_CU,
 )
 

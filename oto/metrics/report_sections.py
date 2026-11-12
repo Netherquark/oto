@@ -15,7 +15,7 @@ from __future__ import annotations
 import csv
 import statistics
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from oto.tensile.shape_order import ordered_shapes
 

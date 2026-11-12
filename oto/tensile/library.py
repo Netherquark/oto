@@ -18,10 +18,14 @@ Public API: see ``__all__``.
 
 import hashlib
 import json
+import re
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from oto.device.peaks import FAMILY_DTYPES, FAMILY_DTYPE_CHAR
 
 #: Where the pinned shipped manifest is cached, relative to the project root.
 MANIFEST_PATH = "gfx90c_results/gfx900_shipped_manifest.json"
@@ -30,7 +34,7 @@ MANIFEST_PATH = "gfx90c_results/gfx900_shipped_manifest.json"
 # so the manifest cache, the tier triage and the identity helpers here are not
 # buried under a binary .dat parser.
 from oto.tensile.shipped_library import (  # noqa: E402
-    _all_rocm_prefixes, _resolve_rocm, CONTRACTION_PATTERNS,
+    _all_rocm_prefixes, _CANON, _MT, _resolve_rocm, CONTRACTION_PATTERNS,
     SHIPPED_FAMILIES, emit_spoof_phases, find_gfx900_dat_files,
     parse_shipped_kernels, shipped_kernel_config, shipped_kernel_knobs)
 

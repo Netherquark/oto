@@ -12,9 +12,12 @@ Public API: extract_family_from_phase_id, resolve_cell_family, FAMILY_TO_DTYPE.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Sequence
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, DTYPE_TO_FAMILY, family_from_kernel_name, kernel_typecode)
+from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
+                              PEAK_GFLOPS, REALISTIC_CEILINGS,
+                              DTYPE_TO_FAMILY, cube_side,
+                              family_from_kernel_name, kernel_typecode)
 
 CLOCK_MIN_COVERAGE = 0.5
 

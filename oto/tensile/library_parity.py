@@ -40,6 +40,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from oto.device.peaks import (
+    FAMILY_DTYPE_CHAR,
     FAMILY_SHAPES,
     cube_side,
     shipped_cell_set,
@@ -167,6 +168,7 @@ def load_pipeline_phases(base_dir: Optional[str] = None,
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold
     in that run's per-run overlay (phases.<run_id>.overlay.yaml).
     """
+    import glob
 
     from pathlib import Path
 
