@@ -22,106 +22,57 @@ from __future__ import annotations
 import re
 from typing import Dict, Set, Tuple
 
-# Single-source PEAK_GFLOPS table @1800 MHz
-# Values are absolute; callers scale by actual sclk if needed
-PEAK_GFLOPS = {
-    # FP32: 7 CU × 4 SIMD × 16 lanes × 1.8 GHz = 806.4 ops/SIMD × 2 (FMA) = 1612.8
-    "FP32": 1613,
-    # FP16: dual-issue v_pk_fma_f16 = 2× FP32 = 3225.6
-    "FP16": 3226,
-    # BF16: no v_pk_fma_bf16 on any gfx9 → single-rate FP32 = 1612.8
-    "BF16": 1613,
-    # INT8: no dp4a on gfx90c → FP32-pipe bound = 1612.8 (UPPER bound only)
-    "INT8": 1613,
-    # FP64: VALU 1/16 of FP32 = 1612.8 / 16 = 100.8
-    "FP64": 101,
-}
+# Refactor 2: source device facts from the default profile so the profile is the
+# single source of truth. Falls back to the gfx90c literals if the profile
+# cannot be loaded (e.g. during bootstrap).
+try:
+    from oto.device.loader import default_profile as _peaks_dp
+    _P = _peaks_dp()
+    PEAK_GFLOPS = dict(_P.peak_gflops)
+    FAMILY_SHAPES = {k: list(v) for k, v in _P.family_shapes.items()}
+    FAMILY_CELLS = {k: list(v) for k, v in _P.family_cells.items()}
+    FAMILY_DTYPE_CHAR = dict(_P.family_dtype_char)
+    FAMILY_DTYPES = dict(_P.family_dtypes)
+    REALISTIC_CEILINGS = dict(_P.realistic_ceilings)
+    REALISTIC_CEILINGS_BLAS8 = dict(_P.realistic_ceilings_blas8)
+    REPORTED_TO_BLAS8 = dict(_P.reported_to_blas8)
+    THEORETICAL_PEAKS = dict(_P.theoretical_peaks)
+    THEORETICAL_PEAKS_BLAS8 = dict(_P.theoretical_peaks_blas8)
+    FAMILY_BYTES_PER_ELEMENT = dict(_P.family_bytes_per_element)
+    NUM_CUS = _P.num_cus
+    NUM_SIMDS_PER_CU = _P.simds_per_cu
+    LANES_PER_SIMD = _P.lanes_per_simd
+    MAX_WAVES_PER_CU = _P.max_waves_per_cu
+    MAX_CLOCK_MHZ = _P.max_clock_mhz
+    LDS_PER_CU_KB = _P.lds_per_cu_kb
+    L2_SIZE_KB = _P.l2_size_kb
+    VGPR_PER_CU = _P.vgpr_per_cu
+    GLOBAL_LOAD_BYTE_CAP = _P.global_load_byte_cap
+except Exception:  # pragma: no cover
+    PEAK_GFLOPS = {  # fallback (gfx90c)
+        "FP32": 1613, "FP16": 3226, "BF16": 1613, "INT8": 1613, "FP64": 101,
+    }
+    FAMILY_SHAPES = {}
+    FAMILY_CELLS = {}
+    FAMILY_DTYPE_CHAR = {}
+    FAMILY_DTYPES = {}
+    REALISTIC_CEILINGS = {}
+    REALISTIC_CEILINGS_BLAS8 = {}
+    REPORTED_TO_BLAS8 = {}
+    THEORETICAL_PEAKS = {}
+    THEORETICAL_PEAKS_BLAS8 = {}
+    FAMILY_BYTES_PER_ELEMENT = {}
+    NUM_CUS = 7
+    NUM_SIMDS_PER_CU = 4
+    LANES_PER_SIMD = 16
+    MAX_WAVES_PER_CU = 40
+    MAX_CLOCK_MHZ = 1800
+    LDS_PER_CU_KB = 64
+    L2_SIZE_KB = 1024
+    VGPR_PER_CU = 65536
+    GLOBAL_LOAD_BYTE_CAP = 16
 
-# Family shapes for the gfx900 spoof reference + red-cell contract.
-# Canonical family deck cubes (side lengths) benchmarked as "cells" per family.
-FAMILY_SHAPES = {
-    "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
-    "DD": [192, 256, 512, 768, 1024, 1365, 2048],
-    "HH": [256, 512, 1024, 2048, 4096],
-    "CC": [192, 256, 512, 1024, 2048],
-    "ZZ": [128, 192, 256, 512, 1024],
-    "HH_HPA": [512, 1024, 2048, 4096],
-    "HS_HPA": [512, 1024, 2048, 4096],
-}
-
-# The graded cell list per family: the cells the campaign actually grades
-# (verdicts, coverage, the deck's wide spans). Distinct from FAMILY_SHAPES
-# where the benchmark contract is wider than the graded cells -- the DD:512
-# and HS_HPA:4096 bands are contract members the deck does not grade, and the
-# like-for-like protocol rule (oto.metrics.protocol) anchors FAMILY on this
-# list so a "wide" native invocation and the gf900 floor share a definition
-# per family. Owned here because it is contract vocabulary, not deck text;
-# candidate_rows re-exports it as TARGET_CELLS for the deck generator.
-FAMILY_CELLS = {
-    "SS": [256, 512, 768, 1000, 1024, 1365, 2048, 4096],
-    "DD": [192, 256, 768, 1024, 1365, 2048],
-    "HH": [256, 512, 1024, 2048, 4096],
-    "CC": [192, 256, 512, 1024, 2048],
-    "ZZ": [128, 192, 256, 512, 1024],
-    "HH_HPA": [512, 1024, 2048, 4096],
-    "HS_HPA": [512, 1024, 2048],
-}
-
-# Complex families run at the REAL rate of their lane class
-# (complex MAC = 4 real FMAs in Tensile expansion)
-# DataType C = complexSingle (FP32 pipe), DataType Z = complexDouble (FP64 pipe)
-
-# Family -> Tensile DataType char ('S'/'D'/'H'/'C'/'Z'), single source for
-# the candidate pipeline, the library, the metrics and the report. Char table (how Tensile
-# sees the kernel) is distinct from FAMILY_DTYPES (which pipe precision the
-# family runs at). Both are family-keyed and canonical here.
-FAMILY_DTYPE_CHAR = {
-    "SS": "S",
-    "DD": "D",
-    "HH": "H",
-    "CC": "C",
-    "ZZ": "Z",
-    "HH_HPA": "H",
-    "HS_HPA": "H",
-}
-
-# Family -> pipe precision for realistic-ceiling lookup (distinct from the
-# Tensile DataType char; e.g. HH_HPA stores FP16 inputs but runs the FP32 pipe).
-FAMILY_DTYPES = {
-    "SS": "FP32",
-    "DD": "FP64",
-    "CC": "FP32",  # complex single → FP32 pipe
-    "ZZ": "FP64",  # complex double → FP64 pipe
-    "HH": "FP16",
-    "HH_HPA": "FP32",  # FP16 in/out, FP32 acc → FP32 pipe
-    "HS_HPA": "FP32",  # FP16 in, FP32 out/acc → FP32 pipe
-}
-
-#: Client-reported GFLOPS -> BLAS-8 GFLOPS, per family.
-#:
-#: The Tensile client charges **2 flops per MAC for every dtype**, the
-#: complex ones included: ``ContractionProblem::flopCount`` multiplies
-#: ``flopsPerMac()`` by the problem sizes, and ``flopsPerMac()`` is
-#: ``2 * DataTypeInfo::packing`` with ``packing == 1`` for complexSingle and
-#: complexDouble (``Tensile/Source/lib/source/ContractionProblem.cpp:1108``,
-#: ``Tensile/Source/lib/include/Tensile/DataTypes.hpp:177``). The corpus proves
-#: it: every benchmark CSV carries ``TotalFlops == 2*M*N*K`` for *every*
-#: family, complex included (e.g. CC 192^3 -> 14,155,776 = 2*192^3).
-#:
-#: A complex MAC is EXECUTED as four real FMAs = 8 BLAS flops, so a reported
-#: complex GFLOPS is **1/4 of its BLAS-8 value**. The hardware roof is stated
-#: in BLAS-8 (1613 FP32 / 101 FP64), so the complex ceilings below are
-#: carried in client-reported units (BLAS-8 / 4) -- the same unit the
-#: measurement arrives in. Everything real is 1:1.
-#:
-#: Reading the unit wrong is a 4x error in the loudest direction: it made CC
-#: and ZZ look like 20-24% of their roof when they run at 80-97% of it (see
-#: ``gfx90c_theoretical_limits.md`` §5.2).
-REPORTED_TO_BLAS8 = {
-    "SS": 1.0, "DD": 1.0, "HH": 1.0, "HH_HPA": 1.0, "HS_HPA": 1.0,
-    "CC": 4.0, "ZZ": 4.0,
-}
-
+# Single-source PEAK_GFLOPS table @1800 MHz (now sourced from profile above;
 
 def blas8_gflops(family: str, reported: float) -> float:
     """A client-reported GFLOPS figure in BLAS-8 units (complex x4).
@@ -137,64 +88,7 @@ def blas8_gflops(family: str, reported: float) -> float:
     return reported * REPORTED_TO_BLAS8.get(family.upper(), 1.0)
 
 
-# Realistic acceptance ceilings, family-keyed (gfx90c_theoretical_limits.md §5,
-# which quotes these exact values). Measured-empirical on this box (precise
-# measured bests: FP32 1118.7, FP64 98.6, HH 2461.0, BF16 1109, INT8 881);
-# ZZ ≈ DD, CC/HPAs ≈ SS (derived-analytical). BF16/INT8 have no families of
-# their own — listed so the code table is complete vs the doc.
-#: The physical (BLAS-8) values; the reported-unit table below is derived.
-REALISTIC_CEILINGS_BLAS8 = {
-    "SS": 1118.7,
-    "DD": 98.6,
-    "HH": 2461.0,
-    "ZZ": 98.6,    # complex double (DataType Z) → FP64 rate
-    "CC": 1118.7,  # complex single (DataType C) → FP32 rate
-    "HH_HPA": 1118.7,
-    "HS_HPA": 1118.7,
-    "BF16": 1109,
-    "INT8": 881,
-}
 
-#: The same ceilings in the unit the measurement arrives in (client-reported
-#: GFLOPS). The complex entries are BLAS-8 / 4 -- see
-#: :data:`REPORTED_TO_BLAS8` for why.
-REALISTIC_CEILINGS = {
-    fam: value / REPORTED_TO_BLAS8.get(fam, 1.0)
-    for fam, value in REALISTIC_CEILINGS_BLAS8.items()
-}
-
-# Theoretical ALU peaks per family (BLAS flop count @1800 MHz)
-# From gfx90c_theoretical_limits.md §2
-#: The physical (BLAS-8) peaks; the reported-unit table below is derived.
-THEORETICAL_PEAKS_BLAS8 = {
-    "SS": 1613,
-    "DD": 101,
-    "CC": 1613,   # complex single (C) → FP32 pipe
-    "ZZ": 101,    # complex double (Z) → FP64 pipe
-    "HH": 3226,   # packed FP16 = 2× FP32
-    "HH_HPA": 1613,  # FP16 in/out, FP32 acc → FP32 pipe
-    "HS_HPA": 1613,  # FP16 in, FP32 out/acc → FP32 pipe
-    "BF16": 1613,  # no v_pk_fma_bf16 → FP32 rate
-    "INT8": 1613,  # no dp4a on gfx90c → FP32 pipe (upper bound)
-}
-
-#: The same peaks in client-reported units (complex = BLAS-8 / 4).
-THEORETICAL_PEAKS = {
-    fam: value / REPORTED_TO_BLAS8.get(fam, 1.0)
-    for fam, value in THEORETICAL_PEAKS_BLAS8.items()
-}
-
-# Hardware constants
-NUM_CUS = 7
-NUM_SIMDS_PER_CU = 4
-LANES_PER_SIMD = 16
-MAX_WAVES_PER_CU = 40
-MAX_CLOCK_MHZ = 1800
-LDS_PER_CU_KB = 64
-L2_SIZE_KB = 1024
-
-
-# ---------------------------------------------------------------------------
 # Cell-key labelling — canonical workload-cell identity for the
 # spoof-baseline <-> native-candidate mapping in the acceptance A/B flow.
 #
