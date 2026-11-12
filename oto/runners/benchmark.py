@@ -56,7 +56,7 @@ def _tensile_command(
     cmd = [
         sys.executable,
         str(tensile_bin),
-        "--arch", "gfx90c",
+        "--arch", "the device",
         "--cxx-compiler", "hipcc",
         "--c-compiler", "hipcc",
     ]

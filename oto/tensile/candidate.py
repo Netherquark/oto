@@ -186,7 +186,7 @@ class CandidateGenerator(CandidateEmitMixin):
         """
         knob = _illegal_knob(config)
         if knob is not None:
-            return False, f"Illegal knob {knob} for gfx90c"
+            return False, f"Illegal knob {knob} for the device"
         if _assert_size_multiple_disabled(config):
             return False, "AssertSizeMultiple: [1] causes crashes"
         crash = _non_generative_knob_rejection(config)

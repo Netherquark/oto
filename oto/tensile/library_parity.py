@@ -13,7 +13,7 @@ parity_report. (The CLI ``main`` lives in oto.checks.library_parity.)
 
 The rule, canonically stated in ``knowledge_base.md`` §6.1:
 
-  * **no contraction** -- every shipped cell must have at least one gfx90c phase;
+  * **no contraction** -- every shipped cell must have at least one the device phase;
   * **no extension** -- no phase may address a cell outside the shipped grid.
 
 * :func:`phase_family` resolves a phase's family. The config ``FamilyLabel`` is

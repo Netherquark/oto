@@ -37,7 +37,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
     "PrefetchGlobalRead": (0, 1, 2),
     "PrefetchLocalRead": (0, 1),
     "FractionalLoad": (0, 1, 2),
-    "TransposeLDS": (-1, 0),   # 1 is the MFMA path; gfx90c has no MFMA
+    "TransposeLDS": (-1, 0),   # 1 is the MFMA path; the device has no MFMA
     "GlobalLoadVectorWidthA": (1, 2, 4),
     "GlobalLoadVectorWidthB": (1, 2, 4),
     "NLCA": (-1, 1, 2, 3),
@@ -111,7 +111,7 @@ FAMILY_KNOB_DOMAINS: Dict[str, Dict[str, Tuple[Any, ...]]] = {
 def forward_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     """The legal draw set for ``knob`` in ``family`` (family override wins).
 
-    Calibrated on gfx90c hardware facts, not on what the gfx900 floor chose.
+    Calibrated on the device hardware facts, not on what the gfx900 floor chose.
     This is the *mutator's* set: it is narrowed per family so a draw the gate
     would refuse anyway does not burn one of the five draws an iteration gets.
     """
@@ -128,7 +128,7 @@ def census_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     The drawing mutator and the legality census want opposite things from a
     domain. The mutator wants ``forward_domain`` — narrow, so a value the gate
     refuses never wastes a draw. The census wants the *device truth*: a value
-    refused by a structural class rule ("illegal on gfx90c", "no
+    refused by a structural class rule ("illegal on the device", "no
     MatrixInstruction") must still be **reported with its rule**, or a reader
     mistakes a deliberately-narrowed domain for a dead axis and "fixes" it.
     ``GlobalSplitU>1`` on CC/ZZ is exactly that case: structurally illegal

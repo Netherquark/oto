@@ -448,7 +448,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
     def _build_template(self, family: str, data_type: str) -> Dict[str, Any]:
         """Build the candidate template."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": "the device",
             "DataType": data_type,
             "ProblemType": "Contraction",
             "ScheduleName": "isa",

@@ -195,7 +195,7 @@ def _family_template(fam: str) -> Dict[str, Any]:
     """The minimal contract template a draw is applied on top of."""
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
-        "Architecture": "gfx90c",
+        "Architecture": "the device",
         "DataType": FAMILY_DTYPE_CHAR.get(fam, "S"),
         "FamilyLabel": fam,
         "ScheduleName": "isa",
@@ -222,7 +222,7 @@ def _classify_draw(template: Dict[str, Any], tiles: List[Dict[str, Any]],
     read it — and treat `python3 check_candidates.py` on the real deck, which
     sees every knob at once, as the authority. A value that is genuinely dead
     for this device is one whose reason is a structural class rule ("illegal on
-    gfx90c", "no MatrixInstruction").
+    the device", "no MatrixInstruction").
     """
     refusals: List[str] = []
     for tile in tiles:
@@ -255,7 +255,7 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
           "responsible,\nand most of these resolve when a companion knob is "
           "drawn with them.\nA value that is genuinely dead for this device "
           "is one whose reason is a\nstructural class rule ('illegal on "
-          "gfx90c', 'no MatrixInstruction'):")
+          "the device', 'no MatrixInstruction'):")
     for fam, knob, value, why in refused:
         print(f"  {fam:8}{knob:30}{str(value):6} {why}")
 

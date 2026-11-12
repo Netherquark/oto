@@ -158,7 +158,7 @@ SUMS = [None, 0, 1, 4]
 PADS = [None, 0, 1, 4]
 AF0EM = [None, 1, 2]
 SCI = [None, 0, 1, True, False]
-ARCHS = ["gfx90c", "gfx900", None]
+ARCHS = ["the device", "gfx900", None]
 
 cfgs = []
 for dt in ("S", "D", "H", "Z", "C", "I8", "SS", "HH", "ZZ", "HH_HPA", None):

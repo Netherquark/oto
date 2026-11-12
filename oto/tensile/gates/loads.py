@@ -421,7 +421,7 @@ def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, 
     """Faithful port of Tensile classic-path divisibility.
 
     Only covers non-MI, FractionalLoad=False, Assembly kernel path -- which is
-    the only path gfx90c can take (no MFMA on this device).
+    the only path the device can take (no MFMA on this device).
 
     Args:
         config: A Tensile solution dict.

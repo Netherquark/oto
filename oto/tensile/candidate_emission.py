@@ -220,7 +220,7 @@ class CandidateEmitMixin:
     def _build_family_template(self, family: str, pattern: str, shape: str) -> Dict:
         """Build candidate template for family phases."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": "the device",
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -392,7 +392,7 @@ class CandidateEmitMixin:
     def _build_template(self, family: str, pattern: str, shape: str) -> Dict[str, Any]:
         """Build candidate template."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": "the device",
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -428,7 +428,7 @@ class CandidateEmitMixin:
                 for shape in trial.get("shapes", base_shapes or
                                        ["1024x1024x1024"]):
                     template = {
-                        "Architecture": "gfx90c",
+                        "Architecture": "the device",
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,

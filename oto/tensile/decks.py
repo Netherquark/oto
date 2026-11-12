@@ -7,7 +7,7 @@ what kind of candidate it is:
   MEASURED  the shipped-gfx900 floor's own winning solution at a named cell, read
             from that phase's resolved 2_BenchmarkData yaml. These convert known
             losses directly.
-  QUANT     a tile chosen for 7-CU wave quantization. gfx90c has 7 CUs, so
+  QUANT     a tile chosen for 7-CU wave quantization. the device has 7 CUs, so
             ceil(N/MT)^2 tiles spread badly whenever the count is a small power
             of two: at N=256 a 128x128 tile yields 4 tiles on 7 CUs and leaves
             3 idle (57% of the machine), while 32x32 yields 64 tiles at 91%.
