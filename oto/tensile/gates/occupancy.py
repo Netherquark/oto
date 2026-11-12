@@ -1,9 +1,9 @@
 """Register-file and LDS occupancy gates.
 
 Owns: the CPU-only model that reproduces every observed device occupancy
-outcome -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget) and
-``ldspad_feasible`` (padded LDS footprint plus the coupled swizzle
-StaggerU/StaggerUMapping/StaggerUStride domains).
+outcome -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget); the
+LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad_gate`` and is
+re-exported here for the historical import path.
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* tables (oto.tensile.gates.vgpr_model), the legality class rules
 (oto.tensile.gates.assembly), or any device constant (oto.device.peaks).
@@ -56,100 +56,31 @@ limit; the MacroTile-area term belongs to the *separate* workgroup-file rule
 above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that
 old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model;
 post-mortem in potential_configs.md.
-Public API: occupancy_feasible, ldspad_feasible, occupancy_workgroups_per_cu,
-dtype_char, tile_dims, refuses_workgroup_register_file,
+Public API: occupancy_feasible, ldspad_feasible (re-exported),
+occupancy_workgroups_per_cu, dtype_char, tile_dims (shared; see
+``oto.tensile.gates.occupancy_common``), refuses_workgroup_register_file,
 refuses_per_thread_occupancy_limit, refuses_lds_reduction_buffer.
 """
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, Optional, Tuple
 
 from .memo import memo_gate
-import oto.device.peaks as _peaks
+
+__all__ = [
+    'occupancy_feasible', 'ldspad_feasible', 'occupancy_workgroups_per_cu',
+    'dtype_char', 'tile_dims', 'refuses_workgroup_register_file',
+    'refuses_per_thread_occupancy_limit', 'refuses_lds_reduction_buffer',
+]
+from .occupancy_common import dtype_char as dtype_char, \
+    tile_dims as tile_dims  # re-export
+from .ldspad_gate import ldspad_feasible as ldspad_feasible  # re-export
 from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
                          MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
                          MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
                          compute_bytes, depth_u, lds_base_bytes, local_split_u,
                          measured_accvgpr, num_threads, per_thread_vgpr)
-
-#: Legal StaggerU values (Tensile Common.py:945).
-STAGGER_U_DOMAIN = (0, 2, 4, 8, 16, 32, 64)
-#: Legal StaggerUMapping values (Tensile Common.py:946).
-STAGGER_MAPPING_DOMAIN = (0, 1, 2, 3, 4)
-#: Legal StaggerUStride values (Tensile Common.py:947).
-STAGGER_STRIDE_DOMAIN = (0, 16, 32, 64, 128, 256, 512, 1024, 2048)
-
-#: Tensile's own default for StaggerU, used when a config omits the key. An
-#: absent StaggerU therefore behaves as "stagger on".
-STAGGER_U_DEFAULT = 32
-#: Tensile's own default for StaggerUStride.
-STAGGER_STRIDE_DEFAULT = 256
-#: Tensile's own default for StaggerUMapping.
-STAGGER_MAPPING_DEFAULT = 0
-
-
-def tile_dims(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int]]:
-    """(MT0, MT1, TT0, TT1) from MacroTile/ThreadTile, or None if unusable.
-
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        The four dims, or None when either key is absent, unparsable or
-        non-positive. Callers treat None as "cannot model" and fail closed.
-    """
-    mt_raw = config.get("MacroTile")
-    tt_raw = config.get("ThreadTile")
-    if not mt_raw or not tt_raw:
-        return None
-    mt_clean = str(mt_raw).upper().replace("MT", "").replace("SB_", "").replace("HB_", "").replace("DB_", "")
-    tt_clean = str(tt_raw).lower().replace("_", "x")
-    try:
-        mt_parts = [int(x) for x in re.split(r'[xX]', mt_clean)]
-        tt_parts = [int(x) for x in re.split(r'[xX]', tt_clean)]
-    except ValueError:
-        return None
-    if len(mt_parts) < 2 or len(tt_parts) < 2:
-        return None
-    if mt_parts[0] <= 0 or mt_parts[1] <= 0 or tt_parts[0] <= 0 or tt_parts[1] <= 0:
-        return None
-    return mt_parts[0], mt_parts[1], tt_parts[0], tt_parts[1]
-
-
-def dtype_char(config: Dict[str, Any]) -> str:
-    """Dtype char for a config, or "" when it cannot be determined.
-
-    Why: a wrong guess would pick the wrong VGPR weight (Z is 8, S is 1) and
-    silently admit a config the gate must reject, so an unknown dtype fails
-    closed with "".
-
-    Args:
-        config: A Tensile solution dict carrying ``DataType``/``dtype`` or a
-            ``FamilyLabel``/``family_label``.
-
-    Returns:
-        The canonical dtype char (S/D/H/B/I8/C/Z), or "" when unreadable.
-    """
-    raw = config.get("DataType", config.get("dtype"))
-    if raw is None:
-        # Label-only configs exist in the auto-generated phases; the label
-        # carries the same information, so resolve through it rather than
-        # failing closed on a config whose dtype is knowable.
-        raw = config.get("FamilyLabel", config.get("family_label"))
-    if raw is None:
-        return ""
-    ch = str(raw).upper()
-    # HPA families carry the base dtype in their label: HH_HPA is f16 pairs
-    # (weight 1) and HS_HPA is f32 pairs (weight 1). Without these, a
-    # label-only HPA config cannot be modelled and the register-file gate fails
-    # it closed -- which silently removes the entire HPA deck from generation.
-    return {
-        "SS": "S", "DD": "D", "HH": "H", "ZZ": "Z", "CC": "C", "FF": "S",
-        "HH_HPA": "H", "HS_HPA": "S",
-    }.get(ch, ch)
-
 
 # ---------------------------------------------------------------- rejections
 #
@@ -308,9 +239,6 @@ def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
 
 @memo_gate
 def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
-    if profile is not None:
-        from .vgpr_model import set_profile as _sp
-        _sp(profile)
     """Register-file gate: reject configs Tensile cannot generate.
 
     Complements the divisibility and assembly-class gates: an over-wide thread
@@ -340,6 +268,15 @@ def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]
         No readable tile dims -> ``(True, "")`` ("nothing to model"); other
         gates own that case.
     """
+    if profile is None:
+        return _occupancy_feasible_impl(config)
+    from .vgpr_model import bound_profile as _bp
+    with _bp(profile):
+        return _occupancy_feasible_impl(config)
+
+
+def _occupancy_feasible_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
+    """Body of :func:`occupancy_feasible` with any bound profile applied."""
     dims = tile_dims(config)
     if not dims:
         return True, ""                      # nothing to model; other gates own it
@@ -521,217 +458,3 @@ def refuses_lds_reduction_buffer(config: Dict[str, Any]) -> Optional[bool]:
         config, dtype_char(config), mt0, mt1, local_split_u(config)) is not None
 
 
-def _pads_feasible(config: Dict[str, Any], ku: int,
-                    bpe: Optional[int]) -> Tuple[bool, str]:
-    """LdsPad legality, including the padded LDS footprint.
-
-    Why: `_write_phase_config` used to drop LdsPadA/B silently, so a candidate
-    carrying pads benchmarked with pads stripped to 0 (every reference kernel). The gate exists so the FORWARDED value is never what kills a
-    phase quietly.
-    """
-    pad_a = config.get("LdsPadA", 0)
-    pad_b = config.get("LdsPadB", 0)
-    try:
-        pad_a, pad_b = int(pad_a or 0), int(pad_b or 0)
-    except (TypeError, ValueError):
-        return False, f"LdsPadA/B must be integers (have {pad_a!r}/{pad_b!r})"
-    if pad_a < 0 or pad_b < 0:
-        return False, f"LdsPadA/B must be >= 0 (have {pad_a}/{pad_b})"
-    if pad_a or pad_b:
-        if not config.get("MacroTile") or ku <= 0 or not bpe:
-            return False, (
-                "LdsPad requires a resolvable MacroTile, DepthU and dtype to "
-                "prove the padded LDS footprint"
-            )
-        dims = tile_dims(config)
-        if not dims:
-            return False, "LdsPad requires a resolvable ThreadTile"
-        mt0, mt1, _, _ = dims
-        footprint = (mt0 + pad_a + mt1 + pad_b) * bpe * ku
-        if footprint > LDS_BUDGET:
-            return False, (
-                f"padded LDS footprint {footprint} > budget {LDS_BUDGET} with "
-                f"LdsPadA={pad_a} LdsPadB={pad_b} at DepthU {ku}; the pads would "
-                f"be dropped or the phase rejected by Tensile"
-            )
-    return True, ""
-
-
-def _int_or_reject(value, label: str) -> Tuple[Optional[int], Optional[str]]:
-    """Parse an int knob, or produce the reject text for a non-integer one."""
-    try:
-        return int(value), None
-    except (TypeError, ValueError):
-        return None, f"{label} must be an integer (have {value!r})"
-
-
-def _swizzle_domain_check(config: Dict[str, Any]) -> Optional[str]:
-    """The three swizzle knobs' own domains, or None when they are legal.
-
-    Tensile's domains (Common.py:945-947): StaggerU in {0,2,4,8,16,32,64},
-    StaggerUMapping in {0,1,2,3,4}, StaggerUStride in
-    {0,16,32,64,128,256,512,1024,2048}.
-    """
-    for key, domain, cite in (
-            ("StaggerU", STAGGER_U_DOMAIN, "945"),
-            ("StaggerUMapping", STAGGER_MAPPING_DOMAIN, "946"),
-            ("StaggerUStride", STAGGER_STRIDE_DOMAIN, "947")):
-        value = config.get(key)
-        if value is None:
-            continue
-        parsed, err = _int_or_reject(value, key)
-        if err or parsed not in domain:
-            return (f"{key}={parsed} outside Tensile domain {domain} "
-                    f"(Common.py:{cite})")
-    return None
-
-
-def _swizzle_feasible(config: Dict[str, Any], ku: int,
-                       bpe: Optional[int]) -> Tuple[bool, str]:
-    """The coupled StaggerU / StaggerUMapping / StaggerUStride domains.
-
-    Tensile source (SolutionStructs:3326-3342, Common.py:945-947, 1599-1601):
-
-      * StaggerUStride=0 is only valid if StaggerU=0 -- the ONE reject.
-      * StaggerU=0 FORCES StaggerUMapping=0 and StaggerUStride=0
-        (":3334-3336"); it does not reject them.
-      * StaggerUStride>0 requires staggerStrideShift = ceil(log2(SUS/(DU*bpe)))
-        >= 0, i.e. SUS > 0.5*DepthU*bpeAB (the ":3342" reject). Tensile then
-        internally raises SUS to a whole multiple of DepthU*bpe.
-      * Legal domains: SU in :data:`STAGGER_U_DOMAIN`, SUM in
-        :data:`STAGGER_MAPPING_DOMAIN`, SUS in :data:`STAGGER_STRIDE_DOMAIN`.
-        SU requires BufferLoad==1 and is silently ignored otherwise.
-
-    Why this was wrong until 2026-10-21: it read Tensile's FORCE as a reject
-    ("StaggerUStride=256 requires StaggerU>0") and so refused every config with
-    StaggerU=0 and the default stride 256. Tensile accepts those -- it zeroes
-    the stride itself. The refusal was a false rejection that killed the whole
-    "no-swizzle" arm: 14 deck rows (98 shape-records across the runs) were
-    refused at the launch boundary as "skipped_illegal", so the axis was never
-    measured at all.
-
-    An earlier revision (2026-10-09) had the SUS bound BACKWARDS as well (it
-    rejected SUS >= DepthU*bpe, i.e. exactly the legal swizzle values), which
-    is why Group C swizzle forwarding was blocked -- every legal StaggerUStride
-    was refused at the launch boundary. Corrected against the pinned checkout
-    (Tensile commit e8a8999e).
-    """
-    domain = _swizzle_domain_check(config)
-    if domain:
-        return False, domain
-    # Coupling. Tensile defaults SU=32 (absent SU = >0); absent SU = "stagger on".
-    su_effective = (STAGGER_U_DEFAULT if config.get("StaggerU") is None
-                    else int(config["StaggerU"]))
-    stride_effective = (STAGGER_STRIDE_DEFAULT if config.get("StaggerUStride") is None
-                        else int(config["StaggerUStride"]))
-
-    if su_effective == 0:
-        # Tensile FORCES the mapping and the stride to 0 here
-        # (SolutionStructs:3334-3336). Whatever the config carried is
-        # overwritten, not rejected -- so neither is a reason to refuse.
-        return True, ""
-    if stride_effective == 0:
-        return False, (f"StaggerUStride=0 is only valid if StaggerU is 0 "
-                       f"(have StaggerU={su_effective}; SolutionStructs:3325-3326)")
-    if ku > 0 and bpe and stride_effective < ku * bpe:
-        return False, (f"StaggerUStride={stride_effective} < DepthU({ku})*{bpe}B; "
-                       f"Tensile requires StaggerUStride >= DepthU*BytesPerElement "
-                       f"when StaggerU>0 (staggerStrideShift >= 0, SolutionStructs:3336-3342)")
-    return True, ""
-
-
-def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
-    """AssertFree0ElementMultiple and StoreCInUnroll sanity.
-
-    Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
-    enforced by ``assembly_class_valid``; enforcing a *second* copy here would
-    be two homes for one fact.
-    """
-    af0em = config.get("AssertFree0ElementMultiple")
-    if af0em is not None:
-        av, err = _int_or_reject(af0em, "AssertFree0ElementMultiple")
-        if err:
-            return False, err
-        if av < 1:
-            return False, f"AssertFree0ElementMultiple must be >= 1 (have {av})"
-
-    sci = config.get("StoreCInUnroll")
-    if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
-        return False, f"StoreCInUnroll must be a bool (have {sci!r})"
-
-    # TransposeLDS is unreachable on this device, in BOTH of its non-zero values:
-    #   * 1 is the MFMA path ("TransposeLds Supports only in
-    #     MatrixInstruction=1", SolutionStructs:4519-4521) and the device has no
-    #     MFMA (no v_mfma_*);
-    #   * -1 forces UnrollMajorLDS on the non-transposed operand
-    #     (":3874-3875"), and the classic (VALU) path rejects UnrollMajorLDS
-    #     outright -- "didn't support UnrollMajorLDS in VALU mode yet"
-    #     (":2890").
-    # The deck check found the second one: a Z 32x32/2x2 phase with
-    # TransposeLDS=-1 was refused by Tensile with exactly that message
-    # (2026-10-22). The same reject applies to UnrollMajorLDSA/B and
-    # LdsBlockSizePerPadA/B (":2890-2892"), which is why those two are
-    # *unreachable* rather than "virgin" in the tuning guide's §9.1.
-    tlds = config.get("TransposeLDS")
-    if tlds is not None:
-        tv, err = _int_or_reject(tlds, "TransposeLDS")
-        if err:
-            return False, err
-        if tv == 1:
-            return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           f"(SolutionStructs:4519-4521) and {_peaks.CODENAME} has no MFMA")
-        if tv == -1:
-            return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
-                           "classic (VALU) path rejects: 'didn't support "
-                           "UnrollMajorLDS in VALU mode yet' "
-                           "(SolutionStructs:2890)")
-    return True, ""
-
-
-@memo_gate
-def ldspad_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
-    if profile is not None:
-        from .vgpr_model import set_profile as _sp
-        _sp(profile)
-    """Group C legality gate for the forwarded LDS-pad / RCT knobs.
-
-    Why: the launch boundary forwards LdsPadA/B, AssertFree0ElementMultiple,
-    StaggerUStride and StoreCInUnroll only when this CPU-only gate passes, so a
-    forwarded value can never surface as an opaque Tensile "error 4" mid-run.
-
-    Configs that carry none of these keys trivially pass -- the gate exists so
-    the FORWARDED value is never what kills a phase silently.
-
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        ``(True, "")`` or ``(False, reason)``.
-    """
-    ku = depth_u(config)
-    ch = dtype_char(config)
-    bpe = BYTES_PER_ELEMENT.get(ch)
-
-    # PrefetchGlobalRead=2 doubles the LDS prefetch buffer; gate it against
-    # the same budget so a 2-deep prefetch cannot silently overflow LDS.
-    pgr = config.get("PrefetchGlobalRead")
-    if pgr is not None:
-        try:
-            pgr_i = int(pgr)
-        except (TypeError, ValueError):
-            return False, f"PrefetchGlobalRead must be an int (have {pgr!r})"
-        if pgr_i == 2:
-            dims = tile_dims(config)
-            if dims and ku > 0 and bpe:
-                mt0, mt1, _, _ = dims
-                if (mt0 + mt1) * bpe * ku * 2 > LDS_BUDGET:
-                    return False, (
-                        f"PrefetchGlobalRead=2 needs a doubled LDS footprint "
-                        f"({(mt0+mt1)*bpe*ku*2} > {LDS_BUDGET}) on this tile"
-                    )
-
-    for gate in (_pads_feasible, _swizzle_feasible):
-        ok, reason = gate(config, ku, bpe)
-        if not ok:
-            return False, reason
-    return _store_knobs_feasible(config)

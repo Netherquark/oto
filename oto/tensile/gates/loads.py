@@ -415,9 +415,6 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
 
 @memo_gate
 def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
-    if profile is not None:
-        from .vgpr_model import set_profile as _sp
-        _sp(profile)
     """Faithful port of Tensile classic-path divisibility.
 
     Only covers non-MI, FractionalLoad=False, Assembly kernel path -- which is
@@ -430,6 +427,15 @@ def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, 
         ``(True, "")`` when every operand's classic-path load is legal, else
         ``(False, reason)`` naming the operand (A/B) and the branch that failed.
     """
+    if profile is None:
+        return _validate_tensile_loads_impl(config)
+    from .vgpr_model import bound_profile as _bp
+    with _bp(profile):
+        return _validate_tensile_loads_impl(config)
+
+
+def _validate_tensile_loads_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
+    """Body of :func:`validate_tensile_loads` with any bound profile applied."""
     geom = _load_geometry(config)
     if geom is None:
         return True, ""
@@ -472,3 +478,4 @@ def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, 
         if reason:
             return False, reason
     return True, ""
+

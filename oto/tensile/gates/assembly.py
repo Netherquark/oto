@@ -115,9 +115,6 @@ def _is_hpa(config: Dict[str, Any], dtype_upper: str) -> bool:
 
 def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
                    gsu: int, profile=None) -> Optional[str]:
-    global _ASM_PROFILE
-    if profile is not None:
-        _ASM_PROFILE = profile
     """GlobalSplitU class rejection text, or None when GSU is legal here.
 
     Rules:
@@ -132,14 +129,15 @@ def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
     """
     is_hpa = _is_hpa(config, dtype_upper)
     is_hs_hpa = is_hpa and dtype_upper in ("H", "B")
+    prof = profile if profile is not None else _ASM_PROFILE
 
-    if dtype_upper in ("Z", "C") and gsu > 1 and not _ASM_PROFILE.has_mfma:
+    if dtype_upper in ("Z", "C") and gsu > 1 and not prof.has_mfma:
         return (f"GlobalSplitU={gsu} on complex {dtype_upper}: illegal on "
-                f"{_ASM_PROFILE.codename} (no MatrixInstruction; SolutionStructs:3553)")
+                f"{prof.codename} (no MatrixInstruction; SolutionStructs:3553)")
 
-    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1 and not _ASM_PROFILE.has_mfma:
+    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1 and not prof.has_mfma:
         return (f"GlobalSplitU={gsu} on half with f32 accumulate "
-                f"(HPA): illegal on {_ASM_PROFILE.codename} (needs half/mixed compute or "
+                f"(HPA): illegal on {prof.codename} (needs half/mixed compute or "
                 "MFMA; SolutionStructs:3553)")
 
     if dtype_upper in ("H", "B") and gsu > 1:

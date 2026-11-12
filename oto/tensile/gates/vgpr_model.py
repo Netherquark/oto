@@ -12,14 +12,16 @@ legality classes (oto.tensile.gates.assembly).
 Public API: GLOBAL_LOAD_BYTE_CAP, FAMILY_BYTES_PER_ELEMENT, VGPR_PER_CU,
 MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT, ACCVGPR_BUDGET, LDS_BUDGET,
 MAX_LDS_BYTES, BYTES_PER_ELEMENT, COMPUTE_BYTES_PER_ELEMENT, VGPR_BUDGET,
+LDS_PER_CU_KB,
 MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE, measured_accvgpr, depth_u,
 lds_base_bytes, local_split_u, num_threads, per_thread_vgpr, is_hpa,
-compute_bytes.
+compute_bytes, set_profile, restore_profile, bound_profile.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+import contextlib
+from typing import Any, Dict, Tuple
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
@@ -32,15 +34,41 @@ except Exception:  # pragma: no cover
     GLOBAL_LOAD_BYTE_CAP = 16
 
 
-def set_profile(profile) -> None:
-    """Re-bind the module-level device constants to ``profile`` (Refactor 2)."""
+_TRACKED = ("GLOBAL_LOAD_BYTE_CAP", "VGPR_PER_CU", "LDS_PER_CU_KB")
+
+
+def set_profile(profile) -> Dict[str, Any]:
+    """Re-bind the module-level device constants to ``profile`` (Refactor 2).
+
+    Returns the previous bindings so a scoped call site can
+    :func:`restore_profile` them; the default (module-init) state is what a
+    restore brings back.
+    """
     global GLOBAL_LOAD_BYTE_CAP, VGPR_PER_CU, LDS_PER_CU_KB
+    previous = {name: globals()[name] for name in _TRACKED}
     try:
         GLOBAL_LOAD_BYTE_CAP = profile.global_load_byte_cap
         VGPR_PER_CU = profile.vgpr_per_cu
         LDS_PER_CU_KB = profile.lds_per_cu_kb
     except Exception:
         pass
+    return previous
+
+
+def restore_profile(state: Dict[str, Any]) -> None:
+    """Restore the bindings :func:`set_profile` replaced (Refactor 2)."""
+    for name, value in state.items():
+        globals()[name] = value
+
+
+@contextlib.contextmanager
+def bound_profile(profile):
+    """Scope ``set_profile`` to the ``with`` block; restore on exit."""
+    state = set_profile(profile)
+    try:
+        yield
+    finally:
+        restore_profile(state)
 
 #: Bytes per element per family, matching the dtype table in
 #: `validate_tensile_loads`. Cross-checked against ``Tensile.DataType.properties``
@@ -60,8 +88,10 @@ FAMILY_BYTES_PER_ELEMENT = {
 try:
     from oto.device.loader import default_profile as _vgpr_dp2
     VGPR_PER_CU = _vgpr_dp2().vgpr_per_cu
+    LDS_PER_CU_KB = _vgpr_dp2().lds_per_cu_kb
 except Exception:  # pragma: no cover
     VGPR_PER_CU = 65536
+    LDS_PER_CU_KB = 64
 MAX_VGPR_PER_THREAD = 256
 #: Effective VGPRs consumed per thread-tile element, per dtype char.
 VGPR_PER_ELEMENT = {"S": 1, "D": 2, "H": 1, "B": 1, "I8": 1, "C": 4, "Z": 8}
