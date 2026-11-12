@@ -26,5 +26,3 @@ def detect_codename() -> str:
         except (OSError, subprocess.TimeoutExpired):
             pass
     return "gfx90c"
-EOF
-echo written

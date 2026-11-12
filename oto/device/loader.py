@@ -87,3 +87,8 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] =
     if m2:
         return load_profile(m2.group(1).strip(), profiles_dir)
     raise ValueError(f"Cannot derive profile from starter: {starter_path}")
+
+
+def default_profile():
+    """The gfx90c profile used as the default when no device is specified."""
+    return load_profile("gfx90c")
