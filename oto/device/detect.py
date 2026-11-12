@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
-from typing import Optional
 
 
 def detect_codename() -> str:
