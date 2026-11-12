@@ -1,7 +1,7 @@
 """Automated potential_configs.md generator from run outputs.
 
-Owns: synthesising a potential_configs.md skeleton from kernel_db + profile +
-the measured corpus. Does NOT own the workflow or the agents.
+Owns: synthesising a potential_configs.md from kernel_db + acceptance report +
+profile + the measured corpus. Does NOT own the workflow or the agents.
 
 Public API: generate(profile, base_dir) -> str.
 """
@@ -13,6 +13,13 @@ from pathlib import Path
 from typing import Any
 
 from oto.device.profile import DeviceProfile
+
+
+def _load_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def generate(profile: DeviceProfile, base_dir: Path) -> str:
@@ -29,27 +36,46 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
         f"- families: {', '.join(sorted(profile.family_shapes))}",
         "",
     ]
+    # Corpus
     kb = base_dir / "gfx90c_results" / "analysis" / "kernel_db.json"
-    if kb.exists():
-        try:
-            db = json.loads(kb.read_text())
-            total_rows = sum(len(v) for v in db.values())
-            parts.append("## Corpus")
-            parts.append(f"- runs: {len(db)}")
-            parts.append(f"- kernel-shape rows: {total_rows}")
-            parts.append("")
-            # per-run summary
-            parts.append("## Per-run row counts")
-            for run_id in sorted(db):
-                parts.append(f"- {run_id}: {len(db[run_id])} rows")
-            parts.append("")
-        except (json.JSONDecodeError, OSError):
-            parts.append("## Corpus: (unreadable)")
-            parts.append("")
+    db = _load_json(kb)
+    if isinstance(db, dict):
+        total_rows = sum(len(v) for v in db.values())
+        parts.append("## Corpus")
+        parts.append(f"- runs: {len(db)}")
+        parts.append(f"- kernel-shape rows: {total_rows}")
+        parts.append("")
+        parts.append("## Per-run row counts")
+        for run_id in sorted(db):
+            parts.append(f"- {run_id}: {len(db[run_id])} rows")
+        parts.append("")
     else:
         parts.append("## Corpus: (no kernel_db.json found)")
         parts.append("")
-    # ceilings
+    # Acceptance report
+    ar = _load_json(base_dir / "gfx90c_results" / "acceptance_report.json")
+    if isinstance(ar, dict):
+        parts.append("## Acceptance (like-for-like)")
+        verdicts = ar.get("per_cell_verdicts", [])
+        wins = sum(1 for v in verdicts if v.get("verdict") == "WIN")
+        ties = sum(1 for v in verdicts if v.get("verdict") == "TIE")
+        losses = sum(1 for v in verdicts if v.get("verdict") == "LOSS")
+        parts.append(f"- cells: {len(verdicts)}  (WIN {wins} / TIE {ties} / LOSS {losses})")
+        parts.append(f"- reference run: {ar.get('reference_run_id', '?')}")
+        parts.append("")
+        # per-family summary
+        by_fam: dict = {}
+        for v in verdicts:
+            by_fam.setdefault(v.get("family", "?"), []).append(v)
+        parts.append("## Per-family verdicts")
+        for fam in sorted(by_fam):
+            vs = by_fam[fam]
+            w = sum(1 for v in vs if v.get("verdict") == "WIN")
+            t = sum(1 for v in vs if v.get("verdict") == "TIE")
+            l = sum(1 for v in vs if v.get("verdict") == "LOSS")
+            parts.append(f"- {fam}: {len(vs)} cells (W{w}/T{t}/L{l})")
+        parts.append("")
+    # Ceilings
     parts.append("## Realistic ceilings (client-reported units)")
     for fam in sorted(profile.realistic_ceilings):
         parts.append(f"- {fam}: {profile.realistic_ceilings[fam]}")
