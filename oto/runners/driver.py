@@ -155,6 +155,14 @@ class TensileDriver(
         self.codename = codename
         from oto.device.loader import load_profile
         self.profile = load_profile(codename)
+        # Propagate the profile to module-level constants (Refactor 2).
+        try:
+            from oto.device import peaks as _peaks
+            from oto.tensile.gates import vgpr_model as _vgpr
+            _peaks.set_profile(self.profile)
+            _vgpr.set_profile(self.profile)
+        except Exception:
+            pass
 
         self._init_registry_and_scheduler()
         self._init_run_dirs()
