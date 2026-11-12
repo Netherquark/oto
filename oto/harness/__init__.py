@@ -26,6 +26,12 @@ coverage.
 
 from __future__ import annotations
 
-__all__ = ["kernel_db", "regression_matrix", "resolve_cells"]
+__all__ = [
+    "asm_occupancy", "candidate_overlay", "candidate_pool", "candidate_rows",
+    "cell_knob_diff", "corpus_census", "coverage_graph", "coverage_map",
+    "deck_check", "failure_triage", "gate_calibration", "generate_candidates",
+    "kernel_db", "measure_vgprs", "occupancy_audit", "regression_matrix",
+    "resolve_cells", "rule_calibration", "tensile_oracle", "visual_check",
+]
 
 __version__ = "1.1.0"

@@ -257,7 +257,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--rule", action="append", default=None,
                     help="builtin name or module:attr (repeatable; default: all "
                          "builtins)")
-    ap.add_argument("--base", default=str(_HERE), help="repo root (default: repo)")
+    ap.add_argument("--base", "--base-dir", dest="base", default=str(_HERE), help="repo root (default: repo)")
     ap.add_argument("--family", action="append", default=None,
                     help="restrict to a family label (repeatable)")
     ap.add_argument("--limit", type=int, default=8,

@@ -161,7 +161,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base", default=str(_HERE), help="repo root (default: repo)")
+    ap.add_argument("--base", "--base-dir", dest="base", default=str(_HERE), help="repo root (default: repo)")
     ap.add_argument("--run", default=None,
                     help="restrict to one run directory name")
     ap.add_argument("--top", type=int, default=25,

@@ -269,7 +269,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base", default=str(_HERE), help="repo root (default: repo)")
+    ap.add_argument("--base", "--base-dir", dest="base", default=str(_HERE), help="repo root (default: repo)")
     ap.add_argument("--population", choices=("ours", "reference", "all"),
                     default="all", help="which corpus population to report")
     ap.add_argument("--family", action="append", default=None,
