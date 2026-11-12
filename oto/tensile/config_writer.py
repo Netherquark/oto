@@ -7,10 +7,14 @@ a knob becomes Tensile YAML, so it is the one place that has to answer for every
 silent-drop bug in the project's history (GlobalReduceVectorWidth, dropped LDS
 pads, dropped StaggerUStride).
 Does NOT own: the gates it consults (oto.tensile.gates), the shape parser it
-uses (oto.tensile.candidate.parse_tensile_shape), or the driver that calls it
-(oto.runners.benchmark).
-Public API: write_phase_config, TRANSPOSE_MAP, GLOBAL_LOAD_WIDTH_KEYS,
-FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS, NOT_FORWARDED_KNOBS. (The driver's
+uses (oto.tensile.candidate.parse_tensile_shape), the driver that calls it
+(oto.runners.benchmark), the forwarding-surface tuples (oto.tensile.knob_surface),
+or the contraction-pattern vocabulary (oto.tensile.patterns).
+Public API: write_phase_config, parse_tensile_shape, TRANSPOSE_MAP,
+GLOBAL_LOAD_WIDTH_KEYS, FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS,
+NOT_FORWARDED_KNOBS. (The forwarding-surface tuples live in
+oto.tensile.knob_surface and the pattern vocabulary in oto.tensile.patterns;
+they are re-exported here for the tests and gate_calibration.) (The driver's
 private `_TENSILE_VALID_PARAMS` is consulted at the launch boundary but is not
 re-exported here.)
 
@@ -56,86 +60,19 @@ from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import (ldspad_feasible,
                                          occupancy_feasible)
+from oto.tensile.knob_surface import (DEPRECATED_KEYS as _DEPRECATED_KEYS,
+                                      FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_C_KNOBS,
+                                      FORWARDED_KNOBS as FORWARDED_KNOBS,
+                                      GLOBAL_LOAD_WIDTH_KEYS as GLOBAL_LOAD_WIDTH_KEYS,
+                                      NOT_FORWARDED_KNOBS as NOT_FORWARDED_KNOBS)
+from oto.tensile.patterns import SPELLINGS, TRANSPOSE_MAP as TRANSPOSE_MAP
 from oto.tensile.shape_order import ordered_shapes
 
-#: Contraction pattern -> (TransposeA, TransposeB). Verified against Tensile
-#: index notation and the corpus' own kernel names:
-#: Ailk_Bljk -> NN, Ailk_Bjlk -> NT, Alik_Bljk -> TN, Alik_Bjlk -> TT.
-#: A pattern that matches none of these falls back to NT, which is what the
-#: reference metadata's own labels almost always mean.
-TRANSPOSE_MAP = {
-    "Ailk_Bljk": (False, False),
-    "Ailk_Bjlk": (False, True),
-    "Alik_Bljk": (True,  False),
-    "Alik_Bjlk": (True,  True),
-}
-
-#: Patterns recognised in a label, in the order they are matched.
-_PATTERNS = ("Ailk_Bljk", "Ailk_Bjlk", "Alik_Bljk", "Alik_Bjlk")
-
-#: Global load/reduce widths. Tensile defaults these when absent, and the default
-#: can contradict the named VectorWidth -> solution rejected ("GlobalLoad
-#: VectorWidthA 2 must be == VectorWidth 4 or == 1").
-GLOBAL_LOAD_WIDTH_KEYS = ("GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-                          "GlobalReduceVectorWidth")
-
-#: LDS-pad / RCT knobs forwarded verbatim, after the ldspad gate passes. They
-#: used to be silently dropped here, so candidates carrying them benchmarked
-#: WITHOUT the knob (the marginal-value audit found 167/167 reference kernels
-#: carrying pads benchmarked with pads stripped to 0).
-#: The swizzle axis (StaggerU / StaggerUMapping / StaggerUStride) is forwarded
-#: as a COUPLED TRIO: Tensile rejects StaggerUStride=0 unless StaggerU=0
-#: (SolutionStructs:3326-3327) and forces StaggerUMapping=0 + StaggerUStride=0
-#: when StaggerU=0 (:3333-3334), so forwarding StaggerUStride alone -- the
-#: pre-2026-10-09 state -- silently benchmarked every swizzle candidate at the
-#: defaults.
-FORWARDED_GROUP_C_KNOBS = ("LdsPadA", "LdsPadB", "AssertFree0ElementMultiple",
-                           "StaggerU", "StaggerUMapping", "StaggerUStride",
-                           "StoreCInUnroll")
-
-#: Keys Tensile must never receive. ``GlobalReduceVectorWidth`` is not a Tensile
-#: parameter at all, despite reference kernel metadata carrying it as ``grvw``;
-#: emitting it is what killed all 127 T1 reference reruns at "Filling in
-#: Parameters With Defaults" having executed zero phases.
-_DEPRECATED_KEYS = ("MacroTile0", "MacroTile1")
-
-#: The COMPLETE forwarding surface: every Tensile ``ForkParameters`` name
-#: ``_fork_params`` can emit and ``_drop_unsupported`` leaves in place. Declared
-#: once so "is this knob real?" has a single, testable answer -- the deck became
-#: a placebo three times (``GlobalReduceVectorWidth``, the LDS pads, and
-#: StaggerUStride-forwarded-alone) precisely because the surface was only
-#: *implied* by the fork helpers. ``tests/test_writer_forwards_sweep_knobs.py``
-#: pins this tuple to them, and ``potential_configs.md`` §R16 is its prose.
-FORWARDED_KNOBS = (
-    "ThreadTile", "MacroTile", "WorkGroup",
-    "WorkGroupMapping", "GlobalSplitU",
-    "DepthU",
-    "VectorWidth", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-    "NumLoadsCoalescedA", "NumLoadsCoalescedB",
-    "PrefetchGlobalRead", "PrefetchLocalRead",
-    "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode",
-    "FractionalLoad", "NonTemporalA", "NonTemporalB", "NonTemporalC",
-    "NonTemporalD",
-    "AssertFree1ElementMultiple",
-    "TransposeLDS",
-) + FORWARDED_GROUP_C_KNOBS
-
-#: Valid Tensile parameters a builder may name, which the launch boundary does
-#: NOT forward. A candidate carrying one would benchmark at the Tensile default
-#: while its manifest claims the treatment ran -- a silent placebo. Declared so
-#: the deck can strip-and-REPORT it (``candidate_rows._NOT_FORWARDED_YET``)
-#: rather than no-op it, and so §R16/§R20 have one home for what is unreachable
-#: today and what it would cost to reach it.
-NOT_FORWARDED_KNOBS = (
-    "WaveSeparateGlobalReadA", "WaveSeparateGlobalReadB",
-    "ThreadSeparateGlobalReadA", "ThreadSeparateGlobalReadB",
-    "1LDSBuffer", "UnrollMajorLDSA", "UnrollMajorLDSB",
-    "LdsBlockSizePerPadA", "LdsBlockSizePerPadB",
-    "DirectToVgprA", "DirectToVgprB",
-    "GlobalReadPerMfma", "LocalWritePerMfma", "DepthULdsDivisor",
-    "PersistentKernel",
-)
-
+__all__ = [
+    'write_phase_config', 'parse_tensile_shape',
+    'TRANSPOSE_MAP', 'GLOBAL_LOAD_WIDTH_KEYS', 'FORWARDED_GROUP_C_KNOBS',
+    'FORWARDED_KNOBS', 'NOT_FORWARDED_KNOBS',
+]
 
 # ---------------------------------------------------------------- readers
 
@@ -148,7 +85,7 @@ def _pattern_of(label: str, explicit: Optional[str]) -> str:
     """
     if explicit:
         return explicit
-    for pat in _PATTERNS:
+    for pat in SPELLINGS:
         if pat in label:
             return pat
     return ""

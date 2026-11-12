@@ -26,13 +26,13 @@ The loads gate needs the second pair (the coalesced-vs-perpendicular geometry
 of an operand), the writer needs the first. Both live here, so the two cannot
 drift apart again.
 
-Public API: TRANSPOSE_MAP, DEFAULT_PATTERN, DEFAULT_TRANSPOSE, transposes,
-tlu_flags, pattern_of.
+Public API: TRANSPOSE_MAP, DEFAULT_PATTERN, DEFAULT_TRANSPOSE, SPELLINGS,
+transposes, tlu_flags, pattern_of.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 #: Pattern spelling -> (TransposeA, TransposeB). ``i``/``j``/``k``/``l`` are
 #: the matrix dimensions; "A**i**lk" means A is stored i-major (k contiguous),
@@ -52,7 +52,8 @@ DEFAULT_PATTERN = "Ailk_Bjlk"
 DEFAULT_TRANSPOSE: Tuple[bool, bool] = TRANSPOSE_MAP[DEFAULT_PATTERN]
 
 #: Every spelling, longest first, so "Alik_Bjlk" is found before a prefix.
-_SPELLINGS = tuple(sorted(TRANSPOSE_MAP, key=len, reverse=True))
+#: Public: the writer matches labels with the same order (one home).
+SPELLINGS = tuple(sorted(TRANSPOSE_MAP, key=len, reverse=True))
 
 
 def transposes(pattern: str) -> Tuple[bool, bool]:
@@ -101,12 +102,12 @@ def pattern_of(config: Dict[str, Any]) -> str:
     named = config.get("ContractionPattern")
     if named:
         text = str(named)
-        for spelling in _SPELLINGS:
+        for spelling in SPELLINGS:
             if spelling in text:
                 return spelling
         return DEFAULT_PATTERN
     label = str(config.get("label", ""))
-    for spelling in _SPELLINGS:
+    for spelling in SPELLINGS:
         if spelling in label:
             return spelling
     return DEFAULT_PATTERN
