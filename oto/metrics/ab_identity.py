@@ -118,6 +118,7 @@ def norm_config(cfg: Dict[str, Any], fingerprint: str = "") -> str:
 
 def _pair_key(rec: Dict[str, Any]) -> Tuple[str, str, str]:
     """Identity used to pair a native record with a floor record."""
-    return (rec["DataType"], rec["ProblemType"],
+    return (rec.get("DataType") or rec.get("dtype") or "",
+            rec.get("ProblemType") or rec.get("shape") or "",
             rec.get("norm_config") or norm_config(rec.get("config") or {},
                                                   rec.get("fingerprint", "")))

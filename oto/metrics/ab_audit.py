@@ -112,12 +112,16 @@ def _best_by_cell(
     for recs, side in ((native, "native"), (floor, "spoof")):
         for r in recs:
             key = r.get("cell_key") or cell_key(
-                extract_family_from_phase_id(r["phase_id"]), r["ProblemType"])
+                extract_family_from_phase_id(r.get("phase_id", "")),
+                r.get("ProblemType") or r.get("shape") or "")
             if not key:
                 continue
+            gf = r.get("GFLOPS") or r.get("median_gflops") or 0.0
+            if gf and "GFLOPS" not in r:
+                r["GFLOPS"] = gf
             slot = cells.setdefault(key, {"cell_key": key})
             best = slot.get(side)
-            if best is None or r["GFLOPS"] > best["GFLOPS"]:
+            if best is None or gf > (best.get("GFLOPS") or best.get("median_gflops") or 0.0):
                 slot[side] = r
     return cells
 

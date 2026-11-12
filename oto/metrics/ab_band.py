@@ -131,7 +131,9 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
         v = r.get("GFLOPS") or 0.0
         if v <= 0:
             continue
-        groups[(r.get("source_run"), r["DataType"], r["ProblemType"],
+        groups[(r.get("source_run"),
+                r.get("DataType") or r.get("dtype") or "",
+                r.get("ProblemType") or r.get("shape") or "",
                 r.get("kernel_key"), _form_key(r))].append(v)
     cvs: List[float] = []
     worst: Dict[str, float] = {}
