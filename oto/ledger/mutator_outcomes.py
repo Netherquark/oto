@@ -12,7 +12,7 @@ Public API: MutatorOutcomesMixin (classify_outcome, _per_cell_medians).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from oto.metrics.analytics import AnalyticsEngine
 

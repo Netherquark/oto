@@ -8,7 +8,6 @@ the tool's job to report, not this test's to freeze.
 """
 from __future__ import annotations
 
-import json
 import sys
 import tempfile
 import unittest

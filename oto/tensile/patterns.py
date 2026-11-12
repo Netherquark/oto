@@ -32,7 +32,7 @@ tlu_flags, pattern_of.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 #: Pattern spelling -> (TransposeA, TransposeB). ``i``/``j``/``k``/``l`` are
 #: the matrix dimensions; "A**i**lk" means A is stored i-major (k contiguous),

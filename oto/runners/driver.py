@@ -15,7 +15,6 @@ Public API: TensileDriver, NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS.
 from __future__ import annotations
 
 import os
-import shutil
 import signal
 import sys
 from pathlib import Path
@@ -25,8 +24,8 @@ from dotenv import load_dotenv
 
 from oto.ledger.agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
-from oto.ledger.registry import SQLiteRegistry, fingerprint_config
-from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
+from oto.ledger.registry import SQLiteRegistry
+from oto.metrics.analytics import AnalyticsEngine
 from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.report import AcceptanceReporter
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
@@ -35,7 +34,7 @@ from oto.runners import (analytics_loaders as _analytics, auto as _auto,
                          benchmark as _benchmark, clocks as _clocks,
                          phases as _phases, reference as _reference,
                          reporting as _reporting, synthesis as _synthesis,
-                         timing as _timing, toolchain)
+                         timing as _timing)
 from oto.runners.toolchain import (DEFAULT_TENSILE_ROOT, require_tensile_root,
                                    resolve_rocm_paths)
 

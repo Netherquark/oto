@@ -49,14 +49,13 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence
 
 from oto import yamlio  # noqa: E402
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import yaml  # noqa: E402
 
 from oto.tensile.config_writer import TRANSPOSE_MAP  # noqa: E402
 from oto.tensile.library_parity import phase_family  # noqa: E402

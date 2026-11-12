@@ -27,8 +27,7 @@ from __future__ import annotations
 import random
 from typing import Any, Dict, List, Optional, Tuple
 
-from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN, _DONOR_POOL,
-                                            _FORWARD_DRAWS,
+from oto.tensile.synthesis.db_knobs import (_FORWARD_DRAWS,
                                             FORWARD_KNOB_DOMAINS,
                                             forward_domain)
 from oto.tensile.synthesis.tile_space import TILE_KNOBS

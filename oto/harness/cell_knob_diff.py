@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 

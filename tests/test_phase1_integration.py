@@ -81,7 +81,6 @@ class Harness(unittest.TestCase):
 
 class OverlayMergeTests(Harness):
     def _driver(self, run_id):
-        import oto.runners.cli
         # Build only what the merge reads, so the test does not depend on Tensile
         # being installed for an unrelated reason.
         driver = TensileDriver.__new__(TensileDriver)
@@ -247,7 +246,6 @@ class ProposalRunIdTests(Harness):
             self.assertEqual(r["run_id"], "run_99")
 
     def test_overlay_is_written_for_this_run(self):
-        from oto.ledger.mutator import Proposal
         path = self.mutator.write_overlay(
             [{"phase_id": "phase_auto_o", "fp": "fpO", "config": {}}],
             run_id="run_explicit")
@@ -426,7 +424,6 @@ class NegativeCacheDurabilityTests(Harness):
 
 class SkipBypassTests(Harness):
     def _driver(self, run_id="run_skip"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
@@ -548,7 +545,6 @@ class SkipBypassTests(Harness):
 
 class OutcomeWriteBackTests(Harness):
     def _driver(self, run_id="run_resolve"):
-        import oto.runners.cli
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
@@ -616,7 +612,6 @@ class LoopActuallyCallsTheResolverTests(Harness):
     """
 
     def _driver(self, run_id="run_loop"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
@@ -786,7 +781,6 @@ class ReadOnlyRegistryTests(Harness):
         def spy(base, read_only=False):
             seen["read_only"] = read_only
             return SQLiteRegistry(base, read_only=True)
-        import oto.ledger.registry as reg_mod
         # ab_audit imports SQLiteRegistry inside the function; patch the module.
         import unittest.mock as mock
         with mock.patch("oto.ledger.registry.SQLiteRegistry", spy):
@@ -826,7 +820,6 @@ class GpuLossAbortTests(Harness):
     """
 
     def _driver(self, run_id="run_gpu_loss"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp

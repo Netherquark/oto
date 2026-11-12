@@ -54,8 +54,6 @@ import yaml
 
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
-from oto.tensile.patterns import TRANSPOSE_MAP as _PATTERN_TRANSPOSE_MAP  # noqa: E402
-from oto.tensile.patterns import transposes as _pattern_transposes  # noqa: E402
 from oto.tensile.gates.occupancy import (ldspad_feasible,
                                          occupancy_feasible)
 from oto.tensile.shape_order import ordered_shapes

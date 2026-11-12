@@ -249,7 +249,6 @@ def cheapest(family: Optional[str] = None, n: int = 5,
     universe used for deck *selection*. Recommending from the union produces
     `--targets` the driver cannot resolve, which is worse than no answer.
     """
-    import yaml
     from oto.tools.consolidate import _is_legal
     from oto.device.peaks import FAMILY_DTYPE_CHAR
 

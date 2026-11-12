@@ -246,7 +246,6 @@ class TestVectorWidthCap(unittest.TestCase):
                           f"VGPR_PER_ELEMENT; its candidates would all be dropped")
 
     def test_widened_variants_do_not_duplicate_an_existing_tile(self):
-        from oto.tensile.candidate import cap_vector_width
         for fam in ("SS", "DD", "HH"):
             seen = set()
             for c in self.decks[fam]:

@@ -31,7 +31,6 @@ def test_second_profile_gates_run():
 
 def test_profile_switching_restores_gfx90c():
     """Switching profiles must not leak state."""
-    from oto.device.loader import default_profile
     p1 = load_profile("gfx90c")
     p2 = load_profile("gfx906")
     set_profile(p2)

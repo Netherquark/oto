@@ -14,7 +14,7 @@ Public API: HtmlMixin.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from oto.metrics.report_css import (DASHBOARD_CSS, JS_THEME_INIT,
                                      JS_THEME_TOGGLE, JS_COLLAPSIBLE)

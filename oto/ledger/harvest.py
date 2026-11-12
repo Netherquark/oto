@@ -19,7 +19,6 @@ from oto import yamlio  # noqa: E402
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
 
-import yaml
 
 import oto.metrics.coverage as coverage
 

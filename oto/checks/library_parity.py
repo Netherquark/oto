@@ -29,7 +29,6 @@ import argparse
 import json
 from pathlib import Path
 
-import yaml
 
 from oto.device.peaks import shipped_cells
 from oto.tensile.library_parity import load_pipeline_phases, parity_report, phases_cells

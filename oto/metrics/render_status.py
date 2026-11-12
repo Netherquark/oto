@@ -38,9 +38,8 @@ import sqlite3
 import sys
 import threading
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 # Imported lazily by `main`: the report module imports this one for the
 # render names it re-exports, so a top-level import would be circular.

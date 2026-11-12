@@ -50,7 +50,6 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import yaml  # noqa: E402
 
 from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import (FAMILY_DTYPES, PEAK_GFLOPS,  # noqa: E402

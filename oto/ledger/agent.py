@@ -22,7 +22,7 @@ from pathlib import Path
 from oto.device.peaks import FAMILY_DTYPE_CHAR, cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.harvest import HarvestMixin
-from oto.ledger.mutator import Mutator, Proposal
+from oto.ledger.mutator import Proposal
 from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
 import oto.metrics.coverage as coverage
 from oto.tensile.candidate import CandidateGenerator, CandidateConfig
@@ -379,9 +379,9 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         lattice_fallbacks: List[str] = []
         ungraded_cells: List[str] = []
 
-        for cell_key, winner_info in winners.items():
+        for ck, winner_info in winners.items():
             cands, repl, rejected, ungraded = self._mutate_cell(
-                cell_key, winner_info, mutation_budget,
+                ck, winner_info, mutation_budget,
                 retired_cells, lattice_fallbacks)
             new_candidates.extend(cands)
             replayed.extend(repl)

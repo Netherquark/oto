@@ -84,7 +84,6 @@ def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
     record of everything that came before, so they are part of the pool. Live
     entries win on phase_id collision.
     """
-    import yaml
     pool: Dict[str, Dict[str, Any]] = {}
     archived = sorted((base / "archive").glob("phases.yaml.*"))
     for path in archived + [base / "phases.yaml"]:

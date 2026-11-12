@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from oto import yamlio  # noqa: E402
 #: Re-measure the cells that previously ran with a config our own extractors got
@@ -97,7 +97,6 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     is far better than refusing to start.
     """
     from pathlib import Path
-    import yaml
     from collections import Counter
 
     import oto.tensile.library as tlib

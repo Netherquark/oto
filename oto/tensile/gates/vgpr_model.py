@@ -19,7 +19,7 @@ compute_bytes.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and

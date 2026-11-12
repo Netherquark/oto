@@ -42,7 +42,7 @@ parser. Every value comes from the canonical owners (``legality``, ``library``,
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from oto.tensile import legality
 # ALL_GROUPS / TEMPLATE_KEYS / reconcile_tile / tile_product_holds are imported
@@ -51,7 +51,7 @@ from oto.tensile import legality
 from oto.tensile.synthesis.tile_space import (ALL_GROUPS, TEMPLATE_KEYS,
                                              reconcile_tile)
 from oto.tensile.synthesis.tile_space import tile_product_holds  # noqa: F401
-from oto.metrics.coverage import STATE_REPLICATE, STATE_RETIRED, decide_state
+from oto.metrics.coverage import decide_state
 
 __all__ = [
     "family_shape_sweeps", "sweep_for_family", "choose_groups",

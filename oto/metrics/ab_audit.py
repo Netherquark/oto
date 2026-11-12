@@ -16,21 +16,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 from oto.metrics.ab_band import (BAND_HI, BAND_LO, TIE_BAND_PCT, measured_band,
                                  repeat_dispersion, reproducible_band, verdict)
-from oto.metrics.ab_identity import (AbIdentityMixin, _CP_RE, _driver,
-                                     _norm_macro_tile, _pair_key, norm_config)
-from oto.metrics.ab_records import (_registry_records, arm_record_sets,
+from oto.metrics.ab_identity import (_driver,
+                                     norm_config)
+from oto.metrics.ab_records import (arm_record_sets,
                                     arm_records, phase_records, phase_family)
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key
-from oto.metrics.protocol import (FAMILY, PARTIAL, SINGLE, UNKNOWN,
+from oto.metrics.protocol import (UNKNOWN,
                                   like_for_like, protocol_of)
 
 BASE = Path(__file__).resolve().parents[2]

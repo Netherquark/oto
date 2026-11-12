@@ -40,7 +40,6 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR          # noqa: E402
 from oto.tensile.gates.vgpr_model import measured_accvgpr  # noqa: E402
 
 _TYPECODE_CORE = re.compile(r"_(MT\d+x\d+(?:x\d+)?)_")
@@ -122,7 +121,6 @@ def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
     else:
         cfg_yaml = phase_dir / "Data" / "00_Final.yaml"
         if cfg_yaml.exists():
-            import yaml
             try:
                 cfgd = yamlio.load_yaml(cfg_yaml) or {}
                 ttr = str(cfgd.get("ThreadTile") or cfgd.get("thread_tile") or "")

@@ -43,7 +43,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
-import yaml
 
 from oto import yamlio  # noqa: E402
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
@@ -202,7 +201,7 @@ def build_matrix(db_path: str, base_dir: str,
     sys.path.insert(0, base_dir)
     from oto.harness.kernel_db import load_kernel_db
     from oto.device.peaks import shipped_cell_set
-    from oto.tensile.library_parity import phase_family, phases_cells
+    from oto.tensile.library_parity import phase_family
 
     db = load_kernel_db(db_path, base_dir=base_dir, rebuild=rebuild)
     native, spoof = _split_native_spoof(db)

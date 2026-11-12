@@ -343,7 +343,6 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         Guards the actual risk of moving 16 cells to T3: a cell left with no
         reference kernel at all would have no floor to compare against.
         """
-        import hashlib as _h
         sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
         cells = {}
         for fam, pats in json.load(open(sm))["families"].items():

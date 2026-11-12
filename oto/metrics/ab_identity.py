@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Tuple
 
-import yaml
 
 from oto import yamlio  # noqa: E402
 #: The project root, resolved from this module's location.

@@ -14,7 +14,6 @@ Public API: SQLiteRegistry, fingerprint_config, _KERNEL_DB_REBUILD_STATUSES.
 from oto.ledger.proposals import ProposalMixin
 from oto.ledger.queries import QueryMixin
 from oto.ledger.registry_core import (RegistryCore,
-                                      _KERNEL_DB_REBUILD_STATUSES,
                                       fingerprint_config)
 
 __all__ = ["SQLiteRegistry", "fingerprint_config"]
