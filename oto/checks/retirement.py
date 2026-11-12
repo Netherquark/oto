@@ -7,13 +7,19 @@ Does NOT own: any read the rest of oto performs (use ``oto.ledger.registry`` or
 Public API: ``main``.
 """
 
+import argparse
 import json
 import sqlite3
+from pathlib import Path
 
 
 def main() -> None:
     """Print retirement records and every cell holding >= 3 samples."""
-    conn = sqlite3.connect('gfx90c_results/registry.db')
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--base-dir", type=Path, default=Path("."),
+                    help="repo root")
+    args = ap.parse_args()
+    conn = sqlite3.connect(Path(args.base_dir) / "gfx90c_results" / "registry.db")
     cursor = conn.cursor()
 
     # Check for retirement records

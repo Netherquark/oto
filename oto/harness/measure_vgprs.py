@@ -40,7 +40,6 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR          # noqa: E402
 from oto.tensile.gates.vgpr_model import measured_accvgpr  # noqa: E402
 
 _TYPECODE_CORE = re.compile(r"_(MT\d+x\d+(?:x\d+)?)_")
@@ -78,6 +77,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", help="only this run dir name")
     ap.add_argument("--json", type=Path)
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override")
+    ap.add_argument("--runs", type=Path, default=None,
+                    help="runs directory (default: <base-dir>/gfx90c_runs)")
     return ap
 
 
@@ -122,7 +125,6 @@ def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
     else:
         cfg_yaml = phase_dir / "Data" / "00_Final.yaml"
         if cfg_yaml.exists():
-            import yaml
             try:
                 cfgd = yamlio.load_yaml(cfg_yaml) or {}
                 ttr = str(cfgd.get("ThreadTile") or cfgd.get("thread_tile") or "")
@@ -147,7 +149,8 @@ def _print_table(rows: List[Dict[str, Any]]) -> None:
 def main() -> int:
     args = _build_arg_parser().parse_args()
 
-    runs_dir = _HERE / "gfx90c_runs"
+    base = Path(args.base_dir) if args.base_dir else _HERE
+    runs_dir = Path(args.runs) if args.runs else base / "gfx90c_runs"
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
         print("no Tensile assembly objects found (run a phase first)")

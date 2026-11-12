@@ -46,7 +46,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
-import math
+
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -61,7 +61,7 @@ from oto.harness.coverage_map import (  # noqa: E402
     _DEFAULT_CELLS, coverage_row, legal_geometries, measured_geometries)
 
 #: Where the figures go (and the index that lists them).
-OUT_DIR = _HERE / "gfx90c_results" / "analysis" / "coverage"
+OUT_DIR_REL = "gfx90c_results/analysis/coverage"
 
 #: The power-of-two buckets of the two axes.
 AREA_BUCKETS = (1024, 2048, 4096, 8192, 16384, 32768, 65536)
@@ -438,7 +438,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--family", action="append", help="limit to a family")
     ap.add_argument("--cell", action="append",
                     help="one cell, 'FAMILY:side' (repeatable)")
-    ap.add_argument("--out", default=str(OUT_DIR), help="where the figures go")
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override (default: this file's parent of package)")
+    ap.add_argument("--out", default=None,
+                    help="where the figures go (default: <base-dir>/gfx90c_results/analysis/coverage)")
     ap.add_argument("--no-svg", action="store_true",
                     help="print the numbers only")
     args = ap.parse_args(argv)
@@ -451,7 +454,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if only:
         fams = sorted({f for f, _ in only})
     measured = measured_geometries()
-    out_dir = Path(args.out)
+    out_dir = Path(args.out) if args.out else ((Path(args.base_dir) if args.base_dir else _HERE) / OUT_DIR_REL)
     entries: List[Dict[str, Any]] = []
     print(f"{'cell':24} {'legal':>5} {'meas':>5} {'unexp':>5} "
           f"{'%unexp':>7} {'best':>8} {'peaks':>5} {'traps':>5}")

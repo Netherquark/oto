@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -89,41 +88,14 @@ def _knob_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Tuple[Dict[str, Any], Li
     return {"only_native": only_a, "only_floor": only_b, "changed": changed}, summary
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--db", type=Path,
-                    default=_HERE / "gfx90c_results" / "analysis" / "kernel_db.json")
-    ap.add_argument("--family", help="only this family (SS/DD/HH/CC/ZZ/HH_HPA/HS_HPA)")
-    ap.add_argument("--floor-wins-only", action="store_true",
-                    help="only print cells the floor wins")
-    ap.add_argument("--json", type=Path)
-    args = ap.parse_args()
-
-    db = json.loads(args.db.read_text())
-    native_rows: List[Dict[str, Any]] = []
-    floor_rows: List[Dict[str, Any]] = []
-    for run_id, rows in db.items():
-        if run_id.startswith("gfx900_ref"):
-            floor_rows += rows
-        else:
-            native_rows += rows
-
-    native_w = _winner_per_cell(native_rows)
-    floor_w = _winner_per_cell(floor_rows)
-
-    cells = sorted(set(native_w) & set(floor_w),
-                   key=lambda c: (_FAMILY_ORDER.index(c[0]) if c[0] in _FAMILY_ORDER else 99, c[1]))
-    if args.family:
-        cells = [c for c in cells if c[0].upper() == args.family.upper()]
-
+def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> List[Dict[str, Any]]:
     rows_out: List[Dict[str, Any]] = []
     for fam, side in cells:
         n, f = native_w[(fam, side)], floor_w[(fam, side)]
         ng, fg = n.get("gflops_median") or 0, f.get("gflops_median") or 0
         dt = (fg - ng) / ng * 100.0 if ng else float("inf")
         floor_wins = fg > ng
-        if args.floor_wins_only and not floor_wins:
+        if floor_wins_only and not floor_wins:
             continue
         knob_n, knob_f = _knob_dict(n), _knob_dict(f)
         _, summary = _knob_diff(knob_n, knob_f)
@@ -142,6 +114,41 @@ def main() -> int:
             "native_kernel": n["kernel"], "floor_kernel": f["kernel"],
             "knob_diff": _knob_diff(knob_n, knob_f)[0],
         })
+    return rows_out
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override")
+    ap.add_argument("--db", type=Path, default=None,
+                    help="kernel_db.json path (default: <base-dir>/gfx90c_results/analysis/kernel_db.json)")
+    ap.add_argument("--family", help="only this family (SS/DD/HH/CC/ZZ/HH_HPA/HS_HPA)")
+    ap.add_argument("--floor-wins-only", action="store_true",
+                    help="only print cells the floor wins")
+    ap.add_argument("--json", type=Path)
+    args = ap.parse_args()
+
+    base = Path(args.base_dir) if args.base_dir else _HERE
+    db_path = Path(args.db) if args.db else base / "gfx90c_results" / "analysis" / "kernel_db.json"
+    db = json.loads(db_path.read_text())
+    native_rows: List[Dict[str, Any]] = []
+    floor_rows: List[Dict[str, Any]] = []
+    for run_id, rows in db.items():
+        if run_id.startswith("gfx900_ref"):
+            floor_rows += rows
+        else:
+            native_rows += rows
+
+    native_w = _winner_per_cell(native_rows)
+    floor_w = _winner_per_cell(floor_rows)
+
+    cells = sorted(set(native_w) & set(floor_w),
+                   key=lambda c: (_FAMILY_ORDER.index(c[0]) if c[0] in _FAMILY_ORDER else 99, c[1]))
+    if args.family:
+        cells = [c for c in cells if c[0].upper() == args.family.upper()]
+
+    rows_out = _paired_rows(cells, native_w, floor_w, args.floor_wins_only)
 
     n_floor = sum(1 for r in rows_out if r["winner"] == "floor")
     print(f"{len(rows_out)} cells shared; floor wins {n_floor} ({len(cells)} total paired)")

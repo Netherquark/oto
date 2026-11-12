@@ -50,7 +50,6 @@ if str(_HERE) not in sys.path:
 from oto.device.peaks import (  # noqa: E402
     LDS_PER_CU_KB,
     MAX_WAVES_PER_CU,
-    NUM_CUS,
     NUM_SIMDS_PER_CU,
 )
 
@@ -343,7 +342,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         description="Measured occupancy of Tensile's emitted kernels, joined "
                     "to their GFLOP/s. CPU only, reads nothing outside "
                     "gfx90c_runs.")
-    ap.add_argument("--runs", default="gfx90c_runs")
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override")
+    ap.add_argument("--runs", default=None,
+                    help="runs directory (default: <base-dir>/gfx90c_runs)")
     ap.add_argument("--dtype", default=None, help="family typecode filter")
     ap.add_argument("--top", type=int, default=25)
     ap.add_argument("--by", choices=["gflops", "vgpr", "waves", "count"],
@@ -422,7 +424,8 @@ def main() -> int:
     if args.check_calibration:
         return _cmd_calibration()
 
-    root = Path(args.runs)
+    base = Path(args.base_dir) if args.base_dir else _HERE
+    root = Path(args.runs) if args.runs else (base / "gfx90c_runs")
     rows = measure_corpus(root, args.dtype)
     if not rows:
         print(f"no emitted kernels with an amdhsa directive under {root}")

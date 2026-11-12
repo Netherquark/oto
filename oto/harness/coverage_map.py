@@ -35,13 +35,12 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
 from oto.harness.candidate_pool import _base_config, _strip_not_forwarded  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
@@ -160,7 +159,8 @@ def _cell_family(row: Dict[str, Any]) -> str:
 
 
 def measured_geometries(db_path: Optional[Path] = None,
-                        protocol: str = "family"
+                        protocol: str = "family",
+                        base_dir: Optional[Path] = None,
                         ) -> Dict[Tuple[str, str], Dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
 
@@ -177,7 +177,8 @@ def measured_geometries(db_path: Optional[Path] = None,
     Returns:
         The measured geometry map, empty when the cache does not exist.
     """
-    path = db_path or (_HERE / "gfx90c_results" / "analysis" / "kernel_db.json")
+    base = Path(base_dir) if base_dir else _HERE
+    path = db_path or (base / "gfx90c_results" / "analysis" / "kernel_db.json")
     if not path.exists():
         return {}
     db = json.loads(path.read_text())
@@ -291,6 +292,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--cell", help="one cell, 'FAMILY:side' (e.g. SS:256)")
     ap.add_argument("--top", type=int, default=8,
                     help="how many unexplored geometries to list per cell")
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override")
+    ap.add_argument("--db", type=Path, default=None,
+                    help="kernel_db.json path (default: <base-dir>/gfx90c_results/analysis/kernel_db.json)")
     ap.add_argument("--protocol", default="family",
                     help="the invocation form the measured best admits "
                          "(§R56.3; default family, like-for-like with the "
@@ -305,7 +310,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         fams = [fam]
         side = int(side)
 
-    measured = measured_geometries(protocol=args.protocol)
+    measured = measured_geometries(db_path=args.db, protocol=args.protocol,
+                                   base_dir=args.base_dir)
     rows: List[Dict[str, Any]] = []
     for fam in fams:
         legal = legal_geometries(fam)
@@ -330,7 +336,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.json:
         out = Path(args.json)
         if not out.is_absolute():
-            out = _HERE / out
+            out = (Path(args.base_dir) if args.base_dir else _HERE) / out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps({"rows": rows}, indent=1))
         print(f"wrote -> {out}")

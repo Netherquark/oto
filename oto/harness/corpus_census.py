@@ -55,7 +55,7 @@ if str(_HERE) not in sys.path:
 from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 
-DEFAULT_DB = _HERE / "gfx90c_results" / "analysis" / "kernel_db.json"
+DEFAULT_DB_REL = "gfx90c_results/analysis/kernel_db.json"
 
 #: The structural axes this census reports. The forward-knob domain
 #: (WorkGroupMapping, LdsPad, StaggerU, ...) is deliberately absent: those are
@@ -141,7 +141,8 @@ def _group_sort(label: str) -> Tuple[int, str]:
     return (_FAMILY_ORDER.get(family, len(_FAMILY_ORDER)), typecode)
 
 
-def load_rows(db_path: Optional[str] = None, side: str = "native") \
+def load_rows(db_path: Optional[str] = None, side: str = "native",
+              base_dir: Optional[Path] = None) \
         -> List[Dict[str, Any]]:
     """Flatten ``kernel_db.json`` into rows tagged ``side`` (native / floor).
 
@@ -149,7 +150,8 @@ def load_rows(db_path: Optional[str] = None, side: str = "native") \
     ``gfx900_ref_*`` key) or ``all``. A row is a dict from the database plus
     ``side`` and ``run``.
     """
-    path = Path(db_path) if db_path else DEFAULT_DB
+    fallback = Path(base_dir) if base_dir else _HERE
+    path = Path(db_path) if db_path else (fallback / DEFAULT_DB_REL)
     if side not in ("native", "floor", "all"):
         raise ValueError(f"side must be native/floor/all, not {side!r}")
     database = read_kernel_db(str(path))
@@ -388,7 +390,9 @@ def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]],
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--db", default=str(DEFAULT_DB),
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override (default: this file's parent of package)")
+    ap.add_argument("--db", default=None,
                     help="kernel_db.json to read")
     ap.add_argument("--family",
                     help="family, typecode or deck alias (SS, HHS, HH_HPA)")
@@ -409,10 +413,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not family or not cell_side.isdigit():
             ap.error("--cell must be FAMILY:SIDE, e.g. SS:1024")
         side = int(cell_side)
-        rows = load_rows(args.db, side="all")
+        rows = load_rows(args.db, side="all", base_dir=args.base_dir)
     else:
         family, typecode = resolve_family(args.family)
-        rows = load_rows(args.db, side="native")
+        rows = load_rows(args.db, side="native", base_dir=args.base_dir)
         if family or typecode:
             rows = [r for r in rows
                     if (not family or str(r.get("family") or "").upper()
