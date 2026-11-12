@@ -21,7 +21,9 @@ import yaml
 import oto.tensile.library as tlib
 import oto.tensile.best_library as bestlib
 from oto.agents import meta as agent_meta
+from oto.agents import harness_tools
 from oto.agents.research import make_researcher
+from oto.tools import potential_configs_gen
 import oto.device.peaks as _peaks
 
 
@@ -159,13 +161,25 @@ class SynthesisMixin:
             profile = load_profile(_peaks.CODENAME)
             text = ""
         researcher = make_researcher(starter_text=text)
-        result = agent_meta.run(profile, text, research=researcher)
+        harness_fn = lambda: harness_tools.build_harness_study(self.base_dir, profile)
+        result = agent_meta.run(profile, text, research=researcher,
+                                harness=harness_fn)
         # write docs
         out_dir = self.base_dir
         tl_path = out_dir / f"{profile.codename}_theoretical_limits.md"
         tc_path = out_dir / f"{profile.codename}_tuning_context.md"
+        hs_path = out_dir / f"{profile.codename}_harness_study.md"
+        pc_path = out_dir / f"{profile.codename}_potential_configs.md"
         tl_path.write_text(result["theoretical_limits"])
         tc_path.write_text(result["tuning_context"])
-        print(f"Generated {tl_path} and {tc_path}")
+        tl_harness = result.get("harness") or {}
+        hs_path.write_text(tl_harness.get("markdown", ""))
+        try:
+            pc_path.write_text(potential_configs_gen.generate(profile, self.base_dir))
+        except Exception as exc:  # configs doc is additive; never fail the docs
+            pc_path.write_text(f"# potential_configs.md — {profile.codename}\n\n"
+                               f"Synthesis failed: {exc}\n")
+        docs = [tl_path, tc_path, hs_path, pc_path]
+        print(f"Generated {', '.join(str(p) for p in docs)}")
         return {"status": "success", "profile": profile.codename,
-                "docs": [str(tl_path), str(tc_path)]}
+                "docs": [str(p) for p in docs]}
