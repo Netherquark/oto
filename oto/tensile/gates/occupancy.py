@@ -306,7 +306,10 @@ def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
 
 
 @memo_gate
-def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+    if profile is not None:
+        from .vgpr_model import set_profile as _sp
+        _sp(profile)
     """Register-file gate: reject configs Tensile cannot generate.
 
     Complements the divisibility and assembly-class gates: an over-wide thread
@@ -685,7 +688,10 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
 
 
 @memo_gate
-def ldspad_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def ldspad_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+    if profile is not None:
+        from .vgpr_model import set_profile as _sp
+        _sp(profile)
     """Group C legality gate for the forwarded LDS-pad / RCT knobs.
 
     Why: the launch boundary forwards LdsPadA/B, AssertFree0ElementMultiple,

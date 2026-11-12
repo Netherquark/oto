@@ -414,7 +414,10 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
 
 
 @memo_gate
-def validate_tensile_loads(config: Dict[str, Any]) -> Tuple[bool, str]:
+def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+    if profile is not None:
+        from .vgpr_model import set_profile as _sp
+        _sp(profile)
     """Faithful port of Tensile classic-path divisibility.
 
     Only covers non-MI, FractionalLoad=False, Assembly kernel path -- which is
