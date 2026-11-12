@@ -37,5 +37,6 @@ def generate(profile: DeviceProfile, theoretical_limits_doc: str = "",
     if theoretical_limits_doc:
         parts += ["", "## Theoretical limits (from agent-1)", theoretical_limits_doc[:500]]
     if extra:
-        parts += ["", "## Research", extra]
+        parts += ["", "## Research (UNVERIFIED — transcribe to profiles/*.json only "
+                  "after checking first-party sources)", extra]
     return "\n".join(parts) + "\n"

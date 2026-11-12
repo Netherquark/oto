@@ -55,5 +55,6 @@ def generate(profile: DeviceProfile, starter_text: str = "",
     for fam, val in sorted(profile.realistic_ceilings.items()):
         parts.append(f"- {fam}: {val}")
     if extra:
-        parts += ["", "## Research", extra]
+        parts += ["", "## Research (UNVERIFIED — transcribe to profiles/*.json only "
+                  "after checking first-party sources)", extra]
     return "\n".join(parts) + "\n"

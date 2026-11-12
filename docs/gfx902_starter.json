@@ -1,0 +1,44 @@
+{
+  "_comment": "UNVERIFIED STUB for the gfx902 starter pair. isa is from LLVM's public AMDGPU docs (amdgpu9.02 = gfx902). EVERY other field is ZERO/EMPTY on purpose: the loader refuses profiles that fail the unverified-profile sanity check, so this stub cannot be tuned against until a human verifies each value against first-party sources and removes this _comment. Fill from the agent research (docs/gfx902_starter.md ## Research brief), verify, then promote this file to profiles/gfx902.json.",
+
+  "codename": "gfx902",
+  "isa": [9, 0, 2],
+  "num_cus": 0,
+  "simds_per_cu": 0,
+  "lanes_per_simd": 0,
+  "max_waves_per_cu": 0,
+  "max_clock_mhz": 0,
+  "lds_per_cu_kb": 0,
+  "l2_size_kb": 0,
+  "vgpr_per_cu": 0,
+  "has_mfma": false,
+  "has_dp4a": false,
+  "has_packed_bf16": false,
+  "global_load_byte_cap": 0,
+
+  "family_shapes": {},
+  "family_cells": {},
+  "family_dtype_char": {},
+  "family_dtypes": {},
+  "family_bytes_per_element": {},
+
+  "peak_gflops": {},
+  "realistic_ceilings": {},
+  "theoretical_peaks": {},
+  "realistic_ceilings_reported": {},
+
+  "reported_to_blas8": {},
+  "theoretical_peaks_blas8": {},
+  "realistic_ceilings_blas8": {},
+
+  "assembly_gates": {},
+  "theoretical": {
+    "memory_type": "",
+    "bandwidth_gb_s": 0.0,
+    "coherent_host_access": false,
+    "boundaries": {}
+  },
+
+  "measured_vgpr": {},
+  "spoof_reference": ""
+}

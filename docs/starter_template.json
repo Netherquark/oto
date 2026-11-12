@@ -1,0 +1,47 @@
+{
+  "_comment": "Machine half of the starter pair. Fill EVERY field with values verified against first-party sources (AMD ISA reference, ROCm docs, SKU spec sheet). Unverified agent research goes in docs/<codename>_starter.md research sections, NOT here. Schema = profiles/gfx90c.json exactly. Delete this _comment key when filling in.",
+
+  "codename": "<codename>",
+  "isa": [9, 0, 0],
+  "num_cus": 0,
+  "simds_per_cu": 0,
+  "lanes_per_simd": 0,
+  "max_waves_per_cu": 0,
+  "max_clock_mhz": 0,
+  "lds_per_cu_kb": 0,
+  "l2_size_kb": 0,
+  "vgpr_per_cu": 65536,
+  "has_mfma": false,
+  "has_dp4a": true,
+  "has_packed_bf16": false,
+  "global_load_byte_cap": 0,
+
+  "family_shapes": {
+    "SS": [], "DD": [], "HH": [], "CC": [], "ZZ": [],
+    "HH_HPA": [], "HS_HPA": []
+  },
+  "family_cells": {},
+  "family_dtype_char": {},
+  "family_dtypes": {},
+  "family_bytes_per_element": {},
+
+  "peak_gflops": {},
+  "realistic_ceilings": {},
+  "theoretical_peaks": {},
+  "realistic_ceilings_reported": {},
+
+  "reported_to_blas8": {},
+  "theoretical_peaks_blas8": {},
+  "realistic_ceilings_blas8": {},
+
+  "assembly_gates": {},
+  "theoretical": {
+    "memory_type": "",
+    "bandwidth_gb_s": 0.0,
+    "coherent_host_access": false,
+    "boundaries": {}
+  },
+
+  "measured_vgpr": {},
+  "spoof_reference": ""
+}

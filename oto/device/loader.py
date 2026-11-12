@@ -19,7 +19,30 @@ from oto.device.profile import (
 _PROFILES_DIR = Path(__file__).resolve().parents[2] / "profiles"
 
 
-def _to_profile(data: Dict[str, Any]) -> DeviceProfile:
+def _check_sanity(data: Dict[str, Any], source: str) -> None:
+    """Refuse obviously-unverified profiles (e.g. the starter template left
+    unfilled). Fails loudly rather than tuning against invented numbers."""
+    problems = []
+    codename = str(data.get("codename", ""))
+    if not codename or codename.startswith("<"):
+        problems.append(f"placeholder codename {codename!r}")
+    for key in ("num_cus", "max_clock_mhz", "lds_per_cu_kb", "vgpr_per_cu"):
+        try:
+            if int(data.get(key, 0)) <= 0:
+                problems.append(f"{key} must be > 0")
+        except (TypeError, ValueError):
+            problems.append(f"{key} must be an integer")
+    if not data.get("family_shapes"):
+        problems.append("family_shapes is empty")
+    if not data.get("peak_gflops"):
+        problems.append("peak_gflops is empty")
+    if problems:
+        raise ValueError(f"Refusing to load unverified profile from {source}: "
+                         + "; ".join(problems))
+
+
+def _to_profile(data: Dict[str, Any], source: str = "<profile>") -> DeviceProfile:
+    _check_sanity(data, source)
     ag = data.get("assembly_gates", {})
     th = data.get("theoretical", {})
     return DeviceProfile(
@@ -66,11 +89,25 @@ def load_profile(codename: str, profiles_dir: Optional[Path] = None) -> DevicePr
     path = Path(d) / f"{codename}.json"
     if not path.exists():
         raise FileNotFoundError(f"No profile for {codename}: {path}")
-    return _to_profile(json.loads(path.read_text()))
+    return _to_profile(json.loads(path.read_text()), str(path))
+
+
+def _codename_from_text(text: str) -> Optional[str]:
+    import re
+    m = re.search(r"codename:\s*(\S+)", text)
+    return m.group(1).strip() if m else None
 
 
 def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] = None) -> DeviceProfile:
-    """Load a profile from a starter file's JSON block, or fall back to a named profile."""
+    """Load a device profile from a starter file.
+
+    Precedence:
+      1. a fenced ```json block inside the starter;
+      2. the Markdown+JSON pair: a ``<stem>.json`` sitting next to ``<stem>.md``
+         (the narrative carries ``codename:``; the JSON carries the facts;
+         the two codenames must agree);
+      3. a bare ``codename:`` line, resolving ``profiles/<codename>.json``.
+    """
     text = Path(starter_path).read_text()
     # Try to find a fenced json/yaml block
     import re
@@ -79,13 +116,25 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] =
         try:
             data = json.loads(m.group(1))
             if "codename" in data:
-                return _to_profile(data)
+                return _to_profile(data, str(starter_path))
         except json.JSONDecodeError:
             pass
+    # Markdown+JSON pair: <starter stem>.json next to the starter
+    pair_json = Path(starter_path).with_suffix(".json")
+    if pair_json.exists():
+        data = json.loads(pair_json.read_text())
+        if "codename" not in data:
+            raise ValueError(f"Starter pair {pair_json} has no codename: {pair_json}")
+        narrative_codename = _codename_from_text(text)
+        if narrative_codename and narrative_codename != data["codename"]:
+            raise ValueError(
+                f"Starter pair mismatch: {starter_path} says codename "
+                f"{narrative_codename}, {pair_json} says {data['codename']}")
+        return _to_profile(data, str(pair_json))
     # Fall back: treat starter's codename as a profile name
-    m2 = re.search(r"codename:\s*(\S+)", text)
-    if m2:
-        return load_profile(m2.group(1).strip(), profiles_dir)
+    codename = _codename_from_text(text)
+    if codename:
+        return load_profile(codename, profiles_dir)
     raise ValueError(f"Cannot derive profile from starter: {starter_path}")
 
 
