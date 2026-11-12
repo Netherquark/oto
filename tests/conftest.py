@@ -109,6 +109,14 @@ def kernel_db_rows() -> Dict[str, List[Dict[str, Any]]]:
 
 
 @pytest.fixture(scope="session")
+def default_profile():
+    """The default (gfx90c) device profile, loaded once per session (Refactor 2)."""
+    from oto.device.loader import load_profile
+
+    return load_profile("gfx90c")
+
+
+@pytest.fixture(scope="session")
 def shipped_manifest() -> Dict[str, Any]:
     """The shipped gfx900 footprint manifest, read once per session."""
     from oto.tensile.library import load_shipped_manifest
