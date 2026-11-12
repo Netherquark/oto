@@ -14,7 +14,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import yaml
 
 from oto import yamlio  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]

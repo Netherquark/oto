@@ -42,7 +42,7 @@ parser. Every value comes from the canonical owners (``legality``, ``library``,
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from oto.tensile import legality
 # ALL_GROUPS / TEMPLATE_KEYS / reconcile_tile / tile_product_holds are imported

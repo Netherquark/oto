@@ -27,10 +27,8 @@ HAS_LIBYAML, dump_yaml.
 
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import yaml
 

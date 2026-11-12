@@ -30,7 +30,7 @@ from oto.metrics.ab_records import (_registry_records, arm_record_sets,
                                     arm_records, phase_records, phase_family)
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key
-from oto.metrics.protocol import (FAMILY, PARTIAL, SINGLE, UNKNOWN,
+from oto.metrics.protocol import (FAMILY, SINGLE, UNKNOWN,
                                   like_for_like, protocol_of)
 
 BASE = Path(__file__).resolve().parents[2]

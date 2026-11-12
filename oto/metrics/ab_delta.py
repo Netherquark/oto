@@ -18,7 +18,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
-                              REALISTIC_CEILINGS, cell_key, cube_side)
+                              REALISTIC_CEILINGS, cube_side)
 from oto.metrics.family_attribution import resolve_cell_family
 from oto.metrics.protocol import SINGLE, protocol_of
 

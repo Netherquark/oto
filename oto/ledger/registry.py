@@ -8,13 +8,12 @@ signature and the base-dir/resolution behaviour, so
 ``SQLiteRegistry(base_dir, read_only=...)`` keeps working for every caller.
 Does NOT own: how a migration is mutated (oto.ledger.mutator), how a phase is
 run (oto.runners), or how a row is graded (oto.metrics).
-Public API: SQLiteRegistry, fingerprint_config, _KERNEL_DB_REBUILD_STATUSES.
+Public API: SQLiteRegistry, fingerprint_config.
 """
 
 from oto.ledger.proposals import ProposalMixin
 from oto.ledger.queries import QueryMixin
 from oto.ledger.registry_core import (RegistryCore,
-                                      _KERNEL_DB_REBUILD_STATUSES,
                                       fingerprint_config)
 
 __all__ = ["SQLiteRegistry", "fingerprint_config"]

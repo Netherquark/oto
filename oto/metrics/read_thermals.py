@@ -7,7 +7,6 @@ Public API: read_thermals."""
 
 from __future__ import annotations
 
-import math
 import os
 import sqlite3
 import statistics
