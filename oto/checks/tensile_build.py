@@ -147,7 +147,6 @@ def _tensile_pipeline() -> Tuple[Any, Any, Any, Any, Any]:
     from Tensile.BenchmarkProblems import constructForkPermutations
     from Tensile.SolutionStructs import Solution
     from Tensile.TensileCreateLibrary import KernelWriterAssembly, markDuplicateKernels
-    from Tensile.BenchmarkProblems import BenchmarkProcess  # noqa: F401
     from Tensile import BenchmarkProblems as BP
 
     return (BP, constructForkPermutations, Solution, KernelWriterAssembly,

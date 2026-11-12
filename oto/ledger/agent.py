@@ -379,9 +379,9 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
         lattice_fallbacks: List[str] = []
         ungraded_cells: List[str] = []
 
-        for cell_key, winner_info in winners.items():
+        for ck, winner_info in winners.items():
             cands, repl, rejected, ungraded = self._mutate_cell(
-                cell_key, winner_info, mutation_budget,
+                ck, winner_info, mutation_budget,
                 retired_cells, lattice_fallbacks)
             new_candidates.extend(cands)
             replayed.extend(repl)
