@@ -301,7 +301,7 @@ class TestNoDoubleCounting(unittest.TestCase):
         return {"dtype": "f32", "family": "SS",
                 "ProblemType": "1024x1024x1024", "fingerprint": "f" * 64,
                 "phase_id": phase, "source_run": run, "run_id": run,
-                "GFLOPS": gflops}
+                "GFLOPS": gflops, "protocol": "family"}
 
     def test_throughput_scaling_is_only_a_function_of_clock(self):
         """The adjusted value must not move when only temperature changes.

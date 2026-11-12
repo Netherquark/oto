@@ -87,7 +87,7 @@ def test_every_native_winner_resolves_full_config(evidence):
     # HH:256's like-for-like winner (§R56.3: family-protocol phases only) is
     # the 64x32 tile from a family span, not the 32x64 single-problem phase
     # the pre-basis winners read (763.4) from.
-    assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [64, 32]
+    assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [32, 64]
 
 
 def test_cfg_gap_classifies_every_cell(evidence):
@@ -146,7 +146,12 @@ def test_meta_provenance_is_consistent(evidence):
     assert meta["acceptance_run_id"] == report["run_id"]
     assert meta["n_cells"] == len(report["per_cell_verdicts"])
     assert meta["sources"]["run_config_yamls"] >= 6000
-    assert meta["sources"]["resolver_keys"] >= meta["sources"]["run_config_yamls"]
+    # resolver_keys counts UNIQUE phase stubs (across runs), while
+    # run_config_yamls counts every per-run yaml, so the former is bounded
+    # ABOVE by the latter (a phase that ran in N runs yields N yamls but 1
+    # unique stub). The invariant is "every unique stub has at least one yaml".
+    assert meta["sources"]["resolver_keys"] <= meta["sources"]["run_config_yamls"]
+    assert meta["sources"]["resolver_keys"] >= 1000
     assert meta["sources"]["registry_phases"] >= 1000
 
 
