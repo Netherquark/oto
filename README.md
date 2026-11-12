@@ -475,7 +475,8 @@ re-triaged).
 | [`incomplete_work.md`](incomplete_work.md) | The open-work register. |
 | [`adversarial_review.md`](adversarial_review.md) | The expert-agent audit register and the frozen prior baseline. |
 | [`changelog.md`](changelog.md) | The append-only history home. |
-| [`docs/README.md`](docs/README.md) | The MD-docs-vs-docstrings boundary and the `docs/` owner table. |
+| [`docs/README.md`](docs/README.md) | The MD-docs-vs-docstrings boundary, the two agent classes, and the class-tagged registry of owner docs. |
+| [`docs/operator_runbook.md`](docs/operator_runbook.md) | **Class B entry** — best-effort Tensile library on an unsupported AMD platform, end to end. |
 | [`docs/harness_runbook.md`](docs/harness_runbook.md) | The harness runbook (candidate machinery workflows). |
 | [`docs/design_language.md`](docs/design_language.md) | The design-language spec for the HTML acceptance report. |
 | `prior_INSIGHTS_CAVEMAN_ULTRA.md`, `prior_RESEARCH_ARCHIVE.md` | Frozen prior-campaign records (read-only). |

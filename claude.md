@@ -4,6 +4,15 @@
 
 ## 1. Role
 
+**Two agent classes run this repo.** (A) **Coding agents** improving oto itself:
+this file is your entry — read §2 next. (B) **Operator agents** using oto to
+produce a best-effort Tensile library for an *unsupported* AMD platform: your
+entry is [`docs/operator_runbook.md`](docs/operator_runbook.md), not this
+file — though §2.0 below and the `docs/README.md` boundary apply to you
+unchanged. (A) optimises the codebase; (B) optimises a device library. Don't
+blend them: this file's campaign framing (gfx90c convergence, the shipped-floor
+acceptance framework) does not transfer to (B).
+
 USE SUBAGENTS AS LIBERALLY AS POSSIBLE to ensure the main agent's context doesn't
 get overpopulated by tangential shit and to parallelise tasks.
 This file is the **entrypoint + operating contract** for oto.

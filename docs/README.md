@@ -17,6 +17,24 @@ thing. Confusing them is the failure mode this file exists to prevent.
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Two agent classes
+
+This ecosystem serves two different agent roles. An agent that hasn't picked
+one defaults to the wrong entry document. Pick first, then read.
+
+| Class | Who | Entry document | Optimises for |
+|---|---|---|---|
+| **A — developer** | coding agent working **on** oto | `claude.md` | the codebase itself |
+| **B — operator** | agent **using** oto to produce a library for an unsupported platform | `docs/operator_runbook.md` | a best-effort library for the target device |
+
+Both classes share: this file's boundary (below), `claude.md`'s invariants
+(§2.0), the append-only ledger, the no-GPU-outside-the-user's-TTY rule, and
+the registry below (a doc you add or edit is a doc you register). Class B
+additionally: the human verification gate (§4 of the runbook) and research
+output tagged UNVERIFIED until a human checks it against first-party
+sources. The registry's `Class` column marks which audience each document
+serves — `dev`, `operator`, or `shared`.
+
 ## The boundary, stated as a test
 
 > **If the fact would still be true after the code were rewritten in another
@@ -38,35 +56,41 @@ Corollaries:
 
 ## Which file owns what
 
-| File | Kind | Owns |
-|---|---|---|
-| `claude.md` | **Ecosystem (root)** | The entry contract, routing, authority rules, guardrails |
-| `README.md` | Ecosystem | General repository orientation |
-| `docs/README.md` | **This file** — the boundary itself |
-| `docs/docstrings.md` | Ecosystem | The docstring convention (what a module docstring must contain) |
+| File | Class | Kind | Owns |
+|---|---|---|---|
+| `claude.md` | shared | **Ecosystem (root)** | The entry contract, routing, authority rules, guardrails |
+| `README.md` | shared | Ecosystem | General repository orientation |
+| `docs/README.md` | shared | **This file** — the boundary and the registry itself |
+| `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
-| `implementation_plan.md` | Ecosystem | The current executable plan only |
-| `mapping.md` | Ecosystem | The shipped-footprint replication contract |
-| `gfx90c_theoretical_limits.md` | Ecosystem | Per-family ceilings, the acceptance authority |
-| `gfx90c_tuning_guide.md` | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
-| `kernel_tuning_research.md` | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
-| `complex_gemm_research_brief.md` | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
-| `potential_configs.md` | Ecosystem | The candidate deck, decisions, search rules |
-| `results.md` | Ecosystem | Measured evidence |
-| `knowledge_base.md` | Ecosystem | Architecture knowledge at the captured state |
-| `changelog.md` | Ecosystem | Evolution log (append-only) |
-| `incomplete_work.md` | Ecosystem | Open-work register |
-| `prior_*.md` | Ecosystem (frozen) | Prior conclusions, results only |
-| `tensile_tuning_context.md` | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
-| `adversarial_review.md` | Ecosystem | Audit register |
-| `plans/REFACTOR_*.md` | Ecosystem | The refactor plans this package was built against |
-| `plans/verify_*.py` | Ecosystem | The executable equivalence proofs for those plans |
-| `docs/design_language.md` | Ecosystem | Design-language spec for the HTML acceptance report |
-| `docs/agent_reference.md` | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
-| `docs/harness_runbook.md` | Ecosystem | Harness runbook (moved from `oto/harness/README.md`) |
-| `oto/**/*.py` | **Docstrings** | Everything about one function's contract |
+| `implementation_plan.md` | dev | Ecosystem | The current executable plan only |
+| `mapping.md` | shared | Ecosystem | The shipped-footprint replication contract |
+| `gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
+| `gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
+| `kernel_tuning_research.md` | shared | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
+| `complex_gemm_research_brief.md` | dev | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
+| `potential_configs.md` | dev | Ecosystem | The candidate deck, decisions, search rules |
+| `results.md` | dev | Ecosystem | Measured evidence |
+| `knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
+| `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
+| `incomplete_work.md` | dev | Ecosystem | Open-work register |
+| `prior_*.md` | dev | Ecosystem (frozen) | Prior conclusions, results only |
+| `tensile_tuning_context.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
+| `adversarial_review.md` | dev | Ecosystem | Audit register |
+| `plans/REFACTOR_*.md` | dev | Ecosystem | The refactor plans this package was built against |
+| `plans/test_optimization.md` | dev | Ecosystem | Test-suite optimisation plan |
+| `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
+| `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
+| `docs/agent_reference.md` | dev | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
+| `docs/harness_runbook.md` | dev | Ecosystem | Harness runbook |
+| `docs/operator_runbook.md` | operator | Ecosystem | **Class B entry** — best-effort library on an unsupported AMD platform, end to end |
+| `docs/starter_pair.md` | operator | Ecosystem | The starter Markdown+JSON pair protocol |
+| `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
+| `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
+| `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 oto/_map.py`) |
+| `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 
-## Reading order for a new agent
+## Reading order for a new coding agent (class A)
 
 `claude.md` — start at **§2.0 (operating rules)**, then §2.1 (documents) →
 `README.md` (orientation) → the owner MD for the task at hand (`claude.md`
@@ -81,6 +105,18 @@ Nothing else. In particular:
   is in the ecosystem MD that owns the decision.
 * Do **not** re-verify a settled fact just because it looks surprising. If an
   owner MD states it with provenance, it is settled (`claude.md` §2.0.1).
+
+## Reading order for the operator agent (class B)
+
+`docs/operator_runbook.md` — the runbook is the entry point (§0 preconditions
+first). Then: `claude.md` **§2.0 only** (the shared invariants) →
+[`docs/starter_pair.md`](starter_pair.md) (the pair protocol) →
+[`docs/agent_reference.md`](agent_reference.md) (CPU-only harness commands) →
+[`plans/REFACTOR_2_UNIVERSAL_GPU.md`](../plans/REFACTOR_2_UNIVERSAL_GPU.md) (implementation context and backlog) → the module
+docstring of anything you edit. Do **not** adopt the campaign-specific
+framing in `claude.md` (gfx90c convergence, the shipped-floor acceptance
+framework): on a new platform there may be no floor library to beat, and
+best-effort correctness is the bar that exists everywhere.
 
 ## The docstring convention
 

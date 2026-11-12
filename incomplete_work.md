@@ -821,3 +821,33 @@ verifier now asserts every `PROMOTED` entry still exists under its new name
   be scaffolding with no caller.
 * `harness/` moved to `oto/harness/`, but `tests/` stays at the repo root —
   the plan says tests move last.
+
+### Docs ecosystem — two agent classes (2026-11-13)
+
+The owner-docs registry in `docs/README.md` now class-tags every entry
+(`dev` / `operator` / `shared`): class A (developer agents working on oto)
+routes through `claude.md`; class B (operator agents producing a best-effort
+library on an unsupported AMD platform) routes through the new
+`docs/operator_runbook.md` — detect → starter pair → agent research → human
+verification gate → docs synthesis (the `<codename>_*.md` artefacts) →
+CPU-only harness study → TTY benchmark → `--best-library` → the
+verification matrix and failure table in that runbook. `claude.md` §1 and the
+root `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now
+enforces registry completeness (unregistered tracked `.md` fails; a registry
+entry matching nothing fails; a registry row missing its class tag fails;
+class-B entry must be routed from `claude.md` and `README.md`). Registered this
+round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`,
+`docs/starter_pair.md`, `docs/starter_template.md`, `docs/gfx902_starter.md`,
+`docs/operator_runbook.md`. Removed: stale `plans/verify_*.py` row (no such
+tracked files).
+
+Note: this register's 2026-10 snapshots above predate Refactor 2 landing —
+`oto/device/*` exists now; treat the Refactor-2-seam paragraphs as history.
+
+**PENDING (needs the user's environment):**
+
+* Class B has never been run end-to-end on a real unsupported platform: needs
+  the gfx902 box (TTY), an API key for agent research, and a human accepting
+  the verified `profiles/gfx902.json`. Until then the runbook is design plus
+  local CPU-only checks only.
+* Live agent research for gfx902 facts remains blocked on the same key.
