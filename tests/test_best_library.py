@@ -65,6 +65,10 @@ def test_default_best_library_dest_is_under_gfx90c_results(tmp_path):
 
 def test_tensile_env_keeps_system_include_out_of_prepend_path(monkeypatch):
     """A /usr ROCM_PATH must not duplicate /usr/include (breaks include_next)."""
+    # Hermetic to the developer's .env: a live ROCM_PATH wins over the
+    # resolver mock, so scrub it to test the resolver path.
+    monkeypatch.delenv("ROCM_PATH", raising=False)
+    monkeypatch.delenv("HIP_PATH", raising=False)
     monkeypatch.delenv("CPLUS_INCLUDE_PATH", raising=False)
     monkeypatch.delenv("C_INCLUDE_PATH", raising=False)
     monkeypatch.setattr(
@@ -82,6 +86,8 @@ def test_tensile_env_prepends_user_rocm_include(tmp_path, monkeypatch):
     inc = rocm / "include"
     inc.mkdir(parents=True)
     (rocm / "lib" / "llvm" / "amdgcn" / "bitcode").mkdir(parents=True)
+    monkeypatch.delenv("ROCM_PATH", raising=False)
+    monkeypatch.delenv("HIP_PATH", raising=False)
     monkeypatch.delenv("CPLUS_INCLUDE_PATH", raising=False)
     monkeypatch.delenv("C_INCLUDE_PATH", raising=False)
     monkeypatch.setattr(

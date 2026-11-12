@@ -438,6 +438,10 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
     if codename is None:
         codename = _default_codename()
     tensile_root = Path(tensile_root)
+    # Tensile resolves LogicPath/OutputPath against its own cwd (tensile_root),
+    # so a caller-relative dest silently breaks the merge step.
+    logic_dir = Path(logic_dir).resolve()
+    final_lib_dir = Path(final_lib_dir).resolve()
     tcl_bin = tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
     if not tcl_bin.exists():
         return False, True, f"TensileCreateLibrary not found at {tcl_bin}"

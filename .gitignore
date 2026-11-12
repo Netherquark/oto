@@ -104,3 +104,4 @@ context_raw.md
 registry.db
 research_prompt*.txt
 todo.txt
+.env.bak-*
