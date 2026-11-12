@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from oto.tensile.candidate_config import CandidateConfig
+import oto.device.peaks as _peaks  # noqa: E402
 from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.tensile.gates.loads import cap_vector_width
 from oto import yamlio  # noqa: E402
@@ -220,7 +221,7 @@ class CandidateEmitMixin:
     def _build_family_template(self, family: str, pattern: str, shape: str) -> Dict:
         """Build candidate template for family phases."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": _peaks.CODENAME,
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -392,7 +393,7 @@ class CandidateEmitMixin:
     def _build_template(self, family: str, pattern: str, shape: str) -> Dict[str, Any]:
         """Build candidate template."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": _peaks.CODENAME,
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
@@ -428,7 +429,7 @@ class CandidateEmitMixin:
                 for shape in trial.get("shapes", base_shapes or
                                        ["1024x1024x1024"]):
                     template = {
-                        "Architecture": "gfx90c",
+                        "Architecture": _peaks.CODENAME,
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,

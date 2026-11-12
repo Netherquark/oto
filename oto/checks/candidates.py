@@ -230,7 +230,7 @@ def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
     """Rebuild phase-shaped configs for every shipped gfx900 floor kernel.
 
     The floor's winning configs must be natively gate-legal — both arms emit
-    `TensileLibrary_gfx90c.co.raw`, and a floor kernel that violates the Model's
+    `TensileLibrary_<codename>.co.raw`, and a floor kernel that violates the Model's
     gates would be a proof the Model over-rejects, not an excuse to skip the
     gate. Sweeping the pinned manifest through the same GATES makes that
     explicit instead of assumed.

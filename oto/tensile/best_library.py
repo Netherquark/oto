@@ -5,7 +5,7 @@ protocol), picking the best family-protocol config per shipped cell (with an
 honest fallback chain), deduplicating configs per family, emitting the
 per-family library-logic YAMLs in the Tensile-confirmed schema, and driving
 ``TensileCreateLibrary --merge-files --code-object-version=V4`` to produce
-``TensileLibrary.dat`` + ``TensileLibrary_gfx90c.co`` under the chosen
+``TensileLibrary.dat`` + ``TensileLibrary_<codename>.co`` under the chosen
 destination. Also owns the per-cell provenance manifest and the parity /
 anti-alias gates.
 
@@ -289,7 +289,7 @@ def _state_sol(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return sol
 
 
-def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root):
+def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename):
     sols = families[fam]
     state_sols = [_state_sol(cfg) for cfg in sols]
 
@@ -311,17 +311,17 @@ def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root):
 
     root = {
         "MinimumRequiredVersion": "4.44.0",
-        "CustomKernelName": f"gfx90c_{fam}_lib",
+        "CustomKernelName": f"{codename}_{fam}_lib",
         "ScheduleName": "isa",
-        "ArchitectureName": "gfx90c",
-        "DeviceNames": ["gfx90c"],
+        "ArchitectureName": codename,
+        "DeviceNames": [codename],
         "ProblemType": _problem_type_state(fam, tensile_root),
         "Solutions": state_sols,
         "LibraryType": "Matching",
         "Library": {"indexOrder": [2, 3, 1, 0], "table": table,
                     "distance": "Equality"},
     }
-    (dest_logic_dir / f"gfx90c_{fam}.yaml").write_text(
+    (dest_logic_dir / f"{codename}_{fam}.yaml").write_text(
         yaml.safe_dump(root, sort_keys=False))
 
     winning_shapes = sorted({cell[1] for cell in cell_map if cell[0] == fam})
@@ -334,14 +334,17 @@ def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root):
 
 def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
                     dest_logic_dir: Path,
-                    tensile_root: Optional[Path] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+                    tensile_root: Optional[Path] = None,
+                    codename: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    if codename is None:
+        codename = _default_codename()
     dest_logic_dir = Path(dest_logic_dir)
     dest_logic_dir.mkdir(parents=True, exist_ok=True)
     families, _ = dedupe_configs(cell_map)
 
     phases: List[Dict[str, Any]] = []
     for fam in sorted(families):
-        phase = _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root)
+        phase = _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename)
         phases.append(phase)
 
     parity = parity_report(phases)
@@ -406,7 +409,14 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
     return env
 
 
-def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename="gfx90c"):
+def _default_codename() -> str:
+    import oto.device.peaks as _peaks
+    return _peaks.CODENAME
+
+
+def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
+    if codename is None:
+        codename = _default_codename()
     tensile_root = Path(tensile_root)
     tcl_bin = tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
     if not tcl_bin.exists():
@@ -425,30 +435,8 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename="gfx90c"):
     return True, False, None
 
 
-def build_best_library(base_dir: Path, dest: Optional[Path] = None,
-                       basis: str = "family",
-                       tensile_root: Optional[Path] = None,
-                       kernel_db_path: Optional[Path] = None,
-                       codename: str = "gfx90c") -> Dict[str, Any]:
-    base_dir = Path(base_dir)
-    dest = Path(dest) if dest is not None else default_best_library_dest(base_dir)
-    dest.mkdir(parents=True, exist_ok=True)
-    logic_dir = dest / "3_LibraryLogic"
-    final_lib_dir = dest / "FinalLibrary"
-    logic_dir.mkdir(parents=True, exist_ok=True)
-    final_lib_dir.mkdir(parents=True, exist_ok=True)
-
-    cell_map, refused, stats = cell_solution_map(base_dir, basis, kernel_db_path)
-    phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root)
-
-    anti_alias_passed, leak_files = anti_alias_scan(logic_dir, final_lib_dir)
-
-    tcl_ran = False
-    tcl_failed = False
-    tcl_error = None
-    if tensile_root is not None:
-        tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir, codename)
-
+def _write_best_manifest(dest: Path, basis: str, cell_map, refused, stats, parity,
+                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error) -> None:
     manifest = {
         "basis": basis,
         "cells": len(cell_map),
@@ -468,6 +456,36 @@ def build_best_library(base_dir: Path, dest: Optional[Path] = None,
         ],
     }
     (dest / "best_effort_library.json").write_text(json.dumps(manifest, indent=2, default=str))
+
+
+def build_best_library(base_dir: Path, dest: Optional[Path] = None,
+                       basis: str = "family",
+                       tensile_root: Optional[Path] = None,
+                       kernel_db_path: Optional[Path] = None,
+                       codename: Optional[str] = None) -> Dict[str, Any]:
+    if codename is None:
+        codename = _default_codename()
+    base_dir = Path(base_dir)
+    dest = Path(dest) if dest is not None else default_best_library_dest(base_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+    logic_dir = dest / "3_LibraryLogic"
+    final_lib_dir = dest / "FinalLibrary"
+    logic_dir.mkdir(parents=True, exist_ok=True)
+    final_lib_dir.mkdir(parents=True, exist_ok=True)
+
+    cell_map, refused, stats = cell_solution_map(base_dir, basis, kernel_db_path)
+    phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root, codename)
+
+    anti_alias_passed, leak_files = anti_alias_scan(logic_dir, final_lib_dir)
+
+    tcl_ran = False
+    tcl_failed = False
+    tcl_error = None
+    if tensile_root is not None:
+        tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir, codename)
+
+    _write_best_manifest(dest, basis, cell_map, refused, stats, parity,
+                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error)
 
     status = "success"
     if tcl_failed or refused or not parity.get("parity_ok", False):

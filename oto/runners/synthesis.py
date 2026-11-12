@@ -22,6 +22,7 @@ import oto.tensile.library as tlib
 import oto.tensile.best_library as bestlib
 from oto.agents import meta as agent_meta
 from oto.agents.research import make_researcher
+import oto.device.peaks as _peaks
 
 
 class SynthesisMixin:
@@ -30,13 +31,13 @@ class SynthesisMixin:
     def _emit_family_logic(self, logic_dir: Path) -> None:
         """Placeholder logic definitions for the 7 dtype families."""
         for fam in ["SS", "DD", "HH", "ZZ", "CC", "HH_HPA", "HS_HPA"]:
-            logic_file = logic_dir / f"gfx90c_{fam}.yaml"
+            logic_file = logic_dir / f"{_peaks.CODENAME}_{fam}.yaml"
             logic_content = {
                 "MinimumRequiredVersion": "4.44.0",
-                "CustomKernelName": f"gfx90c_{fam}_lib",
+                "CustomKernelName": f"{_peaks.CODENAME}_{fam}_lib",
                 "ScheduleName": "isa",
-                "Architecture": "gfx90c",
-                "DeviceNames": ["gfx90c"],
+                "Architecture": _peaks.CODENAME,
+                "DeviceNames": [_peaks.CODENAME],
                 "Solutions": self.scheduler.family_decks.get(fam, [])
             }
             with open(logic_file, "w") as f:
@@ -48,7 +49,7 @@ class SynthesisMixin:
         cmd = [
             sys.executable,
             str(tcl_bin),
-            f"--architecture={getattr(getattr(self, 'profile', None), 'codename', 'gfx90c')}",
+            f"--architecture={getattr(getattr(self, 'profile', None), 'codename', _peaks.CODENAME)}",
             "--merge-files",
             str(logic_dir),
             str(final_lib_dir)
@@ -98,7 +99,7 @@ class SynthesisMixin:
         Synthesize final HIP library (Stage 6):
         - Query certified winners from DB
         - Emit per-family logic YAML files into 3_LibraryLogic/
-        - Invoke TensileCreateLibrary --architecture=gfx90c --merge-files
+        - Invoke TensileCreateLibrary --architecture=<codename> --merge-files
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
         - Enforce the shipped gfx900 footprint regression gate
         """
@@ -142,7 +143,7 @@ class SynthesisMixin:
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
             tensile_root=getattr(self, "tensile_root", None),
-            codename=getattr(self, "codename", "gfx90c"))
+            codename=getattr(self, "codename", _peaks.CODENAME))
         print(f"Best-effort library: {result}")
         return result
 
@@ -155,7 +156,7 @@ class SynthesisMixin:
             profile = load_profile_from_starter(starter)
             text = starter.read_text()
         else:
-            profile = load_profile("gfx90c")
+            profile = load_profile(_peaks.CODENAME)
             text = ""
         researcher = make_researcher(starter_text=text)
         result = agent_meta.run(profile, text, research=researcher)

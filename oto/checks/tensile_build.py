@@ -68,7 +68,15 @@ ERR_MSG = {
 # Tensile setup. Mirrors Tensile/Tensile.py main() -> assignGlobalParameters,
 # because that function insists on a fully validated toolchain.
 # --------------------------------------------------------------------------
-def _init_tensile(arch: str = "gfx90c") -> None:
+def _default_arch() -> str:
+    """The Tensile arch default: the resolved device profile's codename."""
+    from oto.device.loader import default_profile
+    return default_profile().codename
+
+
+def _init_tensile(arch: Optional[str] = None) -> None:
+    if arch is None:
+        arch = _default_arch()
     tensile_root = _require_tensile_root()
     sys.path.insert(0, str(tensile_root))
     os.environ.setdefault("ROCM_PATH", "/usr")
@@ -116,7 +124,8 @@ def _init_tensile(arch: str = "gfx90c") -> None:
     # about the arch we ported and so the tool still works with no GPU present.
     import Tensile.Common as Common2
 
-    isa = {"gfx900": (9, 0, 0x00), "gfx90c": (9, 0, 0x0C), "gfx906": (9, 0, 0x06)}.get(arch)
+    from oto.device.tensile_isa import isa_triple
+    isa = isa_triple(arch)
     if isa is not None:
         Common2.globalParameters["CurrentISA"] = isa
 
@@ -338,6 +347,8 @@ def _pool(ko: Any, name: str) -> Optional[int]:
 # Driver: one subprocess per phase (Tensile is heavy global state).
 # --------------------------------------------------------------------------
 def _worker(args: argparse.Namespace) -> int:
+    if args.arch is None:
+        args.arch = _default_arch()
     _init_tensile(arch=args.arch)
     result = probe_phase_config(Path(args.phase_yaml))
     Path(args.result_json).write_text(json.dumps(result))
@@ -531,7 +542,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", help="only this FamilyLabel (e.g. ZZ)")
     ap.add_argument("--phase-id")
-    ap.add_argument("--arch", default="gfx90c")
+    ap.add_argument("--arch", default=None,
+                    help="Tensile arch (default: the device profile codename)")
     ap.add_argument("--timeout", type=int, default=600, help="seconds per phase")
     ap.add_argument("--jobs", type=int, default=1, help="parallel phase subprocesses")
     ap.add_argument("--json", help="write full report here")

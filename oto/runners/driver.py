@@ -151,7 +151,8 @@ class TensileDriver(
                 from oto.device.detect import detect_codename
                 codename = detect_codename()
             except Exception:
-                codename = "gfx90c"
+                from oto.device.loader import default_profile
+                codename = default_profile().codename
         self.codename = codename
         from oto.device.loader import load_profile
         self.profile = load_profile(codename)

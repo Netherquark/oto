@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pathlib import Path
 
+import oto.device.peaks as _peaks
 from oto.device.peaks import FAMILY_DTYPE_CHAR, cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.harvest import HarvestMixin
@@ -448,7 +449,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin):
     def _build_template(self, family: str, data_type: str) -> Dict[str, Any]:
         """Build the candidate template."""
         return {
-            "Architecture": "gfx90c",
+            "Architecture": _peaks.CODENAME,
             "DataType": data_type,
             "ProblemType": "Contraction",
             "ScheduleName": "isa",

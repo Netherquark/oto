@@ -56,6 +56,7 @@ from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
                                             FORWARD_KNOB_DOMAINS)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
+import oto.device.peaks as _peaks
 
 
 class DBMutator(DbPatternsMixin):
@@ -142,7 +143,7 @@ class DBMutator(DbPatternsMixin):
 
     def _template(self, family: str) -> Dict[str, Any]:
         return {
-            "Architecture": "gfx90c",
+            "Architecture": _peaks.CODENAME,
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
             "FamilyLabel": family,
             "ScheduleName": "isa",

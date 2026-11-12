@@ -37,6 +37,7 @@ if str(_HERE) not in sys.path:
 
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.decks import KNOB_SWEEPS, KNOB_SWEEP_BASES  # noqa: E402
+import oto.device.peaks as _peaks  # noqa: E402
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -144,7 +145,7 @@ def _emit_baselines(
             for pattern in patterns:
                 for shape in shapes:
                     template = {
-                        "Architecture": "gfx90c",
+                        "Architecture": _peaks.CODENAME,
                         "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
@@ -185,7 +186,7 @@ def _emit_sweeps(
                         knobs.update(value)
                         for shape in shapes:
                             template = {
-                                "Architecture": "gfx90c",
+                                "Architecture": _peaks.CODENAME,
                                 "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                                 "ContractionPattern": pattern,
                                 "ProblemType": shape,
@@ -219,7 +220,7 @@ def _emit_trials(
         for pattern in patterns:
             for shape in trial.get("shapes", shapes):
                 template = {
-                    "Architecture": "gfx90c",
+                    "Architecture": _peaks.CODENAME,
                     "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
                     "ContractionPattern": pattern,
                     "ProblemType": shape,

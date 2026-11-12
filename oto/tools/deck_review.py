@@ -46,9 +46,10 @@ BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 
 from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
+import oto.device.peaks as _peaks  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.tensile.synthesis.db_knobs import (  # noqa: E402
-    FORWARD_KNOB_DOMAINS, forward_domain)
+    FORWARD_KNOB_DOMAINS)
 
 #: The A/B bases, lenient to strict, with what each one actually asks. The
 #: names and their meaning live in `oto.metrics.ab_delta._stat`; this is the
@@ -195,7 +196,7 @@ def _family_template(fam: str) -> Dict[str, Any]:
     """The minimal contract template a draw is applied on top of."""
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
-        "Architecture": "gfx90c",
+        "Architecture": _peaks.CODENAME,
         "DataType": FAMILY_DTYPE_CHAR.get(fam, "S"),
         "FamilyLabel": fam,
         "ScheduleName": "isa",
@@ -251,11 +252,11 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
             print(f"  {where:52}{n:4}")
     if not refused:
         return
-    print("\nrefused standalone — read the reason: it names the knob or rule "
-          "responsible,\nand most of these resolve when a companion knob is "
-          "drawn with them.\nA value that is genuinely dead for this device "
-          "is one whose reason is a\nstructural class rule ('illegal on "
-          "gfx90c', 'no MatrixInstruction'):")
+    print(f"\nrefused standalone — read the reason: it names the knob or rule "
+          f"responsible,\nand most of these resolve when a companion knob is "
+          f"drawn with them.\nA value that is genuinely dead for this device "
+          f"is one whose reason is a\nstructural class rule ('illegal on "
+          f"{_peaks.CODENAME}', 'no MatrixInstruction'):")
     for fam, knob, value, why in refused:
         print(f"  {fam:8}{knob:30}{str(value):6} {why}")
 

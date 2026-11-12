@@ -73,11 +73,11 @@ class ClockMixin:
     # plateaus; it never falls off a thermal ceiling:
     #
     #     temp      46-48C  56-58C  64-66C  70-72C  76-78C  80-82C
-    #     median     930MHz 1537MHz 1725MHz 1787MHz 1800MHz 1800MHz
+    #     median     930MHz 1537MHz 1725MHz 1787MHz (max clock) (max clock)
     #
     # The clock tracks each kernel's power draw, not the die temperature: the
     # *coldest* bucket holds the *lowest* clock and the hottest is still pinned at
-    # the 1800 MHz maximum. A temperature factor fitted to that curve would have
+    # the max boost clock. A temperature factor fitted to that curve would have
     # a negative slope through the midrange, i.e. it would credit thermally
     # stressed measurements with a speedup. The gate sits above the hottest
     # sample ever recorded (82C), so it is inert on the current corpus and only

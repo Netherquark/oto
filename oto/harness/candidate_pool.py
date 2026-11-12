@@ -21,8 +21,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
 
 from oto import yamlio  # noqa: E402
-from oto.device.peaks import (FAMILY_DTYPES, FAMILY_DTYPE_CHAR,  # noqa: E402
+from oto.device.peaks import (FAMILY_DTYPE_CHAR,  # noqa: E402
                               FAMILY_SHAPES)
+import oto.device.peaks as _peaks  # noqa: E402
 from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
@@ -34,7 +35,7 @@ from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         FAMILY_DTYPE, LADDER,
                                         NARROW_NEIGHBOURS, PATTERNS,
                                         PLAN_BATCH, TARGET_CELLS,
-                                        WGM_VARIANTS, _pad_rows)
+                                        _pad_rows)
 
 #: Notes for rows dropped because no target shape satisfied their element-
 #: multiple assertions. Appended to by ``_offer_row``; drained by
@@ -77,7 +78,7 @@ def _label_for(fam: str, pattern: str, knobs: Dict[str, Any]) -> str:
 
 def _base_config(fam: str) -> Dict[str, Any]:
     return {
-        "Architecture": "gfx90c",
+        "Architecture": _peaks.CODENAME,
         "DataType": FAMILY_DTYPE[fam],
         "FamilyLabel": fam,
         "ScheduleName": "isa",

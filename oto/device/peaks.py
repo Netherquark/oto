@@ -28,6 +28,7 @@ from typing import Dict, Set, Tuple
 try:
     from oto.device.loader import default_profile as _peaks_dp
     _P = _peaks_dp()
+    CODENAME = _P.codename
     PEAK_GFLOPS = dict(_P.peak_gflops)
     FAMILY_SHAPES = {k: list(v) for k, v in _P.family_shapes.items()}
     FAMILY_CELLS = {k: list(v) for k, v in _P.family_cells.items()}
@@ -49,6 +50,7 @@ try:
     VGPR_PER_CU = _P.vgpr_per_cu
     GLOBAL_LOAD_BYTE_CAP = _P.global_load_byte_cap
 except Exception:  # pragma: no cover
+    CODENAME = "gfx90c"
     PEAK_GFLOPS = {  # fallback (this device)
         "FP32": 1613, "FP16": 3226, "BF16": 1613, "INT8": 1613, "FP64": 101,
     }
@@ -252,10 +254,11 @@ def set_profile(profile) -> None:
     device too. Atomic scalars are re-bound; consumers that bind those at
     import time are converted to module-attribute reads in oto/.
     """
-    global NUM_CUS, NUM_SIMDS_PER_CU, LANES_PER_SIMD
+    global CODENAME, NUM_CUS, NUM_SIMDS_PER_CU, LANES_PER_SIMD
     global MAX_WAVES_PER_CU, MAX_CLOCK_MHZ, LDS_PER_CU_KB, L2_SIZE_KB
     global VGPR_PER_CU, GLOBAL_LOAD_BYTE_CAP
     try:
+        CODENAME = profile.codename
         PEAK_GFLOPS.clear(); PEAK_GFLOPS.update(profile.peak_gflops)
         FAMILY_SHAPES.clear(); FAMILY_SHAPES.update({k: list(v) for k, v in profile.family_shapes.items()})
         FAMILY_CELLS.clear(); FAMILY_CELLS.update({k: list(v) for k, v in profile.family_cells.items()})

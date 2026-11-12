@@ -29,6 +29,7 @@ from oto.ledger.registry import fingerprint_config
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
 from oto.runners.toolchain import resolve_rocm_paths
 from oto.tensile import config_writer
+import oto.device.peaks as _peaks
 
 
 def _refuse_reuse_of(phase_out_dir: Path) -> None:
@@ -56,7 +57,7 @@ def _tensile_command(
     cmd = [
         sys.executable,
         str(tensile_bin),
-        "--arch", getattr(getattr(driver, "profile", None), "codename", "gfx90c"),
+        "--arch", getattr(getattr(driver, "profile", None), "codename", _peaks.CODENAME),
         "--cxx-compiler", "hipcc",
         "--c-compiler", "hipcc",
     ]

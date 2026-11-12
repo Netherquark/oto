@@ -67,6 +67,7 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from .memo import memo_gate
+import oto.device.peaks as _peaks
 from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
                          MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
                          MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
@@ -678,7 +679,7 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
             return False, err
         if tv == 1:
             return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           "(SolutionStructs:4519-4521) and gfx90c has no MFMA")
+                           f"(SolutionStructs:4519-4521) and {_peaks.CODENAME} has no MFMA")
         if tv == -1:
             return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
                            "classic (VALU) path rejects: 'didn't support "

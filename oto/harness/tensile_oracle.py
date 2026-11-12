@@ -44,6 +44,8 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import oto.device.peaks as _peaks  # noqa: E402
+
 #: The derived fields worth showing: the LDS allocation Tensile computed and
 #: the register pools it allocated.
 _LDS_FIELDS = ("DepthU", "_DepthULds", "LdsNumElements", "LdsNumElementsAlignedA",
@@ -151,7 +153,6 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
         A dict with our gate's verdict, Tensile's verdict, the derived fields
         Tensile computed, and the register pools it allocated.
     """
-    from oto.checks.tensile_build import _init_tensile, probe_phase_config
     from oto.runners.driver import TensileDriver
 
     base = Path(base_dir or _HERE)
@@ -226,7 +227,7 @@ def _lds_bytes(state: Dict[str, Any]) -> int:
 def _config_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     """The config dict the CLI describes."""
     config: Dict[str, Any] = {
-        "Architecture": "gfx90c",
+        "Architecture": _peaks.CODENAME,
         "DataType": args.dtype,
         "FamilyLabel": args.family or args.dtype,
         "ScheduleName": "isa",
@@ -264,12 +265,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--phase-id", default=None,
                     help="probe a deck row by phase_id instead of describing one")
     ap.add_argument("--json", type=Path, help="write the verdict here")
+    ap.add_argument("--base-dir", type=Path, default=None,
+                    help="repo root override (driver/tensile paths resolve from here)")
     args = ap.parse_args(argv)
 
     if args.phase_id:
         import yaml
 
-        deck = yaml.safe_load((_HERE / "phases.yaml").read_text()) or []
+        phases_path = (Path(args.base_dir) if args.base_dir else _HERE) / "phases.yaml"
+        deck = yaml.safe_load(phases_path.read_text()) or []
         row = next((p for p in deck if p.get("phase_id") == args.phase_id), None)
         if row is None:
             print(f"no deck row named {args.phase_id!r}")
@@ -278,7 +282,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     else:
         config = _config_from_args(args)
 
-    result = probe_config(config)
+    result = probe_config(config, base_dir=args.base_dir)
     if args.json:
         args.json.write_text(json.dumps(result, indent=1, default=str))
     tensile = result["tensile"]
