@@ -66,7 +66,10 @@ def memo_gate(fn: Callable[[Dict[str, Any]], Tuple[bool, str]]
     cache: Dict[str, Tuple[bool, str]] = {}
 
     @functools.wraps(fn)
-    def wrapper(config: Dict[str, Any]) -> Tuple[bool, str]:
+    def wrapper(config: Dict[str, Any], *args, **kwargs) -> Tuple[bool, str]:
+        # Profile-aware calls are not memoised (they depend on device state).
+        if args or kwargs:
+            return fn(config, *args, **kwargs)
         key = config_key(config)
         hit = cache.get(key)
         if hit is not None:
