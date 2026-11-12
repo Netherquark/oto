@@ -76,7 +76,7 @@ ACCVGPR_BUDGET = 128
 #: allocator result inflated by prefetch double-buffering, power-of-two offset
 #: alignment and LdsPad, so the base is not the number Tensile compares -- but it
 #: is a sound *upper-bound* proxy in the only direction that matters here.
-#: Measured complex (Z, 8 B) boundary on gfx90c: 16384 legal, 20480 dead
+#: Measured complex (Z, 8 B) boundary on the device: 16384 legal, 20480 dead
 #: (128x32x16 needs 106496 B and is rejected). Deliberately conservative: it may
 #: refuse a config Tensile would accept, never admits one Tensile refuses.
 LDS_BUDGET = 16384
@@ -119,7 +119,7 @@ COMPUTE_BYTES_PER_ELEMENT = {
     "S": 4, "D": 8, "H": 2, "B": 2, "I8": 1, "I1": 1, "C": 8, "Z": 16,
 }
 
-#: Measured per-thread VGPR totals from Tensile's own kernel writer on gfx90c,
+#: Measured per-thread VGPR totals from Tensile's own kernel writer on the device,
 #: reported by check_tensile_build.py. (threadtile, accvgpr, observed total).
 #: Every entry satisfies: total = accvgpr + a small tile-dependent overhead, and
 #: the pass/fail boundary is exactly accvgpr > 128 for complex.

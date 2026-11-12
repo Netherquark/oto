@@ -161,7 +161,7 @@ PATTERNS = {
 # 2026-10-20 (§R40): the list must cover every cell the report scores, or a
 # candidate for that cell is never measured. DD's 768/1024/1365 and HH's 4096
 # tie the floor but were absent, so no DD/HH row emitted here reached them.
-# 2026-10-23 (§R56.3-A): the list itself moved to gfx90c contract
+# 2026-10-23 (§R56.3-A): the list itself moved to the device contract
 # vocabulary (oto.device.peaks FAMILY_CELLS) so the deck and the like-for-like
 # protocol classifier share one definition; the export name stays TARGET_CELLS.
 TARGET_CELLS = dict(FAMILY_CELLS)
@@ -210,7 +210,7 @@ AUTO_EXPLICIT: Dict[str, List[Dict[str, Any]]] = {
 #   * CC GSU>1 — the old "MultipleBuffer wave-fill" rung (§13.5 rung 2, §14.5
 #     item 3c). Tensile's supported-gate passes complex only via
 #     _GlobalAccumulation (SolutionStructs:3543-3553), which the port never
-#     sets on gfx90c, so the local gate refuses.
+#     sets on the device, so the local gate refuses.
 #   * NLCA=3 on 128-width tiles — legal only where NumLoads>=3 side-wise;
 #     96x96x16/6x6/VW2 is the ladder tile with exactly 3 global loads per
 #     K-slice (128x128x8/VW4 has NumLoads=1, so NLCA>1 is refused there).
@@ -235,7 +235,7 @@ PLAN_BATCH: List[Dict[str, Any]] = [
     # WG 8x8x1, no GLVW) at 193.77 — so the gap is tile AREA + load width, not
     # contraction direction (both are Ailk_Bjlk/NT).
     #
-    # Port record (gfx900 → gfx90c): MT, WG and GLVW are taken verbatim because
+    # Port record (gfx900 → the device): MT, WG and GLVW are taken verbatim because
     # they are self-consistent consequences of MT/TT/VW rather than vendor magic
     # numbers. Everything else is re-swept because the source part had 60 CUs and
     # HBM2: StaggerU (32 was a 56-CU raster choice), WGM (7 CUs wants the
@@ -383,7 +383,7 @@ PLAN_BATCH += _pad_rows(
     "2026-10-09 Group C: LDS pad on the ZZ du8 winner geometry (§14.5 item 4)")
 # CC steal-adapt variants (§14.5 item 3): WGM8 (CC's real lever), PGR=0
 # (VGPR-bound residency) and GLVW=1 (narrower loads) on the steal tile. GSU2+
-# workspace is absent — gate-refused for complex on gfx90c (see table comment).
+# workspace is absent — gate-refused for complex on the device (see table comment).
 for kw, note in (
     ({"WorkGroupMapping": 8}, "S3 steal-adapt: WGM8"),
     ({"WorkGroupMapping": 8, "LdsPadA": 2}, "S3 steal-adapt: WGM8 + LdsPadA=2"),
@@ -883,7 +883,7 @@ for _fam, _tile, _tt, _vw, _du in (
 # TransposeLDS=-1 forces UnrollMajorLDS on the non-transposed operand
 # (SolutionStructs:3874-3875) -- a real, untried knob on this part.
 # NOT TransposeLDS=1: that value is the MFMA path ("TransposeLds Supports only
-# in MatrixInstruction=1", SolutionStructs:4519-4521) and gfx90c has no MFMA,
+# in MatrixInstruction=1", SolutionStructs:4519-4521) and this device has no MFMA,
 # so it yields zero solutions. The gate refuses it now.
 for _fam, _tile, _tt, _vw, _du in (
     ("CC", "64x64x8", "4x4", 2, 8),
@@ -896,7 +896,7 @@ for _fam, _tile, _tt, _vw, _du in (
         "MacroTile": _tile, "ThreadTile": _tt, "VectorWidth": _vw,
         "DepthU": _du, "FractionalLoad": 2,
         "note": "R45 virgin: FractionalLoad=2 (ragged edge handling)"})
-    # TransposeLDS is NOT probed: it is unreachable on gfx90c in both of its
+    # TransposeLDS is NOT probed: it is unreachable on this device in both of its
     # non-zero values -- 1 is the MFMA path and -1 forces UnrollMajorLDS, which
     # the classic VALU path rejects ("didn't support UnrollMajorLDS in VALU
     # mode yet", SolutionStructs:2890). The deck check found the second one on

@@ -1,6 +1,6 @@
 """Register-file and LDS occupancy gates.
 
-Owns: the CPU-only model that reproduces every observed gfx90c occupancy
+Owns: the CPU-only model that reproduces every observed device occupancy
 outcome -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget) and
 ``ldspad_feasible`` (padded LDS footprint plus the coupled swizzle
 StaggerU/StaggerUMapping/StaggerUStride domains).
@@ -317,7 +317,7 @@ def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]
     Tensile reaches them:
 
     * per-thread accumulators -- ``TT0*TT1*weight > ACCVGPR_BUDGET`` (128).
-      Tensile refuses past 256 VGPRs/thread; on gfx90c complex (Z), TT 4x4 =
+      Tensile refuses past 256 VGPRs/thread; on this device, complex (Z), TT 4x4 =
       128 accVGPR passes and TT 8x4 = 256 -> 271 VGPRs FAILs.
     * the workgroup register file -- ``weight*MT0*MT1*LSU >= 65536`` (error 4,
       see :func:`_workgroup_file_check`); ThreadTile cancels, so it bounds
@@ -658,9 +658,9 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
     if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
         return False, f"StoreCInUnroll must be a bool (have {sci!r})"
 
-    # TransposeLDS is unreachable on gfx90c, in BOTH of its non-zero values:
+    # TransposeLDS is unreachable on this device, in BOTH of its non-zero values:
     #   * 1 is the MFMA path ("TransposeLds Supports only in
-    #     MatrixInstruction=1", SolutionStructs:4519-4521) and gfx90c has no
+    #     MatrixInstruction=1", SolutionStructs:4519-4521) and the device has no
     #     MFMA (no v_mfma_*);
     #   * -1 forces UnrollMajorLDS on the non-transposed operand
     #     (":3874-3875"), and the classic (VALU) path rejects UnrollMajorLDS

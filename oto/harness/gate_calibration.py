@@ -16,7 +16,7 @@ it:
 
 Does NOT own: the gates themselves (``oto.tensile.gates``), the config the
 driver *intended* (the registry -- this reads the compiled launch truth), the
-census over gfx90c-truth knob DOMAIN (``oto.tools.deck_review legality``), or
+census over the device-truth knob DOMAIN (``oto.tools.deck_review legality``), or
 the failure *reason* mining (``oto.harness.failure_triage``).
 
 Public API: main, audit, read_phase_config, measurement_produced.

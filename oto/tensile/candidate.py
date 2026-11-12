@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, LDS_PER_CU_KB, NUM_CUS)
+import oto.device.peaks as _peaks
+from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.candidate_emission import CandidateEmitMixin
 from oto.tensile.gates.assembly import assembly_class_valid
@@ -46,7 +47,7 @@ __all__ = [
 
 # Re-exported, not re-implemented: ``depth_u`` lives with the VGPR model, and
 # ``dtype_char``/``tile_dims`` with the occupancy gate that uses them.
-_ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, NUM_CUS)
+_ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, _peaks.NUM_CUS)
 
 
 # Knob neighbour map for single-knob mutations (corpus-wide, kept here so the
@@ -163,7 +164,7 @@ class CandidateGenerator(CandidateEmitMixin):
     # ------------------------------------------------------------------ gates
 
     def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, str]:
-        """Is this candidate legal to launch on gfx90c?
+        """Is this candidate legal to launch on the device?
 
         Why an orchestrator and not a gate: the three gate families each answer
         one question (is the class legal, does the classic load path divide, is
@@ -209,8 +210,8 @@ class CandidateGenerator(CandidateEmitMixin):
             return False, f"Tensile load divisibility: {why}"
 
         lds_kb_est = estimate_lds_usage(config)
-        if lds_kb_est > LDS_PER_CU_KB:
-            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {LDS_PER_CU_KB}KB"
+        if lds_kb_est > _peaks.LDS_PER_CU_KB:
+            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {_peaks.LDS_PER_CU_KB}KB"
 
         # Register-file / occupancy feasibility. This is the gate that catches
         # Tensile's overflowedResources==4 ("Occupancy limit"), which the
@@ -244,7 +245,7 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     return _parse(shape_str)
 
 
-#: Knobs gfx90c has no hardware path for; a candidate carrying any of
+#: Knobs this device has no hardware path for; a candidate carrying any of
 #: them is refused before the deck is written.
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
@@ -377,7 +378,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (gfx90c).
+    """Modelled workgroups-per-CU from the register file (this device).
 
     Why it delegates: the previous version inferred threads from ThreadTile via
     a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore

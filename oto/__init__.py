@@ -1,4 +1,4 @@
-"""oto -- one-shot deterministic convergence for native gfx90c Tensile libraries.
+"""oto -- one-shot deterministic convergence for native device Tensile libraries.
 
 The public API of the project re-exported here so a caller never has to know
 which subpackage a symbol moved to. Names are deliberately the ones the codebase

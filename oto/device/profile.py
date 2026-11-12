@@ -4,7 +4,7 @@ Owns: the frozen ``DeviceProfile`` dataclass and its nested policy/limits
 sub-structures. Every gate, ceiling, shape list and doc generator reads from
 this. No device literal may live outside this module and ``profiles/``.
 
-Does NOT own: loading (oto.device.loader), the gfx90c constants (profiles/),
+Does NOT own: loading (oto.device.loader), the device constants (profiles/),
 or any legality rule (oto.tensile.gates).
 
 Public API: DeviceProfile, AssemblyGatePolicy, TheoreticalLimits.

@@ -74,7 +74,7 @@ def _stage_report(driver, args, stage) -> Optional[int]:
 
 
 def _stage_best_library(driver, args, stage) -> Optional[int]:
-    """Build a best-effort gfx90c TensileLibrary.dat from the full db."""
+    """Build a best-effort device TensileLibrary.dat from the full db."""
     if (args.best_library is None and "library" not in stage
             and "best-library" not in stage and "best_library" not in stage):
         return None

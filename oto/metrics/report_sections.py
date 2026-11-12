@@ -371,7 +371,7 @@ class SectionMixin:
                 </tr>"""
         return f"""
         <section class="section collapsible" data-collapsed="true">
-            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">Telemetry insights (gfx90c APU)</h2>
+            <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">Telemetry insights (the device APU)</h2>
             <div class="table-wrap">
                 <table>
                     <thead>

@@ -1,4 +1,4 @@
-"""The assembly-class gate: is this GEMM class legal on gfx90c at all?
+"""The assembly-class gate: is this GEMM class legal on this device at all?
 
 Owns: ``assembly_class_valid``, the single source of truth for both seams (the
 candidate generator's ``validate_config`` and the launch boundary's config
@@ -9,7 +9,7 @@ classic-path load divisibility (oto.tensile.gates.loads), or the candidate
 sampler (oto.tensile.candidate).
 
 Faithful to the Tensile SolutionStructs Assembly rejects reproduced from the 24
-draft-run failures (gfx90c = Assembly-only, FFMA, no MatrixInstruction/MFMA
+draft-run failures (this device = Assembly-only, FFMA, no MatrixInstruction/MFMA
 escape; Tensile v4.44.0):
 
   SolutionStructs:3553  "GlobalSplitU only compatible with single, or asm and
@@ -24,14 +24,14 @@ ALU-walled at a quarter of the real pipe:
     `v_fma_f64`; the MFMA path is the same count (`numMfmaPerIter *= 4`).
   * BLAS charges 8*M*N*K for CGEMM/ZGEMM vs 2*M*N*K for real GEMM -- a 4x
     cost, i.e. 2 flops per FMA, the real-GEMM ratio. An ALU-bound complex GEMM
-    therefore has the same BLAS-8 ceiling as its real counterpart: on gfx90c
+    therefore has the same BLAS-8 ceiling as its real counterpart: on this device
     CGEMM <= 1613 and ZGEMM <= 101 GFLOPS. The "divide by 4" applies to
     complex-MAC throughput (~202 / ~12.6 G MAC/s), never to BLAS-8 GFLOPS.
   * Split schemes: 4M = 4 mul + 2 add, collapsing to 4 instructions with FMA
     and free negate (what Tensile emits); 3M (Gauss/Karatsuba) = 3 mul + 5 add,
     about 7-8 scalar ops per MAC but only 3 real GEMMs per GEMM with an
     O(MK+KN+MN) combine; 2M (Caday) = 2 real GEMMs.
-Instruction-level escape hatches are closed on gfx90c (no `v_mfma`, no
+Instruction-level escape hatches are closed on this device (no `v_mfma`, no
 `v_dot*`/dp4a, no `v_pk_fma_bf16`); the levers are occupancy/register tiling
 and the 3M decomposition.
 
@@ -56,7 +56,7 @@ from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
 from oto.device.loader import default_profile as _asm_dp
 
-#: Refactor 2: device feature flags come from the profile (default gfx90c).
+#: Refactor 2: device feature flags come from the profile (default: the device).
 _ASM_PROFILE = _asm_dp()
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
@@ -121,7 +121,7 @@ def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
     """GlobalSplitU class rejection text, or None when GSU is legal here.
 
     Rules:
-      1. GlobalSplitU > 1 on complex (Z/C) -- illegal on gfx90c (no MFMA;
+      1. GlobalSplitU > 1 on complex (Z/C) -- illegal on this device (no MFMA;
          SolutionStructs:3553).
       2. GlobalSplitU > 1 on half with f32 accumulate (HPA / HS_HPA,
          ComputeDataType 's') -- illegal (needs half/mixed compute or MFMA;
@@ -177,11 +177,11 @@ def _stagger_rejection(config: Dict[str, Any],
 @memo_gate
 def assembly_class_valid(config: Dict[str, Any],
                         profile=None) -> Tuple[bool, str]:
-    """Return (True, "") if config is a legal gfx90c Assembly GEMM class.
+    """Return (True, "") if config is a legal Assembly GEMM class for the device.
 
     CLASS-BASED validity -- single source of truth for both seams (scheduler
     validate_config + the config writer). Any cell that falls in an illegal
-    class is auto-caught pre-run, never launched on gfx90c.
+    class is auto-caught pre-run, never launched on the device.
 
     Args:
         config: A Tensile solution dict, normally with ``DataType`` merged in

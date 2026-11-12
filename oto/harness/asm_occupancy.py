@@ -6,7 +6,7 @@ Owns: reading Tensile's own generated assembly (the `amdhsa_next_free_vgpr` /
 actual resident-wave occupancy, joined to the GFLOP/s those kernels measured —
 plus the Tensile CSV column trap that joins it.
 Does NOT own: the *predicted* occupancy gate (oto.tensile.gates.occupancy), the
-VGPR/LDS calibration tables (oto.tensile.gates.vgpr_model), gfx90c constants
+VGPR/LDS calibration tables (oto.tensile.gates.vgpr_model), the device constants
 (oto.device.peaks), or the predicted resident-workgroup audit
 (oto.harness.occupancy_audit). This module measures what was emitted; that
 module predicts what a gate would allow.

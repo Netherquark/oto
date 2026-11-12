@@ -222,7 +222,7 @@ def _classify_draw(template: Dict[str, Any], tiles: List[Dict[str, Any]],
     read it — and treat `python3 check_candidates.py` on the real deck, which
     sees every knob at once, as the authority. A value that is genuinely dead
     for this device is one whose reason is a structural class rule ("illegal on
-    gfx90c", "no MatrixInstruction").
+    the device", "no MatrixInstruction").
     """
     refusals: List[str] = []
     for tile in tiles:

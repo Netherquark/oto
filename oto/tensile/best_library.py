@@ -1,4 +1,4 @@
-"""Best-effort gfx90c ``TensileLibrary.dat`` carved from the full kernel database.
+"""Best-effort device ``TensileLibrary.dat`` carved from the full kernel database.
 
 Owns: reading the complete measured corpus (``kernel_db.json``, every run, every
 protocol), picking the best family-protocol config per shipped cell (with an

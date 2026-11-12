@@ -1,7 +1,7 @@
 """Device auto-detection: resolve the GPU codename from the system.
 
 Owns: reading the codename from rocminfo (or a starter file). Falls back to
-gfx90c when detection fails (with a warning).
+the default codename when detection fails (with a warning).
 
 Public API: detect_codename.
 """
@@ -14,7 +14,7 @@ import subprocess
 
 
 def detect_codename() -> str:
-    """Return the GPU codename (e.g. 'gfx90c') from rocminfo, or 'gfx90c' fallback."""
+    """Return the GPU codename from rocminfo, or the default codename when detection fails."""
     rocminfo = shutil.which("rocminfo")
     if rocminfo:
         try:

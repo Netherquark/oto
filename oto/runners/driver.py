@@ -145,7 +145,7 @@ class TensileDriver(
         self.tensile_root = require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)
         self.cooldown_s = cooldown_s
         self.create_run = create_run
-        # Refactor 2: resolve gfx90c profile (auto-detect if not given).
+        # Refactor 2: resolve the device profile (auto-detect if not given).
         if codename is None:
             try:
                 from oto.device.detect import detect_codename

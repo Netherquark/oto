@@ -19,7 +19,7 @@ live at that point, the same pass reports Tensile's real per-thread VGPR / SGPR 
 accVGPR counts -- the measurement that would retire the calibrated model.
 
 No benchmark is ever run: ``BenchmarkProblems`` / ``BenchmarkStructs`` (the part
-that launches GEMMs on gfx90c) is never invoked. The ROCm tools touched are
+that launches GEMMs on the device) is never invoked. The ROCm tools touched are
 the path-locating helpers real runs use (``hipconfig``,
 ``rocm_agent_enumerator``), which only print config.
 
@@ -111,7 +111,7 @@ def _init_tensile(arch: str = "gfx90c") -> None:
         }
     )
 
-    # Detection reads gfx90c to pick the ISA. This is a path/enumeration
+    # Detection reads the device to pick the ISA. This is a path/enumeration
     # query, not a workload, but pin the ISA anyway so the proof is explicitly
     # about the arch we ported and so the tool still works with no GPU present.
     import Tensile.Common as Common2

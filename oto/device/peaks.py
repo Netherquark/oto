@@ -23,7 +23,7 @@ import re
 from typing import Dict, Set, Tuple
 
 # Refactor 2: source device facts from the default profile so the profile is the
-# single source of truth. Falls back to the gfx90c literals if the profile
+# single source of truth. Falls back to the device literals if the profile
 # cannot be loaded (e.g. during bootstrap).
 try:
     from oto.device.loader import default_profile as _peaks_dp
@@ -49,7 +49,7 @@ try:
     VGPR_PER_CU = _P.vgpr_per_cu
     GLOBAL_LOAD_BYTE_CAP = _P.global_load_byte_cap
 except Exception:  # pragma: no cover
-    PEAK_GFLOPS = {  # fallback (gfx90c)
+    PEAK_GFLOPS = {  # fallback (this device)
         "FP32": 1613, "FP16": 3226, "BF16": 1613, "INT8": 1613, "FP64": 101,
     }
     FAMILY_SHAPES = {}
@@ -196,9 +196,9 @@ def cell_key(family: object, shape: object) -> "str | None":
 
 
 def shipped_cells() -> Dict[str, Dict[str, str]]:
-    """The canonical gfx90c "shape x dtype" coverage grid (the coverage-parity rule).
+    """The canonical the device "shape x dtype" coverage grid (the coverage-parity rule).
 
-    This is the *single* definition of what the produced gfx90c TensileLibrary
+    This is the *single* definition of what the produced device TensileLibrary
     may address: the exact cell set the shipped gfx900 library addresses today.
 
     Cell = (family, cube shape); family implies the Tensile DataType char via
@@ -247,27 +247,26 @@ def kernel_key(cfg: object) -> str:
 def set_profile(profile) -> None:
     """Re-bind module-level device constants to ``profile`` (Refactor 2).
 
-    Consumers that read ``oto.device.peaks`` globals pick up the new device
-    without code changes; call this before importing consumer modules.
+    Dict/list constants are mutated in place (clear/update) so consumers that
+    did ``from oto.device.peaks import FAMILY_SHAPES`` at import time see the new
+    device too. Atomic scalars are re-bound; consumers that bind those at
+    import time are converted to module-attribute reads in oto/.
     """
-    global PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_CELLS, FAMILY_DTYPE_CHAR
-    global FAMILY_DTYPES, REALISTIC_CEILINGS, REALISTIC_CEILINGS_BLAS8
-    global REPORTED_TO_BLAS8, THEORETICAL_PEAKS, THEORETICAL_PEAKS_BLAS8
-    global FAMILY_BYTES_PER_ELEMENT, NUM_CUS, NUM_SIMDS_PER_CU, LANES_PER_SIMD
+    global NUM_CUS, NUM_SIMDS_PER_CU, LANES_PER_SIMD
     global MAX_WAVES_PER_CU, MAX_CLOCK_MHZ, LDS_PER_CU_KB, L2_SIZE_KB
     global VGPR_PER_CU, GLOBAL_LOAD_BYTE_CAP
     try:
-        PEAK_GFLOPS = dict(profile.peak_gflops)
-        FAMILY_SHAPES = {k: list(v) for k, v in profile.family_shapes.items()}
-        FAMILY_CELLS = {k: list(v) for k, v in profile.family_cells.items()}
-        FAMILY_DTYPE_CHAR = dict(profile.family_dtype_char)
-        FAMILY_DTYPES = dict(profile.family_dtypes)
-        REALISTIC_CEILINGS = dict(profile.realistic_ceilings)
-        REALISTIC_CEILINGS_BLAS8 = dict(profile.realistic_ceilings_blas8)
-        REPORTED_TO_BLAS8 = dict(profile.reported_to_blas8)
-        THEORETICAL_PEAKS = dict(profile.theoretical_peaks)
-        THEORETICAL_PEAKS_BLAS8 = dict(profile.theoretical_peaks_blas8)
-        FAMILY_BYTES_PER_ELEMENT = dict(profile.family_bytes_per_element)
+        PEAK_GFLOPS.clear(); PEAK_GFLOPS.update(profile.peak_gflops)
+        FAMILY_SHAPES.clear(); FAMILY_SHAPES.update({k: list(v) for k, v in profile.family_shapes.items()})
+        FAMILY_CELLS.clear(); FAMILY_CELLS.update({k: list(v) for k, v in profile.family_cells.items()})
+        FAMILY_DTYPE_CHAR.clear(); FAMILY_DTYPE_CHAR.update(profile.family_dtype_char)
+        FAMILY_DTYPES.clear(); FAMILY_DTYPES.update(profile.family_dtypes)
+        REALISTIC_CEILINGS.clear(); REALISTIC_CEILINGS.update(profile.realistic_ceilings)
+        REALISTIC_CEILINGS_BLAS8.clear(); REALISTIC_CEILINGS_BLAS8.update(profile.realistic_ceilings_blas8)
+        REPORTED_TO_BLAS8.clear(); REPORTED_TO_BLAS8.update(profile.reported_to_blas8)
+        THEORETICAL_PEAKS.clear(); THEORETICAL_PEAKS.update(profile.theoretical_peaks)
+        THEORETICAL_PEAKS_BLAS8.clear(); THEORETICAL_PEAKS_BLAS8.update(profile.theoretical_peaks_blas8)
+        FAMILY_BYTES_PER_ELEMENT.clear(); FAMILY_BYTES_PER_ELEMENT.update(profile.family_bytes_per_element)
         NUM_CUS = profile.num_cus
         NUM_SIMDS_PER_CU = profile.simds_per_cu
         LANES_PER_SIMD = profile.lanes_per_simd

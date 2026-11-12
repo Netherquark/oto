@@ -465,7 +465,7 @@ class CandidateEmitMixin:
 # Kept out of CandidateGenerator so a caller can ask "is this single knob
 # illegal / does this tile divide" without constructing a generator.
 
-#: Knobs gfx90c has no hardware path for.
+#: Knobs this device has no hardware path for.
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
 
@@ -573,7 +573,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
 
 
 def estimate_occupancy(config: Dict[str, Any]) -> float:
-    """Modelled workgroups-per-CU from the register file (gfx90c).
+    """Modelled workgroups-per-CU from the register file (this device).
 
     Why it delegates: the previous version inferred threads from ThreadTile via
     a `64 // tt` heuristic, ignored MacroTile and VGPRs entirely, and therefore
