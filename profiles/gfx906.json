@@ -1,0 +1,210 @@
+{
+  "codename": "gfx906",
+  "isa": [
+    9,
+    0,
+    6
+  ],
+  "num_cus": 64,
+  "simds_per_cu": 4,
+  "lanes_per_simd": 16,
+  "max_waves_per_cu": 40,
+  "max_clock_mhz": 1500,
+  "lds_per_cu_kb": 64,
+  "l2_size_kb": 4096,
+  "vgpr_per_cu": 65536,
+  "has_mfma": false,
+  "has_dp4a": false,
+  "has_packed_bf16": false,
+  "global_load_byte_cap": 16,
+  "peak_gflops": {
+    "FP32": 14700,
+    "FP64": 7350,
+    "FP16": 29400,
+    "BF16": 14700,
+    "INT8": 14700,
+    "CC": 14700,
+    "ZZ": 7350,
+    "HH": 29400,
+    "HH_HPA": 14700,
+    "HS_HPA": 14700
+  },
+  "family_shapes": {
+    "SS": [
+      256,
+      512,
+      1024
+    ],
+    "DD": [
+      256,
+      512,
+      1024
+    ],
+    "HH": [
+      256,
+      512,
+      1024
+    ],
+    "CC": [
+      256,
+      512,
+      1024
+    ],
+    "ZZ": [
+      256,
+      512,
+      1024
+    ],
+    "HH_HPA": [
+      512,
+      1024
+    ],
+    "HS_HPA": [
+      512,
+      1024
+    ]
+  },
+  "family_cells": {
+    "SS": [
+      256,
+      512,
+      1024
+    ],
+    "DD": [
+      256,
+      512,
+      1024
+    ],
+    "HH": [
+      256,
+      512,
+      1024
+    ],
+    "CC": [
+      256,
+      512,
+      1024
+    ],
+    "ZZ": [
+      256,
+      512,
+      1024
+    ],
+    "HH_HPA": [
+      512,
+      1024
+    ],
+    "HS_HPA": [
+      512,
+      1024
+    ]
+  },
+  "realistic_ceilings": {
+    "SS": 10000.0,
+    "DD": 5000.0,
+    "HH": 20000.0,
+    "CC": 10000.0,
+    "ZZ": 5000.0,
+    "HH_HPA": 10000.0,
+    "HS_HPA": 10000.0,
+    "BF16": 10000.0,
+    "INT8": 10000.0
+  },
+  "realistic_ceilings_blas8": {
+    "SS": 10000.0,
+    "DD": 5000.0,
+    "HH": 20000.0,
+    "CC": 10000.0,
+    "ZZ": 5000.0,
+    "HH_HPA": 10000.0,
+    "HS_HPA": 10000.0,
+    "BF16": 10000.0,
+    "INT8": 10000.0
+  },
+  "realistic_ceilings_reported": {
+    "SS": 10000.0,
+    "DD": 5000.0,
+    "HH": 20000.0,
+    "CC": 10000.0,
+    "ZZ": 5000.0,
+    "HH_HPA": 10000.0,
+    "HS_HPA": 10000.0,
+    "BF16": 10000.0,
+    "INT8": 10000.0
+  },
+  "family_dtype_char": {
+    "SS": "S",
+    "DD": "D",
+    "HH": "H",
+    "CC": "C",
+    "ZZ": "Z",
+    "HH_HPA": "H",
+    "HS_HPA": "S"
+  },
+  "family_dtypes": {
+    "SS": "FP32",
+    "DD": "FP64",
+    "HH": "FP16",
+    "CC": "FP32",
+    "ZZ": "FP64",
+    "HH_HPA": "FP32",
+    "HS_HPA": "FP32"
+  },
+  "family_bytes_per_element": {
+    "SS": 4,
+    "DD": 8,
+    "HH": 2,
+    "HS": 4,
+    "CC": 8,
+    "ZZ": 16,
+    "HH_HPA": 2,
+    "HS_HPA": 4
+  },
+  "reported_to_blas8": {
+    "SS": 1.0,
+    "DD": 1.0,
+    "HH": 1.0,
+    "HH_HPA": 1.0,
+    "HS_HPA": 1.0,
+    "CC": 4.0,
+    "ZZ": 4.0
+  },
+  "theoretical_peaks": {
+    "SS": 14700,
+    "DD": 7350,
+    "CC": 14700,
+    "ZZ": 7350,
+    "HH": 29400,
+    "HH_HPA": 14700,
+    "HS_HPA": 14700,
+    "BF16": 14700,
+    "INT8": 14700
+  },
+  "theoretical_peaks_blas8": {
+    "SS": 14700,
+    "DD": 7350,
+    "CC": 14700,
+    "ZZ": 7350,
+    "HH": 29400,
+    "HH_HPA": 14700,
+    "HS_HPA": 14700,
+    "BF16": 14700,
+    "INT8": 14700
+  },
+  "assembly_gates": {
+    "has_mfma": false,
+    "has_dp4a": false,
+    "has_packed_bf16": false,
+    "complex_allows_gsu": false,
+    "half_allows_gsu": false,
+    "vw_floor": 1
+  },
+  "theoretical": {
+    "memory_type": "HBM2",
+    "bandwidth_gb_s": 1024.0,
+    "coherent_host_access": false,
+    "boundaries": {}
+  },
+  "measured_vgpr": {},
+  "spoof_reference": ""
+}

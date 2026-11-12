@@ -43,3 +43,14 @@ def test_profile_loader_missing_raises():
     import pytest
     with pytest.raises(FileNotFoundError):
         load_profile("gfx9999")
+
+
+def test_second_profile_loads_and_differs():
+    p2 = load_profile("gfx906")
+    assert p2.codename == "gfx906"
+    assert p2.num_cus == 64
+    assert p2.max_clock_mhz == 1500
+    assert p2.has_mfma is False
+    # differs from gfx90c
+    p1 = load_profile("gfx90c")
+    assert p1.num_cus != p2.num_cus
