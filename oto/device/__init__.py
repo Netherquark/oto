@@ -1,7 +1,8 @@
 """Device facts: the gfx90c hardware peak table and cell/family vocabulary.
 
 This is the ONLY package in oto that may hold a numeric hardware constant, and
-the seam Refactor 2 will use to make the driver device-agnostic.
+the seam Refactor 2 will use to make the driver device-agnostic. Refactor 2
+adds oto/device/profile.py (DeviceProfile) + oto/device/loader.py.
 
 Owns: the peak GFLOPS table, per-family shape grids, the family <-> Tensile
 DataType-char mapping, the realistic acceptance ceilings, the hardware limits

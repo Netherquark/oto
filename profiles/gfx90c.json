@@ -1,0 +1,241 @@
+{
+  "codename": "gfx90c",
+  "isa": [
+    9,
+    0,
+    12
+  ],
+  "num_cus": 7,
+  "simds_per_cu": 4,
+  "lanes_per_simd": 16,
+  "max_waves_per_cu": 40,
+  "max_clock_mhz": 1800,
+  "lds_per_cu_kb": 64,
+  "l2_size_kb": 1024,
+  "vgpr_per_cu": 65536,
+  "has_mfma": false,
+  "has_dp4a": false,
+  "has_packed_bf16": false,
+  "global_load_byte_cap": 16,
+  "peak_gflops": {
+    "FP32": 1613,
+    "FP16": 3226,
+    "BF16": 1613,
+    "INT8": 1613,
+    "FP64": 101
+  },
+  "family_shapes": {
+    "SS": [
+      256,
+      512,
+      768,
+      1000,
+      1024,
+      1365,
+      2048,
+      4096
+    ],
+    "DD": [
+      192,
+      256,
+      512,
+      768,
+      1024,
+      1365,
+      2048
+    ],
+    "HH": [
+      256,
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "CC": [
+      192,
+      256,
+      512,
+      1024,
+      2048
+    ],
+    "ZZ": [
+      128,
+      192,
+      256,
+      512,
+      1024
+    ],
+    "HH_HPA": [
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "HS_HPA": [
+      512,
+      1024,
+      2048,
+      4096
+    ]
+  },
+  "family_cells": {
+    "SS": [
+      256,
+      512,
+      768,
+      1000,
+      1024,
+      1365,
+      2048,
+      4096
+    ],
+    "DD": [
+      192,
+      256,
+      768,
+      1024,
+      1365,
+      2048
+    ],
+    "HH": [
+      256,
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "CC": [
+      192,
+      256,
+      512,
+      1024,
+      2048
+    ],
+    "ZZ": [
+      128,
+      192,
+      256,
+      512,
+      1024
+    ],
+    "HH_HPA": [
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "HS_HPA": [
+      512,
+      1024,
+      2048
+    ]
+  },
+  "realistic_ceilings": {
+    "SS": 1118.7,
+    "DD": 98.6,
+    "HH": 2461.0,
+    "ZZ": 24.65,
+    "CC": 279.675,
+    "HH_HPA": 1118.7,
+    "HS_HPA": 1118.7,
+    "BF16": 1109.0,
+    "INT8": 881.0
+  },
+  "realistic_ceilings_blas8": {
+    "SS": 1118.7,
+    "DD": 98.6,
+    "HH": 2461.0,
+    "ZZ": 98.6,
+    "CC": 1118.7,
+    "HH_HPA": 1118.7,
+    "HS_HPA": 1118.7,
+    "BF16": 1109,
+    "INT8": 881
+  },
+  "realistic_ceilings_reported": {
+    "SS": 1118.7,
+    "DD": 98.6,
+    "HH": 2461.0,
+    "ZZ": 24.65,
+    "CC": 279.675,
+    "HH_HPA": 1118.7,
+    "HS_HPA": 1118.7,
+    "BF16": 1109.0,
+    "INT8": 881.0
+  },
+  "family_dtype_char": {
+    "SS": "S",
+    "DD": "D",
+    "HH": "H",
+    "CC": "C",
+    "ZZ": "Z",
+    "HH_HPA": "H",
+    "HS_HPA": "H"
+  },
+  "family_dtypes": {
+    "SS": "FP32",
+    "DD": "FP64",
+    "CC": "FP32",
+    "ZZ": "FP64",
+    "HH": "FP16",
+    "HH_HPA": "FP32",
+    "HS_HPA": "FP32"
+  },
+  "family_bytes_per_element": {
+    "SS": 4,
+    "DD": 8,
+    "HH": 2,
+    "HS": 4,
+    "CC": 8,
+    "ZZ": 16,
+    "HH_HPA": 2,
+    "HS_HPA": 4
+  },
+  "reported_to_blas8": {
+    "SS": 1.0,
+    "DD": 1.0,
+    "HH": 1.0,
+    "HH_HPA": 1.0,
+    "HS_HPA": 1.0,
+    "CC": 4.0,
+    "ZZ": 4.0
+  },
+  "theoretical_peaks": {
+    "SS": 1613.0,
+    "DD": 101.0,
+    "CC": 403.25,
+    "ZZ": 25.25,
+    "HH": 3226.0,
+    "HH_HPA": 1613.0,
+    "HS_HPA": 1613.0,
+    "BF16": 1613.0,
+    "INT8": 1613.0
+  },
+  "theoretical_peaks_blas8": {
+    "SS": 1613,
+    "DD": 101,
+    "CC": 1613,
+    "ZZ": 101,
+    "HH": 3226,
+    "HH_HPA": 1613,
+    "HS_HPA": 1613,
+    "BF16": 1613,
+    "INT8": 1613
+  },
+  "assembly_gates": {
+    "has_mfma": false,
+    "has_dp4a": false,
+    "has_packed_bf16": false,
+    "complex_allows_gsu": false,
+    "half_allows_gsu": false,
+    "vw_floor": 1
+  },
+  "theoretical": {
+    "memory_type": "DDR4",
+    "bandwidth_gb_s": 0.0,
+    "coherent_host_access": false,
+    "boundaries": {}
+  },
+  "measured_vgpr": {},
+  "spoof_reference": "gfx900"
+}
