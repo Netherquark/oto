@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from oto.tensile.best_library import (
     SHIPPED_CELLS, _tensile_env, build_best_library, cell_solution_map,
     default_best_library_dest, dedupe_configs, emit_logic_yaml,
+    logic_filename_hint,
 )
 
 
@@ -97,3 +98,35 @@ def test_tensile_env_prepends_user_rocm_include(tmp_path, monkeypatch):
     env = _tensile_env(Path("/tmp/Tensile"))
     assert env["CPLUS_INCLUDE_PATH"].split(":")[0] == str(inc)
     assert env["C_INCLUDE_PATH"].split(":")[0] == str(inc)
+
+
+def test_logic_filename_hint_falls_back_without_tensile_root():
+    assert logic_filename_hint(None, "gfx90c") == "gfx90c"
+
+
+def test_logic_filename_hint_asks_target_tensile(monkeypatch):
+    class _P:
+        stdout = "vega10\n"
+    monkeypatch.setattr("oto.tensile.best_library.subprocess.run",
+                        lambda *a, **k: _P())
+    assert logic_filename_hint(Path("/tmp/FakeTensile"), "gfx90c") == "vega10"
+
+
+def test_logic_filename_hint_falls_back_on_error(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("no tensile")
+    monkeypatch.setattr("oto.tensile.best_library.subprocess.run", boom)
+    assert logic_filename_hint(Path("/tmp/FakeTensile"), "gfx90c") == "gfx90c"
+
+
+def test_emit_logic_yaml_names_files_for_tensile_selection(tmp_path, monkeypatch):
+    """ROCm 7.x maps gfx90c -> vega10; the merge step selects logic files by
+    the mapped name as a stem substring, so the YAML filenames must carry it."""
+    monkeypatch.setattr("oto.tensile.best_library.logic_filename_hint",
+                        lambda root, cn: "vega10")
+    cm, _, _ = cell_solution_map(Path("."), "family")
+    logic = tmp_path / "3_LibraryLogic"
+    emit_logic_yaml(cm, logic, tensile_root=Path("/tmp/FakeTensile"))
+    names = sorted(p.name for p in logic.glob("*.yaml"))
+    assert len(names) == 7
+    assert all(n.startswith("vega10_") for n in names)

@@ -291,7 +291,7 @@ def _state_sol(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return sol
 
 
-def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename):
+def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename, hint=None):
     sols = families[fam]
     state_sols = [_state_sol(cfg) for cfg in sols]
 
@@ -323,7 +323,7 @@ def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, code
         "Library": {"indexOrder": [2, 3, 1, 0], "table": table,
                     "distance": "Equality"},
     }
-    (dest_logic_dir / f"{codename}_{fam}.yaml").write_text(
+    (dest_logic_dir / f"{hint or codename}_{fam}.yaml").write_text(
         yaml.safe_dump(root, sort_keys=False))
 
     winning_shapes = sorted({cell[1] for cell in cell_map if cell[0] == fam})
@@ -332,6 +332,35 @@ def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, code
         "config": {"FamilyLabel": fam},
         "shapes": winning_shapes,
     }
+
+
+def logic_filename_hint(tensile_root, codename) -> str:
+    """Filename prefix the target Tensile will match to select logic files.
+
+    The merge step selects logic files by a substring of the file *stem*
+    (``findLogicFiles``), using ``getArchitectureName(architecture)`` -- e.g.
+    the ROCm 7.x nightly maps ``gfx90c`` -> ``vega10`` (the gfx900-class
+    target). Emitting ``<codename>_<family>.yaml`` then silently selects zero
+    files (observed: ``# LibraryLogicFiles: found 0 files``, a "successful"
+    TCL run with 0 solution catalogs and no ``TensileLibrary.dat``). Ask the
+    very Tensile doing the merge; on any failure fall back to the codename
+    (which is what Tensile builds that map an arch to itself expect).
+    """
+    if not tensile_root:
+        return codename
+    try:
+        root = Path(tensile_root)
+        code = ("import sys\n"
+                "from Tensile.Common import getArchitectureName\n"
+                "print(getArchitectureName(sys.argv[1]) or sys.argv[1])\n")
+        env = _tensile_env(root)
+        proc = subprocess.run([sys.executable, "-c", code, codename],
+                              capture_output=True, text=True, env=env,
+                              cwd=str(root), timeout=60)
+        hint = (proc.stdout or "").strip()
+        return hint or codename
+    except Exception:
+        return codename
 
 
 def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
@@ -343,10 +372,12 @@ def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
     dest_logic_dir = Path(dest_logic_dir)
     dest_logic_dir.mkdir(parents=True, exist_ok=True)
     families, _ = dedupe_configs(cell_map)
+    hint = logic_filename_hint(tensile_root, codename)
 
     phases: List[Dict[str, Any]] = []
     for fam in sorted(families):
-        phase = _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename)
+        phase = _emit_one_family(fam, cell_map, families, dest_logic_dir,
+                                 tensile_root, codename, hint)
         phases.append(phase)
 
     parity = parity_report(phases)
@@ -463,10 +494,12 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
 
 
 def _write_best_manifest(dest: Path, basis: str, cell_map, refused, stats, parity,
-                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error) -> None:
+                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error,
+                         logic_hint=None) -> None:
     manifest = {
         "basis": basis,
         "cells": len(cell_map),
+        "logic_filename_hint": logic_hint,
         "refused": refused,
         "stats": stats,
         "parity": parity,
@@ -500,6 +533,7 @@ def build_best_library(base_dir: Path, dest: Optional[Path] = None,
     logic_dir.mkdir(parents=True, exist_ok=True)
     final_lib_dir.mkdir(parents=True, exist_ok=True)
 
+    hint = logic_filename_hint(tensile_root, codename) if tensile_root else codename
     cell_map, refused, stats = cell_solution_map(base_dir, basis, kernel_db_path)
     phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root, codename)
 
@@ -512,7 +546,8 @@ def build_best_library(base_dir: Path, dest: Optional[Path] = None,
         tcl_ran, tcl_failed, tcl_error = _run_tcl(tensile_root, logic_dir, final_lib_dir, codename)
 
     _write_best_manifest(dest, basis, cell_map, refused, stats, parity,
-                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error)
+                         anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error,
+                         logic_hint=hint)
 
     status = "success"
     if tcl_failed or refused or not parity.get("parity_ok", False):

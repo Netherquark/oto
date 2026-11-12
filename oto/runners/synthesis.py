@@ -32,8 +32,10 @@ class SynthesisMixin:
 
     def _emit_family_logic(self, logic_dir: Path) -> None:
         """Placeholder logic definitions for the 7 dtype families."""
+        hint = bestlib.logic_filename_hint(getattr(self, "tensile_root", None),
+                                           _peaks.CODENAME)
         for fam in ["SS", "DD", "HH", "ZZ", "CC", "HH_HPA", "HS_HPA"]:
-            logic_file = logic_dir / f"{_peaks.CODENAME}_{fam}.yaml"
+            logic_file = logic_dir / f"{hint}_{fam}.yaml"
             logic_content = {
                 "MinimumRequiredVersion": "4.44.0",
                 "CustomKernelName": f"{_peaks.CODENAME}_{fam}_lib",
@@ -48,22 +50,26 @@ class SynthesisMixin:
     def _run_tensile_create_library(self, tcl_bin: Path, logic_dir: Path,
                                     final_lib_dir: Path) -> Optional[Dict[str, Any]]:
         """Invoke TensileCreateLibrary; the error dict on failure, else None."""
+        arch = getattr(getattr(self, 'profile', None), 'codename', _peaks.CODENAME)
         cmd = [
             sys.executable,
             str(tcl_bin),
-            f"--architecture={getattr(getattr(self, 'profile', None), 'codename', _peaks.CODENAME)}",
+            f"--architecture={arch}",
+            "--code-object-version=V4",
             "--merge-files",
-            str(logic_dir),
-            str(final_lib_dir)
+            str(Path(logic_dir).resolve()),
+            str(Path(final_lib_dir).resolve())
         ]
         env = self._get_tensile_env()
         proc = subprocess.run(cmd, env=env, cwd=str(self.tensile_root),
                               capture_output=True, text=True)
         if proc.returncode != 0:
+            # Tensile prints its traceback on stdout, not stderr.
+            tail = ((proc.stderr or "") + "\n" + (proc.stdout or "")).strip()
             return {
                 "status": "failed",
                 "returncode": proc.returncode,
-                "error": proc.stderr[-500:]
+                "error": tail[-1500:],
             }
         return None
 
