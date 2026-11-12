@@ -48,7 +48,7 @@ class SynthesisMixin:
         cmd = [
             sys.executable,
             str(tcl_bin),
-            "--architecture=gfx90c",
+            f"--architecture={getattr(getattr(self, 'profile', None), 'codename', 'gfx90c')}",
             "--merge-files",
             str(logic_dir),
             str(final_lib_dir)
@@ -141,7 +141,8 @@ class SynthesisMixin:
         dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
-            tensile_root=getattr(self, "tensile_root", None))
+            tensile_root=getattr(self, "tensile_root", None),
+            codename=getattr(self, "codename", "gfx90c"))
         print(f"Best-effort library: {result}")
         return result
 

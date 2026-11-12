@@ -412,7 +412,7 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir):
     if not tcl_bin.exists():
         return False, True, f"TensileCreateLibrary not found at {tcl_bin}"
     env = _tensile_env(tensile_root)
-    cmd = [sys.executable, str(tcl_bin), "--architecture=gfx90c",
+    cmd = [sys.executable, str(tcl_bin), f"--architecture={codename}",
            "--code-object-version=V4", "--merge-files",
            str(logic_dir), str(final_lib_dir), "HIP"]
     try:
@@ -428,7 +428,8 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir):
 def build_best_library(base_dir: Path, dest: Optional[Path] = None,
                        basis: str = "family",
                        tensile_root: Optional[Path] = None,
-                       kernel_db_path: Optional[Path] = None) -> Dict[str, Any]:
+                       kernel_db_path: Optional[Path] = None,
+                       codename: str = "gfx90c") -> Dict[str, Any]:
     base_dir = Path(base_dir)
     dest = Path(dest) if dest is not None else default_best_library_dest(base_dir)
     dest.mkdir(parents=True, exist_ok=True)
