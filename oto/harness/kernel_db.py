@@ -354,7 +354,10 @@ def build_kernel_db(base_dir: str,
                         + glob.glob(os.path.join(run_dir, "probe_*")))
         acc: List[Dict[str, Any]] = []
         for pd in phases:
-            acc.extend(phase_survey(pd, os.path.basename(pd), kind == "spoof"))
+            try:
+                acc.extend(phase_survey(pd, os.path.basename(pd), kind == "spoof"))
+            except Exception as exc:  # pragma: no cover - defensive
+                sys.stderr.write(f"  {run_id}/{os.path.basename(pd)}: skipped ({exc})\n")
         cache[run_id] = acc
         if not quiet:
             sys.stderr.write(f"{run_id}: {len(phases)} phase dirs "
