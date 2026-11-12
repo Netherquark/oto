@@ -21,8 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
 
 from oto import yamlio  # noqa: E402
-from oto.device.peaks import (FAMILY_DTYPE_CHAR,  # noqa: E402
-                              FAMILY_SHAPES)
+from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
 import oto.device.peaks as _peaks  # noqa: E402
 from oto.ledger.registry import fingerprint_config  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
@@ -34,8 +33,7 @@ from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         AUTO_EXPLICIT, DU_VARIANTS,
                                         FAMILY_DTYPE, LADDER,
                                         NARROW_NEIGHBOURS, PATTERNS,
-                                        PLAN_BATCH, TARGET_CELLS,
-                                        _pad_rows)
+                                        PLAN_BATCH, TARGET_CELLS)
 
 #: Notes for rows dropped because no target shape satisfied their element-
 #: multiple assertions. Appended to by ``_offer_row``; drained by
@@ -100,8 +98,10 @@ def _load_deck_fps() -> Set[str]:
     return fps
 
 
-def __yaml_load(path: Path, fallback: Any = []) -> Any:
+def __yaml_load(path: Path, fallback: Any = None) -> Any:
     """Read a YAML file with the canonical reader (libyaml + content cache)."""
+    if fallback is None:
+        fallback = []
     try:
         return yamlio.load_yaml_cached(path) or fallback
     except Exception:

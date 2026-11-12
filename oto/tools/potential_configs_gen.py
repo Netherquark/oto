@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 from oto.device.profile import DeviceProfile
 
@@ -36,48 +36,59 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
         f"- families: {', '.join(sorted(profile.family_shapes))}",
         "",
     ]
-    # Corpus
-    kb = base_dir / "gfx90c_results" / "analysis" / "kernel_db.json"
-    db = _load_json(kb)
-    if isinstance(db, dict):
-        total_rows = sum(len(v) for v in db.values())
-        parts.append("## Corpus")
-        parts.append(f"- runs: {len(db)}")
-        parts.append(f"- kernel-shape rows: {total_rows}")
-        parts.append("")
-        parts.append("## Per-run row counts")
-        for run_id in sorted(db):
-            parts.append(f"- {run_id}: {len(db[run_id])} rows")
-        parts.append("")
-    else:
-        parts.append("## Corpus: (no kernel_db.json found)")
-        parts.append("")
-    # Acceptance report
-    ar = _load_json(base_dir / "gfx90c_results" / "acceptance_report.json")
-    if isinstance(ar, dict):
-        parts.append("## Acceptance (like-for-like)")
-        verdicts = ar.get("per_cell_verdicts", [])
-        wins = sum(1 for v in verdicts if v.get("verdict") == "WIN")
-        ties = sum(1 for v in verdicts if v.get("verdict") == "TIE")
-        losses = sum(1 for v in verdicts if v.get("verdict") == "LOSS")
-        parts.append(f"- cells: {len(verdicts)}  (WIN {wins} / TIE {ties} / LOSS {losses})")
-        parts.append(f"- reference run: {ar.get('reference_run_id', '?')}")
-        parts.append("")
-        # per-family summary
-        by_fam: dict = {}
-        for v in verdicts:
-            by_fam.setdefault(v.get("family", "?"), []).append(v)
-        parts.append("## Per-family verdicts")
-        for fam in sorted(by_fam):
-            vs = by_fam[fam]
-            w = sum(1 for v in vs if v.get("verdict") == "WIN")
-            t = sum(1 for v in vs if v.get("verdict") == "TIE")
-            l = sum(1 for v in vs if v.get("verdict") == "LOSS")
-            parts.append(f"- {fam}: {len(vs)} cells (W{w}/T{t}/L{l})")
-        parts.append("")
+    parts.extend(_corpus_section(base_dir))
+    parts.extend(_acceptance_section(base_dir))
     # Ceilings
     parts.append("## Realistic ceilings (client-reported units)")
     for fam in sorted(profile.realistic_ceilings):
         parts.append(f"- {fam}: {profile.realistic_ceilings[fam]}")
     parts.append("")
     return "\n".join(parts) + "\n"
+
+
+def _corpus_section(base_dir: Path) -> List[str]:
+    """The `## Corpus` + per-run stats block."""
+    kb = base_dir / "gfx90c_results" / "analysis" / "kernel_db.json"
+    db = _load_json(kb)
+    if not isinstance(db, dict):
+        return ["## Corpus: (no kernel_db.json found)", ""]
+    total_rows = sum(len(v) for v in db.values())
+    floor_rows = sum(len(v) for k, v in db.items() if k.startswith("gfx900_ref"))
+    lines = ["## Corpus",
+             f"- runs: {len(db)}",
+             f"- kernel-shape rows: {total_rows}",
+             f"- native rows: {total_rows - floor_rows}",
+             f"- floor rows: {floor_rows}",
+             "",
+             "## Per-run row counts"]
+    for run_id in sorted(db):
+        lines.append(f"- {run_id}: {len(db[run_id])} rows")
+    lines.append("")
+    return lines
+
+
+def _acceptance_section(base_dir: Path) -> List[str]:
+    """The `## Acceptance (like-for-like)` + `## Per-family verdicts` block."""
+    ar = _load_json(base_dir / "gfx90c_results" / "acceptance_report.json")
+    if not isinstance(ar, dict):
+        return []
+    verdicts = ar.get("per_cell_verdicts", [])
+    tally = {"WIN": 0, "TIE": 0, "LOSS": 0}
+    for v in verdicts:
+        tally[v.get("verdict", "")] = tally.get(v.get("verdict", ""), 0) + 1
+    lines = ["## Acceptance (like-for-like)",
+             f"- cells: {len(verdicts)}  (WIN {tally['WIN']} / TIE {tally['TIE']} / LOSS {tally['LOSS']})",
+             f"- reference run: {ar.get('reference_run_id', '?')}",
+             "",
+             "## Per-family verdicts"]
+    by_fam: dict = {}
+    for v in verdicts:
+        by_fam.setdefault(v.get("family", "?"), []).append(v)
+    for fam in sorted(by_fam):
+        vs = by_fam[fam]
+        w = sum(1 for v in vs if v.get("verdict") == "WIN")
+        t = sum(1 for v in vs if v.get("verdict") == "TIE")
+        l = sum(1 for v in vs if v.get("verdict") == "LOSS")
+        lines.append(f"- {fam}: {len(vs)} cells (W{w}/T{t}/L{l})")
+    lines.append("")
+    return lines

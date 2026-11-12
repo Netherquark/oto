@@ -126,6 +126,19 @@ def _bounds(row: Dict, lds_factor: int) -> Optional[Tuple[int, int, int, int, st
     return lds_bound, vgpr_bound, wave_bound, resident, binder, info
 
 
+def _floor_rows(db: Dict[str, List[Dict]]) -> Tuple[List[Dict], List[str]]:
+    """Floor rows for the audit.
+
+    Locked reference runs are preferred (the published floor); when the
+    cache carries no locked run this falls back to every ``gfx900_ref_*``
+    run present, never to a hardcoded run id. Returns ``(rows, chosen)``.
+    """
+    chosen = sorted(k for k in db if k.startswith("gfx900_ref_locked_"))
+    if not chosen:
+        chosen = sorted(k for k in db if k.startswith("gfx900_ref_"))
+    return [r for k in chosen for r in db[k]], chosen
+
+
 def _audit(rows_iter: Iterable[Dict], lds_factor: int) -> List[Dict]:
     winners = _winner_per_cell(rows_iter)
     out: List[Dict] = []
@@ -157,9 +170,15 @@ def main() -> int:
                     help="only print cells with resident wg/CU <= N")
     args = ap.parse_args()
 
-    db = json.load(open(KERNEL_DB))
+    with open(KERNEL_DB) as f:
+        db = json.load(f)
     if args.side == "floor":
-        rows = db.get("gfx900_ref_locked_52149f315d", [])
+        rows, chosen = _floor_rows(db)
+        if not rows:
+            print("no floor rows found (no gfx900_ref_* keys in kernel_db.json)",
+                  file=sys.stderr)
+            return 1
+        print(f"floor runs: {', '.join(chosen)}", file=sys.stderr)
     else:
         rows = [r for run, rs in db.items()
                 for r in rs if not run.startswith("gfx900_ref_")]

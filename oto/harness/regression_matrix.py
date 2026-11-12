@@ -43,8 +43,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
-import yaml
-
 from oto import yamlio  # noqa: E402
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
@@ -111,10 +109,25 @@ def _split_native_spoof(db: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
     spoof: List[Dict[str, Any]] = []
     for run_id, rows in db.items():
         if run_id.startswith("gfx900_ref_"):
-            spoof.extend(rows)
+            spoof.extend(dict(r, run=run_id) for r in rows)
         else:
-            native.extend(rows)
+            native.extend(dict(r, run=run_id) for r in rows)
     return native, spoof
+
+
+def _filter_protocol(rows: List[Dict[str, Any]],
+                     any_protocol: bool) -> Tuple[List[Dict[str, Any]], int]:
+    """Rows admitted under the like-for-like rule (protocol == 'family').
+
+    Pre-protocol-stamp caches classify as 'unknown' and are admitted only
+    with ``any_protocol=True``. Probe/single-problem invocations measure
+    2-4x inflated against the deck protocol and must not win an all-time
+    cell. Returns ``(admitted, dropped_count)``.
+    """
+    if any_protocol:
+        return list(rows), 0
+    keep = [r for r in rows if r.get("protocol") == "family"]
+    return keep, len(rows) - len(keep)
 
 
 def _deck_phase_ids(base_dir: str) -> Set[str]:
@@ -164,9 +177,12 @@ def _matrix_entry(
         "shape": f"{side}x{side}x{side}",
         "deck": _med(dk), "floor": _med(fl), "all_time": _med(at),
         "deck_phase": dk.get("phase") if dk else None,
+        "deck_run": dk.get("run") if dk else None,
         "deck_seeds": dk.get("n_seeds") if dk else None,
         "floor_phase": fl.get("phase") if fl else None,
+        "floor_run": fl.get("run") if fl else None,
         "all_time_phase": at.get("phase") if at else None,
+        "all_time_run": at.get("run") if at else None,
         "deck_config": _cfg(dk), "floor_config": _cfg(fl),
         "vs_floor_pct": None, "loss_config_identical": False,
     }
@@ -191,13 +207,15 @@ def _matrix_entry(
 
 
 def build_matrix(db_path: str, base_dir: str,
-                 rebuild: bool = False) -> Dict[str, Any]:
+                 rebuild: bool = False,
+                 any_protocol: bool = False) -> Dict[str, Any]:
     """deck / floor / all-time per shipped grid cell + aggregate verdicts.
 
     The universe of cells is the repo's canonical shipped grid
     (`oto.device.peaks.shipped_cell_set`), so this tool can never report an
     out-of-grid cell; non-cube probe shapes have no cell and are excluded by
-    construction.
+    construction. Rows are admitted under the like-for-like rule
+    (`protocol='family'`) unless ``any_protocol=True``.
     """
     sys.path.insert(0, base_dir)
     from oto.harness.kernel_db import load_kernel_db
@@ -206,6 +224,8 @@ def build_matrix(db_path: str, base_dir: str,
 
     db = load_kernel_db(db_path, base_dir=base_dir, rebuild=rebuild)
     native, spoof = _split_native_spoof(db)
+    native, drop_nat = _filter_protocol(native, any_protocol)
+    spoof, drop_spo = _filter_protocol(spoof, any_protocol)
 
     grid = shipped_cell_set()  # {(family, shape)} — canonical, 38 cells
     deck_phase_ids = _deck_phase_ids(base_dir)
@@ -222,6 +242,8 @@ def build_matrix(db_path: str, base_dir: str,
             "runs": sorted(db),
             "grid_size": len(grid),
             "cells_with_data": len(keys),
+            "protocol": "any" if any_protocol else "family",
+            "excluded_protocol_rows": drop_nat + drop_spo,
         },
         "cells": {},
         "cell_keys": keys,
@@ -273,10 +295,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--json", default="gfx90c_results/analysis/regression_matrix.json",
                     help="write matrix here")
     ap.add_argument("--no-json", action="store_true", help="print table only")
+    ap.add_argument("--any-protocol", action="store_true",
+                    help="admit rows from every invocation form (deck generation, "
+                         "default is like-for-like 'family' only)")
     args = ap.parse_args(argv)
 
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
-    result = build_matrix(args.db, base, rebuild=args.rebuild)
+    result = build_matrix(args.db, base, rebuild=args.rebuild,
+                          any_protocol=args.any_protocol)
     print(_table(result))
     if not args.no_json:
         out = Path(args.json)
