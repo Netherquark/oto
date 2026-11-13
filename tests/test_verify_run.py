@@ -191,7 +191,7 @@ class TestCliExitCodes(unittest.TestCase):
     """The exit code is the contract -- these run the tool as a subprocess."""
 
     def _cli(self, *args):
-        return subprocess.run([sys.executable, str(ROOT / "verify_run.py"), *args],
+        return subprocess.run([sys.executable, str(ROOT / "oto.py"), "verify", "run", *args],
                               capture_output=True, text=True)
 
     def test_diff_exits_nonzero_on_violation(self):

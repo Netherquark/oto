@@ -227,3 +227,155 @@ any new `*.md` tokens. `claude.md` §1 and root `README.md` §7 routing must
 be updated to point at `oto doctor` and `oto status` instead of the old
 shims. The generated `docs/cli.md` command reference becomes the single
 source of truth for the new nomenclature.
+
+1. oto tune vs oto run
+Option A: oto tune = convergence loop only; single-phase work via oto run --stage X Option B: oto tune absorbs everything (convergence + single-phase); --stage selects what to run Option C: oto run is the main command (absorbs --auto and --stage); oto tune is an alias
+
+Recommendation: A — clean separation. oto tune is the 10-hour overnight loop; oto run is "execute these specific phases."
+
+2. --stage routing
+Option A: Keep --stage 1..7 or names on oto run (current behavior, minimal change) Option B: Stages become subcommands: oto preflight, oto bench, oto report, etc. Option C: Hybrid: oto run --stage X for execution + oto <stage> as shorthand aliases
+
+Recommendation: B — subcommands are discoverable; --stage is a hidden routing table that nobody memorizes. But this is the biggest surface change.
+
+3. oto doctor scope
+Option A: Toolchain only (TENSILE_ROOT, compiler, GPU, .env, venv, Python version) Option B: Toolchain + registry integrity + DB health + doc registry Option C: Toolchain + everything check_db / check_candidates / check_library_parity do
+
+Recommendation: A for Phase 1, then B in Phase 3. Keep oto check db separate for registry-specific diagnostics.
+
+4. --json on every command
+Option A: ALL commands support --json Option B: Only read commands (status, stats, report, check, verify) Option C: Only commands that produce structured data (status, stats, report)
+
+Recommendation: B — mutating commands (tune, bench) produce logs, not data; --json on those would be noise.
+
+5. Progress bars
+Option A: tqdm if available, custom ANSI fallback Option B: Custom ANSI progress (no external dep) Option C: No progress bars, just line-based output ([3/10] phase_x ...)
+
+Recommendation: C — simplest, works everywhere, no dep, composable with pipes. Add --live for TTY repaint separately.
+
+6. Help style
+Option A: argparse built-in with add_argument_group (minimal code) Option B: Custom help formatter with examples-first, bold headings, color Option C: Use rich library for formatted help (external dep)
+
+Recommendation: B — argparse groups handle 90% of it; custom epilog for examples. No external dep.
+
+7. oto invocation
+Option A: Repo-root oto shell script (exec python3 -m oto "$@") Option B: python3 -m oto only (no script) Option C: Both (script + module)
+
+Recommendation: A — one command, no typing python3 -m. Script lives at repo root, users add repo root to PATH.
+
+8. Error handling
+Option A: Print to stderr + sys.exit(code) (POSIX standard) Option B: Custom exception hierarchy (oto.errors.OtoError) caught by dispatcher Option C: Both — exceptions internally, caught at top level, printed as stderr + exit code
+
+Recommendation: C — clean internally, POSIX externally. Tracebacks saved to logs/oto-<ts>.log for unknown errors.
+
+9. --dry-run
+Option A: Available on ALL mutating commands Option B: Available only on oto tune and oto bench Option C: Available on all commands that touch state (tune, bench, consolidate, library best-effort)
+
+Recommendation: C — read commands don't need it; mutating commands that are irreversible get it.
+
+10. --live (TTY repaint)
+Option A: Flag on oto tune (current behavior) Option B: Separate oto status --watch command (current render_status behavior) Option C: Both — oto tune --live for inline, oto status --watch for standalone
+
+Recommendation: C — current behavior is fine; just rename --live to --live {on,off}.
+
+11. --generate-device-docs
+Option A: oto docs generate [STARTER] Option B: oto agent generate [STARTER] Option C: oto generate docs [STARTER]
+
+Recommendation: A — docs is the noun, generate is the verb. Consistent with oto docs index.
+
+12. Verification scripts
+Option A: oto verify all / oto verify run {snapshot,diff,telemetry,cheapest} Option B: oto verify-all / oto verify-run (flat, no subcommands) Option C: Keep as python3 verify_all.py / python3 verify_run.py (no migration)
+
+Recommendation: A — subcommands are discoverable; matches the noun-verb pattern.
+
+13. allruns.py
+Option A: oto stats Option B: oto allruns Option C: oto report allruns (nested under report)
+
+Recommendation: A — stats is what it does; allruns is jargon.
+
+14. check_* scripts
+Option A: oto check candidates / oto check db / oto check retirement / oto check library-parity / oto check tensile-build Option B: oto check {candidates,db,retirement,library,build} Option C: Flat: oto check-candidates, oto check-db, etc.
+
+Recommendation: A — noun-verb, consistent with oto verify run.
+
+15. chart.py
+Option A: oto chart Option B: oto figures Option C: oto report chart (nested under report)
+
+Recommendation: A — chart is clear enough.
+
+16. consolidate.py
+Option A: oto consolidate Option B: oto deck consolidate Option C: oto tools consolidate
+
+Recommendation: A — consolidate is the verb; keep it top-level.
+
+17. port_tensile.py itself
+Option A: oto tune (convergence loop) + oto run (single-phase) Option B: oto run (everything) + oto tune (alias for oto run --auto) Option C: oto (bare = run with defaults) + oto run (explicit)
+
+Recommendation: A — tune is the 10-hour loop; run is "execute these phases."
+
+18. Output formatting (colors)
+Option A: Colors on TTY by default, --no-color + NO_COLOR to disable Option B: No colors by default, --color to enable Option C: Colors on TTY by default, --color/--no-color to override
+
+Recommendation: A — clig.dev says colors on TTY by default, disable via NO_COLOR/--no-color.
+
+19. --version
+Option A: oto version (subcommand) + oto --version (flag) Option B: oto --version flag only Option C: oto version subcommand only
+
+Recommendation: A — both, for discoverability and scriptability.
+
+20. Shell completions
+Option A: oto completion bash|zsh (Phase 4) Option B: No completions (Phase 1-3 only) Option C: Completions via external tool (argcomplete)
+
+Recommendation: B for now, A in Phase 4. Not critical for correctness.
+
+21. Config file (oto.toml)
+Option A: No config file; .env + env vars + CLI flags only Option B: oto.toml for persistent settings (base_dir, tensile_root, etc.) Option C: Both — .env for secrets, oto.toml for settings
+
+Recommendation: A — .env + env vars + flags is sufficient; adding a config file is scope creep.
+
+22. --no-input
+Option A: Implement --no-input on all commands (forbid prompts) Option B: Implement only on oto tune (the only command that prompts) Option C: No --no-input; use --yes for non-interactive
+
+Recommendation: A — clig.dev says every command should support it; --yes is a shortcut, --no-input is the safety net.
+
+23. --quiet
+Option A: Implement on all commands Option B: Implement only on read commands (status, stats, report) Option C: No --quiet; use --json for machine output
+
+Recommendation: A — --quiet suppresses narration; --json changes format. Both are useful.
+
+24. --verbose
+Option A: Implement on all commands (escalate stderr output) Option B: Implement only on oto tune and oto bench Option C: No --verbose; use --debug instead
+
+Recommendation: A — clig.dev uses --verbose for more output, --quiet for less. Both on all commands.
+
+25. --no-color
+Option A: Implement --no-color + NO_COLOR env var on all commands Option B: Implement only NO_COLOR env var (no flag) Option C: No color support at all (plain text only)
+
+Recommendation: A — clig.dev standard; --no-color flag + NO_COLOR env var.
+
+
+1. agree with your recommendation
+2. option b subcommands
+3. full doctor impl one shot evergreen
+4. option b
+5. a, tqdm is fine as a dep no custom in house nonsense
+6. use rich. we want to use existing high quality solutions as much as possible instead of developing dinky in house trash
+7. explain wtf you mean
+8. see how far you can get with posix only, if theres regression minimal custom stuf
+9. c, state commands
+10. c
+11. oto agent generate, all the operator agent stuff should be under oto agent __
+12. a 
+13. a 
+14. a
+15. a
+16. a
+17. a
+18. a
+19. a
+20. do this last, bash and zsh
+21. a, no need for toml, env is fine for config + paths + settings + secrets. update env.example if needed ig 
+22. a
+23. a
+24. a
+25. colour only, no colour isnt imp

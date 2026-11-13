@@ -319,7 +319,7 @@ def _run_stats(args: Any) -> int:
 def _run_chart(args: Any) -> int:
     # chart.py runs at module level; exec it
     import runpy
-    runpy.run_path(str(Path(__file__).resolve().parents[2] / "chart.py"), run_name="__main__")
+    runpy.run_path(str(Path(__file__).resolve().parents[2] / "oto" / "tools" / "chart.py"), run_name="__main__")
     return 0
 
 

@@ -36,7 +36,8 @@ import oto.runners.phases as phases_mod
 # The parser and the option wiring live in the CLI module; the entrypoint the
 # operator actually runs is the repo-root port_tensile.py.
 DRIVER_SRC = ROOT / "oto" / "runners" / "cli.py"
-CLI_ENTRYPOINT = ROOT / "port_tensile.py"
+CLI_ENTRYPOINT = ROOT / "oto.py"
+CLI_ARGS = ["tune"]
 
 
 class FakeStdin:
@@ -231,7 +232,7 @@ class TestCliOptionSurface(unittest.TestCase):
     def test_options_actually_reach_the_parser(self):
         """--help must list the options; catches a flag added outside argparse."""
         res = subprocess.run(
-            [sys.executable, str(CLI_ENTRYPOINT), "--help"],
+            [sys.executable, str(CLI_ENTRYPOINT), "tune", "--help"],
             capture_output=True, text=True, timeout=180)
         assert res.returncode == 0, res.stderr
         declared, _ = self._declared_and_read()

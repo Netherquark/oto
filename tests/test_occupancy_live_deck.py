@@ -106,11 +106,9 @@ class TestTensileBuildProof(unittest.TestCase):
 
 class TestDeckLinter(unittest.TestCase):
     def test_check_candidates_reports_clean(self):
-        tool = BASE / "check_candidates.py"
-        if not tool.exists():
-            self.skipTest("check_candidates.py not present")
+        tool = BASE / "oto.py"
         proc = subprocess.run(
-            [sys.executable, str(tool), "--quiet"],
+            [sys.executable, str(tool), "check", "candidates", "--quiet"],
             capture_output=True, text=True, cwd=str(BASE), timeout=1800,
         )
         assert proc.returncode in (0, 1), proc.stdout + proc.stderr
