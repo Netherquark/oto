@@ -7,6 +7,7 @@ Public API: measured_index, load_deck, dtype_bytes, _is_legal, select_deck, _med
 
 from __future__ import annotations
 
+import os
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -31,7 +32,7 @@ from oto.tools.consolidate_targets import _fam, native_runs, target_cells
 BASE = _AB_BASE
 
 #: Read-only use of Tensile: dtype byte widths are read from its tables.
-_TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
+_TENSILE_ROOT = Path(os.environ.get("TENSILE_ROOT", "")) if os.environ.get("TENSILE_ROOT") else None
 
 def _median(vals: list[float]) -> float:
     return statistics.median(vals) if vals else 0.0
@@ -155,7 +156,7 @@ def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     The third is checked here against Tensile's own dtype table because
     ``occupancy_feasible`` and ``assembly_class_valid`` both pass ZZ VectorWidth 2,
     which Tensile rejects at assembly time with 20 empty phases and a wasted
-    overnight run. ``check_candidates.py`` still misses it for the same reason.
+    overnight run. ``python3 -m oto check candidates`` still misses it for the same reason.
     """
     cfg = phase.get("config") or {}
     try:

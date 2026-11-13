@@ -15,14 +15,14 @@ The gates run in the orchestrator's own order (illegal knobs, tile divisibility,
 assembly class, classic-load divisibility, the LDS footprint, then register-file
 occupancy), so a multi-failure config reports the same reason the driver would
 have reported. The occupancy gate is a calibrated model, not Tensile's verdict;
-``check_tensile_build.py`` is the cross-check that asks Tensile itself.
+``oto check tensile-build`` is the cross-check that asks Tensile itself.
 
-    python3 check_candidates.py                      # sweep phases.yaml
-    python3 check_candidates.py --family ZZ
-    python3 check_candidates.py --deck other.yaml
-    python3 check_candidates.py --deck <base>/<codename>_results/overlays/phases.seed.overlay.yaml
-    python3 check_candidates.py --quiet              # only print failures
-    python3 check_candidates.py --json out.json
+    python3 -m oto check candidates                   # sweep phases.yaml
+    python3 -m oto check candidates --family ZZ
+    python3 -m oto check candidates --deck other.yaml
+    python3 -m oto check candidates --deck <base>/<codename>_results/overlays/phases.seed.overlay.yaml
+    python3 -m oto check candidates --quiet          # only print failures
+    python3 -m oto check candidates --json > out.json
 
 Exit code 1 if any config fails, so it can gate a pipeline. CPU only: no Tensile
 invocation, no GPU.
@@ -42,7 +42,7 @@ from oto import yamlio
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
-for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
+for _p in (os.environ.get("TENSILE_ROOT"),):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 

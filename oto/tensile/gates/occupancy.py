@@ -50,7 +50,7 @@ calibrated against the pass/fail boundary but was structurally wrong, and real
 runs proved it. It predicted complex (Z) 128x64 and 64x128 would fail -- true,
 but for the wrong reason -- while passing complex 128x32, which then died 116
 times in run_20260928_024945. Building every phase's kernel with Tensile's own
-writer (check_tensile_build.py, CPU-only) showed the per-thread constraint is the
+writer (``oto check tensile-build``, CPU-only) showed the per-thread constraint is the
 per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
 limit; the MacroTile-area term belongs to the *separate* workgroup-file rule
 above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that

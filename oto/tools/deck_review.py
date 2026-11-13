@@ -221,7 +221,7 @@ def _classify_draw(template: dict[str, Any], tiles: list[dict[str, Any]],
     resolve when a companion knob is drawn alongside: `StaggerU=0` is refused
     because `StaggerUStride` defaults to 256, and is legal the moment
     `StaggerUStride=0` is drawn too. The reason text names the companion, so
-    read it — and treat `python3 check_candidates.py` on the real deck, which
+    read it — and treat `python3 -m oto check candidates` on the real deck, which
     sees every knob at once, as the authority. A value that is genuinely dead
     for this device is one whose reason is a structural class rule ("illegal on
     the device", "no MatrixInstruction").

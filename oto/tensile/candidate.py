@@ -19,19 +19,15 @@ from pathlib import Path
 from typing import Any
 
 import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.candidate_emission import CandidateEmitMixin
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import cap_vector_width, validate_tensile_loads
 from oto.tensile.gates.occupancy import (
-    dtype_char,
     ldspad_feasible,
     occupancy_feasible,
     occupancy_workgroups_per_cu,
-    tile_dims,
 )
-from oto.tensile.gates.vgpr_model import depth_u
 
 __all__ = [
     "CandidateConfig",
@@ -43,11 +39,6 @@ __all__ = [
     "occupancy_workgroups_per_cu",
     "validate_tensile_loads",
 ]
-
-# Re-exported, not re-implemented: ``depth_u`` lives with the VGPR model, and
-# ``dtype_char``/``tile_dims`` with the occupancy gate that uses them.
-_ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, _peaks.NUM_CUS)
-
 
 # Knob neighbour map for single-knob mutations (corpus-wide, kept here so the
 # deck and the mutation logic share one authoritative source).

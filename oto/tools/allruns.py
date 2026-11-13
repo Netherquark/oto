@@ -17,9 +17,9 @@ own loaders and aggregators (the driver's all-runs record loaders, and the
 drift from the pipeline that produced the ledger. Byte widths come from the same
 place as the gate's, which ``tests.test_measurement_integrity`` asserts.
 
-    python3 allruns.py                     # tables to stdout
-    python3 allruns.py --json out.json     # machine-readable
-    python3 allruns.py --family ZZ         # filter tables to one family
+    python3 -m oto.tools.allruns           # tables to stdout
+    python3 -m oto.tools.allruns --json out.json  # machine-readable
+    python3 -m oto.tools.allruns --family ZZ      # filter to one family
 
 CPU only. Touches no GPU and launches no Tensile run.
 """
@@ -39,7 +39,7 @@ import yaml
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
-for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
+for _p in (os.environ.get("TENSILE_ROOT"),):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 

@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 def read_thermals(run_dir: Path) -> dict[str, Any] | None:
     """Temperature/power/clock envelope from one run's telemetry CSV.
 
-    Only gpu-busy samples, matching the filter port_tensile uses for its clock
+    Only gpu-busy samples, matching the filter the driver uses for its clock
     normalization: idle samples read the idle clock and a cool die, so folding
     them in would report a cooler run than the one that was actually measured.
     """

@@ -190,7 +190,7 @@ COMPUTE_BYTES_PER_ELEMENT = {
 }
 
 #: Measured per-thread VGPR totals from Tensile's own kernel writer on the device,
-#: reported by check_tensile_build.py. (threadtile, accvgpr, observed total).
+#: reported by ``oto check tensile-build``. (threadtile, accvgpr, observed total).
 #: Every entry satisfies: total = accvgpr + a small tile-dependent overhead, and
 #: the pass/fail boundary is exactly accvgpr > 128 for complex.
 MEASURED_VGPR = {

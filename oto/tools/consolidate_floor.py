@@ -24,8 +24,6 @@ from oto.tools.consolidate_targets import source_chain
 BASE = _AB_BASE
 
 #: Read-only use of Tensile: dtype byte widths are read from its tables.
-_TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
-
 #: The floor is a multi-shape sweep; the next native run has to match it.
 PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
 

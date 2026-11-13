@@ -67,7 +67,7 @@ from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import shape_order_key
 
 # The full structural knob surface — MUST match the yaml emission surface of
-# port_tensile._write_phase_config so docs citing a knob can find it here.
+# oto.tensile.config_writer._write_phase_config so docs citing a knob can find it here.
 CFG_KEYS = [
     "MacroTile", "ThreadTile", "VectorWidth", "GlobalSplitU", "DepthU",
     "WorkGroupMapping", "WorkGroup", "GlobalLoadVectorWidthA",

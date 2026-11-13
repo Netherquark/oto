@@ -121,7 +121,7 @@ for _fam, _ch in FAMILY_DTYPE_CHAR.items():
 # canonical single-typed kernels; HHS/HSS (fp16-in, fp16/fp32 mixed) belong to
 # the HH family and MUST never be tallied into the SS cells (the §13.2
 # typecode-filter rule). This is the single resolver every cell-attribution
-# consumer (analytics, harness/kernel_db, port_tensile) uses, so a family is
+# consumer (analytics, harness/kernel_db, oto.runners.cli) uses, so a family is
 # decided exactly once, by the kernel's own name, not by phase_id text.
 # ---------------------------------------------------------------------------
 
@@ -207,7 +207,7 @@ def shipped_cells() -> dict[str, dict[str, str]]:
     way). Returns ``{"SS:256": {"family": "SS", "shape": "256x256x256",
     "side": "256", "dtype": "S"}, ...}``. The rule itself (both clauses) is
     stated once in `knowledge_base.md` §6.1 and enforced by
-    `check_library_parity.py` + `library_parity.parity_report`.
+    ``oto check library-parity`` + ``oto.tensile.library_parity.parity_report``.
     """
     return {
         f"{fam}:{side}": {

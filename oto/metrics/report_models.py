@@ -65,7 +65,7 @@ class ABVerdict:
     # Thermal context for the same busy samples the clocks came from. Reported
     # alongside the clock, never folded into it: core clock is the channel
     # temperature acts through, so a second temperature factor would
-    # double-count (see port_tensile.THERMAL_MAX_C).
+    # double-count (see oto.runners.clocks.THERMAL_MAX_C).
     native_temp_c: float | None = None  # median die temp, winning native phase
     spoof_temp_c: float | None = None
     native_temp_max_c: float | None = None

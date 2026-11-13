@@ -149,11 +149,6 @@ _EXPRESSION_INDEX_DDL = (
 )
 
 
-class SQLiteRegistry:
-    """SQLite-based append-only registry with ACID guarantees."""
-
-
-
 class RegistryCore:
     """The append-only ledger engine: connection, schema, transactions, runs."""
 
@@ -350,7 +345,7 @@ class RegistryCore:
             if base not in sys.path:
                 sys.path.insert(0, base)
             # Lazy import: harness.kernel_db imports oto.device.peaks only, so
-            # there is no cycle back into registry/port_tensile.
+            # there is no cycle back into registry/runners.
             from oto.harness.kernel_db import load_kernel_db
             cache = str(self.results_dir / "analysis" / "kernel_db.json")
             db = load_kernel_db(cache, base_dir=base, rebuild=True, quiet=True)

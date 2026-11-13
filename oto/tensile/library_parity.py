@@ -25,10 +25,10 @@ The rule, canonically stated in ``knowledge_base.md`` §6.1:
   as cells.
 * :func:`parity_report` is the missing / extra / non-cube report.
 * :func:`load_pipeline_phases` merges deck plus overlays in the same order the
-  driver does, so preflight and the standalone ``check_library_parity.py``
+  driver does, so preflight and the ``oto check library-parity`` command
   measure the same set.
 
-Enforcement points, all CPU-only: the ``check_library_parity.py`` CLI (exit 1 on
+Enforcement points, all CPU-only: the ``python3 -m oto check library-parity`` command (exit 1 on
 divergence), the ``--preflight`` check, and ``consolidate.py all --commit``, which
 refuses to install a deck that breaks parity. Tests: ``tests/test_library_parity.py``.
 """
@@ -164,7 +164,7 @@ def load_pipeline_phases(base_dir: str | None = None,
                          include_seed: bool = True) -> list[dict[str, Any]]:
     """Deck + current overlays, merged in the manifest order the run uses.
 
-    Mirrors `port_tensile.load_phases_manifest`'s merge order (deck, then the
+    Mirrors `oto.runners.phases.load_phases_manifest`'s merge order (deck, then the
     live run's overlay when one is active, then the persistent seed overlay)
     so a preflight parity verdict covers the exact manifest a run would build.
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold
