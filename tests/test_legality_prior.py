@@ -156,7 +156,8 @@ class TestShippedSupport(unittest.TestCase):
         assert len(signatures) == len(support)
 
     def test_datatype_matches_family_char(self):
-        for family, char in tlib.FAMILY_DTYPE_CHAR.items():
+        from oto.device.peaks import FAMILY_DTYPE_CHAR
+        for family, char in FAMILY_DTYPE_CHAR.items():
             for entry in legality.shipped_support(BASE, family):
                 assert entry["config"]["DataType"] == char
 

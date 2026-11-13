@@ -129,7 +129,7 @@ class StatusFixture(unittest.TestCase):
     def report(self, plan: rs.RunPlan = None, now=None):
         tiers = self.tiers
 
-        def fake_emit(shipped):
+        def fake_emit(shipped, arch="gfx900", schedule="vega10"):
             return [{k: v for k, v in p.items() if k != "_tier"}
                     for p in self.phases]
 

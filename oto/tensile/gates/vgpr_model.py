@@ -36,20 +36,51 @@ except Exception:  # pragma: no cover
 
 _TRACKED = ("GLOBAL_LOAD_BYTE_CAP", "VGPR_PER_CU", "LDS_PER_CU_KB")
 
+#: Gate modules that captured a profile-derived name with
+#: ``from .vgpr_model import X`` at import time (the plain name in their
+#: module namespace is a snapshot, so rebinding *our* globals would leave the
+#: gates reading the gfx90c value). set_profile/restore_profile rebind these
+#: module globals too; restore reverses them exactly. Only profile-derived
+#: names are listed -- calibrated constants (LDS_BUDGET, MAX_LDS_BYTES,
+#: ACCVGPR_BUDGET) stay fixed by design.
+_DOWNSTREAM: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("oto.tensile.gates.occupancy", ("VGPR_PER_CU",)),
+    ("oto.tensile.gates.loads", ("GLOBAL_LOAD_BYTE_CAP",)),
+)
+
+
+def _downstream_modules():
+    import importlib
+    for path, names in _DOWNSTREAM:
+        try:
+            yield importlib.import_module(path), names
+        except Exception:  # pragma: no cover - a gate module must import cleanly
+            continue
+
 
 def set_profile(profile) -> dict[str, Any]:
     """Re-bind the module-level device constants to ``profile`` (Refactor 2).
 
     Returns the previous bindings so a scoped call site can
     :func:`restore_profile` them; the default (module-init) state is what a
-    restore brings back.
+    restore brings back. Also rebinds the import-time snapshots held by the
+    gate modules (see ``_DOWNSTREAM``), or the bound profile would silently
+    change nothing a gate reads.
     """
     global GLOBAL_LOAD_BYTE_CAP, VGPR_PER_CU, LDS_PER_CU_KB
     previous = {name: globals()[name] for name in _TRACKED}
     try:
+        for mod, names in _downstream_modules():
+            for name in names:
+                if hasattr(mod, name):
+                    previous[f"{mod.__name__}.{name}"] = getattr(mod, name)
         GLOBAL_LOAD_BYTE_CAP = profile.global_load_byte_cap
         VGPR_PER_CU = profile.vgpr_per_cu
         LDS_PER_CU_KB = profile.lds_per_cu_kb
+        for mod, names in _downstream_modules():
+            for name in names:
+                if name in globals():
+                    setattr(mod, name, globals()[name])
     except Exception:
         pass
     return previous
@@ -57,8 +88,17 @@ def set_profile(profile) -> dict[str, Any]:
 
 def restore_profile(state: dict[str, Any]) -> None:
     """Restore the bindings :func:`set_profile` replaced (Refactor 2)."""
-    for name, value in state.items():
-        globals()[name] = value
+    import importlib
+
+    for key, value in state.items():
+        if "." in key:
+            mod_name, _, name = key.rpartition(".")
+            try:
+                setattr(importlib.import_module(mod_name), name, value)
+            except Exception:  # pragma: no cover
+                pass
+        else:
+            globals()[key] = value
 
 
 @contextlib.contextmanager
