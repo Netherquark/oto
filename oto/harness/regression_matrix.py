@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from collections import defaultdict
 from collections.abc import Sequence
 from pathlib import Path
@@ -220,7 +219,6 @@ def build_matrix(db_path: str, base_dir: str,
     construction. Rows are admitted under the like-for-like rule
     (`protocol='family'`) unless ``any_protocol=True``.
     """
-    sys.path.insert(0, base_dir)
     from oto.device.peaks import shipped_cell_set
     from oto.harness.kernel_db import load_kernel_db
     from oto.tensile.library_parity import phase_family
