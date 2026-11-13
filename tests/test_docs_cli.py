@@ -75,3 +75,24 @@ if __name__ == "__main__":
     test_documented_commands_exist()
     test_cli_md_is_fresh()
     print("docs/cli.md contracts OK")
+
+
+def test_readme_examples_exist():
+    parser = build_parser()
+    roots = _roots(parser)
+    checked = 0
+    for match in re.finditer(r"\boto\b", (REPO / "README.md").read_text()):
+        rest = match.string[match.end():match.end() + 60].split("#")[0]
+        tokens = _TOKEN.findall(rest)
+        if not tokens or tokens[0] not in roots:
+            continue
+        path, current = [], parser
+        for tok in tokens:
+            try:
+                current = subparser_for(current, [tok])
+            except KeyError:
+                break
+            path.append(tok)
+        assert path, f"unresolvable command in README.md: {tokens}"
+        checked += 1
+    assert checked > 5, "expected a useful sample of README CLI examples"
