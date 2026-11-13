@@ -21,7 +21,9 @@ from typing import Any
 from oto.cli.errors import EXIT_FAIL
 
 #: Stage names that are read-only enough to answer ``--json`` at the stage level.
-_READ_STAGE_JSON = frozenset({"candidate", "2"})
+#: Stage names with a real structured payload for ``--json``. Everything else
+#: that is read-only falls back to capturing the stage's own output.
+_STRUCTURED_STAGE_JSON = frozenset({"candidate", "2"})
 
 
 def base_dir(args: Any) -> Path:
@@ -177,21 +179,35 @@ def run_stage(name: str, args: Any) -> int:
         argv += ["--tensile-root", str(args.tensile_root)]
     if getattr(args, "dry_run", False):
         argv += ["--dry-run"]
-    if getattr(args, "json", False) and name in _READ_STAGE_JSON:
-        phases = load_pipeline_phases(str(base_dir(args)))
-        fams: dict[str, int] = {}
-        for p in phases or []:
-            lbl = str(p.get("label") or "")
-            fam = "?"
-            for f in ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ"):
-                if f in lbl:
-                    fam = f
-                    break
-            fams[fam] = fams.get(fam, 0) + 1
+    if getattr(args, "json", False):
+        if name in _STRUCTURED_STAGE_JSON:
+            phases = load_pipeline_phases(str(base_dir(args)))
+            fams: dict[str, int] = {}
+            for p in phases or []:
+                lbl = str(p.get("label") or "")
+                fam = "?"
+                for f in ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ"):
+                    if f in lbl:
+                        fam = f
+                        break
+                fams[fam] = fams.get(fam, 0) + 1
+            print(json.dumps({
+                "ok": True, "stage": name,
+                "phases": len(phases or []), "families": fams,
+            }, indent=2, default=str))
+            return 0
+        # Read-only stages with no backend JSON schema: capture the stage's
+        # own output and hand it to the caller as one JSON document.
+        import contextlib
+        import io
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = _call(argv, cli_main)
         print(json.dumps({
-            "ok": True, "stage": name, "phases": len(phases or []), "families": fams,
+            "ok": rc == 0, "stage": name, "output": buf.getvalue(),
         }, indent=2, default=str))
-        return 0
+        return rc
     return _call(argv, cli_main)
 
 
