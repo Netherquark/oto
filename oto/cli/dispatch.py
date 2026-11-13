@@ -173,6 +173,7 @@ def _with_argv(argv: list[str], func: Any, *args: Any, **kwargs: Any) -> Any:
     finally:
         _sys.argv = old
 
+
 def _resolve_base(args: Any) -> Path:
     from pathlib import Path
     if getattr(args, "base_dir", None):
