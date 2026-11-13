@@ -87,7 +87,7 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
 
 ## Enforcement
 
-`plans/verify_all.py` proves the code did not change during the package split.
+`oto/tools/verifiers/verify_all.py` proves the code did not change during the package split.
 It says nothing about docstrings. The convention is enforced by review: when you
 touch a module, check its three clauses still describe it, and check its
 `Does NOT own` neighbours have not quietly absorbed one of its jobs.
