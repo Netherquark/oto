@@ -119,7 +119,7 @@ def _bare_driver():
     d = pt.TensileDriver.__new__(pt.TensileDriver)
     d._stop_requested = False
     d._finish_after_iteration = False
-    d.run_dir = Path("/tmp/opencode/_fake_run")
+    d.run_dir = Path("fake_run_does_not_exist_on_disk")
     return d
 
 

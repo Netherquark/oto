@@ -71,7 +71,7 @@ def test_default_best_library_dest_is_under_gfx90c_results(tmp_path):
         tmp_path / "gfx90c_results" / "best_effort_library")
 
 
-def test_tensile_env_keeps_system_include_out_of_prepend_path(monkeypatch):
+def test_tensile_env_keeps_system_include_out_of_prepend_path(tmp_path, monkeypatch):
     """A /usr ROCM_PATH must not duplicate /usr/include (breaks include_next)."""
     # Hermetic to the developer's .env: a live ROCM_PATH wins over the
     # resolver mock, so scrub it to test the resolver path.
@@ -83,7 +83,9 @@ def test_tensile_env_keeps_system_include_out_of_prepend_path(monkeypatch):
         "oto.runners.toolchain.resolve_rocm_paths",
         lambda: {"ROCM_PATH": "/usr", "HIP_PATH": "/usr"},
     )
-    env = _tensile_env(Path("/tmp/Tensile"))
+    fake_root = tmp_path / "Tensile"
+    fake_root.mkdir()
+    env = _tensile_env(fake_root)
     for var in ("CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH"):
         entries = [p for p in env.get(var, "").split(":") if p]
         assert "/usr/include" not in entries
@@ -102,7 +104,9 @@ def test_tensile_env_prepends_user_rocm_include(tmp_path, monkeypatch):
         "oto.runners.toolchain.resolve_rocm_paths",
         lambda: {"ROCM_PATH": str(rocm), "HIP_PATH": str(rocm)},
     )
-    env = _tensile_env(Path("/tmp/Tensile"))
+    fake_root = tmp_path / "Tensile"
+    fake_root.mkdir()
+    env = _tensile_env(fake_root)
     assert env["CPLUS_INCLUDE_PATH"].split(":")[0] == str(inc)
     assert env["C_INCLUDE_PATH"].split(":")[0] == str(inc)
 
@@ -116,14 +120,14 @@ def test_logic_filename_hint_asks_target_tensile(monkeypatch):
         stdout = "vega10\n"
     monkeypatch.setattr("oto.tensile.best_library.subprocess.run",
                         lambda *a, **k: _P())
-    assert logic_filename_hint(Path("/tmp/FakeTensile"), "gfx90c") == "vega10"
+    assert logic_filename_hint(Path("FakeTensile-does-not-exist"), "gfx90c") == "vega10"
 
 
 def test_logic_filename_hint_falls_back_on_error(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("no tensile")
     monkeypatch.setattr("oto.tensile.best_library.subprocess.run", boom)
-    assert logic_filename_hint(Path("/tmp/FakeTensile"), "gfx90c") == "gfx90c"
+    assert logic_filename_hint(Path("FakeTensile-does-not-exist"), "gfx90c") == "gfx90c"
 
 
 def test_emit_logic_yaml_names_files_for_tensile_selection(tmp_path, monkeypatch):
@@ -133,7 +137,7 @@ def test_emit_logic_yaml_names_files_for_tensile_selection(tmp_path, monkeypatch
                         lambda root, cn: "vega10")
     cm, _, _ = cell_solution_map(Path("."), "family")
     logic = tmp_path / "3_LibraryLogic"
-    emit_logic_yaml(cm, logic, tensile_root=Path("/tmp/FakeTensile"))
+    emit_logic_yaml(cm, logic, tensile_root=Path("FakeTensile-does-not-exist"))
     names = sorted(p.name for p in logic.glob("*.yaml"))
     assert len(names) == 7
     assert all(n.startswith("vega10_") for n in names)

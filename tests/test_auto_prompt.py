@@ -220,7 +220,7 @@ class TestCountReading(unittest.TestCase):
             assert literal not in body, f"{literal} is hardcoded in auto_prompt.py; counts must be read live"
 
     def test_missing_db_yields_zeros_not_a_crash(self):
-        counts = auto_prompt._read_counts(Path("/tmp/opencode/does-not-exist"))
+        counts = auto_prompt._read_counts(Path("/nonexistent/this-db-does-not-exist.json"))
         assert counts["illegal"] == 0
         assert counts["underspecified"] == 0
 

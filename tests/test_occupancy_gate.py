@@ -685,18 +685,40 @@ class TestTensileBuildProof(unittest.TestCase):
 
     @staticmethod
     def _report():
+        """Resolve the build-proof artifact, or None when absent.
+
+        Artifact contract (keep this in sync with ``oto/checks/tensile_build.py`` --
+        its ``--json`` flag is the only producer): the operator writes the proof
+        to ``./<codename>_results/analysis/tensile_build_proof.json`` (default
+        local contract) or to any path exported as ``$OCCUPANCY_PROOF``. Files
+        are schema-validated before use; anything else fails loudly, and no
+        /tmp path is ever consulted.
+        """
+        from oto.runners.paths import results_rel
         env = os.environ.get("OCCUPANCY_PROOF")
         if env:
             return Path(env)
-        d = Path("/tmp/opencode")
-        found = sorted(d.glob("zz*.json"), key=lambda q: q.stat().st_mtime)
-        return found[-1] if found else d / "zz_build.json"
+        return Path(results_rel("analysis", "tensile_build_proof.json"))
 
     def test_agrees_with_tensile_when_report_available(self):
         rep = self._report()
         if not rep.exists():
             self.skipTest(f"no build proof at {rep}")
         rows = json.loads(rep.read_text())
+        # Schema gate: the proof must be a list of {phase_id, ok} records --
+        # anything else is not a build proof and failing loudly is correct.
+        if not isinstance(rows, list) or any(
+            not isinstance(r, dict)
+            or not isinstance(r.get("phase_id"), str)
+            or r.get("ok") not in (True, False, 0, 1)
+            for r in rows
+        ):
+            self.fail(
+                f"build proof at {rep} is malformed: expected a list of "
+                '{"phase_id": str, "ok": bool} records. Produce it with '
+                "`python3 check_tensile_build.py --json "
+                "<codename>_results/analysis/tensile_build_proof.json`, or "
+                "export OCCUPANCY_PROOF to a valid report.")
         deck = {p["phase_id"]: p for p in yaml.safe_load((BASE / "phases.yaml").read_text())}
         checked = mismatch = 0
         for row in rows:
