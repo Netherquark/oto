@@ -52,15 +52,15 @@ def test_granule_four_not_eight():
     assert ao.VGPR_GRANULE == 4
     for value in ORNL_TABLE:
         aligned_4 = -(-value // 4) * 4
-        assert ao.SIMD_VGPR // (64 * aligned_4) == ORNL_TABLE[value]
+        assert ao._simd_vgpr() // (64 * aligned_4) == ORNL_TABLE[value]
         aligned_8 = -(-value // 8) * 8
-        if ao.SIMD_VGPR // (64 * aligned_8) != ORNL_TABLE[value]:
+        if ao._simd_vgpr() // (64 * aligned_8) != ORNL_TABLE[value]:
             # the 8-granule model must fail somewhere, or the oracle is weak
             assert value in (28, 36, 84)
 
 
 def test_waves_never_exceed_the_simd_cap():
-    assert ao.waves_per_simd(8) == ao.WAVES_PER_SIMD_MAX
+    assert ao.waves_per_simd(8) == ao._waves_per_simd_max()
     assert ao.waves_per_simd(256) == 1
     assert ao.waves_per_simd(0) == 0
 
@@ -137,6 +137,7 @@ def test_corpus_occupancy_is_not_pathologically_low():
 
 
 def test_lds_and_caps_are_sourced_from_one_home():
-    assert ao.LDS_PER_CU == LDS_PER_CU_KB * 1024
-    assert ao.WAVES_PER_SIMD_MAX == MAX_WAVES_PER_CU // NUM_SIMDS_PER_CU
-    assert ao.SIMD_VGPR * NUM_SIMDS_PER_CU == ao.VGPR_PER_CU
+    from oto.device import peaks as _peaks
+    assert ao._lds_per_cu() == LDS_PER_CU_KB * 1024
+    assert ao._waves_per_simd_max() == MAX_WAVES_PER_CU // NUM_SIMDS_PER_CU
+    assert ao._simd_vgpr() * NUM_SIMDS_PER_CU == _peaks.VGPR_PER_CU

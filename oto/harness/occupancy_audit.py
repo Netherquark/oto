@@ -41,24 +41,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from statistics import median
 
-_HERE = Path(__file__).resolve().parents[2]
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
-
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir
-
-LDS_PER_CU_KB = _peaks.LDS_PER_CU_KB
-MAX_WAVES_PER_CU = _peaks.MAX_WAVES_PER_CU
-NUM_CUS = _peaks.NUM_CUS
 from oto.tensile.gates.vgpr_model import (
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,
-    VGPR_PER_CU,
 )
 
-LDS_PER_CU = LDS_PER_CU_KB * 1024          # 64 KiB
 FAMILY_CHAR = {                            # typecode -> dtype character
     "SS": "S", "DD": "D", "HH": "H", "HS": "S",
     "CC": "C", "ZZ": "Z", "FF": "S",
@@ -111,10 +101,10 @@ def _bounds(row: dict, lds_factor: int) -> tuple[int, int, int, int, str, dict] 
     if measured is None:
         return None
     lds_base = (mt[0] + mt[1]) * bpe * ku
-    lds_bound = max(1, LDS_PER_CU // (max(1, lds_base) * lds_factor))
-    vgpr_bound = max(1, VGPR_PER_CU // (wg_threads * measured))
+    lds_bound = max(1, (_peaks.LDS_PER_CU_KB * 1024) // (max(1, lds_base) * lds_factor))
+    vgpr_bound = max(1, _peaks.VGPR_PER_CU // (wg_threads * measured))
     waves_per_wg = max(1, wg_threads // 64)
-    wave_bound = max(1, MAX_WAVES_PER_CU // waves_per_wg)
+    wave_bound = max(1, _peaks.MAX_WAVES_PER_CU // waves_per_wg)
     resident = min(lds_bound, vgpr_bound, wave_bound)
     binder = ("LDS" if lds_bound == resident else
               "VGPR" if vgpr_bound == resident else "waves")
@@ -153,7 +143,7 @@ def _audit(rows_iter: Iterable[dict], lds_factor: int) -> list[dict]:
             "lds_bound": lds, "vgpr_bound": vgp, "wave_bound": wav,
             "resident": res, "binder": binder,
             "waves_per_cu": waves_cu,
-            "pct_of_40": waves_cu / MAX_WAVES_PER_CU * 100,
+            "pct_of_40": waves_cu / _peaks.MAX_WAVES_PER_CU * 100,
             "median_gflops": row.get("gflops_median") or 0,
         })
     return out
@@ -215,7 +205,7 @@ def main() -> int:
     print(f"\nresident wg/CU: min={min(res)} median={median(res)} max={max(res)}")
     print(f"cells at <=3 resident wg/CU: {len(low)} / {len(cells)}")
     print(f"waves/CU: min={min(waves)} median={median(waves)} max={max(waves)}"
-          f" (budget {MAX_WAVES_PER_CU}/CU)")
+          f" (budget {_peaks.MAX_WAVES_PER_CU}/CU)")
     print(f"binding resource tally: {dict(binders)}")
     return 0
 
