@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """``check_tensile_build.py`` -- prove every phase's config builds (CPU-only).
 
-Thin entrypoint: the implementation lives in :mod:`oto.checks.tensile_build`.
-Runs Tensile's own kernel writer in a subprocess per phase, no GPU.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.checks.tensile_build`.
+Does NOT own: any proof logic -- the Tensile kernel-writer subprocesses and the
+validation table they produce live in :mod:`oto.checks.tensile_build`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

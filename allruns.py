@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """``allruns.py`` -- best config per cell across ALL runs (claude.md §2.1).
 
-Thin entrypoint: the implementation lives in :mod:`oto.tools.allruns`. Drives
-oto's own loaders, so it cannot drift from the pipeline that produced the ledger.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.tools.allruns`; the documented ``python3 allruns.py``
+invocation.
+Does NOT own: any logic -- the implementation, its owning modules and its
+docstring-owned contract live in :mod:`oto.tools.allruns`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

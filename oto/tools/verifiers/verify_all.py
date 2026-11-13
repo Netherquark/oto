@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Run every Refactor-1 equivalence verification against the pre-refactor tree.
 
+Owns: the verification-suite orchestrator -- the check list
+(CHECKS), the subprocess wiring, the summary report and the overall exit code.
+Does NOT own: the checks themselves (the six verify_*.py) or the refactor it
+audits (the REFACTOR_BASE pin and the equivalence logic live in each script).
+Public API: main.
+
 What "no behaviour change" means for this refactor is stated as five executable
 checks rather than as an assurance. Each one compares the current tree against
 the last commit before the package split (set REFACTOR_BASE), and each one prints

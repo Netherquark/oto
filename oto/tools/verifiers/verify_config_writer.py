@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """_write_phase_config equivalence.
 
+Owns: the config-writer equivalence corpus -- the old port_tensile.py
+write_phase_configs (from git show REFACTOR_BASE) lifted vs the new
+oto/runners/config_writer.py, incl. the stub + phase lifting.
+Does NOT own: the writer itself (oto.runners.config_writer) or the phases it
+generates.
+Public API: lift, load_old, phases_from (internal); the contract is the
+process exit code (0 clean, 1 mismatches).
+
 The config writer is the one method that was genuinely restructured, so it gets
 its own differential: for every phase in the live deck (and the reference decks),
 the OLD implementation and the NEW one must agree on (ok, reason) AND on the

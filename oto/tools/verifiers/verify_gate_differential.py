@@ -7,6 +7,13 @@ REFACTOR_BASE = "2824c2f"
 """Differential check: every scheduler.py symbol must behave identically
 after the oto.tensile.candidate / oto.tensile.gates split.
 
+Owns: the gate differential run -- old scheduler.py from REFACTOR_BASE vs
+the current oto.device.peaks / gate modules, incl. the accepted message
+rewrites (ACCEPTED_MESSAGE_REWRITES).
+Does NOT own: the gate logic (oto.tensile.gates.*) or the solver it probes.
+Public API: _verdict, _message (internal); the contract is the process exit
+code (0 clean, 1 findings).
+
 Runs the ORIGINAL module (from HEAD, stubbed with the flat import) and the NEW
 package side by side over an exhaustive config corpus and asserts equal
 results, including exact reason strings.

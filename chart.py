@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Visually pleasing comparison: native gfx90c vs gfx900-spoofed (floor) on the same HW.
 
-Reads gfx90c_results/acceptance_report.json and plots per-cell GFLOP/s for the
-native best vs the spoof (gfx900 shipped library) best, with verdict + delta.
+Owns: the figure itself -- reading ``gfx90c_results/acceptance_report.json``,
+per-cell GFLOP/s for the native best vs the spoof (gfx900 shipped library)
+best, with verdict + delta, and the matplotlibr output.
+Does NOT own: the data it plots (``oto.metrics`` report mixins write the JSON;
+``oto.metrics.ab_audit`` decides the verdicts) or the acceptance-report
+design language (``docs/design_language.md``).
+Public API: none -- run as ``python3 chart.py`` (module-level plot script).
 """
 import json
 from pathlib import Path

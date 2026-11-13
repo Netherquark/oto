@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """``check_db.py`` -- inspect the registry DB for label contamination.
 
-Thin entrypoint: the implementation lives in :mod:`oto.checks.db`.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.checks.db`.
+Does NOT own: any check logic -- the contamination scan and its exit code live
+in :mod:`oto.checks.db`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

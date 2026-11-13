@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """``check_library_parity.py`` -- coverage-parity check vs shipped gfx900.
 
-Thin entrypoint: the implementation lives in :mod:`oto.checks.library_parity`.
-The rule it enforces is stated once in ``knowledge_base.md`` §6.1.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.checks.library_parity`.
+Does NOT own: any parity logic -- the rule it enforces (``knowledge_base.md``
+§6.1) and its checker live in :mod:`oto.checks.library_parity`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

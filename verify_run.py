@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """``verify_run.py`` -- corpus snapshot / diff / telemetry verification.
 
-Thin entrypoint: the implementation lives in :mod:`oto.tools.verify_run`.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.tools.verify_run`; the documented
+``python3 verify_run.py {snapshot,diff,telemetry,cheapest} ...`` invocation.
+Does NOT own: any verification logic -- the subcommands and their exit codes
+live in :mod:`oto.tools.verify_run`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

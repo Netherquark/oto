@@ -2,6 +2,14 @@
 """Method-level equivalence: every TensileDriver method moved into a mixin, and
 every port_tensile function moved into a new module, must keep its exact body.
 
+Owns: the method-equivalence corpus -- normalise + collect old
+REFACTOR_BASE methods vs the new runner mixins, incl. the RESTRUCTURED and
+ALIASES rewrite tables.
+Does NOT own: the methods themselves (they live in the runners mixins) or
+the equivalence of symbols (verify_ast_equivalence).
+Public API: head_source, normalise, collect (internal); the contract is the
+process exit code (0 clean, 1 findings).
+
 Bodies are normalised by removing only the docstring and the ``import ...``
 statements (which legitimately moved), so a dropped or altered statement is
 still a failure.

@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """Symbol-level equivalence: every public symbol of every pre-split module.
 
+Owns: the symbol-level AST corpus + comparison against REFACTOR_BASE
+(2824c2f) -- the MOVES/DECOMPOSED/PROMOTED tables, the MISSING report and
+the per-entry verdict.
+Does NOT own: method-vs-mixin checks (verify_method_equivalence), the HTML
+report (verify_report_html), config-writer equivalence
+(verify_config_writer) or gate differentials (verify_gate_differential).
+Public API: head_text, strip (internal helpers); the contract is the process
+exit code (0 clean, 1 findings).
+
 For each module at the pre-refactor commit (REFACTOR_BASE), for each public
 top-level function / class / method, this checks that an identically named
 definition exists in the new package with the same body -- ignoring import

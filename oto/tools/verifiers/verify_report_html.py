@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Byte-identity check for the report_html.py split.
 
+Owns: the byte-identical HTML report comparison -- build_payload and
+load_head_report against the generated baseline under REFACTOR_BASE.
+Does NOT own: the renderer (oto.metrics report mixins) or the report data it
+compares.
+Public API: build_payload, load_head_report, shim (internal); the contract is
+the process exit code (0 clean, 1 findings).
+
 Renders the same AcceptanceReport payload through HEAD's renderer and through the
 new one, and compares the emitted HTML byte for byte.
 """

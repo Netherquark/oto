@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """``consolidate.py`` -- deck consolidation (mine / all subcommands).
 
-Thin entrypoint: the implementation lives in :mod:`oto.tools.consolidate`.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the ``main()``
+dispatch into :mod:`oto.tools.consolidate`.
+Does NOT own: any consolidation logic -- the mine/all subcommands live in
+:mod:`oto.tools.consolidate`.
+Public API: none beyond ``main`` re-exported for ``-m``/import parity.
 """
 
 import sys

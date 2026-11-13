@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """``verify_method_equivalence.py`` -- Method equivalence verification.
 
-Thin entrypoint: the implementation lives in ``oto.tools.verifiers.verify_method_equivalence``.
+Owns: the thin entrypoint -- the ``sys.path`` bootstrap and the subprocess
+invocation of ``oto.tools.verifiers.verify_method_equivalence`` (the implementation is a
+script: it runs its corpus at import time and calls ``sys.exit``; there is
+no ``main`` to import).
+Does NOT own: any verification logic -- the corpus, the REFACTOR_BASE pin
+and the exit-code contract live in ``oto.tools.verifiers.verify_method_equivalence``.
+Public API: none -- script entry; ``verify_all.py`` depends on the process
+exit code (0 clean, 1 findings).
 """
 
 import sys

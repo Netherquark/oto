@@ -2,6 +2,15 @@
 """
 Visual/layout regression check for the acceptance report.
 
+Owns: the headless-browser layout regression harness -- the viewport matrix
+(desktop/mobile), the JS snapshot, the required-section presence check, the
+expected metric-grid column count, and the exit code returned by
+``check_report``.
+Does NOT own: the report HTML (``oto.metrics`` report mixins), the browser
+itself, or the report design language (``docs/design_language.md``).
+Public API: ``check_report``, ``main`` (``JS_SNAPSHOT`` / ``VIEWPORTS`` /
+``REQUIRED_SECTIONS`` are harness internals).
+
 Runs the rendered HTML through a headless browser and verifies:
 - No horizontal overflow at desktop (1440px) or mobile (390px) viewports
 - Table wrappers scroll correctly (table wider than wrapper)
