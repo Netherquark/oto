@@ -164,6 +164,9 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
                 "gate_refusal": verdict.get("gate_refusal"),
                 "tensile_reason": verdict.get("tensile", {}).get("reason"),
             })
+        print(f"[{_index}/{len(rows)}] {row.get('phase_id', '')[:72]} "
+              f"{'OK' if verdict.get('tensile', {}).get('ok') else 'REFUSED'}",
+              flush=True)
         checked.append({"phase_id": row.get("phase_id", ""),
                         "ok": bool(verdict.get("tensile", {}).get("ok")),
                         "reason": verdict.get("tensile", {}).get("reason")})
@@ -201,12 +204,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                    else (base / args.json) if args.json else None)
     result = check(base, Path(args.overlay), args.family or (), args.limit,
                    result_path)
+    print(f"\nprobed {result['probed']} unmeasured row(s) in "
+          f"{result['seconds']}s -- {len(result['refusals'])} refused by Tensile")
     for _refusal in result["refusals"][:20]:
-        pass
+        print(f"  REFUSED {_refusal['phase_id']}: "
+              f"{_refusal['tensile_reason'] or _refusal['gate_refusal']}")
     if args.json:
         out = result_path or (base / args.json)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1))
+        print(f"wrote -> {out}")
     return 1 if result["refusals"] else 0
 
 

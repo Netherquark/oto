@@ -61,6 +61,8 @@ def install(base: Path, stage: Path, sel: dict[str, Any],
             stamp_dir = prev_arch / f"{lock['run_id']}_{stamp.replace(':', '')}_{n}"
             n += 1
         shutil.move(str(live_lock), str(stamp_dir))
+        print(f"[consolidate] previous {lock['run_id']} preserved at "
+              f"{stamp_dir.relative_to(base)}")
     shutil.copytree(lock["dest"], live_lock)
     shutil.copy2(dbres["out"], LIVE_DB)
     shutil.copy2(staged, deck_path)

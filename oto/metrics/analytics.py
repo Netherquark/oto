@@ -180,7 +180,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
                 if not reader.fieldnames:
                     return 0
                 return sum(1 for _ in reader)
-        except Exception:
+        except Exception as e:
+            print(f"Error counting rows in CSV {csv_path}: {e}")
             return 0
 
     def read_column(self, csv_path: Path, column: str) -> list[float]:
@@ -286,8 +287,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
                         clean_row["shape"] = shape_str
                         clean_row["ProblemType"] = shape_str
                         records.append(clean_row)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error reading CSV {csv_path}: {e}")
         return records
 
     def aggregate_by_cell(

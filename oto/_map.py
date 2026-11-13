@@ -122,6 +122,7 @@ def main() -> int:
         _emit_tree(out, base, level=3)
         out.append("\n")
     HERE.joinpath("README.md").write_text("".join(out))
+    print(f"wrote {HERE / 'README.md'}")
     return 0
 
 

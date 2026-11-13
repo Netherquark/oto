@@ -411,10 +411,14 @@ def _launch_gate_refusal(driver, phase: dict[str, Any]
                             ("occupancy", occupancy_feasible)):
         gate_ok, gate_reason = gate(gate_config)
         if not gate_ok:
+            print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
+                  f"{gate_name} illegal ({gate_reason})")
             return f"{gate_name} illegal: {gate_reason}"
 
     pad_ok, pad_reason = ldspad_feasible(gate_config)
     if not pad_ok:
+        print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
+              f"forwarded-knob illegal ({pad_reason})")
         return f"forwarded-knob illegal: {pad_reason}"
     return None
 
@@ -431,7 +435,7 @@ def _fork_list_for_phase(
     for _key in _DEPRECATED_KEYS:
         fork_params.pop(_key, None)
     for _key in _drop_unsupported(fork_params, valid_params, not_tensile_param):
-        pass
+        print(f"[cfg] dropping parameter {_key!r} not supported by this Tensile")
     return [{k: v} for k, v in fork_params.items()]
 
 

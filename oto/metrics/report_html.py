@@ -362,3 +362,4 @@ class HtmlMixin:
 
         with open(html_path, "w") as f:
             f.write(html)
+        print(f"Acceptance dashboard HTML generated at: {html_path}")

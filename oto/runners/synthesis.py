@@ -111,6 +111,7 @@ class SynthesisMixin:
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
         - Enforce the shipped gfx900 footprint regression gate
         """
+        print("Synthesizing final HIP library (Stage 6)...")
         tcl_bin = self.tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
         logic_dir = self.run_dir / "3_LibraryLogic"
         final_lib_dir = self.run_dir / "FinalLibrary"
@@ -147,10 +148,12 @@ class SynthesisMixin:
                                 protocol_basis: str = "family") -> dict[str, Any]:
         """Carve a best-effort device TensileLibrary.dat from the full db."""
         dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
-        return bestlib.build_best_library(
+        result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
             tensile_root=getattr(self, "tensile_root", None),
             codename=getattr(self, "codename", _peaks.CODENAME))
+        print(f"Best-effort library: {result}")
+        return result
 
     def generate_device_docs(self, starter_path=None) -> dict[str, Any]:
         """Run agent-1 + agent-2 to generate device-specific docs."""
@@ -185,5 +188,6 @@ class SynthesisMixin:
             pc_path.write_text(f"# potential_configs.md — {profile.codename}\n\n"
                                f"Synthesis failed: {exc}\n")
         docs = [tl_path, tc_path, hs_path, pc_path]
+        print(f"Generated {', '.join(str(p) for p in docs)}")
         return {"status": "success", "profile": profile.codename,
                 "docs": [str(p) for p in docs]}

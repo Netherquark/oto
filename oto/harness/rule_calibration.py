@@ -242,12 +242,20 @@ def _resolve_rules(specs: Sequence[str] | None) -> dict[str, Rule]:
 
 
 def _report(label: str, pop: dict[str, Any], limit: int) -> None:
-    len(pop["false_rejections"])
+    n_fr = len(pop["false_rejections"])
+    flag = "  ok" if n_fr == 0 else "  <-- the decision rule: must be 0"
+    print(f"  {label}   applicable={pop['applicable']}  built={pop['built']}  "
+          f"not-applicable={pop['not_applicable']}")
+    print(f"    would-refuse BUILT (FALSE REJECTION): {n_fr:6}{flag}")
+    print(f"    would-refuse empty (caught)         : {len(pop['catches']):6}")
+    print(f"    would-allow  built (agree)          : {pop['agrees']:6}")
+    print(f"    would-allow  empty (missed)         : {pop['allowed_empty']:6}")
     if pop["caught_by_family"]:
-        ", ".join(f"{k} {v}"
+        fams = ", ".join(f"{k} {v}"
                          for k, v in sorted(pop["caught_by_family"].items()))
+        print(f"    caught by family: {fams}")
     for _r in pop["false_rejections"][:limit]:
-        pass
+        print(f"    FALSE REJECTION: {_r['run']}/{_r['phase']} ({_r['family']})")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -272,8 +280,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     results = {name: probe(rule, name=name, base=args.base, families=args.family)
                for name, rule in rules.items()}
 
-    next(iter(results.values()))["meta"]
-    for result in results.values():
+    first = next(iter(results.values()))["meta"]
+    print(f"rule calibration -- {first['base']}")
+    print(f"  {first['runs']} runs, {first['with_config']} phases with a launch "
+          f"config" + (f", families={','.join(args.family)}" if args.family else ""))
+    for name, result in results.items():
+        print(f"\nrule: {name}")
         _report("OURS (native candidates)", result["populations"]["ours"],
                 args.limit)
         _report("REFERENCE (gfx900 replay)", result["populations"]["reference"],

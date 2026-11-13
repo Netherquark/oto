@@ -305,10 +305,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
     result = build_matrix(args.db, base, rebuild=args.rebuild,
                           any_protocol=args.any_protocol)
+    print(_table(result))
     if not args.no_json:
         out = Path(args.json)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1, default=str))
+        print(f"\nwrote -> {out}")
     return 0
 
 

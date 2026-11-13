@@ -534,9 +534,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     cells, meta = build(base, args.acceptance, args.registry, args.db)
 
     if not args.no_table:
-        pass
+        print(_table(cells))
     if args.taxonomy:
-        pass
+        print(_taxonomy(cells))
 
     def _write(flag_off: bool, path: str, payload: str) -> None:
         if flag_off:
@@ -546,6 +546,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             out = Path(base) / out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(payload)
+        print(f"wrote -> {out}")
 
     _write(args.no_json, args.json, json.dumps(
         {"meta": meta, "cells": cells}, indent=1))
@@ -555,6 +556,7 @@ def main(argv: Sequence[str] | None = None) -> int:
            f"# sources: {json.dumps(meta['sources'])}\n\n" + _table(cells) + "\n")
     if args.tsv:
         _write(False, args.tsv, _tsv(cells) + "\n")
+    print(f"{len(cells)} cells resolved")
     return 0
 
 

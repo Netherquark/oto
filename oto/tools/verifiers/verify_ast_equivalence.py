@@ -358,8 +358,10 @@ def _print_report(all_missing: list[str], all_differs: list[str],
                  errors: list[str], decomposed: list[str],
                  promoted_missing: list[str]) -> None:
     """Print the classified comparison and decide the exit status."""
+    print(f"INTENTIONALLY DECOMPOSED (proved by the other checks): "
+          f"{len(decomposed)}")
     for _d in decomposed:
-        pass
+        print("   ", _d)
 
     # Classify every "missing" so the reader can see what happened to it.
     driver_methods = [m for m in all_missing if "::TensileDriver." in m]
@@ -373,18 +375,33 @@ def _print_report(all_missing: list[str], all_differs: list[str],
     # The private-symbol skip above would hide a deleted helper, so every
     # PROMOTED entry is checked for existence under its new name (FOLDED, which
     # has no symbol of its own, is proved by verify_gate_differential.py).
+    print("\nMISSING, classified:")
+    print(f"  TensileDriver methods moved to a runner mixin "
+          f"(verify_method_equivalence.py): {len(driver_methods)}")
+    print(f"  SQLiteRegistry methods moved to a ledger mixin, same public "
+          f"class: {len(ledger_methods)}")
+    print(f"  AcceptanceReporter renderer methods "
+          f"(verify_report_html.py, byte-identical): {len(report_methods)}")
+    print(f"  Analytics methods moved to an analytics mixin "
+          f"(verify_report_html.py exercises them): {len(analytics_methods)}")
+    print(f"  UNEXPLAINED: {len(unexplained)}")
     for _m in unexplained:
-        pass
+        print("   ", _m)
 
+    print(f"\nDIFFERING BODIES/SIGNATURES: {len(all_differs)}")
     for _d in all_differs:
-        pass
+        print("   ", _d)
+    print(f"PARSE ERRORS: {len(errors)}")
     for _e in errors:
-        pass
+        print("   ", _e)
+    print(f"\nPROMOTED SYMBOLS MISSING IN THE NEW TREE: "
+          f"{len(promoted_missing)}")
     for _p in promoted_missing:
-        pass
+        print("   ", _p)
 
     if unexplained or all_differs or errors or promoted_missing:
         sys.exit(1)
+    print("\nAST EQUIVALENCE: OK")
 
 
 def main():

@@ -102,13 +102,14 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[s
             continue
         knob_n, knob_f = _knob_dict(n), _knob_dict(f)
         _, summary = _knob_diff(knob_n, knob_f)
-        (
+        line = (
             f"  {fam}:{side:<6} native {ng:8.1f}  floor {fg:8.1f}  "
             f"Δ{dt:+7.1f}%  {'FLOOR' if floor_wins else 'native'}\n"
             f"      native {n['kernel']}\n"
             f"      floor  {f['kernel']}\n"
             f"      knobs  {' | '.join(summary)}"
         )
+        print(line + "\n")
         rows_out.append({
             "cell": f"{fam}:{side}", "native_gflops": round(ng, 1),
             "floor_gflops": round(fg, 1), "delta_pct": round(dt, 2),
@@ -152,9 +153,11 @@ def main() -> int:
 
     rows_out = _paired_rows(cells, native_w, floor_w, args.floor_wins_only)
 
-    sum(1 for r in rows_out if r["winner"] == "floor")
+    n_floor = sum(1 for r in rows_out if r["winner"] == "floor")
+    print(f"{len(rows_out)} cells shared; floor wins {n_floor} ({len(cells)} total paired)")
     if args.json:
         args.json.write_text(json.dumps(rows_out, indent=1))
+        print(f"wrote {args.json}")
     return 0
 
 

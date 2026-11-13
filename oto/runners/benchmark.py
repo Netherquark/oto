@@ -119,17 +119,21 @@ class BenchmarkMixin:
         Returns True if cooldown completed or skipped, False if quit requested.
         """
         if self._gpu_phases_run > 0 and self.cooldown_s > 0 and not self._stop_requested and not self._finish_after_iteration:
+            print(f"Thermal cooldown: waiting {self.cooldown_s}s ('s' to skip sleep, 'e' to end run after current phase, 'q' to quit)...")
             start = time.time()
             while time.time() - start < self.cooldown_s:
                 if self._stop_requested:
                     return False
                 key = self._read_key()
                 if key == 's':
+                    print("\n[USER ACTION] 's' pressed: Skipping thermal cooldown...")
                     break
                 if key == 'e':
+                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
                     self._finish_after_iteration = True
                     break
                 if key == 'q':
+                    print("\n[USER ACTION] 'q' pressed: Quitting run during cooldown...")
                     self._stop_requested = True
                     return False
         return not self._stop_requested
@@ -171,15 +175,17 @@ class BenchmarkMixin:
         Execute a single phase (Stage 1 + Stage 3).
         """
         phase_id = phase.get("phase_id", "unknown")
-        phase.get("label", "unknown")
-        phase.get("dtype", "S")
-        phase.get("ScheduleName", "isa")
+        label = phase.get("label", "unknown")
+        dtype = phase.get("dtype", "S")
+        schedule_name = phase.get("ScheduleName", "isa")
         config = phase.get("config", {})
         fp = phase.get("fp", fingerprint_config(config))
 
+        print(f"\n--- Phase {phase_id}: {label} ({schedule_name}, {dtype}) ---")
 
         # Apply cooldown before GPU work (first GPU phase exempt)
         if not self._apply_cooldown():
+            print(f"Skipping phase {phase_id} due to stop request.")
             return {"status": "interrupted"}
 
         # Write phase config file
@@ -215,6 +221,7 @@ class BenchmarkMixin:
         schedule_name = phase.get("ScheduleName", "isa")
         num_benchmarks = phase.get("NumBenchmarks", 8)
         reason = f"{refusal} (refused before Tensile launch)"
+        print(f"Skipping {phase_id}: {reason}")
         self.registry.append_record({
             "run_id": self.run_dir.name,
             "phase_id": phase_id,
@@ -319,8 +326,9 @@ class BenchmarkMixin:
                 "result": result
             }
             self.registry.append_record(end_record, run_id=self.run_dir.name)
-        except Exception:
-            pass
+            print(f"[RECOVERY] Logged {status} record for {phase_id} in finally block")
+        except Exception as e:
+            print(f"[RECOVERY ERROR] Failed to log completion record in finally: {e}")
 
     def _benchmark_phase(
         self,
@@ -357,6 +365,7 @@ class BenchmarkMixin:
             return result
 
         except subprocess.TimeoutExpired:
+            print(f"Phase {phase_id} timed out after {self.phase_timeout_s}s")
             self.registry.append_record(
                 self._outcome_record(phase, fp, "timeout"),
                 run_id=self.run_dir.name)
@@ -364,6 +373,7 @@ class BenchmarkMixin:
             return {"status": "timeout"}
 
         except Exception as e:
+            print(f"Phase {phase_id} failed: {e}")
             self.registry.append_record(
                 self._outcome_record(phase, fp, "failed", error=str(e)),
                 run_id=self.run_dir.name)
@@ -386,6 +396,7 @@ class BenchmarkMixin:
                         break
                     file.write(line)
                     file.flush()
+                    print(f"{prefix}{line.rstrip()}")
             finally:
                 with contextlib.suppress(Exception):
                     stream.close()
@@ -497,12 +508,15 @@ class BenchmarkMixin:
                 # Wait up to the poll interval for 's'/'e'/'q' (no-op off a TTY).
                 key = self._read_key()
                 if key == 's':
+                    print("\n[USER ACTION] 's' pressed: Skipping current phase...")
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     skipped = True
                     break
                 if key == 'e':
+                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
                     self._finish_after_iteration = True
                 elif key == 'q':
+                    print("\n[USER ACTION] 'q' pressed: Quitting run...")
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     self._stop_requested = True
                     break

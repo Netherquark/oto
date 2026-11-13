@@ -277,6 +277,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         deck = yaml.safe_load(phases_path.read_text()) or []
         row = next((p for p in deck if p.get("phase_id") == args.phase_id), None)
         if row is None:
+            print(f"no deck row named {args.phase_id!r}")
             return 1
         config = row.get("config", {})
     else:
@@ -285,12 +286,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     result = probe_config(config, base_dir=args.base_dir)
     if args.json:
         args.json.write_text(json.dumps(result, indent=1, default=str))
-    result["tensile"]
+    tensile = result["tensile"]
+    print(f"config      {config.get('DataType')} {config.get('MacroTile')} "
+          f"tt{config.get('ThreadTile')} vw{config.get('VectorWidth')} "
+          f"du{config.get('DepthU')}"
+          + (f" wgm{config.get('WorkGroupMapping')}" if config.get("WorkGroupMapping") else ""))
+    print(f"our gate    {'LEGAL' if not result.get('gate_refusal') else 'REFUSED'}"
+          + (f" -- {result['gate_refusal']}" if result.get("gate_refusal") else ""))
+    print(f"Tensile     {'BUILDS' if tensile.get('ok') else 'REFUSES'}"
+          f"  ({tensile.get('solutions')} solution(s))"
+          + (f"  -- {tensile.get('reason')}" if tensile.get("reason") else ""))
     derived = result.get("derived") or {}
     if derived:
-        pass
+        print(f"LDS         {derived.get('LdsNumElements')} elements "
+              f"= {result.get('lds_bytes')} bytes"
+              f"  (A {derived.get('LdsNumElementsAlignedA')}, "
+              f"B {derived.get('LdsNumElementsAlignedB')}, "
+              f"blk {derived.get('LdsOffsetA_Blk')}/{derived.get('LdsOffsetB_Blk')})")
+        print(f"derived     depth {derived.get('DepthU')} (lds {derived.get('_DepthULds')}), "
+              f"pads {derived.get('LdsPadA')}/{derived.get('LdsPadB')}, "
+              f"maxOccupancy {derived.get('MaxOccupancy')}")
     if derived.get("Reject"):
-        pass
+        print(f"reject      {derived['Reject']}")
     return 0
 
 

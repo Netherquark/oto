@@ -164,6 +164,7 @@ for dt in ("S", "D", "H", "Z", "C", "I8", "SS", "HH", "ZZ", "HH_HPA", None):
                         c["VectorWidth"] = vw
                     cfgs.append(c)
 
+print(f"corpus: {len(cfgs)} base configs")
 
 count = 0
 for c in cfgs:
@@ -235,11 +236,20 @@ for _ in range(4000):
         check(f"KNOB {name}:{c}", ro, rn)
         count += 1
 
+print(f"differential comparisons: {count}")
+print(f"  the OLD gate raised where the new one returns a verdict: "
+      f"{len(buckets['old_raised'])}  (an improvement; the old crash was the "
+      f"opaque-failure mode these gates exist to prevent)")
 if fails:
+    print(f"FAILURES: {len(fails)}")
     for key in ("new_raised", "verdict_flipped", "text_differs"):
         rows = buckets[key]
         if not rows:
             continue
+        print(f"  {key}: {len(rows)}")
         for _label, _a, _b in rows[:6]:
-            pass
+            print(f"   {key[:4].upper()} {_label}")
+            print("     orig:", _a)
+            print("     new :", _b)
     sys.exit(1)
+print("ALL EQUAL")

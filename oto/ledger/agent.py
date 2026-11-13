@@ -163,8 +163,9 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
             from oto.metrics import ab_audit
             native, floor, _chain = ab_audit.arm_record_sets(self.base_dir)
             losers = self.analytics.cells_not_beating_floor(native, floor)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[floor] cannot read the reference floor ({e}); mutation "
+                  f"targeting falls back to the ceiling rule alone")
         self._floor_losers_cache = (self.iteration, losers)
         return losers
 

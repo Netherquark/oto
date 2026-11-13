@@ -180,8 +180,14 @@ def main():
         got = normalise(node)
         if got != want:
             differs.append(f"{name} (now in {rel})")
+    print(f"HEAD TensileDriver methods: {len(old)}")
+    print(f"MOVED, NOT FOUND: {sorted(missing)}")
+    print(f"MOVED, BODY DIFFERS: {sorted(differs)}")
+    print(f"NOT ACCOUNTED FOR: {sorted(extra)}")
+    print(f"intentionally restructured: {sorted(RESTRUCTURED)}")
     if missing or differs:
         sys.exit(1)
+    print("METHOD EQUIVALENCE: OK")
 
 
 if __name__ == "__main__":

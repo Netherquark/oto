@@ -216,44 +216,72 @@ def _filter_by_family(nat, flr, nat_t, flr_t, family):
 
 def _print_summary(base, ref_ids, native, floor, nat, flr):
     """The header block: arms, cell counts and the partial-knob list."""
+    print(f"base-dir     : {base}")
+    print(f"floor runs   : {ref_ids}")
+    print(f"native arm   : {len(native)} records / {len({r.get('source_run') for r in native})} run(s)")
+    print(f"floor arm    : {len(floor)} records / {len({r.get('source_run') for r in floor})} run(s)")
+    print(f"native cells : {len(nat)}   floor cells: {len(flr)}   shared: {len(set(nat) & set(flr))}")
     thin = sorted(f"{c[0]}:{c[1]}" for c, w in list(nat.items()) + list(flr.items())
                   if w["knob_src"] != "yaml")
     if thin:
-        pass
+        print(f"\npartial-knob cells (registry 12-key snapshot, no YAML): {thin}")
+    print("\nnote: a 2_BenchmarkData CSV is a MULTI-SIZE SWEEP — GFlops is the LAST")
+    print("      column, column 0 is the row index, and SizeL is the real K.")
 
 
 def _print_load_width(nat_t, flr_t):
     """Load width actually reached, per arm x family."""
+    print("\n=== load width actually reached, per arm x family ===")
+    print(f"  {'family':8} {'native':26} {'floor':26} verdict")
     fams = sorted(set(nat_t) | set(flr_t))
     for f in fams:
         b = DTYPE_BYTES.get(FAMILY_CHAR.get(f, f[0]), 4)
-        sorted({t[2] * b for t in nat_t.get(f, ())})
-        sorted({t[2] * b for t in flr_t.get(f, ())})
+        nb = sorted({t[2] * b for t in nat_t.get(f, ())})
+        fb = sorted({t[2] * b for t in flr_t.get(f, ())})
+        n_at_cap = GLOBAL_LOAD_CAP_BYTES in nb
+        f_at_cap = GLOBAL_LOAD_CAP_BYTES in fb
+        v = ("both at cap" if n_at_cap and f_at_cap else
+             "NATIVE-only at cap" if n_at_cap else
+             "FLOOR-only at cap" if f_at_cap else
+             f"neither at {GLOBAL_LOAD_CAP_BYTES}B cap")
+        print(f"  {f:8} {[f'{x}B' for x in nb]!s:26} {[f'{x}B' for x in fb]!s:26} {v}")
 
 
 def _print_best_table(w, _label=None):
     """Best config per cell, one arm."""
+    print(f"\n=== best config per cell — {_label} ===")
+    print(f"  {'cell':14} {'GFLOPS':>9} {'nker':>5} {'MT':11} {'TT':6} {'VW':>3} "
+          f"{'loadB':>6} {'DU':>4} {'WGM':>4} {'GSU':>4} pattern")
     for cell in sorted(w):
         rec = w[cell]
         k = rec["knobs"]
         vw = k.get("VectorWidth")
         b = DTYPE_BYTES.get(FAMILY_CHAR.get(cell[0], cell[0][0]), 4)
-        f"{int(vw) * b}B" if vw is not None else "?"
+        lb = f"{int(vw) * b}B" if vw is not None else "?"
+        print(f"  {f'{cell[0]}:{cell[1]}':14} {rec['gflops']:9.1f} {rec['n_kernels']:5} "
+              f"{_fmt(k.get('MacroTile')):11} {_fmt(k.get('ThreadTile')):6} {vw!s:>3} "
+              f"{lb:>6} {k.get('DepthU')!s:>4} {k.get('WorkGroupMapping')!s:>4} "
+              f"{k.get('GlobalSplitU')!s:>4} {k.get('ContractionPattern')}")
 
 
 def _print_triples(nat_t, flr_t):
     """(MacroTile / ThreadTile / VectorWidth) triples per arm x family."""
+    print("\n=== (MacroTile / ThreadTile / VectorWidth) triples per arm x family ===")
     for _arm, tri in (("native", nat_t), ("floor", flr_t)):
+        print(f"\n-- {_arm}")
         for f in sorted(tri):
             b = DTYPE_BYTES.get(FAMILY_CHAR.get(f, f[0]), 4)
             ts = sorted(tri[f])
             at_cap = [t for t in ts if t[2] * b == GLOBAL_LOAD_CAP_BYTES]
+            print(f"   {f:8} n={len(ts):3}  " + ", ".join(f"{a}/{b_}/vw{c}" for a, b_, c in ts))
             if at_cap:
-                pass
+                print(f"   {'':8} at {GLOBAL_LOAD_CAP_BYTES}B cap: "
+                      + ", ".join(f"{a}/{b_}/vw{c}" for a, b_, c in at_cap))
 
 
 def _print_never_exercised(nat, flr):
     """Knobs that exist in the schema but were never exercised by either arm."""
+    print("\n=== never-exercised knobs (both arms, all cells) ===")
     for knob in ("GlobalSplitU", "ContractionPattern", "StaggerU", "DepthU",
                  "WorkGroupMapping", "LdsPadB", "PrefetchGlobalRead"):
         vals = set()
@@ -262,7 +290,7 @@ def _print_never_exercised(nat, flr):
                 if knob in rec["knobs"]:
                     vals.add(str(rec["knobs"][knob]))
         if vals and len(vals) == 1:
-            pass
+            print(f"  {knob:20} = {sorted(vals)}   <- only ever this one value")
 
 
 def _write_allruns_json(path, ref_ids, native, floor, nat, flr, nat_t, flr_t):
@@ -299,6 +327,7 @@ def main() -> int:
     if args.json:
         _write_allruns_json(args.json, ref_ids, native, floor,
                             nat, flr, nat_t, flr_t)
+        print(f"\nwrote {args.json}")
     return 0
 
 

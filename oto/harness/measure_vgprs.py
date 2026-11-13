@@ -142,8 +142,11 @@ def _extract_key(obj: Path) -> tuple[str, int, int] | None:
 
 
 def _print_table(rows: list[dict[str, Any]]) -> None:
+    print(f"{'dtype':5} {'TT':8} {'n':>4} {'measured med':>12} {'model acc':>10} {'ratio':>7}")
     for _r in rows:
-        pass
+        print(f"{_r['dtype']:5} {_r['tt']:<6} {_r['n']:>4} "
+              f"{_r['measured_median_vgpr']:>12} {_r['model_acc_vgpr']:>10} "
+              f"{_r['ratio']:>7.2f}")
 
 
 def main() -> int:
@@ -153,6 +156,7 @@ def main() -> int:
     runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _peaks.CODENAME)
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
+        print("no Tensile assembly objects found (run a phase first)")
         return 1
 
     by_key: dict[tuple[str, int, int], dict[str, Any]] = defaultdict(lambda: {"counts": []})
@@ -165,6 +169,7 @@ def main() -> int:
             continue
         by_key[key]["counts"].append(info["vgpr"])
 
+    print(f"{len(objs)} objects scanned, {sum(len(v['counts']) for v in by_key.values())} mapped\n")
     rows: list[dict[str, Any]] = []
     for key in sorted(by_key):
         _ch, _tt0, _tt1 = key
@@ -172,11 +177,13 @@ def main() -> int:
         med = counts[len(counts) // 2]
         model = measured_accvgpr(key[1], key[2], _WEIGHT[key[0]])
         ratio = med / model if model else 0.0
+        print(f"{key[0]:5} {key[1]}x{key[2]:<6} {len(counts):>4} {med:>12} {model:>10} {ratio:>7.2f}")
         rows.append({"dtype": key[0], "tt": f"{key[1]}x{key[2]}", "n": len(counts),
                      "measured_median_vgpr": med, "model_acc_vgpr": model,
                      "ratio": round(ratio, 2)})
     if args.json:
         args.json.write_text(json.dumps(rows, indent=1))
+        print(f"wrote {args.json}")
     return 0
 
 

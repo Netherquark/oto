@@ -74,10 +74,15 @@ class CandidateEmitMixin:
             candidates, existing_phases, existing_fps, existing_ids)
 
         if renamed:
-            pass
+            print(
+                f"[gate] bound {renamed} candidate(s) to a fingerprint-suffixed "
+                f"phase_id: the generated id was already owned by a different "
+                f"config, which would have silently overwritten its results."
+            )
         if rejected:
+            print(f"[gate] refused {len(rejected)} illegal candidate(s) before append:")
             for _r in rejected:
-                pass
+                print(f"       - {_r}")
 
         with open(target_yaml, "w") as f:
             yaml.safe_dump(existing_phases, f, sort_keys=False, default_flow_style=False)
@@ -318,7 +323,7 @@ class CandidateEmitMixin:
         if candidates:
             self.append_candidates_batch(candidates, phases_file)
         for _line in refused:
-            pass
+            print(f"[knob-sweep] refused {_line}")
         return candidates
 
     def _emit_baselines(self, candidates, refused, family, pattern, bases,
@@ -451,7 +456,7 @@ class CandidateEmitMixin:
         if candidates:
             self.append_candidates_batch(candidates, phases_file)
         for _line in refused:
-            pass
+            print(f"[trial] refused {_line}")
         return candidates
 
 # ------------------------------------------------- gate helpers (module level)

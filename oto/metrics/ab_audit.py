@@ -330,27 +330,62 @@ def _fmt_table(rows: list[list[str]], headers: list[str]) -> str:
 def _print_proposal_coverage(cov: dict[str, Any]) -> None:
     """Print `n`, spread and the novel/replicate split per mutated cell."""
     if not cov.get("available"):
+        print(f"proposal coverage: unavailable ({cov.get('reason', 'unknown')})")
         return
-    cov.get("tally") or {}
-    cov.get("origins") or {}
-    cov.get("band_pct")
+    tally = cov.get("tally") or {}
+    origins = cov.get("origins") or {}
+    band = cov.get("band_pct")
+    band_txt = f"{band:.1f}%" if band else "unmeasured"
+    print(f"\nproposal coverage: cells={cov.get('n_cells', 0)}  "
+          f"explore={tally.get('explore', 0)}  replicate={tally.get('replicate', 0)}  "
+          f"retired={tally.get('retired', 0)}  "
+          f"origin novel={origins.get('novel', 0)} replicate={origins.get('replicate', 0)}"
+          f"  band={band_txt}")
     cells = cov.get("cells") or []
     if cells:
-        pass
+        print(_fmt_table(
+            [[c["family"], c["shape"], c["state"], c["n_distinct_fp"],
+              c["min_n"], f"{c['max_spread_ratio']:.3f}",
+              (c["parent_fp"] or "-")[:12]]
+             for c in cells],
+            ["family", "shape", "state", "n_fp", "min_n", "spread", "parent"]))
 
 
 def print_report(result: dict[str, Any]) -> None:
     rb = result["reproducible_band"]
+    print(f"floor chain : {result['floor_chain']}")
+    print(f"basis       : {result.get('protocol_basis', '?')} "
+          f"(census native={result.get('protocol_census', {}).get('native')}, "
+          f"floor={result.get('protocol_census', {}).get('spoof')})")
+    print(f"tie band    : +/-{result['band_pct']:.1f}% "
+          f"({result['band_source']}; shipped default "
+          f"+/-{result['shipped_band_pct']:.1f}%)")
     cross = rb.get("cross_arm") or {}
     for _label, key in (("protocol-matched  ", "protocol_matched"),
                        ("protocol-mismatched", "protocol_mismatched")):
         s = cross.get(key) or {}
         if not s.get("n"):
+            print(f"{_label}: no shared configurations")
             continue
+        print(f"{_label}: n={s['n']:4}  median={s['median_ratio']:.3f}  "
+              f"p10={s['p10_ratio']:.3f}  p90={s['p90_ratio']:.3f}  "
+              f"band=+/-{s['band_pct']:.1f}%  "
+              f"within shipped band={s['share_within_shipped_band']*100:.1f}%")
     rd = result.get("repeat_dispersion") or {}
     if rd.get("n"):
-        pass
+        print(f"repeat spread: n={rd['n']:4}  median CV="
+              f"{rd['median_cv_pct']:.1f}%  p90 CV={rd['p90_cv_pct']:.1f}%  "
+              f"worst single={rd['max_cv_single_pct']:.1f}%  "
+              f"worst multi={rd['max_cv_multi_pct']:.1f}%")
     _print_proposal_coverage(result.get("proposal_coverage") or {})
+    print(f"\ncells={result['n_cells']}  {result['tally']}  "
+          f"ungraded={result['ungraded']}  "
+          f"protocol-mismatched={result['protocol_mismatched_cells']}  "
+          f"generator-mismatched={result['provenance_mismatched_cells']}  "
+          f"generator-unknown={result['provenance_unknown_cells']}")
+    print(f"certainty: {result['tally_certainty']}")
+    print(f"certain (same form + same generator + margin beyond noise): "
+          f"{result['tally_certain']}\n")
 
     rows = []
     for c in result["cells"]:
@@ -369,6 +404,9 @@ def print_report(result: dict[str, Any]) -> None:
             str(c["native_run"] or "-")[:22],
             str(c["spoof_run"] or "-")[:24],
         ])
+    print(_fmt_table(rows, ["cell", "verdict", "certainty", "native", "spoof",
+                            "delta%", "matched", "families", "native_run",
+                            "spoof_run"]))
 
 
 def main() -> int:
@@ -391,12 +429,13 @@ def main() -> int:
     result = audit(base=args.base_dir, band_pct=args.band,
                    protocol_basis=args.protocol_basis)
     if args.arm_classes:
-        pass
+        print(json.dumps(result["reproducible_band"], indent=2))
     else:
         print_report(result)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(result, indent=2, default=str))
+        print(f"\njson -> {args.json}")
     return 0
 
 

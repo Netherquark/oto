@@ -121,6 +121,7 @@ def phases_from(path):
 all_phases = yamlio.load_yaml(ROOT / "phases.yaml") or []
 all_phases += phases_from(_runs_dir(ROOT, _peaks.CODENAME))
 all_phases += phases_from(_results_dir(ROOT, _peaks.CODENAME) / "gfx900_ref_locked_52149f315d")
+print(f"phases under test: {len(all_phases)}")
 
 d = _Stub()
 mismatch = []
@@ -263,7 +264,11 @@ with tempfile.TemporaryDirectory() as td:
         else:
             n_refused += 1
 
+print(f"written: {n_ok}, refused: {n_refused}")
+print(f"accepted as newly-forwarded knobs: {n_forwarded}")
+print(f"mismatches: {len(mismatch)}")
 for _m in mismatch[:6]:
-    pass
+    print("  ", _m)
 if mismatch:
     sys.exit(1)
+print("CONFIG WRITER EQUIVALENCE: OK")

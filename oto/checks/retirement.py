@@ -27,14 +27,16 @@ def main() -> None:
 
     # Check for retirement records
     cursor.execute("SELECT id, data FROM records WHERE record_type = 'retire'")
+    print('Retirement records:')
     retire_count = 0
     for row in cursor.fetchall():
         _record_id, data_json = row
         data = json.loads(data_json)
         retire_count += 1
+        print(f'  ID {_record_id}: {data}')
 
     if retire_count == 0:
-        pass
+        print('  No retirement records found')
 
     # Check sample counts per cell
     cursor.execute("SELECT id, data FROM records WHERE record_type = 'general'")
@@ -48,9 +50,10 @@ def main() -> None:
         key = f"{dtype}_{shape}_{fp}"
         cell_sample_counts[key] = cell_sample_counts.get(key, 0) + 1
 
+    print('\nSample counts per cell (showing cells with >=3 samples):')
     for _key, count in sorted(cell_sample_counts.items()):
         if count >= 3:
-            pass
+            print(f'  {_key}: {count} samples')
 
     conn.close()
 

@@ -95,6 +95,8 @@ class TelemetrySampler:
             busy = self._read_int(self.device_dir / "gpu_busy_percent", 0)
         else:
             if not self._warned_missing_busy:
+                print(f"[telemetry] WARNING: no gpu_busy_percent at "
+                      f"{self.device_dir / 'gpu_busy_percent'} — busy reads 0.")
                 self._warned_missing_busy = True
             busy = 0
 
@@ -150,6 +152,9 @@ class TelemetrySampler:
         target = self._resolve_log_path()
         if target != self.log_path:
             self.log_path = target
+            print(f"[telemetry] existing CSV has an older schema; "
+                  f"writing per-phase telemetry to {target.name} instead "
+                  f"(previous file left intact).")
         lines = self.log_path.read_text().splitlines() if self.log_path.exists() else []
         header_missing = not lines or not lines[0].startswith("timestamp")
         if header_missing:

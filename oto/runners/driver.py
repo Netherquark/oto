@@ -209,8 +209,10 @@ class TensileDriver(
                 # Ledger missing or unreadable: do NOT bypass the identical-fp
                 # skip, because novelty would then be unverifiable.
                 self.mutator = None
-        except Exception:
+        except Exception as e:
             self.mutator = None
+            print(f"[mutator] unavailable ({e}); mutation arm keeps phases.yaml "
+                  "behaviour and the identical-fp skip")
 
     def _init_agent_and_reporter(self) -> None:
         self.agent = ConvergenceAgent(
@@ -294,8 +296,10 @@ class TensileDriver(
         Phase-0 Preflight validation:
         Check Tensile binary, device info, and registry.
         """
+        print("Running Phase-0 Preflight checks...")
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
 
+        parity_line = "not checked"
         parity_ok = True
         try:
             from oto.tensile.library_parity import load_pipeline_phases, parity_report
@@ -303,11 +307,11 @@ class TensileDriver(
                 self.base_dir,
                 run_id=self.run_dir.name if self.run_dir else None)
             pr = parity_report(manifest)
-            (f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
+            parity_line = (f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
                            f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
             parity_ok = pr["parity_ok"]
-        except Exception:  # pragma: no cover - defensive (never blocks)
-            pass
+        except Exception as exc:  # pragma: no cover - defensive (never blocks)
+            parity_line = f"error: {exc}"
 
         checks = [
             ("Tensile root exists", self.tensile_root.is_dir()),
@@ -321,6 +325,10 @@ class TensileDriver(
 
         all_ok = True
         for _name, ok in checks:
+            status = "[OK]" if ok else "[FAIL]"
+            print(f"  {status} {_name}"
+                  if _name != checks[-1][0]
+                  else f"  {status} {_name} ({parity_line})")
             if not ok:
                 all_ok = False
 
@@ -396,11 +404,12 @@ class TensileDriver(
                 compact=True,
             ).start()
             self._live_status.refresh()
-        except BaseException:
+        except BaseException as e:
             # BaseException, not Exception: run_status raises SystemExit when the
             # registry is not there yet, and that must not abort a run that is
             # in the middle of creating one.
             self._live_status = None
+            print(f"[live] status panel unavailable ({e}); continuing without it")
     def _stop_live_status(self) -> None:
         panel, self._live_status = self._live_status, None
         if panel is None:

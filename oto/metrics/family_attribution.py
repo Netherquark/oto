@@ -93,6 +93,9 @@ def _warn_contamination(stamp: str, typecode: str, resolved: str,
     if key in _CONTAMINATION_SEEN:
         return
     _CONTAMINATION_SEEN.add(key)
+    print(f"[contamination] e.g. {phase_id} carries family stamp {stamp} but "
+          f"its kernel typecode is {typecode} ({resolved}) — attributing to "
+          f"{resolved} (typecode wins); one line per (stamp, typecode) class")
 
 
 def resolve_cell_family(rec: dict[str, Any]) -> str:

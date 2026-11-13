@@ -75,6 +75,9 @@ def _drop_illegal_stored(payload: dict[str, Any]
         refused = {i for i, _ in illegal}
         stored = [p for p in stored if str(p.get("phase_id", "")) not in refused]
         payload["phases"] = stored
+        print(f"dropped {len(illegal)} stored row(s) the launch gate refuses: "
+              f"{', '.join(i for i, _ in illegal[:6])}"
+              f"{' ...' if len(illegal) > 6 else ''}")
     return stored, illegal
 
 
@@ -132,6 +135,7 @@ def _write_overlay(rows: list[dict[str, Any]], dry_run: bool) -> int:
     }
     with open(mirror, "w") as f:
         yaml.safe_dump(mirror_payload, f, sort_keys=False, default_flow_style=False)
+    print(f"mirror written: {mirror.relative_to(_overlay_path().parent.parent.parent)}")
     return len(added)
 
 
@@ -212,6 +216,8 @@ def _summarise(rows: list[dict[str, Any]]) -> None:
     total = [0]
     for fam in sorted(by_family):
         counts = by_family[fam]
-        "  " + fam.ljust(8) + " " + "  ".join(
+        line = "  " + fam.ljust(8) + " " + "  ".join(
             f"{k}={counts[k]}" for k in sorted(counts))
+        print(line)
         total[0] += sum(counts.values())
+    print(f"  TOTAL  candidates={total[0]}")

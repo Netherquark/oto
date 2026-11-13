@@ -96,17 +96,34 @@ def main() -> int:
         args.json.write_text(json.dumps(report, indent=2))
 
     if args.quiet:
-        "OK" if report["parity_ok"] else "DIVERGENT"
+        status = "OK" if report["parity_ok"] else "DIVERGENT"
+        print(f"coverage-parity: {status} "
+              f"{report['deck_cells']}/{report['shipped_cells']} shipped cells "
+              f"({len(report['missing'])} missing, {len(report['extra'])} extra)")
     else:
+        print("Coverage-parity check vs shipped gfx900 TensileLibrary")
+        print(f"  manifest phases : {len(phases)}")
+        print(f"  shipped cells   : {report['shipped_cells']}")
+        print(f"  deck cells      : {report['deck_cells']}")
+        print(f"  missing (contraction): {len(report['missing'])}")
         if report["missing"]:
-            pass
+            print(_fmt_cells(report["missing"]))
+        print(f"  extra  (extension):  {len(report['extra'])}")
         if report["extra"]:
-            pass
+            print(_fmt_cells(report["extra"]))
+        if report["non_cube_shapes"]:
+            print(f"  non-cell shapes (GEMV probes, excluded from parity): "
+                  f"{len(report['non_cube_shapes'])}")
         if report["non_cube_shapes"] and not args.quiet:
             for _s in report["non_cube_shapes"][:8]:
-                pass
+                print(f"    {_s}")
         if report["unresolved_families"]:
-            pass
+            print(f"  unresolved families: {report['unresolved_families']}")
+        print()
+        print("PASS: deck maps exactly to the shipped cell grid"
+              if report["parity_ok"]
+              else "FAIL: deck diverges from the shipped cell grid — "
+                   "fix missing (add coverage) and/or extra (revert extension) cells")
 
     return 0 if report["parity_ok"] else 1
 

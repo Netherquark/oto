@@ -39,6 +39,7 @@ import sys
 from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
+from statistics import median
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
@@ -176,25 +177,44 @@ def main() -> int:
     if args.side == "floor":
         rows, _chosen = _floor_rows(db)
         if not rows:
+            print("no floor rows found (no gfx900_ref_* keys in kernel_db.json)",
+                  file=sys.stderr)
             return 1
+        print(f"floor runs: {', '.join(_chosen)}", file=sys.stderr)
     else:
         rows = [r for run, rs in db.items()
                 for r in rs if not run.startswith("gfx900_ref_")]
     if not rows:
+        print(f"no rows under side={args.side}", file=sys.stderr)
         return 1
 
     cells = _audit(rows, args.lds_factor)
     if not cells:
+        print("no auditable cells (measured-VGPR table missing their TT)", file=sys.stderr)
         return 1
 
+    hdr = (f"{'cell':<9}{'resident':>8}{'binder':>7}{'waves/CU':>9}"
+           f"{'% of 40':>8}{'LDS':>5}{'VGPR':>6}{'WAV':>5}{'med GF':>9}")
+    print(f"occupancy audit: side={args.side} lds_factor={args.lds_factor} "
+          f"cells={len(cells)}")
+    print(hdr)
     for c in cells:
         if args.at_most is not None and c["resident"] > args.at_most:
             continue
+        print(f"{c['cell']:<9}{c['resident']:>8}{c['binder']:>7}"
+              f"{c['waves_per_cu']:>9}{c['pct_of_40']:>7.0f}%"
+              f"{c['lds_bound']:>5}{c['vgpr_bound']:>6}{c['wave_bound']:>5}"
+              f"{c['median_gflops']:>9.1f}")
 
-    [c["resident"] for c in cells]
-    [c["waves_per_cu"] for c in cells]
-    [c for c in cells if c["resident"] <= 3]
-    Counter(c["binder"] for c in cells)
+    res = [c["resident"] for c in cells]
+    waves = [c["waves_per_cu"] for c in cells]
+    low = [c for c in cells if c["resident"] <= 3]
+    binders = Counter(c["binder"] for c in cells)
+    print(f"\nresident wg/CU: min={min(res)} median={median(res)} max={max(res)}")
+    print(f"cells at <=3 resident wg/CU: {len(low)} / {len(cells)}")
+    print(f"waves/CU: min={min(waves)} median={median(waves)} max={max(waves)}"
+          f" (budget {MAX_WAVES_PER_CU}/CU)")
+    print(f"binding resource tally: {dict(binders)}")
     return 0
 
 

@@ -85,7 +85,8 @@ class PhaseMixin:
                 merged = self._merge_overlay_entries(
                     phases, overlay, origin_label="overlay", src=run_id)
                 if merged:
-                    pass
+                    print(f"[overlay] merged {merged} candidate phase(s) from "
+                          f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
 
         # Persistent seed overlay (proposal D2, potential_configs.md §8): the
         # proven-winner rows and next-phase probes queued for every native run,
@@ -100,7 +101,8 @@ class PhaseMixin:
                 merged = self._merge_overlay_entries(
                     phases, seed, origin_label="seed_overlay", src="seed")
                 if merged:
-                    pass
+                    print(f"[overlay] merged {merged} seed phase(s) from "
+                          f"phases.seed.overlay.yaml (D2 list, phases.yaml untouched)")
         return phases
 
     def _merge_overlay_entries(
@@ -147,7 +149,8 @@ class PhaseMixin:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
-        except Exception:
+        except Exception as e:
+            print(f"[overlay] seed overlay unreadable, ignoring: {e}")
             return []
 
     def _load_run_overlay(self, run_id: str) -> list[dict[str, Any]]:
@@ -170,7 +173,8 @@ class PhaseMixin:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
-        except Exception:
+        except Exception as e:
+            print(f"[overlay] unreadable, ignoring: {e}")
             return []
 
     _KEY_POLL_S = 0.2
@@ -204,12 +208,14 @@ class PhaseMixin:
         try:
             outcome, _detail = self.mutator.resolve_phase_dir(
                 fp, phase_dir, run_id=self.run_dir.name if self.run_dir else None)
-        except Exception:
+        except Exception as e:
             # A classification failure must not abort a run whose phases have
             # already executed; the candidate simply stays pending.
+            print(f"[ledger] could not resolve {fp}: {e}")
             return None
         if outcome and outcome != "pending":
-            pass
+            print(f"[ledger] {fp} -> {outcome} "
+                  f"(winner_freq={_detail.get('winner_freq')})")
         return None if outcome == "pending" else outcome
     def run_phases(
         self,
@@ -225,6 +231,8 @@ class PhaseMixin:
         phases = self.load_phases_manifest(phases_path) if phases_path else self.load_phases_manifest()
 
         if self.run_dir is None:
+            print(f"[plan] {len(phases)} phase(s) in the manifest; no run "
+                  f"directory, so this is a dry run and nothing is executed.")
             return []
 
         phases = self._filter_target_phases(phases, target_ids)
@@ -285,6 +293,7 @@ class PhaseMixin:
                 break
 
             if self._finish_after_iteration:
+                print("End-after-iteration requested, halting phase execution")
                 break
         return results, (executed_count, skipped_count, refused_count)
 
@@ -333,6 +342,9 @@ class PhaseMixin:
             note += (" -- the client aborted at the hardware probe "
                      "(SIGABRT / hipErrorNoDevice: the GPU is no longer visible "
                      "to HIP, e.g. a lost /dev/kfd or a driver-level reset)")
+        print(f"\n[ABORT] {note}")
+        print("[ABORT] halting the run instead of burning the remaining budget "
+              "on void phases")
         self._abort_note = note
         self._stop_requested = True
 
@@ -374,7 +386,10 @@ class PhaseMixin:
 
     def _check_stop_requested(self) -> bool:
         """Check if stop was requested. Returns True if should break."""
-        return bool(self._stop_requested or self._finish_after_iteration)
+        if self._stop_requested or self._finish_after_iteration:
+            print("Stop requested, halting phase execution")
+            return True
+        return False
 
     def _should_execute_phase(
         self,
@@ -411,7 +426,10 @@ class PhaseMixin:
                 and reason == "identical_fp_already_passed":
             allowed, reason = True, "bypassed_identical_fp_via_ledger"
 
-        return allowed
+        if not allowed:
+            print(f"Skipping phase {phase_id} ({reason})")
+            return False
+        return True
 
     def _record_skip(self, phase_id: str, fp: str, reason: str) -> None:
         """Record a skipped phase in the registry."""
@@ -428,9 +446,11 @@ class PhaseMixin:
         """Handle user key presses during skip. Returns 'stop' if should break."""
         key = self._read_key(block=False)
         if key == 'q':
+            print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")
             self._stop_requested = True
             return "stop"
         if key == 'e':
+            print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
             self._finish_after_iteration = True
             return "stop"
         return "continue"

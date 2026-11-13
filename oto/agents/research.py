@@ -23,6 +23,7 @@ Public API: make_researcher(api_key, starter_text="", endpoint=None).
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Callable
 
 try:
@@ -87,6 +88,7 @@ def _openai_compatible_research(key: str, endpoint: str, model: str,
         timeout=timeout,
     )
     if resp.status_code != 200:
+        print(f"research: HTTP {resp.status_code} from {endpoint}", file=sys.stderr)
         return ""
     data = resp.json()
     return (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
@@ -105,6 +107,7 @@ def _anthropic_research(key: str, model: str, query: str, timeout: int) -> str:
         timeout=timeout,
     )
     if resp.status_code != 200:
+        print(f"research: HTTP {resp.status_code} from Anthropic", file=sys.stderr)
         return ""
     blocks = resp.json().get("content", [])
     return "\n".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
@@ -142,8 +145,8 @@ def make_researcher(api_key: str = "", starter_text: str = "",
                     key, _DEFAULT_OPENAI_ENDPOINT,
                     model_override or "gpt-4o-mini-search-preview",
                     query, timeout)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"research: {exc.__class__.__name__}", file=sys.stderr)
         return ""
 
     return research

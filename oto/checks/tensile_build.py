@@ -189,11 +189,22 @@ def select_phases(args: argparse.Namespace) -> list[dict[str, Any]]:
 def print_progress(row: dict[str, Any], i: int, total: int, outdir: Path,
                    passed: int, failed: int) -> None:
     regs = [r for r in row["results"] if r.get("vgprs") is not None]
-    max((r["vgprs"] for r in regs), default=None)
-    max((r.get("accvgprs") or 0 for r in regs), default=None)
-    "PASS" if row["ok"] else "FAIL"
+    vg = max((r["vgprs"] for r in regs), default=None)
+    ag = max((r.get("accvgprs") or 0 for r in regs), default=None)
+    flag = "PASS" if row["ok"] else "FAIL"
+    print(
+        f"[{i:>3}/{total}] {flag} {row['phase_id']:<44} "
+        f"MT={row['macro_tile']} TT={row['thread_tile']} "
+        f"sols={row['solutions']}"
+        + (f" vgpr<={vg}" if vg is not None else "")
+        + (f" accvgpr<={ag}" if ag else "")
+        + ("" if row["ok"] else f"  <- {row['reason']}"),
+        flush=True,
+    )
     if "model_ok" in row:
-        "MATCH" if row["model_ok"] == row["ok"] else "*** MISMATCH ***"
+        agree = "MATCH" if row["model_ok"] == row["ok"] else "*** MISMATCH ***"
+        print(f"          model: {'legal' if row['model_ok'] else 'illegal'} / Tensile: "
+              f"{'legal' if row['ok'] else 'illegal'}  {agree}", flush=True)
 
 
 def _probe_row(
@@ -272,6 +283,8 @@ def main() -> int:
 
     rows: list[dict[str, Any]] = []
     passed = failed = 0
+    print(f"Tensile CPU-only build proof: {len(phases)} phase(s), arch={args.arch}, "
+          f"jobs={args.jobs}\n", flush=True)
 
     configs = write_phase_configs(phases, outdir)
 
@@ -297,13 +310,15 @@ def main() -> int:
         failed += 0 if row["ok"] else 1
         rows.append(row)
 
+    print(f"\n{passed} passed, {failed} failed, {len(rows)} total")
     if not args.keep:
         shutil.rmtree(outdir, ignore_errors=True)
     else:
-        pass
+        print(f"artifacts: {outdir}")
 
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=2))
+        print(f"report: {args.json}")
 
     return 0 if failed == 0 else 1
 

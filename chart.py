@@ -96,3 +96,4 @@ fig.text(0.99, 0.01, f"WIN {wins}  /  TIE {ties}  /  LOSS {losses}   (38 cells t
 fig.tight_layout()
 out = BASE / "gfx90c_vs_spoof.png"
 fig.savefig(out, dpi=150, bbox_inches="tight")
+print(f"saved: {out}")

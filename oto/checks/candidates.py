@@ -209,18 +209,21 @@ def main() -> int:
         if bad:
             fails.append((phase.get("phase_id") or phase.get("kernel", "?"), bad))
         elif not args.quiet:
-            pass
+            print(f"  ok   {str(phase.get('phase_id') or phase.get('kernel', '?'))[:60]:60} "
+                  f"{_occupancy_margin(cfg)}")
 
+    print(f"\n{source}: {checked} checked, {skipped} skipped, {len(fails)} illegal")
     if fam_total:
-        pass
+        print("  per family: " + ", ".join(f"{k}={v}" for k, v in sorted(fam_total.items())))
     for _pid, bad in fails:
         for _name, _why in bad:
-            pass
+            print(f"  FAIL {str(_pid)[:60]:60} [{_name}] {_why}")
 
     if args.json:
         args.json.write_text(json.dumps(
             {"deck": str(source), "checked": checked, "illegal": len(fails),
              "failures": {str(p): dict(b) for p, b in fails}}, indent=1, default=str))
+        print(f"wrote {args.json}")
     return 1 if fails else 0
 
 

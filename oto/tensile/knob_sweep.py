@@ -71,6 +71,7 @@ def _run_dry(
     args: argparse.Namespace,
     shapes: list[str]
 ) -> tuple[list[dict[str, Any]], list[str]]:
+    print("DRY RUN -- nothing written. Pass --emit to append.")
     return _dry_run(gen, args.families or list(KNOB_SWEEP_BASES),
                     args.patterns or ["Ailk_Bljk"], shapes,
                     include_baseline=args.baseline,
@@ -98,12 +99,15 @@ def _print_summary(emitted: list[dict[str, Any]],
                    refused: list[str],
                    emit: bool) -> int:
     if not emitted:
+        print("ERROR: no candidate could be emitted. Check the refusals above.")
         return 1
+    print(f"\nready: {len(emitted)} candidates")
     if refused:
+        print(f"{len(refused)} refused by the gates:")
         for _line in refused:
-            pass
+            print(f"  {_line}")
     if not emit:
-        pass
+        print("\nre-run with --emit to append these to phases.yaml")
     return 0
 
 
@@ -112,6 +116,11 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
     shapes = args.shapes or ["512x512x512", "1024x1024x1024"]
     gen = CandidateGenerator(Path("."))
+    print(f"knob-sweep deck: {len(KNOB_SWEEPS)} sweeps x "
+          f"{len(args.families or KNOB_SWEEP_BASES)} families x "
+          f"{len(shapes)} shapes"
+          + (" + baselines" if args.baseline else "")
+          + (" + trials" if args.trials else ""))
 
     if args.emit:
         emitted, refused = _run_emit(gen, args, shapes)

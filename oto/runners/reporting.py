@@ -190,6 +190,9 @@ class ReportingMixin:
 
         spoof_records, ref_run_ids = self._load_spoof_records(run_id)
         if not spoof_records:
+            print("[ab] no completed gfx900 reference floor found -- A/B verdicts "
+                  "deferred. Establish it with `--gfx900-reference` (or --auto, "
+                  "which runs it automatically).")
             return []
 
         self._last_ab_reference_run_id = ref_run_ids[0] if ref_run_ids else None
@@ -253,9 +256,22 @@ class ReportingMixin:
     def _log_thermal_and_clock_warnings(self, thermal, native_cov, agg):
         """Log thermal and clock adjustment warnings."""
         if thermal["hot_phases"]:
-            pass
+            print("[report] WARNING: "
+                  f"{thermal['hot_phases']} phase(s) hit or exceeded the "
+                  f"{self.THERMAL_MAX_C:.0f}C telemetry validity gate. Those "
+                  "samples were dropped from the clock estimate rather than "
+                  "scaled, so the phases show as UNMEASURED (and their cells "
+                  "fall back to unadjusted grading below the coverage floor) "
+                  "instead of as slow kernels. Affected: "
+                  + ", ".join(thermal["hot_phase_ids"][:5]))
         if agg.endswith("_clock") and native_cov[1] == 0:
-            pass
+            print("[report] WARNING: --native-agg "
+                  f"{agg!r} requires per-phase telemetry clocks, but the NATIVE arm "
+                  f"has none ({native_cov[0]}/{native_cov[1]} samples covered across "
+                  f"{len(native_cov[2]) if len(native_cov) > 2 else 0} run(s); the largest native run has no telemetry "
+                  "at all). Cells will fall back to UNADJUSTED best-vs-best and are "
+                  "flagged clock_adjusted=false -- these numbers are NOT "
+                  "telemetry-adjusted.")
 
     def _build_verdicts(self, deltas, thermal_by_phase, agg):
         """Build ABVerdict objects from deltas."""
@@ -354,11 +370,16 @@ class ReportingMixin:
                                                  native_agg,
                                                  protocol_basis=protocol_basis)
         if native_arm["empty"]:
-            pass
+            print("[report] WARNING: native arm is EMPTY across the whole database — "
+                  "every coverage/RED number below is 0 because nothing was ever "
+                  "measured, not because the hardware is slow.")
         elif ab_verdicts:
-            sum(1 for v in ab_verdicts if v.verdict == "WIN")
-            sum(1 for v in ab_verdicts if v.verdict == "TIE")
-            sum(1 for v in ab_verdicts if v.verdict == "LOSS")
+            wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
+            ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
+            losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
+            print(f"[report] native arm: {native_arm['n_records']} cells from "
+                  f"{native_arm['n_runs']} run(s), agg={native_agg} -> "
+                  f"{wins} WIN / {ties} TIE / {losses} LOSS")
         return native_arm
 
     def _emit_report(self, run_id: str, run_dir: Path | None, report,
@@ -367,6 +388,7 @@ class ReportingMixin:
         if run_dir is not None:
             report_out = run_dir / "acceptance_report.json"
             self.reporter.write_report(report, report_out)
+            print(f"Report emitted to: {report_out}")
         if self.reporter.base_dir:
             with contextlib.suppress(Exception):
                 self.reporter.write_report(
@@ -440,6 +462,7 @@ class ReportingMixin:
                 run_dir = self.run_dir
             run_id = self._report_run_id(run_id, run_dir)
             if not run_id:
+                print("Report generation: no run_id available")
                 return None
 
             all_analytics, cell_status, family_timing, execution_timing = \
@@ -457,7 +480,8 @@ class ReportingMixin:
             return self._emit_report(run_id, run_dir, report, ab_verdicts,
                                      native_arm, all_analytics,
                                      cell_status["red"])
-        except Exception:
+        except Exception as e:
+            print(f"Report generation error: {e}")
             return None
     def regenerate_report(self, run_id: str | None = None,
                           native_agg: str = "winner",
@@ -472,11 +496,13 @@ class ReportingMixin:
         if run_id is None:
             run_id = self.registry.latest_run_id(arm="native")
         if not run_id:
+            print("No run id available to regenerate a report")
             return None
 
         run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / run_id
         if not run_dir.exists():
             run_dir = None
+        print(f"Regenerating acceptance report for run {run_id}")
         return self.generate_acceptance_report(run_dir=run_dir, run_id=run_id,
                                               native_agg=native_agg,
                                               protocol_basis=protocol_basis)

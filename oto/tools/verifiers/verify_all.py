@@ -57,23 +57,32 @@ ENV = dict(os.environ)
 
 def main() -> int:
     if not ENV.get("TENSILE_ROOT") and not (ROOT / ".env").is_file():
-        pass
+        print("NOTE: TENSILE_ROOT is unset and there is no repo-root .env -- "
+              "checks that read Tensile's dtype table will not have a checkout "
+              "to read. Export it to exercise them fully.")
 
     failures = []
     for label, script in CHECKS:
+        print(f"\n=== {label} ({script})")
         proc = subprocess.run([sys.executable, str(HERE / script)],
                               cwd=ROOT, env=ENV,
                               capture_output=True, text=True)
-        "\n".join(proc.stdout.strip().splitlines()[-6:])
+        tail = "\n".join(proc.stdout.strip().splitlines()[-6:])
+        print(tail or "(no output)")
         if proc.returncode != 0:
+            print(f"--- FAILED ({proc.returncode})")
+            print("\n".join(proc.stderr.strip().splitlines()[-15:]))
             failures.append(label)
         else:
-            pass
+            print("--- OK")
 
+    print("\n================ SUMMARY ================")
     for _label, _ in CHECKS:
-        pass
+        print(f"  {'FAIL' if _label in failures else 'OK  '}  {_label}")
     if failures:
+        print(f"\n{len(failures)} check(s) failed: {failures}")
         return 1
+    print("\nALL EQUIVALENCE CHECKS PASSED")
     return 0
 
 

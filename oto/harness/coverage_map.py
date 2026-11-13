@@ -325,9 +325,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             cell_measured = measured.get((fam, shape), {})
             rows.append(coverage_row(fam, shape, legal, cell_measured))
 
+    print(f"{'cell':<18}{'legal':>7}{'meas':>7}{'cover':>8}{'best':>10}  "
+          f"{'best geometry':<28} unexplored (ranked by neighbour score)")
     for row in rows:
+        print(f"{row['family'] + ':' + row['shape']:<18}{row['n_legal']:>7}"
+              f"{row['n_measured']:>7}{row['coverage_pct']:>7.1f}%"
+              f"{row['best_measured']:>10.1f}  "
+              f"{_fmt_geom(row['best_geometry']):<28} "
+              f"{len(row['unmeasured'])} open")
         for _gap in row["unmeasured"][:args.top]:
-            pass
+            print(f"    {_gap['neighbour_score']:>8.1f}  {_fmt_geom(_gap['geometry'])}")
 
     if args.json:
         out = Path(args.json)
@@ -335,6 +342,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             out = (Path(args.base_dir) if args.base_dir else _HERE) / out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps({"rows": rows}, indent=1))
+        print(f"wrote -> {out}")
     return 0
 
 

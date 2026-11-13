@@ -58,12 +58,17 @@ def main() -> int:
 
     if args.prune_candidates:
         _stripped, _kept = _prune_candidates_from_seed(dry_run=args.dry_run)
+        print(f"{'[dry-run] would strip' if args.dry_run else 'stripped'} "
+              f"{_stripped} phase_cand_* rows; {_kept} rows kept in "
+              f"{OVERLAY_PATH.name}")
         return 0
 
     rows: list[dict[str, Any]] = list(iter_candidates())
     rows = _round_robin_prune(rows, args.max_fp)
     _summarise(rows)
-    _write_overlay(rows, dry_run=args.dry_run)
+    written = _write_overlay(rows, dry_run=args.dry_run)
+    print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
+          f"{written} candidate(s) to {OVERLAY_PATH.name}")
     return 0
 
 

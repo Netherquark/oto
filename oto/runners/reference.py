@@ -53,6 +53,8 @@ def _rebuild_deck_for_triage(manifest: dict[str, Any],
     so rebuild the deck from the shipped manifest instead and let the
     content comparison decide what still needs running.
     """
+    print("[gfx900-reference] triage manifest present: rebuilding the "
+          "deck from the shipped manifest so the config fixes apply")
     _fresh = tlib.emit_spoof_phases(manifest, arch=arch)
     # Keep the rebuild inside the audited scope. emit_spoof_phases
     # spans every shipped family (2285 here) while the audited floor
@@ -66,7 +68,11 @@ def _rebuild_deck_for_triage(manifest: dict[str, Any],
     # across the whole reference chain.
     _audited = set(rerun_manifest.get("tiers_by_key") or {}) | {
         tlib.phase_key(p) for p in deck}
-    return [p for p in _fresh if tlib.phase_key(p) in _audited]
+    _scoped = [p for p in _fresh if tlib.phase_key(p) in _audited]
+    print(f"[gfx900-reference] rebuilt {len(_scoped)}/{len(_fresh)} "
+          f"phase(s) inside the audited scope "
+          f"({len(_audited)} kernel(s) triaged)")
+    return _scoped
 
 
 def _filter_resume_deck(
@@ -166,10 +172,17 @@ class ReferenceMixin:
         phases, n_reuse, _n_held = _filter_resume_deck(
             deck, _rm, reusable_keys, reusable_pids, release_held)
         if n_reuse:
-            pass
+            print(f"[gfx900-reference] reusing {n_reuse}/{len(deck)} phase(s) "
+                  f"by content ({len(reusable_keys)} keyed, "
+                  f"{len(reusable_pids)} legacy)")
         if _rm:
-            sum(1 for p in deck
+            n_t3 = sum(1 for p in deck
                        if tlib.tier_for(p, _rm) == tlib.TIER_DROP)
+            held_note = (f", {_n_held} pinned as held"
+                         if _n_held else "")
+            print(f"[gfx900-reference] triage applied: {len(phases)} phase(s) "
+                  f"to run, {n_reuse} reusable, {n_t3} dropped as unreproducible"
+                  f"{held_note}")
         return phases, {"gfx900_resume": True, "resume_of": base}
 
     def _fresh_deck(self, manifest: dict[str, Any],
@@ -245,6 +258,7 @@ class ReferenceMixin:
         Refactor 2: a profile with no spoof_reference runs native-only.
         """
         if not getattr(self, "profile", None) or not getattr(self.profile, "spoof_reference", ""):
+            print("[reference] no spoof_reference in profile; native-only run")
             return {"status": "native-only", "phases": []}
         arch = self.profile.spoof_reference
         manifest = tlib.load_shipped_manifest(
@@ -294,6 +308,8 @@ class ReferenceMixin:
         # `yaml.safe_load` the whole reference deck and throw the result away.
         phases, resume_meta = self._resume_deck(base, base_dir, release_held)
         if not phases:
+            print("[gfx900-reference] reference deck already fully completed -- "
+                  "nothing to resume")
             return [], {"status": "noop", "run_id": base,
                         "phases_targeted": 0, "phases_executed": 0, "results": 0}
         return phases, {"resume_of": base, "resume_meta": resume_meta}
@@ -302,9 +318,22 @@ class ReferenceMixin:
         """Apply audited re-run triage to phase list."""
         _rerun = tlib.load_rerun_manifest(self.base_dir)
         if _rerun:
+            _before = len(phases)
+            _tiers = [tlib.tier_for(p, _rerun) for p in phases]
             phases = tlib.apply_rerun_tiers(phases, _rerun,
                                             release_held=release_held,
                                             release_drop=release_drop)
+            n_held = _tiers.count(tlib.TIER_HELD)
+            n_drop = _tiers.count(tlib.TIER_DROP)
+            print(f"[gfx900-reference] triage: {_before} -> {len(phases)} "
+                  f"phase(s) (T1 first"
+                  + (f", {n_drop} T3 unreproducible dropped"
+                     if n_drop and not release_drop else "")
+                  + (f", {n_drop} T3 released to the back" if release_drop and n_drop else "")
+                  + (f", {n_held} T2 pinned-held"
+                     if n_held and not release_held else "")
+                  + (", T2 released to the back" if release_held else "")
+                  + ")")
         return phases
 
     def _create_reference_run_dir(self, resume: bool, resume_meta: dict) -> str:
@@ -353,7 +382,9 @@ class ReferenceMixin:
             run_meta.update(resume_meta)
             self.registry.update_run_status(run_id, status, run_meta)
             if status == "smoke":
-                pass
+                print("[gfx900-reference] smoke run marked 'smoke' -- NOT recalled as "
+                      "the A/B floor. Run `--gfx900-reference` WITHOUT --limit to "
+                      "establish the permanent floor.")
             return {"run_id": run_id, "status": status,
                     "phases_targeted": len(phases), "phases_executed": executed,
                     "results": len(results)}

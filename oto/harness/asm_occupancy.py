@@ -365,24 +365,28 @@ def _cmd_calibration() -> int:
            for v, want in _CALIBRATION.items()
            if waves_per_simd(v) != want]
     if bad:
+        print("CALIBRATION MISMATCH:", bad)
         return 1
+    print("calibration OK: 10/10 rows of the AMD/ORNL GFX9 table reproduced")
     return 0
 
 
 def _cmd_binder(rows: list[dict[str, Any]]) -> int:
+    print("\n-- resource tally --")
     tally: dict[str, int] = {}
     for r in rows:
         tally[r["binder"]] = tally.get(r["binder"], 0) + 1
     for _k, _v in sorted(tally.items(), key=lambda kv: -kv[1]):
-        pass
+        print(f"  {_k:<10s} {_v:6d}  {100*_v/len(rows):5.1f}%")
+    print("\n-- waves/CU distribution --")
     hist: dict[int, int] = {}
     for r in rows:
         hist[r["waves_per_cu"]] = hist.get(r["waves_per_cu"], 0) + 1
     for _w in sorted(hist):
-        pass
+        print(f"  {_w:>3d} waves/CU  {hist[_w]:6d}  {100*hist[_w]/len(rows):5.1f}%")
     spilled = sum(1 for r in rows if r["scratch"])
     if spilled:
-        pass
+        print(f"\n{spilled} kernels carry a private segment (spill)")
     return 0
 
 
@@ -392,10 +396,12 @@ def _cmd_count(rows: list[dict[str, Any]], top: int) -> int:
         key = (r["dtype"], r["mt0"], r["mt1"], r["tt"], r["depth_u"])
         groups[key] = groups.get(key, 0) + 1
     ordered = sorted(groups.items(), key=lambda kv: -kv[1])[:top]
+    print(f"{len(rows)} kernels, {len(groups)} distinct shapes")
     for key, _n in ordered:
-        next(r for r in rows
-                    if (r["dtype"], r["mt0"], r["mt1"], r["tt"],
-                        r["depth_u"]) == key)
+        probe = next(r for r in rows
+                     if (r["dtype"], r["mt0"], r["mt1"], r["tt"],
+                         r["depth_u"]) == key)
+        print(f"{_n:5d}  {_fmt(probe)}")
     return 0
 
 
@@ -407,8 +413,10 @@ def _cmd_sorted(rows: list[dict[str, Any]], args: Any) -> int:
     else:
         measured = [r for r in rows if r["gflops"] is not None]
         ordered = sorted(measured, key=lambda r: -r["gflops"])[:args.top]
+    print(f"{len(rows)} kernels; "
+          f"{sum(1 for r in rows if r['gflops'] is not None)} with GFLOP/s")
     for _r in ordered:
-        pass
+        print(_fmt(_r))
     return 0
 
 
@@ -422,10 +430,12 @@ def main() -> int:
     root = Path(args.runs) if args.runs else (_runs_dir(base, _peaks.CODENAME))
     rows = measure_corpus(root, args.dtype)
     if not rows:
+        print(f"no emitted kernels with an amdhsa directive under {root}")
         return 1
 
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=1, default=str))
+        print(f"wrote {len(rows)} rows to {args.json}")
 
     if args.binder:
         return _cmd_binder(rows)

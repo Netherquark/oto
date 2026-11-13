@@ -32,6 +32,7 @@ view.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sqlite3
 import sys
@@ -387,15 +388,16 @@ def _main(argv, build_report) -> int:
 
     def once() -> int:
         try:
-            build_report(base, args.run, plan)
+            rep = build_report(base, args.run, plan)
         except SystemExit:
             raise
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            print(f"registry error: {e}", file=sys.stderr)
             return 2
         if args.json:
-            pass
+            print(json.dumps(rep, indent=2, default=str))
         else:
-            pass
+            print(render(rep, args.thermals))
         return 0
 
     if not args.watch:
@@ -405,9 +407,10 @@ def _main(argv, build_report) -> int:
             if not args.json:
                 os.system("clear" if os.name != "nt" else "cls")
             once()
+            print()
             time.sleep(max(args.watch, 1.0))
     except KeyboardInterrupt:
-        pass
+        print("\nstopped", file=sys.stderr)
     return 0
 
 

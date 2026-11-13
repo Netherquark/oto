@@ -27,23 +27,27 @@ def main() -> None:
 
     # Sample some records to understand structure
     cursor.execute("SELECT id, data FROM records LIMIT 5")
+    print('Sample records:')
     for row in cursor.fetchall():
         _record_id, data_json = row
         data = json.loads(data_json)
+        print(f'\n  ID {_record_id}:')
+        print(f'    Keys: {list(data.keys())}')
         if 'label' in data:
-            pass
+            print(f'    Label: {data["label"]}')
         if 'phase_id' in data:
-            pass
+            print(f'    Phase ID: {data["phase_id"]}')
 
     # Check for auto/Unknown labels more thoroughly
     cursor.execute("SELECT id, data FROM records")
+    print('\n\nRecords with auto/Unknown in label:')
     for row in cursor.fetchall():
         _record_id, data_json = row
         data = json.loads(data_json)
         label = data.get('label', '')
-        data.get('phase_id', '')
+        phase_id = data.get('phase_id', '')
         if 'auto' in label.lower() or 'unknown' in label.lower():
-            pass
+            print(f'  ID {_record_id}: phase_id={phase_id}, label={label}')
 
     conn.close()
 

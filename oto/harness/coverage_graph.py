@@ -461,6 +461,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     measured = measured_geometries()
     out_dir = Path(args.out) if args.out else ((Path(args.base_dir) if args.base_dir else _HERE) / OUT_DIR_REL)
     entries: list[dict[str, Any]] = []
+    print(f"{'cell':24} {'legal':>5} {'meas':>5} {'unexp':>5} "
+          f"{'%unexp':>7} {'best':>8} {'peaks':>5} {'traps':>5}")
     for family in fams:
         legal = legal_geometries(family)
         for shape in _DEFAULT_CELLS.get(family, []):
@@ -470,6 +472,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             row = coverage_row(family, shape, legal, cell_measured)
             grid = _grid(family, legal, cell_measured)
             peaks, traps = _extrema(grid)
+            print(_summary(family, shape, row, peaks, traps))
             entry = {"family": family, "shape": shape,
                      "n_legal": row["n_legal"], "n_measured": row["n_measured"],
                      "unexplored": row["n_legal"] - row["n_measured"],
@@ -487,6 +490,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         _index_page(entries, out_dir)
         _write_data(entries, out_dir)
+        print(f"\nwrote {len(entries)} figure(s) + index.html + coverage.json"
+              f" -> {out_dir}")
     return 0
 
 

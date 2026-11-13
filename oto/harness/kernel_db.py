@@ -471,8 +471,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
     db = load_kernel_db(args.json, base_dir=base, rebuild=args.rebuild,
                         run_ids=args.run_id, all_ref=args.all_ref)
-    sum(len(v) for v in db.values())
-    sum(1 for v in db.values() if v)
+    n_rows = sum(len(v) for v in db.values())
+    n_runs = sum(1 for v in db.values() if v)
+    print(f"{args.json}: {n_runs} runs with data, {n_rows} kernel-shape rows "
+          f"({len(db)} runs scanned)")
     return 0
 
 

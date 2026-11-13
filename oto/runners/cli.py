@@ -13,6 +13,7 @@ Public API: main.
 from __future__ import annotations
 
 import argparse
+import statistics
 import sys
 from typing import Any
 
@@ -87,6 +88,7 @@ def _stage_best_library(driver, args, stage) -> int | None:
     else:
         basis = "any"
     result = driver.synthesize_best_library(dest, protocol_basis=basis)
+    print(f"Best-effort library result: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 def _stage_generate_device_docs(driver, args, stage) -> int | None:
@@ -96,6 +98,7 @@ def _stage_generate_device_docs(driver, args, stage) -> int | None:
         return None
     starter = args.generate_device_docs or None
     result = driver.generate_device_docs(starter)
+    print(f"Device docs result: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
@@ -105,6 +108,7 @@ def _stage_synthesis(driver, args, stage) -> int | None:
             or "build" in stage):
         return None
     result = driver.synthesize_library()
+    print(f"Stage 6 Synthesis complete: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
@@ -122,8 +126,9 @@ def _stage_candidate_plan(driver, args, stage) -> int | None:
                 fam = f
                 break
         fam_counts[fam] = fam_counts.get(fam, 0) + 1
+    print(f"Candidate plan: {len(phases)} phases in phases.yaml")
     for _fam, _n in sorted(fam_counts.items()):
-        pass
+        print(f"  {_fam}: {_n}")
     return 0
 
 
@@ -147,13 +152,16 @@ def _stage_analytics(driver, args, stage) -> int | None:
     analytics = driver._load_analytics_from_run(
         run_dir if run_dir is not None and run_dir.exists() else None)
     if not analytics:
+        print("No analytics records available for the latest run.")
         return 1
     by_dtype: dict[str, list[CellAnalytics]] = {}
     for a in analytics:
         by_dtype.setdefault(a.dtype, []).append(a)
     for _dt, lst in sorted(by_dtype.items()):
-        [a.median_gflops for a in lst]
-        sum(1 for a in lst if a.is_below_ceiling)
+        med = [a.median_gflops for a in lst]
+        below = sum(1 for a in lst if a.is_below_ceiling)
+        print(f"[{_dt}] cells={len(lst)} best={max(med):.1f} GFLOPS "
+               f"median={statistics.median(med):.1f} below_ceiling={below}")
     return 0
 
 
@@ -165,6 +173,7 @@ def _stage_gfx900_reference(driver, args, stage) -> int | None:
     result = driver.run_gfx900_reference(refresh=args.refresh, limit=args.limit,
                                         ref_shapes=ref_shapes, resume=args.resume,
                                         release_held=args.release_under_specified)
+    print(f"gfx900 reference run: {result}")
     return 0 if result.get("status") in ("completed", "noop") else 1
 
 
@@ -225,10 +234,12 @@ def _stage_benchmark(driver, args) -> int | None:
     matched = _match_targets(driver, args)
 
     if args.dry_run:
+        print(f"Matched {len(matched)} targets in manifest:")
         for _t in matched:
-            pass
+            print(f"  - {_t.get('phase_id')}: {_t.get('label')} (shapes: {_t.get('shapes')})")
         return 0
 
+    print(f"Executing {len(matched)} matched targets across Stage 3 benchmark...")
     results = []
     executed_count = 0
     for target in matched:
@@ -239,6 +250,7 @@ def _stage_benchmark(driver, args) -> int | None:
         if res.get("status") not in ("interrupted", "skipped_by_user"):
             executed_count += 1
         if driver._finish_after_iteration:
+            print("End-after-iteration requested, halting target execution")
             break
 
     final_status = "interrupted" if driver._stop_requested else "completed"
@@ -246,6 +258,7 @@ def _stage_benchmark(driver, args) -> int | None:
     if driver._finish_after_iteration:
         run_meta["end_after_iteration"] = True
     driver.registry.update_run_status(driver.run_dir.name, final_status, run_meta)
+    print(f"Completed {executed_count} targets (run status: {final_status})")
 
     driver.generate_acceptance_report()
     return 0
@@ -257,6 +270,7 @@ def _stage_native(driver, args) -> int | None:
                             opt_in_identical_skip=not args.force,
                             release_held=args.release_under_specified,
                             skip_reference=True)
+    print(f"Native-only auto loop complete: {result}")
     return 0 if result.get("converged") else 1
 
 
@@ -291,6 +305,7 @@ def _stage_auto(driver, args) -> int | None:
                             mutation_budget=plan.mutations,
                             opt_in_identical_skip=not args.force,
                             release_held=args.release_under_specified)
+    print(f"7-Stage Auto loop complete: {result}")
     return 0 if result.get("converged") else 1
 
 
