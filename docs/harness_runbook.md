@@ -80,7 +80,7 @@ because `StaggerUStride` defaults to 256, and becomes legal the moment
 `StaggerUStride=0` is drawn too. A genuinely dead value is one whose reason is a
 structural class rule ("illegal on gfx90c", "no MatrixInstruction"). The reason
 text names the culprit, so read it rather than the count. Use this after editing
-`db_knobs.py`; `python3 check_candidates.py` on the real deck — which sees every
+`db_knobs.py`; `python3 oto.py check candidates` on the real deck — which sees every
 knob at once — stays the authority.
 
 **3. `flood` — know what the run is actually measuring.** The per-cell distinct
@@ -201,7 +201,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    band is 5%, documented separately). Never re-propose SS 96x96x8/6x6/VW2 or
    HH GlobalSplitU=2 (hard walls, §8).
 4. **Preflight + consolidate gates** re-run the parity check automatically:
-   `port_tensile.py --preflight` and `consolidate.py all --commit` refuse a
+   `oto doctor` and `oto consolidate --commit` refuse a
    deck that breaks the grid.
 
 ### 5. Ask Tensile, not the model (the legality oracle)
@@ -256,7 +256,7 @@ traps (a legal configuration whose measured neighbours are all faster) sit
 Authoritative green-lighted next step (user runs in a TTY): wire the seed
 overlay (`python3 -m oto.harness.generate_candidates`; the overlay is
 gitignored, so this is required), run the CPU-only preflight, then
-`python3 port_tensile.py --auto --budget 10 --yes`. The deck rationale and its
+`python3 oto.py tune --budget 10 --yes`. The deck rationale and its
 four-outcome reading are in `potential_configs.md` §R40. After the run, rebuild
 the matrix (`step 1`) and re-check parity (`step 3`).
 
