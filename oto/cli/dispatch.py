@@ -5,6 +5,12 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+
+try:
+    from tqdm import tqdm as _tqdm
+    _HAS_TQDM = True
+except ImportError:
+    _HAS_TQDM = False
 from typing import Any
 
 from oto._version import __version__
@@ -231,6 +237,12 @@ def _run_tune(args: Any) -> int:
     if args.live == "off":
         argv += ["--live", "off"]
     argv += ["--auto"]
+    if _HAS_TQDM and not getattr(args, "quiet", False):
+        with _tqdm(desc="tune", unit="phase", leave=True) as bar:
+            bar.update(0)
+            result = _with_argv(argv, cli_main)
+            bar.update(1)
+            return result
     return _with_argv(argv, cli_main)
 
 
