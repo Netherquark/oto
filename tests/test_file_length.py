@@ -32,7 +32,6 @@ OFFENDERS = {
     "tests/test_synthesis_phase4.py",    # 780 lines
     "tests/test_occupancy_gate.py",      # 779 lines
     "tests/test_run_status.py",          # 620 lines
-    "oto/metrics/run_status.py",         # 608 lines
 }
 
 
