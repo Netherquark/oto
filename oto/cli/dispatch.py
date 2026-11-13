@@ -33,6 +33,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _add_core_subcommands(sub: Any) -> None:
+    p = sub.add_parser("run", help="Run specific pipeline stages")
+    add_global_flags(p)
+    p.add_argument("--stage", nargs="+", default=[], help="Stage(s) to run (1-7 or names)")
+    p.add_argument("--targets", nargs="+", help="Target IDs or labels")
+    p.add_argument("--family", nargs="+", help="Filter by family")
+    p.add_argument("--pattern", nargs="+", help="Filter by contraction pattern")
+    p.add_argument("--shape", nargs="+", help="Filter by problem shape")
+    p.add_argument("--force", action="store_true", help="Force execution")
+    p.set_defaults(func=_run_run)
+
     p = sub.add_parser("tune", help="Run the convergence loop",
                        epilog="Examples:\n  oto tune --dry-run              # preview without executing\n  oto tune --budget 10 --yes      # accept default plan, no prompts\n  oto tune --resume               # continue from latest run\n  oto tune --include-illegal     # re-measure illegal reference cells")
     add_global_flags(p)
@@ -64,30 +74,6 @@ def _add_core_subcommands(sub: Any) -> None:
     add_global_flags(p)
     p.add_argument("--run", help="run_id to report on (default: newest)")
     p.set_defaults(func=_run_report)
-
-    p = sub.add_parser("consolidate", help="Deck consolidation")
-    add_global_flags(p)
-    p.set_defaults(func=_run_consolidate)
-
-    p = sub.add_parser("stats", help="Cross-run best config per cell")
-    add_global_flags(p)
-    p.add_argument("--family", help="Filter by family")
-    p.set_defaults(func=_run_stats)
-
-    p = sub.add_parser("chart", help="Generate comparison figures")
-    add_global_flags(p)
-    p.set_defaults(func=_run_chart)
-
-    p = sub.add_parser("version", help="Print version")
-    p.set_defaults(func=_run_version)
-
-    p = sub.add_parser("help", help="Show help for a topic")
-    p.add_argument("topic", nargs="?", help="Command or topic name")
-    p.set_defaults(func=_run_help)
-
-    p = sub.add_parser("completion", help="Generate shell completions")
-    p.add_argument("shell", choices=["bash", "zsh"], help="Shell type")
-    p.set_defaults(func=_run_completion)
 
 
 def _add_bench_subcommands(sub: Any) -> None:
@@ -159,7 +145,29 @@ def _add_agent_subcommands(sub: Any) -> None:
 
 
 def _add_utility_subcommands(sub: Any) -> None:
-    pass
+    p = sub.add_parser("consolidate", help="Deck consolidation")
+    add_global_flags(p)
+    p.set_defaults(func=_run_consolidate)
+
+    p = sub.add_parser("stats", help="Cross-run best config per cell")
+    add_global_flags(p)
+    p.add_argument("--family", help="Filter by family")
+    p.set_defaults(func=_run_stats)
+
+    p = sub.add_parser("chart", help="Generate comparison figures")
+    add_global_flags(p)
+    p.set_defaults(func=_run_chart)
+
+    p = sub.add_parser("version", help="Print version")
+    p.set_defaults(func=_run_version)
+
+    p = sub.add_parser("help", help="Show help for a topic")
+    p.add_argument("topic", nargs="?", help="Command or topic name")
+    p.set_defaults(func=_run_help)
+
+    p = sub.add_parser("completion", help="Generate shell completions")
+    p.add_argument("shell", choices=["bash", "zsh"], help="Shell type")
+    p.set_defaults(func=_run_completion)
 
 
 
@@ -182,6 +190,26 @@ def _resolve_base(args: Any) -> Path:
 
 
 # --- adapter functions (each ~5 lines, calls existing main) ---
+
+def _run_run(args: Any) -> int:
+    from oto.runners.cli import main as cli_main
+    argv = ["--base-dir", str(_resolve_base(args))]
+    if args.stage:
+        argv += ["--stage", *args.stage]
+    if args.targets:
+        argv += ["--targets", *args.targets]
+    if args.family:
+        argv += ["--family", *args.family]
+    if args.pattern:
+        argv += ["--pattern", *args.pattern]
+    if args.shape:
+        argv += ["--shape", *args.shape]
+    if args.dry_run:
+        argv += ["--dry-run"]
+    if args.force:
+        argv += ["--force"]
+    return _with_argv(argv, cli_main)
+
 
 def _run_tune(args: Any) -> int:
     from oto.runners.cli import main as cli_main
@@ -397,6 +425,7 @@ def _run_help(args: Any) -> int:
         print("oto — Tensile tuning for unsupported AMD GPUs")
         print()
         print("Commands:")
+        print("  run       Run specific pipeline stages")
         print("  tune      Run the convergence loop")
         print("  bench     Benchmark phases")
         print("  status    Run status, ETA, and live panel")
