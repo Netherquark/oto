@@ -133,7 +133,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.set_defaults(commit=False)
-    ap.add_argument("--base-dir", type=Path, default=BASE)
+    ap.add_argument("--base-dir", "--base", type=Path, default=BASE)
     sub = ap.add_subparsers(dest="cmd")
     m = sub.add_parser("mine", help="read-only: best existing phase per cell")
     m.add_argument("--json", type=Path)

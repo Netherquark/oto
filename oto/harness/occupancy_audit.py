@@ -46,19 +46,17 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir
 
 LDS_PER_CU_KB = _peaks.LDS_PER_CU_KB
 MAX_WAVES_PER_CU = _peaks.MAX_WAVES_PER_CU
 NUM_CUS = _peaks.NUM_CUS
-from oto.runners.paths import results_rel
 from oto.tensile.gates.vgpr_model import (
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,
     VGPR_PER_CU,
 )
-
-KERNEL_DB = results_rel("analysis", "kernel_db.json")
 
 LDS_PER_CU = LDS_PER_CU_KB * 1024          # 64 KiB
 FAMILY_CHAR = {                            # typecode -> dtype character
@@ -170,9 +168,13 @@ def main() -> int:
                     help="LDS double-buffer factor (1 = single-buffer probe)")
     ap.add_argument("--at-most", type=int, default=None,
                     help="only print cells with resident wg/CU <= N")
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
+                    help="repo root (default: this module's parent package root)")
     args = ap.parse_args()
 
-    with open(KERNEL_DB) as f:
+    base = args.base_dir or Path(__file__).resolve().parents[2]
+    db_path = results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
+    with open(db_path) as f:
         db = json.load(f)
     if args.side == "floor":
         rows, _chosen = _floor_rows(db)

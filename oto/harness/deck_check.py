@@ -192,7 +192,7 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", default=None, help="repo root")
+    ap.add_argument("--base-dir", "--base", default=None, help="repo root")
     ap.add_argument("--overlay", default=str(OVERLAY), help="the launch set")
     ap.add_argument("--family", action="append", help="limit to a family")
     ap.add_argument("--limit", type=int, default=None, help="stop after N rows")

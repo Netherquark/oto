@@ -194,7 +194,7 @@ def _fmt(x):
 def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", type=Path, default=BASE)
+    ap.add_argument("--base-dir", "--base", type=Path, default=BASE)
     ap.add_argument("--family", help="filter tables to one family label (e.g. ZZ)")
     ap.add_argument("--json", type=Path, help="also write machine-readable output here")
     return ap

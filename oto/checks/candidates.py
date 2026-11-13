@@ -173,7 +173,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--deck", type=Path, default=BASE / "phases.yaml")
-    ap.add_argument("--base-dir", type=Path, default=BASE)
+    ap.add_argument("--base-dir", "--base", type=Path, default=BASE)
     ap.add_argument("--family", help="only check this family label")
     ap.add_argument("--floor", action="store_true",
                     help="sweep the shipped gfx900 floor deck (gfx900_shipped_manifest.json "

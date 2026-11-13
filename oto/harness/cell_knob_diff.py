@@ -122,7 +122,7 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[s
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--db", type=Path, default=None,
                     help="kernel_db.json path (default: <base-dir>/<codename>_results/analysis/kernel_db.json)")

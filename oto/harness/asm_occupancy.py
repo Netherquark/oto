@@ -344,7 +344,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         description="Measured occupancy of Tensile's emitted kernels, joined "
                     "to their GFLOP/s. CPU only, reads nothing outside "
                     "<codename>_runs.")
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--runs", default=None,
                     help="runs directory (default: <base-dir>/<codename>_runs)")

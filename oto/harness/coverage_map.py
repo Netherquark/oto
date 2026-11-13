@@ -295,7 +295,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--cell", help="one cell, 'FAMILY:side' (e.g. SS:256)")
     ap.add_argument("--top", type=int, default=8,
                     help="how many unexplored geometries to list per cell")
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--db", type=Path, default=None,
                     help="kernel_db.json path (default: <base-dir>/<codename>_results/analysis/kernel_db.json)")

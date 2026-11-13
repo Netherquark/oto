@@ -301,7 +301,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", type=Path, default=BASE,
+    ap.add_argument("--base-dir", "--base", type=Path, default=BASE,
                     help="project base dir (default: repo root)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

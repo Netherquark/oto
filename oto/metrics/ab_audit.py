@@ -412,7 +412,7 @@ def print_report(result: dict[str, Any]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", type=Path, default=BASE)
+    ap.add_argument("--base-dir", "--base", type=Path, default=BASE)
     ap.add_argument("--json", type=Path, help="also write machine-readable output here")
     ap.add_argument("--arm-classes", action="store_true",
                     help="print the reproducible band per invocation form only")

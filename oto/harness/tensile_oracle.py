@@ -266,7 +266,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--phase-id", default=None,
                     help="probe a deck row by phase_id instead of describing one")
     ap.add_argument("--json", type=Path, help="write the verdict here")
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override (driver/tensile paths resolve from here)")
     args = ap.parse_args(argv)
 

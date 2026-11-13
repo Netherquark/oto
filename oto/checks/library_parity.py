@@ -70,7 +70,7 @@ def _fmt_cells(cells) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", type=Path, default=DEFAULT_BASE)
+    ap.add_argument("--base-dir", "--base", type=Path, default=DEFAULT_BASE)
     ap.add_argument("--phases", type=Path, default=None,
                     help="explicit phase file; implies no overlays are merged")
     ap.add_argument("--overlay", type=Path, nargs="*", default=None,

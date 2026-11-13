@@ -19,7 +19,7 @@ from oto.runners.paths import results_dir as _results_dir
 def main() -> None:
     """Print sample record keys and every record whose label smells of drift."""
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--base-dir", type=Path, default=Path("."),
+    ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")
     args = ap.parse_args()
     conn = sqlite3.connect(_results_dir(args.base_dir, _peaks.CODENAME) / "registry.db")

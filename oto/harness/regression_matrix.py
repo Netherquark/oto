@@ -43,8 +43,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import oto.device.peaks as _peaks
 from oto import yamlio
-from oto.runners.paths import results_rel
+from oto.runners.paths import results_dir
 
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
@@ -289,12 +290,13 @@ def _table(r: dict[str, Any]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", default=None, help="repo root")
-    ap.add_argument("--db", default=results_rel("analysis", "kernel_db.json"),
-                    help="kernel_db cache path")
+    ap.add_argument("--base-dir", "--base", default=None, help="repo root")
+    ap.add_argument("--db", default=None,
+                    help="kernel_db cache path (default: "
+                         "<base-dir>/<codename>_results/analysis/kernel_db.json)")
     ap.add_argument("--rebuild", action="store_true",
                     help="rebuild kernel_db from runs first")
-    ap.add_argument("--json", default=results_rel("analysis", "regression_matrix.json"),
+    ap.add_argument("--json", default=None,
                     help="write matrix here")
     ap.add_argument("--no-json", action="store_true", help="print table only")
     ap.add_argument("--any-protocol", action="store_true",
@@ -303,11 +305,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
-    result = build_matrix(args.db, base, rebuild=args.rebuild,
+    res_dir = results_dir(base, _peaks.CODENAME)
+    db_path = args.db or res_dir / "analysis" / "kernel_db.json"
+    json_path = (Path(args.json) if args.json
+                 else res_dir / "analysis" / "regression_matrix.json")
+    result = build_matrix(db_path, base, rebuild=args.rebuild,
                           any_protocol=args.any_protocol)
     print(_table(result))
     if not args.no_json:
-        out = Path(args.json)
+        out = json_path
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1, default=str))
         print(f"\nwrote -> {out}")

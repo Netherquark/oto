@@ -28,7 +28,7 @@ def _add_scope_flags(parser: argparse.ArgumentParser) -> None:
     required, never inferred.
     """
     parser.add_argument(
-        "--base-dir",
+        "--base-dir", "--base",
         type=Path,
         default=Path.cwd(),
         help="Base directory for the project (default: cwd)"

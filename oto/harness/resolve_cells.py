@@ -511,7 +511,7 @@ def _tsv(cells: list[dict[str, Any]]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", default=None, help="repo root")
+    ap.add_argument("--base-dir", "--base", default=None, help="repo root")
     ap.add_argument("--acceptance", default=None,
                     help="acceptance_report.json path (default: <base>/<codename>_results/…)")
     ap.add_argument("--registry", default=None,

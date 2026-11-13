@@ -394,7 +394,7 @@ def _payload(args: argparse.Namespace, rows: Sequence[dict[str, Any]],
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override (default: this file's parent of package)")
     ap.add_argument("--db", default=None,
                     help="kernel_db.json to read")

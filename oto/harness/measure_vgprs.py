@@ -80,7 +80,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", help="only this run dir name")
     ap.add_argument("--json", type=Path)
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--runs", type=Path, default=None,
                     help="runs directory (default: <base-dir>/<codename>_runs)")

@@ -443,7 +443,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--family", action="append", help="limit to a family")
     ap.add_argument("--cell", action="append",
                     help="one cell, 'FAMILY:side' (repeatable)")
-    ap.add_argument("--base-dir", type=Path, default=None,
+    ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override (default: this file's parent of package)")
     ap.add_argument("--out", default=None,
                     help="where the figures go (default: <base-dir>/<codename>_results/analysis/coverage)")

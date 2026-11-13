@@ -456,7 +456,7 @@ DEFAULT_CACHE = results_rel("analysis", "kernel_db.json")
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base-dir", default=None,
+    ap.add_argument("--base-dir", "--base", default=None,
                     help="repo root (default: this repo)")
     ap.add_argument("--json", default=DEFAULT_CACHE,
                     help=f"cache path (default: {DEFAULT_CACHE})")
