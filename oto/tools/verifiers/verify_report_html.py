@@ -16,7 +16,7 @@ from __future__ import annotations
 #: The last commit before the package split. Every check in this directory
 #: compares against it, so "no behaviour change" is measured against one
 #: fixed point rather than against whatever HEAD happens to be.
-REFACTOR_BASE = "2824c2f"
+REFACTOR_BASE = "6264196"
 
 import importlib
 import json

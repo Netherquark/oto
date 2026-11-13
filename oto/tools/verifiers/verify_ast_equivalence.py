@@ -2,7 +2,7 @@
 """Symbol-level equivalence: every public symbol of every pre-split module.
 
 Owns: the symbol-level AST corpus + comparison against REFACTOR_BASE
-(2824c2f) -- the MOVES/DECOMPOSED/PROMOTED tables, the MISSING report and
+(6264196) -- the MOVES/DECOMPOSED/PROMOTED tables, the MISSING report and
 the per-entry verdict.
 Does NOT own: method-vs-mixin checks (verify_method_equivalence), the HTML
 report (verify_report_html), config-writer equivalence
@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 #: The last commit before the package split. Every check compares against it, so
 #: "no behaviour change" is measured against one fixed point.
-REFACTOR_BASE = "2824c2f"
+REFACTOR_BASE = "6264196"
 
 # HEAD module -> new package module(s) that own it.
 MOVES = [

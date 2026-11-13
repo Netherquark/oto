@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 #: The last commit before the package split; every check compares against it.
-REFACTOR_BASE = "2824c2f"
+REFACTOR_BASE = "6264196"
 
 SRC = subprocess.run(["git", "show", f"{REFACTOR_BASE}:port_tensile.py"], cwd=ROOT,
                      capture_output=True, text=True, check=True).stdout

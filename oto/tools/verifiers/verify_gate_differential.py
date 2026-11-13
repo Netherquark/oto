@@ -1,7 +1,7 @@
 #: The last commit before the package split. Every check in this directory
 #: compares against it, so "no behaviour change" is measured against one
 #: fixed point rather than against whatever HEAD happens to be.
-REFACTOR_BASE = "2824c2f"
+REFACTOR_BASE = "6264196"
 
 #!/usr/bin/env python3
 """Differential check: every scheduler.py symbol must behave identically
