@@ -205,14 +205,14 @@ Shorter flag names on the new surface: `--include-illegal`, `--include-underspec
 
 ## 7. Open questions (decisions required before Phase 1)
 
-1. Command name: `oto` alone (repo-root script) OK?
+1. Command name: `oto` alone (repo-root script) OK? yes
 2. How long must legacy shims persist (one release vs indefinite)? — **N/A:
-   no legacy shims, clean break.**
-3. Name for the new diagnostics command (`oto doctor`)?
+   no legacy shims, clean break.** no shims
+3. Name for the new diagnostics command (`oto doctor`)? yes doctor
 4. GPU-flag naming: `--include-illegal` on the new surface (no aliasing older
-   `--release-*` spellings)?
+   `--release-*` spellings)? yes include illegal no need to alias older
 5. May Phase 1 begin after review, or a narrower first slice (Phase 1 +
-   `oto status` only)?
+   `oto status` only)? full plan approved all phases but ensure you carry it out very carefully so theres no regressions
 
 Nothing is started. Answer the five questions and I'll execute; meanwhile the
 plan's component test list is already designed so every phase ends with the

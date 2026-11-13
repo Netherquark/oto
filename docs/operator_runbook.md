@@ -12,6 +12,28 @@ facts and **without** running the GPU in a display session. It is not a
 recipe for the full convergence campaign (that is `implementation_plan.md`'s
 job on the reference target), and it never overrides `claude.md`.
 
+## 0.1 Hard rule — Class B agents are READ-ONLY on the oto codebase
+
+A Class B agent **must not modify any file under `oto/`, `tests/`, or the root
+shims**. Its only writes are:
+
+- `profiles/<codename>.json` (via the starter pair)
+- `docs/<codename>_starter.md` / `docs/<codename>_starter.json`
+- generated device docs (`<codename>_theoretical_limits.md`, `<codename>_tuning_context.md`,
+  `<codename>_harness_study.md`, `<codename>_potential_configs.md`)
+- run artifacts under `<codename>_results/` and `<codename>_runs/`
+
+If a Class B agent encounters a bug in oto itself, it must **stop and report**
+the bug to the user — it must never patch oto code. The Class A entry point is
+`claude.md`; a Class B agent that finds itself wanting to edit oto code has
+picked the wrong class and must switch to Class A (with the user's explicit
+permission).
+
+Enforced by: `oto/docs_index.py` (`AGENT_CLASSES["B"]["never_needs"]` includes
+all `oto/**/*.py` paths; `oto/agents/meta.py` runs only CPU-only harness tools
+that write to the run directory, never to `oto/`).
+
+
 ## 0. Hard preconditions — stop at the first failure
 
 1. **You have a target codename** (e.g. from `rocminfo`), not a vendor string.
