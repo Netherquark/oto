@@ -1,5 +1,10 @@
+rich>=13.0
+rich-argparse>=1.5
+tqdm>=4.66
 python-dotenv>=1.0
 PyYAML
+numpy>=1.26
+matplotlib>=3.8
 # dev/test
 pytest>=8.0
 pytest-xdist>=3.0

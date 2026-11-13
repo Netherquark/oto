@@ -32,6 +32,8 @@ Checks:
 
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import subprocess
 import sys
@@ -61,26 +63,39 @@ CHECKS = [
 ENV = dict(os.environ)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--json", action="store_true", help="machine-readable output")
+    args = ap.parse_args(argv)
     if not ENV.get("TENSILE_ROOT") and not (ROOT / ".env").is_file():
         print("NOTE: TENSILE_ROOT is unset and there is no repo-root .env -- "
               "checks that read Tensile's dtype table will not have a checkout "
               "to read. Export it to exercise them fully.")
 
     failures = []
+    results = []
     for label, script in CHECKS:
-        print(f"\n=== {label} ({script})")
         proc = subprocess.run([sys.executable, str(HERE / script)],
                               cwd=ROOT, env=ENV,
                               capture_output=True, text=True)
         tail = "\n".join(proc.stdout.strip().splitlines()[-6:])
-        print(tail or "(no output)")
+        if not args.json:
+            print(tail or "(no output)")
+        ok = proc.returncode == 0
+        if args.json:
+            results.append({"check": label, "script": script, "ok": ok})
         if proc.returncode != 0:
-            print(f"--- FAILED ({proc.returncode})")
-            print("\n".join(proc.stderr.strip().splitlines()[-15:]))
+            if not args.json:
+                print(f"--- FAILED ({proc.returncode})")
+                print("\n".join(proc.stderr.strip().splitlines()[-15:]))
             failures.append(label)
-        else:
+        elif not args.json:
             print("--- OK")
+
+    if args.json:
+        print(json.dumps({"ok": not failures, "failed": failures,
+                         "checks": results}, indent=2))
+        return 1 if failures else 0
 
     print("\n================ SUMMARY ================")
     for _label, _ in CHECKS:

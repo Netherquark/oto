@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The argparse stage dispatch: the ``port_tensile.py`` command line.
+"""The argparse stage dispatch: the ``python3 -m oto`` command line.
 
 Owns: ``main`` -- every ``--flag`` the driver accepts and the stage that each one
 selects. Each stage is a named function here so the CLI is a routing table, not a
@@ -13,6 +13,7 @@ Public API: main.
 from __future__ import annotations
 
 import argparse
+import os
 import statistics
 import sys
 from typing import Any
@@ -81,6 +82,11 @@ def _stage_best_library(driver, args, stage) -> int | None:
             and "best-library" not in stage and "best_library" not in stage):
         return None
     dest = args.best_library or None
+    if args.dry_run:
+        print(f"dry run: would carve best-effort library to "
+              f"{dest or '<default best_effort_library>'} "
+              f"(protocol basis {args.protocol_basis})")
+        return 0
     # Default to the across-all-runs view ("any") unless the caller explicitly
     # chose a protocol basis on the command line.
     if "--protocol-basis" in sys.argv or "--protocol_basis" in sys.argv:
@@ -97,6 +103,9 @@ def _stage_generate_device_docs(driver, args, stage) -> int | None:
             and "generate_device_docs" not in stage):
         return None
     starter = args.generate_device_docs or None
+    if args.dry_run:
+        print(f"dry run: would generate device docs from {starter or '<default starter>'}")
+        return 0
     result = driver.generate_device_docs(starter)
     print(f"Device docs result: {result}")
     return 0 if result.get("status") != "failed" else 1
@@ -107,6 +116,9 @@ def _stage_synthesis(driver, args, stage) -> int | None:
     if not (args.synthesize or "6" in stage or "synthesis" in stage
             or "build" in stage):
         return None
+    if args.dry_run:
+        print("dry run: would synthesize and build the native library")
+        return 0
     result = driver.synthesize_library()
     print(f"Stage 6 Synthesis complete: {result}")
     return 0 if result.get("status") != "failed" else 1
@@ -136,6 +148,9 @@ def _stage_retirement(driver, args, stage) -> int | None:
     """Stage 4: retirement sweep for stable cells (registry-only)."""
     if not ("4" in stage or "retirement" in stage):
         return None
+    if args.dry_run:
+        print("dry run: would retire stable cells (registry unchanged)")
+        return 0
     driver._retire_stable_candidates()
     return 0
 
@@ -266,47 +281,100 @@ def _stage_benchmark(driver, args) -> int | None:
 
 def _stage_native(driver, args) -> int | None:
     """The native-only auto loop (no reference floor)."""
-    result = driver.run_auto(args.budget, args.mutation_budget,
-                            opt_in_identical_skip=not args.force,
-                            release_held=args.release_under_specified,
-                            skip_reference=True)
+    bar = _make_progress(args.budget or 0)
+    try:
+        result = driver.run_auto(args.budget, args.mutation_budget,
+                                opt_in_identical_skip=not args.force,
+                                release_held=args.release_under_specified,
+                                release_drop=args.release_unreproducible,
+                                skip_reference=True,
+                                dry_run=args.dry_run,
+                                progress=_tick(bar))
+    finally:
+        _close_progress(bar)
     print(f"Native-only auto loop complete: {result}")
-    return 0 if result.get("converged") else 1
+    return 0 if result.get("converged") or result.get("dry_run") else 1
+
+
+def _make_progress(total: int):
+    """tqdm on stderr; one bar for the iteration count, no in-house ANSI."""
+    try:
+        from tqdm import tqdm
+    except ImportError:  # pragma: no cover - requirements pin tqdm
+        return None
+    return tqdm(total=total, desc="oto tune", unit="iter", file=sys.stderr,
+                disable=bool(os.environ.get("OTO_QUIET")), leave=True)
+
+
+def _tick(bar):
+    if bar is None:
+        return None
+
+    def update(done: int, _total: int) -> None:
+        bar.n = done
+        bar.refresh()
+    return update
+
+
+def _close_progress(bar) -> None:
+    if bar is not None:
+        bar.close()
 
 
 def _stage_auto(driver, args) -> int | None:
-    """The --auto loop, after asking the user the four questions.
+    """The --auto loop, after asking the user the five questions.
 
-    Why the plan owns the decisions: the four answers (re-measure illegal?
-    re-measure under-specified? iterations? mutations?) are the user's, not a
-    default's. CLI flags take precedence only over the *numeric* half; the plan
-    owns the release decisions, and the --release-* flags are a one-directional
-    non-interactive spelling of questions 2 and 3 -- a flag can say yes, the
-    prompt (or its absence) decides otherwise.
+    Why the plan owns the decisions: the five answers (re-measure illegal?
+    re-measure under-specified? re-attempt unreproducible? iterations?
+    mutations?) are the user's, not a default's. CLI flags take precedence over
+    the numeric half; the --release-* flags are a one-directional non-interactive
+    spelling of questions 1-3 -- a flag can say yes, the prompt (or its absence)
+    decides otherwise.
     """
-    from oto.runners.auto_prompt import ask
+    from oto.runners.auto_prompt import (
+        DEFAULT_ITERATIONS,
+        DEFAULT_MUTATIONS,
+        AutoPlan,
+        ask,
+    )
 
     cli_budget = args.budget
     cli_mut_budget = args.mutation_budget
-
-    plan = ask(base_dir=driver.base_dir, assume_yes=args.yes)
-
-    if cli_budget is not None:
-        plan.iterations = cli_budget
-    if cli_mut_budget is not None:
-        plan.mutations = cli_mut_budget
-
-    if args.release_under_specified:
-        plan.rerun_underspecified = True
-    if getattr(args, "release_unreproducible", False):
-        plan.rerun_unreproducible = True
-    result = driver.run_auto(plan=plan,
-                            budget=plan.iterations,
-                            mutation_budget=plan.mutations,
-                            opt_in_identical_skip=not args.force,
-                            release_held=args.release_under_specified)
+    if args.dry_run:
+        plan = AutoPlan(
+            rerun_illegal=args.release_illegal,
+            rerun_underspecified=args.release_under_specified,
+            rerun_unreproducible=args.release_unreproducible,
+            iterations=cli_budget or DEFAULT_ITERATIONS,
+            mutations=cli_mut_budget or DEFAULT_MUTATIONS,
+            assumed=True,
+        )
+    else:
+        plan = ask(base_dir=driver.base_dir, assume_yes=args.yes)
+        if cli_budget is not None:
+            plan.iterations = cli_budget
+        if cli_mut_budget is not None:
+            plan.mutations = cli_mut_budget
+        if args.release_illegal:
+            plan.rerun_illegal = True
+        if args.release_under_specified:
+            plan.rerun_underspecified = True
+        if args.release_unreproducible:
+            plan.rerun_unreproducible = True
+    bar = _make_progress(plan.iterations)
+    try:
+        result = driver.run_auto(plan=plan,
+                                budget=plan.iterations,
+                                mutation_budget=plan.mutations,
+                                opt_in_identical_skip=not args.force,
+                                release_held=plan.rerun_underspecified,
+                                release_drop=plan.rerun_unreproducible,
+                                dry_run=args.dry_run,
+                                progress=_tick(bar))
+    finally:
+        _close_progress(bar)
     print(f"7-Stage Auto loop complete: {result}")
-    return 0 if result.get("converged") else 1
+    return 0 if result.get("converged") or result.get("dry_run") else 1
 
 
 # ------------------------------------------------------------------- main

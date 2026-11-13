@@ -105,3 +105,4 @@ registry.db
 research_prompt*.txt
 todo.txt
 .env.bak-*
+logs/*.log

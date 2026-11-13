@@ -133,12 +133,19 @@ def _add_reference_flags(parser: argparse.ArgumentParser
 
 
 def _add_release_flags(parser: argparse.ArgumentParser) -> None:
-    """The non-interactive spelling of --auto questions 2 and 3.
+    """The non-interactive spelling of --auto questions 1, 2 and 3.
 
     Why: one-directional. A flag can say yes; the prompt (or its absence)
     decides otherwise. Bundling them would let one flag silently release both
     tiers, which claude.md section 5 forbids.
     """
+    parser.add_argument(
+        "--release-illegal",
+        action="store_true",
+        help="Non-interactive equivalent of answering 'yes' to question 1 "
+             "(re-measure the ILLEGAL reference cells). The --auto prompt asks "
+             "interactively; this flag exists for cron/CI."
+    )
     parser.add_argument(
         "--release-under-specified",
         action="store_true",
@@ -315,7 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
         An ``ArgumentParser`` with every flag the driver accepts.
     """
     parser = argparse.ArgumentParser(
-        description=f"port_tensile.py — oto driver for {_peaks.CODENAME} Tensile port"
+        description=f"oto — Tensile tuning driver for {_peaks.CODENAME}"
     )
     _add_scope_flags(parser)
     _add_auto_flags(parser)

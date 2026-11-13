@@ -297,6 +297,10 @@ def _load(path: str) -> dict[str, Any]:
     return json.loads(Path(path).read_text())
 
 
+def add_json(sub: Any) -> None:
+    sub.add_argument("--json", action="store_true", help="machine-readable output")
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
@@ -307,13 +311,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("snapshot", help="record corpus state (dirs + registry rows)")
     s.add_argument("--out", help="write JSON here instead of stdout")
+    add_json(s)
 
     d = sub.add_parser("diff", help="compare two snapshots; non-zero if data was lost")
     d.add_argument("before")
     d.add_argument("after")
+    add_json(d)
 
     t = sub.add_parser("telemetry", help="per-phase telemetry funnel for one run")
     t.add_argument("run_id")
+    add_json(t)
 
     c = sub.add_parser("cheapest", help="cheapest legal phases, for a cheap smoke run")
     c.add_argument("--family", help="dtype char filter, e.g. ZZ")
@@ -325,6 +332,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 def _cmd_snapshot(args, base: Path) -> int:
     snap = snapshot(base)
     text = json.dumps(snap, indent=2, sort_keys=True)
+    if args.json:
+        print(text)
+        if args.out:
+            Path(args.out).write_text(text + "\n")
+        return 0
     if args.out:
         Path(args.out).write_text(text + "\n")
         print(f"wrote {args.out}: {len(snap['dirs'])} run dirs, "
@@ -336,6 +348,9 @@ def _cmd_snapshot(args, base: Path) -> int:
 
 def _cmd_diff(args) -> int:
     res = diff_snapshots(_load(args.before), _load(args.after))
+    if args.json:
+        print(json.dumps(res, indent=2))
+        return 0
     print(f"added:   {res['added'] or 'none'}")
     print(f"removed: {res['removed'] or 'none'}")
     print(f"modified in place: {[r['run_id'] for r in res['modified']] or 'none'}")
@@ -353,6 +368,9 @@ def _cmd_diff(args) -> int:
 
 def _cmd_telemetry(args, base: Path) -> int:
     res = telemetry(args.run_id, base)
+    if args.json:
+        print(json.dumps(res, indent=2, default=str))
+        return 1 if "error" in res else 0
     if "error" in res:
         print(res["error"])
         return 1
@@ -385,7 +403,7 @@ def _cmd_cheapest(args, base: Path) -> int:
             print(f"  {r['volume']:>14.0f} {r['dtype']:<6} {r['problem_type']:<14} "
                   f"{r['vector_width']!s:<3} {len(r['shapes']):<7} {r['phase_id']}")
         print("\ndrive one with:")
-        print(f"  python3 port_tensile.py --dry-run --native "
+        print(f"  python3 -m oto bench --dry-run --native "
               f"--targets {rows[0]['phase_id']}" if rows else "  (none)")
     return 0
 

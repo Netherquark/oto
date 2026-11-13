@@ -30,7 +30,14 @@ def test_help():
 def test_bare_invocation():
     r = _run()
     assert r.returncode == 0
-    assert "Quick start" in r.stdout
+    assert "Start here" in r.stdout
+
+
+def test_bare_invocation_lists_quick_start():
+    r = _run()
+    assert r.returncode == 0
+    assert "oto doctor" in r.stdout
+    assert "oto tune --dry-run" in r.stdout
 
 
 def test_doctor():
@@ -57,7 +64,8 @@ def test_verify_all_runs():
 def test_help_subcommand():
     r = _run("help")
     assert r.returncode == 0
-    assert "Commands:" in r.stdout
+    assert "Available commands" in r.stdout
+    assert "tune" in r.stdout
 
 
 def test_unknown_command():

@@ -1,0 +1,9 @@
+#!/bin/sh
+# oto — repo-local entry point for the oto CLI.
+#
+# The Python package is `oto/`, so a repo-root file named `oto` cannot exist
+# (a file and a directory cannot share a name). `bin/` is the shell-level
+# namespace: put it on PATH, or run `./bin/oto` from the repository root.
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m oto "$@"

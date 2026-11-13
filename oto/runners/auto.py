@@ -28,6 +28,8 @@ class AutoMixin:
         release_drop: bool = False,
         skip_reference: bool = False,
         plan: AutoPlan | None = None,
+        dry_run: bool = False,
+        progress: Any = None,
     ) -> dict[str, Any]:
         """
         Run auto-convergence loop: preflight, A/B baseline, manifest phases, harvest/mutate loop.
@@ -41,6 +43,10 @@ class AutoMixin:
         print(f"Starting auto-convergence loop (budget={budget}, "
               f"mutation_budget={mutation_budget})")
         print(f"Plan: {plan.summary()}")
+        if dry_run:
+            self._print_dry_run(plan, budget, mutation_budget, skip_reference)
+            return {"converged": False, "reason": "dry run", "iterations": 0,
+                    "dry_run": True, "plan": plan.summary()}
 
         if not self._run_preflight_check():
             return {"converged": False, "reason": "Preflight aborted", "iterations": 0}
@@ -49,6 +55,8 @@ class AutoMixin:
 
         iteration = 0
         while iteration < budget and not self._stop_requested and not self._finish_after_iteration:
+            if progress is not None:
+                progress(iteration, budget)
             print(f"\n=== Iteration {iteration + 1}/{budget} ===")
             iteration_result = self._run_auto_iteration(iteration, budget, opt_in_identical_skip, mutation_budget)
             if iteration_result.get("should_break"):
@@ -57,12 +65,33 @@ class AutoMixin:
                 return iteration_result["return"]
             iteration += 1
 
+        if progress is not None:
+            progress(iteration, budget)
         self.generate_acceptance_report()
         return {
             "converged": False,
             "reason": "Budget exhausted",
             "iterations": iteration
         }
+
+    def _print_dry_run(self, plan: AutoPlan, budget: int, mutations: int,
+                       skip_reference: bool) -> None:
+        """List what an --auto run would do without touching the GPU."""
+        from oto.runners.auto_prompt import _read_counts
+        counts = _read_counts(self.base_dir)
+        print("Dry run: no preflight, no reference measurement, no benchmarks.")
+        print(f"  reference corpus: {counts.get('total', 0)} cells "
+              f"({counts.get('illegal', 0)} illegal, "
+              f"{counts.get('underspecified', 0)} under-specified, "
+              f"{counts.get('unreproducible', 0)} unreproducible)")
+        print(f"  iterations: {budget}; mutations per candidate: {mutations}")
+        if skip_reference:
+            print("  reference floor: skipped (native-only)")
+        elif plan.reruns_any_reference:
+            print("  reference floor: re-measure the selected tiers first")
+        else:
+            print("  reference floor: recall the existing floor (provisional A/B)")
+        print(f"  plan: {plan.summary()}")
 
     def _resolve_auto_plan(
         self,

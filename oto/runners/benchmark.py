@@ -99,7 +99,8 @@ class BenchmarkMixin:
         phase to discover there are no keys to read.
         """
         try:
-            if not sys.stdin.isatty():
+            import os
+            if os.environ.get("OTO_NO_INPUT") or not sys.stdin.isatty():
                 if block:
                     time.sleep(self._KEY_POLL_S)
                 return ""

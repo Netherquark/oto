@@ -1,266 +1,711 @@
 # oto CLI command reference
 
-Generated command reference for the `oto` dispatcher. Run `oto <cmd> --help`
-for full flag details.
+Generated from `oto help --json` for oto 26.11.0. Do not hand-edit;
+run `oto help --write docs/cli.md` after changing the command tree.
+
+`oto` is the single front door. It is verb-first and noun-scoped: at most
+two levels, stdout carries data, stderr carries narration, and read
+commands have `--json`.
 
 ## Quick start
 
 ```bash
-python3 -m oto doctor          # diagnose environment
-python3 -m oto status          # run status and ETA
-python3 -m oto tune --dry-run  # preview convergence loop
-python3 -m oto tune --budget 10 --yes  # run convergence loop
+oto doctor                     # is this box ready?
+oto status                     # what is the current run doing?
+oto tune --dry-run             # preview the overnight loop
+oto tune --budget 10 --yes     # run it non-interactively
 ```
+
+The repository-local entry point is `bin/oto`; add `bin/` to `PATH` to
+type `oto`. `python3 -m oto` is the same dispatcher.
+
+## Global conventions
+
+- `--base PATH` — project directory (default: current directory).
+- `-q/--quiet` — suppress narration; errors still go to stderr.
+- `-v/--verbose` — show the command line and full tracebacks.
+- `--no-input` — never prompt; take documented defaults or fail.
+- `--no-color` / `NO_COLOR` — disable ANSI colour.
+- `--json` — read commands only: one JSON document on stdout.
+- `-n/--dry-run` — state-changing commands: print the plan, change nothing.
+- Exit codes: `0` ok, `1` failure, `2` usage error, `130` interrupted.
 
 ## Commands
 
-### `oto` (bare)
-Prints orientation screen with quick-start commands.
+### `oto agent`
 
-### `oto tune`
-Run the convergence loop (auto-convergence across all shipped families).
+Operator-agent operations
 
 ```bash
-python3 -m oto tune --dry-run              # preview without executing
-python3 -m oto tune --budget 10 --yes      # accept default plan, no prompts
-python3 -m oto tune --resume               # continue from latest run
-python3 -m oto tune --include-illegal      # re-measure illegal reference cells
-python3 -m oto tune --live off             # quiet transcript
+oto agent generate docs/starter.md
+oto agent index
 ```
 
-Flags: `--budget`, `--mutations`, `--resume`, `--include-illegal`,
-`--include-underspecified`, `--include-unreproducible`, `--yes`, `--live {on,off}`
+#### `oto agent generate`
 
-### `oto run`
-Run specific pipeline stages.
+Generate device docs (agent-1 + agent-2)
 
 ```bash
-python3 -m oto run --stage preflight       # run preflight only
-python3 -m oto run --stage candidate --family SS  # run candidate stage for SS
-python3 -m oto run --dry-run               # list matched targets
+oto agent generate docs/gfx902_starter.md --dry-run
+oto agent generate docs/gfx902_starter.md
 ```
 
-Flags: `--stage`, `--targets`, `--family`, `--pattern`, `--shape`,
-`--dry-run`, `--force`
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `-n`, `--dry-run` — Show what would happen without executing
+
+#### `oto agent index`
+
+Regenerate docs/docs_index.json
+
+```bash
+oto agent index
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+
+### `oto analytics`
+
+Stage 5: analytics summary for a run
+
+```bash
+oto analytics
+oto analytics --stage 5
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--tensile-root` — 
 
 ### `oto bench`
-Benchmark phases.
+
+Benchmark the reference floor, native loop, or a scope
 
 ```bash
-python3 -m oto bench --dry-run             # list matched targets
-python3 -m oto bench --native --limit 5    # native-only smoke test
-python3 -m oto bench --family SS --shape 1024x1024x1024
+oto bench --dry-run                  # list matched manifest targets
+oto bench --native --limit 5         # native-only smoke test
+oto bench --family SS --shape 1024x1024x1024
 ```
 
-Flags: `--native`, `--limit`, `--ref-shapes`, `--resume`, `--refresh`,
-`--targets`, `--family`, `--pattern`, `--shape`, `--dry-run`
+Flags:
 
-### `oto status`
-Run status, ETA, and live panel.
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--native` — Native-only loop (no gfx900 reference floor)
+- `--limit` — Max reference phases (one per family)
+- `--ref-shapes` — Comma-separated cube sides, e.g. 256,512
+- `--resume` — Resume the reference floor
+- `--refresh` — Re-scan the system dat
+- `--targets` — Target IDs or labels
+- `--family` — Family labels (e.g. SS or CC DD)
+- `--pattern` — Contraction patterns
+- `--shape` — Problem shapes
+- `-n`, `--dry-run` — Show what would happen without executing
+- `--force` — Run even when an identical fingerprint already passed
+- `--live` {on,off} (default: `on`) — Live TTY status panel (default: on)
+- `--live-interval` (default: `30.0`) — Seconds between live status repaints (default: 30)
+- `--tensile-root` — Override TENSILE_ROOT for this command
+
+### `oto candidate`
+
+Stage 2: print the candidate plan by family
 
 ```bash
-python3 -m oto status                      # one-shot report
-python3 -m oto status --watch 30           # refresh every 30s
-python3 -m oto status --thermals --json    # machine-readable with thermals
+oto candidate
 ```
 
-Flags: `--watch`, `--thermals`, `--plan`, `--run`, `--json`
+Flags:
 
-### `oto report`
-Regenerate acceptance report.
-
-```bash
-python3 -m oto report                      # latest run
-python3 -m oto report --run <run_id> --json
-```
-
-Flags: `--run`, `--json`
-
-### `oto doctor`
-Diagnose environment (toolchain, GPU, registry).
-
-```bash
-python3 -m oto doctor                      # full diagnostic
-python3 -m oto doctor --json               # machine-readable
-```
-
-### `oto verify all`
-Run all refactor verifiers.
-
-```bash
-python3 -m oto verify all
-```
-
-### `oto verify run`
-Corpus snapshot/diff/telemetry.
-
-```bash
-python3 -m oto verify run snapshot --out before.json
-python3 -m oto verify run diff before.json after.json
-python3 -m oto verify run telemetry run_20261005_170141
-python3 -m oto verify run cheapest --family ZZ
-```
-
-### `oto check candidates`
-Deck linter.
-
-```bash
-python3 -m oto check candidates --quiet
-python3 -m oto check candidates --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
-```
-
-### `oto check db`
-Registry integrity.
-
-```bash
-python3 -m oto check db
-```
-
-### `oto check retirement`
-Retirement assertion.
-
-```bash
-python3 -m oto check retirement
-```
-
-### `oto check library-parity`
-Coverage parity vs shipped gfx900.
-
-```bash
-python3 -m oto check library-parity
-```
-
-### `oto library best-effort`
-Carve best-effort .dat (CPU-only).
-
-```bash
-python3 -m oto library best-effort
-python3 -m oto library best-effort --dest gfx90c_results/best_effort_library --protocol-basis family
-```
-
-Flags: `--dest`, `--protocol-basis {family,any,single,partial}`, `--dry-run`
-
-### `oto check tensile-build`
-CPU-only Tensile build proof.
-
-```bash
-python3 -m oto check tensile-build --jobs 8 --json
-python3 -m oto check tensile-build --family ZZ
-python3 -m oto check tensile-build --compare
-```
-
-Flags: `--family`, `--phase-id`, `--arch`, `--timeout`, `--jobs`, `--compare`, `--keep`, `--json`
-
-### `oto consolidate`
-Deck consolidation.
-
-```bash
-python3 -m oto consolidate
-```
-
-### `oto stats`
-Cross-run best config per cell.
-
-```bash
-python3 -m oto stats
-python3 -m oto stats --family ZZ --json
-```
-
-Flags: `--family`, `--json`
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--tensile-root` — 
 
 ### `oto chart`
-Generate comparison figures.
+
+Generate the native-vs-floor comparison figure
 
 ```bash
-python3 -m oto chart
+oto chart
+oto chart --out gfx90c_vs_spoof.png
 ```
 
-### `oto agent generate`
-Generate device docs (agent-1/agent-2).
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--out` — Output PNG path
+
+### `oto check`
+
+Diagnostic assertions (read-only)
 
 ```bash
-python3 -m oto agent generate docs/<codename>_starter.md
+oto check candidates --quiet
+oto check db --json
 ```
 
-### `oto agent index`
-Regenerate docs index.
+#### `oto check candidates`
+
+Deck linter: four-gate legality
 
 ```bash
-python3 -m oto agent index
+oto check candidates --quiet
+oto check candidates --deck phases.yaml --json
 ```
 
-### `oto version`
-Print version.
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--deck` — Deck or overlay YAML (default: phases.yaml)
+- `--family` — Only this family label
+- `--floor` — Sweep the shipped gfx900 floor manifest
+- `--json` — Emit one JSON document on stdout; silence narration
+
+#### `oto check db`
+
+Registry integrity and label contamination
 
 ```bash
-python3 -m oto version
-python3 -m oto --version
+oto check db
+oto check db --json
 ```
 
-### `oto help`
-Show help for a topic.
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+#### `oto check library-parity`
+
+Coverage parity vs the shipped gfx900 grid
 
 ```bash
-python3 -m oto help
-python3 -m oto help tune
+oto check library-parity --quiet
+oto check library-parity --json
 ```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--phases` — Explicit deck file; implies no overlays
+- `--overlay` — Extra overlay YAML(s)
+- `--run-id` — Fold in this run's overlay
+- `--no-seed` — Skip the seed overlay
+- `--json` — Emit one JSON document on stdout; silence narration
+
+#### `oto check retirement`
+
+Retirement records and per-cell samples
+
+```bash
+oto check retirement
+oto check retirement --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+#### `oto check tensile-build`
+
+CPU-only Tensile build proof
+
+```bash
+oto check tensile-build --family ZZ --jobs 8
+oto check tensile-build --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--family` — Only this FamilyLabel
+- `--phase-id` — Only this phase id
+- `--arch` — Tensile arch (default: profile codename)
+- `--timeout` (default: `600`) — Seconds per phase
+- `--jobs` (default: `1`) — Parallel phases
+- `--compare` — Cross-check oto's occupancy model against Tensile
+- `--keep` — Keep build artifacts here
+- `--json` — Emit one JSON document on stdout; silence narration
 
 ### `oto completion`
-Generate shell completions.
+
+Generate shell completions
 
 ```bash
-python3 -m oto completion bash
-python3 -m oto completion zsh
+oto completion bash
+oto completion zsh > _oto
 ```
 
-To install bash completions:
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+
+### `oto consolidate`
+
+Consolidate the floor into a locked deck
+
 ```bash
-python3 -m oto completion bash >> ~/.bashrc
+oto consolidate --dry-run        # stage only (default)
+oto consolidate --commit         # install after parity passes
 ```
 
-To install zsh completions:
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--commit` — Install the consolidated deck (default: stage only)
+- `--explain-archive` — Explain which runs the archive keeps
+- `-n`, `--dry-run` — Show what would happen without executing
+
+### `oto doctor`
+
+Diagnose the toolchain, GPU, registry, and docs
+
 ```bash
-python3 -m oto completion zsh > ~/.zsh/completions/_oto
+oto doctor                       # human checklist with hints
+oto doctor --json                # machine-readable verdict
 ```
 
-## Global flags
+Flags:
 
-Available on all commands:
-- `--base`, `--base-dir` — base directory (default: cwd)
-- `-q`, `--quiet` — suppress non-essential output
-- `-v`, `--verbose` — verbose stderr output
-- `--no-input` — never prompt
-- `--json` — machine-readable JSON output (read commands only)
-- `--dry-run` — show what would happen without executing (state commands only)
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
 
-## Environment variables
+### `oto help`
 
-- `TENSILE_ROOT` — Tensile source tree root
-- `ROCM_PATH` — ROCm installation path
-- `OTO_API_KEY` — API key for agent research
-- `NO_COLOR` — disable color output
-- `OTO_YES` — accept default plan without prompting (CI)
+Show help for a topic
 
-## Migration from old commands
+```bash
+oto help
+oto help tune
+oto help --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+- `--write` — Regenerate the Markdown command reference
+
+### `oto library`
+
+Tensile library operations
+
+```bash
+oto library best-effort
+oto library best-effort --protocol-basis any
+```
+
+#### `oto library best-effort`
+
+Carve the best-effort .dat (CPU-only)
+
+```bash
+oto library best-effort --dry-run
+oto library best-effort --dest out/ --protocol-basis any
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--dest` — Destination directory
+- `--protocol-basis` {family,any,single,partial} (default: `family`) — Protocol basis for carving
+- `-n`, `--dry-run` — Show what would happen without executing
+
+### `oto preflight`
+
+Stage 1: validate the run environment
+
+```bash
+oto preflight
+oto preflight --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--tensile-root` — 
+- `--json` — Emit one JSON document on stdout; silence narration
+
+### `oto report`
+
+Regenerate the acceptance report
+
+```bash
+oto report                       # newest native run
+oto report --run <id> --json     # machine-readable payload
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--run` — run_id to report on (default: newest)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+### `oto retirement`
+
+Stage 4: retire stable cells (registry-only)
+
+```bash
+oto retirement --dry-run
+oto retirement
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--tensile-root` — 
+- `-n`, `--dry-run` — Show what would happen without executing
+
+### `oto run`
+
+Execute an explicit multi-stage selection
+
+```bash
+oto run --stage preflight candidate   # two stages, one process
+oto run --stage benchmark --family SS --dry-run
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--stage` (default: `[]`) — Stages: 1..7 or preflight,candidate,benchmark,retirement,analytics,synthesis,report
+- `--targets` — Target IDs or labels
+- `--family` — Family labels (e.g. SS or CC DD)
+- `--pattern` — Contraction patterns
+- `--shape` — Problem shapes
+- `-n`, `--dry-run` — Show what would happen without executing
+- `--force` — Run even when an identical fingerprint already passed
+- `--live` {on,off} (default: `on`) — Live TTY status panel (default: on)
+- `--live-interval` (default: `30.0`) — Seconds between live status repaints (default: 30)
+- `--tensile-root` — Override TENSILE_ROOT for this command
+
+### `oto stats`
+
+Cross-run best config per cell
+
+```bash
+oto stats
+oto stats --family ZZ --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--family` — Filter to one family label
+- `--json` — Emit one JSON document on stdout; silence narration
+
+### `oto status`
+
+Show run status, ETA, and the live panel
+
+```bash
+oto status                      # one-shot report
+oto status --watch 30           # refresh every 30 seconds
+oto status --thermals --json    # machine-readable with thermals
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--watch` — Refresh every N seconds
+- `--thermals` — Include thermals
+- `--plan` (default: `[]`) — Project a plan (rerun_illegal=no, iterations=4, ...)
+- `--run` — run_id to report on (default: newest)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+### `oto synthesis`
+
+Stage 6: build and validate the native library
+
+```bash
+oto synthesis --dry-run
+oto synthesis
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--tensile-root` — 
+- `-n`, `--dry-run` — Show what would happen without executing
+
+### `oto tune`
+
+Run the convergence loop (the overnight job)
+
+```bash
+oto tune --dry-run                  # list the plan, no GPU work
+oto tune --budget 10 --yes          # accept defaults, no prompts
+oto tune --include-illegal --resume # re-measure the illegal tier
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--budget` — Convergence iterations
+- `--mutations` — Max mutations per candidate
+- `--resume` — Resume the reference floor where it stopped
+- `--include-illegal` — Re-measure the ILLEGAL reference cells
+- `--include-underspecified` — Re-measure the UNDER-SPECIFIED reference cells
+- `--include-unreproducible` — Re-attempt the UNREPRODUCIBLE reference cells
+- `-y`, `--yes` — Accept the default plan without prompting
+- `--live` {on,off} (default: `on`) — Live TTY status panel (default: on)
+- `--live-interval` (default: `30.0`) — 
+- `--tensile-root` — Override TENSILE_ROOT for this run
+- `-n`, `--dry-run` — Show what would happen without executing
+
+### `oto verify`
+
+Verification commands
+
+```bash
+oto verify all
+oto verify run snapshot --out before.json
+```
+
+#### `oto verify all`
+
+Run all refactor verifiers
+
+```bash
+oto verify all
+oto verify all --json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+#### `oto verify run`
+
+Corpus snapshot/diff/telemetry
+
+```bash
+oto verify run snapshot --out before.json
+oto verify run diff before.json after.json
+oto verify run telemetry <run_id>
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+##### `oto verify run cheapest`
+
+Cheapest legal phases for a smoke run
+
+```bash
+oto verify run cheapest --family ZZ --n 3
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--family` — Dtype char filter, e.g. ZZ
+- `--n` (default: `5`) — Number of phases
+- `--json` — Emit one JSON document on stdout; silence narration
+
+##### `oto verify run diff`
+
+Compare two snapshots; non-zero on data loss
+
+```bash
+oto verify run diff before.json after.json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+##### `oto verify run snapshot`
+
+Record corpus state as JSON
+
+```bash
+oto verify run snapshot --out before.json
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--out` — Write JSON here instead of stdout
+- `--json` — Emit one JSON document on stdout; silence narration
+
+##### `oto verify run telemetry`
+
+Per-phase telemetry funnel for one run
+
+```bash
+oto verify run telemetry <run_id>
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--json` — Emit one JSON document on stdout; silence narration
+
+### `oto version`
+
+Print the version
+
+```bash
+oto version
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+
+## Migration from the old scripts
+
+There are no compatibility shims and no aliases. This is the clean break.
 
 | Old command | New command |
 |---|---|
-| `python3 port_tensile.py --auto` | `python3 -m oto tune` |
-| `python3 port_tensile.py --auto --budget 10 --yes` | `python3 -m oto tune --budget 10 --yes` |
-| `python3 port_tensile.py --preflight` | `python3 -m oto preflight` |
-| `python3 port_tensile.py --report` | `python3 -m oto report` |
-| `python3 port_tensile.py --best-library` | `python3 -m oto library best-effort` |
-| `python3 port_tensile.py --generate-device-docs` | `python3 -m oto agent generate` |
-| `python3 port_tensile.py --native` | `python3 -m oto bench --native` |
-| `python3 port_tensile.py --gfx900-reference` | `python3 -m oto bench --refresh` |
-| `python3 allruns.py` | `python3 -m oto stats` |
-| `python3 check_candidates.py --quiet` | `python3 -m oto check candidates --quiet` |
-| `python3 check_db.py` | `python3 -m oto check db` |
-| `python3 check_retirement.py` | `python3 -m oto check retirement` |
-| `python3 check_library_parity.py` | `python3 -m oto check library-parity` |
-| `python3 check_tensile_build.py` | `python3 -m oto check tensile-build` |
-| `python3 consolidate.py` | `python3 -m oto consolidate` |
-| `python3 chart.py` | `python3 -m oto chart` |
-| `python3 verify_all.py` | `python3 -m oto verify all` |
-| `python3 verify_run.py snapshot` | `python3 -m oto verify run snapshot` |
-| `python3 -m oto.metrics.render_status` | `python3 -m oto status` |
+| `python3 port_tensile.py --auto` | `oto tune` |
+| `python3 port_tensile.py --auto --budget 10 --yes` | `oto tune --budget 10 --yes` |
+| `python3 port_tensile.py --preflight` | `oto preflight  (or oto doctor)` |
+| `python3 port_tensile.py --report` | `oto report` |
+| `python3 port_tensile.py --best-library` | `oto library best-effort` |
+| `python3 port_tensile.py --generate-device-docs` | `oto agent generate` |
+| `python3 port_tensile.py --gfx900-reference` | `oto bench` |
+| `python3 port_tensile.py --native` | `oto bench --native` |
+| `python3 allruns.py` | `oto stats` |
+| `python3 check_candidates.py` | `oto check candidates` |
+| `python3 check_db.py` | `oto check db` |
+| `python3 check_retirement.py` | `oto check retirement` |
+| `python3 check_library_parity.py` | `oto check library-parity` |
+| `python3 check_tensile_build.py` | `oto check tensile-build` |
+| `python3 consolidate.py` | `oto consolidate` |
+| `python3 chart.py` | `oto chart` |
+| `python3 verify_all.py` | `oto verify all` |
+| `python3 verify_run.py snapshot` | `oto verify run snapshot` |
+| `python3 -m oto.metrics.render_status` | `oto status` |

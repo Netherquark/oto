@@ -208,6 +208,9 @@ def ask(base_dir: Any = None,
     say(f"    {counts.get('unreproducible', 0):>5}  UNREPRODUCIBLE  cannot be rebuilt")
     say()
 
+    import os
+    assume_yes = (assume_yes or bool(os.environ.get("OTO_YES"))
+                  or bool(os.environ.get("OTO_NO_INPUT")))
     interactive = sys.stdin is not None and sys.stdin.isatty() and not assume_yes
     if not interactive:
         say("Not an interactive terminal -- taking defaults.")

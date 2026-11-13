@@ -1,539 +1,94 @@
-"""Top-level dispatcher: routes subcommands to existing main() functions."""
+"""The ``oto`` process boundary: parse, apply output policy, dispatch, catch.
+
+Owns: the stdout/stderr contract, ``--quiet``/``--verbose``/``--no-input``/
+``--no-color`` policy, the top-level exception -> exit-code translation, and
+bare-invocation orientation.
+Does NOT own: the command tree (``oto.cli.parser``) or any adapter
+(``oto.cli.commands``). Keeping this file small is deliberate: every command
+gets the same policy because there is only one process boundary.
+Public API: main.
+"""
 
 from __future__ import annotations
 
-import argparse
+import os
 import sys
-from pathlib import Path
-
-try:
-    from tqdm import tqdm as _tqdm
-    _HAS_TQDM = True
-except ImportError:
-    _HAS_TQDM = False
 from typing import Any
 
-from oto._version import __version__
-from oto.cli.flags import add_global_flags, add_version_flag
-
-try:
-    from rich.argparse import RichHelpFormatter
-except ImportError:
-    from argparse import RawDescriptionHelpFormatter as RichHelpFormatter
+from oto.cli import commands
+from oto.cli.errors import handle_error
+from oto.cli.parser import build_parser
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="oto",
-        description="oto — Tensile tuning for unsupported AMD GPUs",
-        formatter_class=RichHelpFormatter,
-    )
-    add_version_flag(parser)
-    sub = parser.add_subparsers(dest="command", help="Available commands")
-    _add_core_subcommands(sub)
-    _add_bench_subcommands(sub)
-    _add_library_subcommands(sub)
-    _add_agent_subcommands(sub)
-    _add_utility_subcommands(sub)
-    return parser
+def _apply_environment(args: Any) -> None:
+    if getattr(args, "no_color", False):
+        os.environ["NO_COLOR"] = "1"
+    if getattr(args, "quiet", False):
+        os.environ["OTO_QUIET"] = "1"
+    if getattr(args, "verbose", False):
+        os.environ["OTO_VERBOSE"] = "1"
+    if getattr(args, "no_input", False):
+        os.environ["OTO_NO_INPUT"] = "1"
 
 
-def _add_core_subcommands(sub: Any) -> None:
-    p = sub.add_parser("run", help="Run specific pipeline stages")
-    add_global_flags(p)
-    p.add_argument("--stage", nargs="+", default=[], help="Stage(s) to run (1-7 or names)")
-    p.add_argument("--targets", nargs="+", help="Target IDs or labels")
-    p.add_argument("--family", nargs="+", help="Filter by family")
-    p.add_argument("--pattern", nargs="+", help="Filter by contraction pattern")
-    p.add_argument("--shape", nargs="+", help="Filter by problem shape")
-    p.add_argument("--force", action="store_true", help="Force execution")
-    p.set_defaults(func=_run_run)
-
-    p = sub.add_parser("tune", help="Run the convergence loop",
-                       epilog="Examples:\n  oto tune --dry-run              # preview without executing\n  oto tune --budget 10 --yes      # accept default plan, no prompts\n  oto tune --resume               # continue from latest run\n  oto tune --include-illegal     # re-measure illegal reference cells")
-    add_global_flags(p)
-    p.add_argument("--budget", type=int, default=None, help="Auto-convergence iterations")
-    p.add_argument("--mutations", type=int, default=None, help="Max mutations per candidate")
-    p.add_argument("--resume", action="store_true", help="Resume from latest run")
-    p.add_argument("--include-illegal", action="store_true", help="Re-measure illegal reference cells")
-    p.add_argument("--include-underspecified", action="store_true", help="Re-measure under-specified cells")
-    p.add_argument("--include-unreproducible", action="store_true", help="Re-attempt unreproducible cells")
-    p.add_argument("--yes", action="store_true", help="Accept default plan without prompting")
-    p.add_argument("--live", choices=["on", "off"], default="on", help="Live status repaint")
-    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
-    p.set_defaults(func=_run_tune)
-
-    p = sub.add_parser("status", help="Run status, ETA, and live panel",
-                       epilog="Examples:\n  oto status                     # one-shot report\n  oto status --watch 30          # refresh every 30s\n  oto status --thermals --json   # machine-readable with thermals")
-    add_global_flags(p)
-    p.add_argument("--watch", type=float, metavar="SECONDS", help="Refresh every N seconds")
-    p.add_argument("--thermals", action="store_true", help="Include thermal envelope")
-    p.add_argument("--plan", nargs="*", default=[], help="Project a plan: KEY=VALUE ...")
-    p.add_argument("--run", help="run_id to report on (default: newest)")
-    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    p.set_defaults(func=_run_status)
-
-    p = sub.add_parser("doctor", help="Diagnose environment (toolchain, GPU, registry)",
-                       epilog="Examples:\n  oto doctor                     # full diagnostic\n  oto doctor --json              # machine-readable")
-    add_global_flags(p)
-    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    p.set_defaults(func=_run_doctor)
-
-    p = sub.add_parser("report", help="Regenerate acceptance report")
-    add_global_flags(p)
-    p.add_argument("--run", help="run_id to report on (default: newest)")
-    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    p.set_defaults(func=_run_report)
-
-
-def _add_bench_subcommands(sub: Any) -> None:
-    p = sub.add_parser("bench", help="Benchmark phases",
-                       epilog="Examples:\n  oto bench --dry-run            # list matched targets\n  oto bench --family SS --shape 1024x1024x1024\n  oto bench --native --limit 5   # native-only smoke test")
-    add_global_flags(p)
-    p.add_argument("--native", action="store_true", help="Native-only (no reference floor)")
-    p.add_argument("--limit", type=int, help="Max phases to benchmark")
-    p.add_argument("--ref-shapes", help="Comma-separated cube sides")
-    p.add_argument("--resume", action="store_true", help="Resume incomplete reference run")
-    p.add_argument("--refresh", action="store_true", help="Re-scan system dat")
-    p.add_argument("--targets", nargs="+", help="Target IDs or labels")
-    p.add_argument("--family", nargs="+", help="Filter by family")
-    p.add_argument("--pattern", nargs="+", help="Filter by contraction pattern")
-    p.add_argument("--shape", nargs="+", help="Filter by problem shape")
-    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
-    p.set_defaults(func=_run_bench)
-
-    p = sub.add_parser("verify", help="Verification commands")
-    vsub = p.add_subparsers(dest="verify_cmd")
-    vp = vsub.add_parser("all", help="Run all refactor verifiers")
-    add_global_flags(vp)
-    vp.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    vp.set_defaults(func=_run_verify_all)
-    vp2 = vsub.add_parser("run", help="Corpus snapshot/diff/telemetry")
-    add_global_flags(vp2)
-    vp2.add_argument("verify_run_cmd", nargs="?", choices=["snapshot", "diff", "telemetry", "cheapest"])
-    vp2.add_argument("verify_run_args", nargs=argparse.REMAINDER)
-    vp2.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    vp2.set_defaults(func=_run_verify_run)
-
-    p = sub.add_parser("check", help="Diagnostic checks")
-    csub = p.add_subparsers(dest="check_cmd")
-    for name, help_text in [("candidates", "Deck linter"),
-                            ("db", "Registry integrity"),
-                            ("retirement", "Retirement assertion"),
-                            ("library-parity", "Coverage parity vs shipped gfx900")]:
-        cp = csub.add_parser(name, help=help_text)
-        add_global_flags(cp)
-        cp.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-        cp.set_defaults(func=_run_check, check_name=name)
-
-
-def _add_library_subcommands(sub: Any) -> None:
-    p = sub.add_parser("library", help="Tensile library operations",
-                       epilog="Examples:\n  oto library best-effort        # carve best-effort .dat (CPU-only)\n  oto library verify             # coverage parity check\n  oto library build-proof        # build-proof assertion")
-    lsub = p.add_subparsers(dest="library_cmd")
-    lp = lsub.add_parser("best-effort", help="Carve best-effort .dat (CPU-only)")
-    add_global_flags(lp)
-    lp.add_argument("--dest", help="Destination directory")
-    lp.add_argument("--protocol-basis", choices=["family", "any", "single", "partial"],
-                    default="family", help="Protocol basis for carving")
-    lp.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
-    lp.set_defaults(func=_run_library_best_effort)
-    lp2 = lsub.add_parser("verify", help="Coverage parity check")
-    add_global_flags(lp2)
-    lp2.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    lp2.set_defaults(func=_run_library_verify)
-    lp3 = lsub.add_parser("build-proof", help="Build-proof check")
-    add_global_flags(lp3)
-    lp3.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    lp3.set_defaults(func=_run_library_build_proof)
-
-
-def _add_agent_subcommands(sub: Any) -> None:
-    p = sub.add_parser("agent", help="Agent operations (doc generation, harness study)",
-                       epilog="Examples:\n  oto agent generate starter.md  # agent-1 + agent-2 docs\n  oto agent index                # regenerate docs index")
-    asub = p.add_subparsers(dest="agent_cmd")
-    ap = asub.add_parser("generate", help="Generate device docs (agent-1/agent-2)")
-    add_global_flags(ap)
-    ap.add_argument("starter", nargs="?", help="Starter file path")
-    ap.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
-    ap.set_defaults(func=_run_docs_generate)
-    ap2 = asub.add_parser("index", help="Regenerate docs index")
-    add_global_flags(ap2)
-    ap2.set_defaults(func=_run_docs_index)
-
-
-def _add_utility_subcommands(sub: Any) -> None:
-    p = sub.add_parser("consolidate", help="Deck consolidation")
-    add_global_flags(p)
-    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
-    p.set_defaults(func=_run_consolidate)
-
-    p = sub.add_parser("stats", help="Cross-run best config per cell")
-    add_global_flags(p)
-    p.add_argument("--family", help="Filter by family")
-    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
-    p.set_defaults(func=_run_stats)
-
-    p = sub.add_parser("chart", help="Generate comparison figures")
-    add_global_flags(p)
-    p.set_defaults(func=_run_chart)
-
-    p = sub.add_parser("version", help="Print version")
-    p.set_defaults(func=_run_version)
-
-    p = sub.add_parser("help", help="Show help for a topic")
-    p.add_argument("topic", nargs="?", help="Command or topic name")
-    p.set_defaults(func=_run_help)
-
-    p = sub.add_parser("completion", help="Generate shell completions")
-    p.add_argument("shell", choices=["bash", "zsh"], help="Shell type")
-    p.set_defaults(func=_run_completion)
-
-
-
-def _with_argv(argv: list[str], func: Any, *args: Any, **kwargs: Any) -> Any:
-    """Run func with sys.argv temporarily set to argv."""
-    import sys as _sys
-    old = _sys.argv
-    _sys.argv = ["oto", *argv]
-    try:
-        return func(*args, **kwargs)
-    finally:
-        _sys.argv = old
-
-
-
-def _mute_stdout(func, *args, **kwargs):
-    """Run func with stdout redirected to stderr (mutating commands)."""
-    import sys as _sys
-    _old = _sys.stdout
-    _sys.stdout = _sys.stderr
-    try:
-        return func(*args, **kwargs)
-    finally:
-        _sys.stdout = _old
-
-
-def _resolve_base(args: Any) -> Path:
-    from pathlib import Path
+def _verbose(args: Any, parser: Any) -> None:
+    if not getattr(args, "verbose", False):
+        return
+    command = getattr(args, "command", "") or "oto"
+    rest = " ".join(sys.argv[1:])
+    print(f"oto: {rest or command}", file=sys.stderr)
     if getattr(args, "base_dir", None):
-        return Path(args.base_dir)
-    return Path.cwd()
+        print(f"oto: base={args.base_dir}", file=sys.stderr)
 
 
-# --- adapter functions (each ~5 lines, calls existing main) ---
+def _mutating_stdout(args: Any) -> Any:
+    """Return the stream mutating commands should print narration to.
 
-def _run_run(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if args.stage:
-        argv += ["--stage", *args.stage]
-    if args.targets:
-        argv += ["--targets", *args.targets]
-    if args.family:
-        argv += ["--family", *args.family]
-    if args.pattern:
-        argv += ["--pattern", *args.pattern]
-    if args.shape:
-        argv += ["--shape", *args.shape]
-    if args.dry_run:
-        argv += ["--dry-run"]
-    if args.force:
-        argv += ["--force"]
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_tune(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if args.budget is not None:
-        argv += ["--budget", str(args.budget)]
-    if args.mutations is not None:
-        argv += ["--mutation-budget", str(args.mutations)]
-    if args.resume:
-        argv += ["--resume"]
-    if args.include_illegal:
-        argv += ["--release-under-specified"]
-    if args.include_underspecified:
-        argv += ["--release-under-specified"]
-    if args.include_unreproducible:
-        argv += ["--release-unreproducible"]
-    if args.yes:
-        argv += ["--yes"]
-    if args.live == "off":
-        argv += ["--live", "off"]
-    argv += ["--auto"]
-    if _HAS_TQDM and not getattr(args, "quiet", False):
-        with _tqdm(desc="tune", unit="phase", leave=True) as bar:
-            bar.update(0)
-            result = _with_argv(argv, cli_main)
-            bar.update(1)
-            return result
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_status(args: Any) -> int:
-    from oto.metrics.render_status import main as rs_main
-    argv = ["--base", str(_resolve_base(args))]
-    if args.run:
-        argv += ["--run", args.run]
-    if args.plan:
-        argv += ["--plan", *args.plan]
-    if args.watch:
-        argv += ["--watch", str(args.watch)]
-    if args.thermals:
-        argv += ["--thermals"]
-    if getattr(args, "json", False):
-        argv += ["--json"]
-    return rs_main(argv)
-
-
-def _run_doctor(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args)), "--preflight"]
-    if getattr(args, "json", False):
-        argv += ["--json"]
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_verify_all(args: Any) -> int:
-    from oto.tools.verifiers.verify_all import main as va_main
-    return va_main()
-
-
-def _run_verify_run(args: Any) -> int:
-    from oto.tools.verify_run import main as vr_main
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if args.verify_run_cmd:
-        argv += [args.verify_run_cmd]
-    if args.verify_run_args:
-        argv += args.verify_run_args
-    return vr_main(argv)
-
-
-def _run_check(args: Any) -> int:
-    name = args.check_name
-    base = str(_resolve_base(args))
-    if name == "candidates":
-        from oto.checks.candidates import main as m
-        argv = ["--base-dir", base]
-        if getattr(args, "json", False):
-            argv += ["--json"]
-        return _with_argv(argv, m)
-    if name == "db":
-        from oto.checks.db import main as m
-        argv = ["--base-dir", base]
-        if getattr(args, "json", False):
-            argv += ["--json"]
-        return _with_argv(argv, m)
-    if name == "retirement":
-        from oto.checks.retirement import main as m
-        argv = ["--base-dir", base]
-        if getattr(args, "json", False):
-            argv += ["--json"]
-        return _with_argv(argv, m)
-    if name == "library-parity":
-        from oto.checks.library_parity import main as m
-        argv = ["--base-dir", base]
-        if getattr(args, "json", False):
-            argv += ["--json"]
-        return _with_argv(argv, m)
-    return 1
-
-
-def _run_bench(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if args.native:
-        argv += ["--native"]
-    if args.limit:
-        argv += ["--limit", str(args.limit)]
-    if args.ref_shapes:
-        argv += ["--ref-shapes", args.ref_shapes]
-    if args.resume:
-        argv += ["--resume"]
-    if args.refresh:
-        argv += ["--refresh"]
-    if args.targets:
-        argv += ["--targets", *args.targets]
-    if args.family:
-        argv += ["--family", *args.family]
-    if args.pattern:
-        argv += ["--pattern", *args.pattern]
-    if args.shape:
-        argv += ["--shape", *args.shape]
-    if args.dry_run:
-        argv += ["--dry-run"]
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_report(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args)), "--report"]
-    if args.run:
-        argv += [args.run]
-    return _with_argv(argv, cli_main)
-
-
-def _run_library_best_effort(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args)), "--best-library"]
-    if args.dest:
-        argv += [args.dest]
-    argv += ["--protocol-basis", args.protocol_basis]
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_library_verify(args: Any) -> int:
-    from oto.checks.library_parity import main as m
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if getattr(args, "json", False):
-        argv += ["--json"]
-    return _with_argv(argv, m)
-
-
-def _run_library_build_proof(args: Any) -> int:
-    from oto.checks.tensile_build import main as m
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if getattr(args, "json", False):
-        argv += ["--json"]
-    return _with_argv(argv, m)
-
-
-def _run_consolidate(args: Any) -> int:
-    from oto.tools.consolidate import main as m
-    return _mute_stdout(_with_argv, ["--base-dir", str(_resolve_base(args))], m)
-
-
-def _run_stats(args: Any) -> int:
-    from oto.tools.allruns import main as m
-    argv = ["--base-dir", str(_resolve_base(args))]
-    if args.family:
-        argv += ["--family", args.family]
-    if args.json:
-        argv += ["--json"]
-    return _with_argv(argv, m)
-
-
-def _run_chart(args: Any) -> int:
-    # chart.py runs at module level; exec it
-    import runpy
-    runpy.run_path(str(Path(__file__).resolve().parents[2] / "oto" / "tools" / "chart.py"), run_name="__main__")
-    return 0
-
-
-def _run_docs_generate(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
-    argv = ["--base-dir", str(_resolve_base(args)), "--generate-device-docs"]
-    if args.starter:
-        argv += [args.starter]
-    return _mute_stdout(_with_argv, argv, cli_main)
-
-
-def _run_docs_index(args: Any) -> int:
-    from oto.docs_index import write_index
-    write_index()
-    print("docs/docs_index.json regenerated")
-    return 0
-
-
-def _run_version(args: Any) -> int:
-    print(f"oto {__version__}")
-    return 0
-
-
-def _run_completion(args: Any) -> int:
-    if args.shell == "bash":
-        print("""_oto_completions() {
-    local cur
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=( $(compgen -W "tune status doctor verify check bench report library consolidate stats chart agent version help completion" -- "$cur") )
-}
-complete -F _oto_completions oto""")
-    elif args.shell == "zsh":
-        print("""#compdef oto
-_oto() {
-    local -a commands
-    commands=(
-        'tune:Run the convergence loop'
-        'status:Run status, ETA, and live panel'
-        'doctor:Diagnose environment'
-        'verify:Verification commands'
-        'check:Diagnostic checks'
-        'bench:Benchmark phases'
-        'report:Regenerate acceptance report'
-        'library:Tensile library operations'
-        'consolidate:Deck consolidation'
-        'stats:Cross-run best config per cell'
-        'chart:Generate comparison figures'
-        'agent:Agent operations'
-        'version:Print version'
-        'help:Show help for a topic'
-        'completion:Generate shell completions'
-    )
-    _describe 'command' commands
-}
-compdef _oto oto""")
-    return 0
-
-
-def _run_help(args: Any) -> int:
-    if args.topic:
-        print(f"See: oto {args.topic} --help")
-    else:
-        print("oto — Tensile tuning for unsupported AMD GPUs")
-        print()
-        print("Commands:")
-        print("  run       Run specific pipeline stages")
-        print("  tune      Run the convergence loop")
-        print("  bench     Benchmark phases")
-        print("  status    Run status, ETA, and live panel")
-        print("  report    Regenerate acceptance report")
-        print("  doctor    Diagnose environment")
-        print("  verify    Verification commands")
-        print("  check     Diagnostic checks")
-        print("  library   Tensile library operations")
-        print("  consolidate  Deck consolidation")
-        print("  stats     Cross-run best config per cell")
-        print("  chart     Generate comparison figures")
-        print("  agent     Agent operations (doc generation, harness study)")
-        print("  version   Print version")
-        print("  help      Show help for a topic")
-        print()
-        print("Run 'oto <command> --help' for details.")
-    return 0
+    Data -> stdout, narration -> stderr. Existing backends print progress on
+    stdout, so the boundary redirects that stream rather than rewriting every
+    print. ``--quiet`` sends the same narration to /dev/null; errors still go
+    to stderr through the exception path.
+    """
+    if not getattr(args, "mutating", False):
+        return sys.stdout
+    if getattr(args, "quiet", False):
+        return open(os.devnull, "w")
+    return sys.stderr
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = _build_parser()
+    parser = build_parser()
     args = parser.parse_args(argv)
-    if not getattr(args, "func", None):
-        # Bare invocation: show orientation
-        print("oto — Tensile tuning for unsupported AMD GPUs")
-        print()
-        print("Quick start:")
-        print("  oto doctor          # diagnose environment")
-        print("  oto status          # run status and ETA")
-        print("  oto tune            # run convergence loop")
-        print("  oto tune --dry-run  # preview without executing")
-        print()
-        print("Run 'oto help' for full command list.")
-        print("Run 'oto <command> --help' for command details.")
-        return 0
-    import os as _os
-    _devnull = None
-    _old_stdout = None
-    if getattr(args, "quiet", False):
-        _devnull = open(_os.devnull, "w")
-        _old_stdout = sys.stdout
-        sys.stdout = _devnull
+    _apply_environment(args)
+    _verbose(args, parser)
+
+    if not getattr(args, "command", None):
+        return commands.dispatch(args, parser)
+
+    old_stdout = sys.stdout
+    replacement = None
+    if getattr(args, "mutating", False):
+        replacement = _mutating_stdout(args)
+        sys.stdout = replacement
     try:
-        result = args.func(args)
-    except Exception as exc:
-        from oto.cli.errors import handle_error
-        result = handle_error(exc, quiet=getattr(args, "quiet", False))
+        return commands.dispatch(args, parser)
+    except KeyboardInterrupt as exc:
+        return handle_error(exc, verbose=getattr(args, "verbose", False),
+                            json_mode=getattr(args, "json", False),
+                            base=getattr(args, "base_dir", None),
+                            command=getattr(args, "command", ""))
+    except SystemExit:
+        raise
+    except BaseException as exc:
+        return handle_error(exc, verbose=getattr(args, "verbose", False),
+                            json_mode=getattr(args, "json", False),
+                            base=getattr(args, "base_dir", None),
+                            command=getattr(args, "command", ""))
     finally:
-        if _devnull is not None:
-            sys.stdout = _old_stdout
-            _devnull.close()
-    return result
+        sys.stdout = old_stdout
+        if replacement is not None and replacement is not sys.stderr:
+            replacement.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

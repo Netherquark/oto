@@ -224,7 +224,7 @@ class TestCliExitCodes(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             a, b = Path(d) / "a.json", Path(d) / "b.json"
             for out in (a, b):
-                assert self._cli("--base-dir", str(ROOT), "snapshot", "--out", str(out)).returncode == 0
+                assert self._cli("--base", str(ROOT), "snapshot", "--out", str(out)).returncode == 0
             res = self._cli("diff", str(a), str(b))
             assert res.returncode == 0, res.stdout + res.stderr
 

@@ -23,13 +23,16 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 def _ls_py_files() -> list[str]:
-    return subprocess.run(
+    files = subprocess.run(
         ["git", "ls-files", "*.py"],
         capture_output=True,
         text=True,
         check=True,
         cwd=REPO,
     ).stdout.split()
+    # Deleted-in-worktree files still appear in the index; the guard walks the
+    # tree, so a file that no longer exists must not be in scope.
+    return [f for f in files if (REPO / f).is_file()]
 
 
 def _changed_python_files() -> list[str]:

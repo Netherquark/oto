@@ -31,7 +31,7 @@ Public API: TensileDriver, CandidateGenerator, Mutator, ConvergenceAgent,
 AnalyticsEngine, AcceptanceReporter, SQLiteRegistry, __version__.
 """
 
-__version__ = "1.0.0"
+from oto._version import __version__  # single source of truth for the CLI
 
 __all__ = [
     "AcceptanceReporter",
