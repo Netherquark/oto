@@ -84,7 +84,7 @@ class TestTensileBuildProof(unittest.TestCase):
             self.fail(
                 f"build proof at {rep} is malformed: expected a list of "
                 '{"phase_id": str, "ok": bool} records. Produce it with '
-                "`python3 check_tensile_build.py --json "
+                "`python3 -m oto check tensile-build --json "
                 "<codename>_results/analysis/tensile_build_proof.json`, or "
                 "export OCCUPANCY_PROOF to a valid report.")
         deck = {p["phase_id"]: p for p in yaml.safe_load((BASE / "phases.yaml").read_text())}
@@ -106,9 +106,9 @@ class TestTensileBuildProof(unittest.TestCase):
 
 class TestDeckLinter(unittest.TestCase):
     def test_check_candidates_reports_clean(self):
-        tool = BASE / "oto.py"
+        cmd = [sys.executable, "-m", "oto", "check", "candidates", "--quiet"]
         proc = subprocess.run(
-            [sys.executable, str(tool), "check", "candidates", "--quiet"],
+            cmd,
             capture_output=True, text=True, cwd=str(BASE), timeout=1800,
         )
         assert proc.returncode in (0, 1), proc.stdout + proc.stderr

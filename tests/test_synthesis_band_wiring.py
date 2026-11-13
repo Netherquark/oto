@@ -233,7 +233,7 @@ class AgentWiringTests(unittest.TestCase):
 
     def test_the_overlay_sweep_matches_the_deck_sweep(self):
         # Asserted against the file rather than the in-memory candidate: the file
-        # is what port_tensile actually merges into the run.
+        # is what the driver actually merges into the run.
         a = self._agent()
         with mock.patch.object(Mutator, "sample_cell_synthesized",
                                return_value=self._stub()):

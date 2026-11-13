@@ -5,12 +5,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OTO = ROOT / "oto.py"
+BASE_CMD = [sys.executable, "-m", "oto"]
 
 
 def _run(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, str(OTO), *args],
+        BASE_CMD + list(args),
         capture_output=True, text=True, cwd=str(ROOT), timeout=60,
     )
 

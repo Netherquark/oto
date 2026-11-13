@@ -4,7 +4,7 @@
 No GPU work: telemetry CSVs are written into a temp dir and the loader is
 called directly.
 
-The policy under test is documented at port_tensile.THERMAL_MAX_C. In short:
+The policy under test is documented at oto.runners.clocks.THERMAL_MAX_C. In short:
 
   * Temperature is a VALIDITY gate, not a second throughput correction. A busy
     sample at/above THERMAL_MAX_C is dropped from the clock estimate, so the
