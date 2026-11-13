@@ -393,7 +393,7 @@ false rejections to both populations.** Tests:
 
 ## 7. Floor deck: gate-legality of the steal (todo 3 DONE)
 
-`python3 check_candidates.py --floor` sweeps all **6 855** shipped gfx900
+`python3 -m oto check candidates --floor` sweeps all **6 855** shipped gfx900
 manifest kernels (`gfx90c_results/gfx900_shipped_manifest.json`, 84 `.dat`
 entries; rebuilt into configs via `oto/tensile/library.py:shipped_kernel_config`)
 through the same CPU-only preflight the deck must pass. `oto/checks/candidates.py`
@@ -482,10 +482,10 @@ merely rarely. This is the cheapest possible candidate list: every one of these
 is a legal value on this device that no baseline measurement has ever occupied,
 so there is no "we already tried that" to discover later. The counts are not
 transcribed here on purpose (`claude.md` §5); re-derive the variance from
-`python3 allruns.py` and the floor's own manifests.
+`python3 -m oto.tools.allruns` and the floor's own manifests.
 
 **The "floor state" column is transcribed from the shipped gfx900 reference
-floor's kernel census (prior-knowledge base), not re-derived here, and is marked `check`.** `allruns.py` reports the knob
+floor's kernel census (prior-knowledge base), not re-derived here, and is marked `check`.** `oto.tools.allruns` reports the knob
 values of each cell's *winner*, not the full variance across the floor, so it
 cannot confirm or refute a "never moves" claim on its own. Verify a row against
 the floor manifests before spending a run on it.
@@ -657,8 +657,8 @@ forwarded knobs. Deck a whole overlay with:
 ```
 python3 -m oto.harness.generate_candidates --dry-run   # validate + count, no write
 python3 -m oto.harness.generate_candidates             # write phases.seed.overlay.yaml
-python3 check_candidates.py --family CC                # preflight the live deck
-python3 check_candidates.py --floor                    # verify the floor is stealable
+python3 -m oto check candidates --family CC                # preflight the live deck
+python3 -m oto check candidates --floor                    # verify the floor is stealable
 ```
 
 `--max-fp N` is an optional cap (round-robin across family/cell buckets); the

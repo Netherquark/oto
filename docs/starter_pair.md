@@ -39,7 +39,7 @@ works with zero code changes.
 
 ## Getting the facts with agent research
 
-`--generate-device-docs` runs two doc agents against the pair:
+`oto agent generate` runs two doc agents against the pair:
 
 * **agent-1** (`oto/agents/theoretical_limits.py`) — emits
   `<codename>_theoretical_limits.md` (peaks, ceilings, hardware section),
@@ -91,7 +91,7 @@ The shipped `.json` stub deliberately fails the loader's unverified
 3. Fill the JSON with values you can verify, or leave a stub and research:
 
    ```
-   oto --codename <codename> --generate-device-docs ...
+   python3 -m oto agent generate docs/<codename>_starter.md
    ```
 
 4. Transcribe the verified facts from the `## Research (UNVERIFIED ...)`

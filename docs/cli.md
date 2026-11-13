@@ -92,6 +92,7 @@ Flags:
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
 - `--tensile-root` — 
+- `--json` — Emit one JSON document on stdout; silence narration
 
 ### `oto bench`
 
@@ -131,6 +132,7 @@ Stage 2: print the candidate plan by family
 
 ```bash
 oto candidate
+oto candidate --json
 ```
 
 Flags:
@@ -141,6 +143,7 @@ Flags:
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
 - `--tensile-root` — 
+- `--json` — Emit one JSON document on stdout; silence narration
 
 ### `oto chart`
 

@@ -234,7 +234,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 
 | Need | Run |
 |---|---|
-| Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 oto stats` (`--family ZZ`, `--json out.json`) |
+| Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 -m oto stats` (`--family ZZ`, `--json > post.json`) |
 | What has the corpus already measured on this family/cell, at which geometry or axis value, and how did it score? | `python3 -m oto.harness.corpus_census` (`--family SS`, `--typecode HHS`, `--cell SS:1024`, `--knob DepthU`, `--json out.json`) |
 | Does Tensile build every *unmeasured* deck row? (the pre-run sweep) | `python3 -m oto.harness.deck_check` (`--family CC --limit 10`, `--json out.json`; ~75 s/row, resumable, CPU-only) |
 | Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
@@ -247,7 +247,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
-| Which knobs has the corpus ever actually varied? | `python3 oto stats` (`--json out.json`; the `never-exercised knobs` block) |
+| Which knobs has the corpus ever actually varied? | `python3 -m oto stats` (`--json > post.json`; the `never-exercised knobs` block) |
 | Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
 | Is this forward-knob domain deck-safe, or does it generate refusals? | `python3 -m oto.tools.deck_review legality` (`--family CC`) |
 | Do the launch gates agree with what Tensile actually built? (false rejections / misses) | `python3 -m oto.harness.gate_calibration` (`--population ours`, `--fail-on-false-reject`) |

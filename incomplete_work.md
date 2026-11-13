@@ -1,5 +1,18 @@
 # Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26; 2026-11-13)
 
+**2026-11-13 (night) — CLI front door landed; suite green again.**
+The 2026-11-13 (evening) caveat above is RESOLVED by this session's Phase-1..4
+land: the verb-first `oto` front (subcommands, global flags, `--json`/quiet/
+verbose/dry-run/doctor/docs/completions) replaced the root shim in
+`bin/oto` over `python3 -m oto` (root `oto.py` deleted). Full suite re-run
+after the final edits: **1044 passed, 8 skipped, 242 subtests passed, 0
+failed** — including `tests/test_ruff.py`, `tests/test_py_compile.py`,
+`tests/test_pyflakes.py`, `tests/test_function_length.py`, `tests/test_file_length.py`.
+Remaining known rough edges: `stats --json` over the full corpus is slow
+(allruns census); `oto check tensile-build` needs a warm Tensile env; GPU
+legs still need the operator's ROCm nightly. No new failures against the
+pre-existing 4 `verify_all` FAILs.
+
 **2026-11-13 (evening) — honest suite status + in-flight rework caveat.**
 Suite re-ran (zz_suite24): RC=1, 7 failed / 1036 passed / 8 skipped / 242 subtests.
 All 7 reds attribute to the concurrently in-flight, UNCOMMITTED CLI rework in
@@ -962,7 +975,10 @@ Note: this register's 2026-10 snapshots above predate Refactor 2 landing —
 **Still blocked (external input required):**
 - C4 (gfx902 starter research) — needs API key.
 - gfx906 real-hardware validation — no hardware.
-- CLI UX implementation — needs answers to §7 of plans/CLI_UX_REWORK.md.
+- ~~CLI UX implementation — needs answers to §7 of plans/CLI_UX_REWORK.md.~~
+  RESOLVED 2026-11-13: the whole `plans/CLI_UX_REWORK.md` ("oneshot evergreen")
+  landed in this session — Phase 1 (front + doctor + checks + docs + dispatch)
+  through Phase 4 (completions), full suite green.
 - C2.5–C2.9 explicit signature threading — deliberately deferred (mechanism
   equivalent via set_profile; high churn, low equivalence value).
 - Verifier baseline bringup (2824c2f → current) — needs verifier rewrite.

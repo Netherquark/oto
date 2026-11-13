@@ -1,6 +1,6 @@
 # The ``oto/`` package map
 
-Generated. Regenerate with ``python3 oto/_map.py``.
+Generated. Regenerate with ``python3 -m oto._map``.
 
 Each entry is the first sentence of that module's docstring, so the
 only way to make this file stale is to delete the docstring. Line

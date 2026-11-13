@@ -1,6 +1,6 @@
 # CLI UX rework plan — oneshot evergreen (2026-11-13)
 
-Status: **IMPLEMENTED (Phases 1-4).** All 25 questions answered and resolved.
+Status: **IMPLEMENTED (Phases 1-4).** All 25 questions answered and resolved. Full suite green 2026-11-13 (1044 passed / 8 skipped / 242 subtests).
 Phases 1-4 landed as commits 362744b..423ecbe. Remaining: stdout/stderr contract
 (narration already redirected to stderr for mutating commands) and deeper
 docs rewrite (command references updated, full Class B rewrite pending).
@@ -23,7 +23,7 @@ with new nomenclature in the same pass.
 **Three inconsistent invocation mechanisms, none of which are "the CLI":**
 - 11 root shims that only `sys.path.insert` and call `oto.tools.*:main`
   (`allruns.py`, `check_db.py`, ...).
-- Package modules meant to be run as scripts — `python3 oto/metrics/render_status.py --help`
+- Package modules meant to be run as scripts — `python3 -m oto.metrics.render_status --help`
   **crashes today** (`No module named 'oto'`) — and `README.md:365` plus that
   module's own `--help` example reference `python3 run_status.py`, which
   **does not exist**.

@@ -98,7 +98,7 @@ export OTO_API_ENDPOINT=...    # explicit endpoint always wins (OTO_API_MODEL to
 ```
 
 ```bash
-PYTHONPATH=. python3 -m oto agent generate docs/<codename>_starter.md
+python3 -m oto agent generate docs/<codename>_starter.md
 ```
 
 The agent writes `docs/<codename>_theoretical_limits.md` and
@@ -107,7 +107,8 @@ The agent writes `docs/<codename>_theoretical_limits.md` and
 `docs/<codename>_potential_configs.md` (both CPU-only; see §6). Without a
 key, research is a clean no-op and the docs carry the starter text only.
 If the target already has `profiles/<codename>.json`, you may omit the
-starter path: `--generate-device-docs --codename <codename>`.
+starter path and pass `--codename` to the driver:
+`python3 -m oto.runners.cli --generate-device-docs --codename <codename>`.
 
 **Agent research is advisory. It is never the source of record for silicon
 facts.** See §4.
@@ -162,7 +163,7 @@ python3 -m oto.tools.deck_review score                            # deck sanity
 python3 -m oto.harness.generate_candidates --dry-run               # candidate pool size
 ```
 
-`--generate-device-docs` additionally synthesises:
+`oto agent generate` additionally synthesises:
 
 - `docs/<codename>_harness_study.md` — corpus census (runs, floor vs native
   rows), TARGET_CELLS coverage, native winners per cell, and 16 round-robin
@@ -181,7 +182,7 @@ proposals still generate and gate-check. Analysis guides for each tool:
 |---|---|---|
 | Profile refuses placeholders | loader sanity check | §4 sanity load passes |
 | Docs carry provenance + UNVERIFIED tags | read the four `<codename>_*.md` | every silicon fact cited or tagged |
-| Library builds **(TTY)** | `--best-library --codename <codename>` | `TensileCreateLibrary` exits 0; outputs `TensileLibrary.dat` |
+| Library builds **(TTY)** | `oto library best-effort` (driver spelling: `--best-library --codename <codename>`) | `TensileCreateLibrary` exits 0; outputs `TensileLibrary.dat` |
 | Anti-alias scan | oto's built-in post-build check | no foreign-arch tokens found |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or failures triaged and recorded) |
 | Functional check **(TTY)** | PyTorch loads the library; GEMM vs reference on random inputs | outputs match reference within dtype tolerance |
@@ -197,7 +198,7 @@ Performance claims are reported as measured, never extrapolated.
 | `load_profile` says unverified/placeholder | Fill + verify the starter pair (§4). Do not patch the gate. |
 | Agent returns empty research | Set a key (§3) or run with none; the docs then carry the starter text only. Non-200 collapses to empty with a status-only stderr note — check your endpoint/key, do not paste it into files. |
 | Auto-detect picks the wrong device | Pass `--codename <codename>` explicitly; never edit peaks to match silence. |
-| Corpus missing on first run | Expected; `harness-study` reports "no kernel_db.json". Start with `--best-library` for the floor-less build. |
+| Corpus missing on first run | Expected; `harness-study` reports "no kernel_db.json". Start with `oto library best-effort` for the floor-less build. |
 | Gates reject every proposal | The generator is profile-driven; a rejection storm means the profile is off (clock/LDS/ISA), not that the deck is wrong. Re-verify §4. |
 | ROCm reports the arch as unsupported | Stop. Record the blocker in `incomplete_work.md`. Do not widen `gates/` to force it through. |
 | You want to relax the 60-line / 600-line / pyflakes / ruff / py_compile / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/harness_runbook.md` guardrails. |

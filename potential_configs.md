@@ -702,7 +702,7 @@ vendor's.
 * **Preflight is the authority, not a number written here.** `python3
   check_candidates.py --quiet` → `0 illegal`;
   `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;
-  `PYTHONPATH=. python3 oto/runners/cli.py --preflight` → parity (38/38 cells).
+  `python3 -m oto.runners.cli --preflight` → parity (38/38 cells).
 
 ## R31 — what to stop doing
 
@@ -730,7 +730,7 @@ python3 -m oto.harness.generate_candidates --dry-run
 python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
 python3 -m oto.harness.rule_calibration --fail-on-false-reject
 python3 -m oto.harness.failure_triage
-PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 -m oto.runners.cli --preflight
 python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
 
 # TTY only — the real run:
@@ -947,7 +947,7 @@ dtypes, and forces `1LDSBuffer`).
 * **Preflight is the authority, not a number written here** (`claude.md`: never
   write a corpus count down). `python3 -m oto.harness.generate_candidates --dry-run`
   must report `0 refused`, `python3 check_candidates.py --quiet` must report
-  `0 illegal`, and `PYTHONPATH=. python3 oto/runners/cli.py --preflight` must show
+  `0 illegal`, and `python3 -m oto.runners.cli --preflight` must show
   full parity (38/38 shipped cells) before the run.
 
 ## R20 — the launch-boundary extension (ranked, deliberately NOT done here)
@@ -987,7 +987,7 @@ out of the deck: a candidate carrying them is a no-op (R16).
 # CPU-only, safe under GNOME (no GPU stress):
 python3 check_candidates.py --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 -m oto.runners.cli --preflight
 
 # TTY only — the real run:
 python3 port_tensile.py --auto --budget 10 --yes
@@ -1338,7 +1338,7 @@ overnight run command:
 # CPU-only, from any session (safe under GNOME)
 python3 check_candidates.py --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 -m oto.runners.cli --preflight
 
 # TTY only — the real run
 python3 port_tensile.py --auto --budget 10 --yes
@@ -2396,7 +2396,7 @@ retains **765 of 3831 configs (20 %)** and **loses 0 of 35 cell winners**
 # 1. CPU-only, from any session (safe under GNOME)
 python3 check_candidates.py --family CC --quiet        # legal, or it names the rows
 python3 -m oto.harness.generate_candidates --dry-run  # prints the per-family tally
-PYTHONPATH=. python3 oto/runners/cli.py --preflight   # 38/38 parity, all OK
+python3 -m oto.runners.cli --preflight   # 38/38 parity, all OK
 
 # 2. TTY only — the real run
 python3 port_tensile.py --auto --budget 10 --yes
@@ -2414,7 +2414,7 @@ is the honest estimate and `--budget 10` iterations of mutation on top. Judge
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
 python3 allruns.py --json /tmp/opencode/post.json      # knob census + cells_resolved
-PYTHONPATH=. python3 oto/runners/cli.py --native-agg floor_best   # the strict basis
+python3 -m oto.runners.cli --native-agg floor_best   # the strict basis
 ```
 
 Report `agg="floor_best"` as a **co-primary** alongside `winner`: it grades the

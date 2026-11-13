@@ -3768,3 +3768,17 @@ the pre-built seed pool.
   --quiet` 0 illegal, full suite 922 passed / 8 skipped.
 
 - **2026-11-13 — the docs ecosystem gets two agent classes and a registry test.** All owner docs are now class-tagged (`dev` / `operator` / `shared`) in the `docs/README.md` registry: class A (developer agents working on oto) routes to `claude.md`; class B (operator agents producing a best-effort library for an unsupported AMD platform) routes to the new `docs/operator_runbook.md` — preconditions → detect → starter pair → agent research → human verification gate → docs synthesis (the `<codename>_*.md` artefacts) → CPU-only harness study → TTY benchmark → `--best-library` → verification matrix and failure table. `claude.md` §1 and `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now fails when a tracked Markdown file is unregistered, when a registry glob matches no tracked file, or when a registry row lacks a class tag. Registered this round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`, and the starter-pair docs. Removed stale `plans/verify_*.py` registry row (no such tracked files). Also landed the harness toolkit for class A/B use (`oto/agents/harness_tools.py`: corpus census with floor/native split + TARGET_CELLS coverage, round-robin candidate proposals, CPU-gate verification, `build_harness_study`) wired into `--generate-device-docs`, which now also writes `<codename>_harness_study.md` and `<codename>_potential_configs.md`.
+
+- **2026-11-13 — the CLI front door (`oto`) lands (Phase 1–4 of the CLI UX rework).**
+  Replaced the multi-mechanism root shim with a single verb-first front: subcommands
+  (`tune`, `run`, `bench`, `status`, `report`, `doctor`, `preflight`, `candidate`,
+  `retirement`, `analytics`, `synthesis`, `verify`, `check`, `library`, `agent`,
+  `consolidate`, `stats`, `chart`, `version`, `help`, `completion`), global flags
+  (`--base`, `-q/--quiet`, `-v/--verbose`, `--no-input`, `--no-color`, `-n/--dry-run`,
+  `-y/--yes`, `--live {on,off}`, read-only `--json`). Root `oto.py` deleted; `bin/oto`
+  over `python3 -m oto` is the repo-local entry. `oto doctor` (toolchain/GPU/registry/
+  corpus/docs), `oto check db|retirement`, `oto verify all --json`, `oto chart`,
+  `oto candidate --json`, generated `docs/cli.md` (single source of truth) all wired.
+  Full suite green: 1044 passed / 8 skipped / 242 subtests; ruff + py_compile + pyflakes
+  + function/file-length + interactive-keys gates clean; no new failures vs the pre-existing
+  `verify_all` baseline.

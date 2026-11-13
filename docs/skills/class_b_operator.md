@@ -5,7 +5,7 @@
 ## What you do
 - Use oto to produce a best-effort Tensile library for an unsupported AMD platform
 - Generate device-specific docs via agent-1/agent-2
-- Run CPU-only harness study, then TTY benchmark, then `--best-library`
+- Run CPU-only harness study, then TTY benchmark, then `oto library best-effort`
 
 ## What you read
 - `docs/operator_runbook.md` (the contract)

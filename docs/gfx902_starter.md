@@ -47,7 +47,7 @@ party source; transcribe to the .json half only after verification.
 ## API key
 
 Set one of these in the shell on the machine that runs
-`--generate-device-docs` (never commit a key):
+`oto agent generate` (never commit a key):
 
     export ANTHROPIC_API_KEY=...     # preferred, agent uses web_search tool
     # or export OPENAI_API_KEY=...   # uses gpt-4o-mini-search-preview

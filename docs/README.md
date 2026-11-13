@@ -107,7 +107,7 @@ Corollaries:
 | `docs/starter_pair.md` | operator | Ecosystem | The starter Markdown+JSON pair protocol |
 | `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
-| `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 oto/_map.py`) |
+| `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto._map`) |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 
 ## The quality gates

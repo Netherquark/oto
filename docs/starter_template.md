@@ -31,4 +31,4 @@ codename: <codename>
 ## API key
 
 <!-- Name the env var, never the key. e.g. "export ANTHROPIC_API_KEY=..."
-     on the machine that runs --generate-device-docs. -->
+     on the machine that runs `oto agent generate`. -->

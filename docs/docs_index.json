@@ -224,6 +224,12 @@
     {
       "class": "shared",
       "kind": "Ecosystem",
+      "owns": "CLI command reference \u2014 `oto <cmd>` vocabulary, flags, migration table",
+      "path": "docs/cli.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
       "owns": "Per-class agent skill definitions (Class A developer, Class B operator)",
       "path": "docs/skills/class_a_developer.md"
     },
@@ -266,11 +272,11 @@
     {
       "class": "dev",
       "kind": "Package",
-      "owns": "The `oto/` package map (regenerate with `python3 oto/_map.py`)",
+      "owns": "The `oto/` package map (regenerate with `python3 -m oto._map`)",
       "path": "oto/README.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 36,
+  "total": 37,
   "version": 1
 }
