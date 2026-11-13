@@ -14,6 +14,11 @@ ERROR_HINTS: dict[str, str] = {
     "registry": "Run 'oto check db' or pass --base <path>.",
     "GPU": "GPU not detected. Run 'oto doctor' to check hardware.",
     "profile": "No profile for codename. Check profiles/ directory.",
+    "No such file": "File not found. Check the path and try again.",
+    "PermissionError": "Permission denied. Check file permissions.",
+    "FileNotFoundError": "File not found. Check the path and try again.",
+    "ModuleNotFoundError": "Missing dependency. Run 'oto doctor' to check environment.",
+    "KeyboardInterrupt": "Interrupted by user.",
 }
 
 
@@ -33,6 +38,13 @@ def handle_error(exc: Exception, quiet: bool = False) -> int:
         if exc.hint:
             print(f"hint: {exc.hint}", file=sys.stderr)
         return exc.exit_code
+    # Try to match a known error pattern
+    exc_str = str(exc)
+    for pattern, hint in ERROR_HINTS.items():
+        if pattern.lower() in exc_str.lower():
+            print(f"error: {exc}", file=sys.stderr)
+            print(f"hint: {hint}", file=sys.stderr)
+            return EXIT_FAIL
     # Unknown error — save traceback
     import traceback
     tb = traceback.format_exc()
