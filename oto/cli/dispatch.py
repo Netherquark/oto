@@ -60,6 +60,7 @@ def _add_core_subcommands(sub: Any) -> None:
     p.add_argument("--include-unreproducible", action="store_true", help="Re-attempt unreproducible cells")
     p.add_argument("--yes", action="store_true", help="Accept default plan without prompting")
     p.add_argument("--live", choices=["on", "off"], default="on", help="Live status repaint")
+    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     p.set_defaults(func=_run_tune)
 
     p = sub.add_parser("status", help="Run status, ETA, and live panel",
@@ -69,16 +70,19 @@ def _add_core_subcommands(sub: Any) -> None:
     p.add_argument("--thermals", action="store_true", help="Include thermal envelope")
     p.add_argument("--plan", nargs="*", default=[], help="Project a plan: KEY=VALUE ...")
     p.add_argument("--run", help="run_id to report on (default: newest)")
+    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.set_defaults(func=_run_status)
 
     p = sub.add_parser("doctor", help="Diagnose environment (toolchain, GPU, registry)",
                        epilog="Examples:\n  oto doctor                     # full diagnostic\n  oto doctor --json              # machine-readable")
     add_global_flags(p)
+    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.set_defaults(func=_run_doctor)
 
     p = sub.add_parser("report", help="Regenerate acceptance report")
     add_global_flags(p)
     p.add_argument("--run", help="run_id to report on (default: newest)")
+    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.set_defaults(func=_run_report)
 
 
@@ -95,17 +99,20 @@ def _add_bench_subcommands(sub: Any) -> None:
     p.add_argument("--family", nargs="+", help="Filter by family")
     p.add_argument("--pattern", nargs="+", help="Filter by contraction pattern")
     p.add_argument("--shape", nargs="+", help="Filter by problem shape")
+    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     p.set_defaults(func=_run_bench)
 
     p = sub.add_parser("verify", help="Verification commands")
     vsub = p.add_subparsers(dest="verify_cmd")
     vp = vsub.add_parser("all", help="Run all refactor verifiers")
     add_global_flags(vp)
+    vp.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     vp.set_defaults(func=_run_verify_all)
     vp2 = vsub.add_parser("run", help="Corpus snapshot/diff/telemetry")
     add_global_flags(vp2)
     vp2.add_argument("verify_run_cmd", nargs="?", choices=["snapshot", "diff", "telemetry", "cheapest"])
     vp2.add_argument("verify_run_args", nargs=argparse.REMAINDER)
+    vp2.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     vp2.set_defaults(func=_run_verify_run)
 
     p = sub.add_parser("check", help="Diagnostic checks")
@@ -116,6 +123,7 @@ def _add_bench_subcommands(sub: Any) -> None:
                             ("library-parity", "Coverage parity vs shipped gfx900")]:
         cp = csub.add_parser(name, help=help_text)
         add_global_flags(cp)
+        cp.add_argument("--json", action="store_true", help="Machine-readable JSON output")
         cp.set_defaults(func=_run_check, check_name=name)
 
 
@@ -128,12 +136,15 @@ def _add_library_subcommands(sub: Any) -> None:
     lp.add_argument("--dest", help="Destination directory")
     lp.add_argument("--protocol-basis", choices=["family", "any", "single", "partial"],
                     default="family", help="Protocol basis for carving")
+    lp.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     lp.set_defaults(func=_run_library_best_effort)
     lp2 = lsub.add_parser("verify", help="Coverage parity check")
     add_global_flags(lp2)
+    lp2.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     lp2.set_defaults(func=_run_library_verify)
     lp3 = lsub.add_parser("build-proof", help="Build-proof check")
     add_global_flags(lp3)
+    lp3.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     lp3.set_defaults(func=_run_library_build_proof)
 
 
@@ -144,6 +155,7 @@ def _add_agent_subcommands(sub: Any) -> None:
     ap = asub.add_parser("generate", help="Generate device docs (agent-1/agent-2)")
     add_global_flags(ap)
     ap.add_argument("starter", nargs="?", help="Starter file path")
+    ap.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     ap.set_defaults(func=_run_docs_generate)
     ap2 = asub.add_parser("index", help="Regenerate docs index")
     add_global_flags(ap2)
@@ -153,11 +165,13 @@ def _add_agent_subcommands(sub: Any) -> None:
 def _add_utility_subcommands(sub: Any) -> None:
     p = sub.add_parser("consolidate", help="Deck consolidation")
     add_global_flags(p)
+    p.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     p.set_defaults(func=_run_consolidate)
 
     p = sub.add_parser("stats", help="Cross-run best config per cell")
     add_global_flags(p)
     p.add_argument("--family", help="Filter by family")
+    p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.set_defaults(func=_run_stats)
 
     p = sub.add_parser("chart", help="Generate comparison figures")
@@ -257,14 +271,17 @@ def _run_status(args: Any) -> int:
         argv += ["--watch", str(args.watch)]
     if args.thermals:
         argv += ["--thermals"]
-    if args.json:
+    if getattr(args, "json", False):
         argv += ["--json"]
     return rs_main(argv)
 
 
 def _run_doctor(args: Any) -> int:
     from oto.runners.cli import main as cli_main
-    return _with_argv(["--base-dir", str(_resolve_base(args)), "--preflight"], cli_main)
+    argv = ["--base-dir", str(_resolve_base(args)), "--preflight"]
+    if getattr(args, "json", False):
+        argv += ["--json"]
+    return _with_argv(argv, cli_main)
 
 
 def _run_verify_all(args: Any) -> int:
@@ -287,16 +304,28 @@ def _run_check(args: Any) -> int:
     base = str(_resolve_base(args))
     if name == "candidates":
         from oto.checks.candidates import main as m
-        return _with_argv(["--base-dir", base], m)
+        argv = ["--base-dir", base]
+        if getattr(args, "json", False):
+            argv += ["--json"]
+        return _with_argv(argv, m)
     if name == "db":
         from oto.checks.db import main as m
-        return _with_argv(["--base-dir", base], m)
+        argv = ["--base-dir", base]
+        if getattr(args, "json", False):
+            argv += ["--json"]
+        return _with_argv(argv, m)
     if name == "retirement":
         from oto.checks.retirement import main as m
-        return _with_argv(["--base-dir", base], m)
+        argv = ["--base-dir", base]
+        if getattr(args, "json", False):
+            argv += ["--json"]
+        return _with_argv(argv, m)
     if name == "library-parity":
         from oto.checks.library_parity import main as m
-        return _with_argv(["--base-dir", base], m)
+        argv = ["--base-dir", base]
+        if getattr(args, "json", False):
+            argv += ["--json"]
+        return _with_argv(argv, m)
     return 1
 
 
@@ -345,12 +374,18 @@ def _run_library_best_effort(args: Any) -> int:
 
 def _run_library_verify(args: Any) -> int:
     from oto.checks.library_parity import main as m
-    return _with_argv(["--base-dir", str(_resolve_base(args))], m)
+    argv = ["--base-dir", str(_resolve_base(args))]
+    if getattr(args, "json", False):
+        argv += ["--json"]
+    return _with_argv(argv, m)
 
 
 def _run_library_build_proof(args: Any) -> int:
     from oto.checks.tensile_build import main as m
-    return _with_argv(["--base-dir", str(_resolve_base(args))], m)
+    argv = ["--base-dir", str(_resolve_base(args))]
+    if getattr(args, "json", False):
+        argv += ["--json"]
+    return _with_argv(argv, m)
 
 
 def _run_consolidate(args: Any) -> int:
