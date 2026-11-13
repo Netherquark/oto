@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -83,6 +84,10 @@ def _add_core_subcommands(sub: Any) -> None:
     p = sub.add_parser("help", help="Show help for a topic")
     p.add_argument("topic", nargs="?", help="Command or topic name")
     p.set_defaults(func=_run_help)
+
+    p = sub.add_parser("completion", help="Generate shell completions")
+    p.add_argument("shell", choices=["bash", "zsh"], help="Shell type")
+    p.set_defaults(func=_run_completion)
 
 
 def _add_bench_subcommands(sub: Any) -> None:
@@ -349,6 +354,41 @@ def _run_version(args: Any) -> int:
     return 0
 
 
+def _run_completion(args: Any) -> int:
+    if args.shell == "bash":
+        print("""_oto_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "tune status doctor verify check bench report library consolidate stats chart agent version help completion" -- "$cur") )
+}
+complete -F _oto_completions oto""")
+    elif args.shell == "zsh":
+        print("""#compdef oto
+_oto() {
+    local -a commands
+    commands=(
+        'tune:Run the convergence loop'
+        'status:Run status, ETA, and live panel'
+        'doctor:Diagnose environment'
+        'verify:Verification commands'
+        'check:Diagnostic checks'
+        'bench:Benchmark phases'
+        'report:Regenerate acceptance report'
+        'library:Tensile library operations'
+        'consolidate:Deck consolidation'
+        'stats:Cross-run best config per cell'
+        'chart:Generate comparison figures'
+        'agent:Agent operations'
+        'version:Print version'
+        'help:Show help for a topic'
+        'completion:Generate shell completions'
+    )
+    _describe 'command' commands
+}
+compdef _oto oto""")
+    return 0
+
+
 def _run_help(args: Any) -> int:
     if args.topic:
         print(f"See: oto {args.topic} --help")
@@ -391,8 +431,20 @@ def main(argv: list[str] | None = None) -> int:
         print("Run 'oto help' for full command list.")
         print("Run 'oto <command> --help' for command details.")
         return 0
+    import os as _os
+    _devnull = None
+    _old_stdout = None
+    if getattr(args, "quiet", False):
+        _devnull = open(_os.devnull, "w")
+        _old_stdout = sys.stdout
+        sys.stdout = _devnull
     try:
-        return args.func(args)
+        result = args.func(args)
     except Exception as exc:
         from oto.cli.errors import handle_error
-        return handle_error(exc, quiet=getattr(args, "quiet", False))
+        result = handle_error(exc, quiet=getattr(args, "quiet", False))
+    finally:
+        if _devnull is not None:
+            sys.stdout = _old_stdout
+            _devnull.close()
+    return result
