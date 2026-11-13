@@ -35,6 +35,21 @@ output tagged UNVERIFIED until a human checks it against first-party
 sources. The registry's `Class` column marks which audience each document
 serves — `dev`, `operator`, or `shared`.
 
+### Who reads what (agent-role map)
+
+| Agent role | Entry doc (read first) | Then | Never needs |
+|---|---|---|---|
+| Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
+| Class A — reviewer/auditor subagent | `adversarial_review.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
+| Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
+| Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, `<cn>_theoretical_limits.md`, `<cn>_tuning_context.md`, `potential_configs.md` — generated docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
+| Any agent, any class | `docs/comparability.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
+
+Class rules that follow from the map: a Class A agent that starts from
+`docs/operator_runbook.md` has picked the wrong entry; a Class B agent that
+opens `implementation_plan.md` is reading the dev loop, not its own. Both
+classes register every doc they add here, with the right `Class` value.
+
 ## The boundary, stated as a test
 
 > **If the fact would still be true after the code were rewritten in another
