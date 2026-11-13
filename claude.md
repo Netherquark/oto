@@ -200,7 +200,7 @@ microbenchmark of any size. **Everything the agent needs to know about the devic
 is already in `gfx90c_theoretical_limits.md` §1–§3 and `oto/device/peaks.py`.**
 Full Tensile benchmark runs are also not the agent's to launch: only in a TTY, and
 only when the USER runs them. Agent work is CPU-only — code, DB and docs, plus the
-repo's own CPU-only tools (`check_candidates.py`, `allruns.py`,
+repo's own CPU-only tools (`oto check candidates`, `oto stats`,
 `check_tensile_build.py`, `check_library_parity.py`, the gate/test suite, deck
 generation, dry-run, result inspection).
 
@@ -234,20 +234,20 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 
 | Need | Run |
 |---|---|
-| Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 allruns.py` (`--family ZZ`, `--json out.json`) |
+| Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 oto stats` (`--family ZZ`, `--json out.json`) |
 | What has the corpus already measured on this family/cell, at which geometry or axis value, and how did it score? | `python3 -m oto.harness.corpus_census` (`--family SS`, `--typecode HHS`, `--cell SS:1024`, `--knob DepthU`, `--json out.json`) |
 | Does Tensile build every *unmeasured* deck row? (the pre-run sweep) | `python3 -m oto.harness.deck_check` (`--family CC --limit 10`, `--json out.json`; ~75 s/row, resumable, CPU-only) |
 | Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
 | Run the test suite (2m10s serial, 1m27s with `-n auto`, 37s for `-m preflight`) | `python3 -m pytest -q` (`-n auto` to distribute, `-m preflight` for the pre-run subset) |
 | Is the repo clean under the tree-walking guards? (pyflakes, ruff, py_compile, 60-line and 600-line rules) | `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q` (`OTO_GUARD_FILES=1` for changed files only) |
-| Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 port_tensile.py --best-library [DEST]` (default `gfx90c_results/best_effort_library/`; `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
+| Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 oto --best-library [DEST]` (default `gfx90c_results/best_effort_library/`; `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
 | What is the *legal* geometry space per cell, what has been measured inside it, and which legal geometry is untried but sits next to a fast one? (the numbers, then the picture) | `python3 -m oto.harness.coverage_map` (`--family SS`, `--cell SS:256`, `--top 12`, `--json out.json`) and `python3 -m oto.harness.coverage_graph` (writes `gfx90c_results/analysis/coverage/*.svg` + an index page) |
-| Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
+| Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 oto check candidates` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
-| Which knobs has the corpus ever actually varied? | `python3 allruns.py` (`--json out.json`; the `never-exercised knobs` block) |
+| Which knobs has the corpus ever actually varied? | `python3 oto stats` (`--json out.json`; the `never-exercised knobs` block) |
 | Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
 | Is this forward-knob domain deck-safe, or does it generate refusals? | `python3 -m oto.tools.deck_review legality` (`--family CC`) |
 | Do the launch gates agree with what Tensile actually built? (false rejections / misses) | `python3 -m oto.harness.gate_calibration` (`--population ours`, `--fail-on-false-reject`) |
@@ -258,7 +258,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 `oto.tensile.knob_sweep` is a **dry run by default** and writes `phases.yaml`
 only with `--emit`; that keeps the read-only contract of stage 2 intact while
 still giving deck generation a one-line entry point. It exists because
-`allruns.py` proves `GlobalSplitU` and `StaggerU` have only ever held one value
+`oto stats` proves `GlobalSplitU` and `StaggerU` have only ever held one value
 each — see `potential_configs.md` §8 for the deck it emits and §8.1 for the
 measured legality matrix behind it.
 
@@ -409,7 +409,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   telemetry as proof of behavior.
 - Do not use a mathematically or physically unjustified normalization just because it
   improves presentation. Revalidate derived conclusions when methodology changes.
-- **/tmp-PoC-first default.** Every code change — not only `port_tensile.py` /
+- **/tmp-PoC-first default.** Every code change — not only `oto` /
   its modules — is prototyped in `/tmp` and tested there before landing;
   in-tree files are edited only after the PoC passes. Throwaway scripts never
   land in the repo root.
