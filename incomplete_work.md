@@ -1,3 +1,45 @@
+# Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26; 2026-11-13)
+
+**2026-11-13 refresh — two classes of finding.** (a) *Landed and proven this
+session*: ruff + py_compile + file-length gates; profile seam made load-bearing
+(downstream rebind); second-profile gate tests; spoof_reference parameterised
+(emit + manifest cache + recall + run-id prefix); real potential_configs
+synthesis from run artifacts; agent-role docs map; library-level sys.path hack
+removed. (b) *Environment-blocked, not done*: the full end-to-end suite could
+not be re-run on this externally saturated machine (loadavg ~60–70 from the
+other session; CPU-starved to ~1% for a long-running suite). Per-file
+verification was used instead; two known lint-fallout defects (FAMILY_DTYPE_CHAR
+re-export; fake_emit kwarg) were found that way. **The full suite must be
+re-run on a quiet machine before claiming it green.**
+
+Open items, tracked:
+
+- C2.5–C2.9 mechanical `DeviceProfile` object threading in the ~50 consumer
+  files that currently read `oto.device.peaks` at import/call time instead of
+  taking a profile. Deliberately deferred: semantically safe today (peaks is
+  the profile-derived constants module; gates rebind correctly via
+  `bound_profile`), but the diff is large and the full suite is unverifiable
+  here. Cheap interim guards exist: `tests/test_profile_second_device.py`,
+  gate rebind tests, import sweeps, compile-all.
+- File-length offenders (the `OFFENDERS` list in `tests/test_file_length.py`):
+  `test_phase1_integration.py` 1008, `test_synthesis_phase4.py` 780,
+  `test_occupancy_gate.py` 779, `test_run_status.py` 620, `run_status.py` 608.
+  Splitting is mechanical but suite-verifiable only.
+- C4 (gfx902 starter research, agent-1/agent-2 outputs) — needs an API key,
+  not provided.
+- GPU runtime verification (yolo26 e2e, C3.5 parity, C7.1, C8 GPU legs,
+  `.dat` bit-exact builds on the user's ROCm nightly) — needs the user's TTY;
+  GPU is session-wedged.
+- C7.2 docstring residue: ~3 occurrences of device codename prose outside
+  `oto/device/` + `profiles/` remain (docstrings/comments in
+  `oto/tensile/shipped_library.py`, `oto/tensile/gates/vgpr_model.py`,
+  `oto/runners/paths.py` — deliberate, documented back-compat notes).
+- C7.1 (gfx906/gfx902 starter profiles) — blocked on C4 for gfx902; the
+  synthetic gfx906 profile is in place for gate testing.
+- C5.4 docstring cleanup (~60 files, tell-what-it-owns style rewrite) —
+  explicitly out of scope this session; the quality gates (function ≤ 60,
+  file ≤ 600, ruff/pyflakes zero findings) are the enforceable parts and are
+  enforced.
 # Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26)
 
 Status key: RESOLVED (mechanism landed + proven) / PENDING (real gap, still open) /

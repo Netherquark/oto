@@ -34,6 +34,46 @@ and NOT the experimental data (that is `results.md`).
   at integration time; the four tree-walking guard suites pass and the gates
   are the standing commit battery now.
 
+- **2026-11-13 (14th) — profile seam made load-bearing; spoof floor and
+  potential_configs parameterised.** After the gate integration (13th), the
+  load-bearing question was whether a *different* device profile would change
+  gate verdicts. It could not: `set_profile()` rebound only vgpr_model's own
+  globals while gate modules hold `from .vgpr_model import X` snapshots taken
+  at import — a silent no-op. `set_profile`/`restore_profile` now also rebind
+  the import-time snapshots in `oto.tensile.gates.occupancy`
+  (`VGPR_PER_CU`) and `oto.tensile.gates.loads` (`GLOBAL_LOAD_BYTE_CAP`) via a
+  `_DOWNSTREAM` registry; restore reverses them exactly, exception-safe.
+  Calibrated constants (`LDS_BUDGET`, `MAX_LDS_BYTES`, `ACCVGPR_BUDGET`) stay
+  fixed by design. `tests/test_profile_second_device.py` proves the flip both
+  ways (same 64x64x16 DD config: gfx90c-admit vs synthetic-refuse; load-cap
+  bound flips 4→2) plus exception-safe restore; session fixture
+  `second_profile` (gfx906) added in `tests/conftest.py`. The spoof-reference
+  floor is parameterised end to end: `find_gfx900_dat_files` /
+  `_config_from_kernel` / `shipped_kernel_config` / `emit_spoof_phases` take
+  `arch` (+ `schedule`); `load_shipped_manifest` / `reference_chain` /
+  `latest_reference_run_id` take `arch=`; cache filename is arch-scoped;
+  `runners/reference.py` resolves `profile.spoof_reference` and threads it
+  into the manifest load, emit, resume chains and the `<arch>_ref_*` run-id
+  prefix; a profile with no `spoof_reference` still short-circuits to
+  native-only. Two lint-fallout defects were caught and fixed:
+  `tests/test_legality_prior.py` read `tlib.FAMILY_DTYPE_CHAR` (re-export
+  removed by the ruff F401 cleanup; rewired to `oto.device.peaks`), and
+  `tests/test_run_status.py`'s `fake_emit` mock rejected the new `arch` kwarg.
+  `potential_configs_gen.generate()` now synthesises the real document from
+  run artifacts: like-for-like acceptance, per-cell verdict anatomy table,
+  ranked attack plan (LOSSes by gap, then TIEs), readable orange list,
+  realistic ceilings, research citations; results paths now derive from
+  `profile.codename` (was hardwired to the default device).
+  `oto/harness/regression_matrix.py` lost its library-level
+  `sys.path.insert(0, base_dir)` (a foreign-repo import leak); CLI bootstraps
+  kept. Docs: agent-role map added to `docs/README.md` (who reads which doc,
+  per agent role; dev / operator / shared). Machine was externally saturated
+  throughout (loadavg ~60–70, not this session's work); per-file verification
+  used instead of the full suite: new module, test_run_status,
+  test_legality_prior, test_occupancy_gate, test_profile, test_agents,
+  test_comparability — all green; two heavy files still verifying in
+  background.
+
 - **2026-10-29 (12th) — best-effort build fixed on system ROCm; default
   destination made explicit.** `_tensile_env` no longer prepends
   compiler-default system includes (`/usr/include`, `/usr/local/include`) to
