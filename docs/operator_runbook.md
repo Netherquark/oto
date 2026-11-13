@@ -98,7 +98,7 @@ export OTO_API_ENDPOINT=...    # explicit endpoint always wins (OTO_API_MODEL to
 ```
 
 ```bash
-PYTHONPATH=. python3 port_tensile.py --generate-device-docs docs/<codename>_starter.md --codename <codename>
+PYTHONPATH=. python3 oto.py agent generate docs/<codename>_starter.md
 ```
 
 The agent writes `docs/<codename>_theoretical_limits.md` and
@@ -139,7 +139,7 @@ The agent's numbers may be wrong in ways tests cannot catch. Before any
 
 Best-effort still starts with measurement. In the user's TTY:
 
-1. Run oto's driver stages for the target (`port_tensile.py` stage list and
+1. Run oto's driver stages for the target (`oto run --stage` list and
    the interactive controls are documented in `README.md` §3).
 2. The kernel corpus accumulates in `gfx90c_results/analysis/kernel_db.json`
    — the path is historical, not device; on the target device the corpus is

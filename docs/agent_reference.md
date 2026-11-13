@@ -17,9 +17,9 @@ python3 -m oto.tools.deck_review legality
 python3 -m oto.tools.deck_review flood --cap 24
 
 # 2. CPU-only pre-flight
-python3 check_candidates.py --quiet
+python3 oto.py check candidates --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 oto.py doctor
 
 # 3. Pyflakes + ruff + py_compile + length safety nets (fast, CPU-only)
 python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
@@ -201,7 +201,7 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 ## CPU-only contract (`claude.md` §5)
 
 - **Never stress the GPU** from a GNOME session (no sustained `./benchmark` runs)
-- `check_candidates.py`, `generate_candidates --dry-run`, and `--preflight` are safe
+- `oto check candidates`, `generate_candidates --dry-run`, and `oto doctor` are safe
 - Real benchmarking happens in the user's TTY only
 - CPU-only legality proofs: `validate_config`, `ldspad_feasible`, `occupancy_feasible`
 - **Any `pytest` invocation during programming takes minutes and must be run in
@@ -218,13 +218,13 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 ```bash
 # CPU-only (any session)
 python3 -m oto.harness.generate_candidates          # wire the seed overlay
-python3 check_candidates.py --quiet
-python3 check_candidates.py --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
+python3 oto.py check candidates --quiet
+python3 oto.py check candidates --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-PYTHONPATH=. python3 oto/runners/cli.py --preflight
+python3 oto.py doctor
 
 # TTY only — the real run
-python3 port_tensile.py --auto --budget 10 --yes
+python3 oto.py tune --budget 10 --yes
 ```
 
 The overlay is gitignored, so wiring it in is a required step, not a no-op.
