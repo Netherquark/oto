@@ -1,0 +1,276 @@
+{
+  "agent_classes": {
+    "A": {
+      "description": "Coding agent working on oto itself.",
+      "entry": "claude.md",
+      "name": "developer",
+      "never_needs": [
+        "docs/operator_runbook.md",
+        "docs/starter_*.md"
+      ],
+      "reads": [
+        "claude.md",
+        "docs/agent_reference.md",
+        "docs/docstrings.md",
+        "docs/harness_runbook.md",
+        "implementation_plan.md"
+      ],
+      "tools": [
+        "pytest",
+        "ruff",
+        "pyflakes",
+        "generate_candidates",
+        "check_candidates"
+      ]
+    },
+    "B": {
+      "description": "Agent using oto to produce a best-effort library for an unsupported AMD platform.",
+      "entry": "docs/operator_runbook.md",
+      "must_not_write": [
+        "oto/**/*.py",
+        "tests/**/*.py",
+        "*.py (root shims)"
+      ],
+      "name": "operator",
+      "never_needs": [
+        "implementation_plan.md",
+        "docs/harness_runbook.md"
+      ],
+      "reads": [
+        "docs/operator_runbook.md",
+        "docs/starter_pair.md",
+        "docs/starter_template.md",
+        "docs/gfx902_starter.md"
+      ],
+      "tools": [
+        "oto doctor",
+        "oto status",
+        "oto tune",
+        "oto library best-effort",
+        "oto check candidates",
+        "oto verify all"
+      ]
+    }
+  },
+  "documents": [
+    {
+      "class": "shared",
+      "kind": "**Ecosystem (root)**",
+      "owns": "The entry contract, routing, authority rules, guardrails",
+      "path": "claude.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "General repository orientation",
+      "path": "README.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The docstring convention (what a module docstring must contain)",
+      "path": "docs/docstrings.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The current executable plan only",
+      "path": "implementation_plan.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "The shipped-footprint replication contract",
+      "path": "mapping.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Per-family ceilings, the acceptance authority",
+      "path": "gfx90c_theoretical_limits.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The tuning cookbook: legal knob domains (\u00a71.1\u2013\u00a71.2), what wins, the virgin-axis census (\u00a79.1)",
+      "path": "gfx90c_tuning_guide.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Research only: hardware model, Tensile source mechanics, unverified-claim register",
+      "path": "kernel_tuning_research.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Research only: complex (C/Z) GEMM on the pre-MFMA assembly path",
+      "path": "complex_gemm_research_brief.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The candidate deck, decisions, search rules",
+      "path": "potential_configs.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Measured evidence",
+      "path": "results.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Architecture knowledge at the captured state",
+      "path": "knowledge_base.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Evolution log (append-only)",
+      "path": "changelog.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Open-work register",
+      "path": "incomplete_work.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior conclusions, results only",
+      "path": "prior_INSIGHTS_CAVEMAN_ULTRA.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior conclusions, results only",
+      "path": "prior_RESEARCH_ARCHIVE.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Tuning/search philosophy (incl. \u00a7S the autotuning strategy cross-check)",
+      "path": "tensile_tuning_context.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Audit register",
+      "path": "adversarial_review.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The refactor plans this package was built against",
+      "path": "plans/REFACTOR_2_UNIVERSAL_GPU.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Test-suite optimisation plan",
+      "path": "plans/test_optimization.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "CLI UX rework plan \u2014 one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev",
+      "path": "plans/CLI_UX_REWORK.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
+      "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
+      "path": "archive/corpus.pass1_20261014.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
+      "path": "archive/corpus2.pass2_20261014.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem (frozen)",
+      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
+      "path": "archive/corpus3.pass3_20261014.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Multi/single-run comparability triage \u2014 the like-for-like admission rule",
+      "path": "docs/comparability.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Design-language spec for the HTML acceptance report",
+      "path": "docs/design_language.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Agentic kernel-tuning harness quick reference (CPU-only)",
+      "path": "docs/agent_reference.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Per-class agent skill definitions (Class A developer, Class B operator)",
+      "path": "docs/skills/class_a_developer.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Per-class agent skill definitions (Class A developer, Class B operator)",
+      "path": "docs/skills/class_b_operator.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Harness runbook",
+      "path": "docs/harness_runbook.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "**Class B entry** \u2014 best-effort library on an unsupported AMD platform, end to end",
+      "path": "docs/operator_runbook.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "The starter Markdown+JSON pair protocol",
+      "path": "docs/starter_pair.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "Zero-spec pair template the operator copies",
+      "path": "docs/starter_template.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "gfx902 worked starter (public identity + open questions only)",
+      "path": "docs/gfx902_starter.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Package",
+      "owns": "The `oto/` package map (regenerate with `python3 oto/_map.py`)",
+      "path": "oto/README.md"
+    }
+  ],
+  "generated_from": "docs/README.md",
+  "total": 36,
+  "version": 1
+}
