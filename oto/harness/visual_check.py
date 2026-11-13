@@ -22,6 +22,7 @@ from pathlib import Path
 try:
     from playwright.sync_api import sync_playwright
 except ImportError:
+    print("playwright not installed; run: pip install playwright && playwright install chromium")
     sys.exit(1)
 
 
@@ -106,10 +107,12 @@ def check_report(report_path: Path, base_url: str | None = None) -> int:
         browser.close()
 
     if failures:
-        for _f in failures:
-            pass
+        print("VISUAL CHECK FAILURES:")
+        for f in failures:
+            print(f"  - {f}")
         return 1
 
+    print("Visual/layout checks: PASS")
     return 0
 
 
@@ -120,6 +123,7 @@ def main():
     args = parser.parse_args()
 
     if not args.report.exists():
+        print(f"Report not found: {args.report}")
         return 1
 
     return check_report(args.report, args.url)

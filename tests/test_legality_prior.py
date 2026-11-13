@@ -11,7 +11,6 @@ import unittest
 from pathlib import Path
 
 import oto.tensile.legality as legality
-import oto.tensile.library as tlib
 from oto.device.peaks import FAMILY_DTYPES
 
 BASE = Path(__file__).resolve().parent.parent

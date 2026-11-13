@@ -245,23 +245,27 @@ def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, A
 
 def _report(name: str, pop: dict[str, Any], limit: int) -> None:
     conf = pop["confusion"]
+    print(f"\n{name}   phases={pop['phases']}  built={pop['built']}")
     cells = [
         (True, True, "agree: Tensile built it, gate allowed it"),
         (False, False, "agree: no measurement, gate refused it"),
         (False, True, "MISS: no measurement, gate allowed it (work list)"),
         (True, False, "FALSE REJECTION: Tensile built it, gate refused it"),
     ]
-    for built, ok, _label in cells:
-        conf.get(f"built={built} gate={ok}", 0)
+    for built, ok, label in cells:
+        n = conf.get(f"built={built} gate={ok}", 0)
+        flag = ""
         if built and not ok:
-            pass
+            flag = "  <-- the decision rule: must be 0" if n else "  ok"
+        print(f"  {n:6}  {label}{flag}")
 
-    for _tag, rows in (("misses", pop["misses"]),
+    for tag, rows in (("misses", pop["misses"]),
                       ("false rejections", pop["false_rejections"])):
         if not rows:
             continue
-        for _r in rows[:limit]:
-            pass
+        print(f"  {tag} ({len(rows)}):")
+        for r in rows[:limit]:
+            print(f"    {r['run']}/{r['phase'][:56]:56} {r['reason'][:48]}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -281,7 +285,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     result = audit(args.base, args.family)
-    result["meta"]
+    meta = result["meta"]
+    print(f"gate calibration -- {meta['base']}")
+    print(f"  {meta['runs']} runs, {meta['phases']} phases, "
+          f"{meta['with_config']} with a launch config "
+          f"({meta['no_config']} without"
+          + (f", {meta['filtered_out']} filtered by --family"
+             if meta["filtered_out"] else "") + ")")
 
     shown = (("ours", "reference") if args.population == "all"
              else (args.population,))

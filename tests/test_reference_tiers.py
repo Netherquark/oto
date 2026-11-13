@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT))
 import oto.runners.auto_prompt as ap
 import oto.runners.driver as pt
 import oto.tensile.library as tl
+from oto.tensile.shipped_library import _CANON
 
 T1 = ["p_t1_a", "p_t1_b", "p_t1_c"]
 T2 = ["p_t2_a", "p_t2_b"]
@@ -221,7 +222,7 @@ class TestManifestIsPinned(unittest.TestCase):
                 for name in dt["kernels"]:
                     seen += 1
                     k = tl.phase_key(
-                        {"kernel": tl._CANON.sub("Cijk", name)})
+                        {"kernel": _CANON.sub("Cijk", name)})
                     assert k in self.by, f"{k} is missing from the audited manifest"
                     assert self.by[k] in known, f"{k} has an unknown tier {self.by[k]!r}"
         assert len(self.by) == seen, "manifest must not tier anything outside the corpus"
@@ -296,7 +297,7 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
             for dt in pats.values():
                 for n in dt["kernels"]:
                     self.name_of[hashlib.sha1(n.encode()).hexdigest()[:8]] = \
-                        tl._CANON.sub("Cijk", n)
+                        _CANON.sub("Cijk", n)
 
     def _key(self, tag):
         return tl.phase_key({"kernel": self.name_of[tag]})
@@ -341,7 +342,7 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
                 cells.setdefault((fam, pat), set())
                 for n in dt["kernels"]:
                     cells[(fam, pat)].add(
-                        tl.phase_key({"kernel": tl._CANON.sub("Cijk", n)}))
+                        tl.phase_key({"kernel": _CANON.sub("Cijk", n)}))
         empty = []
         for cell, keys in cells.items():
             usable = [k for k in keys if self.by.get(k) != tl.TIER_DROP]

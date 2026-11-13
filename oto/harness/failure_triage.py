@@ -136,19 +136,28 @@ def census(base: str = ".", run_filter: str | None = None,
 
 
 def _report(result: dict[str, Any], top: int) -> None:
-    result["meta"]
+    meta = result["meta"]
+    print(f"runs scanned: {meta['runs_scanned']}")
+    print(f"phase dirs: {meta['phase_dirs']}   with no non-empty CSV: {meta['empty']}")
 
+    print()
+    print("runs with any empty phase (name, phases, empty):")
     for r in result["per_run"]:
         if r["empty"]:
-            pass
+            print(f"   {r['run']:44} {r['phases']:4} {r['empty']:4}")
 
-    for _reason, _count in sorted(result["reasons"].items(),
+    print()
+    print("=" * 78)
+    print("Why the empty ones are empty (reason histogram):")
+    for reason, count in sorted(result["reasons"].items(),
                                key=lambda kv: -kv[1])[:top]:
-        pass
+        print(f"   {count:4}  {reason}")
 
     if result["samples"]:
-        for _run, _ph, _why in result["samples"][:12]:
-            pass
+        print()
+        print("samples:")
+        for run, ph, why in result["samples"][:12]:
+            print(f"   {run}/{ph}: {why}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

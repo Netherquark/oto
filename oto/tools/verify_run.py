@@ -327,29 +327,49 @@ def _cmd_snapshot(args, base: Path) -> int:
     text = json.dumps(snap, indent=2, sort_keys=True)
     if args.out:
         Path(args.out).write_text(text + "\n")
+        print(f"wrote {args.out}: {len(snap['dirs'])} run dirs, "
+              f"tables {snap['tables']}")
     else:
-        pass
+        print(text)
     return 0
 
 
 def _cmd_diff(args) -> int:
     res = diff_snapshots(_load(args.before), _load(args.after))
-    for _, _v in res["tables"].items():
-        pass
+    print(f"added:   {res['added'] or 'none'}")
+    print(f"removed: {res['removed'] or 'none'}")
+    print(f"modified in place: {[r['run_id'] for r in res['modified']] or 'none'}")
+    for t_, v in res["tables"].items():
+        print(f"  {t_:<8} {v['before']} -> {v['after']} "
+              f"(delta {v.get('delta', 'n/a')})")
     if res["ok"]:
+        print("OK: additive only, nothing lost")
         return 0
-    for _v in res["violations"]:
-        pass
+    print("VIOLATIONS:")
+    for v in res["violations"]:
+        print(f"  - {v}")
     return 1
 
 
 def _cmd_telemetry(args, base: Path) -> int:
     res = telemetry(args.run_id, base)
     if "error" in res:
+        print(res["error"])
         return 1
-    for _pid, _e in sorted(res["phases"].items()):
-        pass
+    print(f"{res['run_id']}  rows={res['rows']} tagged={res['tagged_rows']} "
+          f"untagged={res['untagged_rows']}  phase_id column={res['schema_ok']}")
+    print(f"  gates: busy>{res['busy_gate_pct']}% "
+          f"(enforced={res['busy_gate_enforced']}), "
+          f"sclk in {res['sclk_range_hz']}, thermal<{res['thermal_max_c']}C")
+    hdr = f"  {'phase':<46} {'rows':>5} {'busy':>5} {'sclk':>5} {'clock':>6} {'hot':>4}"
+    print(hdr)
+    for pid, e in sorted(res["phases"].items()):
+        print(f"  {pid[:46]:<46} {e['rows']:>5} {e['busy']:>5} {e['sclk']:>5} "
+              f"{e['clock']:>6} {e['hot']:>4}"
+              f"  base={e['clock_base_hz']/1e6:.0f}MHz"
+              f"{'' if e['ok'] else '  <-- NO CLOCK BASE'}")
     if res["unmeasured_phases"]:
+        print(f"  UNMEASURED: {res['unmeasured_phases']}")
         return 1
     return 0 if res["ok"] else 1
 
@@ -357,10 +377,16 @@ def _cmd_telemetry(args, base: Path) -> int:
 def _cmd_cheapest(args, base: Path) -> int:
     rows = cheapest(args.family, args.n, base)
     if args.json:
-        pass
+        print(json.dumps(rows, indent=2))
     else:
-        for _r in rows:
-            pass
+        print(f"  {'volume':>14} {'dtype':<6} {'problem':<14} {'vw':<3} "
+              f"{'shapes':<7} phase")
+        for r in rows:
+            print(f"  {r['volume']:>14.0f} {r['dtype']:<6} {r['problem_type']:<14} "
+                  f"{r['vector_width']!s:<3} {len(r['shapes']):<7} {r['phase_id']}")
+        print("\ndrive one with:")
+        print(f"  python3 port_tensile.py --dry-run --native "
+              f"--targets {rows[0]['phase_id']}" if rows else "  (none)")
     return 0
 
 

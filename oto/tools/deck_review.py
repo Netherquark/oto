@@ -73,13 +73,17 @@ def _score(base: Path) -> int:
 
     native, floor, _chain = arm_record_sets(base)
     if not native or not floor:
+        print("no native/spoof records found -- run a benchmark first")
         return 1
 
+    print(f"native records={len(native)}  spoof records={len(floor)}")
+    print(f"{'basis':11}{'cells':>6}{'WIN':>6}{'TIE':>6}{'LOSS':>6}   meaning")
     deltas: dict[str, dict[tuple[str, int], dict[str, Any]]] = {}
-    for basis, _meaning in BASES:
+    for basis, meaning in BASES:
         d = ab_delta._pair_cells(native, floor, basis, 2.0, None, None)
         deltas[basis] = d
-        Counter(v["verdict"] for v in d.values())
+        c = Counter(v["verdict"] for v in d.values())
+        print(f"{basis:11}{len(d):6}{c['WIN']:6}{c['TIE']:6}{c['LOSS']:6}   {meaning}")
 
     # The losses are the work list, and they only exist on the strict bases.
     worst = deltas["floor_best"]
@@ -87,18 +91,24 @@ def _score(base: Path) -> int:
                      for k, v in worst.items() if v["verdict"] == "LOSS"),
                     key=lambda r: r[0])
     if losers:
-        for _pct, key in losers[:12]:
-            worst[key]
-            key[2].split("_")[1]
-            key[1].split("x")[0]
+        print(f"\nLOSSES on floor_best ({len(losers)}) -- typical native vs spoof's best:")
+        for pct, key in losers[:12]:
+            v = worst[key]
+            fam = key[2].split("_")[1]
+            side = key[1].split("x")[0]
+            print(f"  {fam + ':' + side:10}{pct:8.1f}%  "
+                  f"nat_typ={v['native_median']:8.1f}  "
+                  f"spoof_best={v['spoof_best_median']:8.1f}")
 
     ties = deltas["winner"]
     tied = sorted((v["delta_pct"], k) for k, v in ties.items()
                   if v["verdict"] == "TIE")
     if tied:
-        for _pct, key in tied:
-            key[2].split("_")[1]
-            key[1].split("x")[0]
+        print(f"\nTIEs on winner ({len(tied)}) -- investigate whether they are walls:")
+        for pct, key in tied:
+            fam = key[2].split("_")[1]
+            side = key[1].split("x")[0]
+            print(f"  {fam + ':' + side:10}{pct:8.1f}%")
     return 0
 
 
@@ -228,16 +238,28 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
                      refused: list[tuple[str, str, Any, str]],
                      skipped: Counter) -> None:
     """Print the census. Split out so `_legality` stays inside the line budget."""
-    legal + sum(coupled.values()) + len(refused)
+    total = legal + sum(coupled.values()) + len(refused)
+    print(f"{n_fams} families x up to {TILES_PER_FAMILY} measured tiles; "
+          f"{total} (family, knob, value) draws through "
+          f"validate_config + ldspad_feasible")
+    print(f"  legal on >=1 tile: {legal}   coupled: {sum(coupled.values())}"
+          f"   refused standalone: {len(refused)}")
     if skipped:
-        pass
+        print(f"  no legal measured tile for {', '.join(sorted(skipped))} — "
+              f"those rows are template-only verdicts")
     if coupled:
-        for _where, _n in coupled.most_common():
-            pass
+        print("\ncoupled (tile-dependent; ordinary, not a defect):")
+        for where, n in coupled.most_common():
+            print(f"  {where:52}{n:4}")
     if not refused:
         return
-    for _fam, _knob, _value, _why in refused:
-        pass
+    print(f"\nrefused standalone — read the reason: it names the knob or rule "
+          f"responsible,\nand most of these resolve when a companion knob is "
+          f"drawn with them.\nA value that is genuinely dead for this device "
+          f"is one whose reason is a\nstructural class rule ('illegal on "
+          f"{_peaks.CODENAME}', 'no MatrixInstruction'):")
+    for fam, knob, value, why in refused:
+        print(f"  {fam:8}{knob:30}{value!s:6} {why}")
 
 
 def _legality(base: Path, families: list[str] | None) -> int:
@@ -302,9 +324,11 @@ def _flood(base: Path, cap: int | None) -> int:
     db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
-    except Exception:
+    except Exception as exc:
+        print(f"cannot read {db_path}: {exc}")
         return 1
     if not isinstance(db, dict):
+        print(f"{db_path} is not a kernel_db map")
         return 1
 
     # (family, shape) -> fingerprint -> [medians]
@@ -323,15 +347,21 @@ def _flood(base: Path, cap: int | None) -> int:
             cells[(str(row.get("family")), str(row.get("shape")))][fp].append(med)
 
     if not cells:
+        print("no cells in kernel_db.json")
         return 1
 
+    print(f"{'cell':12}{'configs':>8}{'records':>8}{'med/best':>9}")
+
     total_cfg = 0
-    for (_fam, _shape), fps in sorted(cells.items()):
+    for (fam, shape), fps in sorted(cells.items()):
         n_cfg = len(fps)
-        sum(len(v) for v in fps.values())
-        max((max(v) for v in fps.values()), default=0.0)
+        n_rec = sum(len(v) for v in fps.values())
+        best = max((max(v) for v in fps.values()), default=0.0)
         med = sorted(max(v) for v in fps.values())[len(fps) // 2]
         total_cfg += n_cfg
+        print(f"{fam + ':' + shape.split('x')[0]:12}{n_cfg:8}{n_rec:8}"
+              f"{(med / best * 100 if best else 0):9.0f}")
+    print(f"{'TOTAL':12}{total_cfg:8}")
 
     if cap is None:
         return 0
@@ -344,6 +374,9 @@ def _flood(base: Path, cap: int | None) -> int:
         winner = max(fps.items(), key=lambda kv: max(kv[1]))[0]
         if winner not in {fp for fp, _ in ranked}:
             lost += 1
+    print(f"\ntop-{cap} cap: retains {kept}/{total_cfg} configs "
+          f"({100 * kept / total_cfg:.0f}%), LOSES {lost} of {len(cells)} "
+          f"cell winners")
     return 0
 
 

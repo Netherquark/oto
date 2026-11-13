@@ -329,6 +329,7 @@ def _print_axes(records: Sequence[dict[str, Any]], top: int) -> None:
     for record in records:
         by_group[f"{record['family']}/{record['typecode']}"].append(record)
     for label in sorted(by_group, key=_group_sort):
+        print(f"\n### {label}")
         by_axis: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for record in by_group[label]:
             by_axis[record["axis"]].append(record)
@@ -338,8 +339,9 @@ def _print_axes(records: Sequence[dict[str, Any]], top: int) -> None:
             if not values:
                 continue
             shown = values if top <= 0 else values[:top]
-            " | ".join(f"{_fmt(v['value'])} {v['best']:.1f} "
+            cells = " | ".join(f"{_fmt(v['value'])} {v['best']:.1f} "
                                f"(n={v['n']})" for v in shown)
+            print(f"  {axis:16s} {len(values):3d} values: {cells}")
 
 
 def _print_geometries(records: Sequence[dict[str, Any]], top: int) -> None:
@@ -349,18 +351,25 @@ def _print_geometries(records: Sequence[dict[str, Any]], top: int) -> None:
         by_group[f"{record['family']}/{record['typecode']}"].append(record)
     for label in sorted(by_group, key=_group_sort):
         values = sorted(by_group[label], key=lambda r: -r["best"])
+        print(f"\n### {label}: {len(values)} distinct geometries")
         shown = values if top <= 0 else values[:top]
-        for _record in shown:
-            pass
+        for record in shown:
+            print(f"  {record['best']:9.1f}  n={record['n']:5d}  "
+                  f"{_geometry_text(record)}")
 
 
 def _print_cell(history: dict[str, Any]) -> None:
     """Print one cell's geometry history and the floor reference."""
+    print(f"### {history.get('label', history['cell'])}  "
+          f"native rows={history['n_attempts']}  "
+          f"geometries={history['n_geometries']}")
     floor = history.get("floor_best")
     if floor:
-        pass
+        print(f"  floor best {floor['gflops']:8.1f}  {_geometry_text(floor)}")
     for record in history["geometries"]:
-        f"n={record['n_seeds']}" if record.get("n_seeds") else ""
+        seeds = f"n={record['n_seeds']}" if record.get("n_seeds") else ""
+        print(f"  {record['gflops']:9.1f}  rows={record['n']:4d} {seeds:7s}  "
+              f"{_geometry_text(record)}")
 
 
 def _payload(args: argparse.Namespace, rows: Sequence[dict[str, Any]],

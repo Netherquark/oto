@@ -184,6 +184,7 @@ class TestCountReading(unittest.TestCase):
         import json
 
         import oto.tensile.library as tlib
+        from oto.tensile.shipped_library import _CANON
 
         counts = auto_prompt._read_counts(BASE)
         manifest = tlib.load_rerun_manifest(BASE)
@@ -195,7 +196,7 @@ class TestCountReading(unittest.TestCase):
             for dt in pats.values():
                 for name in dt["kernels"]:
                     tier = tlib.tier_for(
-                        {"kernel": tlib._CANON.sub("Cijk", name)}, manifest)
+                        {"kernel": _CANON.sub("Cijk", name)}, manifest)
                     if tier == tlib.TIER_FIRST:
                         expected["illegal"] += 1
                     elif tier in tlib.UNDERSPECIFIED_TIERS:
