@@ -27,6 +27,11 @@ from oto.runners.paths import results_rel
 #: Where the pinned shipped manifest is cached, relative to the project root.
 MANIFEST_PATH = results_rel("gfx900_shipped_manifest.json")
 
+
+def manifest_rel(arch: str = "gfx900") -> str:
+    """The results-relative cache filename for a reference arch's manifest."""
+    return results_rel(f"{arch}_shipped_manifest.json")
+
 # The shipped-library parse and the spoof-phase emitter live in their own module
 # so the manifest cache, the tier triage and the identity helpers here are not
 # buried under a binary .dat parser.
@@ -58,6 +63,7 @@ __all__ = [
     "latest_reference_run_id",
     "load_rerun_manifest",
     "load_shipped_manifest",
+    "manifest_rel",
     "parse_shipped_kernels",
     "phase_key",
     "reference_chain",
@@ -67,9 +73,9 @@ __all__ = [
 ]
 
 
-def _find_shipped_dats(prefix: Path) -> list[Path]:
+def _find_shipped_dats(prefix: Path, arch: str = "gfx900") -> list[Path]:
     """Candidate .dat files under one ROCm prefix."""
-    return find_gfx900_dat_files(prefix)
+    return find_gfx900_dat_files(prefix, arch=arch)
 
 
 def _parse_dat_filename(df: Path) -> tuple[str, str] | None:
@@ -146,14 +152,14 @@ def _build_families(
     return families
 
 
-def _scan_dat_library() -> dict[str, Any]:
-    """Scan installed gfx900 TensileLibrary into manifest dict."""
+def _scan_dat_library(arch: str = "gfx900") -> dict[str, Any]:
+    """Scan the installed TensileLibrary of reference `arch` into a manifest."""
     active_rocm = _resolve_rocm()
     prefixes = _all_rocm_prefixes()
     scanned: list[dict[str, Any]] = []
     total_kernels = 0
     for prefix in prefixes:
-        for df in _find_shipped_dats(prefix):
+        for df in _find_shipped_dats(prefix, arch):
             parsed = _parse_dat_filename(df)
             if not parsed:
                 continue
@@ -171,6 +177,7 @@ def _scan_dat_library() -> dict[str, Any]:
     }
     return {
         "generated_at": datetime.now().isoformat(),
+        "spoof_reference": arch,
         "rocm_path": active_rocm,
         "rocm_prefixes": prefixes,
         "dat_files": scanned,
@@ -180,35 +187,37 @@ def _scan_dat_library() -> dict[str, Any]:
     }
 
 
-def load_shipped_manifest(base_dir: Path, refresh: bool = False) -> dict[str, Any]:
-    """Return the pinned gfx900 shipped-library manifest (compute-once, pin).
+def load_shipped_manifest(base_dir: Path, refresh: bool = False,
+                          arch: str = "gfx900") -> dict[str, Any]:
+    """Return the pinned shipped-library manifest for `arch` (compute-once, pin).
 
     First load scans the system dat and writes the cache; later loads reuse it
-    until refresh=True (--gfx900-reference --refresh). Never touches the live
-    dat on report-only paths once pinned.
+    until refresh=True (the --reference refresh flag). Never touches the live
+    dat on report-only paths once pinned. The cache filename and the scan are
+    arch-scoped, so a second reference arch gets its own manifest.
     """
-    manifest_path = Path(base_dir) / MANIFEST_PATH
+    manifest_path = Path(base_dir) / manifest_rel(arch)
     if not refresh and manifest_path.exists():
         try:
             return json.loads(manifest_path.read_text())
         except (OSError, ValueError):
             pass
 
-    manifest = _scan_dat_library()
+    manifest = _scan_dat_library(arch)
     manifest["cache_path"] = str(manifest_path)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2))
     return manifest
 
 
-def latest_reference_run_id(registry) -> str | None:
-    """Return the most recently *completed* gfx900 reference run id, if any."""
+def latest_reference_run_id(registry, arch: str = "gfx900") -> str | None:
+    """Return the most recently *completed* `arch` reference run id, if any."""
     import sqlite3
     try:
         conn = sqlite3.connect(registry.db_path, timeout=30.0)
         try:
             rows = conn.execute(
-                "SELECT run_id, status FROM runs WHERE run_id LIKE 'gfx900_ref_%' "
+                f"SELECT run_id, status FROM runs WHERE run_id LIKE '{arch}_ref_%' "
                 "ORDER BY id DESC"
             ).fetchall()
         finally:
@@ -385,9 +394,10 @@ def apply_rerun_tiers(phases: list[dict[str, Any]],
     return first + kept + last
 
 
-def reference_chain(registry, exclude: str | None = None) -> list[str]:
+def reference_chain(registry, exclude: str | None = None,
+                    arch: str = "gfx900") -> list[str]:
     """
-    Newest-first list of completed, non-smoke gfx900_ref_* runs forming ONE
+    Newest-first list of completed, non-smoke `arch`_ref_* runs forming ONE
     logical reference floor (a --resume run links to its base via
     metadata.resume_of, so the whole chain is recalled together).
     Only the newest chain head is returned; ancestors are walked back through
@@ -401,7 +411,7 @@ def reference_chain(registry, exclude: str | None = None) -> list[str]:
         try:
             rows = conn.execute(
                 "SELECT run_id, status, metadata FROM runs "
-                "WHERE run_id LIKE 'gfx900_ref_%' ORDER BY id DESC"
+                f"WHERE run_id LIKE '{arch}_ref_%' ORDER BY id DESC"
             ).fetchall()
         finally:
             conn.close()

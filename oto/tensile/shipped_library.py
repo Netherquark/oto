@@ -85,16 +85,19 @@ def _all_rocm_prefixes() -> list[str]:
     return sorted(prefixes, key=lambda p: (p == primary, p), reverse=True)
 
 
-def find_gfx900_dat_files(rocm: str | None = None) -> list[Path]:
-    """Return every `TensileLibrary_Type_<T>_Contraction_l_*_Cijk_Dijk_gfx900.dat`.
+def find_gfx900_dat_files(rocm: str | None = None,
+                          arch: str = "gfx900") -> list[Path]:
+    """Return every `TensileLibrary_Type_<T>_Contraction_l_*_Cijk_Dijk_<arch>.dat`.
 
-    Skips the lazy TOC (`TensileLibrary_lazy_gfx900.dat`) and non-gfx900
+    Skips the lazy TOC (`TensileLibrary_lazy_<arch>.dat`) and non-matching
     artifacts. `.hyp` payloads are matched too (their filenames mirror the
-    distributed dat names).
+    distributed dat names). ``arch`` defaults to the gfx900 reference the
+    project ships; a profile with a different ``spoof_reference`` names its
+    own architecture here.
     """
     found: list[Path] = []
     for d in _library_dirs(rocm or _resolve_rocm()):
-        found.extend(p for p in sorted(d.rglob("TensileLibrary_Type_*_gfx900.dat"))
+        found.extend(p for p in sorted(d.rglob(f"TensileLibrary_Type_*_{arch}.dat"))
                      if "_lazy_" not in p.name)
     return found
 
@@ -187,13 +190,15 @@ def shipped_kernel_knobs(name: str) -> dict[str, Any]:
     return _parse_kernel_knobs(name)
 
 
-def shipped_kernel_config(name: str, family: str) -> dict[str, Any]:
+def shipped_kernel_config(name: str, family: str,
+                          arch: str = "gfx900") -> dict[str, Any]:
     """Public canonical read: phase `config` for one shipped kernel of `family`.
 
     Resolves `family` to its Tensile DataType char via the shared
-    FAMILY_DTYPE_CHAR map rather than each caller re-deriving it.
+    FAMILY_DTYPE_CHAR map rather than each caller re-deriving it. ``arch``
+    sets the config's Architecture (the reference floor's ISA).
     """
-    return _config_from_kernel(name, FAMILY_DTYPE_CHAR[family])
+    return _config_from_kernel(name, FAMILY_DTYPE_CHAR[family], arch)
 
 
 def _reconcile_knobs(k: dict[str, Any]) -> None:
@@ -240,12 +245,13 @@ def _reconcile_knobs(k: dict[str, Any]) -> None:
     k["t0"], k["t1"] = tt[0], tt[1]
 
 
-def _config_from_kernel(name: str, dtype: str) -> dict[str, Any]:
+def _config_from_kernel(name: str, dtype: str,
+                        arch: str = "gfx900") -> dict[str, Any]:
     """Build the phase `config` dict (Architecture + kernel knobs) for a kernel."""
     k = _parse_kernel_knobs(name)
     _reconcile_knobs(k)
     config: dict[str, Any] = {
-        "Architecture": "gfx900",
+        "Architecture": arch,
         "DataType": dtype,
         "ProblemType": "Contraction",
     }
@@ -287,13 +293,17 @@ def _short_tag(name: str, k: dict[str, Any]) -> str:
     )
 
 
-def emit_spoof_phases(manifest: dict[str, Any]) -> list[dict[str, Any]]:
-    """Build the one-time gfx900 spoof reference phase list from the manifest.
+def emit_spoof_phases(manifest: dict[str, Any],
+                      arch: str = "gfx900",
+                      schedule: str = "vega10") -> list[dict[str, Any]]:
+    """Build the one-time spoof reference phase list from the manifest.
 
     One phase per shipped kernel, per family/pattern, benchmarked at the
-    family's canonical deck shapes with ScheduleName=vega10 (8 seeds). Every
-    phase carries a distinct fp (kernel-derived config) so no phase collides
-    with candidates or with any other shipped kernel.
+    family's canonical deck shapes with ScheduleName=``schedule`` (8 seeds).
+    Every phase carries a distinct fp (kernel-derived config) so no phase
+    collides with candidates or with any other shipped kernel. ``arch`` is
+    the reference architecture (the profile's ``spoof_reference``); for
+    gfx90c that is gfx900.
     """
     phases: list[dict[str, Any]] = []
     by_family = manifest.get("families", {})
@@ -310,19 +320,19 @@ def emit_spoof_phases(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             for name in kernels:
                 k = _parse_kernel_knobs(name)
                 _reconcile_knobs(k)
-                config = _config_from_kernel(name, dtype_char)
+                config = _config_from_kernel(name, dtype_char, arch)
                 tag = _short_tag(name, k)
-                phase_id = f"phase_{fam.lower()}_gfx900_{pattern}_{tag}"
-                label = f"gfx900_{fam}_{pattern}_{tag}"
+                phase_id = f"phase_{fam.lower()}_{arch}_{pattern}_{tag}"
+                label = f"{arch}_{fam}_{pattern}_{tag}"
                 phases.append({
                     "phase_id": phase_id,
                     "label": label,
                     "dtype": dtype_char.lower(),
                     "shapes": shapes,
-                    "ScheduleName": "vega10",
+                    "ScheduleName": schedule,
                     "NumBenchmarks": 8,
                     "config": config,
                     "kernel": name,  # provenance: shipped solution name
-                    "gfx900_reference_source": "+".join(manifest.get("rocm_prefixes", []) or []),
+                    f"{arch}_reference_source": "+".join(manifest.get("rocm_prefixes", []) or []),
                 })
     return phases

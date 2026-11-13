@@ -271,7 +271,8 @@ def _process_chain_records(
     out["last_event"] = last_event
 
 
-def _resolve_corpus(base: Path) -> tuple[dict[str, str], dict[str, str]]:
+def _resolve_corpus(base: Path, arch: str = "gfx900"
+                     ) -> tuple[dict[str, str], dict[str, str]]:
     """The phase_key -> tier map for the reference corpus, and its tag map.
 
     The tag map resolves records written before `phase_key` existed (both
@@ -287,7 +288,10 @@ def _resolve_corpus(base: Path) -> tuple[dict[str, str], dict[str, str]]:
     shipped = tlib.load_shipped_manifest(base, refresh=False)
     if not shipped:
         return corpus, tag_to_key
-    for phase in tlib.emit_spoof_phases(shipped):
+    # The reference corpus naming convention is <arch>_ref_*; only the
+    # gfx900 corpus exists today, hence the default. The profile-driven
+    # path lives in oto/runners/reference.py.
+    for phase in tlib.emit_spoof_phases(shipped, arch=arch):
         key = tlib.phase_key(phase)
         corpus[key] = tlib.tier_for(phase, manifest)
         pid = str(phase.get("phase_id") or "")

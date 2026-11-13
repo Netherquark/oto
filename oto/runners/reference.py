@@ -26,6 +26,13 @@ from oto import yamlio
 from oto.runners.paths import runs_dir as _runs_dir
 
 
+def _spoof_arch(self) -> str:
+    """The profile's reference-floor architecture (empty profile gate handled by caller)."""
+    profile = getattr(self, "profile", None)
+    ref = getattr(profile, "spoof_reference", "") if profile else ""
+    return ref or "gfx900"
+
+
 def _deck_content_fps(deck: list[dict[str, Any]]) -> dict[str, str]:
     """phase_key -> config fingerprint (undotted keys only)."""
     fps: dict[str, str] = {}
@@ -37,8 +44,8 @@ def _deck_content_fps(deck: list[dict[str, Any]]) -> dict[str, str]:
 
 def _rebuild_deck_for_triage(manifest: dict[str, Any],
                             deck: list[dict[str, Any]],
-                            rerun_manifest: dict[str, Any]
-                            ) -> list[dict[str, Any]]:
+                            rerun_manifest: dict[str, Any],
+                            arch: str = "gfx900") -> list[dict[str, Any]]:
     """Rebuild the deck from the shipped manifest, scoped to the audited set.
 
     A triaged resume exists to re-measure phases whose CONFIG changed.
@@ -46,7 +53,7 @@ def _rebuild_deck_for_triage(manifest: dict[str, Any],
     so rebuild the deck from the shipped manifest instead and let the
     content comparison decide what still needs running.
     """
-    _fresh = tlib.emit_spoof_phases(manifest)
+    _fresh = tlib.emit_spoof_phases(manifest, arch=arch)
     # Keep the rebuild inside the audited scope. emit_spoof_phases
     # spans every shipped family (2285 here) while the audited floor
     # covers 1212 of them; intersecting by phase_key refreshes the
@@ -109,7 +116,9 @@ class ReferenceMixin:
 
     def _resume_chain_ids(self, base: str) -> list[str]:
         """Chain ids for a resume, base first."""
-        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        arch = _spoof_arch(self)
+        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
+                                        arch=arch)
         chain_ids = [r for r in chain_ids
                      if (_runs_dir(self.base_dir, _peaks.CODENAME) / r).is_dir()]
         if base not in chain_ids:
@@ -135,7 +144,8 @@ class ReferenceMixin:
           and T3 must never be re-staged. Reuse-then-triage would drop every T1
           phase that already has a verdict and quietly run none of them.
         """
-        manifest = tlib.load_shipped_manifest(self.base_dir, refresh=False)
+        arch = _spoof_arch(self)
+        manifest = tlib.load_shipped_manifest(self.base_dir, refresh=False, arch=arch)
 
         with open(base_dir / "phases_reference.yaml") as f:
             deck = yamlio.load_yaml_text(f.read()) or []
@@ -144,7 +154,7 @@ class ReferenceMixin:
         # content comparison then decides what still needs running.
         _rm = tlib.load_rerun_manifest(self.base_dir)
         if _rm:
-            deck = _rebuild_deck_for_triage(manifest, deck, _rm)
+            deck = _rebuild_deck_for_triage(manifest, deck, _rm, arch=arch)
 
         chain_ids = self._resume_chain_ids(base)
 
@@ -171,7 +181,8 @@ class ReferenceMixin:
         so an empty smoke can never be spuriously "completed" (and recalled).
         """
         from oto.tensile.candidate import assembly_class_valid
-        phases = tlib.emit_spoof_phases(manifest)
+        arch = _spoof_arch(self)
+        phases = tlib.emit_spoof_phases(manifest, arch=arch)
 
         def _legal(p: dict[str, Any]) -> bool:
             gate = {**p.get("config", {}), "DataType": p.get("dtype"),
@@ -235,8 +246,9 @@ class ReferenceMixin:
         """
         if not getattr(self, "profile", None) or not getattr(self.profile, "spoof_reference", ""):
             return {"status": "native-only", "phases": []}
+        arch = self.profile.spoof_reference
         manifest = tlib.load_shipped_manifest(
-            self.base_dir, refresh=(not resume and refresh))
+            self.base_dir, refresh=(not resume and refresh), arch=arch)
 
         if resume:
             phases, resume_meta = self._get_resume_phases(
@@ -265,7 +277,9 @@ class ReferenceMixin:
     def _get_resume_phases(self, manifest, resume_base: str | None,
                            release_held: bool) -> tuple:
         """Get phases for resume mode. Returns (phases, resume_meta)."""
-        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        arch = _spoof_arch(self)
+        chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
+                                        arch=arch)
         base = resume_base or (chain_ids[0] if chain_ids else None)
         if not base:
             return [], {"status": "failed",
@@ -295,7 +309,8 @@ class ReferenceMixin:
 
     def _create_reference_run_dir(self, resume: bool, resume_meta: dict) -> str:
         """Create reference run directory and sync agent."""
-        run_id = f"gfx900_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        arch = _spoof_arch(self)
+        run_id = f"{arch}_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if resume:
             run_id = f"{run_id}_resume"
         prev_run_dir, prev_configs, prev_client = (
@@ -355,7 +370,7 @@ class ReferenceMixin:
 
     def _latest_reference_run(self, exclude: str | None = None) -> str | None:
         """Most recently completed gfx900 reference run (recall floor for A/B)."""
-        ref = tlib.latest_reference_run_id(self.registry)
+        ref = tlib.latest_reference_run_id(self.registry, arch=_spoof_arch(self))
         if ref and exclude and ref == exclude:
             return None
         return ref
@@ -363,8 +378,9 @@ class ReferenceMixin:
     def _reference_floor_runs(self, run_id: Any) -> list[str]:
         """Full resume chain of the recalled reference floor, newest first,
         excluding the candidate run itself when it is a reference run."""
-        exclude = str(run_id) if str(run_id).startswith("gfx900_ref_") else None
-        chain = tlib.reference_chain(self.registry, exclude=exclude)
+        arch = _spoof_arch(self)
+        exclude = str(run_id) if str(run_id).startswith(f"{arch}_ref_") else None
+        chain = tlib.reference_chain(self.registry, exclude=exclude, arch=arch)
         return [r for r in chain
                 if (_runs_dir(self.base_dir, _peaks.CODENAME) / r).is_dir()]
     def _reusable_phase_keys(self, run_ids: list[str],
@@ -450,7 +466,9 @@ class ReferenceMixin:
         blocks --auto); T3 unbuildable, stays failed. A T1 phase is owed
         until newest record's config_fingerprint matches current phase's.
         """
-        chain = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
+        arch = _spoof_arch(self)
+        chain = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
+                                    arch=arch)
         if not chain:
             return -1
         # Union of every deck in the chain: after several resumes the newest deck
