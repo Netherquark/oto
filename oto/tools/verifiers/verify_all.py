@@ -10,7 +10,7 @@ what it compared and how many comparisons agreed.
 
 Exit status is non-zero if any check fails. Every check is read-only: it
 compares code and renders reports into a temp dir, never touching
-gfx90c_runs/ or gfx90c_results/.
+<codename>_runs/ or <codename>_results/.
 
 Checks:
   1. verify_gate_differential.py   every scheduler gate/function over an

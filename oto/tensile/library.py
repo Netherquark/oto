@@ -26,9 +26,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from oto.device.peaks import FAMILY_DTYPES, FAMILY_DTYPE_CHAR
+from oto.runners.paths import results_rel
 
 #: Where the pinned shipped manifest is cached, relative to the project root.
-MANIFEST_PATH = "gfx90c_results/gfx900_shipped_manifest.json"
+MANIFEST_PATH = results_rel("gfx900_shipped_manifest.json")
 
 # The shipped-library parse and the spoof-phase emitter live in their own module
 # so the manifest cache, the tier triage and the identity helpers here are not
@@ -245,7 +246,7 @@ def config_fingerprint(phase: Dict[str, Any]) -> str:
     return "fp_" + hashlib.sha1(blob.encode()).hexdigest()[:16]
 
 
-RERUN_MANIFEST_PATH = "gfx90c_results/reference_rerun_manifest.json"
+RERUN_MANIFEST_PATH = results_rel("reference_rerun_manifest.json")
 
 # ---------------------------------------------------------------------------
 # Reference-cell classification.

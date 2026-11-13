@@ -35,6 +35,8 @@ from oto.metrics.family_attribution import (FAMILY_TO_DTYPE,
                                             extract_family_from_phase_id,
                                             resolve_cell_family)
 from oto.metrics.policy import aggregate_cell
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 __all__ = ["AnalyticsEngine", "CellAnalytics", "extract_family_from_phase_id",
            "resolve_cell_family", "FAMILY_TO_DTYPE", "CLOCK_MIN_COVERAGE"]
@@ -97,7 +99,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     def __init__(self, registry, base_dir: Path):
         self.registry = registry
         self.base_dir = Path(base_dir)
-        self.results_dir = self.base_dir / "gfx90c_results"
+        self.results_dir = _results_dir(self.base_dir, _peaks.CODENAME)
         self._phases_cache = None
 
     def _load_phases_manifest(self) -> List[Dict[str, Any]]:

@@ -44,6 +44,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from oto import yamlio  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 BASE = Path(__file__).resolve().parents[2]
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
@@ -76,14 +79,14 @@ def snapshot(base: Path = BASE) -> Dict[str, Any]:
     byte length) and to catch deletion, not to attest to contents. Hashing every
     CSV in the corpus would cost more than the runs being verified.
     """
-    runs_dir = base / "gfx90c_runs"
+    runs_dir = _runs_dir(base, _peaks.CODENAME)
     dirs: Dict[str, List[int]] = {}
     if runs_dir.is_dir():
         for d in sorted(runs_dir.iterdir()):
             if d.is_dir():
                 dirs[d.name] = list(_dir_size(d))
 
-    db_path = base / "gfx90c_results" / "registry.db"
+    db_path = _results_dir(base, _peaks.CODENAME) / "registry.db"
     tables: Dict[str, Optional[int]] = {}
     if db_path.is_file():
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -176,7 +179,7 @@ def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
     """
     from oto.runners.driver import TensileDriver
 
-    path = base / "gfx90c_runs" / run_id / "logs" / "telemetry.csv"
+    path = _runs_dir(base, _peaks.CODENAME) / run_id / "logs" / "telemetry.csv"
     if not path.is_file():
         return {"run_id": run_id, "ok": False,
                 "error": f"no telemetry at {path.relative_to(base)}"}
@@ -205,7 +208,7 @@ def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
             else:
                 e["hot"] += 1
     d = _driver()
-    bases = d._load_telemetry_by_phase(base / "gfx90c_runs" / run_id)
+    bases = d._load_telemetry_by_phase(_runs_dir(base, _peaks.CODENAME) / run_id)
     for pid, e in per_phase.items():
         v = sorted(e.pop("sclk_values"))
         e["clock_median_hz"] = v[len(v) // 2] if v else 0

@@ -54,6 +54,8 @@ from oto.device.peaks import (  # noqa: E402
 )
 
 from oto.tensile.gates.vgpr_model import VGPR_PER_CU  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 #: Register-file size of one SIMD = the CU file divided by the SIMD count. With
 #: 65536 per CU and 4 SIMDs this is 16384, i.e. 64 KiB per SIMD.
@@ -341,11 +343,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Measured occupancy of Tensile's emitted kernels, joined "
                     "to their GFLOP/s. CPU only, reads nothing outside "
-                    "gfx90c_runs.")
+                    "<codename>_runs.")
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--runs", default=None,
-                    help="runs directory (default: <base-dir>/gfx90c_runs)")
+                    help="runs directory (default: <base-dir>/<codename>_runs)")
     ap.add_argument("--dtype", default=None, help="family typecode filter")
     ap.add_argument("--top", type=int, default=25)
     ap.add_argument("--by", choices=["gflops", "vgpr", "waves", "count"],
@@ -425,7 +427,7 @@ def main() -> int:
         return _cmd_calibration()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    root = Path(args.runs) if args.runs else (base / "gfx90c_runs")
+    root = Path(args.runs) if args.runs else (_runs_dir(base, _peaks.CODENAME))
     rows = measure_corpus(root, args.dtype)
     if not rows:
         print(f"no emitted kernels with an amdhsa directive under {root}")

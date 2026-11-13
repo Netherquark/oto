@@ -36,6 +36,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from oto import yamlio  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 #: Re-measure the cells that previously ran with a config our own extractors got
 #: wrong. These measurements are the ones everything downstream trusts.
 QUESTION_ILLEGAL = "rerun_illegal"
@@ -106,7 +109,7 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     counts = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
     try:
         import sqlite3
-        db = sqlite3.connect(base / "gfx90c_results" / "registry.db")
+        db = sqlite3.connect(_results_dir(base, _peaks.CODENAME) / "registry.db")
         chain = [r[0] for r in db.execute(
             "select run_id from runs where run_id like 'gfx900_ref%' order by run_id")]
     except Exception:
@@ -114,7 +117,7 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
 
     universe: Dict[str, Any] = {}
     for rid in chain:
-        p = base / "gfx90c_runs" / rid / "phases_reference.yaml"
+        p = _runs_dir(base, _peaks.CODENAME) / rid / "phases_reference.yaml"
         try:
             for ph in yamlio.load_yaml(p) or []:
                 universe.setdefault(tlib.phase_key(ph), ph)

@@ -23,8 +23,9 @@ from oto.harness.candidate_rows import TARGET_CELLS
 from oto.harness.cell_knob_diff import _side, _winner_per_cell
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import occupancy_feasible, ldspad_feasible
+from oto.runners.paths import results_rel
 
-KERNEL_DB_RELPATH = Path("gfx90c_results") / "analysis" / "kernel_db.json"
+KERNEL_DB_RELPATH = Path(results_rel("analysis", "kernel_db.json"))
 
 _H_NOTE = ("Proposals are CPU-gate-checked models only. They still need GPU "
            "feedback (benchmark + accept/reject) before any of them can ship.")

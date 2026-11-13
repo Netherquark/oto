@@ -10,7 +10,7 @@ Runs the rendered HTML through a headless browser and verifies:
 
 Usage:
     python3 -m oto.harness.visual_check <report.html> [--url <base-url>]
-    python3 -m oto.harness.visual_check gfx90c_runs/.../acceptance_report.html
+    python3 -m oto.harness.visual_check <base>/<codename>_runs/.../acceptance_report.html
 """
 
 from __future__ import annotations

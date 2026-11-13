@@ -113,7 +113,7 @@ LDS_BUDGET = 16384
 #: Bytes per element for the LDS footprint, by dtype char. This is Tensile's
 #: own ``DataType.numBytes()`` (= ``properties['reg'] * 4``) -- EXCEPT "Z", which
 #: is deliberately left at half that value. See DECISION REQUIRED in
-#: gfx90c_theoretical_limits.md §6: complex double is 4 registers = 16 bytes in
+#: <codename>_theoretical_limits.md §6: complex double is 4 registers = 16 bytes in
 #: Tensile/DataType.py:82 (and FAMILY_BYTES_PER_ELEMENT agrees, "ZZ": 16), but
 #: LDS_BUDGET below was calibrated against the 8-byte value, so correcting this
 #: entry alone would reject ZZ configs Tensile builds and runs. The two must be

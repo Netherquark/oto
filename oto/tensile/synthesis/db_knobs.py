@@ -77,7 +77,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
 #: *Deck state* -- ``HH`` is hardware-legal but banned **by decision**: GSU>1 on
 #: half Assembly additionally requires ``AssertFree0ElementMultiple >= 2`` for the
 #: atomics on edge tiles (SolutionStructs:3616), and the HH deck ships
-#: ``AF0EM = 1``. See ``gfx90c_tuning_guide.md`` §9 ("HH GSU>1 structurally
+#: ``AF0EM = 1``. See ``<codename>_tuning_guide.md`` §9 ("HH GSU>1 structurally
 #: banned (wide + narrow, test-locked)") and ``potential_configs.md`` pre-rewrite
 #: §"SS is the only GSU-legal family". So this row is a *policy*, not a silicon
 #: fact: lift it the day an HH candidate carries ``AF0EM >= 2``, and the axis

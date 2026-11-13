@@ -60,6 +60,8 @@ import yaml  # noqa: E402
 
 from oto.tensile.config_writer import TRANSPOSE_MAP  # noqa: E402
 from oto.tensile.library_parity import phase_family  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 #: Transpose pair -> contraction pattern; the inverse of the writer's own map, so
 #: the two cannot drift (``config_writer.TRANSPOSE_MAP`` stays the one home).
@@ -185,7 +187,7 @@ def audit(base: str = ".", families: Optional[Sequence[str]] = None) -> Dict[str
     """Classify every phase with a launch config against the gates.
 
     Args:
-        base: Repo root holding ``gfx90c_runs/``.
+        base: Repo root holding the runs directory.
         families: When given, keep only phases whose resolved family is listed.
 
     Returns:
@@ -195,7 +197,7 @@ def audit(base: str = ".", families: Optional[Sequence[str]] = None) -> Dict[str
     from oto.tensile.candidate import CandidateGenerator
     from oto.tensile.gates.occupancy import ldspad_feasible
 
-    runs_dir = Path(base) / "gfx90c_runs"
+    runs_dir = _runs_dir(base, _peaks.CODENAME)
     gen = CandidateGenerator(Path(base))
     want = {f.upper() for f in families} if families else None
 

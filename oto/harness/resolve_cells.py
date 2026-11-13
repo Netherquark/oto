@@ -19,7 +19,7 @@ The resolution order exists because the compiled emission is the truth: a phase'
 row is what the driver intended, and the kernel_db row is the structural fallback
 when neither is on disk. On a tie between runs the newest run wins.
 
-Outputs, under ``gfx90c_results/analysis/``: ``cells_resolved.json`` (machine
+Outputs, under ``<codename>_results/analysis/``: ``cells_resolved.json`` (machine
 cache: metadata plus one row per graded cell) and ``cells_resolved.full.txt``
 (the aligned human evidence table).
 
@@ -56,6 +56,10 @@ from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import (FAMILY_DTYPES, PEAK_GFLOPS,  # noqa: E402
                               REALISTIC_CEILINGS, THEORETICAL_PEAKS)
 from oto.tensile.shape_order import shape_order_key  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import results_rel
+from oto.runners.paths import runs_dir as _runs_dir
 
 # The full structural knob surface — MUST match the yaml emission surface of
 # port_tensile._write_phase_config so docs citing a knob can find it here.
@@ -148,7 +152,7 @@ def _load_registry_phases(registry_path: str) -> Tuple[Dict[str, Dict[str, Any]]
 
 def _load_run_configs(runs_dir: str) -> Tuple[Dict[str, Dict[str, Dict[str, Any]]],
                                               Dict[str, Dict[str, Any]], int]:
-    """Two views over every `gfx90c_runs/*/configs/*.yaml`:
+    """Two views over every `<codename>_runs/*/configs/*.yaml`:
 
     * run_scoped[runs_dir_name][phase_stub] — for winner-run-first lookup;
     * global[phase_stub] — newest run wins on a phase-name collision.
@@ -315,7 +319,7 @@ def _cell_row(
     # The ceilings come from the canonical table (oto.device.peaks), NOT from
     # the acceptance report's coverage block: the report is a snapshot, and its
     # complex-family percentages were computed against a 4x-too-large bar until
-    # 2026-10-21 (gfx90c_theoretical_limits.md 5.2). The tables are in
+    # 2026-10-21 (<codename>_theoretical_limits.md 5.2). The tables are in
     # client-reported units, which is the unit the measurement arrives in.
     ceiling = REALISTIC_CEILINGS.get(fam) or PEAK_GFLOPS.get(
         FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
@@ -350,10 +354,10 @@ def build(base_dir: str = ".",
     CPU-only. All inputs are canonical repo caches / registries.
     """
     base = Path(base_dir)
-    acceptance_path = acceptance_path or str(base / "gfx90c_results" / "acceptance_report.json")
-    registry_path = registry_path or str(base / "gfx90c_results" / "registry.db")
-    db_path = db_path or str(base / "gfx90c_results" / "analysis" / "kernel_db.json")
-    runs_dir = base / "gfx90c_runs"
+    acceptance_path = acceptance_path or str(_results_dir(base, _peaks.CODENAME) / "acceptance_report.json")
+    registry_path = registry_path or str(_results_dir(base, _peaks.CODENAME) / "registry.db")
+    db_path = db_path or str(_results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json")
+    runs_dir = _runs_dir(base, _peaks.CODENAME)
 
     with open(acceptance_path) as f:
         report = json.load(f)
@@ -507,14 +511,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None, help="repo root")
     ap.add_argument("--acceptance", default=None,
-                    help="acceptance_report.json path (default: <base>/gfx90c_results/…)")
+                    help="acceptance_report.json path (default: <base>/<codename>_results/…)")
     ap.add_argument("--registry", default=None,
-                    help="registry.db path (default: <base>/gfx90c_results/…)")
+                    help="registry.db path (default: <base>/<codename>_results/…)")
     ap.add_argument("--db", default=None,
-                    help="kernel_db cache path (default: <base>/gfx90c_results/analysis/…)")
-    ap.add_argument("--json", default="gfx90c_results/analysis/cells_resolved.json",
+                    help="kernel_db cache path (default: <base>/<codename>_results/analysis/…)")
+    ap.add_argument("--json", default=results_rel("analysis", "cells_resolved.json"),
                     help="write machine cache here")
-    ap.add_argument("--text", default="gfx90c_results/analysis/cells_resolved.full.txt",
+    ap.add_argument("--text", default=results_rel("analysis", "cells_resolved.full.txt"),
                     help="write the aligned evidence table here")
     ap.add_argument("--tsv", default=None, help="also write this verdicts TSV")
     ap.add_argument("--no-json", action="store_true", help="do not write the JSON cache")

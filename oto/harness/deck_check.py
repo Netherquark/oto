@@ -39,9 +39,12 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.harness.tensile_oracle import probe_phase  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import results_rel
 
 #: The launch set: the persistent seed overlay.
-OVERLAY = Path("gfx90c_results") / "overlays" / "phases.seed.overlay.yaml"
+OVERLAY = Path(results_rel("overlays", "phases.seed.overlay.yaml"))
 
 
 def measured_fingerprints(base_dir: Path) -> set:
@@ -53,7 +56,7 @@ def measured_fingerprints(base_dir: Path) -> set:
     Returns:
         The set of measured fingerprints.
     """
-    db = base_dir / "gfx90c_results" / "registry.db"
+    db = _results_dir(base_dir, _peaks.CODENAME) / "registry.db"
     if not db.is_file():
         return set()
     con = sqlite3.connect(db)

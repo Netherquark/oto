@@ -21,6 +21,8 @@ from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
 from oto.tools.consolidate_floor import PREFERRED_FORMS  # noqa: E402
 from oto.tools.consolidate_targets import (  # noqa: E402
     _fam, native_runs, target_cells)
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 BASE = _AB_BASE
 
@@ -40,7 +42,7 @@ def measured_index(base: Path = BASE) -> Dict[Tuple[str, str], Dict[str, Any]]:
     drv = _driver(base)
     per: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
     for run in native_runs(base):
-        for rec in phase_records(drv, base / "gfx90c_runs" / run, "native"):
+        for rec in phase_records(drv, _runs_dir(base, _peaks.CODENAME) / run, "native"):
             key = rec.get("cell_key") or cell_key(
                 extract_family_from_phase_id(rec["phase_id"]), rec["ProblemType"])
             if not key:

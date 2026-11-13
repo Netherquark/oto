@@ -141,7 +141,7 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
             {"MacroTile": "32x32x8", "ThreadTile": "4x4", "NLCA": 1},
             # LADDER: exercise DepthU, which no ZZ entry has varied. Complex
             # double is 16 B/elem in Tensile (DataType reg=4, numBytes = 16)
-            # -- see the DECISION REQUIRED in gfx90c_theoretical_limits.md
+            # -- see the DECISION REQUIRED in <codename>_theoretical_limits.md
             # §6: BYTES_PER_ELEMENT["Z"] still reads 8 here, so this comment
             # is the only place the 16 B figure is stated until that is decided.
             {"MacroTile": "64x64x4", "ThreadTile": "4x4", "NLCA": 1},

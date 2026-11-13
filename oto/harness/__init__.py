@@ -14,7 +14,7 @@ Workflow (see harness/README.md for the full runbook):
 Owns: nothing at import time — this package holds no logic, only the docstrings
 of the modules underneath it.
 Does NOT own: the modules themselves (each carries its own), the run corpus
-they read (gfx90c_runs/), or the acceptance report they cite
+they read (<codename>_runs/), or the acceptance report they cite
 (oto.metrics.report).
 Public API: none at import time; the module names live in ``__all__``, and the
 public names each one exposes are in its own docstring.

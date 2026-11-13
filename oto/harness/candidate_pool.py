@@ -17,8 +17,6 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
 
 from oto import yamlio  # noqa: E402
 from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
@@ -34,6 +32,10 @@ from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
                                         FAMILY_DTYPE, LADDER,
                                         NARROW_NEIGHBOURS, PATTERNS,
                                         PLAN_BATCH, TARGET_CELLS)
+from oto.runners.paths import results_dir as _results_dir
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OVERLAY_PATH = _results_dir(REPO_ROOT, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
 
 #: Notes for rows dropped because no target shape satisfied their element-
 #: multiple assertions. Appended to by ``_offer_row``; drained by

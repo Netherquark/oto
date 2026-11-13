@@ -32,7 +32,7 @@ The grid, per cell:
   search keeps falling back to it) or all worse (a peak).
 
 CPU only, read-only, and it writes only into
-``gfx90c_results/analysis/coverage/``. No dependency beyond the standard
+``<codename>_results/analysis/coverage/``. No dependency beyond the standard
 library: the SVG is written by hand, so there is nothing to install.
 
     python3 -m oto.harness.coverage_graph                     # every cell
@@ -59,9 +59,10 @@ if str(_HERE) not in sys.path:
 from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
 from oto.harness.coverage_map import (  # noqa: E402
     _DEFAULT_CELLS, coverage_row, legal_geometries, measured_geometries)
+from oto.runners.paths import results_rel
 
 #: Where the figures go (and the index that lists them).
-OUT_DIR_REL = "gfx90c_results/analysis/coverage"
+OUT_DIR_REL = results_rel("analysis", "coverage")
 
 #: The power-of-two buckets of the two axes.
 AREA_BUCKETS = (1024, 2048, 4096, 8192, 16384, 32768, 65536)
@@ -441,7 +442,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override (default: this file's parent of package)")
     ap.add_argument("--out", default=None,
-                    help="where the figures go (default: <base-dir>/gfx90c_results/analysis/coverage)")
+                    help="where the figures go (default: <base-dir>/<codename>_results/analysis/coverage)")
     ap.add_argument("--no-svg", action="store_true",
                     help="print the numbers only")
     args = ap.parse_args(argv)

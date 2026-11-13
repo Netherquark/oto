@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from oto import yamlio  # noqa: E402
+from oto.runners.paths import results_rel
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
 
@@ -288,11 +289,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None, help="repo root")
-    ap.add_argument("--db", default="gfx90c_results/analysis/kernel_db.json",
+    ap.add_argument("--db", default=results_rel("analysis", "kernel_db.json"),
                     help="kernel_db cache path")
     ap.add_argument("--rebuild", action="store_true",
                     help="rebuild kernel_db from runs first")
-    ap.add_argument("--json", default="gfx90c_results/analysis/regression_matrix.json",
+    ap.add_argument("--json", default=results_rel("analysis", "regression_matrix.json"),
                     help="write matrix here")
     ap.add_argument("--no-json", action="store_true", help="print table only")
     ap.add_argument("--any-protocol", action="store_true",

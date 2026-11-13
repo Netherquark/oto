@@ -57,6 +57,7 @@ from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 
 class DBMutator(DbPatternsMixin):
@@ -66,7 +67,7 @@ class DBMutator(DbPatternsMixin):
     Parameters
     ----------
     base_dir:
-        Repository root; `gfx90c_results/analysis/kernel_db.json` is read
+        Repository root; `<codename>_results/analysis/kernel_db.json` is read
         from here (lazy, once).
     mutator:
         The existing ledger-backed Mutator — owns ledger/novelty/emit/overlay.
@@ -79,7 +80,7 @@ class DBMutator(DbPatternsMixin):
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
-            self.base_dir / "gfx90c_results" / "analysis" / "kernel_db.json")
+            _results_dir(self.base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
         self._db: Optional[Dict[str, Any]] = None
         self._by_family: Dict[str, List[Dict[str, Any]]] = {}
         self._by_family_cell: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}

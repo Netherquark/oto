@@ -50,6 +50,7 @@ import oto.device.peaks as _peaks  # noqa: E402
 from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
 from oto.tensile.synthesis.db_knobs import (  # noqa: E402
     FORWARD_KNOB_DOMAINS)
+from oto.runners.paths import results_dir as _results_dir
 
 #: The A/B bases, lenient to strict, with what each one actually asks. The
 #: names and their meaning live in `oto.metrics.ab_delta._stat`; this is the
@@ -151,7 +152,7 @@ def _measured_tiles(base: Path, per_family: int) -> Dict[str, List[Dict[str, Any
     is how a default value like `StaggerU=0` ends up looking broken on an
     LDS-full `256x256` tile.
     """
-    db_path = base / "gfx90c_results" / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     if not db_path.is_file():
         return {}
     try:
@@ -320,7 +321,7 @@ def _legality(base: Path, families: Optional[List[str]]) -> int:
 
 def _flood(base: Path, cap: Optional[int]) -> int:
     """Per-cell distinct-config census, and what a top-K cap would cost."""
-    db_path = base / "gfx90c_results" / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
     except Exception as exc:

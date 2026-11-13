@@ -45,6 +45,8 @@ from oto.device.peaks import (
     cube_side,
     shipped_cell_set,
 )
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 #: Family-name normalisation for the `phase_id` fallback path.
 _FAMILY_ALIASES = {
@@ -183,11 +185,11 @@ def load_pipeline_phases(base_dir: Optional[str] = None,
     merged: List[Dict[str, Any]] = list(deck)
 
     if run_id:
-        for ov_path in sorted((base / "gfx90c_results" / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
+        for ov_path in sorted((_results_dir(base, _peaks.CODENAME) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
             _merge(merged, _yamlio.load_yaml_text(_read(ov_path)), f"run_overlay:{run_id}")
 
     if include_seed:
-        seed_path = base / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        seed_path = _results_dir(base, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
         if seed_path.exists():
             doc = _yamlio.load_yaml(seed_path)
             _merge(merged, doc, "seed_overlay")

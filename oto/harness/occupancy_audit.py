@@ -20,7 +20,7 @@ B into two LDS buffers, so the double-buffer factor is adjustable with
 ``--lds-factor`` (1 = single-buffered probe). ``--side floor`` audits the spoof
 arm instead of the native winners.
 
-CPU only. Reads ``gfx90c_results/analysis/kernel_db.json`` (typecode-corrected
+CPU only. Reads ``<codename>_results/analysis/kernel_db.json`` (typecode-corrected
 rebuild, the same provenance ``cell_knob_diff`` and the acceptance report cite).
 
     python3 -m oto.harness.occupancy_audit                 # native winners
@@ -55,8 +55,9 @@ from oto.tensile.gates.vgpr_model import (  # noqa: E402
     MEASURED_VGPR_BY_DTYPE,
     VGPR_PER_CU,
 )
+from oto.runners.paths import results_rel
 
-KERNEL_DB = "gfx90c_results/analysis/kernel_db.json"
+KERNEL_DB = results_rel("analysis", "kernel_db.json")
 
 LDS_PER_CU = LDS_PER_CU_KB * 1024          # 64 KiB
 FAMILY_CHAR = {                            # typecode -> dtype character

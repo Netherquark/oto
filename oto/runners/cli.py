@@ -20,6 +20,8 @@ from typing import Any, Dict, List, Optional
 from oto.metrics.analytics import CellAnalytics
 from oto.runners import flags
 from oto.runners.driver import TensileDriver
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 #: Stage names/numbers that only read the registry or prior runs and must
 #: therefore NOT mint a new run directory. A stage that mints a run for a
@@ -146,7 +148,7 @@ def _stage_analytics(driver, args, stage) -> Optional[int]:
     if run_dir is None:
         latest = driver.registry.latest_run_id()
         if latest:
-            run_dir = driver.base_dir / "gfx90c_runs" / latest
+            run_dir = _runs_dir(driver.base_dir, _peaks.CODENAME) / latest
     analytics = driver._load_analytics_from_run(
         run_dir if run_dir is not None and run_dir.exists() else None)
     if not analytics:

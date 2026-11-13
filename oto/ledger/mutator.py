@@ -47,6 +47,8 @@ __all__ = ["Mutator", "Proposal", "classify_outcome",
 #: and the duplicate carried a `noqa: F401` that is no longer needed, because the
 #: name is genuinely used.
 import oto.tensile.legality as legality  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted
 #: 59 mutants from one winner, ~25 of which collided on fingerprints; novelty
@@ -425,7 +427,7 @@ class Mutator(MutatorOutcomesMixin):
 
         if run_id is None:
             run_id = self.registry.latest_run_id() or "unbound"
-        target_dir = self.base_dir / "gfx90c_results" / "overlays"
+        target_dir = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays"
         target_dir.mkdir(parents=True, exist_ok=True)
         path = target_dir / f"phases.{run_id}.overlay.yaml"
         payload = {
@@ -446,7 +448,7 @@ class Mutator(MutatorOutcomesMixin):
         """Read back one run's overlay, or [] if there is none."""
         import yaml
 
-        path = self.base_dir / "gfx90c_results" / "overlays" / f"phases.{run_id}.overlay.yaml"
+        path = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():
             return []
         try:

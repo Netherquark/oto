@@ -16,7 +16,7 @@ native winner is the native kernel with the best per-cell median in each
 (family, cell-shape) cell, seed-medians already folded; the floor winner is the
 shipped gfx900 kernel with the best per-cell median in the same cell.
 
-CPU only. Reads ``gfx90c_results/analysis/kernel_db.json`` (rebuild with
+CPU only. Reads ``<codename>_results/analysis/kernel_db.json`` (rebuild with
 ``python3 -m oto.harness.kernel_db --rebuild``).
 
     python3 -m oto.harness.cell_knob_diff                 # all cells
@@ -33,6 +33,9 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import results_rel
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
@@ -122,7 +125,7 @@ def main() -> int:
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--db", type=Path, default=None,
-                    help="kernel_db.json path (default: <base-dir>/gfx90c_results/analysis/kernel_db.json)")
+                    help="kernel_db.json path (default: <base-dir>/<codename>_results/analysis/kernel_db.json)")
     ap.add_argument("--family", help="only this family (SS/DD/HH/CC/ZZ/HH_HPA/HS_HPA)")
     ap.add_argument("--floor-wins-only", action="store_true",
                     help="only print cells the floor wins")
@@ -130,7 +133,7 @@ def main() -> int:
     args = ap.parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    db_path = Path(args.db) if args.db else base / "gfx90c_results" / "analysis" / "kernel_db.json"
+    db_path = Path(args.db) if args.db else _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     db = json.loads(db_path.read_text())
     native_rows: List[Dict[str, Any]] = []
     floor_rows: List[Dict[str, Any]] = []

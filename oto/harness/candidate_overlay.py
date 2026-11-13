@@ -18,9 +18,12 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from oto.harness.candidate_pool import __yaml_load  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OVERLAY_PATH = REPO_ROOT / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+OVERLAY_PATH = _results_dir(REPO_ROOT, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
+
 
 
 def _overlay_path() -> Path:

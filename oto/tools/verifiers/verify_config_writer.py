@@ -9,6 +9,7 @@ exact YAML bytes written.
 from __future__ import annotations
 
 import difflib
+import re
 import subprocess
 import sys
 import tempfile
@@ -56,6 +57,7 @@ LIFT = {
 
 def lift(src: str) -> str:
     """Rewrite a pre-refactor source's flat imports to their new module paths."""
+    src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.peaks import", src)
     for old_text, new_text in LIFT.items():
         src = src.replace(old_text, new_text)
     return src
@@ -64,17 +66,11 @@ def lift(src: str) -> str:
 def load_old():
     """The HEAD port_tensile module, with the flat imports redirected."""
     import types
-    for name in ("registry", "scheduler", "analytics", "gfx90c_common",
+    for name in ("registry", "scheduler", "analytics",
                  "policy", "agent", "mutator", "report", "telemetry",
                  "library_parity"):
         if name in sys.modules:
             del sys.modules[name]
-    import oto.device.peaks as peaks
-    fake = types.ModuleType("gfx90c_common")
-    for attr in dir(peaks):
-        if not attr.startswith("_"):
-            setattr(fake, attr, getattr(peaks, attr))
-    sys.modules["gfx90c_common"] = fake
     shims = {}
     for old, new in (("registry", "oto.ledger.registry"),
                      ("scheduler", "oto.tensile.candidate"),
@@ -103,6 +99,9 @@ import importlib  # noqa: E402
 
 old = load_old()
 from oto.tensile import config_writer  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 
 class _Stub:
@@ -120,8 +119,8 @@ def phases_from(path):
 
 
 all_phases = yamlio.load_yaml(ROOT / "phases.yaml") or []
-all_phases += phases_from(ROOT / "gfx90c_runs")
-all_phases += phases_from(ROOT / "gfx90c_results" / "gfx900_ref_locked_52149f315d")
+all_phases += phases_from(_runs_dir(ROOT, _peaks.CODENAME))
+all_phases += phases_from(_results_dir(ROOT, _peaks.CODENAME) / "gfx900_ref_locked_52149f315d")
 print(f"phases under test: {len(all_phases)}")
 
 d = _Stub()

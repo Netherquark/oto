@@ -13,11 +13,14 @@ REFACTOR_BASE = "2824c2f"
 
 import importlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
 import types
 from pathlib import Path
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -36,7 +39,7 @@ def build_payload():
     d = TensileDriver(base_dir=ROOT, create_run=False)
     d.regenerate_report("run_20261009_205427")
     payload = json.loads(
-        (ROOT / "gfx90c_results" / "acceptance_report.json").read_text())
+        (_results_dir(ROOT, _peaks.CODENAME) / "acceptance_report.json").read_text())
     fields = list(ABVerdict.__dataclass_fields__)
     ver = [ABVerdict(**{k: v.get(k) for k in fields if k in v})
            for v in (payload.get("per_cell_verdicts") or [])
@@ -59,12 +62,12 @@ def load_head_report():
                          capture_output=True, text=True, check=True).stdout
     # Redirect the flat sibling imports at their new homes.
     for old, new in (
-        ("from gfx90c_common import", "from oto.device.peaks import"),
         ("from analytics import", "from oto.metrics.analytics import"),
         ("from policy import", "from oto.metrics.policy import"),
         ("import tensile_library as tlib", "import oto.tensile.library as tlib"),
     ):
         src = src.replace(old, new)
+    src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.peaks import", src)
     p = SCRATCH / "head_report.py"
     p.write_text(src)
     # The module must be registered under its own name for @dataclass to resolve
@@ -79,7 +82,6 @@ def load_head_report():
 
 def main():
     # Shims first: HEAD's report.py reads the new package's siblings.
-    shim("gfx90c_common", "oto.device.peaks")
     shim("analytics", "oto.metrics.analytics")
     shim("policy", "oto.metrics.policy")
     shim("telemetry", "oto.metrics.telemetry")

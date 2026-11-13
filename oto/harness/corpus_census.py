@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Corpus census: what the corpus has ever measured, per family and per cell.
 
-Owns: reading ``gfx90c_results/analysis/kernel_db.json`` back as a history --
+Owns: reading ``<codename>_results/analysis/kernel_db.json`` back as a history --
 the distinct values each structural axis has held and the best seed-median
 GFLOP/s at each, the distinct geometries and their best, and every geometry
 measured on one cell next to the floor's best.
@@ -54,8 +54,9 @@ if str(_HERE) not in sys.path:
 
 from oto.harness.kernel_db import read_kernel_db  # noqa: E402
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
+from oto.runners.paths import results_rel
 
-DEFAULT_DB_REL = "gfx90c_results/analysis/kernel_db.json"
+DEFAULT_DB_REL = results_rel("analysis", "kernel_db.json")
 
 #: The structural axes this census reports. The forward-knob domain
 #: (WorkGroupMapping, LdsPad, StaggerU, ...) is deliberately absent: those are

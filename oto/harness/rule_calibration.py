@@ -48,6 +48,8 @@ if str(_HERE) not in sys.path:
 
 from oto.harness.gate_calibration import (measurement_produced,  # noqa: E402
                                           population_of, read_phase_config)
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 #: A candidate rule. ``True`` = would refuse the config, ``False`` = would allow
 #: it, ``None`` = not applicable (cannot model; excluded from the census).
@@ -64,7 +66,7 @@ def _iter_rows(base: str, families: Optional[Sequence[str]]):
     censuses see exactly the same corpus.
     """
     want = {f.upper() for f in families} if families else None
-    runs_dir = Path(base) / "gfx90c_runs"
+    runs_dir = _runs_dir(base, _peaks.CODENAME)
     for run in sorted(d for d in runs_dir.iterdir() if d.is_dir()):
         cfg_dir = run / "configs"
         for phase_dir in sorted(d for d in run.iterdir()
@@ -113,7 +115,7 @@ def probe(rule: Rule, name: str = "rule", base: str = ".",
     Args:
         rule: ``config -> Optional[bool]`` (``True`` = would refuse).
         name: Label for the report / JSON.
-        base: Repo root holding ``gfx90c_runs/``.
+        base: Repo root holding the runs directory.
         families: When given, keep only phases whose resolved family is listed.
 
     Returns:

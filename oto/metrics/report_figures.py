@@ -16,7 +16,7 @@ are different questions, and the second one is the one that explains a run
 that "improved nothing": the corpus is a thin strip of a much larger legal
 space, and the report now shows it.
 
-The numbers come from ``gfx90c_results/analysis/coverage/coverage.json`` --
+The numbers come from ``<codename>_results/analysis/coverage/coverage.json`` --
 the coverage tool's hand-off. The report never re-derives them (the legal-space
 sweep takes minutes) and says so plainly when the file is absent.
 
@@ -30,9 +30,10 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from oto.runners.paths import results_rel
 
 #: Where the coverage tool writes its figures and its hand-off file.
-COVERAGE_DIR = Path("gfx90c_results") / "analysis" / "coverage"
+COVERAGE_DIR = Path(results_rel("analysis", "coverage"))
 DATA_NAME = "coverage.json"
 
 

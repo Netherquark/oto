@@ -213,7 +213,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _sides in _TIE_WINNERS:
 # VW 1, MT1 = 128, and the 8192-element accumulator cap then refuses 64x128, so
 # its largest legal tile is 64x64 -- also measured. The 1118.7 GFLOPS CC bar and
 # the 98.6 GFLOPS ZZ bar are therefore unreachable by construction, not by
-# tuning; `gfx90c_theoretical_limits.md` §5.1 owns that conclusion.
+# tuning; `<codename>_theoretical_limits.md` §5.1 owns that conclusion.
 _FRONTIER: Dict[str, Tuple[str, Tuple[Tuple[str, str, int, int, Dict[str, Any]], ...]]] = {
     "SS": ("float32, DU8 (the deepest depth with (m+n)*8*4 <= 16384 above 128 wide)",
            (("256x128x8", "8x8", 2, 8, {}),

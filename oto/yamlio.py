@@ -6,7 +6,7 @@ loader available) and ``load_yaml_cached`` (the same, memoised by the file's
 path, size and mtime so a deck that has not changed is parsed once).
 
 Does NOT own: the YAML *content* (the deck is ``phases.yaml``, the overlay is
-``gfx90c_results/overlays/phases.seed.overlay.yaml``, the phase configs are
+``<codename>_results/overlays/phases.seed.overlay.yaml``, the phase configs are
 written by oto.tensile.config_writer) or the JSON caches (those are JSON and
 are read with ``json``).
 

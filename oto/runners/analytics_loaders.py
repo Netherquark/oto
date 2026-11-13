@@ -22,6 +22,8 @@ from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.policy import check_retirement_eligibility
 from oto.metrics.protocol import classify
 from oto.tensile.shape_order import ordered_shapes
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 
 class CorpusMixin:
@@ -125,10 +127,10 @@ class CorpusMixin:
     def _native_run_dirs(self) -> List[Path]:
         """Every native run directory on disk.
 
-        gfx90c_runs/gfx900_ref_* is the spoof floor (the shipped gfx900
+        <runs>/gfx900_ref_* is the spoof floor (the shipped gfx900
         reference chain), never a native candidate, so it is excluded.
         """
-        runs_dir = self.base_dir / "gfx90c_runs"
+        runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
     def _registry_phase_records(self) -> List[Tuple[str, List[Dict[str, Any]]]]:
         """Native registry rows grouped per (run, phase), invocation-stamped.
@@ -183,7 +185,7 @@ class CorpusMixin:
         across every run, including prior older winner runs.
 
         Aggregated corpus:
-          * native CSVs under every gfx90c_runs/run_* directory
+          * native CSVs under every <runs>/run_* directory
           * every registry benchmark_result row (draft/merged runs whose GFLOPS
             live only in the db)
 
@@ -260,7 +262,7 @@ class CorpusMixin:
         """
         # Per (phase_id, fp): {run_dir_name: [gflops...]}
         by_cell: Dict[Tuple[str, str], Dict[str, List[float]]] = {}
-        runs_dir = self.base_dir / "gfx90c_runs"
+        runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
         for run_dir in sorted(runs_dir.glob("run_*")):
             run_name = run_dir.name
             for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):

@@ -18,12 +18,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+import oto.device.peaks as _peaks
 
 ORIG = Path("/tmp/opencode/scheduler_orig.py")
 
-# Load the original scheduler.py as module "scheduler_orig", with its
-# `from gfx90c_common import ...` redirected at the new peaks module.
-import types
+# Load the pre-split scheduler.py as module "scheduler_orig", with its
+# flat legacy `<device-token>_common` import redirected at the new peaks module.
 import subprocess
 
 # Create the original scheduler.py file
@@ -32,20 +32,8 @@ if not ORIG.parent.exists():
 
 src = subprocess.run(["git", "show", f"{REFACTOR_BASE}:scheduler.py"], cwd=ROOT,
                      capture_output=True, text=True, check=True).stdout
+src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.peaks import", src)
 ORIG.write_text(src)
-
-fake_pkg = types.ModuleType("gfx90c_common")
-import oto.device.peaks as peaks
-for name in ("NUM_CUS", "LDS_PER_CU_KB", "FAMILY_DTYPE_CHAR",
-             "MAX_WAVES_PER_CU", "FAMILY_DTYPES", "FAMILY_SHAPES",
-             "PEAK_GFLOPS", "REALISTIC_CEILINGS", "THEORETICAL_PEAKS",
-             "DTYPE_TO_FAMILY", "kernel_typecode", "family_from_kernel_name",
-             "dtype_from_kernel_name", "cube_side", "cell_key",
-             "shipped_cells", "shipped_cell_set", "kernel_key",
-             "NUM_SIMDS_PER_CU", "LANES_PER_SIMD", "MAX_CLOCK_MHZ",
-             "L2_SIZE_KB"):
-    setattr(fake_pkg, name, getattr(peaks, name))
-sys.modules["gfx90c_common"] = fake_pkg
 
 spec = importlib.util.spec_from_file_location("scheduler_orig", ORIG)
 sched_orig = importlib.util.module_from_spec(spec)
@@ -158,7 +146,6 @@ SUMS = [None, 0, 1, 4]
 PADS = [None, 0, 1, 4]
 AF0EM = [None, 1, 2]
 SCI = [None, 0, 1, True, False]
-import oto.device.peaks as _peaks
 ARCHS = [_peaks.CODENAME, "gfx900", None]
 
 cfgs = []

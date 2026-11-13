@@ -14,6 +14,9 @@ from typing import Any, Dict, List
 
 from oto.tools.consolidate_floor import SINGLE_FORM_ONLY_RUNS  # noqa: E402
 from oto.tools.consolidate_targets import LIVE_DB  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import legacy_runs_dir as _legacy_runs_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 BASE = LIVE_DB.parent.parent
 
@@ -45,12 +48,12 @@ def install(base: Path, stage: Path, sel: Dict[str, Any],
     deck_path = base / "phases.yaml"
     staged = write_deck(stage, sel, stamp)
 
-    live_lock = base / "gfx90c_runs" / lock["run_id"]
+    live_lock = _runs_dir(base, _peaks.CODENAME) / lock["run_id"]
     if live_lock.exists():
         # Never delete in place. A previous build of the same lock id is moved
         # aside under archive/ so the swap is reversible; the staged copy is the
         # only thing that replaces it.
-        prev_arch = base / "archive" / "gfx90c_runs" / "superseded_locks"
+        prev_arch = _legacy_runs_dir(base / 'archive') / 'superseded_locks'
         prev_arch.mkdir(parents=True, exist_ok=True)
         stamp_dir = prev_arch / f"{lock['run_id']}_{stamp.replace(':', '')}"
         n = 1
@@ -64,10 +67,10 @@ def install(base: Path, stage: Path, sel: Dict[str, Any],
     shutil.copy2(dbres["out"], LIVE_DB)
     shutil.copy2(staged, deck_path)
 
-    arch = base / "archive" / "gfx90c_runs"
+    arch = _legacy_runs_dir(base / 'archive')
     arch.mkdir(parents=True, exist_ok=True)
     for run in list(SINGLE_FORM_ONLY_RUNS) + phantom_runs(base):
-        src = base / "gfx90c_runs" / run
+        src = _runs_dir(base, _peaks.CODENAME) / run
         if src.is_dir():
             shutil.move(str(src), str(arch / run))
 
@@ -91,7 +94,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> List[str]:
     con.close()
     out = []
     for (run_id,) in rows:
-        d = base / "gfx90c_runs" / run_id
+        d = _runs_dir(base, _peaks.CODENAME) / run_id
         if not d.is_dir():
             continue
         if any(d.rglob("*.csv")):
@@ -107,7 +110,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> List[str]:
 
 def explain_archive(base: Path = BASE) -> str:
     lines = ["Runs moved out of the live loader path (data preserved under "
-             "archive/gfx90c_runs/):"]
+             "the archive/superseded-locks directory):"]
     for r in SINGLE_FORM_ONLY_RUNS:
         lines.append(f"  {r}  (single-shape-only: kept as priors, not gradable "
                      f"against a swept floor)")

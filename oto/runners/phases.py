@@ -23,6 +23,8 @@ from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
 
 from oto import yamlio  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 #: Consecutive executed phases that *launched the client and measured nothing*
 #: before the harness declares the GPU lost and aborts the run. The 2026-10-19
 #: overnight run lost the device after its first phase and burned 9h47m emitting
@@ -138,11 +140,11 @@ class PhaseMixin:
     def _load_seed_overlay(self) -> List[Dict[str, Any]]:
         """This project's persistent seed overlay, or [] when there is none.
 
-        `gfx90c_results/overlays/phases.seed.overlay.yaml` is curated by hand /
+        `<codename>_results/overlays/phases.seed.overlay.yaml` is curated by hand /
         by the D2 tooling and applied to every native run. The per-run overlay
         path is not used because the seed is not tied to a single run_id.
         """
-        path = self.base_dir / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        path = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
         if not path.exists():
             return []
         try:
@@ -160,7 +162,7 @@ class PhaseMixin:
         owner; falls back to the file directly so the overlay is still honoured
         with no ledger-backed mutator.
         """
-        path = (self.base_dir / "gfx90c_results" / "overlays"
+        path = (_results_dir(self.base_dir, _peaks.CODENAME) / "overlays"
                 / f"phases.{run_id}.overlay.yaml")
         if not path.exists():
             return []

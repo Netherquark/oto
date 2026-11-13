@@ -26,6 +26,9 @@ from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin
 
 import oto.tensile.library as tlib
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 __all__ = ["AcceptanceReporter", "ABVerdict", "AcceptanceReport"]
 
@@ -102,7 +105,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             overall_pass=overall_pass,
             summary=summary,
             all_analytics=all_analytics,
-            run_dir=str(self.base_dir / "gfx90c_runs" / run_id) if self.base_dir else None,
+            run_dir=str(_runs_dir(self.base_dir, _peaks.CODENAME) / run_id) if self.base_dir else None,
             family_timing=family_timing,
             execution_timing=execution_timing,
             orange_list=orange_list,
@@ -320,7 +323,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     def write_report(self, report: AcceptanceReport, output_path: Optional[Path] = None) -> None:
         """Write acceptance report to JSON and HTML files."""
         if output_path is None:
-            output_path = self.base_dir / "gfx90c_results" / "acceptance_report.json"
+            output_path = _results_dir(self.base_dir, _peaks.CODENAME) / "acceptance_report.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         report_dict = {

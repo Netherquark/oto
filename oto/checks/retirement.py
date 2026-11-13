@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Inspect the registry DB for retirement records and per-cell sample counts.
 
-Owns: this one ad-hoc SQLite inspection of ``gfx90c_results/registry.db``.
+Owns: this one ad-hoc SQLite inspection of ``<codename>_results/registry.db``.
 Does NOT own: any read the rest of oto performs (use ``oto.ledger.registry`` or
 ``oto.tools.allruns`` for anything the project depends on).
 Public API: ``main``.
@@ -11,6 +11,8 @@ import argparse
 import json
 import sqlite3
 from pathlib import Path
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 
 def main() -> None:
@@ -19,7 +21,7 @@ def main() -> None:
     ap.add_argument("--base-dir", type=Path, default=Path("."),
                     help="repo root")
     args = ap.parse_args()
-    conn = sqlite3.connect(Path(args.base_dir) / "gfx90c_results" / "registry.db")
+    conn = sqlite3.connect(_results_dir(args.base_dir, _peaks.CODENAME) / "registry.db")
     cursor = conn.cursor()
 
     # Check for retirement records

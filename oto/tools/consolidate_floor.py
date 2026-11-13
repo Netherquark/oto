@@ -17,6 +17,9 @@ from typing import Any, Dict, List
 
 from oto.metrics.ab_audit import BASE as _AB_BASE  # noqa: E402
 from oto.tools.consolidate_targets import source_chain  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 BASE = _AB_BASE
 
@@ -42,7 +45,7 @@ def plan_floor(base: Path = BASE) -> Dict[str, Any]:
     chain = source_chain(base)
     stats: Dict[str, Dict[str, Any]] = {}
     for run in chain:
-        rd = base / "gfx90c_runs" / run
+        rd = _runs_dir(base, _peaks.CODENAME) / run
         for csv in rd.glob("phase_*/2_BenchmarkData/*.csv"):
             pid = csv.parent.parent.name
             try:
@@ -97,7 +100,7 @@ def build_floor(base: Path, dest: Path, stamp: str) -> Dict[str, Any]:
     copied = 0
     phases: set = set()
     for run in plan["chain"]:
-        for csv in sorted((base / "gfx90c_runs" / run).glob(
+        for csv in sorted((_runs_dir(base, _peaks.CODENAME) / run).glob(
                 "phase_*/2_BenchmarkData/*.csv")):
             pid = csv.parent.parent.name
             out = dest / pid / "2_BenchmarkData"
@@ -136,7 +139,7 @@ def build_db(base: Path, lock: Dict[str, Any], out: Path,
     ``reference_chain`` selects it as the head with no resume_of to follow.
     """
     out.parent.mkdir(parents=True, exist_ok=True)
-    src = sqlite3.connect(f"file:{base / 'gfx90c_results' / 'registry.db'}?mode=ro",
+    src = sqlite3.connect(f"file:{_results_dir(base, _peaks.CODENAME) / 'registry.db'}?mode=ro",
                           uri=True)
     dst = sqlite3.connect(out)
     src.backup(dst)

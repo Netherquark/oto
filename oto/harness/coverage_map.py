@@ -44,6 +44,9 @@ if str(_HERE) not in sys.path:
 from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
 from oto.harness.candidate_pool import _base_config, _strip_not_forwarded  # noqa: E402
 from oto.tensile.candidate import CandidateGenerator  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import results_rel
 
 #: The thread tiles the harness can express. This is the set the CORPUS has
 #: measured (plus the tile-frontier sweep's set), not an invented grid: the
@@ -178,7 +181,7 @@ def measured_geometries(db_path: Optional[Path] = None,
         The measured geometry map, empty when the cache does not exist.
     """
     base = Path(base_dir) if base_dir else _HERE
-    path = db_path or (base / "gfx90c_results" / "analysis" / "kernel_db.json")
+    path = db_path or (_results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json")
     if not path.exists():
         return {}
     db = json.loads(path.read_text())
@@ -295,7 +298,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--db", type=Path, default=None,
-                    help="kernel_db.json path (default: <base-dir>/gfx90c_results/analysis/kernel_db.json)")
+                    help="kernel_db.json path (default: <base-dir>/<codename>_results/analysis/kernel_db.json)")
     ap.add_argument("--protocol", default="family",
                     help="the invocation form the measured best admits "
                          "(§R56.3; default family, like-for-like with the "

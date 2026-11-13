@@ -32,6 +32,8 @@ from oto.metrics.analytics import extract_family_from_phase_id
 from oto.device.peaks import cell_key
 from oto.metrics.protocol import (FAMILY, SINGLE, UNKNOWN,
                                   like_for_like, protocol_of)
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 BASE = Path(__file__).resolve().parents[2]
 
@@ -260,7 +262,7 @@ def _proposal_coverage(base: Path, band_pct: Optional[float] = None) -> Dict[str
     try:
         from oto.metrics.coverage import coverage_from_registry
         from oto.ledger.registry import SQLiteRegistry
-        db = base / "gfx90c_results" / "registry.db"
+        db = _results_dir(base, _peaks.CODENAME) / "registry.db"
         if not db.exists():
             return {"available": False, "reason": "no registry.db"}
         reg = SQLiteRegistry(base, read_only=True)

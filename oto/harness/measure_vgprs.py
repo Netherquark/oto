@@ -11,7 +11,7 @@ objects (the Tensile driver does that), or the audit that consumes the ratio
 
 Public API: main.
 
-Every run dir under ``gfx90c_runs/`` carries a phase's compiled kernel objects at
+Every run dir under the runs directory carries a phase's compiled kernel objects at
 ``<run>/<phase>/1_BenchmarkProblems/<Kernel>/00_Final/source/build_tmp/SOURCE/assembly/<kernel>.o``,
 whose AMDGPU metadata holds the true ``vgpr_count``. This tool parses them with
 ``llvm-readelf`` (CPU-only, no GPU) and reports, per (dtype char, ThreadTile), the
@@ -41,6 +41,8 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.tensile.gates.vgpr_model import measured_accvgpr  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 _TYPECODE_CORE = re.compile(r"_(MT\d+x\d+(?:x\d+)?)_")
 _WEIGHT = {"S": 1, "D": 2, "H": 1, "C": 2, "Z": 8}
@@ -80,7 +82,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override")
     ap.add_argument("--runs", type=Path, default=None,
-                    help="runs directory (default: <base-dir>/gfx90c_runs)")
+                    help="runs directory (default: <base-dir>/<codename>_runs)")
     return ap
 
 
@@ -150,7 +152,7 @@ def main() -> int:
     args = _build_arg_parser().parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    runs_dir = Path(args.runs) if args.runs else base / "gfx90c_runs"
+    runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _peaks.CODENAME)
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
         print("no Tensile assembly objects found (run a phase first)")

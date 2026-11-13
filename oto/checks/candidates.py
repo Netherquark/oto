@@ -20,7 +20,7 @@ have reported. The occupancy gate is a calibrated model, not Tensile's verdict;
     python3 check_candidates.py                      # sweep phases.yaml
     python3 check_candidates.py --family ZZ
     python3 check_candidates.py --deck other.yaml
-    python3 check_candidates.py --deck gfx90c_results/overlays/phases.seed.overlay.yaml
+    python3 check_candidates.py --deck <base>/<codename>_results/overlays/phases.seed.overlay.yaml
     python3 check_candidates.py --quiet              # only print failures
     python3 check_candidates.py --json out.json
 
@@ -56,6 +56,8 @@ from oto.tensile.gates.vgpr_model import (VGPR_PER_CU,  # noqa: E402
                                           VGPR_PER_ELEMENT,
                                           measured_accvgpr)
 from oto.tensile.library import shipped_kernel_config  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 
 def _divisibility(gen, cfg):
@@ -235,7 +237,7 @@ def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
     gate. Sweeping the pinned manifest through the same GATES makes that
     explicit instead of assumed.
     """
-    manifest_path = base_dir / "gfx90c_results" / "gfx900_shipped_manifest.json"
+    manifest_path = _results_dir(base_dir, _peaks.CODENAME) / "gfx900_shipped_manifest.json"
     manifest = json.loads(manifest_path.read_text())
     deck: list[dict] = []
     for entry in manifest.get("dat_files", []):

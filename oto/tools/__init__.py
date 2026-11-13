@@ -8,7 +8,7 @@ launch Tensile.
 Owns: nothing at import time — this package holds no logic, only the docstrings
 of the modules underneath it.
 Does NOT own: the modules themselves (each carries its own), the corpus they
-analyse (gfx90c_runs/, gfx90c_results/), or the checks that gate a deck
+analyse (<codename>_runs/, <codename>_results/), or the checks that gate a deck
 (oto.checks).
 Public API: none at import time; this package re-exports nothing, so importing
 it has no side effects.

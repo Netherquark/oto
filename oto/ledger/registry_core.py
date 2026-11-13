@@ -34,6 +34,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
 from datetime import datetime
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 # Run-terminal statuses that imply benchmark data may have landed and the
 # kernel_db cache should be refreshed. `skipped` / `smoke` / `failed`
@@ -159,10 +162,10 @@ class RegistryCore:
     def __init__(self, base_dir: Path, read_only: bool = False,
                  auto_rebuild_kernel_db: bool = True):
         self.base_dir = Path(base_dir)
-        self.results_dir = self.base_dir / "gfx90c_results"
-        self.runs_dir = self.base_dir / "gfx90c_runs"
+        self.results_dir = _results_dir(self.base_dir, _peaks.CODENAME)
+        self.runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
         self.read_only = read_only
-        # Refresh gfx90c_results/analysis/kernel_db.json automatically when a
+        # Refresh <codename>_results/analysis/kernel_db.json automatically when a
         # run reaches a terminal data-producing status, so any later mutation /
         # regression_matrix / resolve_cells read always sees the freshest
         # corpus. Tests pass False; `OTO_NO_AUTO_KERNEL_DB_REBUILD=1` disables
@@ -333,7 +336,7 @@ class RegistryCore:
             return False
         return status in _KERNEL_DB_REBUILD_STATUSES
     def _rebuild_kernel_db_after_run(self, run_id: str, status: str) -> None:
-        """Refresh gfx90c_results/analysis/kernel_db.json from the run dirs.
+        """Refresh <codename>_results/analysis/kernel_db.json from the run dirs.
 
         Best-effort: a cache refresh must never fail a run finalisation, so any
         exception is logged (stderr) and swallowed. Rebuild is ~seconds and is

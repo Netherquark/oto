@@ -23,7 +23,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import oto.tensile.library as tlib  # noqa: E402
-DB_REL = Path("gfx90c_results") / "registry.db"
+from oto.runners.paths import results_rel
+DB_REL = Path(results_rel("registry.db"))
 
 #: A run is "in flight" while it is the newest one and has no completed_at.
 #: The path constants live with the module that reads them.

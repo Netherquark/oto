@@ -16,11 +16,14 @@ from typing import List, Tuple
 from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 from oto.metrics.ab_audit import BASE as _AB_BASE, _driver  # noqa: E402
 from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 BASE = _AB_BASE
 
 #: The locked floor, expressed in one registry db.
-LIVE_DB = BASE / "gfx90c_results" / "registry.db"
+LIVE_DB = _results_dir(BASE, _peaks.CODENAME) / "registry.db"
 
 
 def _stamp() -> str:
@@ -59,7 +62,7 @@ def manifest_cells() -> set:
     but a family the manifest never shipped would be a silent over-reach, so it
     is worth being able to ask.
     """
-    path = BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"
+    path = _results_dir(BASE, _peaks.CODENAME) / "gfx900_shipped_manifest.json"
     try:
         fam = json.loads(path.read_text()).get("families", {})
     except Exception:
@@ -71,13 +74,13 @@ def manifest_cells() -> set:
 # measurement inventory
 # --------------------------------------------------------------------------
 def native_runs(base: Path = BASE) -> List[str]:
-    return sorted(d.name for d in (base / "gfx90c_runs").glob("run_*") if d.is_dir())
+    return sorted(d.name for d in (_runs_dir(base, _peaks.CODENAME)).glob("run_*") if d.is_dir())
 
 
 def floor_chain(base: Path = BASE) -> List[str]:
     drv = _driver(base)
     return [r for r in drv._reference_floor_runs(None)
-            if (base / "gfx90c_runs" / r).is_dir()]
+            if (_runs_dir(base, _peaks.CODENAME) / r).is_dir()]
 
 
 def source_chain(base: Path = BASE) -> List[str]:

@@ -19,6 +19,8 @@ import csv as _csv
 import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 
 class ClockMixin:
@@ -191,7 +193,7 @@ class ClockMixin:
         for rid in run_ids:
             if any(k[0] == rid for k in self._sclk_cache):
                 continue
-            run_dir = self.base_dir / "gfx90c_runs" / rid
+            run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / rid
             for pid, hz in self._load_sclk_by_phase(run_dir).items():
                 self._sclk_cache[(rid, pid)] = hz
         return self._sclk_cache
@@ -208,7 +210,7 @@ class ClockMixin:
         for rid in run_ids:
             if any(k[0] == rid for k in self._thermal_cache):
                 continue
-            run_dir = self.base_dir / "gfx90c_runs" / rid
+            run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / rid
             for pid, d in self._load_telemetry_by_phase(run_dir).items():
                 self._thermal_cache[(rid, pid)] = d
         return self._thermal_cache

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Ground-truth per-kernel-per-shape GFLOPS database.
 
-Owns: walking every run/phase directory under ``gfx90c_runs/`` and producing, per
+Owns: walking every run/phase directory under the runs directory and producing, per
 (phase, kernel-shape) row, the per-seed best and median GFlops plus the
 structural config -- the canonical, repo-homed provenance the other harness
 modules cite.
@@ -17,13 +17,13 @@ floor config is rebuilt from the solution name when the folder is absent. Dtype
 is resolved from the config's ``ProblemType.DataType`` enum
 (0=S f32, 1=D f64, 2=C complex f32, 3=Z complex f64, 4=H f16).
 
-Default scopes: native runs = every ``gfx90c_runs/run_*`` directory; the spoof
-floor = ``gfx90c_runs/gfx900_ref_locked_*`` only. ``--all-ref`` also folds in the
+Default scopes: native runs = every ``<runs>/run_*`` directory; the spoof
+floor = ``<runs>/gfx900_ref_locked_*`` only. ``--all-ref`` also folds in the
 other completed ``gfx900_ref_*`` directories, which are chained rebuilds and are
 excluded by default so a regeneration stays byte-identical to the published
 matrix.
 
-Output: ``gfx90c_results/analysis/kernel_db.json`` (run_id -> rows). CPU only.
+Output: ``<codename>_results/analysis/kernel_db.json`` (run_id -> rows). CPU only.
 
     python3 -m oto.harness.kernel_db --rebuild
     python3 -m oto.harness.kernel_db --json out.json
@@ -60,6 +60,9 @@ from oto.device.peaks import (            # noqa: E402  (path set up above)
 )
 from oto.metrics.family_attribution import extract_family_from_phase_id  # noqa: E402
 from oto.metrics.protocol import classify_count, problem_count_text      # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_rel
+from oto.runners.paths import runs_dir as _runs_dir
 
 ENUM_TO_DTYPE = {0: "S", 1: "D", 2: "C", 3: "Z", 4: "H"}
 # Family token immediately after the phase / probe / auto-pool prefix, so
@@ -84,7 +87,7 @@ def discover_runs(base_dir: str,
     matching the published regression matrix; all_ref=True includes every
     gfx900 reference directory.
     """
-    runs_dir = Path(base_dir) / "gfx90c_runs"
+    runs_dir = _runs_dir(base_dir, _peaks.CODENAME)
     out: List[Tuple[str, str]] = []
     if not runs_dir.is_dir():
         return out
@@ -346,7 +349,7 @@ def build_kernel_db(base_dir: str,
         runs = [(rid, kind) for rid, kind in runs if rid in set(run_ids)]
     cache: Dict[str, List[Dict[str, Any]]] = {}
     for run_id, kind in runs:
-        run_dir = os.path.join(base_dir, "gfx90c_runs", run_id)
+        run_dir = str(_runs_dir(base_dir, _peaks.CODENAME) / run_id)
         if not os.path.isdir(run_dir):
             cache[run_id] = []
             continue
@@ -447,7 +450,7 @@ def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
     return db
 
 
-DEFAULT_CACHE = "gfx90c_results/analysis/kernel_db.json"
+DEFAULT_CACHE = results_rel("analysis", "kernel_db.json")
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

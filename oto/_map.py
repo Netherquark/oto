@@ -48,7 +48,7 @@ def _first_sentence(text: str) -> str:
 def _has_modules(directory: Path) -> bool:
     """True when a directory holds at least one real module (not plumbing).
 
-    Stray data directories (a ``gfx90c_results/`` or ``gfx90c_runs/`` created by
+    Stray data directories (a ``<codename>_results/`` or ``<codename>_runs/`` created by
     running a tool with a relative base path) must not get a heading with no
     entries under it.
     """

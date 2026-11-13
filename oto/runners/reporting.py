@@ -23,6 +23,9 @@ from oto.metrics.policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
 from oto.metrics.report import ABVerdict
 from oto.tensile.shape_order import ordered_shapes
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import runs_dir as _runs_dir
 
 
 class ReportingMixin:
@@ -222,7 +225,7 @@ class ReportingMixin:
         ref_run_ids = self._reference_floor_runs(run_id)
         spoof_records: List[Dict[str, Any]] = []
         for ref in ref_run_ids:
-            ref_dir = self.base_dir / "gfx90c_runs" / ref
+            ref_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / ref
             if ref_dir.is_dir():
                 _, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
                 for rec in ref_records:
@@ -389,7 +392,7 @@ class ReportingMixin:
             try:
                 self.reporter.write_report(
                     report,
-                    self.reporter.base_dir / "gfx90c_results" / "acceptance_report.json")
+                    _results_dir(self.reporter.base_dir, _peaks.CODENAME) / "acceptance_report.json")
             except Exception:
                 pass
         return {"cells": len(all_analytics), "red": len(red_list),
@@ -445,7 +448,7 @@ class ReportingMixin:
         failed must still be reported against the historical winners, exactly
         as the spoof arm already is via the reference chain. Reports are written
         into the run dir (when one exists) plus the canonical
-        base_dir/gfx90c_results/ location.
+        base_dir/<codename>_results/ location.
 
         native_agg: which cell statistic picks the winner on both arms —
         'best' | 'median' | 'throttle'.
@@ -487,7 +490,7 @@ class ReportingMixin:
         """Regenerate the acceptance report for a run from the registry.
 
         With no run_id, uses the most recently registered run. Reports land in
-        base_dir/gfx90c_results/acceptance_report.{json,html}. The native arm
+        base_dir/<codename>_results/acceptance_report.{json,html}. The native arm
         spans the whole database, so the report may legitimately be won by
         cells from an older run than run_id.
         """
@@ -497,7 +500,7 @@ class ReportingMixin:
             print("No run id available to regenerate a report")
             return None
 
-        run_dir = self.base_dir / "gfx90c_runs" / run_id
+        run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / run_id
         if not run_dir.exists():
             run_dir = None
         print(f"Regenerating acceptance report for run {run_id}")

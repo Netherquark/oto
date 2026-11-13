@@ -23,6 +23,8 @@ import oto.tensile.library as tlib
 
 
 from oto import yamlio  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 def _deck_content_fps(deck: List[Dict[str, Any]]) -> Dict[str, str]:
     """phase_key -> config fingerprint (undotted keys only)."""
     fps: Dict[str, str] = {}
@@ -114,7 +116,7 @@ class ReferenceMixin:
         """Chain ids for a resume, base first."""
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name)
         chain_ids = [r for r in chain_ids
-                     if (self.base_dir / "gfx90c_runs" / r).is_dir()]
+                     if (_runs_dir(self.base_dir, _peaks.CODENAME) / r).is_dir()]
         if base not in chain_ids:
             chain_ids = [base] + chain_ids
         return chain_ids
@@ -282,7 +284,7 @@ class ReferenceMixin:
             return [], {"status": "failed",
                         "reason": "resume requires an existing completed "
                                   "gfx900 reference run"}
-        base_dir = self.base_dir / "gfx90c_runs" / base
+        base_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / base
         base_yaml = base_dir / "phases_reference.yaml"
         if not base_yaml.is_file():
             return [], {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
@@ -394,7 +396,7 @@ class ReferenceMixin:
         exclude = str(run_id) if str(run_id).startswith("gfx900_ref_") else None
         chain = tlib.reference_chain(self.registry, exclude=exclude)
         return [r for r in chain
-                if (self.base_dir / "gfx90c_runs" / r).is_dir()]
+                if (_runs_dir(self.base_dir, _peaks.CODENAME) / r).is_dir()]
     def _reusable_phase_keys(self, run_ids: List[str],
                             current_fps: Optional[Dict[str, str]] = None
                             ) -> Tuple[Set[str], Set[str]]:
@@ -485,7 +487,7 @@ class ReferenceMixin:
         # covers only the last slice of kernels, but the floor spans all of them.
         universe: Dict[str, Dict[str, Any]] = {}
         for rid in chain:
-            deck_path = (self.base_dir / "gfx90c_runs" / rid
+            deck_path = (_runs_dir(self.base_dir, _peaks.CODENAME) / rid
                          / "phases_reference.yaml")
             try:
                 for ph in yamlio.load_yaml(deck_path) or []:

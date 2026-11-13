@@ -27,6 +27,8 @@ from oto.tools.consolidate_install import (  # noqa: E402
     explain_archive, install, write_deck)
 from oto.tools.consolidate_targets import (  # noqa: E402
     _fam, _stamp, source_chain, target_cells)
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 __all__ = [
     "main", "_stamp", "select_deck", "load_deck", "_fam", "_is_legal",
@@ -72,7 +74,7 @@ def cmd_all(args) -> int:
     stage.mkdir(parents=True, exist_ok=True)
 
     sel = select_deck(base)
-    lock = build_floor(base, stage / "gfx90c_runs" / locked_run_id(
+    lock = build_floor(base, _runs_dir(stage, _peaks.CODENAME) / locked_run_id(
         source_chain(base)), stamp)
     dbres = build_db(base, lock, stage / "registry.db", stamp)
 

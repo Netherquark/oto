@@ -37,9 +37,12 @@ from oto.metrics.render_status import (  # noqa: E402,F401
                                        main, render, render_compact)
 from oto.metrics.run_plan import (Estimate, PhaseCost, RunPlan,
                                   _reference_unit_count, _tuning_unit_count)
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_rel
+from oto.runners.paths import runs_dir as _runs_dir
 
 #: The registry's path relative to the project root.
-DB_REL = Path("gfx90c_results") / "registry.db"
+DB_REL = Path(results_rel("registry.db"))
 
 #: A run is "in flight" while it is the newest one and has no completed_at.
 ACTIVE_STATES = ("started", "interrupted")
@@ -477,7 +480,7 @@ def build_report(base: Path, run_id: Optional[str],
                       ref_total + pin["tune_units"], pin["breakdown"],
                       pin["used"], ref_remaining, pin["tune_units"], ref_done)
 
-    thermals = read_thermals(base / "gfx90c_runs" / (chain[-1] if chain else "")) if chain else None
+    thermals = read_thermals(_runs_dir(base, _peaks.CODENAME) / (chain[-1] if chain else "")) if chain else None
     started_live = state["status_by_run"].get(chain[-1] if chain else "") == "started"
 
     return {

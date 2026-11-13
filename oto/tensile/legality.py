@@ -39,6 +39,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import oto.tensile.library as tlib
 from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_DTYPES
+from oto.runners.paths import results_rel
 
 #: Tensile checkout the citations below were verified against.
 TENSILE_COMMIT = "e8a8999e"
@@ -259,7 +260,7 @@ _SUPPORT_CACHE: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
 #: Repository root, where the pinned manifest lives.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-MANIFEST_RELATIVE_PATH = "gfx90c_results/gfx900_shipped_manifest.json"
+MANIFEST_RELATIVE_PATH = results_rel("gfx900_shipped_manifest.json")
 
 
 def manifest_dir(base_dir: Path) -> Path:

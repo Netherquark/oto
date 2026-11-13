@@ -78,7 +78,7 @@ def main() -> int:
     ap.add_argument("--overlay", type=Path, nargs="*", default=None,
                     help="extra overlay yaml(s) to fold in")
     ap.add_argument("--run-id", default=None,
-                    help="also fold in gfx90c_results/overlays/phases.<run-id>.overlay.yaml")
+                    help="also fold in <base-dir>/<codename>_results/overlays/phases.<run-id>.overlay.yaml")
     ap.add_argument("--no-seed", action="store_true",
                     help="skip the seed overlay when reading the default manifest")
     ap.add_argument("--json", type=Path, default=None, help="write report JSON")

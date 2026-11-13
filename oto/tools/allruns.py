@@ -46,6 +46,8 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
 from oto.metrics.analytics import extract_family_from_phase_id          # noqa: E402
 from oto.device.peaks import DTYPE_TO_FAMILY, cube_side         # noqa: E402
 from oto.runners.driver import TensileDriver                      # noqa: E402
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 # bytes per element for the GLOBAL LOAD. Read from Tensile via
 # consolidate.dtype_bytes rather than hardcoded: this table used to be a second
@@ -92,7 +94,7 @@ class _Knobs:
         if key in self._cache:
             return self._cache[key]
         self._cache[key] = {}
-        d = self.base / "gfx90c_runs" / str(run) / str(phase_id) / "2_BenchmarkData"
+        d = _runs_dir(self.base, _peaks.CODENAME) / str(run) / str(phase_id) / "2_BenchmarkData"
         if d.is_dir():
             for f in sorted(os.listdir(d)):
                 if not f.endswith(".yaml"):
@@ -132,7 +134,7 @@ def _load_arms(base: Path):
     floor: list[dict] = []
     ref_ids = drv._reference_floor_runs(None)
     for ref in ref_ids:
-        d = base / "gfx90c_runs" / ref
+        d = _runs_dir(base, _peaks.CODENAME) / ref
         if d.is_dir():
             _n, recs = drv._ab_records_from_csv(d, force_arm="spoof")
             for r in recs:

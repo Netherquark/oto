@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, List
 
 from oto.device.profile import DeviceProfile
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
 
 
 def _load_json(path: Path) -> Any:
@@ -48,7 +50,7 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
 
 def _corpus_section(base_dir: Path) -> List[str]:
     """The `## Corpus` + per-run stats block."""
-    kb = base_dir / "gfx90c_results" / "analysis" / "kernel_db.json"
+    kb = _results_dir(base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     db = _load_json(kb)
     if not isinstance(db, dict):
         return ["## Corpus: (no kernel_db.json found)", ""]
@@ -69,7 +71,7 @@ def _corpus_section(base_dir: Path) -> List[str]:
 
 def _acceptance_section(base_dir: Path) -> List[str]:
     """The `## Acceptance (like-for-like)` + `## Per-family verdicts` block."""
-    ar = _load_json(base_dir / "gfx90c_results" / "acceptance_report.json")
+    ar = _load_json(_results_dir(base_dir, _peaks.CODENAME) / "acceptance_report.json")
     if not isinstance(ar, dict):
         return []
     verdicts = ar.get("per_cell_verdicts", [])

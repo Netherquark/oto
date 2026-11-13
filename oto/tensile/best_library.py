@@ -34,6 +34,9 @@ from oto.harness.kernel_db import read_kernel_db
 from oto.metrics.protocol import UNKNOWN, protocol_of
 from oto.tensile.library_parity import parity_report
 from oto.tensile.synthesis.db import DBMutator
+import oto.device.peaks as _peaks
+from oto.runners.paths import results_dir as _results_dir
+from oto.runners.paths import results_rel
 
 def _tensile_candidates() -> List[str]:
     cands = []
@@ -67,7 +70,7 @@ SHIPPED_CELLS: Set[Tuple[str, str]] = {
 }
 
 #: Default output location, relative to the oto checkout.
-DEFAULT_BEST_LIBRARY_SUBDIR = Path("gfx90c_results") / "best_effort_library"
+DEFAULT_BEST_LIBRARY_SUBDIR = Path(results_rel("best_effort_library"))
 
 
 def default_best_library_dest(base_dir: Path) -> Path:
@@ -199,7 +202,7 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
         List[Dict[str, Any]], Dict[str, Any]]:
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
-        base_dir / "gfx90c_results" / "analysis" / "kernel_db.json")
+        _results_dir(base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
     db = read_kernel_db(db_path)
     pools = _cell_rows_from_db(db, basis)
 
@@ -339,8 +342,8 @@ def logic_filename_hint(tensile_root, codename) -> str:
 
     The merge step selects logic files by a substring of the file *stem*
     (``findLogicFiles``), using ``getArchitectureName(architecture)`` -- e.g.
-    the ROCm 7.x nightly maps ``gfx90c`` -> ``vega10`` (the gfx900-class
-    target). Emitting ``<codename>_<family>.yaml`` then silently selects zero
+    the ROCm 7.x nightly maps each arch onto an ISA-family token the merge
+    step matches against (this device resolves onto the vega10 family). Emitting ``<codename>_<family>.yaml`` then silently selects zero
     files (observed: ``# LibraryLogicFiles: found 0 files``, a "successful"
     TCL run with 0 solution catalogs and no ``TensileLibrary.dat``). Ask the
     very Tensile doing the merge; on any failure fall back to the codename
@@ -461,7 +464,6 @@ def _tensile_env(tensile_root: Path) -> Dict[str, str]:
 
 
 def _default_codename() -> str:
-    import oto.device.peaks as _peaks
     return _peaks.CODENAME
 
 

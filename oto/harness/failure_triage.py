@@ -9,7 +9,7 @@ of a one-off script.
 
 Does NOT own: whether the *gates* should have predicted the failure
 (``oto.harness.gate_calibration``), the per-phase M1/M2/M3 failure taxonomy
-(``gfx90c_tuning_guide.md`` §5), or the run status / telemetry
+(``<codename>_tuning_guide.md`` §5), or the run status / telemetry
 (``oto.metrics.run_status``).
 
 Public API: main, census, reason_for_phase, measurement_produced.
@@ -30,6 +30,8 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+import oto.device.peaks as _peaks
+from oto.runners.paths import runs_dir as _runs_dir
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
@@ -91,7 +93,7 @@ def census(base: str = ".", run_filter: Optional[str] = None,
     """Walk the run corpus and classify every empty phase.
 
     Args:
-        base: Repo root holding ``gfx90c_runs/``.
+        base: Repo root holding the runs directory.
         run_filter: When given, only this run directory is scanned.
         sample_limit: How many example empty phases to retain.
 
@@ -99,7 +101,7 @@ def census(base: str = ".", run_filter: Optional[str] = None,
         ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
         "samples": [(run, phase, reason)]}``.
     """
-    runs_dir = Path(base) / "gfx90c_runs"
+    runs_dir = _runs_dir(base, _peaks.CODENAME)
     run_dirs = sorted(d for d in runs_dir.iterdir() if d.is_dir())
     if run_filter is not None:
         run_dirs = [d for d in run_dirs if d.name == run_filter]
