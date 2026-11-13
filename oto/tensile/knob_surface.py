@@ -55,19 +55,7 @@ DEPRECATED_KEYS = ("MacroTile0", "MacroTile1")
 #: StaggerUStride-forwarded-alone) precisely because the surface was only
 #: *implied* by the fork helpers. ``tests/test_writer_forwards_sweep_knobs.py``
 #: pins this tuple to them, and ``potential_configs.md`` §R16 is its prose.
-FORWARDED_KNOBS = (
-    "ThreadTile", "MacroTile", "WorkGroup",
-    "WorkGroupMapping", "GlobalSplitU",
-    "DepthU",
-    "VectorWidth", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB",
-    "NumLoadsCoalescedA", "NumLoadsCoalescedB",
-    "PrefetchGlobalRead", "PrefetchLocalRead",
-    "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode",
-    "FractionalLoad", "NonTemporalA", "NonTemporalB", "NonTemporalC",
-    "NonTemporalD",
-    "AssertFree1ElementMultiple",
-    "TransposeLDS",
-) + FORWARDED_GROUP_C_KNOBS
+FORWARDED_KNOBS = ("ThreadTile", "MacroTile", "WorkGroup", "WorkGroupMapping", "GlobalSplitU", "DepthU", "VectorWidth", "GlobalLoadVectorWidthA", "GlobalLoadVectorWidthB", "NumLoadsCoalescedA", "NumLoadsCoalescedB", "PrefetchGlobalRead", "PrefetchLocalRead", "UseSgprForGRO", "InnerUnroll", "MaxOccupancy", "AggressivePerfMode", "FractionalLoad", "NonTemporalA", "NonTemporalB", "NonTemporalC", "NonTemporalD", "AssertFree1ElementMultiple", "TransposeLDS", *FORWARDED_GROUP_C_KNOBS)
 
 #: Valid Tensile parameters a builder may name, which the launch boundary does
 #: NOT forward. A candidate carrying one would benchmark at the Tensile default

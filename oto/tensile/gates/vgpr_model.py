@@ -21,7 +21,7 @@ compute_bytes, set_profile, restore_profile, bound_profile.
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Dict, Tuple
+from typing import Any
 
 #: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
 #: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover
 _TRACKED = ("GLOBAL_LOAD_BYTE_CAP", "VGPR_PER_CU", "LDS_PER_CU_KB")
 
 
-def set_profile(profile) -> Dict[str, Any]:
+def set_profile(profile) -> dict[str, Any]:
     """Re-bind the module-level device constants to ``profile`` (Refactor 2).
 
     Returns the previous bindings so a scoped call site can
@@ -55,7 +55,7 @@ def set_profile(profile) -> Dict[str, Any]:
     return previous
 
 
-def restore_profile(state: Dict[str, Any]) -> None:
+def restore_profile(state: dict[str, Any]) -> None:
     """Restore the bindings :func:`set_profile` replaced (Refactor 2)."""
     for name, value in state.items():
         globals()[name] = value
@@ -196,7 +196,7 @@ def measured_accvgpr(tt0: int, tt1: int, weight: int) -> int:
     return tt0 * tt1 * weight
 
 
-def depth_u(config: Dict) -> int:
+def depth_u(config: dict) -> int:
     """DepthU (K-dimension tile depth), 0 when it cannot be determined.
 
     Why: Depth lives in two different places depending on who wrote the config:
@@ -228,7 +228,7 @@ def depth_u(config: Dict) -> int:
                 ku = int(parts[2])
             except ValueError:
                 return 0
-            return ku if ku > 0 else 0
+            return max(0, ku)
     return 0
 
 
@@ -267,7 +267,7 @@ def knob_int(value: Any, default: int) -> int:
         return default
 
 
-def is_hpa(config: Dict[str, Any]) -> bool:
+def is_hpa(config: dict[str, Any]) -> bool:
     """True when the config accumulates half inputs in f32 (the HPA class).
 
     Reads Tensile's own key first, then the family label -- the two places the
@@ -281,7 +281,7 @@ def is_hpa(config: Dict[str, Any]) -> bool:
     )
 
 
-def compute_bytes(config: Dict[str, Any], ch: str) -> int:
+def compute_bytes(config: dict[str, Any], ch: str) -> int:
     """``ComputeDataType.numBytes()`` for a config's dtype char, or 0 if unknown.
 
     Half with f32 accumulate (HPA) computes in f32, so it returns 4, not 2. The
@@ -293,7 +293,7 @@ def compute_bytes(config: Dict[str, Any], ch: str) -> int:
     return COMPUTE_BYTES_PER_ELEMENT.get(ch, 0)
 
 
-def local_split_u(config: Dict[str, Any]) -> int:
+def local_split_u(config: dict[str, Any]) -> int:
     """LocalSplitU as Tensile will actually receive it (SolutionStructs:1958).
 
     Tensile has no standalone ``LocalSplitU`` key: it reads the workgroup's third
@@ -324,7 +324,7 @@ def local_split_u(config: Dict[str, Any]) -> int:
         return 1
 
 
-def num_threads(dims: Tuple[int, int, int, int], lsu: int) -> int:
+def num_threads(dims: tuple[int, int, int, int], lsu: int) -> int:
     """NumThreads = (MT0/TT0) * (MT1/TT1) * LocalSplitU (SolutionStructs:1964).
 
     Args:

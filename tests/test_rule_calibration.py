@@ -20,8 +20,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness import rule_calibration as rc  # noqa: E402
-from oto.tensile.gates.occupancy import occupancy_feasible  # noqa: E402
+import pytest
+
+from oto.harness import rule_calibration as rc
+from oto.tensile.gates.occupancy import occupancy_feasible
 
 
 def _refuse_all(config):
@@ -75,35 +77,34 @@ class TestProbe(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             _make_corpus(Path(td))
             pop = rc.probe(lambda cfg: False, base=td)["populations"]["ours"]
-            self.assertEqual(pop["applicable"], 2)
-            self.assertEqual(pop["agrees"], 1)
-            self.assertEqual(pop["allowed_empty"], 1)
-            self.assertEqual(pop["false_rejections"], [])
+            assert pop["applicable"] == 2
+            assert pop["agrees"] == 1
+            assert pop["allowed_empty"] == 1
+            assert pop["false_rejections"] == []
 
     def test_refuse_all_splits_built_from_empty(self):
         with tempfile.TemporaryDirectory() as td:
             _make_corpus(Path(td))
             pop = rc.probe(_refuse_all, base=td)["populations"]["ours"]
-            self.assertEqual(len(pop["false_rejections"]), 1)
-            self.assertEqual(len(pop["catches"]), 1)
-            self.assertEqual(pop["false_rejections"][0]["phase"], "phase_built")
-            self.assertEqual(pop["caught_by_family"], {"SS": 1})
+            assert len(pop["false_rejections"]) == 1
+            assert len(pop["catches"]) == 1
+            assert pop["false_rejections"][0]["phase"] == "phase_built"
+            assert pop["caught_by_family"] == {"SS": 1}
 
     def test_none_is_not_applicable(self):
         with tempfile.TemporaryDirectory() as td:
             _make_corpus(Path(td))
             pop = rc.probe(lambda cfg: None, base=td)["populations"]["ours"]
-            self.assertEqual(pop["applicable"], 0)
-            self.assertEqual(pop["not_applicable"], 2)
-            self.assertEqual(pop["false_rejections"], [])
+            assert pop["applicable"] == 0
+            assert pop["not_applicable"] == 2
+            assert pop["false_rejections"] == []
 
     def test_reference_population_is_split_out(self):
         with tempfile.TemporaryDirectory() as td:
             _make_corpus(Path(td))
             result = rc.probe(_refuse_all, base=td)
-            self.assertEqual(result["populations"]["reference"]["applicable"], 1)
-            self.assertEqual(
-                len(result["populations"]["reference"]["false_rejections"]), 1)
+            assert result["populations"]["reference"]["applicable"] == 1
+            assert len(result["populations"]["reference"]["false_rejections"]) == 1
 
     def test_family_filter(self):
         with tempfile.TemporaryDirectory() as td:
@@ -117,7 +118,7 @@ class TestProbe(unittest.TestCase):
             _phase_yaml(cfg / "phase_phase_ss.yaml", (64, 64), (4, 4), 8, 2)
             pop = rc.probe(lambda cfg: None, base=td, families=["DD"]
                            )["populations"]["ours"]
-            self.assertEqual(pop["applicable"] + pop["not_applicable"], 1)
+            assert pop["applicable"] + pop["not_applicable"] == 1
 
 
 class TestBuiltinsMatchTheGate(unittest.TestCase):
@@ -135,24 +136,24 @@ class TestBuiltinsMatchTheGate(unittest.TestCase):
                     {"DataType": "c", "MacroTile": "128x64x8",
                      "ThreadTile": "4x8"}):
             verdict = rule(cfg)
-            self.assertIsNotNone(verdict)
+            assert verdict is not None
             if verdict:
                 fired += 1
-                self.assertFalse(occupancy_feasible(cfg)[0])
-        self.assertGreater(fired, 0, "no config exercised the rule")
+                assert not occupancy_feasible(cfg)[0]
+        assert fired > 0, "no config exercised the rule"
 
     def test_lds_reduction_predicate_implies_the_gate_refuses(self):
         rule = rc.builtin_rules()["lds_reduction"]
         cfg = {"DataType": "s", "MacroTile": "128x128x8", "ThreadTile": "4x4",
                "WorkGroup": [16, 16, 2]}
-        self.assertTrue(rule(cfg))
-        self.assertFalse(occupancy_feasible(cfg)[0])
+        assert rule(cfg)
+        assert not occupancy_feasible(cfg)[0]
 
     def test_apm2_builtin_reads_the_generator_seam_rule(self):
         rule = rc.builtin_rules()["apm2"]
-        self.assertIsNone(rule({"MacroTile": "64x64x8"}))
-        self.assertFalse(rule({"AggressivePerfMode": 1}))
-        self.assertTrue(rule({"AggressivePerfMode": 2}))
+        assert rule({"MacroTile": "64x64x8"}) is None
+        assert not rule({"AggressivePerfMode": 1})
+        assert rule({"AggressivePerfMode": 2})
 
     def test_nt_budget_builtin_fires_on_the_phase_that_died(self):
         """The per-thread occupancy limit, after the measured table was fixed.
@@ -165,16 +166,12 @@ class TestBuiltinsMatchTheGate(unittest.TestCase):
         """
         rule = rc.builtin_rules()["nt_budget"]
         # The phase that built: 63 VGPRs/thread over 1024 threads -> fits.
-        self.assertFalse(rule({"DataType": "z", "MacroTile": "64x64x8",
-                               "ThreadTile": "2x2"}))
+        assert not rule({"DataType": "z", "MacroTile": "64x64x8", "ThreadTile": "2x2"})
         # The phases that died with error 4 in run_20261020_214103.
-        self.assertTrue(rule({"DataType": "s", "MacroTile": "256x128x8",
-                              "ThreadTile": "8x4"}))
-        self.assertTrue(rule({"DataType": "s", "MacroTile": "128x256x8",
-                              "ThreadTile": "4x8"}))
+        assert rule({"DataType": "s", "MacroTile": "256x128x8", "ThreadTile": "8x4"})
+        assert rule({"DataType": "s", "MacroTile": "128x256x8", "ThreadTile": "4x8"})
         # The winner geometry: 119 VGPRs/thread over 256 threads -> fits.
-        self.assertFalse(rule({"DataType": "s", "MacroTile": "128x128x8",
-                               "ThreadTile": "8x8"}))
+        assert not rule({"DataType": "s", "MacroTile": "128x128x8", "ThreadTile": "8x8"})
 
 
 class TestLoadRule(unittest.TestCase):
@@ -182,16 +179,16 @@ class TestLoadRule(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "mine.py"
             path.write_text("def refuse(cfg):\n    return True\n")
-            self.assertTrue(rc.load_rule(f"{path}:refuse")({}))
+            assert rc.load_rule(f"{path}:refuse")({})
 
     def test_load_from_an_importable_module(self):
         rule = rc.load_rule("oto.harness.rule_calibration:_refuses_apm2")
-        self.assertTrue(rule({"AggressivePerfMode": 2}))
+        assert rule({"AggressivePerfMode": 2})
 
     def test_bad_specs_exit(self):
         for spec in ("nocolon", "oto.harness.rule_calibration:no_such_attr",
                      "no_such_module_xyz:refuse"):
-            with self.subTest(spec=spec), self.assertRaises(SystemExit):
+            with self.subTest(spec=spec), pytest.raises(SystemExit):
                 rc.load_rule(spec)
 
 
@@ -204,12 +201,12 @@ class TestMain(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 code = rc.main(["--base", td, "--rule", f"{path}:refuse",
                                 "--fail-on-false-reject"])
-            self.assertEqual(code, 1)
+            assert code == 1
 
     def test_clean_builtin_returns_zero(self):
         with contextlib.redirect_stdout(io.StringIO()):
             code = rc.main(["--rule", "apm2"])
-        self.assertEqual(code, 0)
+        assert code == 0
 
 
 if __name__ == "__main__":

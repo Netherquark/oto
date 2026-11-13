@@ -18,8 +18,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-
+from typing import Any
 
 
 class ProposalMixin:
@@ -38,14 +37,14 @@ class ProposalMixin:
     def emit_proposal_with_phase(
         self,
         fp: str,
-        family: Optional[str] = None,
-        shape: Optional[str] = None,
-        parent_fp: Optional[str] = None,
+        family: str | None = None,
+        shape: str | None = None,
+        parent_fp: str | None = None,
         origin: str = "novel",
-        iteration: Optional[int] = None,
-        run_id: Optional[str] = None,
-        phase_id: Optional[str] = None,
-        phase_data: Optional[Dict[str, Any]] = None,
+        iteration: int | None = None,
+        run_id: str | None = None,
+        phase_id: str | None = None,
+        phase_data: dict[str, Any] | None = None,
     ) -> bool:
         """Record a proposal *and* the phase that will run it, in one transaction.
 
@@ -89,10 +88,10 @@ class ProposalMixin:
     def append_observation(
         self,
         fp: str,
-        outcome: Optional[str] = None,
-        detail: Optional[Dict[str, Any]] = None,
-        run_id: Optional[str] = None,
-        phase_dir: Optional[str] = None,
+        outcome: str | None = None,
+        detail: dict[str, Any] | None = None,
+        run_id: str | None = None,
+        phase_dir: str | None = None,
     ) -> int:
         """Persist one proposal's measurement evidence, append-only.
 
@@ -118,7 +117,7 @@ class ProposalMixin:
                  json.dumps(d), datetime.now().isoformat())
             )
             return cur.lastrowid or 0
-    def observations_for(self, fp: str) -> List[Dict[str, Any]]:
+    def observations_for(self, fp: str) -> list[dict[str, Any]]:
         """Every observation recorded for one fp, oldest first."""
         with self._get_conn() as conn:
             rows = conn.execute(
@@ -126,7 +125,7 @@ class ProposalMixin:
                 (fp,)
             ).fetchall()
         return [dict(r) for r in rows]
-    def _outcome_stream(self) -> List[Tuple[str, str, str]]:
+    def _outcome_stream(self) -> list[tuple[str, str, str]]:
         """`(parent_fp, fp, outcome)` for decided proposals, oldest first.
 
         `consecutive` is a claim about sequence, so the ordering matters:
@@ -147,12 +146,12 @@ class ProposalMixin:
     def record_proposal(
         self,
         fp: str,
-        family: Optional[str] = None,
-        shape: Optional[str] = None,
-        parent_fp: Optional[str] = None,
+        family: str | None = None,
+        shape: str | None = None,
+        parent_fp: str | None = None,
         origin: str = "novel",
-        iteration: Optional[int] = None,
-        run_id: Optional[str] = None,
+        iteration: int | None = None,
+        run_id: str | None = None,
     ) -> bool:
         """Record one emitted candidate in the ledger.
 
@@ -178,7 +177,7 @@ class ProposalMixin:
         self,
         fp: str,
         outcome: str,
-        build_class: Optional[str] = None,
+        build_class: str | None = None,
     ) -> bool:
         """Advance one proposal's outcome, at most once.
 
@@ -203,7 +202,7 @@ class ProposalMixin:
                 (outcome, build_class, now, fp)
             )
             return bool(cur.rowcount)
-    def get_proposal(self, fp: str) -> Optional[Dict[str, Any]]:
+    def get_proposal(self, fp: str) -> dict[str, Any] | None:
         """One ledger row as a dict, or None if this fp was never proposed."""
         if not fp:
             return None
@@ -258,7 +257,7 @@ class ProposalMixin:
         if not fp:
             return False
         return fp not in self.proposed_fps() and fp not in self.decided_fps()
-    def pending_proposals(self) -> List[Dict[str, Any]]:
+    def pending_proposals(self) -> list[dict[str, Any]]:
         """Emitted candidates still awaiting an outcome.
 
         Non-empty after any crash is itself the signal: these are the rows that
@@ -270,7 +269,7 @@ class ProposalMixin:
                 "SELECT * FROM proposals WHERE outcome = 'pending' ORDER BY rowid ASC"
             ).fetchall()
         return [dict(r) for r in rows]
-    def all_proposals(self) -> List[Dict[str, Any]]:
+    def all_proposals(self) -> list[dict[str, Any]]:
         """Every proposal row, oldest first.
 
         The ordered form `decided_fps()` and friends deliberately do not provide:
@@ -287,7 +286,7 @@ class ProposalMixin:
                 """
             ).fetchall()
         return [dict(r) for r in rows]
-    def outcome_histogram(self) -> Dict[str, int]:
+    def outcome_histogram(self) -> dict[str, int]:
         """Outcome counts, read live.
 
         Never a transcribed constant: callers (reports, tests) must read the
@@ -299,7 +298,7 @@ class ProposalMixin:
                 "SELECT outcome, COUNT(*) AS n FROM proposals GROUP BY outcome"
             ).fetchall()
         return {r["outcome"]: r["n"] for r in rows}
-    def coverage_view(self) -> List[Dict[str, Any]]:
+    def coverage_view(self) -> list[dict[str, Any]]:
         """Per (family, shape): proposed count and outcome breakdown.
 
         Cells with no candidate are absent here rather than represented as

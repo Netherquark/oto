@@ -18,12 +18,16 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
+from ..patterns import pattern_of, tlu_flags
 from .memo import memo_gate
-from ..patterns import pattern_of, tlu_flags  # noqa: E402
-from .vgpr_model import (FAMILY_BYTES_PER_ELEMENT, GLOBAL_LOAD_BYTE_CAP,
-                         knob_int, local_split_u)
+from .vgpr_model import (
+    FAMILY_BYTES_PER_ELEMENT,
+    GLOBAL_LOAD_BYTE_CAP,
+    knob_int,
+    local_split_u,
+)
 
 #: Tensile DataType properties the classic path reads, in the units
 #: SolutionStructs uses (``reg`` is registers per element, not bytes).
@@ -53,14 +57,14 @@ _FAMILY_TO_CHAR = {"SS": "S", "DD": "D", "HH": "H", "ZZ": "Z", "CC": "C",
 
 # ---------------------------------------------------------------- readers
 
-def _load_dtype_info(config: Dict[str, Any]) -> Dict[str, Any]:
+def _load_dtype_info(config: dict[str, Any]) -> dict[str, Any]:
     """LOAD_DTYPE_INFO row for the config's DataType (S fallback)."""
     dtype_char = str(config.get("DataType", config.get("dtype", "S"))).upper()
     dtype_char = _FAMILY_TO_CHAR.get(dtype_char, dtype_char)
     return LOAD_DTYPE_INFO.get(dtype_char, LOAD_DTYPE_INFO["S"])
 
 
-def _load_geometry(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int, int]]:
+def _load_geometry(config: dict[str, Any]) -> tuple[int, int, int, int, int] | None:
     """(mt0, mt1, DepthU, tt0, tt1) from a config, or None when unusable.
 
     Why None is legal input: a config that does not name a tile is not this
@@ -80,15 +84,15 @@ def _load_geometry(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int,
         return None
     if len(mt_parts) < 2 or len(tt_parts) < 2:
         return None
-    depthU = knob_int(config.get("DepthU"), mt_parts[2] if len(mt_parts) >= 3 else 16)
+    depth_u = knob_int(config.get("DepthU"), mt_parts[2] if len(mt_parts) >= 3 else 16)
     tt0, tt1 = tt_parts[0], tt_parts[1]
     if tt0 <= 0 or tt1 <= 0:
         return None
-    return mt_parts[0], mt_parts[1], depthU, tt0, tt1
+    return mt_parts[0], mt_parts[1], depth_u, tt0, tt1
 
 
-def _vector_width(config: Dict[str, Any], tt0: int, tt1: int,
-                   dtype: Dict[str, Any]) -> int:
+def _vector_width(config: dict[str, Any], tt0: int, tt1: int,
+                   dtype: dict[str, Any]) -> int:
     """VectorWidth: the user's, else Tensile's default halved until the thread
     tile is divisible by it (SolutionStructs:3435-3443)."""
     vw_user = config.get("VectorWidth")
@@ -101,7 +105,7 @@ def _vector_width(config: Dict[str, Any], tt0: int, tt1: int,
     return vw
 
 
-def _glvw_for(config: Dict[str, Any], tc: str, default: int) -> int:
+def _glvw_for(config: dict[str, Any], tc: str, default: int) -> int:
     """The GlobalLoadVectorWidth Tensile actually uses for operand ``tc``.
 
     An explicit ``GlobalLoadVectorWidthA``/``B`` is honoured verbatim: Tensile
@@ -117,7 +121,7 @@ def _glvw_for(config: Dict[str, Any], tc: str, default: int) -> int:
     Args:
         config: A Tensile solution dict.
         tc: Operand, ``"A"`` or ``"B"``.
-        default: The derived width to fall back to (``max(VW, numElemPerReg)``).
+        default: The derived width to fall back to (``max(VW, num_elem_per_reg)``).
 
     Returns:
         The width Tensile will use: the explicit value, else ``default``.
@@ -132,7 +136,7 @@ def _glvw_for(config: Dict[str, Any], tc: str, default: int) -> int:
     return default if value <= 0 else value
 
 
-def _transposes(config: Dict[str, Any]) -> Tuple[bool, bool]:
+def _transposes(config: dict[str, Any]) -> tuple[bool, bool]:
     """(TLUA, TLUB) from the contraction pattern or the label.
 
     These are Tensile's *layout* flags (TLUA/TLUB), which the loads gate
@@ -144,13 +148,13 @@ def _transposes(config: Dict[str, Any]) -> Tuple[bool, bool]:
     return tlu_flags(pattern_of(config))
 
 
-def _nlca_for(config: Dict[str, Any], tc: str) -> int:
+def _nlca_for(config: dict[str, Any], tc: str) -> int:
     """NumLoadsCoalesced for one operand, honouring the shared NLCA alias."""
     value = config.get(f"NumLoadsCoalesced{tc}", config.get("NLCA", 1))
     return knob_int(value, 1)
 
 
-def _local_split_u(config: Dict[str, Any]) -> int:
+def _local_split_u(config: dict[str, Any]) -> int:
     """LocalSplitU as Tensile will actually receive it.
 
     Thin alias kept for this module's call sites; the reader, its rationale and
@@ -166,13 +170,13 @@ class _Operand:
     """One operand's derived load shape, exactly as SolutionStructs computes it.
 
     All five gates below read the same numbers (``totalElements``,
-    ``NumThreads*glvw``, ``numLoads``, ``pv``), so they are computed once here
+    ``NumThreads*glvw``, ``num_loads``, ``pv``), so they are computed once here
     instead of being restated -- and cannot disagree with each other -- in each
     branch.
     """
 
     def __init__(self, tc: str, mt_tc: int, depth_u: int, num_threads: int,
-                 glvw: int, vw: int, tlu: bool, config: Dict[str, Any]):
+                 glvw: int, vw: int, tlu: bool, config: dict[str, Any]):
         self.tc = tc
         self.mt_tc = mt_tc
         self.depth_u = depth_u
@@ -235,7 +239,7 @@ class _Operand:
             return self.total_elements // (self.num_thread_grtw // self._pv)
         return self.total_elements // self.num_thread_grtw
 
-    def _pv_stage(self) -> Optional[str]:
+    def _pv_stage(self) -> str | None:
         """Divisibility when the operand is smaller than one full load wave."""
         if self.total_elements >= self.num_thread_grtw:
             return None
@@ -250,7 +254,7 @@ class _Operand:
             return f"{self.tc}: GLVW={self.glvw} % pv={pv} != 0"
         return None
 
-    def _whole_stage(self) -> Optional[str]:
+    def _whole_stage(self) -> str | None:
         """Divisibility when the operand is a whole number of load waves."""
         if self.total_elements < self.num_thread_grtw:
             return None
@@ -259,7 +263,7 @@ class _Operand:
                     f"(NumThreads*glvw)={self.num_thread_grtw} != 0")
         return None
 
-    def _shift_ptr_stage(self) -> Optional[str]:
+    def _shift_ptr_stage(self) -> str | None:
         """GLVW==VW-or-1: post-pv-reduction shift-ptr guard
         (SolutionStructs:4583-4596). Only fires when the solution cannot
         guarantee the wide load is whole -- see ``_restriction_active``."""
@@ -301,30 +305,30 @@ class _Operand:
                 else "AssertFree1ElementMultiple")
         return int(self._config.get(knob, 1)) % glvw_eff != 0
 
-    def _nlca_stage(self, nlca: int) -> Optional[str]:
+    def _nlca_stage(self, nlca: int) -> str | None:
         """NumLoadsCoalesced legality (SolutionStructs:2058)."""
-        numLoads = self._num_loads
+        num_loads = self._num_loads
         tvc = self.total_vectors_coalesced
         perp = self.total_elements_perp
 
         def satisfied(n: int) -> bool:
-            nlp = numLoads // n
-            return (numLoads % n == 0 and tvc % n == 0
+            nlp = num_loads // n
+            return (num_loads % n == 0 and tvc % n == 0
                     and perp % nlp == 0)
 
         if nlca == 1:
-            if any(satisfied(n) for n in range(1, numLoads + 1)):
+            if any(satisfied(n) for n in range(1, num_loads + 1)):
                 return None
             return f"{self.tc}: No valid NumLoadsCoalesced=1 found"
         if nlca == -1:
-            if any(satisfied(n) for n in range(numLoads, 0, -1)):
+            if any(satisfied(n) for n in range(num_loads, 0, -1)):
                 return None
             return f"{self.tc}: No valid NumLoadsCoalesced=-1 found"
-        if nlca > numLoads:
-            return f"{self.tc}: NLCA={nlca} > NumLoads={numLoads}"
-        nlp = numLoads // nlca
-        if numLoads % nlca != 0:
-            return f"{self.tc}: NumLoads={numLoads} % NLCA={nlca} != 0"
+        if nlca > num_loads:
+            return f"{self.tc}: NLCA={nlca} > NumLoads={num_loads}"
+        nlp = num_loads // nlca
+        if num_loads % nlca != 0:
+            return f"{self.tc}: NumLoads={num_loads} % NLCA={nlca} != 0"
         if tvc % nlca != 0:
             return f"{self.tc}: totalVectorsCoalesced={tvc} % NLCA={nlca} != 0"
         if perp % nlp != 0:
@@ -332,14 +336,14 @@ class _Operand:
                     f"NumLoadsPerp={nlp} != 0")
         return None
 
-    def _depth_stage(self) -> Optional[str]:
-        """depthU >= GLVW when !TLU (SolutionStructs:3793)."""
+    def _depth_stage(self) -> str | None:
+        """depth_u >= GLVW when !TLU (SolutionStructs:3793)."""
         if not self.tlu and self.depth_u < self.glvw:
-            return (f"{self.tc}: depthU={self.depth_u} < "
+            return (f"{self.tc}: depth_u={self.depth_u} < "
                     f"GLVW={self.glvw} (TLU=False)")
         return None
 
-    def rejection(self) -> Optional[str]:
+    def rejection(self) -> str | None:
         """The first reason this operand's classic load is illegal, if any.
 
         NLCA is parsed here, not at construction, because the pre-split gate read
@@ -414,7 +418,7 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
 
 
 @memo_gate
-def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Faithful port of Tensile classic-path divisibility.
 
     Only covers non-MI, FractionalLoad=False, Assembly kernel path -- which is
@@ -434,7 +438,7 @@ def validate_tensile_loads(config: Dict[str, Any], profile=None) -> Tuple[bool, 
         return _validate_tensile_loads_impl(config)
 
 
-def _validate_tensile_loads_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
+def _validate_tensile_loads_impl(config: dict[str, Any]) -> tuple[bool, str]:
     """Body of :func:`validate_tensile_loads` with any bound profile applied."""
     geom = _load_geometry(config)
     if geom is None:
@@ -462,10 +466,10 @@ def _validate_tensile_loads_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
     if dtype["isHalf"] and vw < 2:
         return False, "VW must be >= 2 for half"
 
-    # GLVW default: max(VW, numElemPerReg) for assembly (SolutionStructs:3451);
+    # GLVW default: max(VW, num_elem_per_reg) for assembly (SolutionStructs:3451);
     # an explicit GlobalLoadVectorWidthA/B overrides it per operand (_glvw_for).
-    numElemPerReg = math.ceil(1.0 / dtype["reg"]) if dtype["reg"] > 0 else 1
-    glvw_default = max(vw, numElemPerReg)
+    num_elem_per_reg = math.ceil(1.0 / dtype["reg"]) if dtype["reg"] > 0 else 1
+    glvw_default = max(vw, num_elem_per_reg)
 
     tlu_a, tlu_b = _transposes(config)
     for tc, mt_tc, tlu in (("A", mt0, tlu_a), ("B", mt1, tlu_b)):

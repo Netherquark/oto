@@ -14,17 +14,17 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
-import oto.tensile.library as tlib
+import oto.device.peaks as _peaks
 import oto.tensile.best_library as bestlib
-from oto.agents import meta as agent_meta
+import oto.tensile.library as tlib
 from oto.agents import harness_tools
+from oto.agents import meta as agent_meta
 from oto.agents.research import make_researcher
 from oto.tools import potential_configs_gen
-import oto.device.peaks as _peaks
 
 
 class SynthesisMixin:
@@ -48,7 +48,7 @@ class SynthesisMixin:
                 yaml.safe_dump(logic_content, f)
 
     def _run_tensile_create_library(self, tcl_bin: Path, logic_dir: Path,
-                                    final_lib_dir: Path) -> Optional[Dict[str, Any]]:
+                                    final_lib_dir: Path) -> dict[str, Any] | None:
         """Invoke TensileCreateLibrary; the error dict on failure, else None."""
         arch = getattr(getattr(self, 'profile', None), 'codename', _peaks.CODENAME)
         cmd = [
@@ -74,7 +74,7 @@ class SynthesisMixin:
         return None
 
     def _anti_alias_scan(self, logic_dir: Path,
-                         final_lib_dir: Path) -> Tuple[bool, List[str]]:
+                         final_lib_dir: Path) -> tuple[bool, list[str]]:
         """Reject any gfx900/vega10 leak into the emitted library."""
         anti_alias_passed = True
         leak_files = []
@@ -89,7 +89,7 @@ class SynthesisMixin:
                     pass
         return anti_alias_passed, leak_files
 
-    def _library_result(self, final_lib_dir: Path) -> Dict[str, Any]:
+    def _library_result(self, final_lib_dir: Path) -> dict[str, Any]:
         """The shipped-footprint coverage gate result."""
         # Regression gate: verify full shipped gfx900 footprint coverage
         shipped = tlib.load_shipped_manifest(self.base_dir)
@@ -102,7 +102,7 @@ class SynthesisMixin:
             "target_kernels": shipped.get("total_shipped_kernels", 0)
         }
 
-    def synthesize_library(self) -> Dict[str, Any]:
+    def synthesize_library(self) -> dict[str, Any]:
         """
         Synthesize final HIP library (Stage 6):
         - Query certified winners from DB
@@ -111,7 +111,6 @@ class SynthesisMixin:
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
         - Enforce the shipped gfx900 footprint regression gate
         """
-        print("Synthesizing final HIP library (Stage 6)...")
         tcl_bin = self.tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
         logic_dir = self.run_dir / "3_LibraryLogic"
         final_lib_dir = self.run_dir / "FinalLibrary"
@@ -144,21 +143,20 @@ class SynthesisMixin:
         # 4. Regression gate: verify full shipped gfx900 footprint coverage
         return self._library_result(final_lib_dir)
 
-    def synthesize_best_library(self, dest: Optional[Path] = None,
-                                protocol_basis: str = "family") -> Dict[str, Any]:
+    def synthesize_best_library(self, dest: Path | None = None,
+                                protocol_basis: str = "family") -> dict[str, Any]:
         """Carve a best-effort device TensileLibrary.dat from the full db."""
         dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
-        result = bestlib.build_best_library(
+        return bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
             tensile_root=getattr(self, "tensile_root", None),
             codename=getattr(self, "codename", _peaks.CODENAME))
-        print(f"Best-effort library: {result}")
-        return result
 
-    def generate_device_docs(self, starter_path=None) -> Dict[str, Any]:
+    def generate_device_docs(self, starter_path=None) -> dict[str, Any]:
         """Run agent-1 + agent-2 to generate device-specific docs."""
-        from oto.device.loader import load_profile, load_profile_from_starter
         from pathlib import Path
+
+        from oto.device.loader import load_profile, load_profile_from_starter
         starter = Path(starter_path) if starter_path else None
         if starter and starter.exists():
             profile = load_profile_from_starter(starter)
@@ -167,7 +165,8 @@ class SynthesisMixin:
             profile = load_profile(_peaks.CODENAME)
             text = ""
         researcher = make_researcher(starter_text=text)
-        harness_fn = lambda: harness_tools.build_harness_study(self.base_dir, profile)
+        def harness_fn():
+            return harness_tools.build_harness_study(self.base_dir, profile)
         result = agent_meta.run(profile, text, research=researcher,
                                 harness=harness_fn)
         # write docs
@@ -186,6 +185,5 @@ class SynthesisMixin:
             pc_path.write_text(f"# potential_configs.md — {profile.codename}\n\n"
                                f"Synthesis failed: {exc}\n")
         docs = [tl_path, tc_path, hs_path, pc_path]
-        print(f"Generated {', '.join(str(p) for p in docs)}")
         return {"status": "success", "profile": profile.codename,
                 "docs": [str(p) for p in docs]}

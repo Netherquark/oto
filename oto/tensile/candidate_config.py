@@ -14,7 +14,7 @@ Public API: CandidateConfig.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -29,7 +29,7 @@ class CandidateConfig:
     phase_id: str
     label: str
     dtype: str
-    shapes: List[str]
-    template: Dict[str, Any]
-    knobs: Dict[str, Any]
+    shapes: list[str]
+    template: dict[str, Any]
+    knobs: dict[str, Any]
     fingerprint: str

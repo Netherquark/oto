@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import functools
 import json
-from typing import Any, Callable, Dict, Tuple
+from collections.abc import Callable
+from typing import Any
 
 #: The cache is cleared when it passes this many entries. A deck sweep asks a
 #: few thousand distinct questions; a long mutating run can ask tens of
@@ -36,7 +37,7 @@ from typing import Any, Callable, Dict, Tuple
 MAX_ENTRIES = 50_000
 
 
-def config_key(config: Dict[str, Any]) -> str:
+def config_key(config: dict[str, Any]) -> str:
     """A stable key for a config dict's *content*.
 
     Args:
@@ -50,8 +51,8 @@ def config_key(config: Dict[str, Any]) -> str:
     return json.dumps(config, sort_keys=True, default=str)
 
 
-def memo_gate(fn: Callable[[Dict[str, Any]], Tuple[bool, str]]
-               ) -> Callable[[Dict[str, Any]], Tuple[bool, str]]:
+def memo_gate(fn: Callable[[dict[str, Any]], tuple[bool, str]]
+               ) -> Callable[[dict[str, Any]], tuple[bool, str]]:
     """Cache a pure ``(config) -> (ok, reason)`` gate by the config's content.
 
     Args:
@@ -63,10 +64,10 @@ def memo_gate(fn: Callable[[Dict[str, Any]], Tuple[bool, str]]
         The cached gate. ``cache_clear()`` empties it (the tests use it to
         prove the memo does not change a verdict).
     """
-    cache: Dict[str, Tuple[bool, str]] = {}
+    cache: dict[str, tuple[bool, str]] = {}
 
     @functools.wraps(fn)
-    def wrapper(config: Dict[str, Any], *args, **kwargs) -> Tuple[bool, str]:
+    def wrapper(config: dict[str, Any], *args, **kwargs) -> tuple[bool, str]:
         # Profile-aware calls are not memoised (they depend on device state).
         if args or kwargs:
             return fn(config, *args, **kwargs)

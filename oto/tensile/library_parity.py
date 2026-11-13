@@ -37,15 +37,15 @@ refuses to install a deck that breaks parity. Tests: ``tests/test_library_parity
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from collections.abc import Iterable, Sequence
+from typing import Any
 
+import oto.device.peaks as _peaks
 from oto.device.peaks import (
-    FAMILY_DTYPE_CHAR,
     FAMILY_SHAPES,
     cube_side,
     shipped_cell_set,
 )
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 
 #: Family-name normalisation for the `phase_id` fallback path.
@@ -77,7 +77,7 @@ def _family_from_tokens(phase_id: str) -> str:
     return ""
 
 
-def phase_family(phase: Dict[str, Any]) -> str:
+def phase_family(phase: dict[str, Any]) -> str:
     """Resolve a phase's canonical family name ('' when unresolvable).
 
     ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
@@ -96,7 +96,7 @@ def phase_family(phase: Dict[str, Any]) -> str:
     return _family_from_tokens(str(phase.get("phase_id") or ""))
 
 
-def phase_cells(phase: Dict[str, Any]) -> Set[Tuple[str, str]]:
+def phase_cells(phase: dict[str, Any]) -> set[tuple[str, str]]:
     """The (family, cube-shape) cells one phase addresses, as shipped-grid keys.
 
     Non-cube shapes are not cells and are dropped here (they surface in
@@ -104,7 +104,7 @@ def phase_cells(phase: Dict[str, Any]) -> Set[Tuple[str, str]]:
     cannot be resolved contributes nothing and appears in ``unresolved``.
     """
     fam = phase_family(phase)
-    out: Set[Tuple[str, str]] = set()
+    out: set[tuple[str, str]] = set()
     for shape in phase.get("shapes") or ():
         side = cube_side(shape)
         if side is None:
@@ -114,16 +114,16 @@ def phase_cells(phase: Dict[str, Any]) -> Set[Tuple[str, str]]:
     return out
 
 
-def phases_cells(phases: Iterable[Dict[str, Any]]) -> Set[Tuple[str, str]]:
+def phases_cells(phases: Iterable[dict[str, Any]]) -> set[tuple[str, str]]:
     """Union of :func:`phase_cells` over a manifest."""
-    out: Set[Tuple[str, str]] = set()
+    out: set[tuple[str, str]] = set()
     for phase in phases:
         out |= phase_cells(phase)
     return out
 
 
-def parity_report(phases: Sequence[Dict[str, Any]],
-                  grid: Optional[Set[Tuple[str, str]]] = None) -> Dict[str, Any]:
+def parity_report(phases: Sequence[dict[str, Any]],
+                  grid: set[tuple[str, str]] | None = None) -> dict[str, Any]:
     """Missing / extra cells of `phases` vs the shipped grid.
 
     Returns a dict with `parity_ok` (True only when missing and extra are both
@@ -135,8 +135,8 @@ def parity_report(phases: Sequence[Dict[str, Any]],
     missing = sorted(grid - covered, key=lambda c: c[0] + c[1])
     extra = sorted(covered - grid, key=lambda c: c[0] + c[1])
 
-    non_cube: Set[str] = set()
-    unresolved: Set[str] = set()
+    non_cube: set[str] = set()
+    unresolved: set[str] = set()
     for phase in phases:
         fam = phase_family(phase)
         if not fam:
@@ -159,9 +159,9 @@ def parity_report(phases: Sequence[Dict[str, Any]],
     }
 
 
-def load_pipeline_phases(base_dir: Optional[str] = None,
-                         run_id: Optional[str] = None,
-                         include_seed: bool = True) -> List[Dict[str, Any]]:
+def load_pipeline_phases(base_dir: str | None = None,
+                         run_id: str | None = None,
+                         include_seed: bool = True) -> list[dict[str, Any]]:
     """Deck + current overlays, merged in the manifest order the run uses.
 
     Mirrors `port_tensile.load_phases_manifest`'s merge order (deck, then the
@@ -170,19 +170,18 @@ def load_pipeline_phases(base_dir: Optional[str] = None,
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold
     in that run's per-run overlay (phases.<run_id>.overlay.yaml).
     """
-    import glob
 
     from pathlib import Path
 
     from oto import yamlio as _yamlio
 
     base = Path(base_dir or Path(__file__).resolve().parents[2])
-    deck: List[Dict[str, Any]] = []
+    deck: list[dict[str, Any]] = []
     deck_path = base / "phases.yaml"
     if deck_path.exists():
         deck = _yamlio.load_yaml(deck_path) or []
 
-    merged: List[Dict[str, Any]] = list(deck)
+    merged: list[dict[str, Any]] = list(deck)
 
     if run_id:
         for ov_path in sorted((_results_dir(base, _peaks.CODENAME) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
@@ -201,8 +200,8 @@ def _read(path: str) -> str:
         return f.read()
 
 
-def _merge(into: List[Dict[str, Any]],
-           doc: Optional[Dict[str, Any]],
+def _merge(into: list[dict[str, Any]],
+           doc: dict[str, Any] | None,
            src: str) -> None:
     if not isinstance(doc, dict):
         return

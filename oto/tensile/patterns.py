@@ -32,12 +32,12 @@ transposes, tlu_flags, pattern_of.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any
 
 #: Pattern spelling -> (TransposeA, TransposeB). ``i``/``j``/``k``/``l`` are
 #: the matrix dimensions; "A**i**lk" means A is stored i-major (k contiguous),
 #: "A**l**ik" means A is l-major (so A is transposed for the GEMM).
-TRANSPOSE_MAP: Dict[str, Tuple[bool, bool]] = {
+TRANSPOSE_MAP: dict[str, tuple[bool, bool]] = {
     "Ailk_Bjlk": (False, True),
     "Alik_Bjlk": (True, True),
     "Ailk_Bljk": (False, False),
@@ -49,14 +49,14 @@ TRANSPOSE_MAP: Dict[str, Tuple[bool, bool]] = {
 DEFAULT_PATTERN = "Ailk_Bjlk"
 
 #: Its transpose flags.
-DEFAULT_TRANSPOSE: Tuple[bool, bool] = TRANSPOSE_MAP[DEFAULT_PATTERN]
+DEFAULT_TRANSPOSE: tuple[bool, bool] = TRANSPOSE_MAP[DEFAULT_PATTERN]
 
 #: Every spelling, longest first, so "Alik_Bjlk" is found before a prefix.
 #: Public: the writer matches labels with the same order (one home).
 SPELLINGS = tuple(sorted(TRANSPOSE_MAP, key=len, reverse=True))
 
 
-def transposes(pattern: str) -> Tuple[bool, bool]:
+def transposes(pattern: str) -> tuple[bool, bool]:
     """(TransposeA, TransposeB) for a contraction pattern spelling.
 
     Args:
@@ -69,7 +69,7 @@ def transposes(pattern: str) -> Tuple[bool, bool]:
     return TRANSPOSE_MAP.get(pattern, DEFAULT_TRANSPOSE)
 
 
-def tlu_flags(pattern: str) -> Tuple[bool, bool]:
+def tlu_flags(pattern: str) -> tuple[bool, bool]:
     """(TLUA, TLUB) for a contraction pattern spelling.
 
     Tensile derives these from the *index assignments*
@@ -88,7 +88,7 @@ def tlu_flags(pattern: str) -> Tuple[bool, bool]:
     return ("Ailk" in pattern, "Bjlk" in pattern)
 
 
-def pattern_of(config: Dict[str, Any]) -> str:
+def pattern_of(config: dict[str, Any]) -> str:
     """The contraction pattern a config (or its phase label) names.
 
     Args:

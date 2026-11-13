@@ -76,7 +76,7 @@ Order: gates first (most isolated), then analytics/report, then harness.
 
 ## Commit discipline
 
-Every commit: (1) single concern, (2) preflight green, (3) no new pyflakes, (4) no function >60 lines, (5) commit message references phase/commit ID (e.g., "R2-C1.3: profile loader").
+Every commit: (1) single concern, (2) preflight green, (3) no new pyflakes, no new ruff findings and every tracked file byte-compiles (`tests/test_pyflakes.py` / `tests/test_ruff.py` / `tests/test_py_compile.py`), (4) no function >60 lines, (5) commit message references phase/commit ID (e.g., "R2-C1.3: profile loader").
 
 ## Risk: large refactor. Mitigation: each phase independently shippable; Phase 1-2 keep gfx90c behaviour identical (profile reproduces constants exactly → tests unchanged).
 

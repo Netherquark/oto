@@ -15,16 +15,13 @@ from __future__ import annotations
 
 import statistics
 from collections import defaultdict
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from oto.metrics.ab_identity import _pair_key
-from oto.device.peaks import cell_key
-from oto.metrics.policy import aggregate_cell
-from oto.metrics.protocol import UNKNOWN, SINGLE
+from oto.metrics.protocol import SINGLE, UNKNOWN
 
 
-def _form_key(rec: Dict[str, Any]) -> Any:
+def _form_key(rec: dict[str, Any]) -> Any:
     """The group form: the stamped protocol, else the legacy count.
 
     UNKNOWN stamps group together (they are the same honest absence of
@@ -45,11 +42,11 @@ TIE_BAND_PCT = 5.0
 # Percentile span reported as the reproducible envelope.
 BAND_LO, BAND_HI = 10, 90
 
-def _pct(values: List[float], p: float) -> float:
+def _pct(values: list[float], p: float) -> float:
     return sorted(values)[min(len(values) - 1, int(p / 100.0 * len(values)))]
 
 
-def _same_form(nrec: Dict[str, Any], frec: Dict[str, Any]) -> bool:
+def _same_form(nrec: dict[str, Any], frec: dict[str, Any]) -> bool:
     """Do two records' invocations have the same form (§R56.3)?
 
     Stamped protocols decide when either side carries one (the canonical
@@ -64,8 +61,8 @@ def _same_form(nrec: Dict[str, Any], frec: Dict[str, Any]) -> bool:
     return nrec.get("shapes_per_phase") == frec.get("shapes_per_phase")
 
 
-def reproducible_band(native: List[Dict[str, Any]],
-                      floor: List[Dict[str, Any]]) -> Dict[str, Any]:
+def reproducible_band(native: list[dict[str, Any]],
+                      floor: list[dict[str, Any]]) -> dict[str, Any]:
     """Noise floor implied by configurations measured in *both* arms.
 
     Keyed on (dtype, shape, fingerprint), so a configuration that appears in the
@@ -96,7 +93,7 @@ def reproducible_band(native: List[Dict[str, Any]],
         same_form = _same_form(nrecs[0], frecs[0])
         (matched if same_form else mismatched).append(ratio)
 
-    def summarise(vals: List[float]) -> Dict[str, Any]:
+    def summarise(vals: list[float]) -> dict[str, Any]:
         if not vals:
             return {"n": 0}
         return {
@@ -115,7 +112,7 @@ def reproducible_band(native: List[Dict[str, Any]],
             "protocol_mismatched": summarise(mismatched)}
 
 
-def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
+def repeat_dispersion(recs: list[dict[str, Any]]) -> dict[str, Any]:
     """Spread of repeated measurements of one config under one form.
 
     Groups by (run, dtype, shape, kernel_key, form) -- everything a legitimate
@@ -126,7 +123,7 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
     sits inside that tail is not evidence. The form key is the stamped
     protocol (§R56.3) falling back to the older shapes_per_phase count.
     """
-    groups: Dict[Tuple[Any, ...], List[float]] = defaultdict(list)
+    groups: dict[tuple[Any, ...], list[float]] = defaultdict(list)
     for r in recs:
         v = r.get("GFLOPS") or 0.0
         if v <= 0:
@@ -135,8 +132,8 @@ def repeat_dispersion(recs: List[Dict[str, Any]]) -> Dict[str, Any]:
                 r.get("DataType") or r.get("dtype") or "",
                 r.get("ProblemType") or r.get("shape") or "",
                 r.get("kernel_key"), _form_key(r))].append(v)
-    cvs: List[float] = []
-    worst: Dict[str, float] = {}
+    cvs: list[float] = []
+    worst: dict[str, float] = {}
     for key, vals in groups.items():
         if len(vals) < 2:
             continue
@@ -167,8 +164,8 @@ def verdict(delta_pct: float, band_pct: float = TIE_BAND_PCT) -> str:
     return "TIE"
 
 
-def measured_band(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
-                  band_pct: Optional[float] = None) -> Dict[str, Any]:
+def measured_band(native: list[dict[str, Any]], floor: list[dict[str, Any]],
+                  band_pct: float | None = None) -> dict[str, Any]:
     """The acceptance band, and where each component of it came from.
 
     Two independent estimates of the same thing: cross-arm disagreement on

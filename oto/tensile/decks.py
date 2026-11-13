@@ -25,9 +25,9 @@ Public API: FAMILY_DECKS.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
-FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
+FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
             "SS": [
             # MEASURED floor winner, all 7 large cells: 128x128x8/8x8/VW4.
             {"MacroTile": "128x128x8", "ThreadTile": "8x8", "NLCA": 1, "VectorWidth": 4, "WorkGroupMapping": 4},
@@ -293,7 +293,7 @@ FAMILY_DECKS: Dict[str, List[Dict[str, Any]]] = {
 #: one non-default value. ``LocalSplitU`` is absent from that Tensile block; its
 #: effective default is 1. Kept here (not in a gate) because it is the table the
 #: sweep below is written against, and the sweep is this module's data.
-TENSILE_KNOB_DEFAULTS: Dict[str, Any] = {
+TENSILE_KNOB_DEFAULTS: dict[str, Any] = {
     "BufferLoad": True,
     "BufferStore": True,
     "StaggerU": 32,
@@ -322,7 +322,7 @@ TENSILE_KNOB_DEFAULTS: Dict[str, Any] = {
     "GlobalRead2B": True,
 }
 
-KNOB_SWEEP_BASES: Dict[str, List[Dict[str, Any]]] = {
+KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
     # The family's best measured winner tile, from
     # `python3 -m oto.harness.asm_occupancy`. These are the tiles the corpus
     # already validated and measured; sweeping knobs on top of them isolates
@@ -375,7 +375,7 @@ KNOB_SWEEP_BASES: Dict[str, List[Dict[str, Any]]] = {
 # `test_decision_trials_cover_d1_d2_d3`.
 #: Decision-labelled trial tiles. `shapes`, when present, overrides the sweep's
 #: shape list; otherwise the generator's shapes apply.
-DECISION_TRIAL_TILES: List[Dict[str, Any]] = [
+DECISION_TRIAL_TILES: list[dict[str, Any]] = [
     {
         "decision": "D1",
         "family": "CC",
@@ -440,7 +440,7 @@ DECISION_TRIAL_TILES: List[Dict[str, Any]] = [
 #: the families this row is legal for; the generator skips it elsewhere rather
 #: than emitting a candidate that the append boundary will refuse. Measured
 #: legality per family is in potential_configs.md §8.1.
-KNOB_SWEEPS: List[Dict[str, Any]] = [
+KNOB_SWEEPS: list[dict[str, Any]] = [
     # ---- Addressing / issue slots: the knobs that spend non-FMA issue slots.
     # Complex is issue-bound, not bandwidth-bound (§5 of the deck), so this
     # group is the highest-yield one.

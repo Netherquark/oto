@@ -64,23 +64,41 @@ refuses_per_thread_occupancy_limit, refuses_lds_reduction_buffer.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from .memo import memo_gate
 
 __all__ = [
-    'occupancy_feasible', 'ldspad_feasible', 'occupancy_workgroups_per_cu',
-    'dtype_char', 'tile_dims', 'refuses_workgroup_register_file',
-    'refuses_per_thread_occupancy_limit', 'refuses_lds_reduction_buffer',
+    'dtype_char',
+    'ldspad_feasible',
+    'occupancy_feasible',
+    'occupancy_workgroups_per_cu',
+    'refuses_lds_reduction_buffer',
+    'refuses_per_thread_occupancy_limit',
+    'refuses_workgroup_register_file',
+    'tile_dims',
 ]
-from .occupancy_common import dtype_char as dtype_char, \
-    tile_dims as tile_dims  # re-export
 from .ldspad_gate import ldspad_feasible as ldspad_feasible  # re-export
-from .vgpr_model import (ACCVGPR_BUDGET, BYTES_PER_ELEMENT, LDS_BUDGET,
-                         MAX_LDS_BYTES, MAX_VGPR_PER_THREAD, MEASURED_VGPR,
-                         MEASURED_VGPR_BY_DTYPE, VGPR_PER_CU, VGPR_PER_ELEMENT,
-                         compute_bytes, depth_u, lds_base_bytes, local_split_u,
-                         measured_accvgpr, num_threads, per_thread_vgpr)
+from .occupancy_common import dtype_char as dtype_char
+from .occupancy_common import tile_dims as tile_dims  # re-export
+from .vgpr_model import (
+    ACCVGPR_BUDGET,
+    BYTES_PER_ELEMENT,
+    LDS_BUDGET,
+    MAX_LDS_BYTES,
+    MAX_VGPR_PER_THREAD,
+    MEASURED_VGPR,
+    MEASURED_VGPR_BY_DTYPE,
+    VGPR_PER_CU,
+    VGPR_PER_ELEMENT,
+    compute_bytes,
+    depth_u,
+    lds_base_bytes,
+    local_split_u,
+    measured_accvgpr,
+    num_threads,
+    per_thread_vgpr,
+)
 
 # ---------------------------------------------------------------- rejections
 #
@@ -175,7 +193,7 @@ def _lds_rejection(ch: str, mt0: int, mt1: int, ku: int, lds: int) -> str:
 
 # ------------------------------------------------------------------- gates
 
-def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
+def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
     """Modelled workgroups per CU; 0 when the gate rejects the config.
 
     Per-thread register demand is fixed by the thread tile (accumulators) and
@@ -214,8 +232,8 @@ def occupancy_workgroups_per_cu(config: Dict[str, Any]) -> int:
     return VGPR_PER_CU // acc
 
 
-def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
-                          lsu: int) -> Optional[str]:
+def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
+                          lsu: int) -> str | None:
     """The register-file rules, in the order Tensile reaches them.
 
     * the LocalSplitU spelling contradiction (a config that means two things),
@@ -238,7 +256,7 @@ def _register_file_checks(config: Dict[str, Any], dims, ch: str, r: int,
 
 
 @memo_gate
-def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Register-file gate: reject configs Tensile cannot generate.
 
     Complements the divisibility and assembly-class gates: an over-wide thread
@@ -275,7 +293,7 @@ def occupancy_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]
         return _occupancy_feasible_impl(config)
 
 
-def _occupancy_feasible_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
+def _occupancy_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
     """Body of :func:`occupancy_feasible` with any bound profile applied."""
     dims = tile_dims(config)
     if not dims:
@@ -305,7 +323,7 @@ def _occupancy_feasible_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
-def _local_split_u_contradiction(config: Dict[str, Any]) -> Optional[str]:
+def _local_split_u_contradiction(config: dict[str, Any]) -> str | None:
     """Reason when the two spellings of LocalSplitU disagree, else None.
 
     Tensile reads LocalSplitU from ``WorkGroup[2]`` and has no standalone key,
@@ -330,7 +348,7 @@ def _local_split_u_contradiction(config: Dict[str, Any]) -> Optional[str]:
             f"would run as LSU={have}. Use one spelling.")
 
 
-def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> Optional[str]:
+def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> str | None:
     """Reason when the accumulator set alone fills the 64K file, else None.
 
     Tensile's ``KernelWriterAssembly.functionSuffix`` sets ``overflowedResources
@@ -345,7 +363,7 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> Optional[str]:
     return None
 
 
-def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> Optional[str]:
+def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> str | None:
     """Reason when the EMITTED per-thread VGPRs do not fit the workgroup.
 
     Tensile's error-4 test (``KernelWriterAssembly.functionSuffix``) is
@@ -373,7 +391,7 @@ def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> Optional[str]:
     return None
 
 
-def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> Optional[str]:
+def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> str | None:
     """Reason when the LSU reduction buffer exceeds 64 KiB, else None.
 
     Only emitted when ``LocalSplitU > 1``: Tensile sizes it at
@@ -391,7 +409,7 @@ def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> Optional[str]:
     return None
 
 
-def refuses_workgroup_register_file(config: Dict[str, Any]) -> Optional[bool]:
+def refuses_workgroup_register_file(config: dict[str, Any]) -> bool | None:
     """The workgroup-register-file rule as a standalone predicate.
 
     ``None`` when the config cannot be modelled (unreadable tile dims or an
@@ -413,7 +431,7 @@ def refuses_workgroup_register_file(config: Dict[str, Any]) -> Optional[bool]:
         dims, mt0, mt1, weight, local_split_u(config), ch) is not None
 
 
-def refuses_per_thread_occupancy_limit(config: Dict[str, Any]) -> Optional[bool]:
+def refuses_per_thread_occupancy_limit(config: dict[str, Any]) -> bool | None:
     """The per-thread occupancy limit (Tensile's error 4) as a predicate.
 
     ``None`` when the config cannot be modelled (unreadable tile dims), else
@@ -441,7 +459,7 @@ def refuses_per_thread_occupancy_limit(config: Dict[str, Any]) -> Optional[bool]
     return VGPR_PER_CU // nt < vgpr
 
 
-def refuses_lds_reduction_buffer(config: Dict[str, Any]) -> Optional[bool]:
+def refuses_lds_reduction_buffer(config: dict[str, Any]) -> bool | None:
     """The LSU LDS-reduction-buffer rule as a standalone predicate.
 
     ``None`` when the config cannot be modelled, else whether Tensile's

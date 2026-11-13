@@ -17,7 +17,7 @@ mutate ``PLAN_BATCH`` and ``AUTO_EXPLICIT`` defined here. Consumers import
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from oto.device.peaks import FAMILY_CELLS, FAMILY_DTYPE_CHAR
 from oto.tensile.config_writer import NOT_FORWARDED_KNOBS
@@ -42,7 +42,7 @@ FAMILY_DTYPE = FAMILY_DTYPE_CHAR
 # packed-2 B/A access; the widest legal ZZ tiles use 4x4). No row below is
 # refused by the gate.
 
-LADDER: Dict[str, List[Dict[str, Any]]] = {
+LADDER: dict[str, list[dict[str, Any]]] = {
     "SS": [
         {"MacroTile": "128x128x8", "ThreadTile": "8x8", "VectorWidth": 4},
         {"MacroTile": "128x128x16", "ThreadTile": "8x8", "VectorWidth": 4},
@@ -166,7 +166,7 @@ PATTERNS = {
 TARGET_CELLS = dict(FAMILY_CELLS)
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
-NARROW_NEIGHBOURS: Dict[str, Dict[str, List[Any]]] = {
+NARROW_NEIGHBOURS: dict[str, dict[str, list[Any]]] = {
     "MacroTile": {"96x96x16": ["128x128x16", "64x64x16"],
                   "128x128x16": ["96x96x16", "64x64x16"],
                   "64x64x16": ["96x96x16", "128x128x16", "32x32x16"],
@@ -182,9 +182,9 @@ NARROW_NEIGHBOURS: Dict[str, Dict[str, List[Any]]] = {
 # N6  SSE:512 floor vw4 kernel (deck never ships SS:512 with the floor tile;
 #     its 128x128x8/8x8/VW4 phase covers 768..4096 but not 512).
 #     Ailk_Bjlk, MT128x128x8, tt8x8, VW4, DU8, GSU1, WGM4.
-# N7  HH_HPA:4096 stranded iteration-9 winner (median was −4.0% of deck).
+# N7  HH_HPA:4096 stranded iteration-9 winner (median was -4.0% of deck).
 #     HH_HPA 128x128x16/8x8 VW4 DU16 GSU1 WGM4 (the D1 probe's config).
-AUTO_EXPLICIT: Dict[str, List[Dict[str, Any]]] = {
+AUTO_EXPLICIT: dict[str, list[dict[str, Any]]] = {
     "SS": [{
         "shapes": ["512x512x512"], "pattern": "Ailk_Bjlk",
         "MacroTile": "128x128x8", "ThreadTile": "8x8",
@@ -218,10 +218,10 @@ AUTO_EXPLICIT: Dict[str, List[Dict[str, Any]]] = {
 # FAMILY_BYTES_PER_ELEMENT), so even pad 1 would overflow the 16 KB/WG budget.
 # HH GSU2 stays banned here as everywhere (§13.4); HH wave-fill runs through
 # the 64x64 alternates that TARGET_CELLS now includes for HH:256.
-PLAN_BATCH: List[Dict[str, Any]] = [
+PLAN_BATCH: list[dict[str, Any]] = [
     # 2026-10-16 Route G — the CC:256 steal (potential_configs.md §0 R8).
     # CC:256 is the ONLY cell in the corpus that is a genuine shortcoming: native
-    # 210.8 vs spoof 212.3 (TIE, −0.7 %) while both sit at 19 % of the CC
+    # 210.8 vs spoof 212.3 (TIE, -0.7 %) while both sit at 19 % of the CC
     # realistic ceiling, and native's typical kernel is 63.6 % below spoof's
     # (median basis: 50.9 vs 139.8). Every other ORANGE cell is a ceiling
     # artefact where native already wins outright.
@@ -335,7 +335,7 @@ PLAN_BATCH: List[Dict[str, Any]] = [
      "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
      "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
      "WorkGroupMapping": -4,
-     "note": "R8: steal + WGM=−4 (negative I/J-swap family, never generated)"},
+     "note": "R8: steal + WGM=-4 (negative I/J-swap family, never generated)"},
     {"fam": "CC", "pattern": "Ailk_Bjlk",
      "MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 2,
      "DepthU": 8, "GlobalSplitU": 1, "WorkGroup": [16, 16, 1],
@@ -358,7 +358,7 @@ PLAN_BATCH: List[Dict[str, Any]] = [
 ]
 
 def _pad_rows(fam: str, pattern: str, tile: str, tt: str, vw: int, du: int,
-              note: str) -> List[Dict[str, Any]]:
+              note: str) -> list[dict[str, Any]]:
     """LdsPadA/B rows for one winner geometry: pads {1,2,4} on each side."""
     rows = []
     for p in (1, 2, 4):

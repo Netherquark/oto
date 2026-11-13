@@ -14,16 +14,34 @@ read/write (candidate_overlay), or the pruning helpers (candidate_prune).
 
 from __future__ import annotations
 
-from oto.harness._rows_core import (AUTO_EXPLICIT, DU_VARIANTS, FAMILY_DTYPE,  # noqa: F401
-                                     LADDER, NARROW_NEIGHBOURS, PATTERNS,
-                                     PLAN_BATCH, TARGET_CELLS, WGM_VARIANTS,
-                                     _NOT_FORWARDED_YET, _pad_rows)
-from oto.harness._rows_frontier import _FRONTIER  # noqa: F401
-from oto.harness import _rows_smallcells as _rows_smallcells  # noqa: F401  (import-time rows)
+from oto.harness import _rows_smallcells as _rows_smallcells
+from oto.harness._rows_core import (
+                                     _NOT_FORWARDED_YET,
+                                     AUTO_EXPLICIT,
+                                     DU_VARIANTS,
+                                     FAMILY_DTYPE,
+                                     LADDER,
+                                     NARROW_NEIGHBOURS,
+                                     PATTERNS,
+                                     PLAN_BATCH,
+                                     TARGET_CELLS,
+                                     WGM_VARIANTS,
+                                     _pad_rows,
+)
+from oto.harness._rows_frontier import _FRONTIER
 
 __all__ = [
-    "AUTO_EXPLICIT", "DU_VARIANTS", "FAMILY_DTYPE", "LADDER",
-    "NARROW_NEIGHBOURS", "PATTERNS", "PLAN_BATCH", "TARGET_CELLS",
-    "WGM_VARIANTS", "_NOT_FORWARDED_YET", "_pad_rows", "_FRONTIER",
-    "_rows_smallcells",
+                                     "AUTO_EXPLICIT",
+                                     "DU_VARIANTS",
+                                     "FAMILY_DTYPE",
+                                     "LADDER",
+                                     "NARROW_NEIGHBOURS",
+                                     "PATTERNS",
+                                     "PLAN_BATCH",
+                                     "TARGET_CELLS",
+                                     "WGM_VARIANTS",
+                                     "_FRONTIER",
+                                     "_NOT_FORWARDED_YET",
+                                     "_pad_rows",
+                                     "_rows_smallcells",
 ]

@@ -12,11 +12,11 @@ Public API: DASHBOARD_CSS (JS_THEME_INIT, JS_THEME_TOGGLE, JS_COLLAPSIBLE are
 re-exported from oto.metrics.report_js).
 """
 
+from oto.metrics.report_js import JS_COLLAPSIBLE as JS_COLLAPSIBLE
 from oto.metrics.report_js import JS_THEME_INIT as JS_THEME_INIT
 from oto.metrics.report_js import JS_THEME_TOGGLE as JS_THEME_TOGGLE
-from oto.metrics.report_js import JS_COLLAPSIBLE as JS_COLLAPSIBLE
 
-__all__ = ["DASHBOARD_CSS", "JS_THEME_INIT", "JS_THEME_TOGGLE", "JS_COLLAPSIBLE"]
+__all__ = ["DASHBOARD_CSS", "JS_COLLAPSIBLE", "JS_THEME_INIT", "JS_THEME_TOGGLE"]
 
 #: The whole dashboard stylesheet. NOTE: the dark palette is declared twice --
 #: once as an explicit ``[data-theme="dark"]`` override and again inside the
@@ -539,4 +539,4 @@ DASHBOARD_CSS = """
             tbody th[scope="row"] { padding-left: 20px; }
         }
         """
- 
+

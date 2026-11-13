@@ -10,17 +10,17 @@ from __future__ import annotations
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-from oto.tools.consolidate_floor import SINGLE_FORM_ONLY_RUNS  # noqa: E402
-from oto.tools.consolidate_targets import LIVE_DB  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import legacy_runs_dir as _legacy_runs_dir
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tools.consolidate_floor import SINGLE_FORM_ONLY_RUNS
+from oto.tools.consolidate_targets import LIVE_DB
 
 BASE = LIVE_DB.parent.parent
 
-def write_deck(stage: Path, sel: Dict[str, Any], stamp: str) -> Path:
+def write_deck(stage: Path, sel: dict[str, Any], stamp: str) -> Path:
     """Write the candidate deck into the staging dir.
 
     Staged rather than only produced at install time so the deck can be read and
@@ -43,8 +43,8 @@ def write_deck(stage: Path, sel: Dict[str, Any], stamp: str) -> Path:
     return out
 
 
-def install(base: Path, stage: Path, sel: Dict[str, Any],
-            lock: Dict[str, Any], dbres: Dict[str, Any], stamp: str) -> None:
+def install(base: Path, stage: Path, sel: dict[str, Any],
+            lock: dict[str, Any], dbres: dict[str, Any], stamp: str) -> None:
     deck_path = base / "phases.yaml"
     staged = write_deck(stage, sel, stamp)
 
@@ -61,8 +61,6 @@ def install(base: Path, stage: Path, sel: Dict[str, Any],
             stamp_dir = prev_arch / f"{lock['run_id']}_{stamp.replace(':', '')}_{n}"
             n += 1
         shutil.move(str(live_lock), str(stamp_dir))
-        print(f"[consolidate] previous {lock['run_id']} preserved at "
-              f"{stamp_dir.relative_to(base)}")
     shutil.copytree(lock["dest"], live_lock)
     shutil.copy2(dbres["out"], LIVE_DB)
     shutil.copy2(staged, deck_path)
@@ -75,7 +73,7 @@ def install(base: Path, stage: Path, sel: Dict[str, Any],
             shutil.move(str(src), str(arch / run))
 
 
-def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> List[str]:
+def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> list[str]:
     """Runs that registered a row but produced nothing at all.
 
     These are bookkeeping accidents, not measurements: a run directory with no
@@ -111,16 +109,16 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> List[str]:
 def explain_archive(base: Path = BASE) -> str:
     lines = ["Runs moved out of the live loader path (data preserved under "
              "the archive/superseded-locks directory):"]
-    for r in SINGLE_FORM_ONLY_RUNS:
-        lines.append(f"  {r}  (single-shape-only: kept as priors, not gradable "
-                     f"against a swept floor)")
+    lines.extend(
+        f"  {r}  (single-shape-only: kept as priors, not gradable "
+        f"against a swept floor)"
+        for r in SINGLE_FORM_ONLY_RUNS)
     ph = phantom_runs(base)
     if ph:
         lines.append("")
         lines.append(f"Phantom runs (registered a row, produced no CSV, no "
                      f"records): {len(ph)}")
-        for r in ph:
-            lines.append(f"  {r}")
+        lines.extend(f"  {r}" for r in ph)
     lines += ["", "Nothing is deleted. Registry rows for the phantom runs are "
               "left alone on purpose."]
     return "\n".join(lines)

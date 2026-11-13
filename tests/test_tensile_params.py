@@ -32,10 +32,14 @@ import signal
 
 import yaml
 
-from oto.runners.driver import (DEFAULT_TENSILE_ROOT,  # noqa: E402
-                                NOT_A_TENSILE_PARAM, TensileDriver,
-                                _TENSILE_VALID_PARAMS, _require_tensile_root)
-from oto.tensile import config_writer  # noqa: E402
+from oto.runners.driver import (
+    _TENSILE_VALID_PARAMS,
+    DEFAULT_TENSILE_ROOT,
+    NOT_A_TENSILE_PARAM,
+    TensileDriver,
+    _require_tensile_root,
+)
+from oto.tensile import config_writer
 
 failures = []
 
@@ -57,7 +61,7 @@ def live_tensile_params():
         from Tensile.SolutionStructs import validParameters
 
         return set(validParameters.keys())
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"  (live Tensile not importable: {exc})")
         return None
 
@@ -108,7 +112,7 @@ with tempfile.TemporaryDirectory() as td:
         wrote, why = config_writer.write_phase_config(d, out, p)
         if not wrote:
             continue
-        names = set(re.findall(r"^\s{4}- (\w+):", out.read_text(), re.M)) - SPECIAL
+        names = set(re.findall(r"^\s{4}- (\w+):", out.read_text(), re.MULTILINE)) - SPECIAL
         bad = {n for n in names if n not in _TENSILE_VALID_PARAMS}
         if bad:
             bad_seen[p["phase_id"]] = sorted(bad)
@@ -135,7 +139,7 @@ with tempfile.TemporaryDirectory() as td:
             txt = out.read_text()
             if "GlobalReduceVectorWidth" in txt:
                 grvw_leak.append(p.get("phase_id"))
-            names = set(re.findall(r"^\s{4}- (\w+):", txt, re.M)) - SPECIAL
+            names = set(re.findall(r"^\s{4}- (\w+):", txt, re.MULTILINE)) - SPECIAL
             bad = {n for n in names if n not in _TENSILE_VALID_PARAMS}
             if bad:
                 ref_bad[p.get("phase_id")] = sorted(bad)

@@ -12,12 +12,14 @@ Public API: extract_family_from_phase_id, resolve_cell_family, FAMILY_TO_DTYPE.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
-                              PEAK_GFLOPS, REALISTIC_CEILINGS,
-                              DTYPE_TO_FAMILY, cube_side,
-                              family_from_kernel_name, kernel_typecode)
+from oto.device.peaks import (
+    DTYPE_TO_FAMILY,
+    FAMILY_DTYPE_CHAR,
+    family_from_kernel_name,
+    kernel_typecode,
+)
 
 CLOCK_MIN_COVERAGE = 0.5
 
@@ -91,12 +93,9 @@ def _warn_contamination(stamp: str, typecode: str, resolved: str,
     if key in _CONTAMINATION_SEEN:
         return
     _CONTAMINATION_SEEN.add(key)
-    print(f"[contamination] e.g. {phase_id} carries family stamp {stamp} but "
-          f"its kernel typecode is {typecode} ({resolved}) — attributing to "
-          f"{resolved} (typecode wins); one line per (stamp, typecode) class")
 
 
-def resolve_cell_family(rec: Dict[str, Any]) -> str:
+def resolve_cell_family(rec: dict[str, Any]) -> str:
     """Cell (family) attribution for one benchmark record — the anti-contamination resolver.
 
     Precedence (first hit wins), per the §13.2 typecode-filter rule:

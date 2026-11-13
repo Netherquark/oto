@@ -13,8 +13,8 @@ Public API: aggregate_cell, should_run, check_retirement_eligibility.
 
 
 import statistics
-from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -28,7 +28,7 @@ class CellAggregation:
     top2_gap_pct: float  # gap between top 2 seeds/medians
 
 
-def aggregate_cell(seeds: List[float]) -> CellAggregation:
+def aggregate_cell(seeds: list[float]) -> CellAggregation:
     """
     Aggregate seed values using N8 median-of-seeds rule (stdlib).
 
@@ -72,9 +72,9 @@ def should_run(
     phase_id: Any,
     fp: str,
     registry=None,
-    phase_scope: Optional[List[Any]] = None,
+    phase_scope: list[Any] | None = None,
     opt_in_identical_skip: bool = True
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """
     Evaluate whether a phase/config should run per the policy matrix.
 
@@ -122,9 +122,9 @@ def should_run(
 
 
 def check_retirement_eligibility(
-    cell_records: List[Dict[str, Any]],
-    reference_meds: Optional[Dict[str, float]] = None
-) -> Tuple[bool, str]:
+    cell_records: list[dict[str, Any]],
+    reference_meds: dict[str, float] | None = None
+) -> tuple[bool, str]:
     """
     Check if a candidate config can be retired.
 
@@ -142,7 +142,7 @@ def check_retirement_eligibility(
     Returns:
         (eligible, reason) tuple
     """
-    per_run_meds: Dict[str, List[float]] = {}
+    per_run_meds: dict[str, list[float]] = {}
     samples = 0
     for rec in cell_records:
         run_id = rec.get("run_id", "")

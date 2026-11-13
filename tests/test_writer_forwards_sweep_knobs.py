@@ -26,9 +26,9 @@ import yaml
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.runners.driver import TensileDriver  # noqa: E402
-from oto.tensile import config_writer  # noqa: E402
-from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS  # noqa: E402
+from oto.runners.driver import TensileDriver
+from oto.tensile import config_writer
+from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
 CC_BASE = dict(KNOB_SWEEP_BASES["CC"][0])
 
@@ -57,9 +57,7 @@ def _phase(knobs):
     """
     knobs = dict(knobs)
     if "GlobalLoadVectorWidthA" in knobs or "GlobalLoadVectorWidthB" in knobs:
-        knobs["VectorWidth"] = max(knobs.get("VectorWidth", 1),
-                                   max(knobs.get("GlobalLoadVectorWidthA", 1),
-                                       knobs.get("GlobalLoadVectorWidthB", 1)))
+        knobs["VectorWidth"] = max(knobs.get("VectorWidth", 1), knobs.get("GlobalLoadVectorWidthA", 1), knobs.get("GlobalLoadVectorWidthB", 1))
     config = {"Architecture": "gfx90c", "DataType": "C",
               "ContractionPattern": "Ailk_Bljk",
               "ProblemType": "1024x1024x1024", "ScheduleName": "isa",
@@ -82,7 +80,7 @@ def _fork(driver, knobs, tmp_path):
             for k, v in fork.items()}
 
 
-@pytest.mark.parametrize("key,value", [
+@pytest.mark.parametrize(("key", "value"), [
     ("UseSgprForGRO", True),
     ("InnerUnroll", 2),
     ("PrefetchGlobalRead", 2),

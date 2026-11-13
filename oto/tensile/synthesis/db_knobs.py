@@ -13,10 +13,7 @@ forward_domain, census_domain.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
-
-
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from typing import Any
 
 #: Forward knobs the manifest sampler cannot reach, with their legal domains.
 #: Values are the Tensile-legal value sets (Common.py) intersected with what
@@ -31,7 +28,7 @@ from oto.device.peaks import FAMILY_DTYPE_CHAR
 #:   because it was tuned for 56-60 CUs; on 7 CUs it asks for 8 workgroups in
 #:   the J-column before wrapping. The negative (I/J-swap) family has never
 #:   been generated at all.
-FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
+FORWARD_KNOB_DOMAINS: dict[str, tuple[Any, ...]] = {
     "LdsPadA": (0, 1, 2, 4),
     "LdsPadB": (0, 1, 2, 4),
     "PrefetchGlobalRead": (0, 1, 2),
@@ -85,7 +82,7 @@ FORWARD_KNOB_DOMAINS: Dict[str, Tuple[Any, ...]] = {
 #:
 #: ``DD`` keeps ``(1, 2, 4)``: double plus BufferStore is a supported GSU case,
 #: and the census classes DD as *coupled* rather than refused.
-FAMILY_KNOB_DOMAINS: Dict[str, Dict[str, Tuple[Any, ...]]] = {
+FAMILY_KNOB_DOMAINS: dict[str, dict[str, tuple[Any, ...]]] = {
     "SS": {"GlobalLoadVectorWidthA": (1, 2, 4),
            "GlobalLoadVectorWidthB": (1, 2, 4)},
     "HH": {"GlobalLoadVectorWidthA": (1, 2, 4, 8),
@@ -108,7 +105,7 @@ FAMILY_KNOB_DOMAINS: Dict[str, Dict[str, Tuple[Any, ...]]] = {
 }
 
 
-def forward_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
+def forward_domain(family: str | None, knob: str) -> tuple[Any, ...]:
     """The legal draw set for ``knob`` in ``family`` (family override wins).
 
     Calibrated on this device hardware facts, not on what the gfx900 floor chose.
@@ -122,8 +119,8 @@ def forward_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
     return FORWARD_KNOB_DOMAINS[knob]
 
 
-def census_domain(family: Optional[str], knob: str) -> Tuple[Any, ...]:
-    """The device-truth draw set for ``knob``: global ∪ family override.
+def census_domain(family: str | None, knob: str) -> tuple[Any, ...]:
+    """The device-truth draw set for ``knob``: global U family override.
 
     The drawing mutator and the legality census want opposite things from a
     domain. The mutator wants ``forward_domain`` — narrow, so a value the gate

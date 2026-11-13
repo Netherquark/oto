@@ -6,8 +6,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.runners.paths import (  # noqa: E402
-    LEGACY_RESULTS_DIR_NAME, LEGACY_RUNS_DIR_NAME, results_dir, runs_dir,
+from oto.runners.paths import (
+    LEGACY_RESULTS_DIR_NAME,
+    LEGACY_RUNS_DIR_NAME,
+    results_dir,
+    runs_dir,
 )
 
 

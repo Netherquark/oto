@@ -13,21 +13,20 @@ phase_family, BASE.
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
-
-from oto.metrics.ab_identity import (AbIdentityMixin, _driver,
-                                        _pair_key, _resolved_config,
-                                        norm_config)
+import oto.device.peaks as _peaks
+from oto.device.peaks import kernel_key
+from oto.metrics.ab_identity import _driver, _resolved_config, norm_config
 from oto.metrics.analytics import extract_family_from_phase_id
-from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
-from oto.tensile.shape_order import ordered_shapes
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.shape_order import ordered_shapes
 
 #: The project root, resolved from this module's location.
 BASE = Path(__file__).resolve().parents[2]
@@ -52,8 +51,8 @@ def phase_family(phase_id: str) -> str:
         return "unknown"
     return "auto" if pid.startswith("phase_auto") else "deck"
 
-def _phase_cell_map(driver, csv_files: List[Path], phase_id: str
-                    ) -> Dict[Tuple[str, str, str, str], Any]:
+def _phase_cell_map(driver, csv_files: list[Path], phase_id: str
+                    ) -> dict[tuple[str, str, str, str], Any]:
     """One phase's seed lists keyed (dtype, shape, fp, family), CSVs merged.
 
     Typecode-first cell attribution (the §13.2 rule) via
@@ -67,7 +66,7 @@ def _phase_cell_map(driver, csv_files: List[Path], phase_id: str
     seeds merge across the CSVs before aggregation.
     """
     phase_fam = extract_family_from_phase_id(phase_id)
-    cell_map: Dict[Tuple[str, str, str, str], Any] = {}
+    cell_map: dict[tuple[str, str, str, str], Any] = {}
     for csv_file in csv_files:
         cm = driver.analytics.aggregate_by_cell_typecode(
             driver.analytics.load_benchmark_csv(csv_file),
@@ -78,10 +77,10 @@ def _phase_cell_map(driver, csv_files: List[Path], phase_id: str
     return cell_map
 
 
-def _phase_csv_records(driver, csv_files: List[Path],
-                       phase: Optional[Dict[str, Any]],
+def _phase_csv_records(driver, csv_files: list[Path],
+                       phase: dict[str, Any] | None,
                        phase_id: str, force_arm: str,
-                       declared: List[str], run_name: str) -> List[Dict[str, Any]]:
+                       declared: list[str], run_name: str) -> list[dict[str, Any]]:
     """Records for one phase's benchmark CSVs, keyed by (dtype, shape, fp, family).
 
     One record per (dtype, shape, config fingerprint), carrying the phase's
@@ -113,10 +112,10 @@ def _phase_csv_records(driver, csv_files: List[Path],
 
 
 def _one_csv_record(driver: Any, cell_dtype: str, shape: str, fp: str, family: str,
-                    seeds: List[Any], config: Dict[str, Any],
-                    stamps_phase: Dict[str, Any], phase_id: str,
-                    force_arm: str, run_name: str, measured: List[str],
-                    declared: List[str], protocol: str) -> Dict[str, Any]:
+                    seeds: list[Any], config: dict[str, Any],
+                    stamps_phase: dict[str, Any], phase_id: str,
+                    force_arm: str, run_name: str, measured: list[str],
+                    declared: list[str], protocol: str) -> dict[str, Any]:
     """One (cell, config) record out of an aggregated phase cell-map."""
     rec = {
         "DataType": cell_dtype,
@@ -138,24 +137,22 @@ def _one_csv_record(driver: Any, cell_dtype: str, shape: str, fp: str, family: s
         "n_seeds": len(seeds),
     }
     if driver is not None and hasattr(driver, "_named_cell_stamps"):
-        try:
+        with contextlib.suppress(Exception):
             rec.update(driver._named_cell_stamps(
                 {**stamps_phase, "shapes": measured, "family": family.lower()},
                 arm=force_arm))
-        except Exception:
-            pass
     return rec
 
 
-def _phase_csv_files(run_dir: Path) -> Iterable[Tuple[str, List[Path]]]:
+def _phase_csv_files(run_dir: Path) -> Iterable[tuple[str, list[Path]]]:
     """(phase_id, csv files) grouped per phase directory (ISOform, one each)."""
-    groups: Dict[str, List[Path]] = {}
+    groups: dict[str, list[Path]] = {}
     for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):
         groups.setdefault(csv_file.parent.parent.name, []).append(csv_file)
     return sorted(groups.items())
 
 
-def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]:
+def phase_records(driver, run_dir: Path, force_arm: str) -> list[dict[str, Any]]:
     """Per-(cell, config) records for one run, via the canonical loader.
 
     One record per (dtype, shape, config fingerprint) per phase, carrying the
@@ -163,7 +160,7 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]
     itself rather than calling ``_ab_records_from_csv`` because the form has to
     stay attached to the phase it came from.
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     if not run_dir.is_dir():
         return out
     manifest = {str(p.get("phase_id", "")): p
@@ -177,9 +174,9 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> List[Dict[str, Any]]
 
 
 def arm_records(driver, runs: Iterable[str], arm: str,
-                base: Path = BASE) -> List[Dict[str, Any]]:
+                base: Path = BASE) -> list[dict[str, Any]]:
     """Records for a set of runs, classified wholly as one arm."""
-    recs: List[Dict[str, Any]] = []
+    recs: list[dict[str, Any]] = []
     for run in runs:
         recs.extend(phase_records(driver, _runs_dir(base, _peaks.CODENAME) / run, arm))
     return recs
@@ -189,12 +186,12 @@ def arm_records(driver, runs: Iterable[str], arm: str,
 #: five coverage tests each wanted it. The corpus does not change inside a
 #: session, so the sets are memoised on a stamp that *does* change when it
 #: does (a new run directory, or a registry write).
-_RECORD_SETS_CACHE: Dict[Tuple[Any, ...], Tuple[List[Dict[str, Any]],
-                                               List[Dict[str, Any]],
-                                               List[str]]] = {}
+_RECORD_SETS_CACHE: dict[tuple[Any, ...], tuple[list[dict[str, Any]],
+                                               list[dict[str, Any]],
+                                               list[str]]] = {}
 
 
-def _corpus_stamp(base: Path) -> Tuple[Any, ...]:
+def _corpus_stamp(base: Path) -> tuple[Any, ...]:
     """A cheap key that changes whenever the corpus changes.
 
     Returns:
@@ -210,15 +207,15 @@ def _corpus_stamp(base: Path) -> Tuple[Any, ...]:
     db = _results_dir(base, _peaks.CODENAME) / "registry.db"
     try:
         stat = db.stat()
-        db_stamp: Tuple[Any, ...] = (stat.st_size, stat.st_mtime)
+        db_stamp: tuple[Any, ...] = (stat.st_size, stat.st_mtime)
     except OSError:
         db_stamp = (0, 0.0)
     return (str(base), len(runs), newest, db_stamp)
 
 
-def arm_record_sets(base: Path = BASE) -> Tuple[List[Dict[str, Any]],
-                                                List[Dict[str, Any]],
-                                                List[str]]:
+def arm_record_sets(base: Path = BASE) -> tuple[list[dict[str, Any]],
+                                                list[dict[str, Any]],
+                                                list[str]]:
     """The canonical ``(native, floor, chain)`` inputs, for every caller.
 
     `native` is the whole native corpus (every `run_*` directory plus every
@@ -252,7 +249,7 @@ def arm_record_sets(base: Path = BASE) -> Tuple[List[Dict[str, Any]],
     _RECORD_SETS_CACHE[key] = (native, floor, chain)
     return native, floor, chain
 
-def _registry_records(driver, base: Path, want_arm: str) -> List[Dict[str, Any]]:
+def _registry_records(driver, base: Path, want_arm: str) -> list[dict[str, Any]]:
     """Registry-only records (draft/merged runs whose GFLOPS live in the DB).
 
     Mirrors `TensileDriver._native_records_all_runs`, but records the invocation
@@ -264,7 +261,7 @@ def _registry_records(driver, base: Path, want_arm: str) -> List[Dict[str, Any]]
         rows = driver.registry.read_records(record_type="benchmark_result")
     except Exception:
         return []
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for r in rows:
         if str(r.get("arm") or "") != want_arm:
             continue

@@ -24,10 +24,15 @@ Public API: CellStatusMixin.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple
+from typing import TYPE_CHECKING, Any
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
-                              PEAK_GFLOPS, REALISTIC_CEILINGS)
+from oto.device.peaks import (
+    FAMILY_DTYPE_CHAR,
+    FAMILY_DTYPES,
+    FAMILY_SHAPES,
+    PEAK_GFLOPS,
+    REALISTIC_CEILINGS,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
@@ -39,16 +44,16 @@ class CellStatusMixin:
 
     def classify_cell_status(
         self,
-        all_analytics: List[CellAnalytics],
+        all_analytics: list[CellAnalytics],
         red_threshold_pct: float = 50.0
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """Classify gfx900 contract cells (family x deck shape) for report.
 
         RED=MISSING, ORANGE=measured < threshold, GREEN=at/above threshold.
         """
         from collections import defaultdict
-        measured: Dict[str, Set[str]] = defaultdict(set)
-        best_per_cell: Dict[Tuple[str, str], float] = {}
+        measured: dict[str, set[str]] = defaultdict(set)
+        best_per_cell: dict[tuple[str, str], float] = {}
         # dtype char -> family fallback; ambiguous 'H' resolves to HH
         dtype_to_family = {}
         for family, ch in FAMILY_DTYPE_CHAR.items():
@@ -65,7 +70,7 @@ class CellStatusMixin:
             if a.median_gflops > best_per_cell.get(key, 0.0):
                 best_per_cell[key] = a.median_gflops
 
-        def _entry(fam: str, shape: str, status: str, best: float) -> Dict[str, Any]:
+        def _entry(fam: str, shape: str, status: str, best: float) -> dict[str, Any]:
             ceiling = REALISTIC_CEILINGS.get(
                 fam, PEAK_GFLOPS.get(FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
             )
@@ -78,9 +83,9 @@ class CellStatusMixin:
                 "pct_of_ceiling": round(pct, 1),
             }
 
-        red: List[Dict[str, Any]] = []
-        orange: List[Dict[str, Any]] = []
-        green: List[Dict[str, Any]] = []
+        red: list[dict[str, Any]] = []
+        orange: list[dict[str, Any]] = []
+        green: list[dict[str, Any]] = []
 
         for fam, sizes in FAMILY_SHAPES.items():
             for s in sizes:

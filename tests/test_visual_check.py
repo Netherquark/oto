@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -40,8 +39,8 @@ class TestVisualCheck(unittest.TestCase):
             text=True,
             timeout=120,
         )
-        self.assertEqual(result.returncode, 0, msg=f"Visual check failed:\n{result.stdout}\n{result.stderr}")
-        self.assertIn("PASS", result.stdout)
+        assert result.returncode == 0, f"Visual check failed:\n{result.stdout}\n{result.stderr}"
+        assert "PASS" in result.stdout
 
 
 if __name__ == "__main__":

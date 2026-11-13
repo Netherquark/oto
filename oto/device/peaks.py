@@ -20,7 +20,6 @@ shipped_cells, shipped_cell_set, kernel_key.
 from __future__ import annotations
 
 import re
-from typing import Dict, Set, Tuple
 
 # Refactor 2: source device facts from the default profile so the profile is the
 # single source of truth. Falls back to the device literals if the profile
@@ -172,7 +171,7 @@ def dtype_from_kernel_name(kernel_name: object) -> str:
     return FAMILY_DTYPE_CHAR.get(family_from_kernel_name(kernel_name), "")
 
 
-def cube_side(shape: object) -> "int | None":
+def cube_side(shape: object) -> int | None:
     """Side length N of an 'NxNxN' cube shape string; None for non-cubes.
 
     Non-cube workloads (GEMV-probe shapes such as 32x4096x1) have no A/B cell
@@ -185,7 +184,7 @@ def cube_side(shape: object) -> "int | None":
     return a if a == b == c else None
 
 
-def cell_key(family: object, shape: object) -> "str | None":
+def cell_key(family: object, shape: object) -> str | None:
     """Canonical workload-cell key 'FAMILY:SIDE'; None if family unknown or
     shape is not a cube."""
     side = cube_side(shape)
@@ -197,7 +196,7 @@ def cell_key(family: object, shape: object) -> "str | None":
     return f"{fam}:{side}"
 
 
-def shipped_cells() -> Dict[str, Dict[str, str]]:
+def shipped_cells() -> dict[str, dict[str, str]]:
     """The canonical the device "shape x dtype" coverage grid (the coverage-parity rule).
 
     This is the *single* definition of what the produced device TensileLibrary
@@ -222,7 +221,7 @@ def shipped_cells() -> Dict[str, Dict[str, str]]:
     }
 
 
-def shipped_cell_set() -> "Set[Tuple[str, str]]":
+def shipped_cell_set() -> set[tuple[str, str]]:
     """The coverage-parity grid as a set of ``(family, "NxNxN")`` tuples."""
     return {(v["family"], v["shape"]) for v in shipped_cells().values()}
 
@@ -236,13 +235,14 @@ def kernel_key(cfg: object) -> str:
     if not isinstance(cfg, dict):
         return ""
     parts = []
-    for k in ("contraction_pattern", "ContractionPattern", "DataType"):
-        if cfg.get(k):
-            parts.append(f"{k}={cfg[k]}")
-    for k in ("MacroTile", "MT0", "MT1", "ThreadTile", "TT0", "TT1",
-              "VectorWidth", "DepthU", "GlobalSplitU", "WorkGroupMapping"):
-        if cfg.get(k) is not None:
-            parts.append(f"{k}={cfg[k]}")
+    parts.extend(f"{k}={cfg[k]}"
+                 for k in ("contraction_pattern", "ContractionPattern", "DataType")
+                 if cfg.get(k))
+    parts.extend(f"{k}={cfg[k]}"
+                 for k in ("MacroTile", "MT0", "MT1", "ThreadTile", "TT0", "TT1",
+                           "VectorWidth", "DepthU", "GlobalSplitU",
+                           "WorkGroupMapping")
+                 if cfg.get(k) is not None)
     return "|".join(parts)
 
 

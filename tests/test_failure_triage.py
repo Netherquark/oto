@@ -13,7 +13,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness import failure_triage as ft  # noqa: E402
+from oto.harness import failure_triage as ft
 
 
 def _make_corpus(root: Path) -> None:
@@ -46,8 +46,8 @@ class TestMeasurementProduced(unittest.TestCase):
             root = Path(td)
             _make_corpus(root)
             run = root / "gfx90c_runs" / "run_test"
-            self.assertTrue(ft.measurement_produced(run / "phase_built"))
-            self.assertFalse(ft.measurement_produced(run / "phase_empty_reject"))
+            assert ft.measurement_produced(run / "phase_built")
+            assert not ft.measurement_produced(run / "phase_empty_reject")
 
 
 class TestReasonForPhase(unittest.TestCase):
@@ -57,8 +57,8 @@ class TestReasonForPhase(unittest.TestCase):
             _make_corpus(root)
             run = root / "gfx90c_runs" / "run_test"
             r = ft.reason_for_phase(run / "phase_empty_reject")
-            self.assertTrue(r.startswith("tensile reject x1:"))
-            self.assertIn("GLVW 2 * bpe 8 > 16", r)
+            assert r.startswith("tensile reject x1:")
+            assert "GLVW 2 * bpe 8 > 16" in r
 
     def test_stderr_fallback(self):
         with tempfile.TemporaryDirectory() as td:
@@ -66,7 +66,7 @@ class TestReasonForPhase(unittest.TestCase):
             _make_corpus(root)
             run = root / "gfx90c_runs" / "run_test"
             r = ft.reason_for_phase(run / "phase_empty_stderr")
-            self.assertTrue(r.startswith("stderr non-empty:"))
+            assert r.startswith("stderr non-empty:")
 
     def test_no_logs(self):
         with tempfile.TemporaryDirectory() as td:
@@ -74,7 +74,7 @@ class TestReasonForPhase(unittest.TestCase):
             _make_corpus(root)
             run = root / "gfx90c_runs" / "run_test"
             r = ft.reason_for_phase(run / "phase_empty_nolog")
-            self.assertEqual(r, "no logs at all")
+            assert r == "no logs at all"
 
 
 class TestCensus(unittest.TestCase):
@@ -83,21 +83,21 @@ class TestCensus(unittest.TestCase):
             root = Path(td)
             _make_corpus(root)
             result = ft.census(str(root))
-            self.assertEqual(result["meta"]["phase_dirs"], 4)
-            self.assertEqual(result["meta"]["empty"], 3)
-            self.assertEqual(result["meta"]["runs_scanned"], 1)
-            self.assertEqual(len(result["per_run"]), 1)
-            self.assertEqual(result["per_run"][0]["empty"], 3)
+            assert result["meta"]["phase_dirs"] == 4
+            assert result["meta"]["empty"] == 3
+            assert result["meta"]["runs_scanned"] == 1
+            assert len(result["per_run"]) == 1
+            assert result["per_run"][0]["empty"] == 3
             # two distinct reasons (reject, stderr) + no-logs
-            self.assertEqual(sum(result["reasons"].values()), 3)
+            assert sum(result["reasons"].values()) == 3
 
     def test_run_filter(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
             result = ft.census(str(root), run_filter="no_such_run")
-            self.assertEqual(result["meta"]["phase_dirs"], 0)
-            self.assertEqual(result["meta"]["empty"], 0)
+            assert result["meta"]["phase_dirs"] == 0
+            assert result["meta"]["empty"] == 0
 
 
 class TestMain(unittest.TestCase):
@@ -105,14 +105,15 @@ class TestMain(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            import io, contextlib
+            import contextlib
+            import io
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = ft.main(["--base", str(root)])
-            self.assertEqual(rc, 0)
+            assert rc == 0
             text = buf.getvalue()
-            self.assertIn("phase dirs: 4", text)
-            self.assertIn("with no non-empty CSV: 3", text)
+            assert "phase dirs: 4" in text
+            assert "with no non-empty CSV: 3" in text
 
 
 if __name__ == "__main__":

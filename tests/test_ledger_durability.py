@@ -76,18 +76,18 @@ class LedgerDurabilityTests(unittest.TestCase):
 
     def _assert_all_present(self, base, fps):
         reg = SQLiteRegistry(Path(base), read_only=True)
-        self.assertEqual(sorted(reg.proposed_fps()), sorted(fps))
+        assert sorted(reg.proposed_fps()) == sorted(fps)
         for fp in fps:
             row = reg.get_proposal(fp)
-            self.assertIsNotNone(row, f"{fp} lost")
-            self.assertEqual(row["outcome"], "functional")
-            self.assertEqual(row["family"], "SS")
-            self.assertEqual(row["shape"], "256x256x256")
-            self.assertEqual(row["parent_fp"], "root")
-            self.assertEqual(row["origin"], "novel")
+            assert row is not None, f"{fp} lost"
+            assert row["outcome"] == "functional"
+            assert row["family"] == "SS"
+            assert row["shape"] == "256x256x256"
+            assert row["parent_fp"] == "root"
+            assert row["origin"] == "novel"
             obs = reg.observations_for(fp)
-            self.assertTrue(obs, f"observation for {fp} lost")
-            self.assertEqual(obs[0]["winner_freq"], 1.0)
+            assert obs, f"observation for {fp} lost"
+            assert obs[0]["winner_freq"] == 1.0
 
     def test_rows_survive_a_wal_checkpoint(self):
         fps = self._seed()
@@ -100,10 +100,7 @@ class LedgerDurabilityTests(unittest.TestCase):
         # still sitting in the write-ahead log.
         fps = self._seed()
         _checkpoint(self.tmp)
-        self.assertFalse((_db(self.tmp).with_name("registry.db-wal")).exists()
-                         and (Path(self.tmp) / "gfx90c_results" /
-                              "registry.db-wal").stat().st_size > 0,
-                         "checkpoint left data in the WAL; the copy would lose it")
+        assert not (_db(self.tmp).with_name("registry.db-wal").exists() and (Path(self.tmp) / "gfx90c_results" / "registry.db-wal").stat().st_size > 0), "checkpoint left data in the WAL; the copy would lose it"
         dest = Path(tempfile.mkdtemp(prefix="oto_dur_copy_"))
         self.addCleanup(shutil.rmtree, dest, ignore_errors=True)
         (dest / "gfx90c_results").mkdir(parents=True)
@@ -155,7 +152,7 @@ class LedgerDurabilityTests(unittest.TestCase):
         _checkpoint(self.tmp)
         self.reg.resolve_proposal(fps[0], "legal_slow", build_class=None)
         row = self.reg.get_proposal(fps[0])
-        self.assertEqual(row["outcome"], "functional")
+        assert row["outcome"] == "functional"
 
     def test_observations_are_append_only_across_a_restore(self):
         fp = self._seed(n=1)[0]
@@ -164,7 +161,7 @@ class LedgerDurabilityTests(unittest.TestCase):
                            "record_count": 16, "row_count": 16,
                            "max_gflops": 600.0, "median_gflops": 590.0})
         _checkpoint(self.tmp)
-        self.assertEqual(len(self.reg.observations_for(fp)), 2)
+        assert len(self.reg.observations_for(fp)) == 2
 
     def test_a_reopened_registry_replays_the_negative_cache_inputs(self):
         # The negative cache is rebuilt from proposal history at startup, so its
@@ -178,7 +175,7 @@ class LedgerDurabilityTests(unittest.TestCase):
         _checkpoint(self.tmp)
         mut2 = Mutator(self.reg, self.tmp, reference_slow=False)
         failures = mut2.rebuild_negative_cache()
-        self.assertEqual(sum(failures.values()), 4)
+        assert sum(failures.values()) == 4
 
     def test_a_read_only_reopen_creates_nothing(self):
         fps = self._seed()
@@ -188,7 +185,7 @@ class LedgerDurabilityTests(unittest.TestCase):
         SQLiteRegistry(self.tmp, read_only=True)
         after = sorted(p.name for p in Path(self.tmp).joinpath(
             "gfx90c_results").iterdir())
-        self.assertEqual(before, after)
+        assert before == after
         self._assert_all_present(self.tmp, fps)
 
 

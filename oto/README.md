@@ -31,7 +31,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ### ``tensile/gates/``
 
-* ``tensile/gates/assembly.py`` — The assembly-class gate: is this GEMM class legal on gfx90c at all?
+* ``tensile/gates/assembly.py`` — The assembly-class gate: is this GEMM class legal on the target device at all?
 * ``tensile/gates/loads.py`` — Classic-path global-load divisibility, and the 16 B load-width cap.
 * ``tensile/gates/memo.py`` — A content-keyed memo for the pure legality gates.
 * ``tensile/gates/occupancy.py`` — Register-file and LDS occupancy gates.

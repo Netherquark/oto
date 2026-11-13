@@ -18,7 +18,8 @@ from __future__ import annotations
 import csv as _csv
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -85,7 +86,7 @@ class ClockMixin:
     # sample ever recorded (82C), so it is inert on the current corpus and only
     # bites if a future run genuinely thermal-throttles.
     THERMAL_MAX_C = 88.0
-    def _telemetry_rows(self, run_dir: Path) -> List[Tuple[str, int, Optional[float]]]:
+    def _telemetry_rows(self, run_dir: Path) -> list[tuple[str, int, float | None]]:
         """(phase_id, sclk_hz, temp_c) for usable busy samples in one run.
 
         Only samples taken while the GPU was actually busy are counted: a
@@ -99,12 +100,11 @@ class ClockMixin:
         per-phase tagging (the phase_id column), since those rows cannot be
         attributed to a phase at all.
         """
-        import csv
 
         path = Path(run_dir) / "logs" / "telemetry.csv"
         if not path.is_file():
             return []
-        rows: List[Tuple[str, int, Optional[float]]] = []
+        rows: list[tuple[str, int, float | None]] = []
         try:
             with path.open(newline="") as fh:
                 rd = _csv.DictReader(fh)
@@ -140,7 +140,7 @@ class ClockMixin:
         except OSError:
             return []
         return rows
-    def _load_telemetry_by_phase(self, run_dir: Path) -> Dict[str, Dict[str, Any]]:
+    def _load_telemetry_by_phase(self, run_dir: Path) -> dict[str, dict[str, Any]]:
         """Per-phase sustained clock plus the thermal context it was taken in.
 
         Each phase needs >= TELEMETRY_MIN_SAMPLES usable busy samples. Samples at
@@ -149,9 +149,9 @@ class ClockMixin:
         reports as *unmeasured* rather than as a slow kernel that clock scaling
         would then over-reward.
         """
-        hz_by_phase: Dict[str, List[int]] = {}
-        temp_by_phase: Dict[str, List[float]] = {}
-        hot_by_phase: Dict[str, int] = {}
+        hz_by_phase: dict[str, list[int]] = {}
+        temp_by_phase: dict[str, list[float]] = {}
+        hot_by_phase: dict[str, int] = {}
         for pid, hz, temp_c in self._telemetry_rows(run_dir):
             if temp_c is not None and temp_c >= self.THERMAL_MAX_C:
                 hot_by_phase[pid] = hot_by_phase.get(pid, 0) + 1
@@ -160,7 +160,7 @@ class ClockMixin:
             if temp_c is not None:
                 temp_by_phase.setdefault(pid, []).append(temp_c)
 
-        out: Dict[str, Dict[str, Any]] = {}
+        out: dict[str, dict[str, Any]] = {}
         for pid, hz in hz_by_phase.items():
             if len(hz) < self.TELEMETRY_MIN_SAMPLES:
                 continue
@@ -177,7 +177,7 @@ class ClockMixin:
                 "hot_samples": hot_by_phase.get(pid, 0),
             }
         return out
-    def _load_sclk_by_phase(self, run_dir: Path) -> Dict[str, float]:
+    def _load_sclk_by_phase(self, run_dir: Path) -> dict[str, float]:
         """Per-phase sustained core clock (Hz) from one run's telemetry timeline.
 
         A thin projection of _load_telemetry_by_phase, so the existing clock
@@ -186,10 +186,10 @@ class ClockMixin:
         """
         return {pid: d["sclk_hz"]
                 for pid, d in self._load_telemetry_by_phase(run_dir).items()}
-    def _sclk_map(self, run_ids: List[str]) -> Dict[Tuple[str, str], float]:
+    def _sclk_map(self, run_ids: list[str]) -> dict[tuple[str, str], float]:
         """(source_run, phase_id) -> sustained sclk across the given runs."""
         if self._sclk_cache is None:
-            self._sclk_cache: Dict[Tuple[str, str], float] = {}
+            self._sclk_cache: dict[tuple[str, str], float] = {}
         for rid in run_ids:
             if any(k[0] == rid for k in self._sclk_cache):
                 continue
@@ -197,7 +197,7 @@ class ClockMixin:
             for pid, hz in self._load_sclk_by_phase(run_dir).items():
                 self._sclk_cache[(rid, pid)] = hz
         return self._sclk_cache
-    def _thermal_map(self, run_ids: List[str]) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    def _thermal_map(self, run_ids: list[str]) -> dict[tuple[str, str], dict[str, Any]]:
         """(source_run, phase_id) -> thermal context for the same busy samples.
 
         Shares the parse with _load_sclk_by_phase via _load_telemetry_by_phase, so
@@ -206,7 +206,7 @@ class ClockMixin:
         state can never be attributed to different windows.
         """
         if self._thermal_cache is None:
-            self._thermal_cache: Dict[Tuple[str, str], Dict[str, Any]] = {}
+            self._thermal_cache: dict[tuple[str, str], dict[str, Any]] = {}
         for rid in run_ids:
             if any(k[0] == rid for k in self._thermal_cache):
                 continue
@@ -214,7 +214,7 @@ class ClockMixin:
             for pid, d in self._load_telemetry_by_phase(run_dir).items():
                 self._thermal_cache[(rid, pid)] = d
         return self._thermal_cache
-    def _thermal_summary(self, run_ids: List[str]) -> Dict[str, Any]:
+    def _thermal_summary(self, run_ids: list[str]) -> dict[str, Any]:
         """Corpus-wide thermal envelope for the runs feeding the A/B report.
 
         Reported, never scaled: see THERMAL_MAX_C for why a temperature factor
@@ -222,9 +222,9 @@ class ClockMixin:
         it is that a reader can see whether a clock-adjusted delta came from a
         thermally stressed window, which the sclk number alone cannot show.
         """
-        temps: List[float] = []
-        peaks: List[float] = []
-        hot_phases: List[str] = []
+        temps: list[float] = []
+        peaks: list[float] = []
+        hot_phases: list[str] = []
         for (rid, pid), d in self._thermal_map(run_ids).items():
             if d.get("temp_c") is not None:
                 temps.append(float(d["temp_c"]))
@@ -242,8 +242,8 @@ class ClockMixin:
             "hot_phases": len(hot_phases),
             "hot_phase_ids": sorted(hot_phases)[:10],
         }
-    def _clock_coverage(self, records: List[Dict[str, Any]],
-                        sclk_by_phase: Dict[Tuple[str, str], float]) -> Tuple[int, int]:
+    def _clock_coverage(self, records: list[dict[str, Any]],
+                        sclk_by_phase: dict[tuple[str, str], float]) -> tuple[int, int]:
         """(covered_samples, total_samples) for one arm against the clock map."""
         covered = total = 0
         for rec in records:
@@ -255,7 +255,7 @@ class ClockMixin:
                                   str(rec.get("phase_id", "")))):
                 covered += 1
         return covered, total
-    def _sclk_reference(self, sclk_by_phase: Dict[Tuple[str, str], float]) -> float:
+    def _sclk_reference(self, sclk_by_phase: dict[tuple[str, str], float]) -> float:
         """The single corpus-wide clock every arm is normalized TO.
 
         The highest sustained clock the GPU actually held in this corpus, used as

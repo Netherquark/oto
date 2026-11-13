@@ -13,16 +13,15 @@ Public API: ConvergenceAgent, ConvergenceVerdict.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
-
 from pathlib import Path
+from typing import Any
 
 from oto.device.peaks import cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.agent_mutate import MutateMixin
 from oto.ledger.harvest import HarvestMixin
+from oto.metrics import coverage
 from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
-import oto.metrics.coverage as coverage
 from oto.tensile.candidate import CandidateGenerator
 
 
@@ -31,7 +30,7 @@ class ConvergenceVerdict:
     """Result of convergence check."""
     converged: bool
     reason: str
-    below_ceiling_cells: List[Dict[str, Any]]
+    below_ceiling_cells: list[dict[str, Any]]
     iterations: int
     budget_remaining: int
 
@@ -50,13 +49,13 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         scheduler: CandidateGenerator,
         analytics: AnalyticsEngine,
         mutator=None,
-        band_pct: Optional[float] = None
+        band_pct: float | None = None
     ):
         self.base_dir = Path(base_dir)
         self.scheduler = scheduler
         self.analytics = analytics
         self.iteration = 0
-        self.harvested_winners: Dict[str, Dict[str, Any]] = {}
+        self.harvested_winners: dict[str, dict[str, Any]] = {}
         # Option H Phase 1 (implementation_plan.md Hplan.3 step 8). The ledger
         # is what makes bypassing the identical-fp skip correct, so its absence
         # is not a soft degradation -- it flips `skip_mutation_arm` back on.
@@ -83,28 +82,27 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         # in the ledger with run_id=NULL, so "which run produced this candidate"
         # cannot be answered after the fact and the ledger cannot be scoped per
         # run. Set by the driver once its run dir exists.
-        self.run_id: Optional[str] = None
+        self.run_id: str | None = None
         # Phase 4 (Hplan.6): coverage guidance and multi-shape grading. Both
         # caches are per-run — the deck does not change within a run, and the
         # ledger only grows, so recomputing per cell is pure waste.
-        self._shape_sweeps_cache: Optional[Dict[str, List[str]]] = None
-        self._coverage_cells_cache: Optional[
-            Dict[Tuple[str, str], Dict[str, Any]]] = None
+        self._shape_sweeps_cache: dict[str, list[str]] | None = None
+        self._coverage_cells_cache: dict[tuple[str, str], dict[str, Any]] | None = None
         #: Acceptance band. Supplied by the caller when it already knows it, and
         #: otherwise resolved lazily by `band()` -- never here. `ab_audit`'s
         #: `arm_record_sets` constructs an agent to manage phases, and
         #: `measured_band_pct` reaches `arm_record_sets`, so computing the band in
         #: `__init__` recurses until the stack gives out. A construction-time
         #: audit is also just expensive: every agent paid for a full arm scan.
-        self.band_pct: Optional[float] = band_pct
+        self.band_pct: float | None = band_pct
         self._band_resolved: bool = band_pct is not None
         self._band_computing: bool = False
         #: `(iteration, {FAMILY:SIDE -> A/B entry})` of cells that have not yet
         #: beaten the floor; empty means unreadable, and `_floor_losers` caches
         #: the scan per iteration because it walks every run (~90s).
-        self._floor_losers_cache: Optional[Tuple[int, Dict[str, Any]]] = None
+        self._floor_losers_cache: tuple[int, dict[str, Any]] | None = None
 
-    def band(self) -> Optional[float]:
+    def band(self) -> float | None:
         """The measured acceptance band, computed at most once, or None.
 
         None means "no band available", which coverage reads as *no lower bound*
@@ -147,7 +145,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
             return True
         return not self.has_outcome_signal
 
-    def _floor_losers(self) -> Dict[str, Any]:
+    def _floor_losers(self) -> dict[str, Any]:
         """Cells that have not yet beaten the recalled floor, by ``FAMILY:SIDE``.
 
         The floor is the frozen gfx900 shipped deck; ``cells_not_beating_floor``
@@ -160,18 +158,17 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         if (self._floor_losers_cache is not None
                 and self._floor_losers_cache[0] == self.iteration):
             return self._floor_losers_cache[1]
-        losers: Dict[str, Any] = {}
+        losers: dict[str, Any] = {}
         try:
-            import oto.metrics.ab_audit as ab_audit
+            from oto.metrics import ab_audit
             native, floor, _chain = ab_audit.arm_record_sets(self.base_dir)
             losers = self.analytics.cells_not_beating_floor(native, floor)
-        except Exception as e:
-            print(f"[floor] cannot read the reference floor ({e}); mutation "
-                  f"targeting falls back to the ceiling rule alone")
+        except Exception:
+            pass
         self._floor_losers_cache = (self.iteration, losers)
         return losers
 
-    def _cell_settled(self, winner_info: Dict[str, Any]) -> bool:
+    def _cell_settled(self, winner_info: dict[str, Any]) -> bool:
         """Whether a cell is finished and must NOT be mutated.
 
         A cell earns a mutation for either of two independent reasons: it is
@@ -195,7 +192,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         key = cell_key(winner_info.get("family"), winner_info.get("shape"))
         return key is None or key not in losers
 
-    def _collect_below_ceiling(self, all_analytics: List[CellAnalytics]) -> List[Dict[str, Any]]:
+    def _collect_below_ceiling(self, all_analytics: list[CellAnalytics]) -> list[dict[str, Any]]:
         """Collect cells that are below the realistic ceiling."""
         return [
             {
@@ -210,7 +207,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
             if a.is_below_ceiling
         ]
 
-    def _check_budget(self, budget_remaining: int, below_ceiling_cells: List) -> Optional[ConvergenceVerdict]:
+    def _check_budget(self, budget_remaining: int, below_ceiling_cells: list) -> ConvergenceVerdict | None:
         """Check if budget is exhausted. Returns verdict if exhausted, None otherwise."""
         if budget_remaining <= 0:
             return ConvergenceVerdict(
@@ -223,10 +220,10 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
             )
         return None
 
-    def _check_cell_requirements(self, all_analytics: List[CellAnalytics]) -> List[str]:
+    def _check_cell_requirements(self, all_analytics: list[CellAnalytics]) -> list[str]:
         """Check cell requirements: >=3 configs, >=6 seeds, CV <= 15%."""
         unconverged_reasons = []
-        cells_by_shape: Dict[Tuple[str, str], List[CellAnalytics]] = {}
+        cells_by_shape: dict[tuple[str, str], list[CellAnalytics]] = {}
         for a in all_analytics:
             key = (a.dtype, a.shape)
             cells_by_shape.setdefault(key, []).append(a)
@@ -255,7 +252,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
 
     def converged(
         self,
-        all_analytics: List[CellAnalytics],
+        all_analytics: list[CellAnalytics],
         budget_remaining: int
     ) -> ConvergenceVerdict:
         """

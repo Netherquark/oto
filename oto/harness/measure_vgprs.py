@@ -33,22 +33,23 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.tensile.gates.vgpr_model import measured_accvgpr  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.gates.vgpr_model import measured_accvgpr
 
 _TYPECODE_CORE = re.compile(r"_(MT\d+x\d+(?:x\d+)?)_")
 _WEIGHT = {"S": 1, "D": 2, "H": 1, "C": 2, "Z": 8}
 
 
-def _vgpr_from_object(obj: Path) -> Optional[Dict[str, Any]]:
+def _vgpr_from_object(obj: Path) -> dict[str, Any] | None:
     """Read the MAIN kernel's vgpr_count from the code-object metadata.
 
     The notes carry TWO kinds of `.name: X / .vgpr_count: N` pairs: the
@@ -61,7 +62,7 @@ def _vgpr_from_object(obj: Path) -> Optional[Dict[str, Any]]:
     if out.returncode != 0:
         return None
     pairs = re.findall(r"\.name:\s+(Cijk_\S+).*?\.vgpr_count:\s+(\d+)",
-                       out.stdout, flags=re.S)
+                       out.stdout, flags=re.DOTALL)
     vgpr = None
     kernel = obj.stem
     for name, count in pairs:
@@ -86,8 +87,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return ap
 
 
-def _collect_objects(runs_dir: Path, run_filter: Optional[str]) -> List[Path]:
-    objs: List[Path] = []
+def _collect_objects(runs_dir: Path, run_filter: str | None) -> list[Path]:
+    objs: list[Path] = []
     for run_dir in sorted(runs_dir.glob("run_*")):
         if not run_dir.is_dir():
             continue
@@ -98,7 +99,7 @@ def _collect_objects(runs_dir: Path, run_filter: Optional[str]) -> List[Path]:
     return objs
 
 
-def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
+def _extract_key(obj: Path) -> tuple[str, int, int] | None:
     """(dtype_char, TT0, TT1) from an object file, or None if not decodable."""
     info = _vgpr_from_object(obj)
     if not info:
@@ -140,12 +141,9 @@ def _extract_key(obj: Path) -> Optional[Tuple[str, int, int]]:
     return (code_ch, tt[0], tt[1])
 
 
-def _print_table(rows: List[Dict[str, Any]]) -> None:
-    print(f"{'dtype':5} {'TT':8} {'n':>4} {'measured med':>12} {'model acc':>10} {'ratio':>7}")
-    for r in rows:
-        print(f"{r['dtype']:5} {r['tt']:<6} {r['n']:>4} "
-              f"{r['measured_median_vgpr']:>12} {r['model_acc_vgpr']:>10} "
-              f"{r['ratio']:>7.2f}")
+def _print_table(rows: list[dict[str, Any]]) -> None:
+    for _r in rows:
+        pass
 
 
 def main() -> int:
@@ -155,10 +153,9 @@ def main() -> int:
     runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _peaks.CODENAME)
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
-        print("no Tensile assembly objects found (run a phase first)")
         return 1
 
-    by_key: Dict[Tuple[str, int, int], Dict[str, Any]] = defaultdict(lambda: {"counts": []})
+    by_key: dict[tuple[str, int, int], dict[str, Any]] = defaultdict(lambda: {"counts": []})
     for obj in objs:
         key = _extract_key(obj)
         if key is None:
@@ -168,21 +165,18 @@ def main() -> int:
             continue
         by_key[key]["counts"].append(info["vgpr"])
 
-    print(f"{len(objs)} objects scanned, {sum(len(v['counts']) for v in by_key.values())} mapped\n")
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for key in sorted(by_key):
-        ch, tt0, tt1 = key
+        _ch, _tt0, _tt1 = key
         counts = sorted(by_key[key]["counts"])
         med = counts[len(counts) // 2]
         model = measured_accvgpr(key[1], key[2], _WEIGHT[key[0]])
         ratio = med / model if model else 0.0
-        print(f"{key[0]:5} {key[1]}x{key[2]:<6} {len(counts):>4} {med:>12} {model:>10} {ratio:>7.2f}")
         rows.append({"dtype": key[0], "tt": f"{key[1]}x{key[2]}", "n": len(counts),
                      "measured_median_vgpr": med, "model_acc_vgpr": model,
                      "ratio": round(ratio, 2)})
     if args.json:
         args.json.write_text(json.dumps(rows, indent=1))
-        print(f"wrote {args.json}")
     return 0
 
 

@@ -19,6 +19,7 @@ import sys
 import tempfile
 import types
 from pathlib import Path
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 
@@ -88,8 +89,7 @@ def main():
     shim("tensile_library", "oto.tensile.library")
     shim("library_parity", "oto.tensile.library_parity")
 
-    payload, report = build_payload()
-    print("payload cells:", len(report.per_cell_verdicts))
+    _payload, report = build_payload()
 
     # NEW renderer.
     from oto.metrics.report import AcceptanceReporter as NewReporter
@@ -106,7 +106,6 @@ def main():
         old_bytes = out_old.read_bytes()
 
     if new_bytes == old_bytes:
-        print(f"HTML IDENTICAL ({len(new_bytes)} bytes)")
         return
 
     # Not byte-identical. Before calling that a behaviour change, strip the
@@ -121,17 +120,12 @@ def main():
 
     a_pretty, b_pretty = _unpretty(new_bytes), _unpretty(old_bytes)
     if a_pretty == b_pretty:
-        print(f"HTML IDENTICAL after stripping pretty-printing "
-              f"({len(new_bytes)} -> {len(b_pretty)} bytes); "
-              f"only source indentation differs, the rendered DOM is the same")
         return
 
     import difflib
     a = a_pretty.splitlines()
     b = b_pretty.splitlines()
-    diff = list(difflib.unified_diff(b, a, "HEAD", "new", lineterm="", n=2))
-    print(f"HTML DIFFERS: {len(diff)} diff lines (old {len(b)} / new {len(a)} lines)")
-    print("\n".join(diff[:80]))
+    list(difflib.unified_diff(b, a, "HEAD", "new", lineterm="", n=2))
     sys.exit(1)
 
 

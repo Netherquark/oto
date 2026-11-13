@@ -25,10 +25,15 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import (PEAK_GFLOPS, REALISTIC_CEILINGS,  # noqa: E402
-                              REALISTIC_CEILINGS_BLAS8, REPORTED_TO_BLAS8,
-                              THEORETICAL_PEAKS, THEORETICAL_PEAKS_BLAS8,
-                              blas8_gflops)
+from oto.device.peaks import (
+    PEAK_GFLOPS,
+    REALISTIC_CEILINGS,
+    REALISTIC_CEILINGS_BLAS8,
+    REPORTED_TO_BLAS8,
+    THEORETICAL_PEAKS,
+    THEORETICAL_PEAKS_BLAS8,
+    blas8_gflops,
+)
 
 RUNS = BASE / "gfx90c_runs"
 
@@ -37,18 +42,18 @@ class TestFlopFactor(unittest.TestCase):
     """The factor itself: 4x for the two complex families, 1x for the rest."""
 
     def test_complex_families_carry_the_four_x_factor(self):
-        self.assertEqual(REPORTED_TO_BLAS8["CC"], 4.0)
-        self.assertEqual(REPORTED_TO_BLAS8["ZZ"], 4.0)
+        assert REPORTED_TO_BLAS8["CC"] == 4.0
+        assert REPORTED_TO_BLAS8["ZZ"] == 4.0
 
     def test_real_families_are_one_to_one(self):
         for fam in ("SS", "DD", "HH", "HH_HPA", "HS_HPA"):
-            self.assertEqual(REPORTED_TO_BLAS8[fam], 1.0, fam)
+            assert REPORTED_TO_BLAS8[fam] == 1.0, fam
 
     def test_helper_converts_only_the_complex_families(self):
-        self.assertEqual(blas8_gflops("CC", 322.0), 1288.0)
-        self.assertEqual(blas8_gflops("ZZ", 24.5), 98.0)
-        self.assertEqual(blas8_gflops("SS", 412.0), 412.0)
-        self.assertEqual(blas8_gflops("hh_hpa", 1454.8), 1454.8)
+        assert blas8_gflops("CC", 322.0) == 1288.0
+        assert blas8_gflops("ZZ", 24.5) == 98.0
+        assert blas8_gflops("SS", 412.0) == 412.0
+        assert blas8_gflops("hh_hpa", 1454.8) == 1454.8
 
 
 class TestCeilings(unittest.TestCase):
@@ -65,11 +70,11 @@ class TestCeilings(unittest.TestCase):
                                THEORETICAL_PEAKS_BLAS8["ZZ"] / 4.0, places=9)
 
     def test_real_ceilings_are_untouched(self):
-        self.assertEqual(REALISTIC_CEILINGS["SS"], 1118.7)
-        self.assertEqual(REALISTIC_CEILINGS["DD"], 98.6)
-        self.assertEqual(REALISTIC_CEILINGS["HH"], 2461.0)
-        self.assertEqual(THEORETICAL_PEAKS["SS"], 1613)
-        self.assertEqual(THEORETICAL_PEAKS["HH"], 3226)
+        assert REALISTIC_CEILINGS["SS"] == 1118.7
+        assert REALISTIC_CEILINGS["DD"] == 98.6
+        assert REALISTIC_CEILINGS["HH"] == 2461.0
+        assert THEORETICAL_PEAKS["SS"] == 1613
+        assert THEORETICAL_PEAKS["HH"] == 3226
 
     def test_the_complex_roof_is_the_real_roof_over_four(self):
         """CC's roof is the FP32 pipe, ZZ's the FP64 pipe -- both /4."""
@@ -82,7 +87,7 @@ class TestCeilings(unittest.TestCase):
                  ("ZZ", 512, 24.3), ("ZZ", 1024, 24.5)]
         for fam, _side, reported in cases:
             pct = reported / THEORETICAL_PEAKS[fam] * 100.0
-            self.assertGreater(pct, 75.0, f"{fam}:{reported} should be near its roof")
+            assert pct > 75.0, f"{fam}:{reported} should be near its roof"
 
 
 class TestCorpusEvidence(unittest.TestCase):
@@ -103,7 +108,7 @@ class TestCorpusEvidence(unittest.TestCase):
                 reader = csv.reader(handle)
                 header = [h.strip() for h in next(reader)]
                 for raw in reader:
-                    row = {h: v.strip() for h, v in zip(header, raw)}
+                    row = {h: v.strip() for h, v in zip(header, raw, strict=False)}
                     m = int(row["SizeI"])
                     n = int(row["SizeJ"])
                     k = int(row["SizeL"])       # SizeK is the batch dim (1)
@@ -121,8 +126,8 @@ class TestCorpusEvidence(unittest.TestCase):
         blas8 = blas8_gflops("CC", reported)
         self.assertAlmostEqual(blas8, 1288.0, places=6)
         pct = blas8 / PEAK_GFLOPS["FP32"] * 100.0
-        self.assertGreater(pct, 75.0)
-        self.assertLess(pct, 90.0)
+        assert pct > 75.0
+        assert pct < 90.0
 
 
 if __name__ == "__main__":

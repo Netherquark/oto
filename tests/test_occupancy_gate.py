@@ -51,14 +51,19 @@ for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/s
 
 # The VGPR model tables and the occupancy gates are separate modules since the
 # gate split; the candidate generator imports them rather than owning them.
-from oto.tensile.gates.loads import validate_tensile_loads  # noqa: E402
-from oto.tensile.gates.occupancy import (occupancy_feasible,  # noqa: E402
-                                         occupancy_workgroups_per_cu)
-from oto.tensile.gates.vgpr_model import (ACCVGPR_BUDGET,  # noqa: E402
-                                          BYTES_PER_ELEMENT, LDS_BUDGET,
-                                          MAX_VGPR_PER_THREAD, MEASURED_VGPR,
-                                          MEASURED_VGPR_BY_DTYPE, VGPR_BUDGET,
-                                          VGPR_PER_CU, VGPR_PER_ELEMENT)
+from oto.tensile.gates.loads import validate_tensile_loads
+from oto.tensile.gates.occupancy import occupancy_feasible, occupancy_workgroups_per_cu
+from oto.tensile.gates.vgpr_model import (
+    ACCVGPR_BUDGET,
+    BYTES_PER_ELEMENT,
+    LDS_BUDGET,
+    MAX_VGPR_PER_THREAD,
+    MEASURED_VGPR,
+    MEASURED_VGPR_BY_DTYPE,
+    VGPR_BUDGET,
+    VGPR_PER_CU,
+    VGPR_PER_ELEMENT,
+)
 
 # Ground truth: per-thread VGPR totals Tensile's kernel writer reported on
 # gfx90c for complex (Z, weight 8) thread tiles.
@@ -88,32 +93,28 @@ def cfg(dtype, macro, thread, **kw):
 
 class TestVGPRWeights(unittest.TestCase):
     def test_complex_costs_double(self):
-        self.assertEqual(VGPR_PER_ELEMENT["Z"], 2 * VGPR_PER_ELEMENT["C"])
-        self.assertEqual(VGPR_PER_ELEMENT["C"], 2 * VGPR_PER_ELEMENT["D"])
-        self.assertEqual(VGPR_PER_ELEMENT["D"], 2 * VGPR_PER_ELEMENT["S"])
-        self.assertEqual(VGPR_PER_ELEMENT["S"], VGPR_PER_ELEMENT["H"])
+        assert VGPR_PER_ELEMENT["Z"] == 2 * VGPR_PER_ELEMENT["C"]
+        assert VGPR_PER_ELEMENT["C"] == 2 * VGPR_PER_ELEMENT["D"]
+        assert VGPR_PER_ELEMENT["D"] == 2 * VGPR_PER_ELEMENT["S"]
+        assert VGPR_PER_ELEMENT["S"] == VGPR_PER_ELEMENT["H"]
 
     def test_isa_cap_is_256_per_thread(self):
-        self.assertEqual(MAX_VGPR_PER_THREAD, 256)
-        self.assertEqual(VGPR_PER_CU, 65536)
-        self.assertEqual(VGPR_BUDGET, 32768)
+        assert MAX_VGPR_PER_THREAD == 256
+        assert VGPR_PER_CU == 65536
+        assert VGPR_BUDGET == 32768
 
 
 class TestMeasuredRule(unittest.TestCase):
     def test_accvgpr_is_threadtile_times_weight(self):
         for (t0, t1), total in OBSERVED.items():
             acc = t0 * t1 * VGPR_PER_ELEMENT["Z"]
-            self.assertLessEqual(
-                acc, total,
-                f"TT {t0}x{t1}: accumulators ({acc}) must fit inside the "
-                f"observed total ({total})",
-            )
+            assert acc <= total, f"TT {t0}x{t1}: accumulators ({acc}) must fit inside the " f"observed total ({total})"
 
     def test_observed_totals_are_monotonic_in_threadtile(self):
         """More accumulators never means fewer VGPRs."""
         by_area = sorted(OBSERVED, key=lambda t: t[0] * t[1])
         totals = [OBSERVED[t] for t in by_area]
-        self.assertEqual(totals, sorted(totals), by_area)
+        assert totals == sorted(totals), by_area
 
     def test_gate_matches_every_observed_outcome(self):
         """The gate must agree with the hardware for all measured thread tiles."""
@@ -122,14 +123,10 @@ class TestMeasuredRule(unittest.TestCase):
                 cfg("Z", "64x64x8", f"{t0}x{t1}")
             )
             legal_in_reality = total <= MAX_VGPR_PER_THREAD
-            self.assertEqual(
-                ok, legal_in_reality,
-                f"TT {t0}x{t1} measured {total} VGPRs; gate said "
-                f"{'legal' if ok else 'illegal'} ({why})",
-            )
+            assert ok == legal_in_reality, f"TT {t0}x{t1} measured {total} VGPRs; gate said " f"{'legal' if ok else 'illegal'} ({why})"
 
     def test_measured_table_matches_observation(self):
-        self.assertEqual(MEASURED_VGPR, OBSERVED)
+        assert MEASURED_VGPR == OBSERVED
 
     def test_corpus_measured_totals_agree_with_gate(self):
         """Corpus code-object measurements (harness/measure_vgprs.py) must
@@ -142,19 +139,15 @@ class TestMeasuredRule(unittest.TestCase):
                 acc = t0 * t1 * weight
                 gate_ok = acc <= ACCVGPR_BUDGET
                 legal = total <= MAX_VGPR_PER_THREAD
-                self.assertEqual(
-                    gate_ok, legal,
-                    f"{ch} TT {t0}x{t1}: acc model {acc} vs budget "
-                    f"{ACCVGPR_BUDGET}, measured {total} VGPRs",
-                )
+                assert gate_ok == legal, f"{ch} TT {t0}x{t1}: acc model {acc} vs budget " f"{ACCVGPR_BUDGET}, measured {total} VGPRs"
 
     def test_budget_sits_between_last_pass_and_first_fail(self):
         last_ok = max(t0 * t1 * VGPR_PER_ELEMENT["Z"]
                       for (t0, t1), v in OBSERVED.items() if v <= MAX_VGPR_PER_THREAD)
         first_bad = min(t0 * t1 * VGPR_PER_ELEMENT["Z"]
                         for (t0, t1), v in OBSERVED.items() if v > MAX_VGPR_PER_THREAD)
-        self.assertEqual(ACCVGPR_BUDGET, last_ok)
-        self.assertGreater(first_bad, last_ok)
+        assert last_ok == ACCVGPR_BUDGET
+        assert first_bad > last_ok
 
 
 class TestVectorWidthCap(unittest.TestCase):
@@ -178,25 +171,27 @@ class TestVectorWidthCap(unittest.TestCase):
             ("HH", "128x128x16", "8x8", 8),
             ("DD", "64x64x8", "4x4", 2),
         ):
-            self.assertEqual(cap_vector_width(fam, mt, tt), want, fam)
+            assert cap_vector_width(fam, mt, tt) == want, fam
 
     def test_cap_vector_width_never_exceeds_the_hardware_cap(self):
         from oto.tensile.gates.loads import cap_vector_width
-        from oto.tensile.gates.vgpr_model import (FAMILY_BYTES_PER_ELEMENT,
-                                                  GLOBAL_LOAD_BYTE_CAP)
+        from oto.tensile.gates.vgpr_model import (
+            FAMILY_BYTES_PER_ELEMENT,
+            GLOBAL_LOAD_BYTE_CAP,
+        )
         for fam, bpe in FAMILY_BYTES_PER_ELEMENT.items():
-            for vw in (1, 2, 4, 8):
+            for _vw in (1, 2, 4, 8):
                 v = cap_vector_width(fam, "128x128x16", "8x8")
-                self.assertLessEqual(v * bpe, GLOBAL_LOAD_BYTE_CAP, fam)
+                assert v * bpe <= GLOBAL_LOAD_BYTE_CAP, fam
 
     def test_cap_vector_width_respects_tile_divisibility(self):
         from oto.tensile.candidate import cap_vector_width
         # vw may not exceed the per-thread extent of a macro-tile dimension.
-        self.assertLessEqual(cap_vector_width("SS", "32x32x16", "4x4"), 8)
-        self.assertLessEqual(cap_vector_width("SS", "16x16x16", "8x8"), 2)
+        assert cap_vector_width("SS", "32x32x16", "4x4") <= 8
+        assert cap_vector_width("SS", "16x16x16", "8x8") <= 2
 
     def test_every_wide_family_deck_reaches_the_cap(self):
-        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT  # noqa: E402
+        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT
         for fam in ("SS", "DD", "HH"):
             bpe = FAMILY_BYTES_PER_ELEMENT[fam]
             best = 0
@@ -204,14 +199,11 @@ class TestVectorWidthCap(unittest.TestCase):
                 vw = c.get("VectorWidth")
                 if vw:
                     best = max(best, vw * bpe)
-            self.assertEqual(
-                best, 16,
-                f"{fam} deck tops out at {best} B; the 16 B cap is unreachable "
-                f"and this family cannot win a large cell")
+            assert best == 16, f"{fam} deck tops out at {best} B; the 16 B cap is unreachable " f"and this family cannot win a large cell"
 
     def test_added_candidates_pass_the_dual_resource_gate(self):
-        from oto.tensile.gates.occupancy import occupancy_feasible
         from oto.device.peaks import FAMILY_DTYPE_CHAR
+        from oto.tensile.gates.occupancy import occupancy_feasible
         checked = 0
         for fam, cfgs in self.decks.items():
             for c in cfgs:
@@ -226,9 +218,9 @@ class TestVectorWidthCap(unittest.TestCase):
                           "ContractionPattern": "Ailk_Bjlk", "VectorWidth": vw}
                 config.update({k: v for k, v in c.items() if k != "NLCA"})
                 ok, why = occupancy_feasible(config)
-                self.assertTrue(ok, f"{fam} {c.get('MacroTile')} vw{vw}: {why}")
+                assert ok, f"{fam} {c.get('MacroTile')} vw{vw}: {why}"
                 checked += 1
-        self.assertGreater(checked, 0)
+        assert checked > 0
 
     def test_family_labels_resolve_to_a_dtype(self):
         """Every family in a deck must be modellable by the register-file gate.
@@ -241,20 +233,17 @@ class TestVectorWidthCap(unittest.TestCase):
         from oto.tensile.gates.vgpr_model import VGPR_PER_ELEMENT
         for fam in self.decks:
             ch = dtype_char({"DataType": fam, "FamilyLabel": fam})
-            self.assertIn(ch, VGPR_PER_ELEMENT,
-                          f"{fam} resolves to dtype {ch!r}, absent from "
-                          f"VGPR_PER_ELEMENT; its candidates would all be dropped")
+            assert ch in VGPR_PER_ELEMENT, f"{fam} resolves to dtype {ch!r}, absent from " f"VGPR_PER_ELEMENT; its candidates would all be dropped"
 
     def test_widened_variants_do_not_duplicate_an_existing_tile(self):
-        from oto.tensile.candidate import cap_vector_width
         for fam in ("SS", "DD", "HH"):
             seen = set()
             for c in self.decks[fam]:
                 key = (c.get("MacroTile"), c.get("ThreadTile"), c.get("VectorWidth"))
-                self.assertNotIn(key, seen, f"duplicate {fam} {key}")
+                assert key not in seen, f"duplicate {fam} {key}"
                 seen.add(key)
             widths = {c.get("VectorWidth") for c in self.decks[fam]}
-            self.assertTrue(widths, fam)
+            assert widths, fam
 
 
 class TestGlobalLoadVectorWidthRule(unittest.TestCase):
@@ -274,28 +263,28 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2))
-        self.assertFalse(ok)
-        self.assertIn("must be == VectorWidth", why)
+        assert not ok
+        assert "must be == VectorWidth" in why
 
     def test_explicit_glvw_equal_to_vw_is_accepted(self):
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 GlobalLoadVectorWidthA=4, GlobalLoadVectorWidthB=4))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_glvw1_narrow_is_accepted_on_a_vw4_tile(self):
         """GLVW=1 is the only *non-default* legal value on a VW>1 tile."""
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 GlobalLoadVectorWidthA=1, GlobalLoadVectorWidthB=1))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_auto_glvw_is_unaffected(self):
         """-1 is the '= VectorWidth' default and must stay legal."""
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 GlobalLoadVectorWidthA=-1, GlobalLoadVectorWidthB=-1))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_pv_reduction_cancels_a_widening_into_a_noop(self):
         """D 32x32x8, VW=1: the pv reduction (SolutionStructs.py:2010) turns an
@@ -309,7 +298,7 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
         ok, why = validate_tensile_loads(
             cfg("D", "32x32x8", "2x2", VectorWidth=1,
                 GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_zz_vector_width_2_is_refused_by_the_byte_cap(self):
         """complexDouble is 16 B, so VW 2 loads 32 B and Tensile refuses the
@@ -318,11 +307,11 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
         run and came back with 0 CSV."""
         ok, why = validate_tensile_loads(
             cfg("Z", "32x64x8", "2x4", VectorWidth=2))
-        self.assertFalse(ok)
-        self.assertIn("> 16", why)
+        assert not ok
+        assert "> 16" in why
         ok, why = validate_tensile_loads(
             cfg("Z", "32x64x8", "2x4", VectorWidth=1))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_assert_free_element_multiple_lifts_the_restriction(self):
         """The guard is conditional: GuaranteeNoPartialA holds when
@@ -338,7 +327,7 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2,
                 AssertFree0ElementMultiple=2, AssertFree1ElementMultiple=2))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_source_language_keeps_the_restriction(self):
         """``bufferLoad`` also requires KernelLanguage Assembly
@@ -348,8 +337,8 @@ class TestGlobalLoadVectorWidthRule(unittest.TestCase):
                 GlobalLoadVectorWidthA=2, GlobalLoadVectorWidthB=2,
                 AssertFree0ElementMultiple=2, AssertFree1ElementMultiple=2,
                 KernelLanguage="Source"))
-        self.assertFalse(ok)
-        self.assertIn("must be == VectorWidth", why)
+        assert not ok
+        assert "must be == VectorWidth" in why
 
 
 class TestLocalSplitUThreadCount(unittest.TestCase):
@@ -370,7 +359,7 @@ class TestLocalSplitUThreadCount(unittest.TestCase):
             with self.subTest(dtype=dtype):
                 ok, why = validate_tensile_loads(
                     cfg(dtype, mt, tt, VectorWidth=vw, LocalSplitU=2))
-                self.assertTrue(ok, why)
+                assert ok, why
 
     def test_lsu2_dies_where_it_does_not(self):
         for dtype, mt, tt, vw, want in (
@@ -381,8 +370,8 @@ class TestLocalSplitUThreadCount(unittest.TestCase):
             with self.subTest(dtype=dtype):
                 ok, why = validate_tensile_loads(
                     cfg(dtype, mt, tt, VectorWidth=vw, LocalSplitU=2))
-                self.assertFalse(ok)
-                self.assertIn(want, why)
+                assert not ok
+                assert want in why
 
     def test_workgroup_spelling_reads_the_same(self):
         """An emitted phase carries only ``WorkGroup`` ("16x16x2"); a deck row
@@ -391,8 +380,8 @@ class TestLocalSplitUThreadCount(unittest.TestCase):
             with self.subTest(**kw):
                 ok, why = validate_tensile_loads(
                     cfg("D", "32x32x8", "2x2", VectorWidth=2, **kw))
-                self.assertFalse(ok)
-                self.assertIn("% pv", why)
+                assert not ok
+                assert "% pv" in why
 
     def test_an_explicit_workgroup_shadows_the_knob(self):
         """``config_writer._fork_tile`` emits an explicit ``WorkGroup`` verbatim
@@ -403,15 +392,15 @@ class TestLocalSplitUThreadCount(unittest.TestCase):
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 WorkGroup=[16, 16, 1], LocalSplitU=2))
-        self.assertTrue(ok, why)            # emitted LSU is 1, so the tile lives
+        assert ok, why            # emitted LSU is 1, so the tile lives
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4, LocalSplitU=2))
-        self.assertFalse(ok)                # no WorkGroup: the LSU really lands
-        self.assertIn("must be == VectorWidth", why)
+        assert not ok                # no WorkGroup: the LSU really lands
+        assert "must be == VectorWidth" in why
 
     def test_lsu1_is_the_default_and_unchanged(self):
         ok, why = validate_tensile_loads(cfg("D", "32x32x8", "2x2", VectorWidth=2))
-        self.assertTrue(ok, why)
+        assert ok, why
 
 
 class TestLdsGate(unittest.TestCase):
@@ -423,23 +412,23 @@ class TestLdsGate(unittest.TestCase):
         """Deck configs carry depth in MacroTile only; missing that read 16x small."""
         c = cfg("Z", "128x32x16", "2x8")
         c.pop("DepthU")
-        self.assertFalse(occupancy_feasible(c)[0])
+        assert not occupancy_feasible(c)[0]
 
     def test_depth_read_from_explicit_depth_u(self):
-        self.assertFalse(occupancy_feasible(cfg("Z", "128x32x16", "2x8", DepthU=16))[0])
+        assert not occupancy_feasible(cfg("Z", "128x32x16", "2x8", DepthU=16))[0]
 
     def test_128x32x16_rejected_however_thread_tile_is_chosen(self):
         for tt in ("2x2", "2x4", "4x2", "4x4", "2x8", "4x8", "8x4"):
             ok, _ = occupancy_feasible(cfg("Z", "128x32x16", tt))
-            self.assertFalse(ok, f"TT {tt} cannot rescue 128x32x16 (LDS bound)")
+            assert not ok, f"TT {tt} cannot rescue 128x32x16 (LDS bound)"
 
     def test_budget_sits_at_measured_boundary(self):
         bpe = BYTES_PER_ELEMENT["Z"]
-        self.assertEqual(LDS_BUDGET, 16384)
+        assert LDS_BUDGET == 16384
         legal = (64 + 64) * 16 * bpe
         dead = (128 + 32) * 16 * bpe
-        self.assertEqual(legal, LDS_BUDGET)
-        self.assertGreater(dead, LDS_BUDGET)
+        assert legal == LDS_BUDGET
+        assert dead > LDS_BUDGET
 
     def test_measured_z_tiles_all_classified_correctly(self):
         for mt, tt, legal in (
@@ -450,14 +439,13 @@ class TestLdsGate(unittest.TestCase):
             ("32x128x8", "2x8", True), ("64x64x16", "2x2", True),
             ("64x64x16", "4x4", True), ("128x32x16", "2x8", False),
         ):
-            self.assertEqual(occupancy_feasible(cfg("Z", mt, tt))[0], legal,
-                             f"{mt}/{tt}")
+            assert occupancy_feasible(cfg("Z", mt, tt))[0] == legal, f"{mt}/{tt}"
 
     def test_bytes_per_element_differs_from_vgpr_weight(self):
         """f64 is 8 bytes but only 2 VGPRs -- conflating them breaks the gate."""
-        self.assertEqual(BYTES_PER_ELEMENT["D"], 8)
-        self.assertEqual(VGPR_PER_ELEMENT["D"], 2)
-        self.assertEqual(BYTES_PER_ELEMENT["H"], 2)
+        assert BYTES_PER_ELEMENT["D"] == 8
+        assert VGPR_PER_ELEMENT["D"] == 2
+        assert BYTES_PER_ELEMENT["H"] == 2
 
 
 class TestMacroTileIsNotTheConstraint(unittest.TestCase):
@@ -465,21 +453,18 @@ class TestMacroTileIsNotTheConstraint(unittest.TestCase):
 
     def test_wide_macro_tile_with_small_thread_tile_is_legal(self):
         """128x32 with TT 8x4 died 116 times; TT 2x8 on the same MT is fine."""
-        self.assertFalse(occupancy_feasible(cfg("Z", "128x32x8", "8x4"))[0])
-        self.assertTrue(occupancy_feasible(cfg("Z", "128x32x8", "2x8"))[0])
+        assert not occupancy_feasible(cfg("Z", "128x32x8", "8x4"))[0]
+        assert occupancy_feasible(cfg("Z", "128x32x8", "2x8"))[0]
 
     def test_narrow_macro_tile_with_big_thread_tile_is_illegal(self):
         """The old area-based model could not express this at all."""
-        self.assertFalse(occupancy_feasible(cfg("Z", "32x32x8", "8x8"))[0])
-        self.assertTrue(occupancy_feasible(cfg("Z", "32x32x8", "2x2"))[0])
+        assert not occupancy_feasible(cfg("Z", "32x32x8", "8x8"))[0]
+        assert occupancy_feasible(cfg("Z", "32x32x8", "2x2"))[0]
 
     def test_old_dead_tiles_still_rejected(self):
         """The original error-4 tiles must not come back."""
         for mt, tt in (("128x64x8", "8x4"), ("64x128x8", "4x8")):
-            self.assertFalse(
-                occupancy_feasible(cfg("Z", mt, tt))[0],
-                f"{mt}/{tt} must stay rejected",
-            )
+            assert not occupancy_feasible(cfg("Z", mt, tt))[0], f"{mt}/{tt} must stay rejected"
 
 
 class TestWorkgroupRegisterFile(unittest.TestCase):
@@ -495,24 +480,22 @@ class TestWorkgroupRegisterFile(unittest.TestCase):
     """
 
     def test_field_filling_tiles_are_refused(self):
-        self.assertFalse(occupancy_feasible(cfg("C", "128x128x8", "4x4"))[0])
-        self.assertFalse(occupancy_feasible(cfg("C", "128x128x8", "8x4"))[0])
-        self.assertFalse(occupancy_feasible(cfg("Z", "128x128x8", "2x2"))[0])
-        self.assertFalse(occupancy_feasible(cfg("Z", "128x64x8", "4x4"))[0])
+        assert not occupancy_feasible(cfg("C", "128x128x8", "4x4"))[0]
+        assert not occupancy_feasible(cfg("C", "128x128x8", "8x4"))[0]
+        assert not occupancy_feasible(cfg("Z", "128x128x8", "2x2"))[0]
+        assert not occupancy_feasible(cfg("Z", "128x64x8", "4x4"))[0]
 
     def test_one_step_down_the_area_ladder_is_legal(self):
-        self.assertTrue(occupancy_feasible(cfg("C", "128x64x8", "8x4"))[0])
-        self.assertTrue(occupancy_feasible(cfg("Z", "128x32x8", "4x4"))[0])
-        self.assertTrue(occupancy_feasible(cfg("Z", "32x128x8", "4x4"))[0])
+        assert occupancy_feasible(cfg("C", "128x64x8", "8x4"))[0]
+        assert occupancy_feasible(cfg("Z", "128x32x8", "4x4"))[0]
+        assert occupancy_feasible(cfg("Z", "32x128x8", "4x4"))[0]
 
     def test_threadtile_cancels_out_of_the_workgroup_rule(self):
         """Verdict follows MacroTile, not ThreadTile, once per-thread passes."""
         for tt in ("2x2", "4x4"):
-            self.assertFalse(
-                occupancy_feasible(cfg("Z", "128x64x8", tt))[0], tt)
+            assert not occupancy_feasible(cfg("Z", "128x64x8", tt))[0], tt
         for tt in ("2x2", "4x4"):
-            self.assertTrue(
-                occupancy_feasible(cfg("Z", "64x64x8", tt))[0], tt)
+            assert occupancy_feasible(cfg("Z", "64x64x8", tt))[0], tt
 
     def test_local_split_u_multiplies_the_workgroup_cost(self):
         """LSU is part of the workgroup cost, not just the load thread count.
@@ -524,10 +507,10 @@ class TestWorkgroupRegisterFile(unittest.TestCase):
         ok, why = occupancy_feasible(
             cfg("D", "128x128x8", "8x8", LocalSplitU=2,
                 WorkGroup=[16, 16, 2]))
-        self.assertFalse(ok)
-        self.assertIn("accumulator", why)
+        assert not ok
+        assert "accumulator" in why
         # The same tile at LSU 1 is legal.
-        self.assertTrue(occupancy_feasible(cfg("D", "128x128x8", "8x8"))[0])
+        assert occupancy_feasible(cfg("D", "128x128x8", "8x8"))[0]
 
 
 class TestLdsReductionBuffer(unittest.TestCase):
@@ -543,13 +526,13 @@ class TestLdsReductionBuffer(unittest.TestCase):
         # (TT 4x4) the per-thread occupancy limit fires first and says so.
         ok, why = occupancy_feasible(
             cfg("S", "128x128x8", "8x8", LocalSplitU=2, WorkGroup=[16, 16, 2]))
-        self.assertFalse(ok)
-        self.assertIn("reduction", why)
+        assert not ok
+        assert "reduction" in why
 
     def test_moderate_reduction_is_allowed(self):
         ok, why = occupancy_feasible(
             cfg("S", "64x64x8", "4x4", LocalSplitU=2, WorkGroup=[16, 16, 2]))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_the_two_spellings_of_local_split_u_must_agree(self):
         """Tensile reads LSU from WorkGroup[2]; the key beside it is a no-op.
@@ -561,19 +544,19 @@ class TestLdsReductionBuffer(unittest.TestCase):
         from oto.tensile.config_writer import _fork_thread_macro_workgroup
         folded = _fork_thread_macro_workgroup(
             {"WorkGroup": [16, 16, 1], "LocalSplitU": 2}, 4, 4, 64, 64)
-        self.assertEqual(folded["WorkGroup"], [[16, 16, 2]])
+        assert folded["WorkGroup"] == [[16, 16, 2]]
         ok, why = occupancy_feasible(
             cfg("C", "64x64x8", "4x4", WorkGroup=[16, 16, 1], LocalSplitU=2))
-        self.assertFalse(ok)
-        self.assertIn("LocalSplitU", why)
+        assert not ok
+        assert "LocalSplitU" in why
         ok, why = occupancy_feasible(
             cfg("C", "64x64x8", "4x4", WorkGroup=[16, 16, 2], LocalSplitU=2))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_rule_only_applies_when_local_split_u_is_raised(self):
         """LSU 1 has no reduction buffer, however wide the MacroTile."""
         ok, why = occupancy_feasible(cfg("S", "128x128x8", "4x4"))
-        self.assertTrue(ok, why)
+        assert ok, why
 
 
 class TestRealDtypesUnaffected(unittest.TestCase):
@@ -597,27 +580,27 @@ class TestRealDtypesUnaffected(unittest.TestCase):
         ]
         for dtype, mt, tt in winners:
             ok, why = occupancy_feasible(cfg(dtype, mt, tt))
-            self.assertTrue(ok, f"{dtype} {mt}/{tt} regressed: {why}")
+            assert ok, f"{dtype} {mt}/{tt} regressed: {why}"
 
     def test_single_precision_allows_wide_thread_tiles(self):
-        self.assertTrue(occupancy_feasible(cfg("S", "128x128x16", "8x8"))[0])
-        self.assertTrue(occupancy_feasible(cfg("H", "128x128x16", "8x8"))[0])
+        assert occupancy_feasible(cfg("S", "128x128x16", "8x8"))[0]
+        assert occupancy_feasible(cfg("H", "128x128x16", "8x8"))[0]
 
 
 class TestWorkgroupsPerCU(unittest.TestCase):
     def test_zero_when_rejected(self):
-        self.assertEqual(occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "8x8")), 0)
-        self.assertEqual(occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "8x4")), 0)
+        assert occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "8x8")) == 0
+        assert occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "8x4")) == 0
 
     def test_positive_for_legal(self):
-        self.assertGreaterEqual(occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "4x4")), 1)
-        self.assertGreaterEqual(occupancy_workgroups_per_cu(cfg("S", "128x128x16", "8x8")), 1)
+        assert occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "4x4")) >= 1
+        assert occupancy_workgroups_per_cu(cfg("S", "128x128x16", "8x8")) >= 1
 
     def test_threadtile_cancels_in_workgroup_count(self):
         """A 4x2 tile on 64x64 and a 4x2 on 32x32 cost the same per thread."""
         a = occupancy_workgroups_per_cu(cfg("Z", "64x64x8", "4x2"))
         b = occupancy_workgroups_per_cu(cfg("Z", "32x32x8", "4x2"))
-        self.assertEqual(a, b)
+        assert a == b
 
 
 class TestUnknownDTypeFailsClosed(unittest.TestCase):
@@ -626,15 +609,15 @@ class TestUnknownDTypeFailsClosed(unittest.TestCase):
         del c["DataType"]
         del c["FamilyLabel"]
         ok, why = occupancy_feasible(c)
-        self.assertFalse(ok)
-        self.assertIn("no VGPR weight", why)
+        assert not ok
+        assert "no VGPR weight" in why
 
     def test_family_label_alias_still_resolves(self):
         for alias in ("S", "SS", "H", "HH", "D", "DD", "C", "CC", "Z", "ZZ"):
             c = cfg("Z", "64x64x8", "4x4", FamilyLabel=alias)
             del c["DataType"]
             ok, _ = occupancy_feasible(c)
-            self.assertTrue(ok, f"FamilyLabel {alias} must map to a real weight")
+            assert ok, f"FamilyLabel {alias} must map to a real weight"
 
 
 class TestUnparseableTileFailsClosed(unittest.TestCase):
@@ -651,23 +634,23 @@ class TestUnparseableTileFailsClosed(unittest.TestCase):
             with self.subTest(macro=macro):
                 ok, why = validate_tensile_loads(
                     cfg("S", "64x64x8", "4x4", MacroTile=macro))
-                self.assertTrue(ok, why)
+                assert ok, why
 
     def test_occupancy_gate_does_not_raise_on_a_placeholder_tile(self):
         for macro in ("NONE", ["NONE"], None):
             with self.subTest(macro=macro):
                 ok, why = occupancy_feasible(
                     cfg("S", "64x64x8", "4x4", MacroTile=macro))
-                self.assertEqual((ok, why), (True, ""))
+                assert (ok, why) == (True, "")
 
 
 class TestThreadTileCancellation(unittest.TestCase):
     def test_unchanged_config_is_still_legal(self):
-        self.assertTrue(occupancy_feasible(cfg("S", "64x64x8", "4x4"))[0])
+        assert occupancy_feasible(cfg("S", "64x64x8", "4x4"))[0]
 
     def test_widening_thread_tile_can_turn_legal_illegal(self):
-        self.assertTrue(occupancy_feasible(cfg("Z", "64x64x8", "4x4"))[0])
-        self.assertFalse(occupancy_feasible(cfg("Z", "64x64x8", "8x8"))[0])
+        assert occupancy_feasible(cfg("Z", "64x64x8", "4x4"))[0]
+        assert not occupancy_feasible(cfg("Z", "64x64x8", "8x8"))[0]
 
 
 class TestLiveDeck(unittest.TestCase):
@@ -682,7 +665,7 @@ class TestLiveDeck(unittest.TestCase):
             ok, why = occupancy_feasible(p["config"])
             if not ok:
                 bad.append(f"{p['phase_id']}: {why}")
-        self.assertEqual(bad, [], f"{len(bad)} live phases rejected:\n" + "\n".join(bad[:10]))
+        assert bad == [], f"{len(bad)} live phases rejected:\n" + "\n".join(bad[:10])
 
     def test_deck_has_no_dead_tiles(self):
         """The thread tiles that died on real hardware must be absent."""
@@ -694,7 +677,7 @@ class TestLiveDeck(unittest.TestCase):
             if str(p["config"].get("DataType", "")).upper() == "Z"
         }
         still = dead & zpresent
-        self.assertEqual(still, set(), f"dead complex tiles still in deck: {still}")
+        assert still == set(), f"dead complex tiles still in deck: {still}"
 
 
 class TestTensileBuildProof(unittest.TestCase):
@@ -727,8 +710,8 @@ class TestTensileBuildProof(unittest.TestCase):
                 self.fail(f"{row['phase_id']}: model "
                           f"{'legal' if ok else 'illegal'} but Tensile "
                           f"{'legal' if row['ok'] else 'illegal'}")
-        self.assertGreater(checked, 0)
-        self.assertEqual(mismatch, 0)
+        assert checked > 0
+        assert mismatch == 0
 
 
 class TestDeckLinter(unittest.TestCase):
@@ -740,8 +723,8 @@ class TestDeckLinter(unittest.TestCase):
             [sys.executable, str(tool), "--quiet"],
             capture_output=True, text=True, cwd=str(BASE), timeout=1800,
         )
-        self.assertIn(proc.returncode, (0, 1), proc.stdout + proc.stderr)
-        self.assertNotIn("FAIL", proc.stdout)
+        assert proc.returncode in (0, 1), proc.stdout + proc.stderr
+        assert "FAIL" not in proc.stdout
 
 
 class TestGeneratedPhaseCellIdentity(unittest.TestCase):
@@ -761,11 +744,12 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
     def _generated(self, family, pattern="Ailk_Bjlk", shape="256x256x256"):
         import tempfile
         from pathlib import Path
+
         from oto.tensile.candidate import CandidateGenerator
         with tempfile.TemporaryDirectory() as tmp:
             gen = CandidateGenerator(Path(tmp))
             cands = gen.generate_family_phases(family, [pattern], [shape])
-            self.assertTrue(cands, f"no candidates generated for {family}")
+            assert cands, f"no candidates generated for {family}"
             return cands
 
     def test_every_family_emits_a_resolvable_cell_key(self):
@@ -775,13 +759,8 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
                 shape = f"{sides[0]}x{sides[0]}x{sides[0]}"
                 for cand in self._generated(family, shape=shape):
                     cfg = {**cand.template, **cand.knobs}
-                    self.assertEqual(
-                        cfg.get("FamilyLabel"), family,
-                        f"{cand.phase_id} has no FamilyLabel; its records would "
-                        f"be stamped with no cell_key")
-                    self.assertIsNotNone(
-                        cell_key(cfg.get("FamilyLabel"), shape),
-                        f"{cand.phase_id} does not resolve to a cell key")
+                    assert cfg.get("FamilyLabel") == family, f"{cand.phase_id} has no FamilyLabel; its records would " f"be stamped with no cell_key"
+                    assert cell_key(cfg.get("FamilyLabel"), shape) is not None, f"{cand.phase_id} does not resolve to a cell key"
 
     def test_family_label_is_not_derivable_from_dtype(self):
         """'H' covers three families, so DataType cannot stand in for it."""
@@ -790,11 +769,10 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
         for fam, dt in FAMILY_DTYPE_CHAR.items():
             by_dtype.setdefault(dt, set()).add(fam)
         ambiguous = {dt: f for dt, f in by_dtype.items() if len(f) > 1}
-        self.assertIn("H", ambiguous,
-                      "expected the H dtype to be family-ambiguous")
+        assert "H" in ambiguous, "expected the H dtype to be family-ambiguous"
         # DTYPE_TO_FAMILY resolves 'H' to HH alone, so anything relying on the
         # dtype fallback would fold HH_HPA and HS_HPA into HH.
-        self.assertEqual(ambiguous["H"], {"HH", "HH_HPA", "HS_HPA"})
+        assert ambiguous["H"] == {"HH", "HH_HPA", "HS_HPA"}
 
 
 if __name__ == "__main__":

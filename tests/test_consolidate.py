@@ -21,39 +21,43 @@ Three things are pinned because each one produced a wrong answer at least once:
 """
 import sys
 import unittest
-import yaml
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from oto.tools.consolidate import (  # noqa: E402
-    _fam, _is_legal, dtype_bytes, load_deck, target_cells,
+from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.tools.consolidate import (
+    _fam,
+    _is_legal,
+    dtype_bytes,
+    load_deck,
+    target_cells,
 )
-from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
 
 
 class TestFamilyCase(unittest.TestCase):
     def test_phase_ids_lowercase_families(self):
-        self.assertEqual(_fam("phase_ss_Ailk_Bjlk_mt64x64x16_tt4x4"), "SS")
-        self.assertEqual(_fam("phase_zz_Ailk_Bjlk_mt32x32x16_tt2x2_vw1"), "ZZ")
-        self.assertEqual(_fam("phase_hh_hpa_Ailk_Bjlk_mt128x64x16"), "HH_HPA")
+        assert _fam("phase_ss_Ailk_Bjlk_mt64x64x16_tt4x4") == "SS"
+        assert _fam("phase_zz_Ailk_Bjlk_mt32x32x16_tt2x2_vw1") == "ZZ"
+        assert _fam("phase_hh_hpa_Ailk_Bjlk_mt128x64x16") == "HH_HPA"
 
     def test_target_cells_use_uppercase(self):
         for fam, shape, key in target_cells():
-            self.assertEqual(key.split(":")[0], fam)
-            self.assertTrue(shape.endswith(f"x{shape.split('x')[0]}x"
-                                           f"{shape.split('x')[0]}"))
+            assert key.split(":")[0] == fam
+            assert shape.endswith(f"x{shape.split('x')[0]}x" f"{shape.split('x')[0]}")
 
 
 class TestTargetMatrix(unittest.TestCase):
     def test_every_family_shape_pair_is_covered(self):
         want = {f"{f}:{s}" for f, sides in FAMILY_SHAPES.items() for s in sides}
-        self.assertEqual({c[2] for c in target_cells()}, want)
+        assert {c[2] for c in target_cells()} == want
 
     def test_no_duplicate_cells(self):
         keys = [c[2] for c in target_cells()]
-        self.assertEqual(len(keys), len(set(keys)))
+        assert len(keys) == len(set(keys))
 
 
 ARCHIVED_DECK = ROOT / "archive" / "phases.yaml.pre_consolidation_oct3"
@@ -67,17 +71,17 @@ def _archived_deck():
 
 class TestDtypeBytes(unittest.TestCase):
     def test_widths_match_tensile(self):
-        self.assertEqual(dtype_bytes("S"), 4)
-        self.assertEqual(dtype_bytes("D"), 8)
-        self.assertEqual(dtype_bytes("H"), 2)
-        self.assertEqual(dtype_bytes("C"), 8)
+        assert dtype_bytes("S") == 4
+        assert dtype_bytes("D") == 8
+        assert dtype_bytes("H") == 2
+        assert dtype_bytes("C") == 8
 
     def test_complex_double_is_sixteen_not_eight(self):
         """The number the ZZ bug turns on."""
-        self.assertEqual(dtype_bytes("Z"), 16)
+        assert dtype_bytes("Z") == 16
 
     def test_unknown_dtype_is_none_not_a_guess(self):
-        self.assertIsNone(dtype_bytes("Q"))
+        assert dtype_bytes("Q") is None
 
 
 class TestLegalityGate(unittest.TestCase):
@@ -89,23 +93,23 @@ class TestLegalityGate(unittest.TestCase):
 
     def test_complex_double_vw2_is_rejected(self):
         ok, why = _is_legal(self._phase("Z", 2))
-        self.assertFalse(ok)
-        self.assertIn("GlobalLoadVectorWidthA", why)
-        self.assertIn("> 16", why)
+        assert not ok
+        assert "GlobalLoadVectorWidthA" in why
+        assert "> 16" in why
 
     def test_complex_double_vw1_is_accepted(self):
         """VW1 hits exactly the 16 B cap and is the widest legal complex width."""
         ok, why = _is_legal(self._phase("Z", 1))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_float_vw4_is_accepted(self):
         ok, why = _is_legal(self._phase("S", 4))
-        self.assertTrue(ok, why)
+        assert ok, why
 
     def test_float_vw8_is_rejected(self):
         ok, why = _is_legal(self._phase("S", 8))
-        self.assertFalse(ok)
-        self.assertIn("GlobalLoadVectorWidthA", why)
+        assert not ok
+        assert "GlobalLoadVectorWidthA" in why
 
     def test_gate_catches_a_real_archived_zz_phase(self):
         """Against the corpus, not a synthetic config."""
@@ -115,10 +119,10 @@ class TestLegalityGate(unittest.TestCase):
         bad = [p for p in deck
                if str(p.get("phase_id", "")).lower().startswith("phase_zz")
                and str((p.get("config") or {}).get("VectorWidth")) == "2"]
-        self.assertTrue(bad, "expected archived ZZ VectorWidth=2 phases to exist")
+        assert bad, "expected archived ZZ VectorWidth=2 phases to exist"
         for p in bad:
             ok, _why = _is_legal(p)
-            self.assertFalse(ok, p["phase_id"])
+            assert not ok, p["phase_id"]
 
     def test_every_live_deck_phase_passes_the_gate(self):
         """The invariant that matters: nothing illegal ships.
@@ -136,7 +140,7 @@ class TestLegalityGate(unittest.TestCase):
         live = yaml.safe_load((ROOT / "phases.yaml").read_text())
         offenders = [(p["phase_id"], _is_legal(p)[1]) for p in live
                      if not _is_legal(p)[0]]
-        self.assertEqual(offenders, [])
+        assert offenders == []
 
 
 class TestSolutionUniverse(unittest.TestCase):
@@ -151,8 +155,7 @@ class TestSolutionUniverse(unittest.TestCase):
         live = {p["phase_id"] for p in yaml.safe_load(
             (ROOT / "phases.yaml").read_text())}
         universe = {p["phase_id"] for p in load_deck(ROOT)}
-        self.assertTrue(universe > live,
-                        "universe must be larger than the live deck")
+        assert universe > live, "universe must be larger than the live deck"
 
     def test_universe_contains_the_archived_originals(self):
         universe = {p["phase_id"] for p in load_deck(ROOT)}
@@ -161,7 +164,7 @@ class TestSolutionUniverse(unittest.TestCase):
             self.skipTest("archived deck not present")
         missing = [p["phase_id"] for p in archived
                    if p["phase_id"] not in universe]
-        self.assertEqual(missing, [])
+        assert missing == []
 
 
 class TestDeckIsVerbatim(unittest.TestCase):
@@ -193,7 +196,7 @@ class TestDeckIsVerbatim(unittest.TestCase):
     def test_every_entry_came_from_the_archived_deck(self):
         for p in self.new:
             if not self._is_d1(p):
-                self.assertIn(p["phase_id"], self.old)
+                assert p["phase_id"] in self.old
 
     def test_entries_are_byte_identical(self):
         from oto.ledger.registry import fingerprint_config
@@ -202,27 +205,26 @@ class TestDeckIsVerbatim(unittest.TestCase):
                 # D1 rows are provenance transplants: the config's own
                 # fingerprint is the contract that keeps them consistent with
                 # what was measured (and with the seed overlay's fp).
-                self.assertEqual(p["fp"], fingerprint_config(p["config"]),
-                                 p["phase_id"])
-                self.assertIn("contraction_pattern", p, p["phase_id"])
+                assert p["fp"] == fingerprint_config(p["config"]), p["phase_id"]
+                assert "contraction_pattern" in p, p["phase_id"]
                 continue
-            self.assertEqual(p, self.old[p["phase_id"]], p["phase_id"])
+            assert p == self.old[p["phase_id"]], p["phase_id"]
 
     def test_no_duplicate_phase_ids(self):
         ids = [p["phase_id"] for p in self.new]
-        self.assertEqual(len(ids), len(set(ids)))
+        assert len(ids) == len(set(ids))
 
     def test_required_keys_present(self):
         for p in self.new:
             for k in ("phase_id", "label", "dtype", "shapes", "config",
                       "fp", "NumBenchmarks", "ScheduleName"):
-                self.assertIn(k, p, p.get("phase_id"))
+                assert k in p, p.get("phase_id")
 
     def test_every_target_cell_has_a_phase(self):
         covered = {cell_key(_fam(p["phase_id"]), s)
                    for p in self.new for s in p["shapes"]}
         missing = [c[2] for c in target_cells() if c[2] not in covered]
-        self.assertEqual(missing, [], f"cells with no deck phase: {missing}")
+        assert missing == [], f"cells with no deck phase: {missing}"
 
 
 if __name__ == "__main__":

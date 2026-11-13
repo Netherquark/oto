@@ -23,8 +23,7 @@ Public API: make_researcher(api_key, starter_text="", endpoint=None).
 from __future__ import annotations
 
 import os
-import sys
-from typing import Callable, Optional, Tuple
+from collections.abc import Callable
 
 try:
     import requests
@@ -39,7 +38,7 @@ _ANTHROPIC_WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search
                               "max_uses": 8}
 
 
-def _extract_api_key(starter_text: str = "") -> Tuple[str, str]:
+def _extract_api_key(starter_text: str = "") -> tuple[str, str]:
     """Read an API key from the starter text or environment.
 
     Returns ``(key, source)`` where source is one of ``starter``,
@@ -88,7 +87,6 @@ def _openai_compatible_research(key: str, endpoint: str, model: str,
         timeout=timeout,
     )
     if resp.status_code != 200:
-        print(f"research: HTTP {resp.status_code} from {endpoint}", file=sys.stderr)
         return ""
     data = resp.json()
     return (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
@@ -107,14 +105,13 @@ def _anthropic_research(key: str, model: str, query: str, timeout: int) -> str:
         timeout=timeout,
     )
     if resp.status_code != 200:
-        print(f"research: HTTP {resp.status_code} from Anthropic", file=sys.stderr)
         return ""
     blocks = resp.json().get("content", [])
     return "\n".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
 
 
 def make_researcher(api_key: str = "", starter_text: str = "",
-                    endpoint: Optional[str] = None) -> Callable[[str], str]:
+                    endpoint: str | None = None) -> Callable[[str], str]:
     """Return a research callable. No-op when no key/requests available."""
     if api_key:
         key, source = api_key, "arg"
@@ -145,8 +142,8 @@ def make_researcher(api_key: str = "", starter_text: str = "",
                     key, _DEFAULT_OPENAI_ENDPOINT,
                     model_override or "gpt-4o-mini-search-preview",
                     query, timeout)
-        except Exception as exc:
-            print(f"research: {exc.__class__.__name__}", file=sys.stderr)
+        except Exception:
+            pass
         return ""
 
     return research

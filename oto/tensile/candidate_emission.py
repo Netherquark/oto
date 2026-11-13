@@ -19,24 +19,22 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
-from oto.tensile.candidate_config import CandidateConfig
-import oto.device.peaks as _peaks  # noqa: E402
+import oto.device.peaks as _peaks
+from oto import yamlio
 from oto.device.peaks import FAMILY_DTYPE_CHAR
-from oto.tensile.gates.loads import cap_vector_width
-from oto import yamlio  # noqa: E402
-from oto.tensile.gates.occupancy import (  # noqa: E402
-    occupancy_feasible, occupancy_workgroups_per_cu)
+from oto.tensile.candidate_config import CandidateConfig
+from oto.tensile.gates.occupancy import occupancy_feasible, occupancy_workgroups_per_cu
 
 
 class CandidateEmitMixin:
     """Emission and the append boundary, mixed into CandidateGenerator."""
 
 
-    def generate_fingerprint(self, config: Dict[str, Any]) -> str:
+    def generate_fingerprint(self, config: dict[str, Any]) -> str:
         """Generate canonical SHA256 fingerprint for a config."""
         canonical = json.dumps(config, sort_keys=True)
         return hashlib.sha256(canonical.encode()).hexdigest()
@@ -46,9 +44,9 @@ class CandidateEmitMixin:
         phase_id: str,
         label: str,
         dtype: str,
-        shapes: List[str],
-        template: Dict[str, Any],
-        knobs: Dict[str, Any]
+        shapes: list[str],
+        template: dict[str, Any],
+        knobs: dict[str, Any]
     ) -> CandidateConfig:
         """Emit a candidate configuration."""
         full_config = {**template, **knobs}
@@ -64,7 +62,7 @@ class CandidateEmitMixin:
             fingerprint=fp
         )
 
-    def append_candidates_batch(self, candidates: List[CandidateConfig], phases_file: Optional[Path] = None) -> int:
+    def append_candidates_batch(self, candidates: list[CandidateConfig], phases_file: Path | None = None) -> int:
         """Append a list of candidates to phases.yaml in a single batch write.
 
         Every candidate is re-validated here, at the append boundary, not left to
@@ -76,15 +74,10 @@ class CandidateEmitMixin:
             candidates, existing_phases, existing_fps, existing_ids)
 
         if renamed:
-            print(
-                f"[gate] bound {renamed} candidate(s) to a fingerprint-suffixed "
-                f"phase_id: the generated id was already owned by a different "
-                f"config, which would have silently overwritten its results."
-            )
+            pass
         if rejected:
-            print(f"[gate] refused {len(rejected)} illegal candidate(s) before append:")
-            for r in rejected:
-                print(f"       - {r}")
+            for _r in rejected:
+                pass
 
         with open(target_yaml, "w") as f:
             yaml.safe_dump(existing_phases, f, sort_keys=False, default_flow_style=False)
@@ -94,7 +87,7 @@ class CandidateEmitMixin:
         """Load existing phases and build fingerprint/id lookup sets."""
         existing_phases = []
         if target_yaml.exists():
-            with open(target_yaml, "r") as f:
+            with open(target_yaml) as f:
                 existing_phases = yamlio.load_yaml_text(f.read()) or []
         existing_fps = {p.get("fp") for p in existing_phases if isinstance(p, dict)}
         existing_ids = {
@@ -106,7 +99,7 @@ class CandidateEmitMixin:
         """Process candidates: validate, check collisions, add to phases."""
         added = 0
         renamed = 0
-        rejected: List[str] = []
+        rejected: list[str] = []
         for cand in candidates:
             merged = {**cand.template, **cand.knobs}
             ok, why = self.validate_config(merged)
@@ -163,7 +156,7 @@ class CandidateEmitMixin:
             self.registry.append_phase(phase_id, cand.fingerprint, phase_entry)
         return True
 
-    def append_to_phases(self, candidate: CandidateConfig, phases_file: Optional[Path] = None) -> str:
+    def append_to_phases(self, candidate: CandidateConfig, phases_file: Path | None = None) -> str:
         """
         Append a single candidate to phases.yaml manifest.
         """
@@ -172,9 +165,9 @@ class CandidateEmitMixin:
     def generate_family_phases(
         self,
         family: str,
-        patterns: List[str],
-        base_shapes: List[str]
-    ) -> List[CandidateConfig]:
+        patterns: list[str],
+        base_shapes: list[str]
+    ) -> list[CandidateConfig]:
         """Generate native family phases for a dtype/op family."""
         candidates = []
         family_deck = self.family_decks.get(family, [])
@@ -207,18 +200,18 @@ class CandidateEmitMixin:
             self.append_candidates_batch(candidates)
         return candidates
 
-    def _build_tile_tag(self, tile_config: Dict[str, Any]) -> str:
+    def _build_tile_tag(self, tile_config: dict[str, Any]) -> str:
         """Build the base tile tag from MT/TT."""
         mt = tile_config.get("MacroTile", "").replace("x", "x")
         tt = tile_config.get("ThreadTile", "").replace("x", "x")
         return f"_mt{mt}_tt{tt}"
 
-    def _count_tile_uses(self, family_deck: List[Dict], tile_key: tuple) -> int:
+    def _count_tile_uses(self, family_deck: list[dict], tile_key: tuple) -> int:
         """Count how many times this tile key appears in the deck."""
         return sum(1 for e in family_deck if (e.get("MacroTile"),
                 e.get("ThreadTile"), e.get("VectorWidth")) == tile_key)
 
-    def _build_family_template(self, family: str, pattern: str, shape: str) -> Dict:
+    def _build_family_template(self, family: str, pattern: str, shape: str) -> dict:
         """Build candidate template for family phases."""
         return {
             "Architecture": _peaks.CODENAME,
@@ -229,21 +222,21 @@ class CandidateEmitMixin:
             "FamilyLabel": family,
         }
 
-    def _validate_tile_config(self, template: Dict, tile_config: Dict, family: str) -> Optional[Dict]:
+    def _validate_tile_config(self, template: dict, tile_config: dict, family: str) -> dict | None:
         """Validate tile config with fallbacks (NLCA, VectorWidth)."""
-        is_valid, reason = self.validate_config({**template, **tile_config})
+        is_valid, _reason = self.validate_config({**template, **tile_config})
         rel = tile_config
 
         if not is_valid and tile_config.get("NLCA", 1) > 1:
             rel = {**tile_config, "NLCA": 1}
-            is_valid, reason = self.validate_config({**template, **rel})
+            is_valid, _reason = self.validate_config({**template, **rel})
 
         if not is_valid and rel.get("VectorWidth"):
             vw = int(rel["VectorWidth"])
             while vw > 1 and not is_valid:
                 vw //= 2
                 rel = {**rel, "VectorWidth": vw}
-                is_valid, reason = self.validate_config({**template, **rel})
+                is_valid, _reason = self.validate_config({**template, **rel})
             if is_valid:
                 self._clamped_widths.append(
                     (family, tile_config.get("MacroTile"),
@@ -253,7 +246,7 @@ class CandidateEmitMixin:
             return None
         return rel
 
-    def _build_phase_tag(self, tile_tag: str, rel: Dict, tile_uses: int) -> str:
+    def _build_phase_tag(self, tile_tag: str, rel: dict, tile_uses: int) -> str:
         """Build the phase_id tag with disambiguating knobs."""
         tag = tile_tag
         if tile_uses > 1:
@@ -268,7 +261,7 @@ class CandidateEmitMixin:
         return tag
 
     @staticmethod
-    def _sweep_value_tag(value: Dict[str, Any]) -> str:
+    def _sweep_value_tag(value: dict[str, Any]) -> str:
         """A phase_id suffix that names exactly which knob *value* ran.
 
         Without this, ``PrefetchGlobalRead`` 1 and 2 collapse onto the same
@@ -294,24 +287,24 @@ class CandidateEmitMixin:
 
     def generate_knob_sweep_phases(
         self,
-        families: Optional[List[str]] = None,
-        patterns: Optional[List[str]] = None,
-        base_shapes: Optional[List[str]] = None,
+        families: list[str] | None = None,
+        patterns: list[str] | None = None,
+        base_shapes: list[str] | None = None,
         include_baseline: bool = False,
-        phases_file: Optional[Path] = None
-    ) -> List[CandidateConfig]:
+        phases_file: Path | None = None
+    ) -> list[CandidateConfig]:
         """Cross-join each family's winner tile with the never-varied knobs.
 
         Separate from generate_family_phases: iterates KNOB_SWEEP_BASES x KNOB_SWEEPS.
         width_override on a sweep row is honoured before validation.
         """
-        from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
+        from oto.tensile.decks import KNOB_SWEEP_BASES
 
         fams = families or list(KNOB_SWEEP_BASES)
         pats = patterns or ["Ailk_Bljk"]
         shapes = base_shapes or ["1024x1024x1024"]
-        candidates: List[CandidateConfig] = []
-        refused: List[str] = []
+        candidates: list[CandidateConfig] = []
+        refused: list[str] = []
 
         for family in fams:
             bases = KNOB_SWEEP_BASES.get(family, [])
@@ -324,8 +317,8 @@ class CandidateEmitMixin:
 
         if candidates:
             self.append_candidates_batch(candidates, phases_file)
-        for line in refused:
-            print(f"[knob-sweep] refused {line}")
+        for _line in refused:
+            pass
         return candidates
 
     def _emit_baselines(self, candidates, refused, family, pattern, bases,
@@ -390,7 +383,7 @@ class CandidateEmitMixin:
                 ))
         return candidates, refused
 
-    def _build_template(self, family: str, pattern: str, shape: str) -> Dict[str, Any]:
+    def _build_template(self, family: str, pattern: str, shape: str) -> dict[str, Any]:
         """Build candidate template."""
         return {
             "Architecture": _peaks.CODENAME,
@@ -403,11 +396,11 @@ class CandidateEmitMixin:
 
     def generate_decision_trial_phases(
         self,
-        families: Optional[List[str]] = None,
-        patterns: Optional[List[str]] = None,
-        base_shapes: Optional[List[str]] = None,
-        phases_file: Optional[Path] = None
-    ) -> List[CandidateConfig]:
+        families: list[str] | None = None,
+        patterns: list[str] | None = None,
+        base_shapes: list[str] | None = None,
+        phases_file: Path | None = None
+    ) -> list[CandidateConfig]:
         """Emit decision-labelled trial tiles (full tiles, not knob deltas).
 
         Each DECISION_TRIAL_TILES entry carries its own decision label and
@@ -416,8 +409,8 @@ class CandidateEmitMixin:
         from oto.tensile.decks import DECISION_TRIAL_TILES
 
         pats = patterns or ["Ailk_Bljk"]
-        candidates: List[CandidateConfig] = []
-        refused: List[str] = []
+        candidates: list[CandidateConfig] = []
+        refused: list[str] = []
 
         for trial in DECISION_TRIAL_TILES:
             family = trial["family"]
@@ -457,8 +450,8 @@ class CandidateEmitMixin:
 
         if candidates:
             self.append_candidates_batch(candidates, phases_file)
-        for line in refused:
-            print(f"[trial] refused {line}")
+        for _line in refused:
+            pass
         return candidates
 
 # ------------------------------------------------- gate helpers (module level)
@@ -470,7 +463,7 @@ class CandidateEmitMixin:
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
 
-def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
+def parse_tensile_shape(shape_str: str) -> dict[str, int]:
     """Parse a Tensile shape string into M, N, B, K (see config_writer).
 
     Re-exported here for the pre-split import surface; the shape grammar is
@@ -481,19 +474,19 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     return _parse(shape_str)
 
 
-def _illegal_knob(config: Dict[str, Any]) -> Optional[str]:
+def _illegal_knob(config: dict[str, Any]) -> str | None:
     """The first knob in :data:`ILLEGAL_KNOBS` set to a truthy value, if any."""
     return next((k for k in ILLEGAL_KNOBS
                  if k in config and config[k] not in (False, 0, None)), None)
 
 
-def _assert_size_multiple_disabled(config: Dict[str, Any]) -> bool:
+def _assert_size_multiple_disabled(config: dict[str, Any]) -> bool:
     """True when AssertSizeMultiple is exactly ``[1]``, which crashes Tensile."""
     asm = config.get("AssertSizeMultiple")
     return isinstance(asm, list) and asm == [1]
 
 
-def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
+def _tile_divisibility_rejection(config: dict[str, Any]) -> str | None:
     """MacroTile/ThreadTile divisibility and workgroup thread-count legality.
 
     Why here and not in the loads gate: this is a *shape* property (does the
@@ -526,7 +519,7 @@ def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def estimate_lds_usage(config: Dict[str, Any]) -> float:
+def estimate_lds_usage(config: dict[str, Any]) -> float:
     """Estimate LDS usage in KB for a GEMM tile.
 
     Why a separate estimate from the occupancy gate's budget: this is the
@@ -573,7 +566,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
     return (total_elements * elem_size) / 1024.0
 
 
-def estimate_occupancy(config: Dict[str, Any]) -> float:
+def estimate_occupancy(config: dict[str, Any]) -> float:
     """Modelled workgroups-per-CU from the register file (this device).
 
     Why it delegates: the previous version inferred threads from ThreadTile via

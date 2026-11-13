@@ -29,9 +29,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from oto.metrics.ab_audit import (  # noqa: E402
-    _CP_RE, _norm_macro_tile, norm_config, reproducible_band, verdict,
-)
+from oto.metrics.ab_audit import norm_config, reproducible_band, verdict
+from oto.metrics.ab_identity import _CP_RE, _norm_macro_tile
 
 
 class TestContractionPattern(unittest.TestCase):
@@ -41,24 +40,21 @@ class TestContractionPattern(unittest.TestCase):
             ("Cijk_Ailk_Bjlk_CB_MT128x64x8_SN_K1", "Ailk_Bjlk"),
             ("Cijk_Ailk_Bljk_SB_00", "Ailk_Bljk"),
         ):
-            self.assertEqual(_CP_RE.search(name).group(1), want, name)
+            assert _CP_RE.search(name).group(1) == want, name
 
     def test_transposed_and_nontransposed_do_not_collide(self):
         """The regression: an empty CP lets Bljk pair with Bjlk."""
         bljk = norm_config({}, "Cijk_Ailk_Bljk_SB_MT128x128x16_SN_K1")
         bjlk = norm_config({}, "Cijk_Ailk_Bjlk_CB_MT128x128x16_SN_K1")
-        self.assertNotEqual(bljk, bjlk)
+        assert bljk != bjlk
 
 
 class TestMacroTileNormalisation(unittest.TestCase):
     def test_native_spelling_includes_depth(self):
-        self.assertEqual(
-            _norm_macro_tile({"MacroTile": "128x128x16"}), "128x128x16")
+        assert _norm_macro_tile({"MacroTile": "128x128x16"}) == "128x128x16"
 
     def test_floor_spelling_splits_depth_out(self):
-        self.assertEqual(
-            _norm_macro_tile({"MacroTile": [128, 64], "DepthU": 16}),
-            "128x64x16")
+        assert _norm_macro_tile({"MacroTile": [128, 64], "DepthU": 16}) == "128x64x16"
 
     def test_both_spellings_agree(self):
         """Same kernel, two writers, one identity."""
@@ -72,7 +68,7 @@ class TestMacroTileNormalisation(unittest.TestCase):
              "VectorWidth": 2, "DepthU": 16, "GlobalSplitU": 1,
              "WorkGroupMapping": 4},
             "Cijk_Ailk_Bljk_SB_MT128x128x16_SN_K1")
-        self.assertEqual(native, floor)
+        assert native == floor
 
 
 class TestNormConfigIsConfigIdentity(unittest.TestCase):
@@ -83,7 +79,7 @@ class TestNormConfigIsConfigIdentity(unittest.TestCase):
                 "VectorWidth": 2, "DepthU": 16, "GlobalSplitU": 1,
                 "WorkGroupMapping": 4}
         gsu2 = dict(base, GlobalSplitU=2)
-        self.assertNotEqual(norm_config(base, fp), norm_config(gsu2, fp))
+        assert norm_config(base, fp) != norm_config(gsu2, fp)
 
     def test_name_alone_is_not_identity(self):
         """Why pairing cannot key on the solution name."""
@@ -94,8 +90,8 @@ class TestNormConfigIsConfigIdentity(unittest.TestCase):
         b = norm_config({"MacroTile": [64, 64], "ThreadTile": [4, 4],
                          "VectorWidth": 2, "DepthU": 16, "GlobalSplitU": 2,
                          "WorkGroupMapping": 4}, fp)
-        self.assertEqual(fp, fp)
-        self.assertNotEqual(a, b)
+        assert fp == fp
+        assert a != b
 
 
 class TestReproducibleBand(unittest.TestCase):
@@ -113,8 +109,8 @@ class TestReproducibleBand(unittest.TestCase):
         floor = [self._rec(100, 8, "a"), self._rec(200, 8, "b"),
                  self._rec(100, 8, "c"), self._rec(100, 8, "d")]
         band = reproducible_band(native, floor)
-        self.assertEqual(band["protocol_matched"]["n"], 2)
-        self.assertEqual(band["protocol_mismatched"]["n"], 2)
+        assert band["protocol_matched"]["n"] == 2
+        assert band["protocol_mismatched"]["n"] == 2
         self.assertAlmostEqual(band["protocol_matched"]["median_ratio"], 1.0)
 
     def test_identical_config_across_forms_is_not_evidence(self):
@@ -126,25 +122,23 @@ class TestReproducibleBand(unittest.TestCase):
         native = [self._rec(100, 1)]
         floor = [self._rec(50, 8)]
         band = reproducible_band(native, floor)
-        self.assertEqual(band["protocol_matched"]["n"], 0)
-        self.assertEqual(band["protocol_mismatched"]["n"], 1)
+        assert band["protocol_matched"]["n"] == 0
+        assert band["protocol_mismatched"]["n"] == 1
 
     def test_zero_floor_value_is_skipped(self):
-        self.assertEqual(
-            reproducible_band([self._rec(100, 8)], [self._rec(0, 8)])
-            ["protocol_matched"]["n"], 0)
+        assert reproducible_band([self._rec(100, 8)], [self._rec(0, 8)])["protocol_matched"]["n"] == 0
 
 
 class TestVerdict(unittest.TestCase):
     def test_boundary_is_a_tie(self):
-        self.assertEqual(verdict(5.0), "TIE")
-        self.assertEqual(verdict(-5.0), "TIE")
-        self.assertEqual(verdict(5.01), "WIN")
-        self.assertEqual(verdict(-5.01), "LOSS")
+        assert verdict(5.0) == "TIE"
+        assert verdict(-5.0) == "TIE"
+        assert verdict(5.01) == "WIN"
+        assert verdict(-5.01) == "LOSS"
 
     def test_band_is_configurable(self):
-        self.assertEqual(verdict(12.0, band_pct=20.2), "TIE")
-        self.assertEqual(verdict(21.0, band_pct=20.2), "WIN")
+        assert verdict(12.0, band_pct=20.2) == "TIE"
+        assert verdict(21.0, band_pct=20.2) == "WIN"
 
 
 def _cell_rec(family, side, gflops, tag, protocol="family"):
@@ -179,6 +173,7 @@ class TestCellsNotBeatingFloor(unittest.TestCase):
     def setUp(self):
         import shutil
         import tempfile
+
         from oto.ledger.registry import SQLiteRegistry
         from oto.metrics.analytics import AnalyticsEngine
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_abdelta_"))
@@ -191,22 +186,19 @@ class TestCellsNotBeatingFloor(unittest.TestCase):
         native = [_cell_rec("SS", 128, 101.0, "n_ss"),
                   _cell_rec("CC", 128, 260.0, "n_cc")]
         losers = self.engine.cells_not_beating_floor(native, floor)
-        self.assertEqual(set(losers), {"SS:128"})
-        self.assertEqual(losers["SS:128"]["verdict"], "TIE")
-        self.assertEqual(losers["SS:128"]["family"], "SS")
+        assert set(losers) == {"SS:128"}
+        assert losers["SS:128"]["verdict"] == "TIE"
+        assert losers["SS:128"]["family"] == "SS"
 
     def test_a_loss_is_reported(self):
         losers = self.engine.cells_not_beating_floor(
             [_cell_rec("SS", 128, 80.0, "n_ss")],
             [_cell_rec("SS", 128, 100.0, "f_ss")])
-        self.assertEqual(losers["SS:128"]["verdict"], "LOSS")
+        assert losers["SS:128"]["verdict"] == "LOSS"
 
     def test_no_floor_yields_the_empty_set(self):
         """Empty must read as "cannot judge", never as "everything won"."""
-        self.assertEqual(
-            self.engine.cells_not_beating_floor(
-                [_cell_rec("SS", 128, 100.0, "n_ss")], []),
-            {})
+        assert self.engine.cells_not_beating_floor([_cell_rec("SS", 128, 100.0, "n_ss")], []) == {}
 
 
 class TestLikeForLikeBasis(unittest.TestCase):
@@ -223,6 +215,7 @@ class TestLikeForLikeBasis(unittest.TestCase):
     def setUp(self):
         import shutil
         import tempfile
+
         from oto.ledger.registry import SQLiteRegistry
         from oto.metrics.analytics import AnalyticsEngine
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_l4l_"))
@@ -243,14 +236,14 @@ class TestLikeForLikeBasis(unittest.TestCase):
         deltas = self.engine.compute_native_vs_spoof_delta(
             [single, family_k], floor, agg="winner")
         entry = deltas[("S", "256x256x256", "cell_SS_256")]
-        self.assertEqual(entry["basis_protocol"], "family")
+        assert entry["basis_protocol"] == "family"
         # 98.5/124.1 = 0.794 -> LOSS outside the 5% band: the like-for-like
         # grading is honest even when it is unflattering.
-        self.assertEqual(entry["verdict"], "LOSS")
-        self.assertEqual(entry["native_value"], 98.5)
+        assert entry["verdict"] == "LOSS"
+        assert entry["native_value"] == 98.5
         # The mixed and isolated numbers stay visible, never graded.
-        self.assertEqual(entry["native_best_any_protocol"], 412.1)
-        self.assertEqual(entry["native_isolated_best"], 412.1)
+        assert entry["native_best_any_protocol"] == 412.1
+        assert entry["native_isolated_best"] == 412.1
 
     def test_partial_phase_never_grades(self):
         """A trio/partial container is excluded from the graded basis."""
@@ -259,8 +252,8 @@ class TestLikeForLikeBasis(unittest.TestCase):
         deltas = self.engine.compute_native_vs_spoof_delta(
             native, [_cell_rec("DD", 192, 21.4, "f_dd")], agg="winner")
         entry = deltas[("D", "192x192x192", "cell_DD_192")]
-        self.assertEqual(entry["native_value"], 21.0)
-        self.assertEqual(entry["native_best_any_protocol"], 77.8)
+        assert entry["native_value"] == 21.0
+        assert entry["native_best_any_protocol"] == 77.8
 
     def test_any_basis_reproduces_the_mixed_pairing(self):
         """protocol_basis='any' grades exactly like the pre-§R56.3 report."""
@@ -270,9 +263,9 @@ class TestLikeForLikeBasis(unittest.TestCase):
             [single, family_k], [_cell_rec("SS", 256, 124.1, "f_ss")],
             agg="winner", protocol_basis="any")
         entry = deltas[("S", "256x256x256", "cell_SS_256")]
-        self.assertEqual(entry["basis_protocol"], "any")
-        self.assertEqual(entry["verdict"], "WIN")
-        self.assertEqual(entry["native_value"], 412.1)
+        assert entry["basis_protocol"] == "any"
+        assert entry["verdict"] == "WIN"
+        assert entry["native_value"] == 412.1
 
     def test_unstamped_native_never_enters_the_family_basis(self):
         """A record without a stamp is UNKNOWN, and UNKNOWN cannot grade."""
@@ -280,7 +273,7 @@ class TestLikeForLikeBasis(unittest.TestCase):
         del unstamped["protocol"]
         deltas = self.engine.compute_native_vs_spoof_delta(
             [unstamped], [_cell_rec("SS", 256, 124.1, "f_ss")], agg="winner")
-        self.assertEqual(deltas, {})
+        assert deltas == {}
 
 
 if __name__ == "__main__":

@@ -21,15 +21,15 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-import yaml  # noqa: E402
+import yaml
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES, cube_side  # noqa: E402
-from oto.tensile.library_parity import (  # noqa: E402
+from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES, cube_side
+from oto.tensile.library_parity import (
+    load_pipeline_phases,
+    parity_report,
     phase_cells,
     phase_family,
     phases_cells,
-    load_pipeline_phases,
-    parity_report,
 )
 
 DECK = yaml.safe_load((REPO / "phases.yaml").read_text())
@@ -103,8 +103,7 @@ class TestPipelineManifestParity:
 
 class TestDivergenceDetection:
     def test_extra_cell_is_detected(self):
-        bad = list(DECK) + [_phase("phase_ss_96_probe", "SS",
-                                   ["96x96x96"], {"FamilyLabel": "SS", "DataType": "S"})]
+        bad = [*list(DECK), _phase("phase_ss_96_probe", "SS", ["96x96x96"], {"FamilyLabel": "SS", "DataType": "S"})]
         report = parity_report(bad)
         assert not report["parity_ok"]
         assert ("SS", "96x96x96") in report["extra"]

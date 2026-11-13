@@ -26,14 +26,15 @@ Public API: RegistryCore, fingerprint_config, _KERNEL_DB_REBUILD_STATUSES.
 """
 
 
-import sqlite3
 import json
 import os
+import sqlite3
 import sys
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
+from typing import Any
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
@@ -250,7 +251,7 @@ class RegistryCore:
                 pass
 
             conn.commit()
-    def create_run_dir(self, run_id: Optional[str] = None,
+    def create_run_dir(self, run_id: str | None = None,
                         allow_existing: bool = False) -> Path:
         """
         Create a new run directory and checkpoint it.
@@ -299,7 +300,7 @@ class RegistryCore:
             )
 
         return run_path
-    def update_run_status(self, run_id: str, status: str, metadata: Optional[Dict] = None) -> None:
+    def update_run_status(self, run_id: str, status: str, metadata: dict | None = None) -> None:
         """
         Update run status and metadata.
 
@@ -365,7 +366,7 @@ class RegistryCore:
 
 
 
-def fingerprint_config(config: Dict[str, Any]) -> str:
+def fingerprint_config(config: dict[str, Any]) -> str:
     """
     Generate a canonical fingerprint for a Tensile config.
 

@@ -28,7 +28,7 @@ HAS_LIBYAML, dump_yaml.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any
 
 import yaml
 
@@ -40,7 +40,7 @@ HAS_LIBYAML = bool(getattr(yaml, "__with_libyaml__", False))
 _LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 #: (path, size, mtime) -> parsed document.
-_CACHE: Dict[Tuple[str, int, int], Any] = {}
+_CACHE: dict[tuple[str, int, int], Any] = {}
 
 
 def load_yaml_text(text: str) -> Any:
@@ -55,7 +55,7 @@ def load_yaml_text(text: str) -> Any:
     return yaml.load(text, Loader=_LOADER)
 
 
-def load_yaml(path: Union[str, Path]) -> Any:
+def load_yaml(path: str | Path) -> Any:
     """Read and parse a YAML file.
 
     Args:
@@ -67,7 +67,7 @@ def load_yaml(path: Union[str, Path]) -> Any:
     return load_yaml_text(Path(path).read_text())
 
 
-def load_yaml_cached(path: Union[str, Path]) -> Any:
+def load_yaml_cached(path: str | Path) -> Any:
     """Read and parse a YAML file, memoised by its content stamp.
 
     Args:
@@ -98,7 +98,7 @@ def clear_cache() -> None:
     _CACHE.clear()
 
 
-def dump_yaml(payload: Any, path: Union[str, Path]) -> None:
+def dump_yaml(payload: Any, path: str | Path) -> None:
     """Write a YAML document the way the project writes them.
 
     Args:

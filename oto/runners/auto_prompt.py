@@ -33,12 +33,13 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from oto import yamlio  # noqa: E402
 import oto.device.peaks as _peaks
+from oto import yamlio
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+
 #: Re-measure the cells that previously ran with a config our own extractors got
 #: wrong. These measurements are the ones everything downstream trusts.
 QUESTION_ILLEGAL = "rerun_illegal"
@@ -70,10 +71,11 @@ class AutoPlan:
     mutations: int = DEFAULT_MUTATIONS
     #: True when no human was asked (no TTY / --yes). Reported, never hidden.
     assumed: bool = False
-    counts: Dict[str, int] = field(default_factory=dict)
+    counts: dict[str, int] = field(default_factory=dict)
 
     def summary(self) -> str:
-        yn = lambda b: "yes" if b else "no"  # noqa: E731
+        def yn(b):
+            return "yes" if b else "no"
         return (f"iterations={self.iterations} mutations={self.mutations} "
                 f"rerun_illegal={yn(self.rerun_illegal)} "
                 f"rerun_underspecified={yn(self.rerun_underspecified)} "
@@ -87,7 +89,7 @@ class AutoPlan:
                 or self.rerun_unreproducible)
 
 
-def _read_counts(base_dir: Any = None) -> Dict[str, int]:
+def _read_counts(base_dir: Any = None) -> dict[str, int]:
     """Live counts of each reference tier, best effort.
 
     Nothing here is cached or transcribed: the universe is the union of every
@@ -99,9 +101,8 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     question ("re-measure the N ILLEGAL ..."), and a wrong-but-plausible number
     is far better than refusing to start.
     """
-    from pathlib import Path
-    import yaml
     from collections import Counter
+    from pathlib import Path
 
     import oto.tensile.library as tlib
 
@@ -115,7 +116,7 @@ def _read_counts(base_dir: Any = None) -> Dict[str, int]:
     except Exception:
         return counts
 
-    universe: Dict[str, Any] = {}
+    universe: dict[str, Any] = {}
     for rid in chain:
         p = _runs_dir(base, _peaks.CODENAME) / rid / "phases_reference.yaml"
         try:

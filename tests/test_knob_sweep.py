@@ -32,13 +32,13 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.decks import (  # noqa: E402
+from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.tensile.candidate import CandidateGenerator
+from oto.tensile.decks import (
     DECISION_TRIAL_TILES,
     FAMILY_DECKS,
-    KNOB_SWEEPS,
     KNOB_SWEEP_BASES,
+    KNOB_SWEEPS,
 )
 
 SHAPE = "1024x1024x1024"
@@ -178,7 +178,7 @@ def test_nlca_needs_the_width_override(gen):
         ok, why = gen.validate_config(with_override)
         assert ok, f"{family} vw{width}+NLCA2 should be legal: {why}"
         # The widest tiles are the ones that cannot carry NLCA=2.
-        if family in ("SS",):
+        if family == "SS":
             ok_wide, _ = gen.validate_config(
                 _merged(family, base, {"NumLoadsCoalescedA": 2}, 4))
             assert not ok_wide, "SS vw4+NLCA2 was legal in §8.1 but not now"
@@ -358,7 +358,7 @@ def test_generated_ids_are_unique_and_self_describing(sandbox):
 def test_value_tag_names_the_key_not_the_row_label():
     """A NumLoadsCoalescedB candidate must not carry an id saying A."""
     tag = CandidateGenerator._sweep_value_tag({"NumLoadsCoalescedB": 2})
-    assert "NumLoadsCoalescedB2" == tag
+    assert tag == "NumLoadsCoalescedB2"
     tag = CandidateGenerator._sweep_value_tag(
         {"GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2})
     assert "GlobalLoadVectorWidthA2" in tag
@@ -514,8 +514,8 @@ def test_no_emitted_candidate_passes_only_the_lenient_gate(gen):
               for sweep in KNOB_SWEEPS
               if fam in sweep.get("families", [])
               for value in sweep["values"]]
-    for trial in DECISION_TRIAL_TILES:
-        checks.append((trial["family"], trial["knobs"], None, {}))
+    checks.extend((trial["family"], trial["knobs"], None, {})
+                  for trial in DECISION_TRIAL_TILES)
     assert len(checks) > 60, len(checks)
     for family, base, width_override, value in checks:
         merged = {**base, **value}

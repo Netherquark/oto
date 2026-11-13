@@ -16,21 +16,21 @@ from __future__ import annotations
 
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
+import oto.device.peaks as _peaks
 from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.policy import check_retirement_eligibility
 from oto.metrics.protocol import classify
-from oto.tensile.shape_order import ordered_shapes
-import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.shape_order import ordered_shapes
 
 
 class CorpusMixin:
     """Whole-corpus measurement loading, mixed into TensileDriver."""
 
-    def _load_analytics_from_run(self, run_dir: Optional[Path] = None,
-                                 protocol_basis: str = "family") -> List[CellAnalytics]:
+    def _load_analytics_from_run(self, run_dir: Path | None = None,
+                                 protocol_basis: str = "family") -> list[CellAnalytics]:
         """Load CellAnalytics from all run CSVs in a run directory.
 
         ``protocol_basis`` (§R56.3, default "family") restricts the analytics
@@ -77,8 +77,8 @@ class CorpusMixin:
                 all_analytics.append(analytics_obj)
 
         return all_analytics
-    def _load_analytics_from_registry(self, run_id: Optional[str] = None,
-                                      protocol_basis: str = "family") -> List[CellAnalytics]:
+    def _load_analytics_from_registry(self, run_id: str | None = None,
+                                      protocol_basis: str = "family") -> list[CellAnalytics]:
         """Load CellAnalytics straight from registry benchmark_result rows.
 
         For merged / draft-imported runs whose per-seed GFLOPS live only in the
@@ -98,7 +98,7 @@ class CorpusMixin:
         if not records:
             return all_analytics
 
-        by_phase: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        by_phase: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for rec in records:
             src_run = str(rec.get("run_id", "") or "")
             by_phase.setdefault((src_run, str(rec.get("phase_id", ""))), []).append(rec)
@@ -124,7 +124,7 @@ class CorpusMixin:
                     family=family, source_run=src_run))
 
         return all_analytics
-    def _native_run_dirs(self) -> List[Path]:
+    def _native_run_dirs(self) -> list[Path]:
         """Every native run directory on disk.
 
         <runs>/gfx900_ref_* is the spoof floor (the shipped gfx900
@@ -132,7 +132,7 @@ class CorpusMixin:
         """
         runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
-    def _registry_phase_records(self) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    def _registry_phase_records(self) -> list[tuple[str, list[dict[str, Any]]]]:
         """Native registry rows grouped per (run, phase), invocation-stamped.
 
         The rows of one phase prove which sides its invocation measured, so
@@ -145,14 +145,14 @@ class CorpusMixin:
             db_records = self.registry.read_records(record_type="benchmark_result")
         except Exception:
             return []
-        by_phase: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        by_phase: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for rec in db_records:
             if str(rec.get("arm") or "") == "spoof":
                 continue
             src_run = str(rec.get("run_id", "") or rec.get("source_run") or "")
             by_phase.setdefault(
                 (src_run, str(rec.get("phase_id", ""))), []).append(rec)
-        out: List[Tuple[str, List[Dict[str, Any]]]] = []
+        out: list[tuple[str, list[dict[str, Any]]]] = []
         for (src_run, phase_id), phase_recs in sorted(by_phase.items()):
             phase_family = extract_family_from_phase_id(phase_id)
             measured = ordered_shapes(
@@ -175,7 +175,7 @@ class CorpusMixin:
             out.append((src_run, stamped))
         return out
 
-    def _native_records_all_runs(self) -> List[Dict[str, Any]]:
+    def _native_records_all_runs(self) -> list[dict[str, Any]]:
         """Native arm for the acceptance comparison: the whole database.
 
         The native-vs-spoof comparison must never be scoped to a single run.
@@ -194,10 +194,10 @@ class CorpusMixin:
         GFLOPS) triples — the same measurement present in both a run CSV and a
         registry row — are collapsed so they cannot be double-counted.
         """
-        records: List[Dict[str, Any]] = []
-        seen: Set[Tuple[str, str, float]] = set()
+        records: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, float]] = set()
 
-        def _add(rec: Dict[str, Any], src_run: str) -> None:
+        def _add(rec: dict[str, Any], src_run: str) -> None:
             gf = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
             if gf <= 0:
                 return
@@ -220,8 +220,8 @@ class CorpusMixin:
                 _add(rec, src_run)
 
         return records
-    def _native_arm_provenance(self, native_records: List[Dict[str, Any]], agg: str,
-                               protocol_basis: str = "family") -> Dict[str, Any]:
+    def _native_arm_provenance(self, native_records: list[dict[str, Any]], agg: str,
+                               protocol_basis: str = "family") -> dict[str, Any]:
         """Cite the native arm scope in the report: which runs, how many cells."""
         runs = sorted({str(r.get("source_run") or r.get("run_id") or "") for r in native_records
                        if (r.get("source_run") or r.get("run_id"))})
@@ -234,7 +234,7 @@ class CorpusMixin:
             "n_records": len(native_records),
             "empty": not native_records,
         }
-    def _native_analytics_all_runs(self, protocol_basis: str = "family") -> List[CellAnalytics]:
+    def _native_analytics_all_runs(self, protocol_basis: str = "family") -> list[CellAnalytics]:
         """CellAnalytics for the whole native corpus (drives coverage/RED/ORANGE).
 
         Coverage must reflect every native candidate ever measured, not just the
@@ -244,7 +244,7 @@ class CorpusMixin:
         form contribute analytics; cross-form phases are excluded by
         construction rather than filtered after the fact.
         """
-        all_analytics: List[CellAnalytics] = []
+        all_analytics: list[CellAnalytics] = []
         for run_dir in self._native_run_dirs():
             all_analytics.extend(self._load_analytics_from_run(
                 run_dir, protocol_basis=protocol_basis))
@@ -261,7 +261,7 @@ class CorpusMixin:
         Returns number of newly retired records appended.
         """
         # Per (phase_id, fp): {run_dir_name: [gflops...]}
-        by_cell: Dict[Tuple[str, str], Dict[str, List[float]]] = {}
+        by_cell: dict[tuple[str, str], dict[str, list[float]]] = {}
         runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
         for run_dir in sorted(runs_dir.glob("run_*")):
             run_name = run_dir.name
@@ -271,7 +271,7 @@ class CorpusMixin:
                 dtype = self.analytics.extract_dtype_from_phase_id(phase_id)
                 records = self.analytics.load_benchmark_csv(csv_file)
                 cell_map = self.analytics.aggregate_by_cell(records, dtype_override=dtype)
-                for (cell_dtype, shape, fp), seeds in cell_map.items():
+                for (_cell_dtype, _shape, fp), seeds in cell_map.items():
                     key = (phase_id, fp)
                     by_cell.setdefault(key, {}).setdefault(run_name, []).extend(seeds)
 

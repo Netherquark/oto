@@ -24,21 +24,22 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import yaml
 
+import oto.device.peaks as _peaks
 from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES
 from oto.harness.coverage_map import _cell_family
 from oto.harness.kernel_db import read_kernel_db
 from oto.metrics.protocol import UNKNOWN, protocol_of
-from oto.tensile.library_parity import parity_report
-from oto.tensile.synthesis.db import DBMutator
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
+from oto.tensile.library_parity import parity_report
+from oto.tensile.synthesis.db import DBMutator
 
-def _tensile_candidates() -> List[str]:
+
+def _tensile_candidates() -> list[str]:
     cands = []
     for var in ("TENSILE_ROOT", "OTO_TENSILE_ROOT"):
         v = os.environ.get(var)
@@ -65,7 +66,7 @@ _TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
                        if os.path.isdir(os.path.join(c, "Tensile", "bin"))]
 
 # Shipped cells: (family, "SxSxS") for every family's FAMILY_SHAPES.
-SHIPPED_CELLS: Set[Tuple[str, str]] = {
+SHIPPED_CELLS: set[tuple[str, str]] = {
     (f, f"{s}x{s}x{s}") for f, ss in FAMILY_SHAPES.items() for s in ss
 }
 
@@ -78,17 +79,17 @@ def default_best_library_dest(base_dir: Path) -> Path:
     return Path(base_dir) / DEFAULT_BEST_LIBRARY_SUBDIR
 
 
-def _expand_tensile_root(root: str) -> List[str]:
+def _expand_tensile_root(root: str) -> list[str]:
     out = []
     for sub in ("", "projects/Tensile", "shared/Tensile",
                     "shared/tensile"):
         p = os.path.join(root, sub) if sub else root
         if os.path.isdir(os.path.join(p, "Tensile", "bin")):
             out.append(p)
-    return out if out else [root]
+    return out or [root]
 
 
-def _ensure_tensile_importable(tensile_root: Optional[Path] = None) -> None:
+def _ensure_tensile_importable(tensile_root: Path | None = None) -> None:
     roots = []
     if tensile_root is not None:
         roots += _expand_tensile_root(str(tensile_root))
@@ -100,7 +101,7 @@ def _ensure_tensile_importable(tensile_root: Optional[Path] = None) -> None:
     _ = __import__("Tensile.SolutionStructs", fromlist=["ProblemType"])
 
 
-def _best_row(rows: List[Dict[str, Any]], basis: str) -> Optional[Dict[str, Any]]:
+def _best_row(rows: list[dict[str, Any]], basis: str) -> dict[str, Any] | None:
     eligible = []
     for r in rows:
         p = protocol_of(r)
@@ -114,8 +115,8 @@ def _best_row(rows: List[Dict[str, Any]], basis: str) -> Optional[Dict[str, Any]
     return max(eligible, key=lambda r: float(r.get("gflops_median") or 0.0))
 
 
-def _cell_rows_from_db(db: Dict[str, Any], basis: str) -> Dict[Tuple[str, str], Dict[str, List[Dict[str, Any]]]]:
-    pools: Dict[Tuple[str, str], Dict[str, List[Dict[str, Any]]]] = {}
+def _cell_rows_from_db(db: dict[str, Any], basis: str) -> dict[tuple[str, str], dict[str, list[dict[str, Any]]]]:
+    pools: dict[tuple[str, str], dict[str, list[dict[str, Any]]]] = {}
     for run_id, rlist in db.items():
         is_floor = str(run_id).startswith("gfx900_ref")
         for r in rlist:
@@ -134,7 +135,7 @@ def _cell_rows_from_db(db: Dict[str, Any], basis: str) -> Dict[Tuple[str, str], 
             else:
                 pool["native_any"].append(rr)
                 p = protocol_of(r)
-                if basis == "any" or p == basis:
+                if basis in ("any", p):
                     pool["native_basis"].append(rr)
     return pools
 
@@ -197,9 +198,9 @@ def _provenance(cell, step, row, basis):
 
 
 def cell_solution_map(base_dir: Path, basis: str = "family",
-                      kernel_db_path: Optional[Path] = None) -> Tuple[
-        Dict[Tuple[str, str], Dict[str, Any]],
-        List[Dict[str, Any]], Dict[str, Any]]:
+                      kernel_db_path: Path | None = None) -> tuple[
+        dict[tuple[str, str], dict[str, Any]],
+        list[dict[str, Any]], dict[str, Any]]:
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
         _results_dir(base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
@@ -210,9 +211,9 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
     sched = mut._scheduler()
     from oto.tensile.gates.occupancy import ldspad_feasible
 
-    cell_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    refused: List[Dict[str, Any]] = []
-    stats: Dict[str, Any] = {
+    cell_map: dict[tuple[str, str], dict[str, Any]] = {}
+    refused: list[dict[str, Any]] = []
+    stats: dict[str, Any] = {
         "basis": basis, "cells": len(SHIPPED_CELLS),
         "native_basis_winners": 0, "native_any_winners": 0,
         "floor_winners": 0, "deck_fallbacks": 0, "refused": 0,
@@ -241,14 +242,14 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
     return cell_map, refused, stats
 
 
-def mut_key(cfg: Dict[str, Any]) -> str:
+def mut_key(cfg: dict[str, Any]) -> str:
     return DBMutator(".", None)._tile_key(cfg)
 
 
-def dedupe_configs(cell_map: Dict[Tuple[str, str], Dict[str, Any]]) -> Tuple[
-        Dict[str, List[Dict[str, Any]]], Dict[str, List[Tuple[str, str]]]]:
-    families: Dict[str, List[Dict[str, Any]]] = {}
-    cells_by_key: Dict[str, List[Tuple[str, str]]] = {}
+def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
+        dict[str, list[dict[str, Any]]], dict[str, list[tuple[str, str]]]]:
+    families: dict[str, list[dict[str, Any]]] = {}
+    cells_by_key: dict[str, list[tuple[str, str]]] = {}
     for cell, info in cell_map.items():
         cfg = info["config"]
         fam = cell[0]
@@ -260,10 +261,10 @@ def dedupe_configs(cell_map: Dict[Tuple[str, str], Dict[str, Any]]) -> Tuple[
     return families, cells_by_key
 
 
-def _problem_type_state(fam: str, tensile_root: Optional[Path] = None) -> Dict[str, Any]:
+def _problem_type_state(fam: str, tensile_root: Path | None = None) -> dict[str, Any]:
     _ensure_tensile_importable(tensile_root)
-    from Tensile.SolutionStructs import ProblemType
     from Tensile.LibraryIO import updateProblemDatatypes
+    from Tensile.SolutionStructs import ProblemType
     dtype_char = FAMILY_DTYPE_CHAR.get(fam, "S")
     is_hpa = "HPA" in fam
     is_hs = fam == "HS_HPA"
@@ -282,7 +283,7 @@ def _problem_type_state(fam: str, tensile_root: Optional[Path] = None) -> Dict[s
     return state
 
 
-def _state_sol(cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _state_sol(cfg: dict[str, Any]) -> dict[str, Any]:
     sol = dict(cfg)
     mt = [int(x) for x in str(cfg["MacroTile"]).split("x")]
     sol["MacroTile"] = mt[:2]
@@ -366,10 +367,10 @@ def logic_filename_hint(tensile_root, codename) -> str:
         return codename
 
 
-def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
+def emit_logic_yaml(cell_map: dict[tuple[str, str], dict[str, Any]],
                     dest_logic_dir: Path,
-                    tensile_root: Optional[Path] = None,
-                    codename: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+                    tensile_root: Path | None = None,
+                    codename: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if codename is None:
         codename = _default_codename()
     dest_logic_dir = Path(dest_logic_dir)
@@ -377,7 +378,7 @@ def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
     families, _ = dedupe_configs(cell_map)
     hint = logic_filename_hint(tensile_root, codename)
 
-    phases: List[Dict[str, Any]] = []
+    phases: list[dict[str, Any]] = []
     for fam in sorted(families):
         phase = _emit_one_family(fam, cell_map, families, dest_logic_dir,
                                  tensile_root, codename, hint)
@@ -387,9 +388,9 @@ def emit_logic_yaml(cell_map: Dict[Tuple[str, str], Dict[str, Any]],
     return phases, parity
 
 
-def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> Tuple[bool, List[str]]:
+def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> tuple[bool, list[str]]:
     anti_alias_passed = True
-    leak_files: List[str] = []
+    leak_files: list[str] = []
     for path in list(Path(logic_dir).glob("*.yaml")) + list(Path(final_lib_dir).glob("*")):
         if path.is_file():
             try:
@@ -402,7 +403,7 @@ def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> Tuple[bool, List[st
     return anti_alias_passed, leak_files
 
 
-def _tensile_env(tensile_root: Path) -> Dict[str, str]:
+def _tensile_env(tensile_root: Path) -> dict[str, str]:
     from oto.runners.toolchain import resolve_rocm_paths
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{tensile_root}:{env.get('PYTHONPATH', '')}".strip(":")
@@ -520,11 +521,11 @@ def _write_best_manifest(dest: Path, basis: str, cell_map, refused, stats, parit
     (dest / "best_effort_library.json").write_text(json.dumps(manifest, indent=2, default=str))
 
 
-def build_best_library(base_dir: Path, dest: Optional[Path] = None,
+def build_best_library(base_dir: Path, dest: Path | None = None,
                        basis: str = "family",
-                       tensile_root: Optional[Path] = None,
-                       kernel_db_path: Optional[Path] = None,
-                       codename: Optional[str] = None) -> Dict[str, Any]:
+                       tensile_root: Path | None = None,
+                       kernel_db_path: Path | None = None,
+                       codename: str | None = None) -> dict[str, Any]:
     if codename is None:
         codename = _default_codename()
     base_dir = Path(base_dir)
@@ -537,7 +538,7 @@ def build_best_library(base_dir: Path, dest: Optional[Path] = None,
 
     hint = logic_filename_hint(tensile_root, codename) if tensile_root else codename
     cell_map, refused, stats = cell_solution_map(base_dir, basis, kernel_db_path)
-    phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root, codename)
+    _phases, parity = emit_logic_yaml(cell_map, logic_dir, tensile_root, codename)
 
     anti_alias_passed, leak_files = anti_alias_scan(logic_dir, final_lib_dir)
 

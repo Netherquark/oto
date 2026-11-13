@@ -37,14 +37,15 @@ import json
 import os
 import sys
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks  # noqa: E402
+import oto.device.peaks as _peaks
 
 #: The derived fields worth showing: the LDS allocation Tensile computed and
 #: the register pools it allocated.
@@ -53,8 +54,8 @@ _LDS_FIELDS = ("DepthU", "_DepthULds", "LdsNumElements", "LdsNumElementsAlignedA
                "LdsPadA", "LdsPadB", "MaxOccupancy", "Reject")
 
 
-def _phase(config: Dict[str, Any], phase_id: str = "probe_oracle",
-           dtype: str = "S") -> Dict[str, Any]:
+def _phase(config: dict[str, Any], phase_id: str = "probe_oracle",
+           dtype: str = "S") -> dict[str, Any]:
     """A phase dict the driver can write a Tensile config from.
 
     The contraction pattern lives on the *phase*, not only in the config: the
@@ -68,7 +69,7 @@ def _phase(config: Dict[str, Any], phase_id: str = "probe_oracle",
             "fp": phase_id, "graded": False}
 
 
-def _capture_derived() -> Tuple[Any, List[Dict[str, Any]]]:
+def _capture_derived() -> tuple[Any, list[dict[str, Any]]]:
     """Patch Tensile's solution builder to record what it derived.
 
     Returns:
@@ -80,9 +81,9 @@ def _capture_derived() -> Tuple[Any, List[Dict[str, Any]]]:
     from Tensile.SolutionStructs import Solution
 
     original = Solution.assignDerivedParameters
-    seen: List[Dict[str, Any]] = []
+    seen: list[dict[str, Any]] = []
 
-    def wrapper(state: Dict[str, Any]) -> None:
+    def wrapper(state: dict[str, Any]) -> None:
         original(state)
         seen.append({k: state.get(k) for k in _LDS_FIELDS})
 
@@ -90,7 +91,7 @@ def _capture_derived() -> Tuple[Any, List[Dict[str, Any]]]:
     return original, seen
 
 
-def _launch_gate_verdict(phase: Dict[str, Any]) -> Optional[str]:
+def _launch_gate_verdict(phase: dict[str, Any]) -> str | None:
     """The launch boundary's own verdict on a phase, or None when it is legal.
 
     The driver refuses a phase with ``_launch_gate_refusal`` *before* it
@@ -103,8 +104,8 @@ def _launch_gate_verdict(phase: Dict[str, Any]) -> Optional[str]:
     return _launch_gate_refusal(None, phase)
 
 
-def probe_phase(phase: Dict[str, Any], base_dir: Optional[Path] = None
-                ) -> Dict[str, Any]:
+def probe_phase(phase: dict[str, Any], base_dir: Path | None = None
+                ) -> dict[str, Any]:
     """Ask Tensile whether a *phase* (a deck row) builds.
 
     The phase is written exactly the way the run writes it -- through the
@@ -139,8 +140,8 @@ def probe_phase(phase: Dict[str, Any], base_dir: Optional[Path] = None
     return _probe_written(config_path, phase.get("config", {}))
 
 
-def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
-                 shapes: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+def probe_config(config: dict[str, Any], base_dir: Path | None = None,
+                 shapes: Sequence[str] | None = None) -> dict[str, Any]:
     """Ask Tensile what it makes of a config.
 
     Args:
@@ -182,7 +183,7 @@ def probe_config(config: Dict[str, Any], base_dir: Optional[Path] = None,
     return _probe_written(config_path, config)
 
 
-def _probe_written(config_path: Path, config: Dict[str, Any]) -> Dict[str, Any]:
+def _probe_written(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     """Run Tensile over a written config and report what it decided."""
     from oto.checks.tensile_build import _init_tensile, probe_phase_config
 
@@ -193,7 +194,7 @@ def _probe_written(config_path: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     finally:
         from Tensile.SolutionStructs import Solution
         Solution.assignDerivedParameters = original
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "config": dict(config),
         "wrote": True,
         "gate_refusal": None,
@@ -209,7 +210,7 @@ def _probe_written(config_path: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _lds_bytes(state: Dict[str, Any]) -> int:
+def _lds_bytes(state: dict[str, Any]) -> int:
     """The LDS allocation Tensile derived, in bytes."""
     elements = state.get("LdsNumElements") or 0
     per_element = 4
@@ -219,14 +220,14 @@ def _lds_bytes(state: Dict[str, Any]) -> int:
             from Tensile.DataType import DataType
 
             per_element = DataType(dest).numBytes()
-        except Exception:  # noqa: BLE001 -- the byte count is a convenience
+        except Exception:
             pass
     return elements * per_element
 
 
-def _config_from_args(args: argparse.Namespace) -> Dict[str, Any]:
+def _config_from_args(args: argparse.Namespace) -> dict[str, Any]:
     """The config dict the CLI describes."""
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "Architecture": _peaks.CODENAME,
         "DataType": args.dtype,
         "FamilyLabel": args.family or args.dtype,
@@ -249,7 +250,7 @@ def _config_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     return config
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dtype", default="S", help="Tensile DataType char (S/D/H/C/Z)")
@@ -276,7 +277,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         deck = yaml.safe_load(phases_path.read_text()) or []
         row = next((p for p in deck if p.get("phase_id") == args.phase_id), None)
         if row is None:
-            print(f"no deck row named {args.phase_id!r}")
             return 1
         config = row.get("config", {})
     else:
@@ -285,28 +285,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     result = probe_config(config, base_dir=args.base_dir)
     if args.json:
         args.json.write_text(json.dumps(result, indent=1, default=str))
-    tensile = result["tensile"]
-    print(f"config      {config.get('DataType')} {config.get('MacroTile')} "
-          f"tt{config.get('ThreadTile')} vw{config.get('VectorWidth')} "
-          f"du{config.get('DepthU')}"
-          + (f" wgm{config.get('WorkGroupMapping')}" if config.get("WorkGroupMapping") else ""))
-    print(f"our gate    {'LEGAL' if not result.get('gate_refusal') else 'REFUSED'}"
-          + (f" -- {result['gate_refusal']}" if result.get("gate_refusal") else ""))
-    print(f"Tensile     {'BUILDS' if tensile.get('ok') else 'REFUSES'}"
-          f"  ({tensile.get('solutions')} solution(s))"
-          + (f"  -- {tensile.get('reason')}" if tensile.get("reason") else ""))
+    result["tensile"]
     derived = result.get("derived") or {}
     if derived:
-        print(f"LDS         {derived.get('LdsNumElements')} elements "
-              f"= {result.get('lds_bytes')} bytes"
-              f"  (A {derived.get('LdsNumElementsAlignedA')}, "
-              f"B {derived.get('LdsNumElementsAlignedB')}, "
-              f"blk {derived.get('LdsOffsetA_Blk')}/{derived.get('LdsOffsetB_Blk')})")
-        print(f"derived     depth {derived.get('DepthU')} (lds {derived.get('_DepthULds')}), "
-              f"pads {derived.get('LdsPadA')}/{derived.get('LdsPadB')}, "
-              f"maxOccupancy {derived.get('MaxOccupancy')}")
+        pass
     if derived.get("Reject"):
-        print(f"reject      {derived['Reject']}")
+        pass
     return 0
 
 

@@ -15,22 +15,25 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from oto.device.peaks import (FAMILY_DTYPES, FAMILY_SHAPES, PEAK_GFLOPS,
-                              REALISTIC_CEILINGS, THEORETICAL_PEAKS)
-from oto.metrics.analytics import (AnalyticsEngine, CellAnalytics,
-                                   FAMILY_TO_DTYPE)
+import oto.device.peaks as _peaks
+import oto.tensile.library as tlib
+from oto.device.peaks import (
+    FAMILY_DTYPES,
+    FAMILY_SHAPES,
+    PEAK_GFLOPS,
+    REALISTIC_CEILINGS,
+    THEORETICAL_PEAKS,
+)
+from oto.metrics.analytics import FAMILY_TO_DTYPE, CellAnalytics
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin
-
-import oto.tensile.library as tlib
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 
-__all__ = ["AcceptanceReporter", "ABVerdict", "AcceptanceReport"]
+__all__ = ["ABVerdict", "AcceptanceReport", "AcceptanceReporter"]
 
 #: The per-cell verdict fields serialized into the JSON report, in order. Each
 #: key equals the attribute name, so the dict is built by lookup rather than by
@@ -66,15 +69,15 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     def generate_acceptance_report(
         self,
         run_id: str,
-        ab_verdicts: List[ABVerdict],
-        all_analytics: List[CellAnalytics],
-        red_list: List[Dict[str, Any]],
+        ab_verdicts: list[ABVerdict],
+        all_analytics: list[CellAnalytics],
+        red_list: list[dict[str, Any]],
         red_threshold_pct: float = 50.0,
-        family_timing: Optional[Dict[str, Dict[str, Any]]] = None,
-        execution_timing: Optional[Dict[str, Any]] = None,
-        orange_list: Optional[List[Dict[str, Any]]] = None,
-        reference_run_id: Optional[str] = None,
-        native_arm: Optional[Dict[str, Any]] = None,
+        family_timing: dict[str, dict[str, Any]] | None = None,
+        execution_timing: dict[str, Any] | None = None,
+        orange_list: list[dict[str, Any]] | None = None,
+        reference_run_id: str | None = None,
+        native_arm: dict[str, Any] | None = None,
         reference_floor_status: str = "not attempted",
         reference_floor_authoritative: bool = True,
     ) -> AcceptanceReport:
@@ -116,7 +119,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             reference_floor_authoritative=reference_floor_authoritative,
         )
 
-    def _load_shipped_manifest(self) -> Dict[str, Any]:
+    def _load_shipped_manifest(self) -> dict[str, Any]:
         """Pinned (scan-once) gfx900 shipped-library manifest for this repo."""
         try:
             return tlib.load_shipped_manifest(self.base_dir)
@@ -125,11 +128,11 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
     def _family_cells(
         self,
-        all_analytics: List[CellAnalytics],
+        all_analytics: list[CellAnalytics],
         family: str,
         fam_lower: str,
-        short: Optional[str],
-    ) -> List[CellAnalytics]:
+        short: str | None,
+    ) -> list[CellAnalytics]:
         """Cells belonging to `family` (explicit prefix or dtype fallback)."""
         family_cells = [a for a in all_analytics
                         if str(a.family or "").upper() == family]
@@ -141,12 +144,12 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
     def _by_size_breakdown(
         self,
-        family_cells: List[CellAnalytics],
+        family_cells: list[CellAnalytics],
         ceiling: float,
         theoretical: float,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Per-kernel-size bucket: cells, best_median and % of ceiling/theoretical."""
-        by_size: Dict[str, Dict[str, Any]] = {}
+        by_size: dict[str, dict[str, Any]] = {}
         for a in family_cells:
             size = self._kernel_size_from_shape(a.shape)
             bucket = by_size.setdefault(size, {"cells": 0, "best_median": 0.0})
@@ -161,9 +164,9 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
     def _compute_family_coverage(
         self,
-        all_analytics: List[CellAnalytics],
-        shipped: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Dict[str, Any]]:
+        all_analytics: list[CellAnalytics],
+        shipped: dict[str, Any] | None = None
+    ) -> dict[str, dict[str, Any]]:
         """
         Compute per-family coverage of the gfx900 contract deck.
 
@@ -187,9 +190,9 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     def _family_coverage_entry(
         self,
         family: str,
-        all_analytics: List[CellAnalytics],
-        expected_kernels: Dict[str, int],
-    ) -> Dict[str, Any]:
+        all_analytics: list[CellAnalytics],
+        expected_kernels: dict[str, int],
+    ) -> dict[str, Any]:
         fam_lower = family.lower()
         short = FAMILY_TO_DTYPE.get(fam_lower)
 
@@ -246,11 +249,11 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
     def _compute_overall_pass(
         self,
-        ab_verdicts: List[ABVerdict],
-        red_list: List[Dict[str, Any]],
-        orange_list: List[Dict[str, Any]],
+        ab_verdicts: list[ABVerdict],
+        red_list: list[dict[str, Any]],
+        orange_list: list[dict[str, Any]],
         red_threshold_pct: float = 50.0,
-        reference_run_id: Optional[str] = None
+        reference_run_id: str | None = None
     ) -> bool:
         """Pass only if every gfx900 contract cell is covered and at/above threshold.
 
@@ -283,13 +286,13 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
 
     def _generate_summary(
         self,
-        ab_verdicts: List[ABVerdict],
-        red_list: List[Dict[str, Any]],
-        orange_list: List[Dict[str, Any]],
+        ab_verdicts: list[ABVerdict],
+        red_list: list[dict[str, Any]],
+        orange_list: list[dict[str, Any]],
         overall_pass: bool,
-        reference_run_id: Optional[str] = None,
+        reference_run_id: str | None = None,
         red_threshold_pct: float = 50.0,
-        execution_timing: Optional[Dict[str, Any]] = None
+        execution_timing: dict[str, Any] | None = None
     ) -> str:
         wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
         ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
@@ -320,7 +323,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             f"{timing}"
         )
 
-    def write_report(self, report: AcceptanceReport, output_path: Optional[Path] = None) -> None:
+    def write_report(self, report: AcceptanceReport, output_path: Path | None = None) -> None:
         """Write acceptance report to JSON and HTML files."""
         if output_path is None:
             output_path = _results_dir(self.base_dir, _peaks.CODENAME) / "acceptance_report.json"

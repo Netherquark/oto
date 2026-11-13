@@ -26,12 +26,12 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import (  # noqa: E402
+from oto.device.peaks import (
     LDS_PER_CU_KB,
     MAX_WAVES_PER_CU,
     NUM_SIMDS_PER_CU,
 )
-from oto.harness import asm_occupancy as ao  # noqa: E402
+from oto.harness import asm_occupancy as ao
 
 # The AMD/ORNL GFX9 table, VGPR/thread -> waves/SIMD. Reproduced here rather
 # than imported because it is the oracle this module is calibrated against.
@@ -39,7 +39,7 @@ ORNL_TABLE = {24: 10, 28: 9, 32: 8, 36: 7, 40: 6,
               48: 5, 64: 4, 84: 3, 128: 2, 256: 1}
 
 
-@pytest.mark.parametrize("vgprs,expected", sorted(ORNL_TABLE.items()))
+@pytest.mark.parametrize(("vgprs", "expected"), sorted(ORNL_TABLE.items()))
 def test_waves_per_simd_matches_the_hardware_table(vgprs, expected):
     assert ao.waves_per_simd(vgprs) == expected
 
@@ -74,11 +74,13 @@ def test_binder_picks_the_smallest_bound():
     # 119 VGPRs -> 2 waves/SIMD = 8/CU; 8 KB LDS with 256 threads allows
     # 8 wg x 4 waves = 32/CU. The register file is what bound.
     binder, waves = ao.binding_resource(119, 8192, 256)
-    assert binder == "VGPR" and waves == 8
+    assert binder == "VGPR"
+    assert waves == 8
     # 40 VGPRs -> 6 waves/SIMD = 24/CU; a 65536 B tile allows one 4-wave
     # workgroup, so LDS is what bound.
     binder, waves = ao.binding_resource(40, 65536, 256)
-    assert binder == "LDS" and waves == 4
+    assert binder == "LDS"
+    assert waves == 4
 
 
 def test_tied_bounds_are_reported_not_broken_by_declaration_order():

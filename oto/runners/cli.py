@@ -13,14 +13,13 @@ Public API: main.
 from __future__ import annotations
 
 import argparse
-import statistics
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+import oto.device.peaks as _peaks
 from oto.metrics.analytics import CellAnalytics
 from oto.runners import flags
 from oto.runners.driver import TensileDriver
-import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
 
 #: Stage names/numbers that only read the registry or prior runs and must
@@ -51,7 +50,7 @@ def _ends_after_preflight(args, stage: set) -> bool:
             and not (stage - PREFLIGHT_STAGES))
 
 
-def _stage_preflight(driver, args, stage) -> Optional[int]:
+def _stage_preflight(driver, args, stage) -> int | None:
     """Stage 1: Phase-0 preflight. Returns an exit code, or None to continue.
 
     ``--preflight`` alone stops here; as a gate for a later stage it returns None
@@ -65,22 +64,22 @@ def _stage_preflight(driver, args, stage) -> Optional[int]:
     return 0 if _ends_after_preflight(args, stage) else None
 
 
-def _stage_report(driver, args, stage) -> Optional[int]:
+def _stage_report(driver, args, stage) -> int | None:
     """Stage 7: regenerate the acceptance report from prior runs."""
     if args.report is None and "7" not in stage and "report" not in stage:
         return None
-    result = driver.regenerate_report(args.report if args.report else None,
+    result = driver.regenerate_report(args.report or None,
                                      native_agg=args.native_agg,
                                      protocol_basis=args.protocol_basis)
     return 0 if result else 1
 
 
-def _stage_best_library(driver, args, stage) -> Optional[int]:
+def _stage_best_library(driver, args, stage) -> int | None:
     """Build a best-effort device TensileLibrary.dat from the full db."""
     if (args.best_library is None and "library" not in stage
             and "best-library" not in stage and "best_library" not in stage):
         return None
-    dest = args.best_library if args.best_library else None
+    dest = args.best_library or None
     # Default to the across-all-runs view ("any") unless the caller explicitly
     # chose a protocol basis on the command line.
     if "--protocol-basis" in sys.argv or "--protocol_basis" in sys.argv:
@@ -88,36 +87,33 @@ def _stage_best_library(driver, args, stage) -> Optional[int]:
     else:
         basis = "any"
     result = driver.synthesize_best_library(dest, protocol_basis=basis)
-    print(f"Best-effort library result: {result}")
     return 0 if result.get("status") != "failed" else 1
 
-def _stage_generate_device_docs(driver, args, stage) -> Optional[int]:
+def _stage_generate_device_docs(driver, args, stage) -> int | None:
     """Generate device-specific docs via agent-1 + agent-2."""
     if (args.generate_device_docs is None and "generate-device-docs" not in stage
             and "generate_device_docs" not in stage):
         return None
-    starter = args.generate_device_docs if args.generate_device_docs else None
+    starter = args.generate_device_docs or None
     result = driver.generate_device_docs(starter)
-    print(f"Device docs result: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
-def _stage_synthesis(driver, args, stage) -> Optional[int]:
+def _stage_synthesis(driver, args, stage) -> int | None:
     """Stage 6: emit the family logic files and build the library."""
     if not (args.synthesize or "6" in stage or "synthesis" in stage
             or "build" in stage):
         return None
     result = driver.synthesize_library()
-    print(f"Stage 6 Synthesis complete: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
-def _stage_candidate_plan(driver, args, stage) -> Optional[int]:
+def _stage_candidate_plan(driver, args, stage) -> int | None:
     """Stage 2: manifest summary only -- no execution, no run minted."""
     if not ("2" in stage or "candidate" in stage):
         return None
     phases = driver.load_phases_manifest()
-    fam_counts: Dict[str, int] = {}
+    fam_counts: dict[str, int] = {}
     for p in phases:
         lbl = str(p.get("label", ""))
         fam = "?"
@@ -126,13 +122,12 @@ def _stage_candidate_plan(driver, args, stage) -> Optional[int]:
                 fam = f
                 break
         fam_counts[fam] = fam_counts.get(fam, 0) + 1
-    print(f"Candidate plan: {len(phases)} phases in phases.yaml")
-    for fam, n in sorted(fam_counts.items()):
-        print(f"  {fam}: {n}")
+    for _fam, _n in sorted(fam_counts.items()):
+        pass
     return 0
 
 
-def _stage_retirement(driver, args, stage) -> Optional[int]:
+def _stage_retirement(driver, args, stage) -> int | None:
     """Stage 4: retirement sweep for stable cells (registry-only)."""
     if not ("4" in stage or "retirement" in stage):
         return None
@@ -140,7 +135,7 @@ def _stage_retirement(driver, args, stage) -> Optional[int]:
     return 0
 
 
-def _stage_analytics(driver, args, stage) -> Optional[int]:
+def _stage_analytics(driver, args, stage) -> int | None:
     """Stage 5: per-dtype analytics summary for the latest run (registry-only)."""
     if not ("5" in stage or "analytics" in stage):
         return None
@@ -152,20 +147,17 @@ def _stage_analytics(driver, args, stage) -> Optional[int]:
     analytics = driver._load_analytics_from_run(
         run_dir if run_dir is not None and run_dir.exists() else None)
     if not analytics:
-        print("No analytics records available for the latest run.")
         return 1
-    by_dtype: Dict[str, List[CellAnalytics]] = {}
+    by_dtype: dict[str, list[CellAnalytics]] = {}
     for a in analytics:
         by_dtype.setdefault(a.dtype, []).append(a)
-    for dt, lst in sorted(by_dtype.items()):
-        med = [a.median_gflops for a in lst]
-        below = sum(1 for a in lst if a.is_below_ceiling)
-        print(f"[{dt}] cells={len(lst)} best={max(med):.1f} GFLOPS "
-               f"median={statistics.median(med):.1f} below_ceiling={below}")
+    for _dt, lst in sorted(by_dtype.items()):
+        [a.median_gflops for a in lst]
+        sum(1 for a in lst if a.is_below_ceiling)
     return 0
 
 
-def _stage_gfx900_reference(driver, args, stage) -> Optional[int]:
+def _stage_gfx900_reference(driver, args, stage) -> int | None:
     """The one-time shipped-floor reference benchmark (recalled forever)."""
     if not args.gfx900_reference:
         return None
@@ -173,11 +165,10 @@ def _stage_gfx900_reference(driver, args, stage) -> Optional[int]:
     result = driver.run_gfx900_reference(refresh=args.refresh, limit=args.limit,
                                         ref_shapes=ref_shapes, resume=args.resume,
                                         release_held=args.release_under_specified)
-    print(f"gfx900 reference run: {result}")
     return 0 if result.get("status") in ("completed", "noop") else 1
 
 
-def _match_family(label: str, fam_filter: List[str]) -> bool:
+def _match_family(label: str, fam_filter: list[str]) -> bool:
     """True when a label's family is in the filter.
 
     Why HH is special-cased: the HPA variants are distinct families with
@@ -192,20 +183,20 @@ def _match_family(label: str, fam_filter: List[str]) -> bool:
     return False
 
 
-def _match_shape(shapes: List[str], shape_filter: List[str]) -> bool:
+def _match_shape(shapes: list[str], shape_filter: list[str]) -> bool:
     """True when any wanted shape appears among a phase's shape strings."""
     return any(sh in shapes or any(sh in s for s in shapes)
                for sh in shape_filter)
 
 
-def _match_targets(driver, args) -> List[Dict[str, Any]]:
+def _match_targets(driver, args) -> list[dict[str, Any]]:
     """Filter the manifest by the explicit / family / pattern / shape filters."""
     manifest = driver.load_phases_manifest()
     matched = []
 
     fam_filter = [f.upper() for f in args.family] if args.family else None
-    pat_filter = args.pattern if args.pattern else None
-    shape_filter = args.shape if args.shape else None
+    pat_filter = args.pattern or None
+    shape_filter = args.shape or None
 
     target_keys = set(args.targets or [])
 
@@ -229,17 +220,15 @@ def _match_targets(driver, args) -> List[Dict[str, Any]]:
     return matched
 
 
-def _stage_benchmark(driver, args) -> Optional[int]:
+def _stage_benchmark(driver, args) -> int | None:
     """Stage 3: execute the matched targets, then emit the acceptance report."""
     matched = _match_targets(driver, args)
 
     if args.dry_run:
-        print(f"Matched {len(matched)} targets in manifest:")
-        for t in matched:
-            print(f"  - {t.get('phase_id')}: {t.get('label')} (shapes: {t.get('shapes')})")
+        for _t in matched:
+            pass
         return 0
 
-    print(f"Executing {len(matched)} matched targets across Stage 3 benchmark...")
     results = []
     executed_count = 0
     for target in matched:
@@ -250,31 +239,28 @@ def _stage_benchmark(driver, args) -> Optional[int]:
         if res.get("status") not in ("interrupted", "skipped_by_user"):
             executed_count += 1
         if driver._finish_after_iteration:
-            print("End-after-iteration requested, halting target execution")
             break
 
     final_status = "interrupted" if driver._stop_requested else "completed"
-    run_meta: Dict[str, Any] = {"targets_executed": executed_count}
+    run_meta: dict[str, Any] = {"targets_executed": executed_count}
     if driver._finish_after_iteration:
         run_meta["end_after_iteration"] = True
     driver.registry.update_run_status(driver.run_dir.name, final_status, run_meta)
-    print(f"Completed {executed_count} targets (run status: {final_status})")
 
     driver.generate_acceptance_report()
     return 0
 
 
-def _stage_native(driver, args) -> Optional[int]:
+def _stage_native(driver, args) -> int | None:
     """The native-only auto loop (no reference floor)."""
     result = driver.run_auto(args.budget, args.mutation_budget,
                             opt_in_identical_skip=not args.force,
                             release_held=args.release_under_specified,
                             skip_reference=True)
-    print(f"Native-only auto loop complete: {result}")
     return 0 if result.get("converged") else 1
 
 
-def _stage_auto(driver, args) -> Optional[int]:
+def _stage_auto(driver, args) -> int | None:
     """The --auto loop, after asking the user the four questions.
 
     Why the plan owns the decisions: the four answers (re-measure illegal?
@@ -305,7 +291,6 @@ def _stage_auto(driver, args) -> Optional[int]:
                             mutation_budget=plan.mutations,
                             opt_in_identical_skip=not args.force,
                             release_held=args.release_under_specified)
-    print(f"7-Stage Auto loop complete: {result}")
     return 0 if result.get("converged") else 1
 
 

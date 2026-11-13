@@ -45,15 +45,16 @@ import json
 import re
 import sys
 from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.harness.kernel_db import read_kernel_db  # noqa: E402
-from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
+from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.harness.kernel_db import read_kernel_db
 from oto.runners.paths import results_rel
 
 DEFAULT_DB_REL = results_rel("analysis", "kernel_db.json")
@@ -62,7 +63,7 @@ DEFAULT_DB_REL = results_rel("analysis", "kernel_db.json")
 #: (WorkGroupMapping, LdsPad, StaggerU, ...) is deliberately absent: those are
 #: not in ``kernel_db`` rows, and their coverage question is owned by
 #: ``oto.tools.deck_review legality`` and ``allruns.py``.
-AXES: Tuple[str, ...] = (
+AXES: tuple[str, ...] = (
     "MacroTile", "MacroTile area", "ThreadTile", "ThreadTile area",
     "DepthU", "VectorWidth", "GlobalSplitU", "WorkGroup",
 )
@@ -89,12 +90,12 @@ FAMILY_ALIASES = {
 _FAMILY_ORDER = {f: i for i, f in enumerate(FAMILY_SHAPES)}
 
 
-def _ints(value: Any) -> Tuple[int, ...]:
+def _ints(value: Any) -> tuple[int, ...]:
     """The integers in a kernel_db tile field (``'[128, 128]'`` or ``'8'``)."""
     return tuple(int(x) for x in re.findall(r"-?\d+", str(value or "")))
 
 
-def _raw(row: Dict[str, Any], key: str) -> Optional[str]:
+def _raw(row: dict[str, Any], key: str) -> str | None:
     """A row's value for one axis, or None when it carries no usable value."""
     value = row.get(key)
     if value is None:
@@ -103,13 +104,13 @@ def _raw(row: Dict[str, Any], key: str) -> Optional[str]:
     return None if text in ("", "None", "0") else text
 
 
-def _tile_area(row: Dict[str, Any], key: str) -> Optional[int]:
+def _tile_area(row: dict[str, Any], key: str) -> int | None:
     """Product of a two-element tile field, or None."""
     parts = _ints(row.get(key))
     return parts[0] * parts[1] if len(parts) >= 2 else None
 
 
-def _axis_value(row: Dict[str, Any], axis: str) -> Optional[Any]:
+def _axis_value(row: dict[str, Any], axis: str) -> Any | None:
     """One row's value on a named axis from ``AXES``."""
     if axis == "MacroTile area":
         return _tile_area(row, "MacroTile")
@@ -118,7 +119,7 @@ def _axis_value(row: Dict[str, Any], axis: str) -> Optional[Any]:
     return _raw(row, axis)
 
 
-def _gflops(row: Dict[str, Any]) -> float:
+def _gflops(row: dict[str, Any]) -> float:
     """The row's seed-median GFLOP/s, falling back to its best seed."""
     for key in ("gflops_median", "gflops_best"):
         try:
@@ -130,21 +131,21 @@ def _gflops(row: Dict[str, Any]) -> float:
     return 0.0
 
 
-def _group_label(row: Dict[str, Any]) -> str:
+def _group_label(row: dict[str, Any]) -> str:
     """``family/typecode`` -- the attribution-aware census group."""
     family = str(row.get("family") or "?").upper()
     typecode = str(row.get("typecode") or "?").upper()
     return f"{family}/{typecode}"
 
 
-def _group_sort(label: str) -> Tuple[int, str]:
+def _group_sort(label: str) -> tuple[int, str]:
     family, _, typecode = label.partition("/")
     return (_FAMILY_ORDER.get(family, len(_FAMILY_ORDER)), typecode)
 
 
-def load_rows(db_path: Optional[str] = None, side: str = "native",
-              base_dir: Optional[Path] = None) \
-        -> List[Dict[str, Any]]:
+def load_rows(db_path: str | None = None, side: str = "native",
+              base_dir: Path | None = None) \
+        -> list[dict[str, Any]]:
     """Flatten ``kernel_db.json`` into rows tagged ``side`` (native / floor).
 
     ``side`` is ``native`` (default: every ``run_*`` key), ``floor`` (every
@@ -156,25 +157,25 @@ def load_rows(db_path: Optional[str] = None, side: str = "native",
     if side not in ("native", "floor", "all"):
         raise ValueError(f"side must be native/floor/all, not {side!r}")
     database = read_kernel_db(str(path))
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for run_id, run_rows in database.items():
         run_side = "floor" if run_id.startswith("gfx900_ref") else "native"
-        if side != "all" and run_side != side:
+        if side not in ("all", run_side):
             continue
-        for row in run_rows:
-            rows.append({**row, "side": run_side, "run": run_id})
+        rows.extend({**row, "side": run_side, "run": run_id}
+                    for row in run_rows)
     return rows
 
 
-def group_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+def group_rows(rows: Iterable[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """``{family/typecode: rows}`` in canonical family order."""
-    groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         groups[_group_label(row)].append(row)
     return {label: groups[label] for label in sorted(groups, key=_group_sort)}
 
 
-def resolve_family(token: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+def resolve_family(token: str | None) -> tuple[str | None, str | None]:
     """``(family, typecode)`` for a family name, typecode or deck alias.
 
     ``HH_HPA`` / ``HS_HPA`` are not ``kernel_db`` family values; they resolve to
@@ -187,18 +188,18 @@ def resolve_family(token: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
     return FAMILY_ALIASES.get(key, (key, None))
 
 
-def axis_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def axis_census(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     """One record per (group, axis, value): how often, and the best median.
 
     ``best`` is the maximum seed-median GFLOP/s measured at that value, so an
     axis value the corpus has never scored cannot be read as a winner. Missing
     or zero-score axis values are skipped, not counted as a value.
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for label, group in group_rows(rows).items():
         family, _, typecode = label.partition("/")
         for axis in AXES:
-            stats: Dict[Any, Dict[str, Any]] = {}
+            stats: dict[Any, dict[str, Any]] = {}
             for row in group:
                 if _gflops(row) <= 0:
                     continue
@@ -209,32 +210,33 @@ def axis_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
                                                 "best": 0.0})
                 stat["n"] += 1
                 stat["best"] = max(stat["best"], _gflops(row))
-            for stat in stats.values():
-                out.append({"family": family, "typecode": typecode,
-                            "axis": axis, **stat})
+            out.extend(
+                {"family": family, "typecode": typecode,
+                 "axis": axis, **stat}
+                for stat in stats.values())
     return out
 
 
-def _geometry(row: Dict[str, Any]) -> Tuple[Optional[str], ...]:
+def _geometry(row: dict[str, Any]) -> tuple[str | None, ...]:
     return tuple(_raw(row, key) for key in GEOMETRY_KEYS)
 
 
-def _geometry_fields(row: Dict[str, Any]) -> Dict[str, Optional[str]]:
+def _geometry_fields(row: dict[str, Any]) -> dict[str, str | None]:
     """A row's six geometry knobs under their output field names."""
-    return dict(zip(GEOMETRY_FIELDS, _geometry(row)))
+    return dict(zip(GEOMETRY_FIELDS, _geometry(row), strict=False))
 
 
-def geometry_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def geometry_census(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     """One record per (group, full geometry): row count and best median.
 
     A "geometry" is the tuple in ``GEOMETRY_KEYS`` -- what the deck calls a
     tile, not a cell. Unscored rows and rows with no geometry at all are
     skipped.
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for label, group in group_rows(rows).items():
         family, _, typecode = label.partition("/")
-        stats: Dict[Tuple[Optional[str], ...], Dict[str, Any]] = {}
+        stats: dict[tuple[str | None, ...], dict[str, Any]] = {}
         for row in group:
             if _gflops(row) <= 0:
                 continue
@@ -247,21 +249,22 @@ def geometry_census(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
             stats[geometry]["n"] += 1
             stats[geometry]["best"] = max(stats[geometry]["best"],
                                           _gflops(row))
-        for stat in stats.values():
-            out.append({"family": family, "typecode": typecode, **stat})
+        out.extend(
+            {"family": family, "typecode": typecode, **stat}
+            for stat in stats.values())
     return out
 
 
-def _attempt(row: Dict[str, Any]) -> Dict[str, Any]:
+def _attempt(row: dict[str, Any]) -> dict[str, Any]:
     """The compact per-attempt record printed by ``cell_history``."""
     return {"gflops": _gflops(row), "n_seeds": row.get("n_seeds"),
             "phase": row.get("phase"), "run": row.get("run"),
             **_geometry_fields(row)}
 
 
-def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
-                 typecode: Optional[str] = None, top: int = 12) \
-        -> Dict[str, Any]:
+def cell_history(rows: Sequence[dict[str, Any]], family: str, side: int,
+                 typecode: str | None = None, top: int = 12) \
+        -> dict[str, Any]:
     """Every geometry measured on ``family:side``, best median first.
 
     ``typecode`` restricts the history to one block (``HHS`` for HH_HPA,
@@ -285,7 +288,7 @@ def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
         if _gflops(row) <= 0:
             continue
         (floor if row.get("side") == "floor" else native).append(row)
-    stats: Dict[Tuple[Optional[str], ...], Dict[str, Any]] = {}
+    stats: dict[tuple[str | None, ...], dict[str, Any]] = {}
     for row in native:
         geometry = _geometry(row)
         if geometry not in stats:
@@ -307,11 +310,11 @@ def cell_history(rows: Sequence[Dict[str, Any]], family: str, side: int,
             "floor_best": floor_rows[0] if floor_rows else None}
 
 
-def _fmt(value: Optional[Any]) -> str:
+def _fmt(value: Any | None) -> str:
     return "-" if value is None else str(value)
 
 
-def _geometry_text(record: Dict[str, Any]) -> str:
+def _geometry_text(record: dict[str, Any]) -> str:
     return (f"MT={_fmt(record.get('macro_tile'))} "
             f"TT={_fmt(record.get('thread_tile'))} "
             f"DU={_fmt(record.get('depth_u'))} "
@@ -320,14 +323,13 @@ def _geometry_text(record: Dict[str, Any]) -> str:
             f"WG={_fmt(record.get('work_group'))}")
 
 
-def _print_axes(records: Sequence[Dict[str, Any]], top: int) -> None:
+def _print_axes(records: Sequence[dict[str, Any]], top: int) -> None:
     """Print one line per (group, axis), values ranked by best median."""
-    by_group: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    by_group: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         by_group[f"{record['family']}/{record['typecode']}"].append(record)
     for label in sorted(by_group, key=_group_sort):
-        print(f"\n### {label}")
-        by_axis: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        by_axis: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for record in by_group[label]:
             by_axis[record["axis"]].append(record)
         for axis in AXES:
@@ -336,44 +338,36 @@ def _print_axes(records: Sequence[Dict[str, Any]], top: int) -> None:
             if not values:
                 continue
             shown = values if top <= 0 else values[:top]
-            cells = " | ".join(f"{_fmt(v['value'])} {v['best']:.1f} "
+            " | ".join(f"{_fmt(v['value'])} {v['best']:.1f} "
                                f"(n={v['n']})" for v in shown)
-            print(f"  {axis:16s} {len(values):3d} values: {cells}")
 
 
-def _print_geometries(records: Sequence[Dict[str, Any]], top: int) -> None:
+def _print_geometries(records: Sequence[dict[str, Any]], top: int) -> None:
     """Print each group's geometries, best median first."""
-    by_group: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    by_group: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         by_group[f"{record['family']}/{record['typecode']}"].append(record)
     for label in sorted(by_group, key=_group_sort):
         values = sorted(by_group[label], key=lambda r: -r["best"])
-        print(f"\n### {label}: {len(values)} distinct geometries")
         shown = values if top <= 0 else values[:top]
-        for record in shown:
-            print(f"  {record['best']:9.1f}  n={record['n']:5d}  "
-                  f"{_geometry_text(record)}")
+        for _record in shown:
+            pass
 
 
-def _print_cell(history: Dict[str, Any]) -> None:
+def _print_cell(history: dict[str, Any]) -> None:
     """Print one cell's geometry history and the floor reference."""
-    print(f"### {history.get('label', history['cell'])}  "
-          f"native rows={history['n_attempts']}  "
-          f"geometries={history['n_geometries']}")
     floor = history.get("floor_best")
     if floor:
-        print(f"  floor best {floor['gflops']:8.1f}  {_geometry_text(floor)}")
+        pass
     for record in history["geometries"]:
-        seeds = f"n={record['n_seeds']}" if record.get("n_seeds") else ""
-        print(f"  {record['gflops']:9.1f}  rows={record['n']:4d} {seeds:7s}  "
-              f"{_geometry_text(record)}")
+        f"n={record['n_seeds']}" if record.get("n_seeds") else ""
 
 
-def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]],
-             family: Optional[str], typecode: Optional[str],
-             side: Optional[int] = None) -> Dict[str, Any]:
+def _payload(args: argparse.Namespace, rows: Sequence[dict[str, Any]],
+             family: str | None, typecode: str | None,
+             side: int | None = None) -> dict[str, Any]:
     """The ``--json`` document for the arguments in force."""
-    payload: Dict[str, Any] = {"meta": {"db": str(args.db),
+    payload: dict[str, Any] = {"meta": {"db": str(args.db),
                                         "family": family,
                                         "typecode": typecode}}
     if side is not None:
@@ -389,7 +383,7 @@ def _payload(args: argparse.Namespace, rows: Sequence[Dict[str, Any]],
     return payload
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", type=Path, default=None,
                     help="repo root override (default: this file's parent of package)")
@@ -407,7 +401,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     help="write the same data as JSON to this path")
     args = ap.parse_args(argv)
 
-    side: Optional[int] = None
+    side: int | None = None
     if args.cell:
         token, _, cell_side = args.cell.partition(":")
         family, typecode = resolve_family(token)

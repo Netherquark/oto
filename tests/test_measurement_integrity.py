@@ -25,11 +25,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 import oto.metrics.ab_audit as ab_audit
-import oto.tensile.gates.vgpr_model as vgpr_model  # noqa: E402
-import oto.tensile.candidate as candidate  # noqa: E402
-from oto.metrics.telemetry import HEADER, TelemetrySampler  # noqa: E402
-from oto.tools.consolidate import _TENSILE_ROOT, dtype_bytes  # noqa: E402
+import oto.tensile.candidate as candidate
+import oto.tensile.gates.vgpr_model as vgpr_model
+from oto.metrics.telemetry import HEADER, TelemetrySampler
+from oto.tools.consolidate import _TENSILE_ROOT, dtype_bytes
 
 if _TENSILE_ROOT and str(_TENSILE_ROOT) not in sys.path:
     sys.path.insert(0, str(_TENSILE_ROOT))
@@ -46,23 +48,18 @@ class TestDtypeByteTable(unittest.TestCase):
     def test_single_dtype_families_match_tensile(self):
         for family, char in self.SINGLE_DTYPE.items():
             with self.subTest(family=family):
-                self.assertIsNotNone(
-                    dtype_bytes(char), f"Tensile has no dtype for char {char}")
-                self.assertEqual(
-                    vgpr_model.FAMILY_BYTES_PER_ELEMENT[family], dtype_bytes(char),
-                    f"{family}: scheduler table disagrees with Tensile numBytes()")
+                assert dtype_bytes(char) is not None, f"Tensile has no dtype for char {char}"
+                assert vgpr_model.FAMILY_BYTES_PER_ELEMENT[family] == dtype_bytes(char), f"{family}: scheduler table disagrees with Tensile numBytes()"
 
     def test_complex_double_is_16_bytes(self):
         """The exact defect: ZZ was 8, which let VectorWidth 2 through."""
-        self.assertEqual(dtype_bytes("Z"), 16)
-        self.assertEqual(vgpr_model.FAMILY_BYTES_PER_ELEMENT["ZZ"], 16)
+        assert dtype_bytes("Z") == 16
+        assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["ZZ"] == 16
 
     def test_zz_vector_width_capped_at_one(self):
         for mt, tt in (("64x64x16", "4x4"), ("128x128x16", "8x8")):
             with self.subTest(macro=mt):
-                self.assertLessEqual(
-                    candidate.cap_vector_width("ZZ", mt, tt), 1,
-                    "complex double must not admit VectorWidth 2")
+                assert candidate.cap_vector_width("ZZ", mt, tt) <= 1, "complex double must not admit VectorWidth 2"
 
     def test_load_gate_dtype_table_matches_tensile(self):
         """The classic-load gate carries its own dtype row, and it had drifted.
@@ -80,54 +77,40 @@ class TestDtypeByteTable(unittest.TestCase):
         for char in ("S", "D", "H", "B", "Z", "C"):
             with self.subTest(char=char):
                 want = dtype_bytes(char)
-                self.assertIsNotNone(want, f"Tensile has no dtype {char}")
-                self.assertEqual(
-                    LOAD_DTYPE_INFO[char]["bytes"], want,
-                    f"{char}: load gate says {LOAD_DTYPE_INFO[char]['bytes']} B, "
-                    f"Tensile numBytes() says {want}")
-                self.assertEqual(int(LOAD_DTYPE_INFO[char]["reg"] * 4), want,
-                                 f"{char}: reg is not numBytes/4")
+                assert want is not None, f"Tensile has no dtype {char}"
+                assert LOAD_DTYPE_INFO[char]["bytes"] == want, f"{char}: load gate says {LOAD_DTYPE_INFO[char]['bytes']} B, " f"Tensile numBytes() says {want}"
+                assert int(LOAD_DTYPE_INFO[char]["reg"] * 4) == want, f"{char}: reg is not numBytes/4"
 
     def test_mixed_precision_families_governed_by_widest_operand(self):
         """HS/HS_HPA load a single alongside a half; HH_HPA loads half."""
-        self.assertEqual(
-            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS"],
-            dtype_bytes("S"), "HS is governed by its single operand")
-        self.assertEqual(
-            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS_HPA"],
-            dtype_bytes("S"), "HS_HPA is governed by its single operand")
-        self.assertEqual(
-            vgpr_model.FAMILY_BYTES_PER_ELEMENT["HH_HPA"],
-            dtype_bytes("H"), "HH_HPA is governed by its half operand")
+        assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS"] == dtype_bytes("S"), "HS is governed by its single operand"
+        assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS_HPA"] == dtype_bytes("S"), "HS_HPA is governed by its single operand"
+        assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["HH_HPA"] == dtype_bytes("H"), "HH_HPA is governed by its half operand"
 
     def test_allruns_shares_the_same_table(self):
         """allruns.py carried its own copy and drifted to the same wrong ZZ."""
         import oto.tools.allruns as allruns
-        self.assertEqual(allruns.DTYPE_BYTES["Z"], dtype_bytes("Z"))
+        assert allruns.DTYPE_BYTES["Z"] == dtype_bytes("Z")
         for family, byte_width in vgpr_model.FAMILY_BYTES_PER_ELEMENT.items():
             with self.subTest(family=family):
-                self.assertEqual(
-                    allruns.DTYPE_BYTES[allruns.FAMILY_CHAR[family]], byte_width,
-                    f"{family} disagrees between allruns and scheduler")
+                assert allruns.DTYPE_BYTES[allruns.FAMILY_CHAR[family]] == byte_width, f"{family} disagrees between allruns and scheduler"
 
 
 class TestPhaseFamily(unittest.TestCase):
     """The certainty tier is only as good as this mapping."""
 
     def test_autotuner_phases_are_auto(self):
-        self.assertEqual(ab_audit.phase_family("phase_auto_0_S_1000x1000x1000_9"),
-                         "auto")
+        assert ab_audit.phase_family("phase_auto_0_S_1000x1000x1000_9") == "auto"
 
     def test_all_deck_namings_are_one_generator(self):
         for pid in ("phase_ss_Ailk_Bjlk_mt128x128x16_tt8x8_vw2_wgm4_alu",
                     "phase_hh_Ailk_Bjlk_mt128x128x16_tt8x8_vw4_wgm4_alu",
                     "phase_ss_gfx900_Ailk_Bjlk_mt128-tt8-vw2-du16-gsu1-88dde43f"):
             with self.subTest(phase=pid):
-                self.assertEqual(ab_audit.phase_family(pid), "deck",
-                                 "deck sweeps must not be split by prefix")
+                assert ab_audit.phase_family(pid) == "deck", "deck sweeps must not be split by prefix"
 
     def test_missing_phase_id_is_unknown_not_deck(self):
-        self.assertEqual(ab_audit.phase_family(""), "unknown")
+        assert ab_audit.phase_family("") == "unknown"
 
 
 class TestTelemetryIsAppendOnly(unittest.TestCase):
@@ -136,7 +119,7 @@ class TestTelemetryIsAppendOnly(unittest.TestCase):
             p = Path(d) / "telemetry.csv"
             p.write_text(HEADER + "\n1,2,3,4,5,6,7,8,phase_x\n")
             s = TelemetrySampler(p)
-            self.assertEqual(s._resolve_log_path(), p)
+            assert s._resolve_log_path() == p
 
     def test_legacy_schema_is_not_appended_to(self):
         """Appending 9-field rows to an 8-column file yields an unparseable CSV."""
@@ -147,15 +130,15 @@ class TestTelemetryIsAppendOnly(unittest.TestCase):
             p.write_text(legacy + "1,2,3,4,5,6,7,8\n")
             s = TelemetrySampler(p)
             chosen = s._resolve_log_path()
-            self.assertNotEqual(chosen, p, "must step aside from a legacy file")
-            self.assertEqual(chosen.suffix, ".csv")
+            assert chosen != p, "must step aside from a legacy file"
+            assert chosen.suffix == ".csv"
             # The previous data is left exactly as it was.
-            self.assertEqual(p.read_text(), legacy + "1,2,3,4,5,6,7,8\n")
+            assert p.read_text() == legacy + "1,2,3,4,5,6,7,8\n"
 
     def test_missing_file_is_used_directly(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "telemetry.csv"
-            self.assertEqual(TelemetrySampler(p)._resolve_log_path(), p)
+            assert TelemetrySampler(p)._resolve_log_path() == p
 
 
 class TestRunDirIsNotSilentlyReused(unittest.TestCase):
@@ -169,7 +152,7 @@ class TestRunDirIsNotSilentlyReused(unittest.TestCase):
             run = reg.create_run_dir("run_fixed")
             # Stand in for a phase that has already written its results.
             (run / "phase_x").mkdir()
-            with self.assertRaises(FileExistsError):
+            with pytest.raises(FileExistsError):
                 reg.create_run_dir("run_fixed")
 
     def test_explicit_reuse_is_allowed_and_keeps_data(self):
@@ -178,9 +161,7 @@ class TestRunDirIsNotSilentlyReused(unittest.TestCase):
             reg.create_run_dir("run_fixed")
             (reg.runs_dir / "run_fixed" / "marker.txt").write_text("keep")
             reg.create_run_dir("run_fixed", allow_existing=True)
-            self.assertEqual(
-                (reg.runs_dir / "run_fixed" / "marker.txt").read_text(), "keep",
-                "continuing a run must not clear what is already there")
+            assert (reg.runs_dir / "run_fixed" / "marker.txt").read_text() == "keep", "continuing a run must not clear what is already there"
 
     def test_fresh_run_dir_is_fine(self):
         with tempfile.TemporaryDirectory() as d:
@@ -191,7 +172,7 @@ class TestRunDirIsNotSilentlyReused(unittest.TestCase):
 
 class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
     def test_rerun_refuses_existing_benchmark_csvs(self):
-        import oto.runners.benchmark as _bench  # noqa: E402
+        import oto.runners.benchmark as _bench
 
         with tempfile.TemporaryDirectory() as d:
             phase_out = Path(d) / "phase_test"
@@ -202,12 +183,12 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
             class _Stub:
                 tensile_root = Path(d)
 
-            with self.assertRaises(FileExistsError):
+            with pytest.raises(FileExistsError):
                 _bench.BenchmarkMixin._run_tensile_benchmark(
                     _Stub(), Path(d) / "cfg.yaml", phase_out, 60)
 
     def test_empty_phase_dir_is_allowed(self):
-        import oto.runners.benchmark as _bench  # noqa: E402
+        import oto.runners.benchmark as _bench
 
         with tempfile.TemporaryDirectory() as d:
             phase_out = Path(d) / "phase_fresh"
@@ -226,7 +207,7 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
             # than raising; the point is that the guard did not fire.
             result = _bench.BenchmarkMixin._run_tensile_benchmark(
                 _Stub(Path(d)), Path(d) / "cfg.yaml", phase_out, 5)
-            self.assertIsInstance(result, dict)
+            assert isinstance(result, dict)
 
 
 class TestLockedFloorIsSwappedNotDeleted(unittest.TestCase):
@@ -235,9 +216,8 @@ class TestLockedFloorIsSwappedNotDeleted(unittest.TestCase):
         src = (Path(__file__).resolve().parent.parent
                / "oto" / "tools" / "consolidate_install.py").read_text()
         body = src.split("def install(", 1)[1]
-        self.assertNotIn("rmtree(live_lock)", body,
-                         "install() must archive the old lock, not delete it")
-        self.assertIn("superseded_locks", body)
+        assert "rmtree(live_lock)" not in body, "install() must archive the old lock, not delete it"
+        assert "superseded_locks" in body
 
 
 if __name__ == "__main__":

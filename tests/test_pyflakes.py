@@ -8,11 +8,10 @@ unused locals, or empty f-strings.
 """
 from __future__ import annotations
 
-import re
 import os
+import re
 import subprocess
 import sys
-
 
 WARN = re.compile(r"(.+?):(\d+):\d+: '(.+?)' imported but unused")
 UNUSED_RE = re.compile(r"redefinition of unused")
@@ -68,8 +67,8 @@ def _changed_python_files() -> list:
 
 def test_pyflakes_dangerous_categories_zero():
     """All four dangerous pyflakes categories must be zero."""
-    files = [f for f in __import__("subprocess").run(
-        ["git", "ls-files", "*.py"], capture_output=True, text=True).stdout.split()]
+    files = list(__import__("subprocess").run(
+        ["git", "ls-files", "*.py"], capture_output=True, text=True).stdout.split())
     if os.environ.get("OTO_GUARD_FILES") == "1":
         # The fast path: check what you touched, not the whole tree.
         changed = set(_changed_python_files())

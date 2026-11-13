@@ -18,14 +18,10 @@ Public API: see ``__all__``.
 
 import hashlib
 import json
-import re
-import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
-from oto.device.peaks import FAMILY_DTYPES, FAMILY_DTYPE_CHAR
 from oto.runners.paths import results_rel
 
 #: Where the pinned shipped manifest is cached, relative to the project root.
@@ -34,27 +30,49 @@ MANIFEST_PATH = results_rel("gfx900_shipped_manifest.json")
 # The shipped-library parse and the spoof-phase emitter live in their own module
 # so the manifest cache, the tier triage and the identity helpers here are not
 # buried under a binary .dat parser.
-from oto.tensile.shipped_library import (  # noqa: E402
-    _all_rocm_prefixes, _CANON, _MT, _resolve_rocm, CONTRACTION_PATTERNS,
-    SHIPPED_FAMILIES, emit_spoof_phases, find_gfx900_dat_files,
-    parse_shipped_kernels, shipped_kernel_config, shipped_kernel_knobs)
+from oto.tensile.shipped_library import (
+    CONTRACTION_PATTERNS,
+    SHIPPED_FAMILIES,
+    _all_rocm_prefixes,
+    _resolve_rocm,
+    emit_spoof_phases,
+    find_gfx900_dat_files,
+    parse_shipped_kernels,
+    shipped_kernel_config,
+    shipped_kernel_knobs,
+)
 
 __all__ = [
-    "CONTRACTION_PATTERNS", "MANIFEST_PATH", "SHIPPED_FAMILIES", "emit_spoof_phases",
-    "find_gfx900_dat_files", "parse_shipped_kernels", "shipped_kernel_config",
-    "shipped_kernel_knobs", "load_shipped_manifest", "latest_reference_run_id",
-    "phase_key", "config_fingerprint", "load_rerun_manifest", "tier_for",
-    "apply_rerun_tiers", "reference_chain", "TIER_KEEP", "TIER_FIRST",
-    "TIER_HELD", "TIER_LAST", "TIER_DROP",
+    "CONTRACTION_PATTERNS",
+    "MANIFEST_PATH",
+    "SHIPPED_FAMILIES",
+    "TIER_DROP",
+    "TIER_FIRST",
+    "TIER_HELD",
+    "TIER_KEEP",
+    "TIER_LAST",
+    "apply_rerun_tiers",
+    "config_fingerprint",
+    "emit_spoof_phases",
+    "find_gfx900_dat_files",
+    "latest_reference_run_id",
+    "load_rerun_manifest",
+    "load_shipped_manifest",
+    "parse_shipped_kernels",
+    "phase_key",
+    "reference_chain",
+    "shipped_kernel_config",
+    "shipped_kernel_knobs",
+    "tier_for",
 ]
 
 
-def _find_shipped_dats(prefix: Path) -> List[Path]:
+def _find_shipped_dats(prefix: Path) -> list[Path]:
     """Candidate .dat files under one ROCm prefix."""
     return find_gfx900_dat_files(prefix)
 
 
-def _parse_dat_filename(df: Path) -> Optional[Tuple[str, str]]:
+def _parse_dat_filename(df: Path) -> tuple[str, str] | None:
     """(family, pattern) from a TensileLibrary dat filename, or None."""
     parts = df.name.split("_")
     try:
@@ -78,7 +96,7 @@ def _scan_one_dat(
     fam: str,
     pat: str,
     prefix: Path
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Parse one .dat -> kernel list + metadata dict, or None if parse fails."""
     kernels = parse_shipped_kernels(df)
     if not kernels:
@@ -94,9 +112,9 @@ def _scan_one_dat(
     }
 
 
-def _build_fam_patterns(scanned: List[Dict[str, Any]]) -> Dict[str, Dict[str, Set[str]]]:
+def _build_fam_patterns(scanned: list[dict[str, Any]]) -> dict[str, dict[str, set[str]]]:
     """Aggregate kernels by family and pattern from scanned dat entries."""
-    fam_patterns: Dict[str, Dict[str, Set[str]]] = {}
+    fam_patterns: dict[str, dict[str, set[str]]] = {}
     for s in scanned:
         fam = fam_patterns.setdefault(s["family"], {})
         fam.setdefault(s["pattern"], set()).update(s["kernels"])
@@ -104,15 +122,15 @@ def _build_fam_patterns(scanned: List[Dict[str, Any]]) -> Dict[str, Dict[str, Se
 
 
 def _build_families(
-    fam_patterns: Dict[str, Dict[str, Set[str]]],
-    scanned: List[Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
+    fam_patterns: dict[str, dict[str, set[str]]],
+    scanned: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     """Per-family per-pattern kernel lists and source prefixes.
 
     `scanned` supplies the rocm prefixes each (family, pattern) was found under,
     so one account can share a kernel that lives in several ROCm installs.
     """
-    families: Dict[str, Dict[str, Any]] = {}
+    families: dict[str, dict[str, Any]] = {}
     for fam, pats in fam_patterns.items():
         fam_info = {}
         for pattern in CONTRACTION_PATTERNS:
@@ -128,11 +146,11 @@ def _build_families(
     return families
 
 
-def _scan_dat_library() -> Dict[str, Any]:
+def _scan_dat_library() -> dict[str, Any]:
     """Scan installed gfx900 TensileLibrary into manifest dict."""
     active_rocm = _resolve_rocm()
     prefixes = _all_rocm_prefixes()
-    scanned: List[Dict[str, Any]] = []
+    scanned: list[dict[str, Any]] = []
     total_kernels = 0
     for prefix in prefixes:
         for df in _find_shipped_dats(prefix):
@@ -162,7 +180,7 @@ def _scan_dat_library() -> Dict[str, Any]:
     }
 
 
-def load_shipped_manifest(base_dir: Path, refresh: bool = False) -> Dict[str, Any]:
+def load_shipped_manifest(base_dir: Path, refresh: bool = False) -> dict[str, Any]:
     """Return the pinned gfx900 shipped-library manifest (compute-once, pin).
 
     First load scans the system dat and writes the cache; later loads reuse it
@@ -183,7 +201,7 @@ def load_shipped_manifest(base_dir: Path, refresh: bool = False) -> Dict[str, An
     return manifest
 
 
-def latest_reference_run_id(registry) -> Optional[str]:
+def latest_reference_run_id(registry) -> str | None:
     """Return the most recently *completed* gfx900 reference run id, if any."""
     import sqlite3
     try:
@@ -203,7 +221,7 @@ def latest_reference_run_id(registry) -> Optional[str]:
     return None
 
 
-def phase_key(phase: Dict[str, Any]) -> str:
+def phase_key(phase: dict[str, Any]) -> str:
     """Stable identity for a phase, independent of parsed knob values.
 
     `phase_id` embeds the knobs that `_parse_kernel_knobs` derived, so any fix to
@@ -220,7 +238,7 @@ def phase_key(phase: Dict[str, Any]) -> str:
     return "k_" + hashlib.sha1(name.encode()).hexdigest()[:12]
 
 
-def config_fingerprint(phase: Dict[str, Any]) -> str:
+def config_fingerprint(phase: dict[str, Any]) -> str:
     """Content hash of everything that determines the measured kernel.
 
     A prior measurement may only be reused when this matches the value recorded
@@ -292,7 +310,7 @@ UNDERSPECIFIED_TIERS = (TIER_HELD, TIER_LAST)
 UNRUNNABLE_TIERS = (TIER_HELD, TIER_DROP)
 
 
-def load_rerun_manifest(base_dir: Path) -> Optional[Dict[str, Any]]:
+def load_rerun_manifest(base_dir: Path) -> dict[str, Any] | None:
     """Load the audited re-run triage, or None when absent/unreadable."""
     try:
         with open(Path(base_dir) / RERUN_MANIFEST_PATH) as f:
@@ -304,20 +322,20 @@ def load_rerun_manifest(base_dir: Path) -> Optional[Dict[str, Any]]:
     return doc
 
 
-def tier_for(phase: Dict[str, Any],
-             manifest: Optional[Dict[str, Any]]) -> str:
+def tier_for(phase: dict[str, Any],
+             manifest: dict[str, Any] | None) -> str:
     """Triaged tier of one phase: by phase_key, falling back to phase_id."""
     if not manifest:
         return TIER_KEEP
-    by_key: Dict[str, str] = manifest.get("tiers_by_key") or {}
-    tiers: Dict[str, str] = manifest.get("tiers") or {}
+    by_key: dict[str, str] = manifest.get("tiers_by_key") or {}
+    tiers: dict[str, str] = manifest.get("tiers") or {}
     return by_key.get(phase_key(phase)) or tiers.get(phase.get("phase_id"), TIER_KEEP)
 
 
-def apply_rerun_tiers(phases: List[Dict[str, Any]],
-                      manifest: Optional[Dict[str, Any]],
+def apply_rerun_tiers(phases: list[dict[str, Any]],
+                      manifest: dict[str, Any] | None,
                       release_held: bool = False,
-                      release_drop: bool = False) -> List[Dict[str, Any]]:
+                      release_drop: bool = False) -> list[dict[str, Any]]:
     """Order a deck by the audited triage.
 
     T3 phases are dropped outright (the user wants them left failed rather than
@@ -344,9 +362,9 @@ def apply_rerun_tiers(phases: List[Dict[str, Any]],
     """
     if not manifest:
         return phases
-    kept: List[Dict[str, Any]] = []
-    first: List[Dict[str, Any]] = []
-    last: List[Dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
+    first: list[dict[str, Any]] = []
+    last: list[dict[str, Any]] = []
     for ph in phases:
         tier = tier_for(ph, manifest)
         if tier == TIER_DROP and not release_drop:
@@ -367,7 +385,7 @@ def apply_rerun_tiers(phases: List[Dict[str, Any]],
     return first + kept + last
 
 
-def reference_chain(registry, exclude: Optional[str] = None) -> List[str]:
+def reference_chain(registry, exclude: str | None = None) -> list[str]:
     """
     Newest-first list of completed, non-smoke gfx900_ref_* runs forming ONE
     logical reference floor (a --resume run links to its base via
@@ -389,9 +407,9 @@ def reference_chain(registry, exclude: Optional[str] = None) -> List[str]:
             conn.close()
     except Exception:
         return []
-    by_id: Dict[str, Tuple[str, Dict[str, Any]]] = {}
+    by_id: dict[str, tuple[str, dict[str, Any]]] = {}
     for run_id, status, metadata in rows:
-        meta: Dict[str, Any] = {}
+        meta: dict[str, Any] = {}
         if metadata:
             try:
                 meta = json.loads(metadata)
@@ -401,10 +419,10 @@ def reference_chain(registry, exclude: Optional[str] = None) -> List[str]:
     for run_id, (status, meta) in by_id.items():
         if run_id == exclude or status != "completed" or meta.get("smoke"):
             continue
-        chain: List[str] = []
-        cur: Optional[str] = run_id
+        chain: list[str] = []
+        cur: str | None = run_id
         while cur in by_id and cur not in chain:
-            cur_status, cur_meta = by_id[cur]
+            _cur_status, cur_meta = by_id[cur]
             chain.append(cur)
             nxt = cur_meta.get("resume_of")
             if not nxt:

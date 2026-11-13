@@ -16,15 +16,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "harness"))
 
-import yaml  # noqa: E402
+import yaml
 
-from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
-from oto.harness.generate_candidates import (  # noqa: E402
+from oto.device.peaks import FAMILY_SHAPES
+from oto.harness.generate_candidates import (
     _round_robin_prune,
     _strip_not_forwarded,
     _write_overlay,
@@ -37,7 +36,7 @@ def _rows():
 
 
 def _grid_cells():
-    return {f: set(f"{s}x{s}x{s}" for s in ss) for f, ss in FAMILY_SHAPES.items()}
+    return {f: {f"{s}x{s}x{s}" for s in ss} for f, ss in FAMILY_SHAPES.items()}
 
 
 class TestPoolInvariants:
@@ -232,8 +231,9 @@ class TestPruneCandidatesFromSeed:
         assert (stripped, kept) == (2, 2)
 
     def test_strip_archives_and_keeps_rest(self, tmp_path, monkeypatch):
-        import oto.harness.generate_candidates as gen
         import yaml
+
+        import oto.harness.generate_candidates as gen
         seed = self._seed(tmp_path)
         monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
         stripped, kept = gen._prune_candidates_from_seed(dry_run=False)
@@ -244,12 +244,14 @@ class TestPruneCandidatesFromSeed:
         archives = list(tmp_path.glob("phases.cand_archive.*.overlay.yaml"))
         assert len(archives) == 1
         archived = yaml.safe_load(archives[0].read_text())["phases"]
-        assert len(archived) == 2 and all(
+        assert len(archived) == 2
+        assert all(
             p["phase_id"].startswith("phase_cand_") for p in archived)
 
     def test_noop_when_nothing_to_strip(self, tmp_path, monkeypatch):
-        import oto.harness.generate_candidates as gen
         import yaml
+
+        import oto.harness.generate_candidates as gen
         seed = tmp_path / "phases.seed.overlay.yaml"
         seed.write_text(yaml.safe_dump({"phases": [
             {"phase_id": "probe_N1_SS_64x64x8", "fp": "c"}]}))
@@ -385,22 +387,20 @@ class TestEveryDeckRowIsGenerative:
         from oto.tensile.decks import FAMILY_DECKS
         bad = []
         for family, rows in FAMILY_DECKS.items():
-            for knobs in rows:
-                # Legal under *some* pattern is enough: the generator emits the
-                # row for whichever patterns accept it.
-                if all(self._is_refused(family, p, knobs)
-                       for p in self.PATTERNS):
-                    bad.append((family, knobs))
+            # Legal under *some* pattern is enough: the generator emits the
+            # row for whichever patterns accept it.
+            bad.extend((family, knobs) for knobs in rows
+                       if all(self._is_refused(family, p, knobs)
+                              for p in self.PATTERNS))
         assert bad == [], f"gate refuses all patterns for: {bad}"
 
     def test_ladder_is_gate_clean(self):
         from oto.harness.candidate_rows import LADDER
         bad = []
         for family, rows in LADDER.items():
-            for knobs in rows:
-                if all(self._is_refused(family, p, knobs)
-                       for p in self.PATTERNS):
-                    bad.append((family, knobs))
+            bad.extend((family, knobs) for knobs in rows
+                       if all(self._is_refused(family, p, knobs)
+                              for p in self.PATTERNS))
         assert bad == [], f"ladder rows refused by the gate: {bad}"
 
     def test_plan_batch_is_gate_clean(self):

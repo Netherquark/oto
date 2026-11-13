@@ -174,7 +174,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    `pytest -n auto`, 37 s for `pytest -m preflight`): the YAML reader uses
    libyaml, the corpus reads are memoised and the legality gates are cached
    by config content. `OTO_GUARD_FILES=1` narrows the tree-walking guards
-   (`test_function_length`, `test_pyflakes`) to the files git reports as
+   (`test_function_length`, `test_pyflakes`, `test_ruff`, `test_py_compile`, `test_file_length`) to the files git reports as
    changed.
    Non-cube probe shapes have no cell: they are fine to measure, reported as
    non-cube shapes (never under coverage).

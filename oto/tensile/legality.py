@@ -34,8 +34,9 @@ from __future__ import annotations
 
 import json
 import random
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any
 
 import oto.tensile.library as tlib
 from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_DTYPES
@@ -57,7 +58,7 @@ CITATIONS = {
 }
 
 
-def is_half_input(config: Dict[str, Any]) -> bool:
+def is_half_input(config: dict[str, Any]) -> bool:
     """True when ``ProblemType.DataType`` is fp16 half.
 
     ``DataType.isHalf()`` is ``value == DataType.half`` -- half only. Bfloat16
@@ -68,7 +69,7 @@ def is_half_input(config: Dict[str, Any]) -> bool:
     return str(config.get("DataType", "")).upper() == "H"
 
 
-def thread_tile_dimensions(config: Dict[str, Any]) -> List[int]:
+def thread_tile_dimensions(config: dict[str, Any]) -> list[int]:
     """Normalise ``ThreadTile`` to its dimensions.
 
     Phase configs carry ThreadTile as the string ``"8x4"`` (the form
@@ -90,7 +91,7 @@ def thread_tile_dimensions(config: Dict[str, Any]) -> List[int]:
     return list(tile)
 
 
-def enable_matrix_instruction(config: Dict[str, Any]) -> Optional[bool]:
+def enable_matrix_instruction(config: dict[str, Any]) -> bool | None:
     """Resolve Tensile's ``EnableMatrixInstruction``, or None if undetermined.
 
     Mirrors SolutionStructs.py:1918-1930. An explicit key wins; otherwise the
@@ -111,7 +112,7 @@ def enable_matrix_instruction(config: Dict[str, Any]) -> Optional[bool]:
     return None
 
 
-def half_vector_width_floor(config: Dict[str, Any]) -> Tuple[bool, str]:
+def half_vector_width_floor(config: dict[str, Any]) -> tuple[bool, str]:
     """Half Assembly on gfx900 requires VectorWidth >= 2 in non-MFMA mode.
 
     Root cause ``A_half_VW1_assembly`` -- the largest reject class in
@@ -133,7 +134,7 @@ def half_vector_width_floor(config: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
-def assembly_gsu_vector_width(config: Dict[str, Any]) -> Tuple[bool, str]:
+def assembly_gsu_vector_width(config: dict[str, Any]) -> tuple[bool, str]:
     """NOT MODELLED -- deliberately absent from ``HARD_WALLS``.
 
     SolutionStructs.py:3611-3612 rejects half Assembly with ``GlobalSplitU > 1``
@@ -175,7 +176,7 @@ DEFERRED_RULES = {
 HARD_WALLS = (half_vector_width_floor,)
 
 
-def check_hard_walls(config: Dict[str, Any]) -> Tuple[bool, str]:
+def check_hard_walls(config: dict[str, Any]) -> tuple[bool, str]:
     """Run every hard wall; return the first failure as ``(False, reason)``."""
     for wall in HARD_WALLS:
         ok, reason = wall(config)
@@ -228,7 +229,7 @@ STRUCTURAL_KNOBS = tuple(sorted({k for knobs in KNOB_GROUPS.values()
 #: Per-(base_dir, family) co-occurrence sets. Built once: the manifest is a file
 #: that does not change within a run, and an overnight run draws thousands of
 #: candidates.
-_COOC_CACHE: Dict[Tuple[str, str], Any] = {}
+_COOC_CACHE: dict[tuple[str, str], Any] = {}
 
 #: Knob -> group. Cross-group pairs are the ones a substitution can cross;
 #: within-group pairs are coherent by construction (`_apply_group` takes the
@@ -255,7 +256,7 @@ TEMPLATE_KEYS = frozenset({
     "Architecture", "ProblemType", "DataType", "FamilyLabel", "ScheduleName",
 })
 
-_SUPPORT_CACHE: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+_SUPPORT_CACHE: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
 #: Repository root, where the pinned manifest lives.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -279,7 +280,7 @@ def manifest_dir(base_dir: Path) -> Path:
     return _REPO_ROOT
 
 
-def shipped_support(base_dir: Path, family: str) -> List[Dict[str, Any]]:
+def shipped_support(base_dir: Path, family: str) -> list[dict[str, Any]]:
     """Deduplicated legal support for ``family``: one entry per shipped vector.
 
     Reads the pinned manifest through ``tensile_library`` (the single owner of
@@ -294,9 +295,9 @@ def shipped_support(base_dir: Path, family: str) -> List[Dict[str, Any]]:
         return cached
 
     manifest = tlib.load_shipped_manifest(root)
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     seen: set = set()
-    for _pattern, block in (manifest.get("families", {}).get(family) or {}).items():
+    for block in (manifest.get("families", {}).get(family) or {}).values():
         for name in block.get("kernels", []):
             config = tlib.shipped_kernel_config(name, family)
             signature = json.dumps(config, sort_keys=True)
@@ -314,9 +315,9 @@ def shipped_support(base_dir: Path, family: str) -> List[Dict[str, Any]]:
     return entries
 
 
-def mt_has_shipped_schedule(config: Dict[str, Any],
+def mt_has_shipped_schedule(config: dict[str, Any],
                             family: str,
-                            base_dir: Path) -> Tuple[bool, str]:
+                            base_dir: Path) -> tuple[bool, str]:
     """Root cause ``D_macrotile_schedule``: MT must have shipped a schedule.
 
     ``MT48x36x16`` was rejected at parameter validation because no shipped
@@ -339,7 +340,7 @@ def mt_has_shipped_schedule(config: Dict[str, Any],
 
 
 def _cooccurrence_pairs(base_dir: Path,
-                        family: str) -> Optional[Set[Tuple[str, str, str, str]]]:
+                        family: str) -> set[tuple[str, str, str, str]] | None:
     """Every ordered pair of structural knob values Tensile actually ships together.
 
     ``None`` when the family has no support, so callers can distinguish "no
@@ -348,7 +349,7 @@ def _cooccurrence_pairs(base_dir: Path,
     support = shipped_support(base_dir, family)
     if not support:
         return None
-    out: Set[Tuple[str, str, str, str]] = set()
+    out: set[tuple[str, str, str, str]] = set()
     for entry in support:
         cfg = entry.get("config") or {}
         present = [(k, _norm_value(cfg[k])) for k in STRUCTURAL_KNOBS
@@ -366,7 +367,7 @@ def _cooccurrence_pairs(base_dir: Path,
 
 def cooccurrence_check(base_dir: Path,
                        family: str,
-                       config: Dict[str, Any]) -> Tuple[bool, str]:
+                       config: dict[str, Any]) -> tuple[bool, str]:
     """Gate a substituted config against the manifest's shipped pair set.
 
     Caches the per-family pair set, so an overnight run's thousands of draws
@@ -381,8 +382,8 @@ def cooccurrence_check(base_dir: Path,
     return _pairs_consistent(config, cooc)
 
 
-def _pairs_consistent(config: Dict[str, Any],
-                      cooc: Set[Tuple[str, str, str, str]]) -> Tuple[bool, str]:
+def _pairs_consistent(config: dict[str, Any],
+                      cooc: set[tuple[str, str, str, str]]) -> tuple[bool, str]:
     """True iff every pair of structural values in ``config`` co-occurs shipped.
 
     Pairwise rather than whole-tuple: a shipped solution has 135+ distinct
@@ -418,8 +419,8 @@ def _norm_value(value: Any) -> str:
     return str(value)
 
 
-def _apply_group(config: Dict[str, Any], entry: Dict[str, Any],
-                 group: str) -> Dict[str, Any]:
+def _apply_group(config: dict[str, Any], entry: dict[str, Any],
+                 group: str) -> dict[str, Any]:
     """Substitute one whole knob group from ``entry`` into ``config``."""
     out = dict(config)
     for knob in KNOB_GROUPS[group]:
@@ -435,9 +436,9 @@ def _apply_group(config: Dict[str, Any], entry: Dict[str, Any],
 def sample_legal(base_dir: Path,
                  family: str,
                  rng: random.Random,
-                 base_config: Optional[Dict[str, Any]] = None,
+                 base_config: dict[str, Any] | None = None,
                  groups: int = 2,
-                 attempts: int = 32) -> Optional[Dict[str, Any]]:
+                 attempts: int = 32) -> dict[str, Any] | None:
     """Draw a legal-by-construction candidate for ``family``.
 
     The base is always a shipped vector (or ``base_config``, when supplied by a
@@ -459,9 +460,9 @@ def sample_legal(base_dir: Path,
     return None
 
 
-def _nearest_support(support: List[Dict[str, Any]],
-                     base_config: Optional[Dict[str, Any]],
-                     rng: random.Random) -> Dict[str, Any]:
+def _nearest_support(support: list[dict[str, Any]],
+                     base_config: dict[str, Any] | None,
+                     rng: random.Random) -> dict[str, Any]:
     """Pick the shipped vector a candidate should be built on top of.
 
     When a parent config is supplied, donors sharing its MacroTile are preferred
@@ -488,8 +489,8 @@ def _nearest_support(support: List[Dict[str, Any]],
 def _draw_legal(base_dir: Path,
                 family: str,
                 rng: random.Random,
-                base_config: Optional[Dict[str, Any]] = None,
-                groups: int = 2) -> Tuple[Optional[Dict[str, Any]], str]:
+                base_config: dict[str, Any] | None = None,
+                groups: int = 2) -> tuple[dict[str, Any] | None, str]:
     """As :func:`sample_legal`, but also return why a draw was discarded."""
     support = shipped_support(base_dir, family)
     if not support:
@@ -523,9 +524,9 @@ def _draw_legal(base_dir: Path,
 
 
 def sampler_sweep(base_dir: Path,
-                  families: Optional[Sequence[str]] = None,
+                  families: Sequence[str] | None = None,
                   draws: int = 400,
-                  seed: int = 0) -> Dict[str, Any]:
+                  seed: int = 0) -> dict[str, Any]:
     """Measure the sampler's own wall/schedule hit rate, CPU-only.
 
     Reports how often a raw draw was discarded, and why -- read live from this
@@ -536,11 +537,11 @@ def sampler_sweep(base_dir: Path,
     """
     families = list(families or FAMILY_DTYPES)
     rng = random.Random(seed)
-    per_family: Dict[str, Any] = {}
+    per_family: dict[str, Any] = {}
     for family in families:
         support = shipped_support(base_dir, family)
         accepted = 0
-        reasons: Dict[str, int] = {}
+        reasons: dict[str, int] = {}
         for _ in range(draws):
             config, reason = _draw_legal(base_dir, family, rng)
             if config is not None:

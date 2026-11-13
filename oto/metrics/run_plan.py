@@ -8,22 +8,22 @@ Public API: RunPlan, PhaseCost, Estimate, _reference_unit_count, _tuning_unit_co
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import statistics
 import sys
-import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import oto.tensile.library as tlib  # noqa: E402
+import oto.tensile.library as tlib
 from oto.runners.paths import results_rel
+
 DB_REL = Path(results_rel("registry.db"))
 
 #: A run is "in flight" while it is the newest one and has no completed_at.
@@ -33,7 +33,7 @@ ACTIVE_STATES = ("started", "interrupted")
 
 
 
-def _parse_ts(value: Any) -> Optional[datetime]:
+def _parse_ts(value: Any) -> datetime | None:
     if not value:
         return None
     try:
@@ -42,9 +42,9 @@ def _parse_ts(value: Any) -> Optional[datetime]:
         return None
 
 
-def fmt_duration(minutes: Optional[float]) -> str:
+def fmt_duration(minutes: float | None) -> str:
     """Human duration, coarse on purpose: an ETA to the second is a lie."""
-    if minutes is None or minutes != minutes or minutes in (float("inf"),):
+    if minutes is None or minutes != minutes or minutes == float("inf"):
         return "unknown"
     if minutes < 0:
         return "unknown"
@@ -63,7 +63,7 @@ def _jittery(n: int) -> bool:
     return n < 3
 
 
-def bucket(status: str, result: Optional[str]) -> str:
+def bucket(status: str, result: str | None) -> str:
     """Map a record's (status, result.status) onto one display bucket.
 
     `result.status` is NULL for records that never got that far (Tensile
@@ -107,10 +107,10 @@ class RunPlan:
     mutations: int = 3
     deck_size: int = 0          # 0 -> read from phases.yaml
     #: minutes per decided phase; None -> measured from comparable runs
-    minutes_per_phase: Optional[float] = None
+    minutes_per_phase: float | None = None
 
     @classmethod
-    def from_auto_prompt_defaults(cls) -> "RunPlan":
+    def from_auto_prompt_defaults(cls) -> RunPlan:
         """Mirror --auto's own defaults so the ETA cannot describe a plan the
         driver will not run.
 
@@ -128,7 +128,7 @@ class RunPlan:
                    mutations=auto_prompt.DEFAULT_MUTATIONS)
 
     @classmethod
-    def from_args(cls, pairs: Sequence[str]) -> "RunPlan":
+    def from_args(cls, pairs: Sequence[str]) -> RunPlan:
         plan = cls.from_auto_prompt_defaults()
         for pair in pairs:
             if "=" not in pair:
@@ -141,13 +141,13 @@ class RunPlan:
             elif key in ("iterations", "mutations", "deck_size"):
                 try:
                     setattr(plan, key, int(raw))
-                except ValueError:
-                    raise SystemExit(f"--plan {key} must be an integer, got {raw!r}")
+                except ValueError as exc:
+                    raise SystemExit(f"--plan {key} must be an integer, got {raw!r}") from exc
             elif key == "minutes_per_phase":
                 try:
                     plan.minutes_per_phase = float(raw)
-                except ValueError:
-                    raise SystemExit(f"--plan {key} must be a number, got {raw!r}")
+                except ValueError as exc:
+                    raise SystemExit(f"--plan {key} must be a number, got {raw!r}") from exc
             else:
                 raise SystemExit(
                     f"unknown --plan key {key!r}; expected one of "
@@ -179,11 +179,11 @@ class PhaseCost:
     def __init__(self, db: Path):
         self.db = db
 
-    def sample(self, min_success: int = 20) -> Tuple[Optional[float], int, List[str]]:
+    def sample(self, min_success: int = 20) -> tuple[float | None, int, list[str]]:
         if not self.db.exists():
             return None, 0, []
-        rates: List[float] = []
-        used: List[str] = []
+        rates: list[float] = []
+        used: list[str] = []
         try:
             conn = sqlite3.connect(f"file:{self.db}?mode=ro", uri=True,
                                    timeout=30.0)
@@ -206,9 +206,7 @@ class PhaseCost:
                             continue
                         status = o.get("status")
                         result = (o.get("result") or {}).get("status")
-                        if status == "completed" and result == "success":
-                            decided += 1
-                        elif status == "failed" and result != "skipped_by_user":
+                        if (status == "completed" and result == "success") or (status == "failed" and result != "skipped_by_user"):
                             decided += 1
                     if decided < min_success:
                         continue
@@ -240,17 +238,17 @@ class PhaseCost:
 @dataclass
 class Estimate:
     units: int = 0
-    minutes_per_unit: Optional[float] = None
+    minutes_per_unit: float | None = None
     decided: int = 0
     done_minutes: float = 0.0
     remaining: int = 0
-    eta_minutes: Optional[float] = None
+    eta_minutes: float | None = None
     source: str = ""
-    breakdown: List[Tuple[str, int]] = field(default_factory=list)
-    rate_sample: List[str] = field(default_factory=list)
+    breakdown: list[tuple[str, int]] = field(default_factory=list)
+    rate_sample: list[str] = field(default_factory=list)
 
     @property
-    def percent(self) -> Optional[float]:
+    def percent(self) -> float | None:
         if not self.units:
             return None
         return 100.0 * min(self.decided, self.units) / self.units
@@ -260,7 +258,7 @@ class Estimate:
         return self.done_minutes
 
     @property
-    def rate_per_hour(self) -> Optional[float]:
+    def rate_per_hour(self) -> float | None:
         if self.minutes_per_unit and self.minutes_per_unit > 0:
             return 60.0 / self.minutes_per_unit
         if self.done_minutes > 0 and self.decided:
@@ -268,8 +266,8 @@ class Estimate:
         return None
 
 
-def _reference_unit_count(plan: RunPlan, manifest: Dict[str, Any],
-                          corpus: Dict[str, str]) -> Tuple[int, List[Tuple[str, int]]]:
+def _reference_unit_count(plan: RunPlan, manifest: dict[str, Any],
+                          corpus: dict[str, str]) -> tuple[int, list[tuple[str, int]]]:
     """How many reference phases this plan will decide.
 
     Counts only tiers the plan released, over the union of the reference chain's
@@ -279,7 +277,7 @@ def _reference_unit_count(plan: RunPlan, manifest: Dict[str, Any],
               tlib.TIER_HELD: plan.rerun_underspecified,
               tlib.TIER_LAST: plan.rerun_underspecified,
               tlib.TIER_DROP: plan.rerun_unreproducible}
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for tier in corpus.values():
         if wanted.get(tier):
             counts[tier] = counts.get(tier, 0) + 1

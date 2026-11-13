@@ -32,10 +32,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import results_rel
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
@@ -50,16 +50,16 @@ STRUCTURAL_KNOBS = (
 _FAMILY_ORDER = ("SS", "DD", "HH", "HH_HPA", "HS_HPA", "CC", "ZZ")
 
 
-def _side(shape: object) -> Optional[int]:
+def _side(shape: object) -> int | None:
     try:
         return int(str(shape).split("x")[0])
     except (ValueError, TypeError, IndexError):
         return None
 
 
-def _winner_per_cell(rows: List[Dict[str, Any]]) -> Dict[Tuple[str, int], Dict[str, Any]]:
+def _winner_per_cell(rows: list[dict[str, Any]]) -> dict[tuple[str, int], dict[str, Any]]:
     """Best per-(family, side) row by gflops_median (seed-median already folded)."""
-    best: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    best: dict[tuple[str, int], dict[str, Any]] = {}
     for r in rows:
         fam = r.get("family") or ""
         side = _side(r.get("shape"))
@@ -71,11 +71,11 @@ def _winner_per_cell(rows: List[Dict[str, Any]]) -> Dict[Tuple[str, int], Dict[s
     return best
 
 
-def _knob_dict(r: Dict[str, Any]) -> Dict[str, Any]:
+def _knob_dict(r: dict[str, Any]) -> dict[str, Any]:
     return {k: r.get(k) for k in STRUCTURAL_KNOBS if r.get(k) is not None}
 
 
-def _knob_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+def _knob_diff(a: dict[str, Any], b: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     keys = sorted(set(a) | set(b))
     only_a = {k: a[k] for k in keys if k in a and k not in b}
     only_b = {k: b[k] for k in keys if k in b and k not in a}
@@ -91,8 +91,8 @@ def _knob_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Tuple[Dict[str, Any], Li
     return {"only_native": only_a, "only_floor": only_b, "changed": changed}, summary
 
 
-def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> List[Dict[str, Any]]:
-    rows_out: List[Dict[str, Any]] = []
+def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[str, Any]]:
+    rows_out: list[dict[str, Any]] = []
     for fam, side in cells:
         n, f = native_w[(fam, side)], floor_w[(fam, side)]
         ng, fg = n.get("gflops_median") or 0, f.get("gflops_median") or 0
@@ -102,14 +102,13 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> List[Dict[s
             continue
         knob_n, knob_f = _knob_dict(n), _knob_dict(f)
         _, summary = _knob_diff(knob_n, knob_f)
-        line = (
+        (
             f"  {fam}:{side:<6} native {ng:8.1f}  floor {fg:8.1f}  "
             f"Δ{dt:+7.1f}%  {'FLOOR' if floor_wins else 'native'}\n"
             f"      native {n['kernel']}\n"
             f"      floor  {f['kernel']}\n"
             f"      knobs  {' | '.join(summary)}"
         )
-        print(line + "\n")
         rows_out.append({
             "cell": f"{fam}:{side}", "native_gflops": round(ng, 1),
             "floor_gflops": round(fg, 1), "delta_pct": round(dt, 2),
@@ -135,8 +134,8 @@ def main() -> int:
     base = Path(args.base_dir) if args.base_dir else _HERE
     db_path = Path(args.db) if args.db else _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     db = json.loads(db_path.read_text())
-    native_rows: List[Dict[str, Any]] = []
-    floor_rows: List[Dict[str, Any]] = []
+    native_rows: list[dict[str, Any]] = []
+    floor_rows: list[dict[str, Any]] = []
     for run_id, rows in db.items():
         if run_id.startswith("gfx900_ref"):
             floor_rows += rows
@@ -153,11 +152,9 @@ def main() -> int:
 
     rows_out = _paired_rows(cells, native_w, floor_w, args.floor_wins_only)
 
-    n_floor = sum(1 for r in rows_out if r["winner"] == "floor")
-    print(f"{len(rows_out)} cells shared; floor wins {n_floor} ({len(cells)} total paired)")
+    sum(1 for r in rows_out if r["winner"] == "floor")
     if args.json:
         args.json.write_text(json.dumps(rows_out, indent=1))
-        print(f"wrote {args.json}")
     return 0
 
 

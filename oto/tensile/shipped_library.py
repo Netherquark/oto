@@ -26,10 +26,9 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
-                              FAMILY_SHAPES)
+from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES
 
 #: Dat TYPE token (from the shipped filename `TensileLibrary_Type_<TYPE>_...`)
 #: maps 1:1 to our family keys for the 7 analysed families.
@@ -58,7 +57,7 @@ def _resolve_rocm() -> str:
     return ""
 
 
-def _library_dirs(rocm: str) -> List[Path]:
+def _library_dirs(rocm: str) -> list[Path]:
     """Candidate dirs holding rocBLAS TensileLibrary artifacts."""
     cands = [
         Path(rocm) / "lib" / "rocblas" / "library",
@@ -69,7 +68,7 @@ def _library_dirs(rocm: str) -> List[Path]:
     return [c for c in cands if c.is_dir()]
 
 
-def _all_rocm_prefixes() -> List[str]:
+def _all_rocm_prefixes() -> list[str]:
     """Every installed ROCm prefix that carries a rocBLAS library.
 
     The primary is whatever the active toolchain resolves (hipconfig/ROCM_PATH);
@@ -80,24 +79,23 @@ def _all_rocm_prefixes() -> List[str]:
     """
     primary = _resolve_rocm()
     prefixes = {p for p in [primary] if p}
-    for extra_cand in ["/opt/rocm"] + sorted(__import__("glob").glob("/opt/rocm-*")):
+    for extra_cand in ["/opt/rocm", *sorted(__import__("glob").glob("/opt/rocm-*"))]:
         if Path(extra_cand).is_dir():
             prefixes.add(extra_cand)
     return sorted(prefixes, key=lambda p: (p == primary, p), reverse=True)
 
 
-def find_gfx900_dat_files(rocm: Optional[str] = None) -> List[Path]:
+def find_gfx900_dat_files(rocm: str | None = None) -> list[Path]:
     """Return every `TensileLibrary_Type_<T>_Contraction_l_*_Cijk_Dijk_gfx900.dat`.
 
     Skips the lazy TOC (`TensileLibrary_lazy_gfx900.dat`) and non-gfx900
     artifacts. `.hyp` payloads are matched too (their filenames mirror the
     distributed dat names).
     """
-    found: List[Path] = []
+    found: list[Path] = []
     for d in _library_dirs(rocm or _resolve_rocm()):
-        for p in sorted(d.rglob("TensileLibrary_Type_*_gfx900.dat")):
-            if "_lazy_" not in p.name:
-                found.append(p)
+        found.extend(p for p in sorted(d.rglob("TensileLibrary_Type_*_gfx900.dat"))
+                     if "_lazy_" not in p.name)
     return found
 
 
@@ -122,7 +120,7 @@ _GSU = re.compile(r"GSU(\d+)")
 _AF0EM = re.compile(r"(?:^|_)AF0EM(\d+)(?:_|$)")
 
 
-def parse_shipped_kernels(dat_file: Path) -> Set[str]:
+def parse_shipped_kernels(dat_file: Path) -> set[str]:
     """Extract canonical (deduplicated) solution names from a binary .dat.
 
     The .dat is a length-prefixed binary blob containing the plain-text kernel
@@ -134,7 +132,7 @@ def parse_shipped_kernels(dat_file: Path) -> Set[str]:
     except OSError:
         return set()
 
-    kernels: Set[str] = set()
+    kernels: set[str] = set()
     for m in re.finditer(r"(?<![A-Za-z0-9_])[A-Za-z]Cijk[A-Za-z0-9_]+", data):
         tok = m.group(0)
         if "_MT" not in tok or "Dijk" in tok:
@@ -146,7 +144,7 @@ def parse_shipped_kernels(dat_file: Path) -> Set[str]:
     return kernels
 
 
-def _parse_kernel_knobs(name: str) -> Dict[str, Any]:
+def _parse_kernel_knobs(name: str) -> dict[str, Any]:
     """Parse structural Tensile knobs out of a canonical solution name.
 
     Sets the knobs `_write_phase_config` understands so the spoofed phase
@@ -154,7 +152,7 @@ def _parse_kernel_knobs(name: str) -> Dict[str, Any]:
     does not name (NLCA, LDS padding, SWV...) fall back to their defaults —
     the reproduction is structural, faithful in MT/TT/WG/VW/DepthU/GSU.
     """
-    knobs: Dict[str, Any] = {}
+    knobs: dict[str, Any] = {}
     m = _MT.search(name)
     if m:
         knobs["m0"], knobs["m1"], knobs["dup"] = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -180,7 +178,7 @@ def _parse_kernel_knobs(name: str) -> Dict[str, Any]:
     return knobs
 
 
-def shipped_kernel_knobs(name: str) -> Dict[str, Any]:
+def shipped_kernel_knobs(name: str) -> dict[str, Any]:
     """Public canonical read: structural knobs of one shipped solution name.
 
     Thin public wrapper over the single `_parse_kernel_knobs` owner, so callers
@@ -189,7 +187,7 @@ def shipped_kernel_knobs(name: str) -> Dict[str, Any]:
     return _parse_kernel_knobs(name)
 
 
-def shipped_kernel_config(name: str, family: str) -> Dict[str, Any]:
+def shipped_kernel_config(name: str, family: str) -> dict[str, Any]:
     """Public canonical read: phase `config` for one shipped kernel of `family`.
 
     Resolves `family` to its Tensile DataType char via the shared
@@ -198,7 +196,7 @@ def shipped_kernel_config(name: str, family: str) -> Dict[str, Any]:
     return _config_from_kernel(name, FAMILY_DTYPE_CHAR[family])
 
 
-def _reconcile_knobs(k: Dict[str, Any]) -> None:
+def _reconcile_knobs(k: dict[str, Any]) -> None:
     """Make ThreadTile/WorkGroup consistent with the named MacroTile.
 
     Tensile's SolutionStructs rejects a config unless, per M/N dimension,
@@ -242,11 +240,11 @@ def _reconcile_knobs(k: Dict[str, Any]) -> None:
     k["t0"], k["t1"] = tt[0], tt[1]
 
 
-def _config_from_kernel(name: str, dtype: str) -> Dict[str, Any]:
+def _config_from_kernel(name: str, dtype: str) -> dict[str, Any]:
     """Build the phase `config` dict (Architecture + kernel knobs) for a kernel."""
     k = _parse_kernel_knobs(name)
     _reconcile_knobs(k)
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "Architecture": "gfx900",
         "DataType": dtype,
         "ProblemType": "Contraction",
@@ -277,9 +275,9 @@ def _config_from_kernel(name: str, dtype: str) -> Dict[str, Any]:
     return config
 
 
-def _short_tag(name: str, k: Dict[str, Any]) -> str:
+def _short_tag(name: str, k: dict[str, Any]) -> str:
     import hashlib
-    tail = "mt{}-tt{}-vw{}-du{}-gsu{}-{}".format(
+    return "mt{}-tt{}-vw{}-du{}-gsu{}-{}".format(
         k.get("m0", 0),
         k.get("t0", 0),
         k.get("vw", 0),
@@ -287,10 +285,9 @@ def _short_tag(name: str, k: Dict[str, Any]) -> str:
         k.get("gsu", 0),
         hashlib.sha1(name.encode()).hexdigest()[:8],
     )
-    return tail
 
 
-def emit_spoof_phases(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
+def emit_spoof_phases(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     """Build the one-time gfx900 spoof reference phase list from the manifest.
 
     One phase per shipped kernel, per family/pattern, benchmarked at the
@@ -298,7 +295,7 @@ def emit_spoof_phases(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
     phase carries a distinct fp (kernel-derived config) so no phase collides
     with candidates or with any other shipped kernel.
     """
-    phases: List[Dict[str, Any]] = []
+    phases: list[dict[str, Any]] = []
     by_family = manifest.get("families", {})
     for fam in SHIPPED_FAMILIES:
         fam_info = by_family.get(fam)

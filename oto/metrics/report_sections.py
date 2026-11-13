@@ -15,7 +15,7 @@ from __future__ import annotations
 import csv
 import statistics
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import ClassVar
 
 import oto.device.peaks as _peaks
 from oto.tensile.shape_order import ordered_shapes
@@ -108,12 +108,12 @@ class SectionMixin:
             out += f" &middot; Spoof floor: gfx900 shipped TensileLibrary (ref <code>{report.reference_run_id}</code>)"
         prefixes = (report.shipped_manifest or {}).get("rocm_prefixes", [])
         if prefixes:
-            out += f" &middot; ROCm: {', '.join('<code>%s</code>' % p for p in prefixes)}"
+            out += f" &middot; ROCm: {', '.join(f'<code>{p}</code>' for p in prefixes)}"
         return out
 
     # Column headers per comparison basis, so the two rendered columns are
     # always exactly the operands behind delta_pct (never a proxy for them).
-    _BASIS_HEADERS = {
+    _BASIS_HEADERS: ClassVar[dict[str, tuple[str, str]]] = {
         "floor_best":   ("Native median", "Floor best median"),
         "strict":       ("Native worst median", "Floor best median"),
         "best_median":  ("Native best median", "Floor median"),
@@ -130,11 +130,10 @@ class SectionMixin:
 
     def _cell_status_section(self, report) -> str:
         """Gfx900 contract cell grid: RED missing / ORANGE below threshold / GREEN."""
-        cells = []
-        for e in report.red_list:
-            cells.append((e, "RED", "tag-loss", "var(--support-error)"))
-        for e in report.orange_list:
-            cells.append((e, "ORANGE", "tag-orange", "var(--support-warning)"))
+        cells = [(e, "RED", "tag-loss", "var(--support-error)")
+                 for e in report.red_list]
+        cells.extend((e, "ORANGE", "tag-orange", "var(--support-warning)")
+                    for e in report.orange_list)
 
         row_html = ""
         for e, label, cls, _color in cells:
@@ -297,7 +296,7 @@ class SectionMixin:
         </section>
         """
 
-    def _load_run_telemetry(self, run_dir) -> Optional[Dict[str, Dict[str, float]]]:
+    def _load_run_telemetry(self, run_dir) -> dict[str, dict[str, float]] | None:
         """Parse logs/telemetry.csv from the run directory (median + peak per metric)."""
         if not run_dir:
             return None
@@ -305,7 +304,7 @@ class SectionMixin:
         if not p.exists():
             return None
 
-        cols: Dict[str, List[float]] = {}
+        cols: dict[str, list[float]] = {}
         try:
             with open(p, newline="") as f:
                 rd = csv.DictReader(f)

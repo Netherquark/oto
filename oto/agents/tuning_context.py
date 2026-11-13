@@ -7,13 +7,13 @@ Public API: generate(profile, theoretical_limits_doc, starter_text="", research=
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from oto.device.profile import DeviceProfile
 
 
 def generate(profile: DeviceProfile, theoretical_limits_doc: str = "",
-            starter_text: str = "", research: Optional[Callable[[str], str]] = None) -> str:
+            starter_text: str = "", research: Callable[[str], str] | None = None) -> str:
     extra = ""
     if research is not None:
         try:

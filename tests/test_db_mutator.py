@@ -29,9 +29,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
-from oto.tensile.synthesis.db import DBMutator, FORWARD_KNOB_DOMAINS  # noqa: E402
+from oto.tensile.candidate import CandidateGenerator
+from oto.tensile.gates.occupancy import ldspad_feasible
+from oto.tensile.synthesis.db import FORWARD_KNOB_DOMAINS, DBMutator
 
 
 class _StubMutator:
@@ -51,17 +51,17 @@ class TestDBMutatorSynthesis(unittest.TestCase):
     def setUp(self):
         self.mutator = _StubMutator()
         self.db = DBMutator(REPO, self.mutator)
-        self.assertTrue(self.db.has_db(), "kernel_db.json must load")
+        assert self.db.has_db(), "kernel_db.json must load"
         self.sched = CandidateGenerator(REPO, registry=None)
 
     def _assert_legal_and_novel(self, family, knobs):
         cfg = {**self.db._template(family), **knobs}
         ok, why = self.sched.validate_config(cfg)
-        self.assertTrue(ok, f"{knobs}: {why}")
+        assert ok, f"{knobs}: {why}"
         ok, why = ldspad_feasible(cfg)
-        self.assertTrue(ok, f"{knobs}: {why}")
+        assert ok, f"{knobs}: {why}"
         from oto.ledger.registry import fingerprint_config
-        self.assertTrue(self.mutator.is_novel(fingerprint_config(cfg)))
+        assert self.mutator.is_novel(fingerprint_config(cfg))
 
     def test_wall_families_get_mutants(self):
         """CC/ZZ (the wall families the old arm starved) synthesise mutants."""
@@ -73,7 +73,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         ):
             mutants = self.db.synthesize_mutants(
                 family, parent, "256x256x256", random.Random("t"), n=8)
-            self.assertEqual(len(mutants), 8, family)
+            assert len(mutants) == 8, family
             for mut in mutants:
                 self._assert_legal_and_novel(family, mut)
 
@@ -94,9 +94,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         # batch. Which knobs they are is not fixed: the pass visits them in a
         # seeded shuffle (so an axis late in the dict is not starved), so the
         # durable property is the VARIETY, not a particular set.
-        self.assertGreaterEqual(
-            len(touched), 3,
-            f"only {len(touched)} forward knob(s) represented: {sorted(touched)}")
+        assert len(touched) >= 3, f"only {len(touched)} forward knob(s) represented: {sorted(touched)}"
 
     def test_wide_mutants_use_db_tile_donors(self):
         """Wide mutants include tiles from the DB's measured winners, not just
@@ -108,8 +106,8 @@ class TestDBMutatorSynthesis(unittest.TestCase):
             "SS", parent, "256x256x256", random.Random("t"), n=40)
         tiles = {mut.get("MacroTile") for mut in mutants}
         # The parent's tile plus at least one donor tile from the DB.
-        self.assertGreater(len(tiles), 1, f"only {tiles}")
-        self.assertIn("128x128x8", tiles)
+        assert len(tiles) > 1, f"only {tiles}"
+        assert "128x128x8" in tiles
 
     #: The narrow pass scores every single-knob delta at priority 1.0, so a
     #: small `n` is filled by the first knobs in dict order and GlobalSplitU
@@ -148,10 +146,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         for family in ("CC", "ZZ", "HH", "HH_HPA", "HS_HPA"):
             with self.subTest(family=family):
                 offered = self._offered_gsu(family)
-                self.assertEqual(
-                    offered - {1}, set(),
-                    f"{family} was offered GlobalSplitU {sorted(offered)}, "
-                    f"none of which can run on this device")
+                assert offered - {1} == set(), f"{family} was offered GlobalSplitU {sorted(offered)}, " f"none of which can run on this device"
 
     def test_the_banned_gsu_test_is_not_vacuous(self):
         """Guard the guard.
@@ -162,10 +157,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         """
         for family in ("CC", "ZZ", "HH", "HH_HPA", "HS_HPA"):
             with self.subTest(family=family):
-                self.assertTrue(
-                    self._offered_gsu(family),
-                    f"{family} never saw a GlobalSplitU draw at "
-                    f"n={self._GSU_N}, so the ban is untested rather than held")
+                assert self._offered_gsu(family), f"{family} never saw a GlobalSplitU draw at " f"n={self._GSU_N}, so the ban is untested rather than held"
 
     def test_gsu_axis_survives_where_it_is_legal(self):
         """The restriction must not have sterilised the families that can use it.
@@ -175,10 +167,7 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         """
         for family in ("SS", "DD"):
             with self.subTest(family=family):
-                self.assertTrue(
-                    self._offered_gsu(family) - {1},
-                    f"{family} lost its GlobalSplitU axis entirely; the fix "
-                    f"should only remove values that cannot run")
+                assert self._offered_gsu(family) - {1}, f"{family} lost its GlobalSplitU axis entirely; the fix " f"should only remove values that cannot run"
 
     def test_novelty_is_guaranteed_not_remeasured(self):
         """A mutant is never a config the ledger has already decided. Recording
@@ -193,12 +182,12 @@ class TestDBMutatorSynthesis(unittest.TestCase):
                     "CC", parent, "256x256x256", random.Random(seed), n=8):
                 cfg = {**self.db._template("CC"), **mut}
                 fp = fingerprint_config(cfg)
-                self.assertNotIn(fp, seen)
+                assert fp not in seen
                 seen.add(fp)
                 # Record the emission so the next pass must avoid it.
                 self.mutator.emitted.append(fp)
         # 4 seeds x 8 mutants, all distinct.
-        self.assertGreaterEqual(len(seen), 32)
+        assert len(seen) >= 32
 
 
 #: One deck-realistic parent per family: the tile shape the family's shipped
@@ -250,9 +239,9 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
     def _assert_legal(self, family, parent, draw):
         cfg = {**self.db._template(family), **parent, **draw}
         ok, why = self.sched.validate_config(cfg)
-        self.assertTrue(ok, f"{family} {draw}: {why}")
+        assert ok, f"{family} {draw}: {why}"
         ok, why = ldspad_feasible(cfg)
-        self.assertTrue(ok, f"{family} {draw}: {why}")
+        assert ok, f"{family} {draw}: {why}"
 
     def test_forward_draws_are_jointly_legal(self):
         """No wide-forward draw is a config the launch boundary would refuse."""
@@ -276,17 +265,16 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
                     self._assert_legal(family, parent, draw)
             emitted[family] = n
         # Guard the guard: an empty pattern list would pass vacuously.
-        self.assertTrue(all(emitted.values()), emitted)
+        assert all(emitted.values()), emitted
 
     def test_joint_domain_is_a_subset_of_the_forward_domain(self):
         """The filter narrows; it never invents a value the family may not draw."""
-        from oto.tensile.synthesis.db_knobs import (FORWARD_KNOB_DOMAINS,
-                                                    forward_domain)
+        from oto.tensile.synthesis.db_knobs import FORWARD_KNOB_DOMAINS, forward_domain
         for family, parent in PARENTS.items():
             for knob in FORWARD_KNOB_DOMAINS:
                 with self.subTest(family=family, knob=knob):
                     joint = set(self.db._joint_domain(family, knob, parent))
-                    self.assertTrue(joint <= set(forward_domain(family, knob)))
+                    assert joint <= set(forward_domain(family, knob))
 
     def test_joint_domain_pins_the_measured_couplings(self):
         """The three couplings the ledger actually refused, pinned by value.
@@ -299,10 +287,8 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
         # GlobalLoadVectorWidth must be the tile's VectorWidth or 1
         # (SolutionStructs:4583-4596): 2 is offered by the SS domain and
         # refused beside VectorWidth 4.
-        self.assertIn(2, forward_domain("SS", "GlobalLoadVectorWidthA"))
-        self.assertEqual(
-            self.db._joint_domain("SS", "GlobalLoadVectorWidthA",
-                                  PARENTS["SS"]), (1, 4))
+        assert 2 in forward_domain("SS", "GlobalLoadVectorWidthA")
+        assert self.db._joint_domain("SS", "GlobalLoadVectorWidthA", PARENTS["SS"]) == (1, 4)
 
         # NLCA must divide the tile's load count (SolutionStructs:2058). A
         # 128x128x8 tile at ThreadTile 8x8 / VectorWidth 4 has exactly one
@@ -310,16 +296,14 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
         # -1 is Tensile's "least coalesced" value (Common.py:1323 allows
         # range(-1, 65)) and is legal here: with one load it degenerates to
         # the same single load.
-        self.assertEqual(forward_domain("SS", "NLCA"), (-1, 1, 2, 3))
-        self.assertEqual(
-            self.db._joint_domain("SS", "NLCA", PARENTS["SS"]), (-1, 1))
+        assert forward_domain("SS", "NLCA") == (-1, 1, 2, 3)
+        assert self.db._joint_domain("SS", "NLCA", PARENTS["SS"]) == (-1, 1)
 
         # The StaggerU trio moves as one (SolutionStructs:3326-3342): the
         # parent's absent StaggerU means Tensile's default 32 ("stagger on"),
         # so StaggerUStride=0 -- in the domain -- is refused.
-        self.assertIn(0, forward_domain("CC", "StaggerUStride"))
-        self.assertNotIn(
-            0, self.db._joint_domain("CC", "StaggerUStride", PARENTS["CC"]))
+        assert 0 in forward_domain("CC", "StaggerUStride")
+        assert 0 not in self.db._joint_domain("CC", "StaggerUStride", PARENTS["CC"])
 
     def test_the_joint_filter_did_not_sterilise_the_coupled_axes(self):
         """Guard the guard, as the GlobalSplitU ban tests do.
@@ -331,10 +315,7 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
         for family in ("SS", "HH", "HH_HPA"):
             for knob in ("GlobalLoadVectorWidthA", "DepthU"):
                 with self.subTest(family=family, knob=knob):
-                    self.assertGreater(
-                        len(self.db._joint_domain(family, knob,
-                                                  PARENTS[family])), 1,
-                        f"{family} lost its {knob} axis entirely")
+                    assert len(self.db._joint_domain(family, knob, PARENTS[family])) > 1, f"{family} lost its {knob} axis entirely"
 
     def test_a_wide_draw_never_lands_on_a_refused_config(self):
         """End-to-end: the synthesiser's whole output is legal, by construction
@@ -343,7 +324,7 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
             with self.subTest(family=family):
                 mutants = self.db.synthesize_mutants(
                     family, parent, "256x256x256", random.Random("t"), n=8)
-                self.assertEqual(len(mutants), 8, family)
+                assert len(mutants) == 8, family
                 for mut in mutants:
                     self._assert_legal(family, parent, mut)
 

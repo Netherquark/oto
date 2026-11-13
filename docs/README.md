@@ -80,6 +80,7 @@ Corollaries:
 | `plans/REFACTOR_*.md` | dev | Ecosystem | The refactor plans this package was built against |
 | `plans/test_optimization.md` | dev | Ecosystem | Test-suite optimisation plan |
 | `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
+| `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
 | `docs/agent_reference.md` | dev | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
 | `docs/harness_runbook.md` | dev | Ecosystem | Harness runbook |
@@ -89,6 +90,34 @@ Corollaries:
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 oto/_map.py`) |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
+
+## The quality gates
+
+The developer side of this ecosystem is enforced, not just documented. Five
+tree-walking guard tests run in the suite and on every commit; a change that
+violates them fails before review:
+
+| Check | Command | Enforces |
+|---|---|---|
+| Pyflakes | `python3 -m pytest tests/test_pyflakes.py -q` | no undefined names, no redefinitions, no empty f-strings |
+| Ruff | `python3 -m pytest tests/test_ruff.py -q` | the pinned rule set in `ruff.toml` (pycodestyle, pyflakes, bugbear, pyupgrade, import sorting, comprehensions, pep8-naming) |
+| py_compile | `python3 -m pytest tests/test_py_compile.py -q` | every tracked `.py` byte-compiles |
+| File length | `python3 -m pytest tests/test_file_length.py -q` | no tracked file over 600 lines (grandfathered list ratchets down) |
+| Function length | `python3 -m pytest tests/test_function_length.py -q` | no function over 60 lines |
+
+```bash
+# all four, one shot
+python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
+
+# fast path: only the files git reports as modified/staged
+OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
+```
+
+The full scan stays the CI default on purpose (a guard that only looks at what
+you touched is not a guard). The py_compile gate additionally covers files no
+test imports — an uncompiled-but-tracked script fails here instead of at first
+use. Class B (operator) docs deliberately do not carry this section: an
+operator consumes the library; the gates guard the library's source.
 
 ## Reading order for a new coding agent (class A)
 

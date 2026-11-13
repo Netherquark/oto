@@ -14,30 +14,37 @@ Public API: TensileDriver, NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS.
 
 from __future__ import annotations
 
+import contextlib
 import os
-import shutil
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 
+from oto.device.peaks import cell_key, kernel_key
 from oto.ledger.agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
-from oto.ledger.registry import SQLiteRegistry, fingerprint_config
-from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
-from oto.device.peaks import cell_key, kernel_key
+from oto.ledger.registry import SQLiteRegistry
+from oto.metrics.analytics import AnalyticsEngine
 from oto.metrics.report import AcceptanceReporter
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
+from oto.runners import analytics_loaders as _analytics
+from oto.runners import auto as _auto
+from oto.runners import benchmark as _benchmark
+from oto.runners import clocks as _clocks
+from oto.runners import phases as _phases
+from oto.runners import reference as _reference
+from oto.runners import reporting as _reporting
+from oto.runners import synthesis as _synthesis
+from oto.runners import timing as _timing
+from oto.runners.toolchain import (
+    DEFAULT_TENSILE_ROOT,
+    require_tensile_root,
+    resolve_rocm_paths,
+)
 from oto.tensile.candidate import CandidateGenerator
-from oto.runners import (analytics_loaders as _analytics, auto as _auto,
-                         benchmark as _benchmark, clocks as _clocks,
-                         phases as _phases, reference as _reference,
-                         reporting as _reporting, synthesis as _synthesis,
-                         timing as _timing, toolchain)
-from oto.runners.toolchain import (DEFAULT_TENSILE_ROOT, require_tensile_root,
-                                   resolve_rocm_paths)
 
 # Legacy private aliases, kept because the pre-split flat public surface used
 # them (`from port_tensile import _require_tensile_root`). New code should use the
@@ -135,10 +142,10 @@ class TensileDriver(
         self,
         base_dir: Path,
         phase_timeout_s: int = 3600,
-        tensile_root: Optional[Path] = None,
+        tensile_root: Path | None = None,
         cooldown_s: int = 30,
         create_run: bool = True,
-        codename: Optional[str] = None,
+        codename: str | None = None,
     ):
         self.base_dir = Path(base_dir).resolve()
         self.phase_timeout_s = phase_timeout_s
@@ -176,10 +183,8 @@ class TensileDriver(
     def _init_run_dirs(self) -> None:
         """Create or skip the run directory and configs subdir."""
         if self.create_run:
-            try:
+            with contextlib.suppress(Exception):
                 self.registry.cleanup_stale_runs()
-            except Exception:
-                pass
             self.run_dir = self.registry.create_run_dir()
             self.configs_dir = self.run_dir / "configs"
             self.configs_dir.mkdir(exist_ok=True)
@@ -204,10 +209,8 @@ class TensileDriver(
                 # Ledger missing or unreadable: do NOT bypass the identical-fp
                 # skip, because novelty would then be unverifiable.
                 self.mutator = None
-        except Exception as e:
+        except Exception:
             self.mutator = None
-            print(f"[mutator] unavailable ({e}); mutation arm keeps phases.yaml "
-                  "behaviour and the identical-fp skip")
 
     def _init_agent_and_reporter(self) -> None:
         self.agent = ConvergenceAgent(
@@ -236,10 +239,10 @@ class TensileDriver(
         self._abort_note = None
         self._gpu_phases_run = 0
         self._current_proc = None
-        self._last_ab_reference_run_id: Optional[str] = None
-        self._native_arm_records: List[Dict[str, Any]] = []
-        self._telemetry: Optional[SysfsTelemetrySampler] = None
-        self._telemetry_run_id: Optional[str] = None
+        self._last_ab_reference_run_id: str | None = None
+        self._native_arm_records: list[dict[str, Any]] = []
+        self._telemetry: SysfsTelemetrySampler | None = None
+        self._telemetry_run_id: str | None = None
         # Live TTY status panel. None unless a run turned it on; see
         # _start_live_status / _stop_live_status.
         self._last_run_status = ""
@@ -258,23 +261,17 @@ class TensileDriver(
         sys.stderr.flush()
         self._stop_requested = True
         if self._current_proc and self._current_proc.poll() is None:
-            try:
+            with contextlib.suppress(OSError):
                 os.killpg(os.getpgid(self._current_proc.pid), signal.SIGKILL)
-            except OSError:
-                pass
         # Mark current run as interrupted in registry before exiting
-        try:
+        with contextlib.suppress(Exception):
             self.registry.update_run_status(self.run_dir.name, "interrupted", {})
-        except Exception:
-            pass
         # Emit partial acceptance report from data collected so far
-        try:
+        with contextlib.suppress(Exception):
             self.generate_acceptance_report()
-        except Exception:
-            pass
         # Exit with 130 (standard Ctrl+C exit code: 128 + SIGINT(2))
         sys.exit(130)
-    def _get_tensile_env(self) -> Dict[str, str]:
+    def _get_tensile_env(self) -> dict[str, str]:
         """Construct environment with Tensile on PYTHONPATH and ROCm toolchain on PATH."""
         env = os.environ.copy()
         tensile_pkg = str(self.tensile_root)
@@ -297,10 +294,8 @@ class TensileDriver(
         Phase-0 Preflight validation:
         Check Tensile binary, device info, and registry.
         """
-        print("Running Phase-0 Preflight checks...")
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
 
-        parity_line = "not checked"
         parity_ok = True
         try:
             from oto.tensile.library_parity import load_pipeline_phases, parity_report
@@ -308,11 +303,11 @@ class TensileDriver(
                 self.base_dir,
                 run_id=self.run_dir.name if self.run_dir else None)
             pr = parity_report(manifest)
-            parity_line = (f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
+            (f"{pr['deck_cells']}/{pr['shipped_cells']} shipped cells "
                            f"({len(pr['missing'])} missing, {len(pr['extra'])} extra)")
             parity_ok = pr["parity_ok"]
-        except Exception as exc:  # pragma: no cover - defensive (never blocks)
-            parity_line = f"error: {exc}"
+        except Exception:  # pragma: no cover - defensive (never blocks)
+            pass
 
         checks = [
             ("Tensile root exists", self.tensile_root.is_dir()),
@@ -325,11 +320,7 @@ class TensileDriver(
         ]
 
         all_ok = True
-        for name, ok in checks:
-            status = "[OK]" if ok else "[FAIL]"
-            print(f"  {status} {name}"
-                  if name != checks[-1][0]
-                  else f"  {status} {name} ({parity_line})")
+        for _name, ok in checks:
             if not ok:
                 all_ok = False
 
@@ -348,7 +339,7 @@ class TensileDriver(
         """Arm of the run whose phases execute_phase is running: spoof for the
         gfx900 reference floor runs, native otherwise."""
         return "spoof" if "gfx900_ref" in str(self.run_dir.name) else "native"
-    def _named_cell_stamps(self, phase: Dict[str, Any], arm: Optional[str] = None) -> Dict[str, Any]:
+    def _named_cell_stamps(self, phase: dict[str, Any], arm: str | None = None) -> dict[str, Any]:
         """cell-key stamps for a phase's registry records.
 
         Identity comes from the authoritative config (FamilyLabel + MacroTile +
@@ -374,8 +365,8 @@ class TensileDriver(
 
     _KEY_POLL_S = 0.2
 
-    def _start_live_status(self, run_id: Optional[str] = None,
-                           plan=None, interval: Optional[float] = None) -> None:
+    def _start_live_status(self, run_id: str | None = None,
+                           plan=None, interval: float | None = None) -> None:
         """Paint run_status into the TTY for the duration of a run.
 
         CPU-only: build_report reads the registry, so this adds no GPU work and
@@ -405,17 +396,14 @@ class TensileDriver(
                 compact=True,
             ).start()
             self._live_status.refresh()
-        except BaseException as e:
+        except BaseException:
             # BaseException, not Exception: run_status raises SystemExit when the
             # registry is not there yet, and that must not abort a run that is
             # in the middle of creating one.
             self._live_status = None
-            print(f"[live] status panel unavailable ({e}); continuing without it")
     def _stop_live_status(self) -> None:
         panel, self._live_status = self._live_status, None
         if panel is None:
             return
-        try:
+        with contextlib.suppress(BaseException):
             panel.stop()
-        except BaseException:
-            pass

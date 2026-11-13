@@ -8,7 +8,6 @@ the tool's job to report, not this test's to freeze.
 """
 from __future__ import annotations
 
-import json
 import sys
 import tempfile
 import unittest
@@ -17,7 +16,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness import gate_calibration as gc  # noqa: E402
+from oto.harness import gate_calibration as gc
 
 
 def _phase_yaml(path: Path, macro, tt, du, vw, dtype="s", ta=False, tb=True):
@@ -87,11 +86,11 @@ class TestReadPhaseConfig(unittest.TestCase):
             cfg_dir.mkdir()
             _phase_yaml(cfg_dir / "phase_p.yaml", (64, 64), (4, 4), 8, 2)
             cfg = gc.read_phase_config(cfg_dir / "phase_p.yaml", "phase_ss_test")
-            self.assertEqual(cfg["MacroTile"], "64x64")
-            self.assertEqual(cfg["ThreadTile"], "4x4")
-            self.assertEqual(cfg["DataType"], "S")
-            self.assertEqual(cfg["FamilyLabel"], "SS")
-            self.assertEqual(cfg["ContractionPattern"], "Ailk_Bjlk")
+            assert cfg["MacroTile"] == "64x64"
+            assert cfg["ThreadTile"] == "4x4"
+            assert cfg["DataType"] == "S"
+            assert cfg["FamilyLabel"] == "SS"
+            assert cfg["ContractionPattern"] == "Ailk_Bjlk"
 
     def test_placeholder_tile_is_excluded_not_a_crash(self):
         """A non-numeric MacroTile is unmodellable -> None, never a ValueError.
@@ -103,8 +102,7 @@ class TestReadPhaseConfig(unittest.TestCase):
             cfg_dir = Path(td) / "configs"
             cfg_dir.mkdir()
             _phase_yaml(cfg_dir / "phase_none.yaml", ("NONE", "NONE"), (4, 4), 8, 2)
-            self.assertIsNone(
-                gc.read_phase_config(cfg_dir / "phase_none.yaml", "phase_ss_x"))
+            assert gc.read_phase_config(cfg_dir / "phase_none.yaml", "phase_ss_x") is None
 
 
 class TestMeasurementProduced(unittest.TestCase):
@@ -112,13 +110,13 @@ class TestMeasurementProduced(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             ph = Path(td) / "p"
             ph.mkdir()
-            self.assertFalse(gc.measurement_produced(ph))
+            assert not gc.measurement_produced(ph)
             (ph / "2_BenchmarkData").mkdir()
-            self.assertFalse(gc.measurement_produced(ph))
+            assert not gc.measurement_produced(ph)
             (ph / "2_BenchmarkData" / "x.csv").write_text("")
-            self.assertFalse(gc.measurement_produced(ph))
+            assert not gc.measurement_produced(ph)
             (ph / "2_BenchmarkData" / "x.csv").write_text("a,b\n1,2\n")
-            self.assertTrue(gc.measurement_produced(ph))
+            assert gc.measurement_produced(ph)
 
 
 class TestAudit(unittest.TestCase):
@@ -128,30 +126,30 @@ class TestAudit(unittest.TestCase):
             _make_corpus(root)
             result = gc.audit(str(root))
             ours = result["populations"]["ours"]
-            self.assertEqual(ours["phases"], 4)
-            self.assertEqual(ours["built"], 2)
-            self.assertEqual(ours["confusion"].get("built=True gate=True"), 1)
-            self.assertEqual(ours["confusion"].get("built=False gate=False"), 1)
-            self.assertEqual(ours["confusion"].get("built=False gate=True"), 1)
-            self.assertEqual(ours["confusion"].get("built=True gate=False"), 1)
-            self.assertEqual(len(ours["false_rejections"]), 1)
-            self.assertEqual(len(ours["misses"]), 1)
-            self.assertEqual(ours["false_rejections"][0]["phase"], "phase_built_refused")
-            self.assertEqual(ours["misses"][0]["phase"], "phase_miss")
+            assert ours["phases"] == 4
+            assert ours["built"] == 2
+            assert ours["confusion"].get("built=True gate=True") == 1
+            assert ours["confusion"].get("built=False gate=False") == 1
+            assert ours["confusion"].get("built=False gate=True") == 1
+            assert ours["confusion"].get("built=True gate=False") == 1
+            assert len(ours["false_rejections"]) == 1
+            assert len(ours["misses"]) == 1
+            assert ours["false_rejections"][0]["phase"] == "phase_built_refused"
+            assert ours["misses"][0]["phase"] == "phase_miss"
 
             ref = result["populations"]["reference"]
-            self.assertEqual(ref["phases"], 1)
-            self.assertEqual(ref["false_rejections"], [])
-            self.assertEqual(ref["misses"], [])
+            assert ref["phases"] == 1
+            assert ref["false_rejections"] == []
+            assert ref["misses"] == []
 
     def test_family_filter(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
             result = gc.audit(str(root), families=["SS"])
-            self.assertEqual(result["meta"]["filtered_out"], 0)
+            assert result["meta"]["filtered_out"] == 0
             # the ZZ-ish? none; all phases are SS here
-            self.assertEqual(result["populations"]["ours"]["phases"], 4)
+            assert result["populations"]["ours"]["phases"] == 4
 
 
 class TestPlaceholderTileExcluded(unittest.TestCase):
@@ -168,9 +166,9 @@ class TestPlaceholderTileExcluded(unittest.TestCase):
             (ph / "2_BenchmarkData" / "x.csv").write_text("a,b\n1,2\n")
             result = gc.audit(str(root))
             ours = result["populations"]["ours"]
-            self.assertEqual(ours["phases"], 0)
-            self.assertEqual(ours["built"], 0)
-            self.assertEqual(ours["false_rejections"], [])
+            assert ours["phases"] == 0
+            assert ours["built"] == 0
+            assert ours["false_rejections"] == []
 
 
 class TestMain(unittest.TestCase):
@@ -183,19 +181,20 @@ class TestMain(unittest.TestCase):
             import contextlib
             with contextlib.redirect_stdout(buf):
                 rc = gc.main(["--base", str(root)])
-            self.assertEqual(rc, 0)
+            assert rc == 0
             text = buf.getvalue()
-            self.assertIn("FALSE REJECTION", text)
-            self.assertIn("MISS", text)
+            assert "FALSE REJECTION" in text
+            assert "MISS" in text
 
     def test_fail_on_false_reject_exits_one(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            import io, contextlib
+            import contextlib
+            import io
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = gc.main(["--base", str(root), "--fail-on-false-reject"])
-            self.assertEqual(rc, 1)
+            assert rc == 1
 
 
 if __name__ == "__main__":

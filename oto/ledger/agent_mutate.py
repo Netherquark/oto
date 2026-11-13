@@ -10,14 +10,13 @@ Public API: MutateMixin.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
-
 import random
+from typing import Any
 
-import oto.metrics.coverage as coverage
 import oto.device.peaks as _peaks
 from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.ledger.mutator import Proposal
+from oto.metrics import coverage
 from oto.tensile.candidate import CandidateConfig
 
 
@@ -25,11 +24,11 @@ class MutateMixin:
     def _mutate_cell(
         self,
         cell_key: str,
-        winner_info: Dict[str, Any],
+        winner_info: dict[str, Any],
         mutation_budget: int,
-        retired_cells: List[str],
-        lattice_fallbacks: List[str],
-    ) -> Tuple[List[CandidateConfig], List[Dict[str, Any]], int, List[str]]:
+        retired_cells: list[str],
+        lattice_fallbacks: list[str],
+    ) -> tuple[list[CandidateConfig], list[dict[str, Any]], int, list[str]]:
         """Mutate one cell's winner.
 
         Returns (new_candidates, replayed, rejected_count, ungraded_cells).
@@ -48,10 +47,10 @@ class MutateMixin:
             retired_cells, lattice_fallbacks
         )
 
-        new_candidates: List[CandidateConfig] = []
-        replayed: List[Dict[str, Any]] = []
+        new_candidates: list[CandidateConfig] = []
+        replayed: list[dict[str, Any]] = []
         rejected_non_novel = 0
-        ungraded_cells: List[str] = []
+        ungraded_cells: list[str] = []
 
         for i, mutant in enumerate(mutants):
             phase_id = f"phase_auto_{self.iteration}_{cell_key}_{i}"
@@ -71,9 +70,9 @@ class MutateMixin:
 
     def mutate_and_feed(
         self,
-        winners: Dict[str, Dict[str, Any]],
+        winners: dict[str, dict[str, Any]],
         mutation_budget: int = 2
-    ) -> List[CandidateConfig]:
+    ) -> list[CandidateConfig]:
         """
         Mutate harvested configs and record them in the proposals ledger.
 
@@ -82,13 +81,13 @@ class MutateMixin:
         * Novelty is checked before emission against ledger/registry fingerprints.
         With no mutator configured, pre-Phase-1 append-to-phases.yaml fallback is preserved.
         """
-        new_candidates: List[CandidateConfig] = []
+        new_candidates: list[CandidateConfig] = []
         rejected_non_novel = 0
-        replayed: List[Dict[str, Any]] = []
-        retired_cells: List[str] = []
-        settled_cells: List[str] = []
-        lattice_fallbacks: List[str] = []
-        ungraded_cells: List[str] = []
+        replayed: list[dict[str, Any]] = []
+        retired_cells: list[str] = []
+        settled_cells: list[str] = []
+        lattice_fallbacks: list[str] = []
+        ungraded_cells: list[str] = []
 
         for ck, winner_info in winners.items():
             cands, repl, rejected, ungraded = self._mutate_cell(
@@ -118,13 +117,13 @@ class MutateMixin:
         cell_key: str,
         family: str,
         shape: str,
-        winner_config: Dict[str, Any],
+        winner_config: dict[str, Any],
         mutation_budget: int,
-        retired_cells: List[str],
-        lattice_fallbacks: List[str],
-    ) -> tuple[List[Dict], List[str], Optional[str]]:
+        retired_cells: list[str],
+        lattice_fallbacks: list[str],
+    ) -> tuple[list[dict], list[str], str | None]:
         """Prepare mutants and sweep shapes for a cell. Returns (mutants, sweep_shapes, cell_state)."""
-        sweep_shapes: List[str] = []
+        sweep_shapes: list[str] = []
         cell_state = None
         if self.mutator is not None:
             cell_state = self._cell_coverage_state(family, shape)
@@ -156,7 +155,7 @@ class MutateMixin:
             mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
         return mutants, sweep_shapes, cell_state
 
-    def _build_template(self, family: str, data_type: str) -> Dict[str, Any]:
+    def _build_template(self, family: str, data_type: str) -> dict[str, Any]:
         """Build the candidate template."""
         return {
             "Architecture": _peaks.CODENAME,
@@ -169,9 +168,9 @@ class MutateMixin:
     def _validate_candidate(
         self,
         candidate: CandidateConfig,
-        template: Dict[str, Any],
-        mutant: Dict[str, Any],
-        winner_info: Dict[str, Any],
+        template: dict[str, Any],
+        mutant: dict[str, Any],
+        winner_info: dict[str, Any],
     ) -> str:
         """Validate candidate and record rejection if invalid. Returns 'invalid' or 'ok'."""
         is_valid, reason = self.scheduler.validate_config({**template, **mutant})
@@ -203,14 +202,14 @@ class MutateMixin:
         family: str,
         data_type: str,
         shape: str,
-        sweep_shapes: List[str],
-        cell_state: Optional[str],
+        sweep_shapes: list[str],
+        cell_state: str | None,
         candidate: CandidateConfig,
-        mutant: Dict[str, Any],
-        winner_info: Dict[str, Any],
-        template: Dict[str, Any],
-        replayed: List[Dict[str, Any]],
-        ungraded_cells: List[str],
+        mutant: dict[str, Any],
+        winner_info: dict[str, Any],
+        template: dict[str, Any],
+        replayed: list[dict[str, Any]],
+        ungraded_cells: list[str],
         cell_key: str,
     ) -> None:
         """Record candidate phase in mutator or fallback to scheduler."""
@@ -250,13 +249,13 @@ class MutateMixin:
         family: str,
         data_type: str,
         shape: str,
-        sweep_shapes: List[str],
-        cell_state: Optional[str],
-        mutant: Dict[str, Any],
-        winner_info: Dict[str, Any],
-        new_candidates: List[CandidateConfig],
-        replayed: List[Dict[str, Any]],
-        ungraded_cells: List[str],
+        sweep_shapes: list[str],
+        cell_state: str | None,
+        mutant: dict[str, Any],
+        winner_info: dict[str, Any],
+        new_candidates: list[CandidateConfig],
+        replayed: list[dict[str, Any]],
+        ungraded_cells: list[str],
         cell_key: str,
     ) -> str:
         """Process a single mutant. Returns status: 'ok', 'rejected_non_novel', or 'invalid'."""
@@ -290,13 +289,13 @@ class MutateMixin:
 
     def _record_emission_stats(
         self,
-        new_candidates: List[CandidateConfig],
+        new_candidates: list[CandidateConfig],
         rejected_non_novel: int,
-        replayed: List[Dict[str, Any]],
-        retired_cells: List[str],
-        settled_cells: List[str],
-        lattice_fallbacks: List[str],
-        ungraded_cells: List[str],
+        replayed: list[dict[str, Any]],
+        retired_cells: list[str],
+        settled_cells: list[str],
+        lattice_fallbacks: list[str],
+        ungraded_cells: list[str],
     ) -> None:
         """Record emission statistics for this iteration."""
         self.last_emission_stats = {

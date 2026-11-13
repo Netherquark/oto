@@ -40,37 +40,39 @@ import argparse
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
 from oto.runners.paths import results_rel
+
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
                "VectorWidth", "DepthU")
 
 
-def _best(rows: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _best(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Best row under the standing winner rule (median-primary, best-secondary)."""
     return max(rows, key=lambda r: (r.get("gflops_median") or 0.0,
                                     r.get("gflops_best") or 0.0)) if rows else None
 
 
-def _med(row: Optional[Dict[str, Any]]) -> float:
+def _med(row: dict[str, Any] | None) -> float:
     return float(row.get("gflops_median") or 0.0) if row else 0.0
 
 
-def _pct(a: float, b: float) -> Optional[float]:
+def _pct(a: float, b: float) -> float | None:
     return ((a - b) / b * 100.0) if b > 0 else None
 
 
-def _cfg(row: Optional[Dict[str, Any]]) -> Dict[str, str]:
+def _cfg(row: dict[str, Any] | None) -> dict[str, str]:
     return {k: str(row.get(k) or "") for k in CONFIG_KEYS} if row else {}
 
 
 _STRUCTURAL = ("MacroTile", "ThreadTile", "VectorWidth", "DepthU")
 
-def _configs_identical(dk: Optional[Dict[str, Any]],
-                       fl: Optional[Dict[str, Any]]) -> bool:
+def _configs_identical(dk: dict[str, Any] | None,
+                       fl: dict[str, Any] | None) -> bool:
     """True when the structural keys both rows actually know about agree, and
     the macro-tile / thread-tile / vector-width / depth knobs are present and
     equal. Missing keys (e.g. floor rows rebuilt from the solution name without
@@ -84,9 +86,9 @@ def _configs_identical(dk: Optional[Dict[str, Any]],
     return all(a.get(k) and a.get(k) == b.get(k) for k in _STRUCTURAL)
 
 
-def _cell_of(row: Dict[str, Any],
-             grid: Set[Tuple[str, str]],
-             phase_family: Any) -> Optional[Tuple[str, str]]:
+def _cell_of(row: dict[str, Any],
+             grid: set[tuple[str, str]],
+             phase_family: Any) -> tuple[str, str] | None:
     """(family, shape) grid cell for a row, or None for non-cube/non-grid."""
     shape = row.get("shape") or ""
     sides = shape.split("x")
@@ -103,11 +105,11 @@ def _cell_of(row: Dict[str, Any],
     return (fam, shape) if (fam, shape) in grid else None
 
 
-def _split_native_spoof(db: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
-                                                List[Dict[str, Any]]]:
+def _split_native_spoof(db: dict[str, Any]) -> tuple[list[dict[str, Any]],
+                                                list[dict[str, Any]]]:
     """Native and floor rows, separated by the gfx900_ref run-id prefix."""
-    native: List[Dict[str, Any]] = []
-    spoof: List[Dict[str, Any]] = []
+    native: list[dict[str, Any]] = []
+    spoof: list[dict[str, Any]] = []
     for run_id, rows in db.items():
         if run_id.startswith("gfx900_ref_"):
             spoof.extend(dict(r, run=run_id) for r in rows)
@@ -116,8 +118,8 @@ def _split_native_spoof(db: Dict[str, Any]) -> Tuple[List[Dict[str, Any]],
     return native, spoof
 
 
-def _filter_protocol(rows: List[Dict[str, Any]],
-                     any_protocol: bool) -> Tuple[List[Dict[str, Any]], int]:
+def _filter_protocol(rows: list[dict[str, Any]],
+                     any_protocol: bool) -> tuple[list[dict[str, Any]], int]:
     """Rows admitted under the like-for-like rule (protocol == 'family').
 
     Pre-protocol-stamp caches classify as 'unknown' and are admitted only
@@ -131,25 +133,25 @@ def _filter_protocol(rows: List[Dict[str, Any]],
     return keep, len(rows) - len(keep)
 
 
-def _deck_phase_ids(base_dir: str) -> Set[str]:
+def _deck_phase_ids(base_dir: str) -> set[str]:
     """The shipped deck's phase ids (the authoritative coverage universe)."""
     text = (Path(base_dir) / "phases.yaml").read_text()
     return {p.get("phase_id") for p in (yamlio.load_yaml_text(text) or [])}
 
 
 def _bucket_rows(
-    native: List[Dict[str, Any]],
-    spoof: List[Dict[str, Any]],
-    deck_phase_ids: Set[str],
-    grid: Set[Tuple[str, str]],
+    native: list[dict[str, Any]],
+    spoof: list[dict[str, Any]],
+    deck_phase_ids: set[str],
+    grid: set[tuple[str, str]],
     phase_family: Any,
-) -> Tuple[Dict[Tuple[str, str], List[Dict[str, Any]]],
-           Dict[Tuple[str, str], List[Dict[str, Any]]],
-           Dict[Tuple[str, str], List[Dict[str, Any]]]]:
+) -> tuple[dict[tuple[str, str], list[dict[str, Any]]],
+           dict[tuple[str, str], list[dict[str, Any]]],
+           dict[tuple[str, str], list[dict[str, Any]]]]:
     """deck / all-time / floor row buckets keyed by (family, shape)."""
-    deck_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
-    at_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
-    floor_rows: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    deck_rows: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    at_rows: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    floor_rows: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in native:
         c = _cell_of(row, grid, phase_family)
         if c:
@@ -167,11 +169,11 @@ def _matrix_entry(
     key: str,
     fam: str,
     side: str,
-    dk: Optional[Dict[str, Any]],
-    fl: Optional[Dict[str, Any]],
-    at: Optional[Dict[str, Any]],
-    result: Dict[str, Any],
-) -> Dict[str, Any]:
+    dk: dict[str, Any] | None,
+    fl: dict[str, Any] | None,
+    at: dict[str, Any] | None,
+    result: dict[str, Any],
+) -> dict[str, Any]:
     """One matrix cell entry; appends wins/losses/regressions to `result`."""
     entry = {
         "cell": key, "family": fam,
@@ -209,7 +211,7 @@ def _matrix_entry(
 
 def build_matrix(db_path: str, base_dir: str,
                  rebuild: bool = False,
-                 any_protocol: bool = False) -> Dict[str, Any]:
+                 any_protocol: bool = False) -> dict[str, Any]:
     """deck / floor / all-time per shipped grid cell + aggregate verdicts.
 
     The universe of cells is the repo's canonical shipped grid
@@ -219,8 +221,8 @@ def build_matrix(db_path: str, base_dir: str,
     (`protocol='family'`) unless ``any_protocol=True``.
     """
     sys.path.insert(0, base_dir)
-    from oto.harness.kernel_db import load_kernel_db
     from oto.device.peaks import shipped_cell_set
+    from oto.harness.kernel_db import load_kernel_db
     from oto.tensile.library_parity import phase_family
 
     db = load_kernel_db(db_path, base_dir=base_dir, rebuild=rebuild)
@@ -235,7 +237,7 @@ def build_matrix(db_path: str, base_dir: str,
                                                   phase_family)
 
     keys = sorted({f"{f}:{s.split('x')[0]}" for f, s in set(deck_rows) | set(at_rows) | set(floor_rows)})
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "meta": {
             "rule": "knowledge_base.md §6.1 coverage-parity contract",
             "winner": "median-of-seeds primary, best-seed secondary",
@@ -262,7 +264,7 @@ def build_matrix(db_path: str, base_dir: str,
     return result
 
 
-def _table(r: Dict[str, Any]) -> str:
+def _table(r: dict[str, Any]) -> str:
     lines = [f"{'cell':>12} {'deck med':>10} {'floor med':>10} {'% vs fl':>9}  kern"]
     lines.append("-" * 72)
     for key in r["cell_keys"]:
@@ -276,16 +278,17 @@ def _table(r: Dict[str, Any]) -> str:
                  f"wins(>+2%): {len(r['wins'])}  "
                  f"losses(<-2%): {len(r['losses'])}  "
                  f"material median regressions: {len(r['material_regressions'])}")
-    for loss in r["losses"]:
-        lines.append(f"  LOSS {loss['cell']:<10} {loss['vs_floor_pct']:+.1f}%  "
-                     f"config-identical={loss['config_identical']}")
-    for m in r["material_regressions"]:
-        lines.append(f"  REGR {m['cell']:<10} {m['pct']:+.1f}% vs "
-                     f"{m['regressed_vs'][:50]}")
+    lines.extend(
+        f"  LOSS {loss['cell']:<10} {loss['vs_floor_pct']:+.1f}%  "
+        f"config-identical={loss['config_identical']}"
+        for loss in r["losses"])
+    lines.extend(
+        f"  REGR {m['cell']:<10} {m['pct']:+.1f}% vs {m['regressed_vs'][:50]}"
+        for m in r["material_regressions"])
     return "\n".join(lines)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None, help="repo root")
@@ -304,12 +307,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
     result = build_matrix(args.db, base, rebuild=args.rebuild,
                           any_protocol=args.any_protocol)
-    print(_table(result))
     if not args.no_json:
         out = Path(args.json)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1, default=str))
-        print(f"\nwrote -> {out}")
     return 0
 
 

@@ -29,9 +29,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from oto.ledger.agent import ConvergenceAgent
-from oto.metrics.analytics import AnalyticsEngine
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
+from oto.metrics.analytics import AnalyticsEngine
 from oto.tensile.candidate import CandidateConfig
 
 CURATED = """\
@@ -111,19 +111,17 @@ class AgentTestCase(unittest.TestCase):
         self.agent = ConvergenceAgent(
             self.tmp, self.scheduler, self.analytics, mutator=self.mutator)
 
-    def assertDeckUnchanged(self):
-        self.assertEqual(
-            self.phases.read_text(), CURATED,
-            "the curated deck was modified; candidates belong in the overlay")
+    def assert_deck_unchanged(self):
+        assert self.phases.read_text() == CURATED, "the curated deck was modified; candidates belong in the overlay"
 
 
 class OverlayRoutingTests(AgentTestCase):
     def test_candidates_go_to_the_overlay_not_the_deck(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
         emitted = self.agent.mutate_and_feed(WINNERS)
-        self.assertGreaterEqual(len(emitted), 1)
-        self.assertEqual(self.scheduler.appended, [])
-        self.assertDeckUnchanged()
+        assert len(emitted) >= 1
+        assert self.scheduler.appended == []
+        self.assert_deck_unchanged()
 
     def test_overlay_file_is_written_for_the_run(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
@@ -131,25 +129,23 @@ class OverlayRoutingTests(AgentTestCase):
         self.agent.mutate_and_feed(WINNERS)
         overlays = sorted((self.tmp / "gfx90c_results" / "overlays").glob("*.yaml"))
         # create_run_dir returns a path; latest_run_id is what write_overlay binds
-        self.assertTrue(overlays or self.mutator.load_overlay("run_arm"))
-        self.assertTrue(self.mutator.load_overlay(run_id) or self.mutator.load_overlay(
-            self.registry.latest_run_id()))
+        assert overlays or self.mutator.load_overlay("run_arm")
+        assert self.mutator.load_overlay(run_id) or self.mutator.load_overlay(self.registry.latest_run_id())
 
     def test_every_emitted_candidate_is_in_the_ledger(self):
         self.make_agent([{"MacroTile": "64x64x16"}, {"ThreadTile": "4x4"}])
         emitted = self.agent.mutate_and_feed(WINNERS)
-        self.assertGreaterEqual(len(emitted), 1)
-        self.assertEqual(self.registry.proposed_fps(),
-                         {c.fingerprint for c in emitted})
+        assert len(emitted) >= 1
+        assert self.registry.proposed_fps() == {c.fingerprint for c in emitted}
 
     def test_iteration_and_parent_are_recorded(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
         emitted = self.agent.mutate_and_feed(WINNERS)
         row = self.registry.get_proposal(emitted[0].fingerprint)
-        self.assertEqual(row["parent_fp"], "parentfp")
-        self.assertEqual(row["iteration"], 0)
-        self.assertEqual(row["family"], "ZZ")
-        self.assertEqual(row["shape"], "128x128x128")
+        assert row["parent_fp"] == "parentfp"
+        assert row["iteration"] == 0
+        assert row["family"] == "ZZ"
+        assert row["shape"] == "128x128x128"
 
     def test_second_iteration_does_not_repropose_fingerprints(self):
         """This is D2. Before the ledger existed, iteration 2 re-proposed 25 of
@@ -167,11 +163,9 @@ class OverlayRoutingTests(AgentTestCase):
         self.make_agent([{"MacroTile": "64x64x16"}, {"ThreadTile": "4x4"}])
         first = self.agent.mutate_and_feed(WINNERS)
         second = self.agent.mutate_and_feed(WINNERS)
-        self.assertGreaterEqual(len(first), 1)
-        self.assertEqual({c.fingerprint for c in first} &
-                         {c.fingerprint for c in second}, set())
-        self.assertEqual(len(self.registry.proposed_fps()),
-                         len(first) + len(second))
+        assert len(first) >= 1
+        assert {c.fingerprint for c in first} & {c.fingerprint for c in second} == set()
+        assert len(self.registry.proposed_fps()) == len(first) + len(second)
 
     def test_repeating_an_iteration_suppresses_every_candidate(self):
         """Given the same iteration and cell, the prior must not re-emit.
@@ -182,14 +176,13 @@ class OverlayRoutingTests(AgentTestCase):
         """
         self.make_agent([{"MacroTile": "64x64x16"}, {"ThreadTile": "4x4"}])
         first = self.agent.mutate_and_feed(WINNERS)
-        self.assertGreaterEqual(len(first), 1)
+        assert len(first) >= 1
         replay_iteration = self.agent.iteration - 1
         self.agent.iteration = replay_iteration
         second = self.agent.mutate_and_feed(WINNERS)
-        self.assertEqual(second, [], "duplicate fingerprints were re-emitted")
-        self.assertGreaterEqual(
-            self.agent.last_emission_stats["rejected_non_novel"], 1)
-        self.assertEqual(len(self.registry.proposed_fps()), len(first))
+        assert second == [], "duplicate fingerprints were re-emitted"
+        assert self.agent.last_emission_stats["rejected_non_novel"] >= 1
+        assert len(self.registry.proposed_fps()) == len(first)
 
 
 class ValidationAssertionTests(AgentTestCase):
@@ -197,23 +190,22 @@ class ValidationAssertionTests(AgentTestCase):
         self.make_agent([{"MacroTile": "128x64"}], valid=False,
                         reason="occupancy illegal: register file")
         emitted = self.agent.mutate_and_feed(WINNERS)
-        self.assertEqual(emitted, [])
+        assert emitted == []
         rows = self.registry.coverage_view()
-        self.assertGreaterEqual(rows[0]["n_legal_rejected"], 1)
+        assert rows[0]["n_legal_rejected"] >= 1
         attempted = self.agent.last_emission_stats.get("candidates_sampled", None)
         if attempted is not None:
-            self.assertEqual(rows[0]["n_legal_rejected"], attempted)
+            assert rows[0]["n_legal_rejected"] == attempted
         row = self.registry.pending_proposals()
-        self.assertEqual(row, [])   # it was resolved, not left pending
+        assert row == []   # it was resolved, not left pending
         fp = next(iter(self.registry.proposed_fps()))
-        self.assertIn("occupancy", self.registry.get_proposal(fp)["build_class"])
-        self.assertDeckUnchanged()
+        assert "occupancy" in self.registry.get_proposal(fp)["build_class"]
+        self.assert_deck_unchanged()
 
     def test_validate_config_is_still_called(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
         self.agent.mutate_and_feed(WINNERS)
-        self.assertTrue(self.scheduler.validated,
-                        "validate_config must stay an assertion, not be dropped")
+        assert self.scheduler.validated, "validate_config must stay an assertion, not be dropped"
 
 
 class SkipBypassTests(AgentTestCase):
@@ -221,16 +213,15 @@ class SkipBypassTests(AgentTestCase):
 
     def test_bypass_allowed_with_ledger_and_outcome(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
-        self.assertFalse(self.agent.skip_mutation_arm())
-        self.assertTrue(self.agent.ledger_enabled)
-        self.assertTrue(self.agent.has_outcome_signal)
+        assert not self.agent.skip_mutation_arm()
+        assert self.agent.ledger_enabled
+        assert self.agent.has_outcome_signal
 
     def test_skip_reenabled_when_no_mutator(self):
         self.scheduler = StubGenerator([{"MacroTile": "64x64x16"}])
         agent = ConvergenceAgent(self.tmp, self.scheduler, self.analytics)
-        self.assertFalse(agent.ledger_enabled)
-        self.assertTrue(agent.skip_mutation_arm(),
-                        "without a ledger the identical-fp skip must stay on")
+        assert not agent.ledger_enabled
+        assert agent.skip_mutation_arm(), "without a ledger the identical-fp skip must stay on"
 
     def test_skip_re_enabled_when_ledger_is_missing(self):
         import sqlite3
@@ -238,9 +229,8 @@ class SkipBypassTests(AgentTestCase):
         with sqlite3.connect(self.registry.db_path) as c:
             c.execute("DROP TABLE proposals")
             c.commit()
-        self.assertFalse(self.mutator.ledger_available())
-        self.assertTrue(self.agent.skip_mutation_arm(),
-                        "a missing ledger must not unlock novelty-based bypass")
+        assert not self.mutator.ledger_available()
+        assert self.agent.skip_mutation_arm(), "a missing ledger must not unlock novelty-based bypass"
 
     def test_skip_re_enabled_without_outcome_signal(self):
         """Step 11: novelty alone is not enough."""
@@ -248,18 +238,17 @@ class SkipBypassTests(AgentTestCase):
         with mock.patch.object(type(self.mutator), "resolve_phase_dir", None):
             agent = ConvergenceAgent(
                 self.tmp, self.scheduler, self.analytics, mutator=self.mutator)
-            self.assertFalse(agent.has_outcome_signal)
-            self.assertTrue(agent.skip_mutation_arm(),
-                            "a novelty-only ledger must keep the skip on")
+            assert not agent.has_outcome_signal
+            assert agent.skip_mutation_arm(), "a novelty-only ledger must keep the skip on"
 
     def test_no_mutator_falls_back_to_legacy_append(self):
         """The pre-Phase-1 path stays reachable for comparison."""
         self.scheduler = StubGenerator([{"MacroTile": "64x64x16"}])
         agent = ConvergenceAgent(self.tmp, self.scheduler, self.analytics)
         emitted = agent.mutate_and_feed(WINNERS)
-        self.assertEqual(len(emitted), 1)
-        self.assertEqual(len(self.scheduler.appended), 1)
-        self.assertFalse(agent.last_emission_stats["wrote_overlay"])
+        assert len(emitted) == 1
+        assert len(self.scheduler.appended) == 1
+        assert not agent.last_emission_stats["wrote_overlay"]
 
 
 class NoCorpusLiteralsTests(unittest.TestCase):
@@ -323,10 +312,7 @@ class NoCorpusLiteralsTests(unittest.TestCase):
             path = Path(__file__).parent.parent / rel
             for lineno, word in self._executable_lines(path):
                 for bad in self.FORBIDDEN:
-                    self.assertNotEqual(
-                        word, bad,
-                        f"{rel}:{lineno} uses the literal {bad} in executable code; "
-                        "corpus counts must be read from the registry at runtime")
+                    assert word != bad, f"{rel}:{lineno} uses the literal {bad} in executable code; " "corpus counts must be read from the registry at runtime"
 
     def test_scanner_sees_identifiers_and_numeric_literals(self):
         """Sanity: the guardrail must not pass vacuously.
@@ -338,10 +324,8 @@ class NoCorpusLiteralsTests(unittest.TestCase):
         path = Path(__file__).parent.parent / "oto" / "ledger" / "proposals.py"
         words = {w for _, w in self._executable_lines(path)}
         for expected in ("record_proposal", "resolve_proposal", "coverage_view"):
-            self.assertIn(expected, words,
-                          f"scanner missed {expected}; the guardrail would pass vacuously")
-        self.assertTrue(any(w.isdigit() for w in words),
-                        "scanner saw no numeric literals at all")
+            assert expected in words, f"scanner missed {expected}; the guardrail would pass vacuously"
+        assert any(w.isdigit() for w in words), "scanner saw no numeric literals at all"
 
     def test_scanner_would_catch_a_planted_count(self):
         """Prove the detector detects, using a scratch file."""
@@ -351,8 +335,7 @@ class NoCorpusLiteralsTests(unittest.TestCase):
             f = Path(d) / "scratch.py"
             f.write_text(planted)
             seen = {w for _, w in self._executable_lines(f)}
-        self.assertIn("".join(("29", "60")), seen,
-                      "the scanner is not detecting the token it exists to detect")
+        assert "".join(("29", "60")) in seen, "the scanner is not detecting the token it exists to detect"
 
 
 #: A cell whose measured best has climbed above its family's published
@@ -399,28 +382,26 @@ class FloorRelativeTargetingTests(AgentTestCase):
         self.make_agent([{"MacroTile": "128x128x16"}])
         self._stub_floor({"SS:1024": {"verdict": "TIE"}})
         emitted = self.agent.mutate_and_feed(AT_CEILING_TIED)
-        self.assertGreaterEqual(len(emitted), 1,
-                                "an at-ceiling cell that only ties got no candidate")
-        self.assertTrue(self.calls, "the floor was never consulted")
+        assert len(emitted) >= 1, "an at-ceiling cell that only ties got no candidate"
+        assert self.calls, "the floor was never consulted"
 
     def test_a_cell_that_beats_the_floor_is_settled(self):
         self.make_agent([{"MacroTile": "128x128x16"}])
         self._stub_floor({"ZZ:128": {"verdict": "TIE"}})   # a different cell
-        self.assertEqual(self.agent.mutate_and_feed(AT_CEILING_TIED), [])
+        assert self.agent.mutate_and_feed(AT_CEILING_TIED) == []
 
     def test_an_unreadable_floor_keeps_the_ceiling_rule(self):
         """Empty means "cannot judge", so the old rule must stand unchanged."""
         self.make_agent([{"MacroTile": "128x128x16"}])
         self._stub_floor({})
-        self.assertEqual(self.agent.mutate_and_feed(AT_CEILING_TIED), [])
+        assert self.agent.mutate_and_feed(AT_CEILING_TIED) == []
 
     def test_a_below_ceiling_cell_never_pays_for_the_floor_scan(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
         self._stub_floor({"ZZ:128": {}})
         emitted = self.agent.mutate_and_feed(WINNERS)   # is_below_ceiling True
-        self.assertGreaterEqual(len(emitted), 1)
-        self.assertEqual(self.calls, [],
-                         "a below-ceiling cell triggered the corpus-wide scan")
+        assert len(emitted) >= 1
+        assert self.calls == [], "a below-ceiling cell triggered the corpus-wide scan"
 
 
 if __name__ == "__main__":

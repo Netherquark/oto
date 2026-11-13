@@ -44,20 +44,23 @@ Public API: DBMutator, FORWARD_KNOB_DOMAINS (re-exported).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import random
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN,
-                                            _DONOR_POOL, _FORWARD_DRAWS,
-                                            FAMILY_DTYPE_CHAR,
-                                            FORWARD_KNOB_DOMAINS)
+import oto.device.peaks as _peaks
+from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.runners.paths import results_dir as _results_dir
+from oto.tensile.synthesis.db_knobs import (
+    _DEFAULT_PATTERN,
+    _DONOR_POOL,
+    FORWARD_KNOB_DOMAINS,
+)
 from oto.tensile.synthesis.db_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
-import oto.device.peaks as _peaks
-from oto.runners.paths import results_dir as _results_dir
 
 
 class DBMutator(DbPatternsMixin):
@@ -76,15 +79,15 @@ class DBMutator(DbPatternsMixin):
     """
 
     def __init__(self, base_dir: Path, mutator,
-                 kernel_db_path: Optional[Path] = None):
+                 kernel_db_path: Path | None = None):
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
             _results_dir(self.base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
-        self._db: Optional[Dict[str, Any]] = None
-        self._by_family: Dict[str, List[Dict[str, Any]]] = {}
-        self._by_family_cell: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
-        self._floor_run: Optional[str] = None
+        self._db: dict[str, Any] | None = None
+        self._by_family: dict[str, list[dict[str, Any]]] = {}
+        self._by_family_cell: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        self._floor_run: str | None = None
         self._sched = None
 
     # -- DB loading -------------------------------------------------------
@@ -102,8 +105,8 @@ class DBMutator(DbPatternsMixin):
         except Exception:
             raw = {}
         self._db = raw if isinstance(raw, dict) else {}
-        by_family: Dict[str, List[Dict[str, Any]]] = {}
-        by_fc: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        by_family: dict[str, list[dict[str, Any]]] = {}
+        by_fc: dict[tuple[str, str], list[dict[str, Any]]] = {}
         floor_run = None
         for run_id, rows in self._db.items():
             if not isinstance(rows, list):
@@ -142,7 +145,7 @@ class DBMutator(DbPatternsMixin):
             self._sched = CandidateGenerator(self.base_dir, registry=None)
         return self._sched
 
-    def _template(self, family: str) -> Dict[str, Any]:
+    def _template(self, family: str) -> dict[str, Any]:
         return {
             "Architecture": _peaks.CODENAME,
             "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
@@ -152,7 +155,7 @@ class DBMutator(DbPatternsMixin):
             "ContractionPattern": _DEFAULT_PATTERN.get(family, "Ailk_Bjlk"),
         }
 
-    def _gate(self, config: Dict[str, Any]) -> bool:
+    def _gate(self, config: dict[str, Any]) -> bool:
         """validate_config + ldspad_feasible, the two CPU-only launch gates."""
         from oto.tensile.gates.occupancy import ldspad_feasible
         ok, _why = self._scheduler().validate_config(config)
@@ -163,17 +166,17 @@ class DBMutator(DbPatternsMixin):
 
     # -- donors -----------------------------------------------------------
 
-    def _tile_donors(self, family: str, parent_config: Dict[str, Any],
-                     rng: random.Random) -> List[Dict[str, Any]]:
+    def _tile_donors(self, family: str, parent_config: dict[str, Any],
+                     rng: random.Random) -> list[dict[str, Any]]:
         """Wide tile donors for the family: measured winners (DB) first, then
         the floor winner's tile, de-duplicated and excluding the parent's own
         tile so a donor is always a real move."""
         self.load_db()
         parent_tile = self._tile_key(parent_config)
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         seen = {parent_tile}
 
-        def _add(entry: Dict[str, Any]) -> None:
+        def _add(entry: dict[str, Any]) -> None:
             # Normalize the DB's parsed knobs to config-format strings/ints,
             # or the gate validates a shape the writer never sees.
             knobs = self._normalize_tile(entry)
@@ -192,11 +195,11 @@ class DBMutator(DbPatternsMixin):
         rng.shuffle(out)
         return out
 
-    def _tile_key(self, knobs: Dict[str, Any]) -> Tuple:
+    def _tile_key(self, knobs: dict[str, Any]) -> tuple:
         return tuple(str(knobs.get(k)) for k in TILE_KNOBS)
 
     @staticmethod
-    def _parse_dims(value: Any) -> Optional[List[int]]:
+    def _parse_dims(value: Any) -> list[int] | None:
         """Parse a knob value that may be a list, a ``"[a, b]"`` string, or a
         ``"axb"`` string, into a list of ints. None when unparseable."""
         if isinstance(value, (list, tuple)):
@@ -220,7 +223,7 @@ class DBMutator(DbPatternsMixin):
         return None
 
     @classmethod
-    def _normalize_tile(cls, entry: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_tile(cls, entry: dict[str, Any]) -> dict[str, Any]:
         """Convert a kernel_db row's parsed knobs to config-format strings.
 
         The analysis DB stores the structural knobs in Tensile's parsed form —
@@ -230,16 +233,14 @@ class DBMutator(DbPatternsMixin):
         conversion a donor tile would be validated (and fingerprinted) in a
         shape the writer never sees.
         """
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         mt = cls._parse_dims(entry.get("MacroTile"))
         du = entry.get("DepthU")
         if mt and len(mt) >= 2:
             du_str = ""
             if du is not None:
-                try:
+                with contextlib.suppress(TypeError, ValueError):
                     du_str = f"x{int(du)}"
-                except (TypeError, ValueError):
-                    pass
             out["MacroTile"] = f"{mt[0]}x{mt[1]}{du_str}"
         tt = cls._parse_dims(entry.get("ThreadTile"))
         if tt and len(tt) >= 2:
@@ -259,7 +260,7 @@ class DBMutator(DbPatternsMixin):
                 out[k] = v
         return out
 
-    def floor_winner(self, family: str, shape: str) -> Optional[Dict[str, Any]]:
+    def floor_winner(self, family: str, shape: str) -> dict[str, Any] | None:
         """The gfx900 floor's winning row for (family, shape), or None."""
         self.load_db()
         if not shape:
@@ -272,9 +273,9 @@ class DBMutator(DbPatternsMixin):
 
     # -- forward-knob draws ---------------------------------------------
 
-    def _narrow_mutants(self, family: str, parent_config: Dict[str, Any],
-                        rng: random.Random, limit: Optional[int] = None
-                        ) -> List[Tuple[Dict[str, Any], float]]:
+    def _narrow_mutants(self, family: str, parent_config: dict[str, Any],
+                        rng: random.Random, limit: int | None = None
+                        ) -> list[tuple[dict[str, Any], float]]:
         """Single-knob deltas on the parent's forward knobs (priority 1.0).
 
         These are the axes the manifest sampler cannot touch, so they are the
@@ -297,7 +298,7 @@ class DBMutator(DbPatternsMixin):
         keeps the run reproducible while spreading the budget over the axes,
         and the cap leaves room for the wide (tile-donor) pass.
         """
-        per_knob: List[Tuple[str, List[Any]]] = []
+        per_knob: list[tuple[str, list[Any]]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
         rng.shuffle(knobs)
         for knob in knobs:
@@ -305,7 +306,7 @@ class DBMutator(DbPatternsMixin):
                       if v != parent_config.get(knob)]
             if values:
                 per_knob.append((knob, values))
-        out: List[Tuple[Dict[str, Any], float]] = []
+        out: list[tuple[dict[str, Any], float]] = []
         depth = max((len(v) for _k, v in per_knob), default=0)
         for i in range(depth):
             for knob, values in per_knob:
@@ -315,25 +316,25 @@ class DBMutator(DbPatternsMixin):
                         return out
         return out
 
-    def _wide_mutants(self, family: str, parent_config: Dict[str, Any],
+    def _wide_mutants(self, family: str, parent_config: dict[str, Any],
                       rng: random.Random
-                      ) -> List[Tuple[Dict[str, Any], float]]:
+                      ) -> list[tuple[dict[str, Any], float]]:
         """Donor tiles re-combined with forward draws (priority 0.6).
 
         The draws are validated against the *donor* tile -- the tile they land
         on -- rather than the parent's, so a donor that moves DepthU also moves
         which StaggerUStride values are legal.
         """
-        out: List[Tuple[Dict[str, Any], float]] = []
+        out: list[tuple[dict[str, Any], float]] = []
         for donor in self._tile_donors(family, parent_config, rng):
             base = {**parent_config, **donor}
-            for draw in self._forward_draws(rng, base, family):
-                out.append(({**parent_config, **donor, **draw}, 0.6))
+            out.extend(({**parent_config, **donor, **draw}, 0.6)
+                       for draw in self._forward_draws(rng, base, family))
         return out
 
-    def synthesize_mutants(self, family: str, parent_config: Dict[str, Any],
+    def synthesize_mutants(self, family: str, parent_config: dict[str, Any],
                           shape: str, rng: random.Random,
-                          n: int = 8) -> List[Dict[str, Any]]:
+                          n: int = 8) -> list[dict[str, Any]]:
         """Return up to ``n`` novel mutant knob dicts for one cell.
 
         Wide (DB tile donors x forward draws), narrow (single-knob deltas on
@@ -347,7 +348,7 @@ class DBMutator(DbPatternsMixin):
 
         # Priority order: narrow (1.0) > direction (0.9) > wide (0.6). The sort
         # below is stable, so the order within a priority is the order below.
-        cands: List[Tuple[Dict[str, Any], float]] = []
+        cands: list[tuple[dict[str, Any], float]] = []
         # The narrow pass may take at most half the budget: the wide pass
         # (DB tile donors) is the only one that moves the *geometry*, and a
         # mutator that never changes the tile cannot leave a local minimum.
@@ -368,7 +369,7 @@ class DBMutator(DbPatternsMixin):
 
         cands.extend(self._wide_mutants(family, parent_config, rng))
 
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         seen = set()
         # Highest priority first; stable within a priority by candidate order.
         for knobs, _prio in sorted(cands, key=lambda x: -x[1]):

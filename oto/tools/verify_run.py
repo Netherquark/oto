@@ -36,17 +36,19 @@ the verdict. CPU only. Touches no GPU and launches no Tensile run.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
 import oto.device.peaks as _peaks
+from oto import yamlio
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+
 BASE = Path(__file__).resolve().parents[2]
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
@@ -57,21 +59,19 @@ REGISTRY_TABLES = ("runs", "phases", "records")
 # --------------------------------------------------------------------------
 # corpus state
 # --------------------------------------------------------------------------
-def _dir_size(p: Path) -> Tuple[int, int]:
+def _dir_size(p: Path) -> tuple[int, int]:
     """(file count, total bytes) under a directory, via one walk."""
     files = 0
     size = 0
     for f in p.rglob("*"):
         if f.is_file():
             files += 1
-            try:
+            with contextlib.suppress(OSError):
                 size += f.stat().st_size
-            except OSError:
-                pass
     return files, size
 
 
-def snapshot(base: Path = BASE) -> Dict[str, Any]:
+def snapshot(base: Path = BASE) -> dict[str, Any]:
     """Corpus state: per-run-directory file counts/sizes plus registry rows.
 
     Cheap enough to take around any run. Counts and bytes, not content hashes:
@@ -80,14 +80,14 @@ def snapshot(base: Path = BASE) -> Dict[str, Any]:
     CSV in the corpus would cost more than the runs being verified.
     """
     runs_dir = _runs_dir(base, _peaks.CODENAME)
-    dirs: Dict[str, List[int]] = {}
+    dirs: dict[str, list[int]] = {}
     if runs_dir.is_dir():
         for d in sorted(runs_dir.iterdir()):
             if d.is_dir():
                 dirs[d.name] = list(_dir_size(d))
 
     db_path = _results_dir(base, _peaks.CODENAME) / "registry.db"
-    tables: Dict[str, Optional[int]] = {}
+    tables: dict[str, int | None] = {}
     if db_path.is_file():
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         try:
@@ -102,7 +102,7 @@ def snapshot(base: Path = BASE) -> Dict[str, Any]:
     return {"dirs": dirs, "tables": tables}
 
 
-def diff_snapshots(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
+def diff_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
     """What changed between two snapshots, split into appends and violations.
 
     An increase in a pre-existing directory is reported separately from a
@@ -127,7 +127,7 @@ def diff_snapshots(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, A
             grown.append({"run_id": name, "before": [bf, bs], "after": [af, as_]})
 
     b_tab, a_tab = before.get("tables", {}), after.get("tables", {})
-    tables: Dict[str, Any] = {}
+    tables: dict[str, Any] = {}
     for t in REGISTRY_TABLES:
         bv, av = b_tab.get(t), a_tab.get(t)
         if bv is None or av is None:
@@ -137,15 +137,14 @@ def diff_snapshots(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, A
             tables[t] = {"before": bv, "after": av, "delta": av - bv,
                          "decreased": av < bv}
 
-    violations: List[str] = []
-    for r in shrunk:
-        violations.append(f"run {r['run_id']} SHRANK: {r['before']} -> {r['after']}")
-    for name in removed:
-        violations.append(f"run {name} was REMOVED")
-    for r in touched:
-        violations.append(
-            f"run {r['run_id']} was modified in place: {r['before']} -> {r['after']} "
-            f"(benchmark data is append-only)")
+    violations: list[str] = []
+    violations.extend(
+        f"run {r['run_id']} SHRANK: {r['before']} -> {r['after']}" for r in shrunk)
+    violations.extend(f"run {name} was REMOVED" for name in removed)
+    violations.extend(
+        f"run {r['run_id']} was modified in place: {r['before']} -> {r['after']} "
+        f"(benchmark data is append-only)"
+        for r in touched)
     for t, v in tables.items():
         if v.get("decreased"):
             violations.append(f"registry table {t} decreased: {v['before']} -> {v['after']}")
@@ -171,7 +170,7 @@ def _driver():
     return d
 
 
-def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
+def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
     """Per-phase telemetry funnel: how many rows survive each filter, and why.
 
     Filters are reported cumulatively in the order `_telemetry_rows` applies
@@ -189,7 +188,7 @@ def telemetry(run_id: str, base: Path = BASE) -> Dict[str, Any]:
         rows = list(rd)
     tagged = [r for r in rows if (r.get("phase_id") or "").strip()]
     schema_ok = "phase_id" in fieldnames
-    per_phase: Dict[str, Dict[str, Any]] = {}
+    per_phase: dict[str, dict[str, Any]] = {}
     for r in tagged:
         pid = r["phase_id"].strip()
         e = per_phase.setdefault(pid, {"rows": 0, "busy": 0, "sclk": 0, "clock": 0,
@@ -239,8 +238,8 @@ def _int(v: Any) -> int:
 # --------------------------------------------------------------------------
 # cheapest legal phase
 # --------------------------------------------------------------------------
-def cheapest(family: Optional[str] = None, n: int = 5,
-             base: Path = BASE) -> List[Dict[str, Any]]:
+def cheapest(family: str | None = None, n: int = 5,
+             base: Path = BASE) -> list[dict[str, Any]]:
     """The n cheapest LEGAL phases *in the live deck*, for a cheap smoke run.
 
     "Legal" is the whole point: sorting by problem volume alone hands back
@@ -252,8 +251,8 @@ def cheapest(family: Optional[str] = None, n: int = 5,
     universe used for deck *selection*. Recommending from the union produces
     `--targets` the driver cannot resolve, which is worse than no answer.
     """
-    from oto.tools.consolidate import _is_legal
     from oto.device.peaks import FAMILY_DTYPE_CHAR
+    from oto.tools.consolidate import _is_legal
 
     deck_path = base / "phases.yaml"
     if not deck_path.is_file():
@@ -264,7 +263,7 @@ def cheapest(family: Optional[str] = None, n: int = 5,
     # belongs to oto.device.peaks, so accept either and let it resolve.
     want = FAMILY_DTYPE_CHAR.get(family, family) if family else None
 
-    def volume(phase: Dict[str, Any]) -> float:
+    def volume(phase: dict[str, Any]) -> float:
         pt = (phase.get("config") or {}).get("ProblemType", "")
         try:
             i, j, k = (int(x) for x in pt.split("x"))
@@ -277,7 +276,7 @@ def cheapest(family: Optional[str] = None, n: int = 5,
         fam = (phase.get("config") or {}).get("DataType", "")
         if want and fam != want:
             continue
-        ok, why = _is_legal(phase)
+        ok, _why = _is_legal(phase)
         if not ok:
             continue
         cfg = phase.get("config") or {}
@@ -294,7 +293,7 @@ def cheapest(family: Optional[str] = None, n: int = 5,
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
-def _load(path: str) -> Dict[str, Any]:
+def _load(path: str) -> dict[str, Any]:
     return json.loads(Path(path).read_text())
 
 
@@ -328,49 +327,29 @@ def _cmd_snapshot(args, base: Path) -> int:
     text = json.dumps(snap, indent=2, sort_keys=True)
     if args.out:
         Path(args.out).write_text(text + "\n")
-        print(f"wrote {args.out}: {len(snap['dirs'])} run dirs, "
-              f"tables {snap['tables']}")
     else:
-        print(text)
+        pass
     return 0
 
 
 def _cmd_diff(args) -> int:
     res = diff_snapshots(_load(args.before), _load(args.after))
-    print(f"added:   {res['added'] or 'none'}")
-    print(f"removed: {res['removed'] or 'none'}")
-    print(f"modified in place: {[r['run_id'] for r in res['modified']] or 'none'}")
-    for t_, v in res["tables"].items():
-        print(f"  {t_:<8} {v['before']} -> {v['after']} "
-              f"(delta {v.get('delta', 'n/a')})")
+    for _, _v in res["tables"].items():
+        pass
     if res["ok"]:
-        print("OK: additive only, nothing lost")
         return 0
-    print("VIOLATIONS:")
-    for v in res["violations"]:
-        print(f"  - {v}")
+    for _v in res["violations"]:
+        pass
     return 1
 
 
 def _cmd_telemetry(args, base: Path) -> int:
     res = telemetry(args.run_id, base)
     if "error" in res:
-        print(res["error"])
         return 1
-    print(f"{res['run_id']}  rows={res['rows']} tagged={res['tagged_rows']} "
-          f"untagged={res['untagged_rows']}  phase_id column={res['schema_ok']}")
-    print(f"  gates: busy>{res['busy_gate_pct']}% "
-          f"(enforced={res['busy_gate_enforced']}), "
-          f"sclk in {res['sclk_range_hz']}, thermal<{res['thermal_max_c']}C")
-    hdr = f"  {'phase':<46} {'rows':>5} {'busy':>5} {'sclk':>5} {'clock':>6} {'hot':>4}"
-    print(hdr)
-    for pid, e in sorted(res["phases"].items()):
-        print(f"  {pid[:46]:<46} {e['rows']:>5} {e['busy']:>5} {e['sclk']:>5} "
-              f"{e['clock']:>6} {e['hot']:>4}"
-              f"  base={e['clock_base_hz']/1e6:.0f}MHz"
-              f"{'' if e['ok'] else '  <-- NO CLOCK BASE'}")
+    for _pid, _e in sorted(res["phases"].items()):
+        pass
     if res["unmeasured_phases"]:
-        print(f"  UNMEASURED: {res['unmeasured_phases']}")
         return 1
     return 0 if res["ok"] else 1
 
@@ -378,20 +357,14 @@ def _cmd_telemetry(args, base: Path) -> int:
 def _cmd_cheapest(args, base: Path) -> int:
     rows = cheapest(args.family, args.n, base)
     if args.json:
-        print(json.dumps(rows, indent=2))
+        pass
     else:
-        print(f"  {'volume':>14} {'dtype':<6} {'problem':<14} {'vw':<3} "
-              f"{'shapes':<7} phase")
-        for r in rows:
-            print(f"  {r['volume']:>14.0f} {r['dtype']:<6} {r['problem_type']:<14} "
-                  f"{str(r['vector_width']):<3} {len(r['shapes']):<7} {r['phase_id']}")
-        print("\ndrive one with:")
-        print(f"  python3 port_tensile.py --dry-run --native "
-              f"--targets {rows[0]['phase_id']}" if rows else "  (none)")
+        for _r in rows:
+            pass
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
     base = args.base_dir.resolve()
 

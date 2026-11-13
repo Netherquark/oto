@@ -38,9 +38,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness.candidate_pool import (  # noqa: E402
-    _assertion_failures, _shapes_satisfying_assertions)
-from oto.harness.candidate_rows import TARGET_CELLS  # noqa: E402
+from oto.harness.candidate_pool import (
+    _assertion_failures,
+    _shapes_satisfying_assertions,
+)
+from oto.harness.candidate_rows import TARGET_CELLS
 
 
 def _sides(fam: str) -> tuple:

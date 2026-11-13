@@ -16,28 +16,33 @@ _parse_ts, _jittery, read_thermals, main.
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
-import sys
-import threading
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
-import oto.tensile.library as tlib  # noqa: E402
+import oto.device.peaks as _peaks
+import oto.tensile.library as tlib
+from oto import yamlio
 
-from oto import yamlio  # noqa: E402
 # Re-exported for the pre-split import surface; the implementations live in
 # oto.metrics.read_thermals / oto.metrics.run_plan.
 from oto.metrics.read_thermals import read_thermals
-from oto.metrics.render_status import (  # noqa: E402,F401
-                                       LiveStatus, _PanelStdout, bar,
-                                       main, render, render_compact)
-from oto.metrics.run_plan import (Estimate, PhaseCost, RunPlan,
-                                  _reference_unit_count, _tuning_unit_count)
-import oto.device.peaks as _peaks
+from oto.metrics.render_status import (
+    LiveStatus,
+    _PanelStdout,
+    bar,
+    main,
+    render,
+    render_compact,
+)
+from oto.metrics.run_plan import (
+    Estimate,
+    PhaseCost,
+    RunPlan,
+    _reference_unit_count,
+    _tuning_unit_count,
+)
 from oto.runners.paths import results_rel
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -47,15 +52,28 @@ DB_REL = Path(results_rel("registry.db"))
 #: A run is "in flight" while it is the newest one and has no completed_at.
 ACTIVE_STATES = ("started", "interrupted")
 
-__all__ = ["RunPlan", "PhaseCost", "Estimate", "build_report", "bar",
-           "render_compact", "render", "LiveStatus", "_PanelStdout",
-           "fmt_duration", "bucket", "_parse_ts", "_jittery",
-           "read_thermals", "main"]
+__all__ = [
+    "Estimate",
+    "LiveStatus",
+    "PhaseCost",
+    "RunPlan",
+    "_PanelStdout",
+    "_jittery",
+    "_parse_ts",
+    "bar",
+    "bucket",
+    "build_report",
+    "fmt_duration",
+    "main",
+    "read_thermals",
+    "render",
+    "render_compact",
+]
 
 # ---------------------------------------------------------------------------
 # small helpers
 # ---------------------------------------------------------------------------
-def _parse_ts(value: Any) -> Optional[datetime]:
+def _parse_ts(value: Any) -> datetime | None:
     if not value:
         return None
     try:
@@ -64,9 +82,9 @@ def _parse_ts(value: Any) -> Optional[datetime]:
         return None
 
 
-def fmt_duration(minutes: Optional[float]) -> str:
+def fmt_duration(minutes: float | None) -> str:
     """Human duration, coarse on purpose: an ETA to the second is a lie."""
-    if minutes is None or minutes != minutes or minutes in (float("inf"),):
+    if minutes is None or minutes != minutes or minutes == float("inf"):
         return "unknown"
     if minutes < 0:
         return "unknown"
@@ -85,7 +103,7 @@ def _jittery(n: int) -> bool:
     return n < 3
 
 
-def bucket(status: str, result: Optional[str]) -> str:
+def bucket(status: str, result: str | None) -> str:
     """Map a record's (status, result.status) onto one display bucket.
 
     `result.status` is NULL for records that never got that far (Tensile
@@ -111,7 +129,7 @@ def bucket(status: str, result: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
+def _load_ledger(db: Path, run_id: str | None) -> dict[str, Any]:
     """Every run row and its general verdicts, in one read of the registry.
 
     Returns the per-run indexes, the resolved chain, the chain's latest
@@ -119,7 +137,7 @@ def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
     """
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=30.0)
     conn.row_factory = sqlite3.Row
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "status_by_run": {}, "started_by_run": {}, "completed_by_run": {},
         "meta_by_run": {}, "row_id": {}, "all_ids": [], "chain": [],
         "latest": {}, "unkeyed": set(), "first_start": None,
@@ -139,7 +157,7 @@ def _load_ledger(db: Path, run_id: Optional[str]) -> Dict[str, Any]:
 
     return out
 
-def _load_runs_data(conn, out: Dict) -> tuple:
+def _load_runs_data(conn, out: dict) -> tuple:
     """Load runs data from database into out dict. Returns tuple of dicts."""
     rows = conn.execute(
         "SELECT id, run_id, status, started_at, completed_at, metadata "
@@ -157,15 +175,15 @@ def _load_runs_data(conn, out: Dict) -> tuple:
     return (out["status_by_run"], out["started_by_run"], out["completed_by_run"],
             out["meta_by_run"], out["row_id"])
 
-def _sort_runs_by_started(status_by_run: Dict, started_by_run: Dict, row_id: Dict) -> List:
+def _sort_runs_by_started(status_by_run: dict, started_by_run: dict, row_id: dict) -> list:
     """Sort all runs by started_at (newest first), tie-break by row_id."""
     return sorted(
         status_by_run,
-        key=lambda r: (started_by_run.get(r) or datetime.min.replace(tzinfo=timezone.utc), row_id[r]),
+        key=lambda r: (started_by_run.get(r) or datetime.min.replace(tzinfo=UTC), row_id[r]),
         reverse=True
     )
 
-def _build_chain_from_run_id(run_id: str, meta_by_run: Dict, status_by_run: Dict) -> List[str]:
+def _build_chain_from_run_id(run_id: str, meta_by_run: dict, status_by_run: dict) -> list[str]:
     """Build chain from explicit run_id and its resume_of ancestors."""
     if run_id not in status_by_run:
         raise SystemExit(f"unknown run {run_id!r}")
@@ -183,9 +201,9 @@ def _build_chain_from_run_id(run_id: str, meta_by_run: Dict, status_by_run: Dict
     return chain
 
 def _build_chain_auto(
-    status_by_run: Dict, started_by_run: Dict, completed_by_run: Dict,
-    meta_by_run: Dict, all_ids: List[str]
-) -> List[str]:
+    status_by_run: dict, started_by_run: dict, completed_by_run: dict,
+    meta_by_run: dict, all_ids: list[str]
+) -> list[str]:
     """Auto-detect chain: in-flight > completed > interrupted, then ancestors."""
     chain = []
     # Priority: 1) in-flight (no completed_at), 2) completed, 3) interrupted
@@ -210,14 +228,14 @@ def _build_chain_auto(
     return chain
 
 def _process_chain_records(
-    conn, chain: List[str], status_by_run: Dict, started_by_run: Dict,
-    completed_by_run: Dict, meta_by_run: Dict, out: Dict
+    conn, chain: list[str], status_by_run: dict, started_by_run: dict,
+    completed_by_run: dict, meta_by_run: dict, out: dict
 ) -> None:
     """Process records for all runs in the chain."""
-    latest: Dict[str, Tuple[str, Optional[str]]] = {}
+    latest: dict[str, tuple[str, str | None]] = {}
     unkeyed: set = set()
-    first_start: Optional[datetime] = None
-    last_event: Optional[datetime] = None
+    first_start: datetime | None = None
+    last_event: datetime | None = None
 
     for rid in chain:
         st = started_by_run.get(rid)
@@ -253,7 +271,7 @@ def _process_chain_records(
     out["last_event"] = last_event
 
 
-def _resolve_corpus(base: Path) -> Tuple[Dict[str, str], Dict[str, str]]:
+def _resolve_corpus(base: Path) -> tuple[dict[str, str], dict[str, str]]:
     """The phase_key -> tier map for the reference corpus, and its tag map.
 
     The tag map resolves records written before `phase_key` existed (both
@@ -263,9 +281,9 @@ def _resolve_corpus(base: Path) -> Tuple[Dict[str, str], Dict[str, str]]:
     of keys already counted under their current name.
     """
     manifest = tlib.load_rerun_manifest(base)
-    corpus: Dict[str, str] = {}
+    corpus: dict[str, str] = {}
     #: phase_id trailing tag -> phase_key, for records that predate phase_key
-    tag_to_key: Dict[str, str] = {}
+    tag_to_key: dict[str, str] = {}
     shipped = tlib.load_shipped_manifest(base, refresh=False)
     if not shipped:
         return corpus, tag_to_key
@@ -278,8 +296,8 @@ def _resolve_corpus(base: Path) -> Tuple[Dict[str, str], Dict[str, str]]:
     return corpus, tag_to_key
 
 
-def _resolve_latest_tags(latest: Dict[str, Any], unkeyed: set,
-                         tag_to_key: Dict[str, str]) -> None:
+def _resolve_latest_tags(latest: dict[str, Any], unkeyed: set,
+                         tag_to_key: dict[str, str]) -> None:
     """Fold pre-phase_key records onto their current key, in place.
 
     Also drops the folded ids from `unkeyed`: they are no longer stale, they
@@ -294,8 +312,8 @@ def _resolve_latest_tags(latest: Dict[str, Any], unkeyed: set,
             unkeyed.discard(str(key)[4:])
 
 
-def _tally_chain(latest: Dict[str, Tuple[str, Optional[str]]],
-                 unkeyed: set) -> Tuple[Dict[str, int], int, int]:
+def _tally_chain(latest: dict[str, tuple[str, str | None]],
+                 unkeyed: set) -> tuple[dict[str, int], int, int]:
     """Bucket the chain's per-phase verdicts; count what is decided.
 
     An unresolved pid is skipped, not counted as decided: it has no corpus
@@ -303,7 +321,7 @@ def _tally_chain(latest: Dict[str, Tuple[str, Optional[str]]],
     the numerator above the corpus size -- the exact failure this tool is
     meant to rule out. It is surfaced as `stale_records` instead.
     """
-    tally = {k: 0 for k in ("success", "failed", "skipped", "active", "other")}
+    tally = dict.fromkeys(("success", "failed", "skipped", "active", "other"), 0)
     for key, (status, result) in latest.items():
         if key.startswith("pid:"):
             continue
@@ -313,10 +331,10 @@ def _tally_chain(latest: Dict[str, Tuple[str, Optional[str]]],
     return tally, decided, stale_ids
 
 
-def _tier_rows(corpus: Dict[str, str],
-               latest: Dict[str, Tuple[str, Optional[str]]],
+def _tier_rows(corpus: dict[str, str],
+               latest: dict[str, tuple[str, str | None]],
                plan: RunPlan
-               ) -> Tuple[List[Tuple[str, int, int]], int, int, int]:
+               ) -> tuple[list[tuple[str, int, int]], int, int, int]:
     """Per-tier (label, done, total) rows, and the plan's released counts.
 
     Progress is per-tier, not "decided over everything": the chain has already
@@ -328,10 +346,10 @@ def _tier_rows(corpus: Dict[str, str],
     Returns:
         ``(tier_rows, ref_done, ref_total, ref_remaining)``.
     """
-    tier_total: Dict[str, int] = {}
+    tier_total: dict[str, int] = {}
     for tier in corpus.values():
         tier_total[tier] = tier_total.get(tier, 0) + 1
-    tier_decided: Dict[str, int] = {}
+    tier_decided: dict[str, int] = {}
     for key, (status, result) in latest.items():
         tier = corpus.get(key)
         if not tier:
@@ -346,7 +364,7 @@ def _tier_rows(corpus: Dict[str, str],
         (tlib.TIER_DROP, plan.rerun_unreproducible)) if on}
     ref_total = 0
     ref_done = 0
-    tier_rows: List[Tuple[str, int, int]] = []
+    tier_rows: list[tuple[str, int, int]] = []
     label = {tlib.TIER_FIRST: "ILLEGAL", tlib.TIER_HELD: "UNDER-SPECIFIED",
              tlib.TIER_LAST: "UNDER-SPECIFIED (legacy)",
              tlib.TIER_DROP: "UNREPRODUCIBLE"}
@@ -362,9 +380,9 @@ def _tier_rows(corpus: Dict[str, str],
     return tier_rows, ref_done, ref_total, ref_total - ref_done
 
 
-def _price_plan(plan: RunPlan, minutes: Optional[float],
-                elapsed: Optional[float], decided: int, units: int,
-                breakdown: Dict[str, Any], used: int, ref_remaining: int,
+def _price_plan(plan: RunPlan, minutes: float | None,
+                elapsed: float | None, decided: int, units: int,
+                breakdown: dict[str, Any], used: int, ref_remaining: int,
                 tune_units: int, ref_done: int) -> Estimate:
     """The ETA estimate, with the jitter guard on its rate.
 
@@ -398,7 +416,7 @@ def _price_plan(plan: RunPlan, minutes: Optional[float],
     return est
 
 
-def _load_ledger_state(base: Path, run_id: Optional[str]) -> Dict[str, Any]:
+def _load_ledger_state(base: Path, run_id: str | None) -> dict[str, Any]:
     """Registry + corpus + manifest state the status panel reports from."""
     db = base / DB_REL
     if not db.exists():
@@ -429,15 +447,15 @@ def _load_ledger_state(base: Path, run_id: Optional[str]) -> Dict[str, Any]:
     }
 
 
-def _plan_inputs(state: Dict[str, Any], base: Path,
-                 plan: RunPlan) -> Dict[str, Any]:
+def _plan_inputs(state: dict[str, Any], base: Path,
+                 plan: RunPlan) -> dict[str, Any]:
     """Plan scope (units) and the phase-cost rate the ETA is priced from."""
     deck_size = _get_deck_size(base, plan)
     ref_units, breakdown = _reference_unit_count(
         plan, state["manifest"], state["corpus"])
     tune_units = _tuning_unit_count(plan, deck_size)
     rate, n_samples, used = PhaseCost(state["db"]).sample()
-    minutes = plan.minutes_per_phase if plan.minutes_per_phase else rate
+    minutes = plan.minutes_per_phase or rate
     return {
         "deck_size": deck_size,
         "ref_units": ref_units,
@@ -450,8 +468,8 @@ def _plan_inputs(state: Dict[str, Any], base: Path,
     }
 
 
-def _timing_inputs(state: Dict[str, Any],
-                   now: Optional[datetime]) -> Dict[str, float]:
+def _timing_inputs(state: dict[str, Any],
+                   now: datetime | None) -> dict[str, float]:
     """Elapsed (head run only) and the chain's wall-clock span."""
     return {
         "elapsed": _calculate_elapsed(state["chain"], state["started_by_run"],
@@ -462,9 +480,9 @@ def _timing_inputs(state: Dict[str, Any],
     }
 
 
-def build_report(base: Path, run_id: Optional[str],
+def build_report(base: Path, run_id: str | None,
                  plan: RunPlan,
-                 now: Optional[datetime] = None) -> Dict[str, Any]:
+                 now: datetime | None = None) -> dict[str, Any]:
     """Build the status report for a run.
 
     `now` overrides the wall clock used to age a still-running head run.
@@ -513,7 +531,6 @@ def _get_deck_size(base: Path, plan: RunPlan) -> int:
     if not deck_size:
         deck_path = base / "phases.yaml"
         if deck_path.is_file():
-            import yaml
             try:
                 doc = yamlio.load_yaml(deck_path) or []
                 deck_size = len(doc) if isinstance(doc, list) else 0
@@ -522,29 +539,29 @@ def _get_deck_size(base: Path, plan: RunPlan) -> int:
     return deck_size
 
 def _calculate_elapsed(
-    chain: List[str],
-    started_by_run: Dict,
-    completed_by_run: Dict,
-    now: Optional[datetime]
-) -> Optional[float]:
+    chain: list[str],
+    started_by_run: dict,
+    completed_by_run: dict,
+    now: datetime | None
+) -> float | None:
     """Calculate elapsed minutes for the head run."""
     head = chain[-1] if chain else ""
     head_start = started_by_run.get(head) if head else None
     head_end = completed_by_run.get(head) if head else None
     if head_start and head_end and head_end >= head_start:
         return (head_end - head_start).total_seconds() / 60.0
-    elif head_start:
+    if head_start:
         clock = now if now is not None else datetime.now(head_start.tzinfo)
         return max((clock - head_start).total_seconds() / 60.0, 0.0)
     return None
 
 def _calculate_chain_span(
-    chain: List[str],
-    first_start: Optional[datetime],
-    last_event: Optional[datetime],
-    started_by_run: Dict,
-    completed_by_run: Dict
-) -> Optional[float]:
+    chain: list[str],
+    first_start: datetime | None,
+    last_event: datetime | None,
+    started_by_run: dict,
+    completed_by_run: dict
+) -> float | None:
     """Calculate chain span in minutes with multiple fallbacks."""
     if first_start and last_event and last_event > first_start:
         return (last_event - first_start).total_seconds() / 60.0
@@ -562,7 +579,7 @@ def _calculate_chain_span(
             return ((max(starts) - min(starts)).total_seconds() / 60.0)
     return None
 
-def _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples) -> Dict:
+def _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples) -> dict:
     """Build the estimate dictionary."""
     return {
         "units": est.units,
@@ -580,7 +597,7 @@ def _build_estimate_dict(est, breakdown, tune_units, deck_size, rate, n_samples)
         "rate_sample_n": n_samples,
     }
 
-def _build_plan_dict(plan: RunPlan) -> Dict:
+def _build_plan_dict(plan: RunPlan) -> dict:
     """Build the plan dictionary."""
     return {
         "rerun_illegal": plan.rerun_illegal,

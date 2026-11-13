@@ -38,26 +38,25 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import yaml
+from oto import yamlio
 
-from oto import yamlio  # noqa: E402
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.gates.assembly import assembly_class_valid  # noqa: E402
-from oto.tensile.gates.occupancy import (occupancy_feasible,  # noqa: E402
-                                         occupancy_workgroups_per_cu,
-                                         tile_dims)
-from oto.tensile.gates.vgpr_model import (VGPR_PER_CU,  # noqa: E402
-                                          VGPR_PER_ELEMENT,
-                                          measured_accvgpr)
-from oto.tensile.library import shipped_kernel_config  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
+from oto.tensile.candidate import CandidateGenerator
+from oto.tensile.gates.assembly import assembly_class_valid
+from oto.tensile.gates.occupancy import (
+    occupancy_feasible,
+    occupancy_workgroups_per_cu,
+    tile_dims,
+)
+from oto.tensile.gates.vgpr_model import VGPR_PER_CU, VGPR_PER_ELEMENT, measured_accvgpr
+from oto.tensile.library import shipped_kernel_config
 
 
 def _divisibility(gen, cfg):
@@ -210,21 +209,18 @@ def main() -> int:
         if bad:
             fails.append((phase.get("phase_id") or phase.get("kernel", "?"), bad))
         elif not args.quiet:
-            print(f"  ok   {str(phase.get('phase_id') or phase.get('kernel', '?'))[:60]:60} "
-                  f"{_occupancy_margin(cfg)}")
+            pass
 
-    print(f"\n{source}: {checked} checked, {skipped} skipped, {len(fails)} illegal")
     if fam_total:
-        print("  per family: " + ", ".join(f"{k}={v}" for k, v in sorted(fam_total.items())))
-    for pid, bad in fails:
-        for name, why in bad:
-            print(f"  FAIL {str(pid)[:60]:60} [{name}] {why}")
+        pass
+    for _pid, bad in fails:
+        for _name, _why in bad:
+            pass
 
     if args.json:
         args.json.write_text(json.dumps(
             {"deck": str(source), "checked": checked, "illegal": len(fails),
              "failures": {str(p): dict(b) for p, b in fails}}, indent=1, default=str))
-        print(f"wrote {args.json}")
     return 1 if fails else 0
 
 

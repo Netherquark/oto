@@ -29,12 +29,10 @@ import argparse
 import json
 from pathlib import Path
 
-import yaml
-
+from oto import yamlio
 from oto.device.peaks import shipped_cells
 from oto.tensile.library_parity import load_pipeline_phases, parity_report, phases_cells
 
-from oto import yamlio  # noqa: E402
 DEFAULT_BASE = Path(__file__).resolve().parents[2]
 
 
@@ -98,34 +96,17 @@ def main() -> int:
         args.json.write_text(json.dumps(report, indent=2))
 
     if args.quiet:
-        status = "OK" if report["parity_ok"] else "DIVERGENT"
-        print(f"coverage-parity: {status} "
-              f"{report['deck_cells']}/{report['shipped_cells']} shipped cells "
-              f"({len(report['missing'])} missing, {len(report['extra'])} extra)")
+        "OK" if report["parity_ok"] else "DIVERGENT"
     else:
-        print("Coverage-parity check vs shipped gfx900 TensileLibrary")
-        print(f"  manifest phases : {len(phases)}")
-        print(f"  shipped cells   : {report['shipped_cells']}")
-        print(f"  deck cells      : {report['deck_cells']}")
-        print(f"  missing (contraction): {len(report['missing'])}")
         if report["missing"]:
-            print(_fmt_cells(report["missing"]))
-        print(f"  extra  (extension):  {len(report['extra'])}")
+            pass
         if report["extra"]:
-            print(_fmt_cells(report["extra"]))
-        if report["non_cube_shapes"]:
-            print(f"  non-cell shapes (GEMV probes, excluded from parity): "
-                  f"{len(report['non_cube_shapes'])}")
-            if not args.quiet:
-                for s in report["non_cube_shapes"][:8]:
-                    print(f"    {s}")
+            pass
+        if report["non_cube_shapes"] and not args.quiet:
+            for _s in report["non_cube_shapes"][:8]:
+                pass
         if report["unresolved_families"]:
-            print(f"  unresolved families: {report['unresolved_families']}")
-        print()
-        print("PASS: deck maps exactly to the shipped cell grid"
-              if report["parity_ok"]
-              else "FAIL: deck diverges from the shipped cell grid — "
-                   "fix missing (add coverage) and/or extra (revert extension) cells")
+            pass
 
     return 0 if report["parity_ok"] else 1
 

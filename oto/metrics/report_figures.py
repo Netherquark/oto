@@ -29,7 +29,8 @@ import html
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from oto.runners.paths import results_rel
 
 #: Where the coverage tool writes its figures and its hand-off file.
@@ -42,7 +43,7 @@ def coverage_dir(base_dir: Path) -> Path:
     return Path(base_dir) / COVERAGE_DIR
 
 
-def coverage_rows(base_dir: Path) -> List[Dict[str, Any]]:
+def coverage_rows(base_dir: Path) -> list[dict[str, Any]]:
     """The per-cell coverage rows, or an empty list when they are absent.
 
     Args:
@@ -63,7 +64,7 @@ def coverage_rows(base_dir: Path) -> List[Dict[str, Any]]:
     return [r for r in (rows or []) if isinstance(r, dict)]
 
 
-def _cell_share(row: Dict[str, Any]) -> float:
+def _cell_share(row: dict[str, Any]) -> float:
     """The unexplored share of ONE cell's legal space, in percent.
 
     The legal space is the same for every cell of a family (it does not depend
@@ -87,7 +88,7 @@ def _relative_src(base_dir: Path, html_path: Path, name: str) -> str:
     return html.escape(rel.replace(os.sep, "/"))
 
 
-def _family_meta(items: List[Dict[str, Any]]) -> str:
+def _family_meta(items: list[dict[str, Any]]) -> str:
     """One family's coverage summary, for its group row in the cell table."""
     legal = max(r.get("n_legal", 0) or 0 for r in items)
     measured = [r.get("n_measured", 0) or 0 for r in items]
@@ -105,14 +106,14 @@ def _family_meta(items: List[Dict[str, Any]]) -> str:
             f"{traps} trap{'' if traps == 1 else 's'}")
 
 
-def _coverage_table(rows: List[Dict[str, Any]]) -> str:
+def _coverage_table(rows: list[dict[str, Any]]) -> str:
     """The per-cell coverage table, grouped by family.
 
     The family group row is a non-interactive summary. It replaces the old
     second table of family summaries *and* the seven per-family ``<details>``
     blocks: the data and the family roll-up now live in one hierarchy.
     """
-    families: Dict[str, List[Dict[str, Any]]] = {}
+    families: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         families.setdefault(str(row.get("family", "")), []).append(row)
 
@@ -162,7 +163,7 @@ def _coverage_table(rows: List[Dict[str, Any]]) -> str:
             </div>"""
 
 
-def _figure_tile(row: Dict[str, Any], base_dir: Path,
+def _figure_tile(row: dict[str, Any], base_dir: Path,
                  html_path: Path) -> str:
     """One figure tile."""
     name = str(row.get("file", ""))
@@ -178,7 +179,7 @@ def _figure_tile(row: Dict[str, Any], base_dir: Path,
                 </figure>"""
 
 
-def _coverage_appendix(rows: List[Dict[str, Any]], base_dir: Path,
+def _coverage_appendix(rows: list[dict[str, Any]], base_dir: Path,
                        html_path: Path) -> str:
     """The coverage maps, in one appendix instead of seven disclosures.
 
@@ -186,7 +187,7 @@ def _coverage_appendix(rows: List[Dict[str, Any]], base_dir: Path,
     they sit behind one clearly-labelled native disclosure, grouped by family
     with a heading rather than another layer of controls.
     """
-    families: Dict[str, List[Dict[str, Any]]] = {}
+    families: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         families.setdefault(str(row.get("family", "")), []).append(row)
     groups = ""

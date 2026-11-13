@@ -40,14 +40,14 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness.candidate_pool import _base_config, _strip_not_forwarded  # noqa: E402
-from oto.harness.candidate_rows import _FRONTIER  # noqa: E402
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
+from oto.harness.candidate_pool import _base_config, _strip_not_forwarded
+from oto.harness.candidate_rows import _FRONTIER
+from oto.tensile.candidate import CandidateGenerator
 
 #: Every thread tile the deck, the ladder and the generator emit, plus their
 #: transposes. A thread tile outside this set is not a candidate the harness can
@@ -66,7 +66,7 @@ def _generator() -> CandidateGenerator:
 
 
 def _legal(fam: str, tile: str, tt: str, vw: int, du: int,
-           extra: Optional[Dict[str, Any]] = None) -> Tuple[bool, str]:
+           extra: dict[str, Any] | None = None) -> tuple[bool, str]:
     """Validate one config through the real generator gate."""
     config = {**_base_config(fam), "MacroTile": tile, "ThreadTile": tt,
               "VectorWidth": vw, "DepthU": du,
@@ -76,9 +76,9 @@ def _legal(fam: str, tile: str, tt: str, vw: int, du: int,
     return ok, why
 
 
-def _sweep(fam: str) -> Set[Tuple[int, int]]:
+def _sweep(fam: str) -> set[tuple[int, int]]:
     """Every tile above 16384 elements the gate admits, at the swept grid."""
-    found: Set[Tuple[int, int]] = set()
+    found: set[tuple[int, int]] = set()
     for mt0 in range(64, 513, 8):
         for mt1 in range(64, 513, 8):
             if mt0 * mt1 <= 16384:

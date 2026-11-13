@@ -39,8 +39,9 @@ problem_count_text.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Set
+from typing import Any
 
 from oto.device.peaks import FAMILY_CELLS
 
@@ -53,7 +54,7 @@ UNKNOWN = "unknown"
 PROTOCOLS = (FAMILY, SINGLE, PARTIAL, UNKNOWN)
 
 #: Human labels, one per form, used in printouts and provenance fields.
-LABEL: Dict[str, str] = {
+LABEL: dict[str, str] = {
     FAMILY: "family-protocol",
     SINGLE: "single-problem",
     PARTIAL: "partial",
@@ -64,12 +65,12 @@ LABEL: Dict[str, str] = {
 #: Tensile 00_Final.yaml. Tensile writes no other list form on this corpus
 #: (verified 2026-10-23 from every yaml of the modern run), so counting these
 #: lines is the whole ProblemSizes read for the kernel_db stamping path.
-_PROBLEM_LINE = re.compile(r"^\s*-\s+Exact:", re.M)
+_PROBLEM_LINE = re.compile(r"^\s*-\s+Exact:", re.MULTILINE)
 
 _CUBE = re.compile(r"\s*([0-9]+)x\1x\1\Z")
 
 
-def label(protocol: Optional[str]) -> str:
+def label(protocol: str | None) -> str:
     """The human label for a protocol value (``''``-safe)."""
     return LABEL.get(protocol or UNKNOWN, LABEL[UNKNOWN])
 
@@ -82,7 +83,7 @@ def gradeable(fam: str):
     return {f"{int(s)}x{int(s)}x{int(s)}" for s in cells}
 
 
-def _side_set(shapes: Iterable[Any]) -> Set[str]:
+def _side_set(shapes: Iterable[Any]) -> set[str]:
     """Normalized cube-side set from a mixed shape list (non-cubes dropped).
 
     A non-cube problem (a GEMV probe row) can never satisfy a cell list by
@@ -90,7 +91,7 @@ def _side_set(shapes: Iterable[Any]) -> Set[str]:
     dropping them is what makes the test safe for a phase that also carries
     one non-cube problem.
     """
-    out: Set[str] = set()
+    out: set[str] = set()
     for s in shapes or ():
         m = _CUBE.match(str(s).strip())
         if m:
@@ -139,7 +140,7 @@ def problem_count_text(text: str) -> int:
     return len(_PROBLEM_LINE.findall(text))
 
 
-def yaml_count(yaml_path: Path) -> Optional[int]:
+def yaml_count(yaml_path: Path) -> int | None:
     """How many problems a Tensile 00_Final.yaml declares.
 
     ``None`` only when the file is missing or unreadable -- callers must treat
@@ -155,7 +156,7 @@ def yaml_count(yaml_path: Path) -> Optional[int]:
 
 
 def classify_count(fam: str,
-                   n_problems: Optional[int],
+                   n_problems: int | None,
                    measured_shapes: Iterable[Any] = ()) -> str:
     """Classify from a declared problem count plus the measured side set.
 
@@ -181,7 +182,7 @@ def classify_count(fam: str,
     return UNKNOWN
 
 
-def protocol_of(record: Dict[str, Any]) -> str:
+def protocol_of(record: dict[str, Any]) -> str:
     """A record's stamped protocol (UNKNOWN when unstamped).
 
     The only read-side accessor: every graded-basis filter must go through
@@ -192,8 +193,8 @@ def protocol_of(record: Dict[str, Any]) -> str:
     return p if p in PROTOCOLS else UNKNOWN
 
 
-def like_for_like(native_protocol: Optional[str],
-                  floor_protocol: Optional[str]) -> bool:
+def like_for_like(native_protocol: str | None,
+                  floor_protocol: str | None) -> bool:
     """True when both sides carry the same, known protocol.
 
     UNKNOWN on either side can neither be asserted to match nor mismatch, so

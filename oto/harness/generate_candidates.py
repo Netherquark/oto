@@ -13,25 +13,33 @@ import them from here.
 from __future__ import annotations
 
 import argparse
-
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from oto.harness.candidate_overlay import (  # noqa: E402
-    OVERLAY_PATH, _prune_candidates_from_seed, _round_robin_prune, _summarise,
-    _write_overlay)
-from oto.harness.candidate_pool import (__yaml_load,  # noqa: E402
-                                        iter_candidates, _narrow_row_gen,
-                                        _strip_not_forwarded)
-from oto.harness.candidate_rows import (TARGET_CELLS,  # noqa: E402
-                                        _pad_rows)
+from oto.harness.candidate_overlay import (
+    OVERLAY_PATH,
+    _prune_candidates_from_seed,
+    _round_robin_prune,
+    _summarise,
+    _write_overlay,
+)
+from oto.harness.candidate_pool import _strip_not_forwarded, iter_candidates
+from oto.harness.candidate_rows import TARGET_CELLS, _pad_rows
 
-__all__ = ["main", "iter_candidates", "_round_robin_prune",
-           "_strip_not_forwarded", "_write_overlay", "OVERLAY_PATH",
-           "TARGET_CELLS", "_pad_rows", "_prune_candidates_from_seed"]
+__all__ = [
+    "OVERLAY_PATH",
+    "TARGET_CELLS",
+    "_pad_rows",
+    "_prune_candidates_from_seed",
+    "_round_robin_prune",
+    "_strip_not_forwarded",
+    "_write_overlay",
+    "iter_candidates",
+    "main",
+]
 
 
 def main() -> int:
@@ -49,18 +57,13 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.prune_candidates:
-        stripped, kept = _prune_candidates_from_seed(dry_run=args.dry_run)
-        print(f"{'[dry-run] would strip' if args.dry_run else 'stripped'} "
-              f"{stripped} phase_cand_* rows; {kept} rows kept in "
-              f"{OVERLAY_PATH.name}")
+        _stripped, _kept = _prune_candidates_from_seed(dry_run=args.dry_run)
         return 0
 
-    rows: List[Dict[str, Any]] = list(iter_candidates())
+    rows: list[dict[str, Any]] = list(iter_candidates())
     rows = _round_robin_prune(rows, args.max_fp)
     _summarise(rows)
-    written = _write_overlay(rows, dry_run=args.dry_run)
-    print(f"{'[dry-run] would append' if args.dry_run else 'appended'} "
-          f"{written} candidate(s) to {OVERLAY_PATH.name}")
+    _write_overlay(rows, dry_run=args.dry_run)
     return 0
 
 

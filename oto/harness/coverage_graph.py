@@ -46,19 +46,25 @@ from __future__ import annotations
 import argparse
 import html
 import json
-
 import sys
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
-from oto.harness.coverage_map import (  # noqa: E402
-    _DEFAULT_CELLS, coverage_row, legal_geometries, measured_geometries)
+import itertools
+
+from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.harness.coverage_map import (
+    _DEFAULT_CELLS,
+    coverage_row,
+    legal_geometries,
+    measured_geometries,
+)
 from oto.runners.paths import results_rel
 
 #: Where the figures go (and the index that lists them).
@@ -79,7 +85,7 @@ _MARGIN_T = 78      # room for the title
 _MARGIN_B = 64      # room for the x-axis labels and the legend
 
 
-def _bucket(value: int, buckets: Sequence[int]) -> Optional[int]:
+def _bucket(value: int, buckets: Sequence[int]) -> int | None:
     """The bucket a value falls in (the largest edge not above it).
 
     A floor, not a ceiling: the axis label then reads as "8k" meaning
@@ -109,8 +115,8 @@ def _weight(family: str) -> int:
 
 
 def _grid(family: str, legal: Iterable[Sequence[Any]],
-          measured: Dict[Tuple[Any, ...], float]
-          ) -> Dict[Tuple[int, int], Dict[str, Any]]:
+          measured: dict[tuple[Any, ...], float]
+          ) -> dict[tuple[int, int], dict[str, Any]]:
     """The 2D projection: bucket -> {legal, value, geometries}.
 
     Args:
@@ -123,8 +129,8 @@ def _grid(family: str, legal: Iterable[Sequence[Any]],
         "n_legal": int, "n_measured": int}``.
     """
     weight = _weight(family)
-    grid: Dict[Tuple[int, int], Dict[str, Any]] = {}
-    for geom, value in ((g, None) for g in legal):
+    grid: dict[tuple[int, int], dict[str, Any]] = {}
+    for geom, _value in ((g, None) for g in legal):
         area = _area_of(geom)
         acc = _acc_of(geom, weight)
         if area is None or acc is None:
@@ -146,7 +152,7 @@ def _grid(family: str, legal: Iterable[Sequence[Any]],
     return grid
 
 
-def _area_of(geom: Sequence[Any]) -> Optional[int]:
+def _area_of(geom: Sequence[Any]) -> int | None:
     """The macro-tile area of a geometry, bucketed."""
     tile = str(geom[0])
     try:
@@ -156,7 +162,7 @@ def _area_of(geom: Sequence[Any]) -> Optional[int]:
     return _bucket(mt0 * mt1, AREA_BUCKETS)
 
 
-def _acc_of(geom: Sequence[Any], weight: int) -> Optional[int]:
+def _acc_of(geom: Sequence[Any], weight: int) -> int | None:
     """The accumulators per thread of a geometry, bucketed."""
     tt = str(geom[1])
     try:
@@ -166,8 +172,8 @@ def _acc_of(geom: Sequence[Any], weight: int) -> Optional[int]:
     return _bucket(tt0 * tt1 * weight, ACC_BUCKETS)
 
 
-def _extrema(grid: Dict[Tuple[int, int], Dict[str, Any]]
-             ) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+def _extrema(grid: dict[tuple[int, int], dict[str, Any]]
+             ) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
     """The local maxima and the local minima of the measured grid.
 
     A measured bucket is a **local minimum** (a trap) when every measured
@@ -181,8 +187,8 @@ def _extrema(grid: Dict[Tuple[int, int], Dict[str, Any]]
     Returns:
         (peaks, traps), each a list of (area, acc) buckets.
     """
-    peaks: List[Tuple[int, int]] = []
-    traps: List[Tuple[int, int]] = []
+    peaks: list[tuple[int, int]] = []
+    traps: list[tuple[int, int]] = []
     for (area, acc), cell in grid.items():
         if not cell["n_measured"]:
             continue
@@ -216,7 +222,7 @@ def _step(bucket: int, direction: int) -> int:
 def _ramp(fraction: float) -> str:
     """A colour on the value ramp."""
     fraction = max(0.0, min(1.0, fraction))
-    for (lo, clo), (hi, chi) in zip(_RAMP, _RAMP[1:]):
+    for (lo, clo), (hi, chi) in itertools.pairwise(_RAMP):
         if fraction <= hi:
             span = (hi - lo) or 1.0
             t = (fraction - lo) / span
@@ -228,7 +234,7 @@ def _mix(c1: str, c2: str, t: float) -> str:
     """Two hex colours mixed."""
     a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
     b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
-    return "#" + "".join(f"{int(round(x + (y - x) * t)):02x}" for x, y in zip(a, b))
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(a, b, strict=False))
 
 
 def _esc(text: str) -> str:
@@ -253,10 +259,10 @@ def _text(x: float, y: float, content: str, size: int = 11,
             f'font-weight="{weight}">{_esc(content)}</text>')
 
 
-def _figure(family: str, shape: str, row: Dict[str, Any],
-            grid: Dict[Tuple[int, int], Dict[str, Any]],
-            peaks: Sequence[Tuple[int, int]],
-            traps: Sequence[Tuple[int, int]]) -> str:
+def _figure(family: str, shape: str, row: dict[str, Any],
+            grid: dict[tuple[int, int], dict[str, Any]],
+            peaks: Sequence[tuple[int, int]],
+            traps: Sequence[tuple[int, int]]) -> str:
     """The SVG of one cell's coverage grid.
 
     Args:
@@ -297,11 +303,11 @@ def _figure(family: str, shape: str, row: Dict[str, Any],
     return "\n".join(out)
 
 
-def _grid_svg(grid: Dict[Tuple[int, int], Dict[str, Any]], best: float,
-              peaks: Sequence[Tuple[int, int]],
-              traps: Sequence[Tuple[int, int]]) -> List[str]:
+def _grid_svg(grid: dict[tuple[int, int], dict[str, Any]], best: float,
+              peaks: Sequence[tuple[int, int]],
+              traps: Sequence[tuple[int, int]]) -> list[str]:
     """The painted grid, with the peaks and the traps marked."""
-    out: List[str] = []
+    out: list[str] = []
     for (area, acc), cell in grid.items():
         x = _MARGIN_L + AREA_BUCKETS.index(area) * _CELL
         y = _MARGIN_T + (len(ACC_BUCKETS) - 1 - ACC_BUCKETS.index(acc)) * _CELL
@@ -323,14 +329,13 @@ def _grid_svg(grid: Dict[Tuple[int, int], Dict[str, Any]], best: float,
     return out
 
 
-def _legend_svg(best: float, row: Dict[str, Any]) -> List[str]:
+def _legend_svg(best: float, row: dict[str, Any]) -> list[str]:
     """The key: the value ramp, the hatch, and the two rings."""
     x = _MARGIN_L + _CELL * len(AREA_BUCKETS) + 24
     y = _MARGIN_T + 6
     out = [_text(x, y, "measured value", size=11, weight="bold")]
-    for index in range(7):
-        out.append(_rect(x + index * 18, y + 8, 17, 14,
-                         _ramp(index / 6.0)))
+    out.extend(_rect(x + index * 18, y + 8, 17, 14, _ramp(index / 6.0))
+               for index in range(7))
     out.append(_text(x, y + 36, "slow", size=10, fill="#555555"))
     out.append(_text(x + 6 * 18 + 6, y + 36, "fast", size=10, fill="#555555",
                      anchor="end"))
@@ -350,9 +355,9 @@ def _legend_svg(best: float, row: Dict[str, Any]) -> List[str]:
     return out
 
 
-def _axes_svg() -> List[str]:
+def _axes_svg() -> list[str]:
     """The axis labels and the legend."""
-    out: List[str] = []
+    out: list[str] = []
     for index, area in enumerate(AREA_BUCKETS):
         x = _MARGIN_L + index * _CELL + (_CELL - 1) / 2
         out.append(_text(x, _MARGIN_T + _CELL * len(ACC_BUCKETS) + 18,
@@ -373,9 +378,9 @@ def _axes_svg() -> List[str]:
     return out
 
 
-def _summary(family: str, shape: str, row: Dict[str, Any],
-             peaks: Sequence[Tuple[int, int]],
-             traps: Sequence[Tuple[int, int]]) -> str:
+def _summary(family: str, shape: str, row: dict[str, Any],
+             peaks: Sequence[tuple[int, int]],
+             traps: Sequence[tuple[int, int]]) -> str:
     """One line of the text summary."""
     free = row["n_legal"] - row["n_measured"]
     return (f"{family:7} {shape:16} {row['n_legal']:5} {row['n_measured']:5} "
@@ -383,19 +388,18 @@ def _summary(family: str, shape: str, row: Dict[str, Any],
             f"{row['best_measured']:8.1f} {len(peaks):5} {len(traps):5}")
 
 
-def _index_page(entries: List[Dict[str, Any]], out_dir: Path) -> None:
+def _index_page(entries: list[dict[str, Any]], out_dir: Path) -> None:
     """The index: every figure with its numbers."""
-    rows = []
-    for entry in entries:
-        rows.append(
-            f'<tr><td>{html.escape(entry["family"])}</td>'
-            f'<td>{html.escape(entry["shape"])}</td>'
-            f'<td>{entry["n_legal"]}</td><td>{entry["n_measured"]}</td>'
-            f'<td>{entry["unexplored"]}</td>'
-            f'<td>{entry["pct_unexplored"]:.1f}%</td>'
-            f'<td>{entry["best"]:.1f}</td>'
-            f'<td>{entry["peaks"]}</td><td>{entry["traps"]}</td>'
-            f'<td><img src="{entry["file"]}" width="520"></td></tr>')
+    rows = [
+        f'<tr><td>{html.escape(entry["family"])}</td>'
+        f'<td>{html.escape(entry["shape"])}</td>'
+        f'<td>{entry["n_legal"]}</td><td>{entry["n_measured"]}</td>'
+        f'<td>{entry["unexplored"]}</td>'
+        f'<td>{entry["pct_unexplored"]:.1f}%</td>'
+        f'<td>{entry["best"]:.1f}</td>'
+        f'<td>{entry["peaks"]}</td><td>{entry["traps"]}</td>'
+        f'<td><img src="{entry["file"]}" width="520"></td></tr>'
+        for entry in entries]
     page = f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>oto coverage graphs</title>
 <style>
@@ -419,7 +423,7 @@ Red ring = a local minimum (a trap: every measured neighbour is faster).</p>
     (out_dir / "index.html").write_text(page)
 
 
-def _write_data(entries: List[Dict[str, Any]], out_dir: Path) -> None:
+def _write_data(entries: list[dict[str, Any]], out_dir: Path) -> None:
     """The numbers behind the figures, as JSON.
 
     The acceptance report embeds the figures and prints their numbers; it must
@@ -433,7 +437,7 @@ def _write_data(entries: List[Dict[str, Any]], out_dir: Path) -> None:
     (out_dir / "coverage.json").write_text(json.dumps(payload, indent=1))
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", action="append", help="limit to a family")
@@ -448,7 +452,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = ap.parse_args(argv)
 
     fams = list(args.family) if args.family else sorted(_DEFAULT_CELLS)
-    only: List[Tuple[str, int]] = []
+    only: list[tuple[str, int]] = []
     for spec in args.cell or []:
         fam, _, side = spec.partition(":")
         only.append((fam, int(side)))
@@ -456,9 +460,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         fams = sorted({f for f, _ in only})
     measured = measured_geometries()
     out_dir = Path(args.out) if args.out else ((Path(args.base_dir) if args.base_dir else _HERE) / OUT_DIR_REL)
-    entries: List[Dict[str, Any]] = []
-    print(f"{'cell':24} {'legal':>5} {'meas':>5} {'unexp':>5} "
-          f"{'%unexp':>7} {'best':>8} {'peaks':>5} {'traps':>5}")
+    entries: list[dict[str, Any]] = []
     for family in fams:
         legal = legal_geometries(family)
         for shape in _DEFAULT_CELLS.get(family, []):
@@ -468,7 +470,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             row = coverage_row(family, shape, legal, cell_measured)
             grid = _grid(family, legal, cell_measured)
             peaks, traps = _extrema(grid)
-            print(_summary(family, shape, row, peaks, traps))
             entry = {"family": family, "shape": shape,
                      "n_legal": row["n_legal"], "n_measured": row["n_measured"],
                      "unexplored": row["n_legal"] - row["n_measured"],
@@ -486,8 +487,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         _index_page(entries, out_dir)
         _write_data(entries, out_dir)
-        print(f"\nwrote {len(entries)} figure(s) + index.html + coverage.json"
-              f" -> {out_dir}")
     return 0
 
 

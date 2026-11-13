@@ -40,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import oto.runners.cli as pt  # noqa: E402
+import oto.runners.cli as pt
 
 HEADER = ["timestamp", "sclk_hz", "mclk_hz", "power_uw", "temp_mc",
           "gpu_busy_percent", "vram_used_bytes", "vram_total_bytes",
@@ -117,10 +117,10 @@ class TestGateThreshold(unittest.TestCase):
         shrinking clock coverage and changing every A/B verdict. That is a
         policy change and has to be deliberate, so it is pinned here.
         """
-        self.assertGreater(pt.TensileDriver.THERMAL_MAX_C, 82.0)
+        assert pt.TensileDriver.THERMAL_MAX_C > 82.0
 
     def test_gate_is_finite_and_positive(self):
-        self.assertGreater(pt.TensileDriver.THERMAL_MAX_C, 0.0)
+        assert pt.TensileDriver.THERMAL_MAX_C > 0.0
 
 
 class TestSampleFiltering(TelemetryFixture):
@@ -135,17 +135,17 @@ class TestSampleFiltering(TelemetryFixture):
         """
         self.write(self.samples("p1", 1_787_000_000, 76, busy=5))
         d = self.driver()
-        self.assertEqual(d._load_sclk_by_phase(self.run_dir)["p1"], 1_787_000_000)
+        assert d._load_sclk_by_phase(self.run_dir)["p1"] == 1787000000
 
     def test_low_busy_idle_floor_is_still_rejected(self):
         """Dropping the busy gate must not also admit the idle floor."""
         self.write(self.samples("p1", 400_000_000, 68, busy=5))
         d = self.driver()
-        self.assertNotIn("p1", d._load_sclk_by_phase(self.run_dir))
+        assert "p1" not in d._load_sclk_by_phase(self.run_dir)
 
     def test_busy_gate_stays_off_by_default(self):
         """Pinned: re-enabling it silently zeroes clock data for cheap phases."""
-        self.assertFalse(pt.TensileDriver.TELEMETRY_REQUIRE_BUSY)
+        assert not pt.TensileDriver.TELEMETRY_REQUIRE_BUSY
 
     def test_idle_samples_are_excluded(self):
         """A compile/idle gap must not drag the clock down to the 400MHz floor."""
@@ -153,15 +153,14 @@ class TestSampleFiltering(TelemetryFixture):
                    + self.samples("p1", 400_000_000, 45, n=5, busy=2))
         d = self.driver()
         got = d._load_sclk_by_phase(self.run_dir)
-        self.assertEqual(got["p1"], 1_800_000_000)
+        assert got["p1"] == 1800000000
 
     def test_hot_samples_are_excluded_from_the_clock_estimate(self):
         """Below-gate samples decide the clock; at/above-gate ones do not."""
         self.write(self.samples("p1", 1_800_000_000, 70)
                    + self.samples("p1", 900_000_000, 95))
         d = self.driver()
-        self.assertEqual(d._load_sclk_by_phase(self.run_dir)["p1"],
-                         1_800_000_000)
+        assert d._load_sclk_by_phase(self.run_dir)["p1"] == 1800000000
 
     def test_all_hot_phase_reports_unmeasured(self):
         """A wholly throttled phase must vanish, not read as a 900MHz kernel.
@@ -172,7 +171,7 @@ class TestSampleFiltering(TelemetryFixture):
         """
         self.write(self.samples("p1", 900_000_000, 95))
         d = self.driver()
-        self.assertNotIn("p1", d._load_sclk_by_phase(self.run_dir))
+        assert "p1" not in d._load_sclk_by_phase(self.run_dir)
 
     def test_hot_samples_are_counted_not_silently_dropped(self):
         """The drop has to be visible, so the report can warn about it."""
@@ -180,15 +179,15 @@ class TestSampleFiltering(TelemetryFixture):
                    + self.samples("p1", 1_800_000_000, 95, n=2))
         d = self.driver()
         phase = d._load_telemetry_by_phase(self.run_dir)["p1"]
-        self.assertEqual(phase["hot_samples"], 2)
-        self.assertEqual(phase["sclk_hz"], 1_800_000_000)
+        assert phase["hot_samples"] == 2
+        assert phase["sclk_hz"] == 1800000000
 
     def test_too_few_usable_samples_is_not_a_measurement(self):
         """Two cool samples after the hot ones are dropped is below the floor."""
         self.write(self.samples("p1", 1_800_000_000, 95, n=4)
                    + self.samples("p1", 1_800_000_000, 70, n=2))
         d = self.driver()
-        self.assertNotIn("p1", d._load_sclk_by_phase(self.run_dir))
+        assert "p1" not in d._load_sclk_by_phase(self.run_dir)
 
     def test_missing_telemetry_column_is_tolerated(self):
         """A sampler with no temp_mc must still yield a clock.
@@ -202,9 +201,9 @@ class TestSampleFiltering(TelemetryFixture):
                    header=cols)
         d = self.driver()
         got = d._load_telemetry_by_phase(self.run_dir)
-        self.assertEqual(got["p1"]["sclk_hz"], 1_800_000_000)
-        self.assertIsNone(got["p1"]["temp_c"])
-        self.assertEqual(got["p1"]["hot_samples"], 0)
+        assert got["p1"]["sclk_hz"] == 1800000000
+        assert got["p1"]["temp_c"] is None
+        assert got["p1"]["hot_samples"] == 0
 
     def test_malformed_rows_are_skipped(self):
         self.write([["t0", "not-a-number", 0, 0, 70000, 90, 0, 0, "p1"],
@@ -212,17 +211,16 @@ class TestSampleFiltering(TelemetryFixture):
                     ["t2", 1_800_000_000, 0, 0, 70000, 90, 0, 0, "p1"],
                     ["t3", 1_800_000_000, 0, 0, 70000, 90, 0, 0, "p1"]])
         d = self.driver()
-        self.assertEqual(d._load_sclk_by_phase(self.run_dir)["p1"],
-                         1_800_000_000)
+        assert d._load_sclk_by_phase(self.run_dir)["p1"] == 1800000000
 
     def test_absent_file_is_not_an_error(self):
         d = self.driver()
-        self.assertEqual(d._load_sclk_by_phase(self.run_dir), {})
+        assert d._load_sclk_by_phase(self.run_dir) == {}
 
     def test_file_without_phase_column_yields_nothing(self):
         self.write([[1, 2, 3]], header=["a", "b", "c"])
         d = self.driver()
-        self.assertEqual(d._load_sclk_by_phase(self.run_dir), {})
+        assert d._load_sclk_by_phase(self.run_dir) == {}
 
 
 class TestThermalContext(TelemetryFixture):
@@ -237,11 +235,11 @@ class TestThermalContext(TelemetryFixture):
                    + self.samples("p1", 1_800_000_000, 80, n=2))
         d = self.driver()
         phase = d._load_telemetry_by_phase(self.run_dir)["p1"]
-        self.assertEqual(phase["sclk_hz"], 1_800_000_000)
+        assert phase["sclk_hz"] == 1800000000
         # median of 3x70C + 2x80C is 70C; the peak is what shows the tail.
         self.assertAlmostEqual(phase["temp_c"], 70.0)
         self.assertAlmostEqual(phase["temp_max_c"], 80.0)
-        self.assertEqual(phase["hot_samples"], 0)
+        assert phase["hot_samples"] == 0
 
     def test_hot_samples_do_not_pollute_the_reported_temperature(self):
         self.write(self.samples("p1", 1_800_000_000, 70, n=3)
@@ -260,25 +258,25 @@ class TestThermalContext(TelemetryFixture):
                             ("run", "p2"): {"sclk_hz": 1, "temp_c": 80.0,
                                             "temp_max_c": 88.0, "hot_samples": 0}}
         s = d._thermal_summary(["run"])
-        self.assertEqual(s["phases"], 2)
+        assert s["phases"] == 2
         self.assertAlmostEqual(s["temp_c"], 75.0)
         self.assertAlmostEqual(s["temp_max_c"], 88.0)
-        self.assertEqual(s["hot_phases"], 0)
+        assert s["hot_phases"] == 0
 
     def test_summary_flags_hot_phases(self):
         d = self.driver()
         d._thermal_cache = {("run", "p1"): {"sclk_hz": 1, "temp_c": 92.0,
                                             "temp_max_c": 95.0, "hot_samples": 4}}
         s = d._thermal_summary(["run"])
-        self.assertEqual(s["hot_phases"], 1)
-        self.assertEqual(s["hot_phase_ids"], ["run:p1"])
+        assert s["hot_phases"] == 1
+        assert s["hot_phase_ids"] == ["run:p1"]
 
     def test_summary_with_no_telemetry(self):
         d = self.driver()
         d._thermal_cache = {}
         s = d._thermal_summary(["run"])
-        self.assertIsNone(s["temp_c"])
-        self.assertEqual(s["hot_phases"], 0)
+        assert s["temp_c"] is None
+        assert s["hot_phases"] == 0
 
 
 class TestNoDoubleCounting(unittest.TestCase):
@@ -317,14 +315,14 @@ class TestNoDoubleCounting(unittest.TestCase):
         spoof = [self._rec(90.0, "r2", "sp1")]
 
         first = self._delta(native, spoof, clocks, 1_800_000_000)
-        self.assertTrue(first, "fixture must produce one cell")
+        assert first, "fixture must produce one cell"
         again = self._delta(native, spoof, clocks, 1_800_000_000)
-        self.assertEqual(first, again)
+        assert first == again
 
-        d = list(first.values())[0]
+        d = next(iter(first.values()))
         self.assertAlmostEqual(d["native_best_median_clock"], 100.0)
         self.assertAlmostEqual(d["spoof_best_median_clock"], 90.0)
-        self.assertTrue(d["clock_adjusted"])
+        assert d["clock_adjusted"]
 
     def test_clock_normalization_is_what_scales(self):
         """A slower-clock arm must be scaled UP, and by the clock ratio alone.
@@ -343,8 +341,8 @@ class TestNoDoubleCounting(unittest.TestCase):
             native, spoof,
             {("r1", "p1"): 1_800_000_000, ("r2", "sp1"): 900_000_000},
             1_800_000_000)
-        a = list(matched.values())[0]
-        b = list(throttled.values())[0]
+        a = next(iter(matched.values()))
+        b = next(iter(throttled.values()))
         self.assertAlmostEqual(a["spoof_best_median_clock"], 50.0)
         self.assertAlmostEqual(b["spoof_best_median_clock"], 100.0)
 
@@ -360,9 +358,9 @@ class TestNoDoubleCounting(unittest.TestCase):
         from oto.metrics.analytics import AnalyticsEngine
         params = inspect.signature(
             AnalyticsEngine.compute_native_vs_spoof_delta).parameters
-        self.assertIn("sclk_by_phase", params)
-        self.assertNotIn("temp_by_phase", params)
-        self.assertNotIn("temp_by_gkey", params)
+        assert "sclk_by_phase" in params
+        assert "temp_by_phase" not in params
+        assert "temp_by_gkey" not in params
 
 
 if __name__ == "__main__":

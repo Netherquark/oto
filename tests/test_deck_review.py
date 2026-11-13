@@ -17,6 +17,7 @@ CPU only, read-only. No GPU, no Tensile run, no writes.
 """
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -24,7 +25,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.tools import deck_review  # noqa: E402
+from oto.tools import deck_review
 
 
 class _Captured:
@@ -49,9 +50,9 @@ class TestScore(unittest.TestCase):
     def test_every_basis_is_reported(self):
         with _Captured() as cap:
             rc = deck_review._score(REPO)
-        self.assertEqual(rc, 0)
+        assert rc == 0
         for basis, _meaning in deck_review.BASES:
-            self.assertIn(basis, cap.text, f"basis {basis} missing from score")
+            assert basis in cap.text, f"basis {basis} missing from score"
 
     def test_winner_basis_matches_the_pipeline(self):
         """The tool must not become a second, divergent A/B opinion."""
@@ -65,8 +66,7 @@ class TestScore(unittest.TestCase):
         # The winner row must carry the same cell count the pipeline produced.
         row = next(line for line in cap.text.splitlines()
                    if line.startswith("winner"))
-        self.assertIn(str(len(expected)), row,
-                      f"score's winner row disagrees with _pair_cells: {row!r}")
+        assert str(len(expected)) in row, f"score's winner row disagrees with _pair_cells: {row!r}"
 
 
 class TestLegality(unittest.TestCase):
@@ -82,16 +82,16 @@ class TestLegality(unittest.TestCase):
                "ThreadTile": "8x8", "VectorWidth": 4, "DepthU": 8,
                "GlobalSplitU": 1, "WorkGroupMapping": 4}
         ok, _why = gen.validate_config(cfg)
-        self.assertTrue(ok, "the census's reference config must itself be legal")
+        assert ok, "the census's reference config must itself be legal"
         ok, _why = ldspad_feasible(cfg)
-        self.assertTrue(ok, "the census's reference config must itself be legal")
+        assert ok, "the census's reference config must itself be legal"
 
     def test_legality_runs_clean(self):
         with _Captured() as cap:
             rc = deck_review._legality(REPO, ["SS"])
-        self.assertEqual(rc, 0)
+        assert rc == 0
         for label in ("legal on >=1 tile:", "coupled:", "refused standalone:"):
-            self.assertIn(label, cap.text, f"{label!r} missing from legality")
+            assert label in cap.text, f"{label!r} missing from legality"
 
     def test_structural_refusals_are_reported_with_their_rule(self):
         """A refusal must name the rule, not just be counted.
@@ -105,12 +105,9 @@ class TestLegality(unittest.TestCase):
         with _Captured() as cap:
             deck_review._legality(REPO, ["CC"])
         text = cap.text
-        self.assertIn("GlobalSplitU", text,
-                      "the GlobalSplitU draw must appear in the census")
+        assert "GlobalSplitU" in text, "the GlobalSplitU draw must appear in the census"
         refused_block = text.split("refused standalone")[-1]
-        self.assertRegex(
-            refused_block, r"GlobalSplitU\s+[24]\s+.*gfx90c",
-            "CC GlobalSplitU=2/4 must be reported as a structural refusal")
+        assert re.search(r"GlobalSplitU\s+[24]\s+.*gfx90c", refused_block), "CC GlobalSplitU=2/4 must be reported as a structural refusal"
 
     def test_a_coupling_is_not_counted_as_a_domain_defect(self):
         """`StaggerU=0` is refused only alongside a default `StaggerUStride`.
@@ -120,14 +117,13 @@ class TestLegality(unittest.TestCase):
         a default value looked dead on tiles that could never have run it.
         """
         tiles = deck_review._measured_tiles(REPO, deck_review.TILES_PER_FAMILY)
-        self.assertTrue(tiles, "kernel_db.json must yield measured tiles")
+        assert tiles, "kernel_db.json must yield measured tiles"
         for fam, fam_tiles in tiles.items():
             with self.subTest(family=fam):
                 for tile in fam_tiles:
-                    self.assertIn("MacroTile", tile)
-                    self.assertIsInstance(tile["MacroTile"], str)
-                    self.assertNotIn(",", tile["MacroTile"],
-                                     f"{fam}: MacroTile must be 'NxM' by now")
+                    assert "MacroTile" in tile
+                    assert isinstance(tile["MacroTile"], str)
+                    assert "," not in tile["MacroTile"], f"{fam}: MacroTile must be 'NxM' by now"
 
 
 class TestFlood(unittest.TestCase):
@@ -140,7 +136,7 @@ class TestFlood(unittest.TestCase):
         db = json.loads(db_path.read_text())
 
         cells = {}
-        for _run, rows in db.items():
+        for rows in db.values():
             if not isinstance(rows, list):
                 continue
             for row in rows:
@@ -154,8 +150,7 @@ class TestFlood(unittest.TestCase):
         for cap in (16, 24, 32):
             with _Captured() as out:
                 deck_review._flood(REPO, cap)
-            self.assertIn(f"LOSES 0 of {len(cells)} cell winners", out.text,
-                          f"cap={cap} loses a winner -- the cap is not median-ranked")
+            assert f"LOSES 0 of {len(cells)} cell winners" in out.text, f"cap={cap} loses a winner -- the cap is not median-ranked"
 
 
 if __name__ == "__main__":

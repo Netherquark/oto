@@ -25,10 +25,8 @@ from unittest import mock
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import oto.runners.cli  # noqa: E402
-from oto.runners.cli import TensileDriver  # noqa: E402
-from oto.runners.auto_prompt import AutoPlan  # noqa: E402
-
+from oto.runners.auto_prompt import AutoPlan
+from oto.runners.cli import TensileDriver
 
 #: Stand-in for "the reference floor still owes work". The value is opaque to
 #: run_auto -- it only ever asks whether the count is zero -- so it is a
@@ -65,7 +63,7 @@ def make_driver(tmp: Path, *, ref_exists: bool, remaining: int,
 
     drv.run_phases = _run_phases
     drv._retire_stable_candidates = lambda: None
-    drv._load_analytics_from_run = lambda: []
+    drv._load_analytics_from_run = list
     drv.generate_acceptance_report = lambda **kw: None
     # `agent` is assigned in __init__, which __new__ bypasses.
     drv.agent = types.SimpleNamespace(
@@ -86,44 +84,40 @@ class TestAutoAlwaysReachesNative(unittest.TestCase):
     def test_complete_floor_is_authoritative(self):
         drv, res = self._run(ref_exists=True, remaining=0,
                              resume_status="completed", fresh_status="completed")
-        self.assertTrue(drv._reference_floor_authoritative)
-        self.assertFalse(res.get("reason", "").startswith("reference"))
+        assert drv._reference_floor_authoritative
+        assert not res.get("reason", "").startswith("reference")
 
     def test_incomplete_recalled_floor_still_runs_native(self):
         drv, res = self._run(ref_exists=True, remaining=5,
                              resume_status="interrupted", fresh_status="completed")
-        self.assertFalse(drv._reference_floor_authoritative)
-        self.assertEqual(drv._reference_floor_status, "interrupted")
-        self.assertNotIn("reference", res.get("reason", ""),
-                         "must not early-return before tuning")
+        assert not drv._reference_floor_authoritative
+        assert drv._reference_floor_status == "interrupted"
+        assert "reference" not in res.get("reason", ""), "must not early-return before tuning"
 
     def test_floor_still_incomplete_after_resume_still_runs_native(self):
         """The exact shape of the three wasted overnight runs."""
         drv, res = self._run(ref_exists=True, remaining=5,
                              resume_status="failed", fresh_status="completed")
-        self.assertFalse(drv._reference_floor_authoritative)
-        self.assertEqual(drv._reference_floor_status, "failed")
-        self.assertNotIn("reference", res.get("reason", ""),
-                         "must not early-return before tuning")
+        assert not drv._reference_floor_authoritative
+        assert drv._reference_floor_status == "failed"
+        assert "reference" not in res.get("reason", ""), "must not early-return before tuning"
 
     def test_no_floor_and_fresh_attempt_fails_still_runs_native(self):
         drv, res = self._run(ref_exists=False, remaining=OWES_WORK,
                              resume_status="failed", fresh_status="failed")
-        self.assertFalse(drv._reference_floor_authoritative)
-        self.assertNotIn("reference", res.get("reason", ""),
-                         "must not early-return before tuning")
+        assert not drv._reference_floor_authoritative
+        assert "reference" not in res.get("reason", ""), "must not early-return before tuning"
 
     def test_no_floor_and_fresh_attempt_completes_is_authoritative(self):
         drv, _ = self._run(ref_exists=False, remaining=0,
                           resume_status="completed", fresh_status="completed")
-        self.assertTrue(drv._reference_floor_authoritative)
+        assert drv._reference_floor_authoritative
 
     def test_native_phase_execution_was_reached(self):
         """Belt and braces: prove the loop body actually ran."""
         drv, _ = self._run(ref_exists=True, remaining=5,
                            resume_status="failed", fresh_status="completed")
-        self.assertTrue(drv._finish_after_iteration,
-                        "run_phases was never reached")
+        assert drv._finish_after_iteration, "run_phases was never reached"
 
 
 class TestDeclinedReference(unittest.TestCase):
@@ -141,8 +135,8 @@ class TestDeclinedReference(unittest.TestCase):
                                plan=AutoPlan(rerun_illegal=False,
                                              rerun_underspecified=False))
         drv.run_gfx900_reference.assert_not_called()
-        self.assertFalse(drv._reference_floor_authoritative)
-        self.assertIn("declined", drv._reference_floor_status)
+        assert not drv._reference_floor_authoritative
+        assert "declined" in drv._reference_floor_status
 
     def test_yes_to_unreproducible_alone_does_call_it(self):
         """Q3 alone is a real opt-in: T3 cannot be rebuilt, but a Tensile
@@ -154,9 +148,9 @@ class TestDeclinedReference(unittest.TestCase):
                                              rerun_underspecified=False,
                                              rerun_unreproducible=True))
         drv.run_gfx900_reference.assert_called_once()
-        self.assertTrue(drv.run_gfx900_reference.call_args.kwargs["release_drop"])
+        assert drv.run_gfx900_reference.call_args.kwargs["release_drop"]
         # and it must NOT have dragged the ~1-day T2 release along with it
-        self.assertFalse(drv.run_gfx900_reference.call_args.kwargs["release_held"])
+        assert not drv.run_gfx900_reference.call_args.kwargs["release_held"]
 
     def test_q2_alone_releases_only_held(self):
         drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
@@ -164,8 +158,8 @@ class TestDeclinedReference(unittest.TestCase):
         TensileDriver.run_auto(drv, budget=1, skip_reference=False,
                                plan=AutoPlan(rerun_underspecified=True))
         kw = drv.run_gfx900_reference.call_args.kwargs
-        self.assertTrue(kw["release_held"])
-        self.assertFalse(kw["release_drop"])
+        assert kw["release_held"]
+        assert not kw["release_drop"]
 
     def test_legacy_flag_still_answers_q2_only(self):
         drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
@@ -175,8 +169,8 @@ class TestDeclinedReference(unittest.TestCase):
                                plan=AutoPlan(rerun_illegal=False,
                                              rerun_underspecified=False))
         kw = drv.run_gfx900_reference.call_args.kwargs
-        self.assertTrue(kw["release_held"])
-        self.assertFalse(kw["release_drop"])
+        assert kw["release_held"]
+        assert not kw["release_drop"]
 
     def test_yes_to_illegal_does_call_it(self):
         drv = make_driver(self.tmp, ref_exists=False, remaining=OWES_WORK,
@@ -191,8 +185,8 @@ class TestDeclinedReference(unittest.TestCase):
                           resume_status="completed", fresh_status="completed")
         plan = AutoPlan(rerun_illegal=True, iterations=10, mutations=3)
         TensileDriver.run_auto(drv, skip_reference=False, plan=plan)
-        self.assertEqual(drv._auto_plan.iterations, 10)
-        self.assertEqual(drv._auto_plan.mutations, 3)
+        assert drv._auto_plan.iterations == 10
+        assert drv._auto_plan.mutations == 3
 
 
 class TestSkipReference(unittest.TestCase):
@@ -202,8 +196,8 @@ class TestSkipReference(unittest.TestCase):
                           fresh_status="completed")
         TensileDriver.run_auto(drv, budget=1, skip_reference=True,
                                plan=AutoPlan())
-        self.assertIsNone(drv._last_ab_reference_run_id)
-        self.assertTrue(drv._reference_floor_authoritative)
+        assert drv._last_ab_reference_run_id is None
+        assert drv._reference_floor_authoritative
 
 
 class TestProvisionalFloorIsLabelled(unittest.TestCase):
@@ -218,9 +212,9 @@ class TestProvisionalFloorIsLabelled(unittest.TestCase):
             reference_floor_status="failed",
             reference_floor_authoritative=False,
         )
-        self.assertIn("PROVISIONAL FLOOR", report.summary)
-        self.assertIn("failed", report.summary)
-        self.assertFalse(report.reference_floor_authoritative)
+        assert "PROVISIONAL FLOOR" in report.summary
+        assert "failed" in report.summary
+        assert not report.reference_floor_authoritative
 
     def test_complete_floor_summary_is_unchanged(self):
         from oto.metrics.report import AcceptanceReporter
@@ -229,8 +223,8 @@ class TestProvisionalFloorIsLabelled(unittest.TestCase):
             run_id="r1", ab_verdicts=[], all_analytics=[], red_list=[],
             reference_run_id="gfx900_ref_floor",
         )
-        self.assertNotIn("PROVISIONAL FLOOR", report.summary)
-        self.assertTrue(report.reference_floor_authoritative)
+        assert "PROVISIONAL FLOOR" not in report.summary
+        assert report.reference_floor_authoritative
 
 
 class TestAbSubjectIsNotTheFloor(unittest.TestCase):
@@ -273,11 +267,9 @@ class TestAbSubjectIsNotTheFloor(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             reg = self._registry(tmp)
             # Unfiltered: the newest row is the floor head.
-            self.assertEqual(reg.latest_run_id(),
-                             "gfx900_ref_20260929_resume")
+            assert reg.latest_run_id() == "gfx900_ref_20260929_resume"
             # Native-only: the newest native run.
-            self.assertEqual(reg.latest_run_id(arm="native"),
-                             "run_native_new")
+            assert reg.latest_run_id(arm="native") == "run_native_new"
 
     def test_report_subject_resolves_to_a_native_run(self):
         """regenerate_report must hand a native run to the A/B, not the floor.
@@ -299,9 +291,8 @@ class TestAbSubjectIsNotTheFloor(unittest.TestCase):
                     seen.update(run_id=run_id) or {"run_id": run_id},
             ):
                 got = d.regenerate_report()
-            self.assertEqual(seen.get("run_id"), "run_native_new",
-                             "A/B subject resolved to the reference floor")
-            self.assertEqual(got["run_id"], "run_native_new")
+            assert seen.get("run_id") == "run_native_new", "A/B subject resolved to the reference floor"
+            assert got["run_id"] == "run_native_new"
 
     def test_explicit_run_id_is_still_honoured(self):
         """The arm filter is only a default; an explicit run_id wins."""
@@ -318,7 +309,7 @@ class TestAbSubjectIsNotTheFloor(unittest.TestCase):
                     seen.update(run_id=run_id) or {"run_id": run_id},
             ):
                 d.regenerate_report(run_id="run_native_old")
-            self.assertEqual(seen.get("run_id"), "run_native_old")
+            assert seen.get("run_id") == "run_native_old"
 
 
 if __name__ == "__main__":

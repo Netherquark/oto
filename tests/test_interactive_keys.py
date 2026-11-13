@@ -29,9 +29,9 @@ sys.path.insert(0, str(ROOT))
 # `_read_key` lives in the phase-execution mixin; the skip policy it feeds
 # lives in the phase-runner mixin; the option surface lives in the CLI module.
 # Patch each where the implementation looks it up.
-import oto.runners.benchmark as bench_mod  # noqa: E402
-import oto.runners.driver as pt  # noqa: E402
-import oto.runners.phases as phases_mod  # noqa: E402
+import oto.runners.benchmark as bench_mod
+import oto.runners.driver as pt
+import oto.runners.phases as phases_mod
 
 # The parser and the option wiring live in the CLI module; the entrypoint the
 # operator actually runs is the repo-root port_tensile.py.
@@ -62,35 +62,34 @@ class FakeStdin:
 
 class TestReadKey(unittest.TestCase):
     def _driver(self):
-        d = pt.TensileDriver.__new__(pt.TensileDriver)
-        return d
+        return pt.TensileDriver.__new__(pt.TensileDriver)
 
     def test_returns_empty_when_stdin_is_not_a_tty(self):
         d = self._driver()
         with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(tty=False)):
             with mock.patch.object(bench_mod.time, "sleep") as slept:
-                self.assertEqual(d._read_key(), "")
-                self.assertTrue(slept.called, "spin-wait loop must not busy-spin")
+                assert d._read_key() == ""
+                assert slept.called, "spin-wait loop must not busy-spin"
 
     def test_block_false_does_not_sleep(self):
         """A skip loop does real work per phase; it must not pay a poll interval."""
         d = self._driver()
         with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(tty=False)):
             with mock.patch.object(bench_mod.time, "sleep") as slept:
-                self.assertEqual(d._read_key(block=False), "")
+                assert d._read_key(block=False) == ""
                 slept.assert_not_called()
 
     def test_reads_and_lowercases_a_key(self):
         d = self._driver()
         with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["Q"])):
             with mock.patch.object(bench_mod.select, "select", return_value=([0], [], [])):
-                self.assertEqual(d._read_key(), "q")
+                assert d._read_key() == "q"
 
     def test_no_key_ready_returns_empty(self):
         d = self._driver()
         with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=[])):
             with mock.patch.object(bench_mod.select, "select", return_value=([], [], [])):
-                self.assertEqual(d._read_key(), "")
+                assert d._read_key() == ""
 
     def test_closed_stdin_does_not_raise(self):
         """A detached stdin must not take a running phase down."""
@@ -99,7 +98,7 @@ class TestReadKey(unittest.TestCase):
         broken.fileno = mock.Mock(side_effect=OSError("detached"))
         with mock.patch.object(bench_mod.sys, "stdin", broken):
             with mock.patch.object(bench_mod.select, "select", side_effect=OSError("detached")):
-                self.assertEqual(d._read_key(), "")
+                assert d._read_key() == ""
 
 
 class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
@@ -147,9 +146,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
                 with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
-            self.assertTrue(d._stop_requested, "'q' was ignored during skips")
-            self.assertEqual(d.registry.append_record.call_count, 1,
-                             "run must stop at the first skip, not drain the deck")
+            assert d._stop_requested, "'q' was ignored during skips"
+            assert d.registry.append_record.call_count == 1, "run must stop at the first skip, not drain the deck"
 
     def test_e_stops_a_fully_skipped_deck(self):
         with tempfile.TemporaryDirectory() as td:
@@ -160,8 +158,8 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
                 with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
-            self.assertTrue(d._finish_after_iteration, "'e' was ignored during skips")
-            self.assertEqual(d.registry.append_record.call_count, 1)
+            assert d._finish_after_iteration, "'e' was ignored during skips"
+            assert d.registry.append_record.call_count == 1
 
     def test_unrelated_keys_do_not_stop_the_run(self):
         with tempfile.TemporaryDirectory() as td:
@@ -173,9 +171,9 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
                 with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(3))
-            self.assertFalse(d._stop_requested)
-            self.assertFalse(d._finish_after_iteration)
-            self.assertEqual(d.registry.append_record.call_count, 3)
+            assert not d._stop_requested
+            assert not d._finish_after_iteration
+            assert d.registry.append_record.call_count == 3
 
     def test_user_quit_is_reported_as_interrupted_not_skipped(self):
         """A run the operator stopped must not be filed as 'skipped'.
@@ -191,7 +189,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
                 with mock.patch.object(bench_mod.select, "select",
                                        return_value=([0], [], [])):
                     self._run(d, self._phases(5))
-            self.assertEqual(d._last_run_status, "interrupted")
+            assert d._last_run_status == "interrupted"
 
 
 class TestCliOptionSurface(unittest.TestCase):
@@ -228,19 +226,17 @@ class TestCliOptionSurface(unittest.TestCase):
     def test_no_option_is_declared_but_never_read(self):
         declared, read = self._declared_and_read()
         dead = sorted(declared - read)
-        self.assertEqual(dead, [],
-                         f"declared but never consulted: {dead}. An option that "
-                         f"does nothing still looks like a working knob.")
+        assert dead == [], f"declared but never consulted: {dead}. An option that " f"does nothing still looks like a working knob."
 
     def test_options_actually_reach_the_parser(self):
         """--help must list the options; catches a flag added outside argparse."""
         res = subprocess.run(
             [sys.executable, str(CLI_ENTRYPOINT), "--help"],
             capture_output=True, text=True, timeout=180)
-        self.assertEqual(res.returncode, 0, res.stderr)
+        assert res.returncode == 0, res.stderr
         declared, _ = self._declared_and_read()
         missing = [d for d in sorted(declared) if f"--{d.replace('_', '-')}" not in res.stdout]
-        self.assertEqual(missing, [], f"in parser but absent from --help: {missing}")
+        assert missing == [], f"in parser but absent from --help: {missing}"
 
     def test_force_is_the_documented_way_to_defeat_identical_fp_skip(self):
         """--force must reach run_phases as opt_in_identical_skip=False.
@@ -249,7 +245,7 @@ class TestCliOptionSurface(unittest.TestCase):
         so a silent wiring break here would make the deck unrunnable-in-practice.
         """
         src = DRIVER_SRC.read_text()
-        self.assertIn("opt_in_identical_skip=not args.force", src)
+        assert "opt_in_identical_skip=not args.force" in src
 
 
 class TestPreflightNeedsNoRunDir(unittest.TestCase):
@@ -266,14 +262,14 @@ class TestPreflightNeedsNoRunDir(unittest.TestCase):
         return _ends_after_preflight(mock.Mock(preflight=preflight), set(stage))
 
     def test_preflight_alone_and_stage_1_stop_without_a_run(self):
-        self.assertTrue(self._ends(True, ()))
-        self.assertTrue(self._ends(True, ("1",)))
-        self.assertTrue(self._ends(False, ("1",)))
+        assert self._ends(True, ())
+        assert self._ends(True, ("1",))
+        assert self._ends(False, ("1",))
 
     def test_a_stage_that_needs_a_run_is_not_preflight_only(self):
-        self.assertFalse(self._ends(True, ("3",)))
-        self.assertFalse(self._ends(False, ("3",)))
-        self.assertFalse(self._ends(True, ("preflight", "2")))
+        assert not self._ends(True, ("3",))
+        assert not self._ends(False, ("3",))
+        assert not self._ends(True, ("preflight", "2"))
 
 
 if __name__ == "__main__":

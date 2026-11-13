@@ -10,16 +10,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from oto.device.profile import (
-    AssemblyGatePolicy, DeviceProfile, TheoreticalLimits,
+    AssemblyGatePolicy,
+    DeviceProfile,
+    TheoreticalLimits,
 )
 
 _PROFILES_DIR = Path(__file__).resolve().parents[2] / "profiles"
 
 
-def _check_sanity(data: Dict[str, Any], source: str) -> None:
+def _check_sanity(data: dict[str, Any], source: str) -> None:
     """Refuse obviously-unverified profiles (e.g. the starter template left
     unfilled). Fails loudly rather than tuning against invented numbers."""
     problems = []
@@ -41,7 +43,7 @@ def _check_sanity(data: Dict[str, Any], source: str) -> None:
                          + "; ".join(problems))
 
 
-def _to_profile(data: Dict[str, Any], source: str = "<profile>") -> DeviceProfile:
+def _to_profile(data: dict[str, Any], source: str = "<profile>") -> DeviceProfile:
     _check_sanity(data, source)
     ag = data.get("assembly_gates", {})
     th = data.get("theoretical", {})
@@ -84,7 +86,7 @@ def _to_profile(data: Dict[str, Any], source: str = "<profile>") -> DeviceProfil
     )
 
 
-def load_profile(codename: str, profiles_dir: Optional[Path] = None) -> DeviceProfile:
+def load_profile(codename: str, profiles_dir: Path | None = None) -> DeviceProfile:
     d = profiles_dir or _PROFILES_DIR
     path = Path(d) / f"{codename}.json"
     if not path.exists():
@@ -92,13 +94,13 @@ def load_profile(codename: str, profiles_dir: Optional[Path] = None) -> DevicePr
     return _to_profile(json.loads(path.read_text()), str(path))
 
 
-def _codename_from_text(text: str) -> Optional[str]:
+def _codename_from_text(text: str) -> str | None:
     import re
     m = re.search(r"codename:\s*(\S+)", text)
     return m.group(1).strip() if m else None
 
 
-def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] = None) -> DeviceProfile:
+def load_profile_from_starter(starter_path: Path, profiles_dir: Path | None = None) -> DeviceProfile:
     """Load a device profile from a starter file.
 
     Precedence:
@@ -111,7 +113,7 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Optional[Path] =
     text = Path(starter_path).read_text()
     # Try to find a fenced json/yaml block
     import re
-    m = re.search(r"```(?:json|yaml)?\s*\n(.*?)\n```", text, re.S)
+    m = re.search(r"```(?:json|yaml)?\s*\n(.*?)\n```", text, re.DOTALL)
     if m:
         try:
             data = json.loads(m.group(1))

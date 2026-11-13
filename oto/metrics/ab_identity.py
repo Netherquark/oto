@@ -15,11 +15,10 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import yaml
+from oto import yamlio
 
-from oto import yamlio  # noqa: E402
 #: The project root, resolved from this module's location.
 BASE = Path(__file__).resolve().parents[2]
 
@@ -44,7 +43,7 @@ def _driver(base: Path = BASE):
     return TensileDriver(base_dir=base, create_run=False)
 
 
-def _resolved_config(phase_dir: Path) -> Dict[str, Any]:
+def _resolved_config(phase_dir: Path) -> dict[str, Any]:
     """Merge the config out of a phase's own resolved ``2_BenchmarkData/*.yaml``.
 
     Tensile writes that file as a list of documents -- a version stamp, a
@@ -53,7 +52,7 @@ def _resolved_config(phase_dir: Path) -> Dict[str, Any]:
     absent from ``phases.yaml``, be paired against native phases on real config
     identity instead of on the solution name alone.
     """
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for yml in sorted(phase_dir.glob("*.yaml")):
         try:
             doc = yamlio.load_yaml_text(yml.read_text(errors="ignore"))
@@ -68,7 +67,7 @@ def _resolved_config(phase_dir: Path) -> Dict[str, Any]:
 
 _CP_RE = re.compile(r"Cijk_(.+?)_(?:SB|CB)_")
 
-def _norm_macro_tile(cfg: Dict[str, Any]) -> str:
+def _norm_macro_tile(cfg: dict[str, Any]) -> str:
     """MacroTile as 'MxNxDU' whichever way Tensile wrote it.
 
     Native phases write ``MacroTile: 128x128x16`` (depth folded in); floor
@@ -90,7 +89,7 @@ def _norm_macro_tile(cfg: Dict[str, Any]) -> str:
     return f"{parts[0] if parts else ''}x{parts[1] if len(parts) > 1 else ''}x{depth if depth is not None else ''}"
 
 
-def norm_config(cfg: Dict[str, Any], fingerprint: str = "") -> str:
+def norm_config(cfg: dict[str, Any], fingerprint: str = "") -> str:
     """Canonical config identity, comparable across the two arms.
 
     Built from resolved-Tensile knobs rather than the solution name because the
@@ -116,7 +115,7 @@ def norm_config(cfg: Dict[str, Any], fingerprint: str = "") -> str:
     ))
 
 
-def _pair_key(rec: Dict[str, Any]) -> Tuple[str, str, str]:
+def _pair_key(rec: dict[str, Any]) -> tuple[str, str, str]:
     """Identity used to pair a native record with a floor record."""
     return (rec.get("DataType") or rec.get("dtype") or "",
             rec.get("ProblemType") or rec.get("shape") or "",

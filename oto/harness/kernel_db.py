@@ -41,8 +41,9 @@ import os
 import re
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 # Repo-root import for the canonical typecode->family resolver (single source of
 # truth in oto/device/peaks.py). kernel_db runs as
@@ -53,14 +54,14 @@ for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from oto.device.peaks import (            # noqa: E402  (path set up above)
+import oto.device.peaks as _peaks
+from oto.device.peaks import (
     FAMILY_DTYPE_CHAR,
     family_from_kernel_name,
     kernel_typecode,
 )
-from oto.metrics.family_attribution import extract_family_from_phase_id  # noqa: E402
-from oto.metrics.protocol import classify_count, problem_count_text      # noqa: E402
-import oto.device.peaks as _peaks
+from oto.metrics.family_attribution import extract_family_from_phase_id
+from oto.metrics.protocol import classify_count, problem_count_text
 from oto.runners.paths import results_rel
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -79,7 +80,7 @@ CONFIG_KEYS = [
 
 
 def discover_runs(base_dir: str,
-                  all_ref: bool = False) -> List[Tuple[str, str]]:
+                  all_ref: bool = False) -> list[tuple[str, str]]:
     """[(run_id, kind)] for native `run_*` + spoof floor runs.
 
     kind is 'native' for `run_*` and 'spoof' for `gfx900_ref_*`. With
@@ -88,7 +89,7 @@ def discover_runs(base_dir: str,
     gfx900 reference directory.
     """
     runs_dir = _runs_dir(base_dir, _peaks.CODENAME)
-    out: List[Tuple[str, str]] = []
+    out: list[tuple[str, str]] = []
     if not runs_dir.is_dir():
         return out
     for entry in sorted(runs_dir.iterdir()):
@@ -103,7 +104,7 @@ def discover_runs(base_dir: str,
     return out
 
 
-def parse_config(yaml_path: str) -> Dict[str, Any]:
+def parse_config(yaml_path: str) -> dict[str, Any]:
     """Structural config from a Tensile `Data/00_Final.yaml`.
 
     Text-scan based (same parser the exploration script validated against the
@@ -120,9 +121,9 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
             text = f.read()
     except OSError:
         return {}
-    cfg: Dict[str, Any] = {}
+    cfg: dict[str, Any] = {}
     for key in CONFIG_KEYS:
-        m = re.search(r"^  %s: (.+)$" % re.escape(key), text, re.M)
+        m = re.search(rf"^  {re.escape(key)}: (.+)$", text, re.MULTILINE)
         if m:
             cfg[key] = m.group(1).strip()
     pt = text.find("ProblemType:")
@@ -130,7 +131,7 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
         m = re.search(r"DataType: (\d+)", text[pt:pt + 800])
         if m:
             cfg["DataTypeEnum"] = int(m.group(1))
-    m = re.search(r"^  ISA: \[([^\]]+)\]", text, re.M)
+    m = re.search(r"^  ISA: \[([^\]]+)\]", text, re.MULTILINE)
     if m:
         cfg["ISA"] = m.group(1).split(",")
     n_problems = problem_count_text(text)
@@ -139,7 +140,7 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
     return cfg
 
 
-def floor_config_from_name(phase_id: str) -> Dict[str, Any]:
+def floor_config_from_name(phase_id: str) -> dict[str, Any]:
     """Structural config for a spoof phase from its phase_id.
 
     Spoof ids carry `_mt<M>-tt<T>-vw<V>-du<D>-gsu<G>-<hash>`; the macro tile
@@ -153,9 +154,9 @@ def floor_config_from_name(phase_id: str) -> Dict[str, Any]:
             "VectorWidth": vw, "DepthU": du, "GlobalSplitU": gsu}
 
 
-def _yaml_index(phase_dir: str) -> Dict[str, str]:
+def _yaml_index(phase_dir: str) -> dict[str, str]:
     """folder -> 00_Final.yaml, keyed by the BenchmarkProblems subfolder."""
-    folder_yaml: Dict[str, str] = {}
+    folder_yaml: dict[str, str] = {}
     for y in sorted(glob.glob(os.path.join(
             phase_dir, "1_BenchmarkProblems", "*", "Data", "00_Final.yaml"))):
         folder_yaml[os.path.basename(os.path.dirname(os.path.dirname(y)))] = y
@@ -163,7 +164,7 @@ def _yaml_index(phase_dir: str) -> Dict[str, str]:
 
 
 def _yaml_for(cpath: str, phase_dir: str,
-              folder_yaml: Dict[str, str]) -> Optional[str]:
+              folder_yaml: dict[str, str]) -> str | None:
     """The 00_Final.yaml a CSV belongs to, by folder or by file stem."""
     rel = os.path.relpath(cpath, phase_dir)
     parts = rel.split(os.sep)
@@ -173,19 +174,18 @@ def _yaml_for(cpath: str, phase_dir: str,
             return folder_yaml.get(parts[idx - 1])
     base = os.path.basename(cpath)
     stem = base.split("__")[0]
-    if stem.endswith(".csv"):
-        stem = stem[:-4]
+    stem = stem.removesuffix(".csv")
     return folder_yaml.get(stem)
 
 
 def _accumulate_rows(
-    csvs: List[str],
+    csvs: list[str],
     phase_dir: str,
-    folder_yaml: Dict[str, str],
-    cfg: Dict[str, Any],
-) -> Dict[Tuple[str, str], List[Tuple[float, Dict[str, Any]]]]:
+    folder_yaml: dict[str, str],
+    cfg: dict[str, Any],
+) -> dict[tuple[str, str], list[tuple[float, dict[str, Any]]]]:
     """phase measurement rows, keyed by (kernel column, shape)."""
-    per_kernel: Dict[Tuple[str, str], List[Tuple[float, Dict[str, Any]]]] = \
+    per_kernel: dict[tuple[str, str], list[tuple[float, dict[str, Any]]]] = \
         defaultdict(list)
     for cpath in csvs:
         ypath = _yaml_for(cpath, phase_dir, folder_yaml) or (os.path.join(
@@ -219,8 +219,8 @@ def _accumulate_rows(
     return per_kernel
 
 
-def _family_and_dtype(cfg: Dict[str, Any], kc: str,
-                      phase_id: str) -> Tuple[str, str, Any]:
+def _family_and_dtype(cfg: dict[str, Any], kc: str,
+                      phase_id: str) -> tuple[str, str, Any]:
     """(family, dtype, dtype_enum) for one kernel row.
 
     Family attribution: the kernel's own typecode is the ground truth
@@ -248,10 +248,10 @@ def _family_and_dtype(cfg: Dict[str, Any], kc: str,
     return family, dt, dt_enum
 
 
-def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
-                  phase_id: str, measured_sides: List[str],
-                  n_problems: Optional[int] = None,
-                  phase_family: str = "") -> Optional[Dict[str, Any]]:
+def _kernel_entry(kc: str, s: str, vcfg: list[tuple[float, dict[str, Any]]],
+                  phase_id: str, measured_sides: list[str],
+                  n_problems: int | None = None,
+                  phase_family: str = "") -> dict[str, Any] | None:
     """One kernel-db row for a (kernel column, shape) group."""
     vals = [v for v, _ in vcfg]
     cfgset = [c for _, c in vcfg]
@@ -268,7 +268,7 @@ def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
     # the kernel typecode alone (an HPA phase's kernels read 'HH', which
     # would misgrade its form against the HH contract's five cells).
     fam_for_protocol = phase_family or (family if family != "?" else "")
-    entry: Dict[str, Any] = {
+    entry: dict[str, Any] = {
         "phase": phase_id,
         "kernel": kc,
         "shape": s,
@@ -291,13 +291,13 @@ def _kernel_entry(kc: str, s: str, vcfg: List[Tuple[float, Dict[str, Any]]],
 
 
 def phase_survey(phase_dir: str, phase_id: str,
-                 is_spoof: bool) -> List[Dict[str, Any]]:
+                 is_spoof: bool) -> list[dict[str, Any]]:
     """All (kernel-shape) rows for one phase directory."""
     folder_yaml = _yaml_index(phase_dir)
 
-    cfg: Dict[str, Any] = {}
+    cfg: dict[str, Any] = {}
     if folder_yaml:
-        cfg = parse_config(folder_yaml[sorted(folder_yaml)[0]])
+        cfg = parse_config(folder_yaml[min(folder_yaml)])
     elif is_spoof:
         cfg = floor_config_from_name(phase_id)
 
@@ -316,7 +316,7 @@ def phase_survey(phase_dir: str, phase_id: str,
     # -- almost always one folder; the floor's rejection-dumped phases have no
     # yaml at all, which leaves the count UNKNOWN and the CSV sides decide)
     # and its measured side set. Rows inherit it.
-    counts: List[int] = []
+    counts: list[int] = []
     for ypath in folder_yaml.values():
         try:
             counts.append(problem_count_text(Path(ypath).read_text()))
@@ -326,7 +326,7 @@ def phase_survey(phase_dir: str, phase_id: str,
     measured_sides = sorted({s for (_kc, s) in per_kernel})
     pfam = extract_family_from_phase_id(phase_id)
 
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for (kc, s), vcfg in sorted(per_kernel.items()):
         entry = _kernel_entry(kc, s, vcfg, phase_id, measured_sides,
                               n_problems=n_problems, phase_family=pfam)
@@ -336,9 +336,9 @@ def phase_survey(phase_dir: str, phase_id: str,
 
 
 def build_kernel_db(base_dir: str,
-                    run_ids: Optional[Sequence[str]] = None,
+                    run_ids: Sequence[str] | None = None,
                     all_ref: bool = False,
-                    quiet: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+                    quiet: bool = False) -> dict[str, list[dict[str, Any]]]:
     """Rebuild the full kernel DB from run directories (CPU-only).
 
     `quiet=True` suppresses the per-run progress lines (used by the automatic
@@ -347,7 +347,7 @@ def build_kernel_db(base_dir: str,
     runs = discover_runs(base_dir, all_ref=all_ref)
     if run_ids:
         runs = [(rid, kind) for rid, kind in runs if rid in set(run_ids)]
-    cache: Dict[str, List[Dict[str, Any]]] = {}
+    cache: dict[str, list[dict[str, Any]]] = {}
     for run_id, kind in runs:
         run_dir = str(_runs_dir(base_dir, _peaks.CODENAME) / run_id)
         if not os.path.isdir(run_dir):
@@ -355,7 +355,7 @@ def build_kernel_db(base_dir: str,
             continue
         phases = sorted(glob.glob(os.path.join(run_dir, "phase_*"))
                         + glob.glob(os.path.join(run_dir, "probe_*")))
-        acc: List[Dict[str, Any]] = []
+        acc: list[dict[str, Any]] = []
         for pd in phases:
             try:
                 acc.extend(phase_survey(pd, os.path.basename(pd), kind == "spoof"))
@@ -371,10 +371,10 @@ def build_kernel_db(base_dir: str,
 #: The parsed cache, keyed by (path, size, mtime). The file is 18 MB of JSON
 #: and every census, resolver and coverage map parses it; the corpus does not
 #: change inside a session, so one parse serves them all.
-_LOADED_CACHE: Dict[Tuple[str, int, float], Dict[str, List[Dict[str, Any]]]] = {}
+_LOADED_CACHE: dict[tuple[str, int, float], dict[str, list[dict[str, Any]]]] = {}
 
 
-def read_kernel_db(cache_path: str) -> Dict[str, List[Dict[str, Any]]]:
+def read_kernel_db(cache_path: str) -> dict[str, list[dict[str, Any]]]:
     """Read the cached kernel DB, memoised, without ever rebuilding it.
 
     The read-only sibling of :func:`load_kernel_db`: the analysis tools want
@@ -407,11 +407,11 @@ def read_kernel_db(cache_path: str) -> Dict[str, List[Dict[str, Any]]]:
         return {}
 
 
-def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
+def load_kernel_db(cache_path: str, base_dir: str | None = None,
                    rebuild: bool = False,
-                   run_ids: Optional[Sequence[str]] = None,
+                   run_ids: Sequence[str] | None = None,
                    all_ref: bool = False,
-                   quiet: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+                   quiet: bool = False) -> dict[str, list[dict[str, Any]]]:
     """Load the cached kernel DB, rebuilding when missing/forced.
 
     `base_dir` (default: repo root) enables a lazy rebuild when the cache is
@@ -453,7 +453,7 @@ def load_kernel_db(cache_path: str, base_dir: Optional[str] = None,
 DEFAULT_CACHE = results_rel("analysis", "kernel_db.json")
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None,
@@ -471,10 +471,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
     db = load_kernel_db(args.json, base_dir=base, rebuild=args.rebuild,
                         run_ids=args.run_id, all_ref=args.all_ref)
-    n_rows = sum(len(v) for v in db.values())
-    n_runs = sum(1 for v in db.values() if v)
-    print(f"{args.json}: {n_runs} runs with data, {n_rows} kernel-shape rows "
-          f"({len(db)} runs scanned)")
+    sum(len(v) for v in db.values())
+    sum(1 for v in db.values() if v)
     return 0
 
 

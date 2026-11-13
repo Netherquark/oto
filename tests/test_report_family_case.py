@@ -27,8 +27,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.metrics.analytics import CellAnalytics  # noqa: E402
-from oto.metrics.report import AcceptanceReporter  # noqa: E402
+from oto.metrics.analytics import CellAnalytics
+from oto.metrics.report import AcceptanceReporter
 
 
 def cell(family: str, shape: str, median: float) -> CellAnalytics:
@@ -55,14 +55,14 @@ class TestFamilyCoverageCase(unittest.TestCase):
             cell("HS_HPA", "4096x4096x4096", 1441.2),
         ]
         cov = self.reporter._compute_family_coverage(analytics)
-        self.assertEqual(cov["HH"]["best_median"], 2749.285)
+        assert cov["HH"]["best_median"] == 2749.285
         # HPA must report its own kernels, not the packed HH median.
-        self.assertEqual(cov["HH_HPA"]["best_median"], 1447.0)
-        self.assertEqual(cov["HS_HPA"]["best_median"], 1441.2)
+        assert cov["HH_HPA"]["best_median"] == 1447.0
+        assert cov["HS_HPA"]["best_median"] == 1441.2
         # And per-size, 4096 for HH_HPA is its own row, not 2749.285.
-        self.assertEqual(cov["HH_HPA"]["by_size"]["4096"]["best_median"], 1411.05)
-        self.assertLess(cov["HH_HPA"]["best_median"], cov["HH"]["best_median"])
-        self.assertLess(cov["HS_HPA"]["best_median"], cov["HH"]["best_median"])
+        assert cov["HH_HPA"]["by_size"]["4096"]["best_median"] == 1411.05
+        assert cov["HH_HPA"]["best_median"] < cov["HH"]["best_median"]
+        assert cov["HS_HPA"]["best_median"] < cov["HH"]["best_median"]
 
     def test_hpa_buckets_are_not_identical(self):
         """The symptom: HH_HPA and HS_HPA had byte-identical coverage dicts."""
@@ -72,17 +72,17 @@ class TestFamilyCoverageCase(unittest.TestCase):
             cell("HS_HPA", "1024x1024x1024", 1429.7),
         ]
         cov = self.reporter._compute_family_coverage(analytics)
-        self.assertNotEqual(cov["HH_HPA"], cov["HS_HPA"])
+        assert cov["HH_HPA"] != cov["HS_HPA"]
         # Each HPA bucket reports only its own kernels -- never the HH median.
-        self.assertEqual(cov["HH_HPA"]["best_median"], 1411.05)
-        self.assertEqual(cov["HH_HPA"]["by_size"]["4096"]["best_median"], 1411.05)
-        self.assertEqual(cov["HS_HPA"]["best_median"], 1429.7)
+        assert cov["HH_HPA"]["best_median"] == 1411.05
+        assert cov["HH_HPA"]["by_size"]["4096"]["best_median"] == 1411.05
+        assert cov["HS_HPA"]["best_median"] == 1429.7
 
     def test_legacy_lowercase_family_still_matches(self):
         """Pre-Oct-9 cells carry lowercase families; they must not be lost."""
         analytics = [cell("hh_hpa", "1024x1024x1024", 1300.0)]
         cov = self.reporter._compute_family_coverage(analytics)
-        self.assertEqual(cov["HH_HPA"]["best_median"], 1300.0)
+        assert cov["HH_HPA"]["best_median"] == 1300.0
 
 
 if __name__ == "__main__":

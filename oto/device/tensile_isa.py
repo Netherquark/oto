@@ -7,8 +7,6 @@ triples, together with the codename -> triple lookup used by the build proof.
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 #: codename -> Tensile ``CurrentISA`` triple.
 ISA_TRIPLES = {
     "gfx900": (9, 0, 0x00),
@@ -17,6 +15,6 @@ ISA_TRIPLES = {
 }
 
 
-def isa_triple(codename: str) -> Optional[Tuple[int, int, int]]:
+def isa_triple(codename: str) -> tuple[int, int, int] | None:
     """Return Tensile's ``CurrentISA`` triple for ``codename``, or ``None``."""
     return ISA_TRIPLES.get(codename)

@@ -27,9 +27,9 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-import yaml  # noqa: E402
+import yaml
 
-from oto.tensile.shape_order import (  # noqa: E402
+from oto.tensile.shape_order import (
     is_numerically_ordered,
     ordered_shapes,
     shape_order_key,
@@ -120,8 +120,8 @@ class TestWriterReimposesOrder:
     def test_write_phase_config_sorts_problem_sizes(self, tmp_path):
         from oto.tensile import config_writer
         try:
-            import oto.runners.driver  # noqa: F401  (writer imports its params)
-        except Exception as exc:  # noqa: BLE001
+            pass
+        except Exception as exc:
             pytest.skip(f"driver not importable: {exc}")
 
         phase = dict(self._deck_phase_with_sweep())

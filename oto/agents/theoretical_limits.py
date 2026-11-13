@@ -9,7 +9,7 @@ Public API: generate(profile, starter_text, research=None) -> str.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from oto.device.profile import DeviceProfile
 
@@ -22,7 +22,7 @@ def _peak_table(profile: DeviceProfile) -> str:
 
 
 def generate(profile: DeviceProfile, starter_text: str = "",
-            research: Optional[Callable[[str], str]] = None) -> str:
+            research: Callable[[str], str] | None = None) -> str:
     """Generate the theoretical-limits doc for ``profile``.
 
     ``research`` is an optional callable (API-key-backed) returning extra

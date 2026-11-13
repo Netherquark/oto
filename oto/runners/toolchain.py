@@ -19,7 +19,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
@@ -38,8 +37,8 @@ DEFAULT_TENSILE_ROOT = (Path(os.environ["TENSILE_ROOT"])
                         if os.environ.get("TENSILE_ROOT") else None)
 
 
-def require_tensile_root(explicit: Optional[Path],
-                         default: Optional[Path]) -> Path:
+def require_tensile_root(explicit: Path | None,
+                         default: Path | None) -> Path:
     """Resolve the Tensile checkout root from an explicit arg, live env, or .env.
 
     Precedence, highest first: the explicit ``--tensile-root`` value; the live
@@ -86,7 +85,7 @@ def require_tensile_root(explicit: Optional[Path],
     return resolved
 
 
-def hipconfig() -> Dict[str, str]:
+def hipconfig() -> dict[str, str]:
     """Query the native ROCm discovery tool (`hipconfig`) for install paths.
 
     `hipconfig` is the ROCm-shipped authority for toolchain locations
@@ -99,7 +98,7 @@ def hipconfig() -> Dict[str, str]:
         out = subprocess.run([hipconfig], capture_output=True, text=True, timeout=30).stdout or ""
     except (OSError, subprocess.TimeoutExpired):
         return {}
-    info: Dict[str, str] = {}
+    info: dict[str, str] = {}
     for line in out.splitlines():
         m = re.match(r"([A-Z][A-Z0-9_]*)\s*:\s*(.*)", line.strip())
         if m and m.group(2).strip():
@@ -107,7 +106,7 @@ def hipconfig() -> Dict[str, str]:
     return info
 
 
-def resolve_rocm_paths() -> Dict[str, str]:
+def resolve_rocm_paths() -> dict[str, str]:
     """Resolve the ROCm toolchain using native discovery only.
 
     Order per key: explicit env value (shell or .env) that exists, then native

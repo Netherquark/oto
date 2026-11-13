@@ -39,23 +39,23 @@ import json
 import math
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 # Device constants have one home. Nothing in this module may re-derive them.
-from oto.device.peaks import (  # noqa: E402
+import oto.device.peaks as _peaks
+from oto.device.peaks import (
     LDS_PER_CU_KB,
     MAX_WAVES_PER_CU,
     NUM_SIMDS_PER_CU,
 )
-
-from oto.tensile.gates.vgpr_model import VGPR_PER_CU  # noqa: E402
-import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.gates.vgpr_model import VGPR_PER_CU
 
 #: Register-file size of one SIMD = the CU file divided by the SIMD count. With
 #: 65536 per CU and 4 SIMDs this is 16384, i.e. 64 KiB per SIMD.
@@ -132,7 +132,7 @@ def waves_per_simd(vgprs: int) -> int:
     return min(WAVES_PER_SIMD_MAX, SIMD_VGPR // (WAVE * aligned))
 
 
-def binding_resource(vgprs: int, lds: int, threads: int) -> Tuple[str, int]:
+def binding_resource(vgprs: int, lds: int, threads: int) -> tuple[str, int]:
     """Which resource caps this kernel, and the waves/CU it allows.
 
     Args:
@@ -162,7 +162,7 @@ def binding_resource(vgprs: int, lds: int, threads: int) -> Tuple[str, int]:
     return binder, cands[binder]
 
 
-def _family_of(path: Path) -> Optional[str]:
+def _family_of(path: Path) -> str | None:
     """Dtype char from the path's ``Cijk_..._HSS_BH_00`` directory, else None.
 
     The typecode is the whole non-numeric segment between the ``Bxxx_`` and the
@@ -176,7 +176,7 @@ def _family_of(path: Path) -> Optional[str]:
     return None
 
 
-def parse_asm_kernel(path: Path) -> Optional[Dict]:
+def parse_asm_kernel(path: Path) -> dict | None:
     """Read one Tensile-emitted assembly file's hardware directives.
 
     Args:
@@ -192,7 +192,7 @@ def parse_asm_kernel(path: Path) -> Optional[Dict]:
     except OSError:
         return None
     head = text.split(".end_amdhsa_kernel", 1)[0]
-    out: Dict = {}
+    out: dict = {}
     for key, directive in (("vgpr", "amdhsa_next_free_vgpr"),
                             ("sgpr", "amdhsa_next_free_sgpr"),
                             ("lds", "amdhsa_group_segment_fixed_size"),
@@ -216,7 +216,7 @@ def parse_asm_kernel(path: Path) -> Optional[Dict]:
     return out
 
 
-def read_phase_gflops(phase_dir: Path) -> Dict[str, Tuple[float, List[int]]]:
+def read_phase_gflops(phase_dir: Path) -> dict[str, tuple[float, list[int]]]:
     """Best and per-problem GFLOP/s for every kernel in one phase.
 
     Tensile's ``2_BenchmarkData/*.csv`` header is **misaligned with its rows**:
@@ -233,7 +233,7 @@ def read_phase_gflops(phase_dir: Path) -> Dict[str, Tuple[float, List[int]]]:
     Returns:
         ``{solution name: (best GFLOP/s, [I, J, K, L of the best])}``.
     """
-    out: Dict[str, Tuple[float, List[int]]] = {}
+    out: dict[str, tuple[float, list[int]]] = {}
     bd = phase_dir / "2_BenchmarkData"
     if not bd.is_dir():
         return out
@@ -264,7 +264,7 @@ def read_phase_gflops(phase_dir: Path) -> Dict[str, Tuple[float, List[int]]]:
     return out
 
 
-def iter_asm(runs_root: Path) -> Iterable[Tuple[Path, Dict]]:
+def iter_asm(runs_root: Path) -> Iterable[tuple[Path, dict]]:
     """Every emitted Tensile kernel under a runs root, with its phase dir."""
     for asm_dir in sorted(runs_root.rglob("SOURCE/assembly")):
         for asm in sorted(asm_dir.glob("*.s")):
@@ -280,9 +280,9 @@ def iter_asm(runs_root: Path) -> Iterable[Tuple[Path, Dict]]:
 
 
 def measure_corpus(runs_root: Path,
-                   dtype: Optional[str] = None) -> List[Dict]:
-    rows: List[Dict] = []
-    cache: Dict[str, Dict[str, Tuple[float, List[int]]]] = {}
+                   dtype: str | None = None) -> list[dict]:
+    rows: list[dict] = []
+    cache: dict[str, dict[str, tuple[float, list[int]]]] = {}
     for phase, k in iter_asm(runs_root):
         fam = _family_of(Path(k["path"]))
         if fam == dtype or (dtype is None):
@@ -327,7 +327,7 @@ def measure_corpus(runs_root: Path,
     return rows
 
 
-def _fmt(row: Dict) -> str:
+def _fmt(row: dict) -> str:
     size = "-"
     if row["mt0"] and row["depth_u"]:
         size = f"{row['mt0']}x{row['mt1']}x{row['depth_u']}"
@@ -365,47 +365,41 @@ def _cmd_calibration() -> int:
            for v, want in _CALIBRATION.items()
            if waves_per_simd(v) != want]
     if bad:
-        print("CALIBRATION MISMATCH:", bad)
         return 1
-    print("calibration OK: 10/10 rows of the AMD/ORNL GFX9 table reproduced")
     return 0
 
 
-def _cmd_binder(rows: List[Dict[str, Any]]) -> int:
-    print("\n-- resource tally --")
-    tally: Dict[str, int] = {}
+def _cmd_binder(rows: list[dict[str, Any]]) -> int:
+    tally: dict[str, int] = {}
     for r in rows:
         tally[r["binder"]] = tally.get(r["binder"], 0) + 1
-    for k, v in sorted(tally.items(), key=lambda kv: -kv[1]):
-        print(f"  {k:<10s} {v:6d}  {100*v/len(rows):5.1f}%")
-    print("\n-- waves/CU distribution --")
-    hist: Dict[int, int] = {}
+    for _k, _v in sorted(tally.items(), key=lambda kv: -kv[1]):
+        pass
+    hist: dict[int, int] = {}
     for r in rows:
         hist[r["waves_per_cu"]] = hist.get(r["waves_per_cu"], 0) + 1
-    for w in sorted(hist):
-        print(f"  {w:>3d} waves/CU  {hist[w]:6d}  {100*hist[w]/len(rows):5.1f}%")
+    for _w in sorted(hist):
+        pass
     spilled = sum(1 for r in rows if r["scratch"])
     if spilled:
-        print(f"\n{spilled} kernels carry a private segment (spill)")
+        pass
     return 0
 
 
-def _cmd_count(rows: List[Dict[str, Any]], top: int) -> int:
-    groups: Dict[Tuple, int] = {}
+def _cmd_count(rows: list[dict[str, Any]], top: int) -> int:
+    groups: dict[tuple, int] = {}
     for r in rows:
         key = (r["dtype"], r["mt0"], r["mt1"], r["tt"], r["depth_u"])
         groups[key] = groups.get(key, 0) + 1
     ordered = sorted(groups.items(), key=lambda kv: -kv[1])[:top]
-    print(f"{len(rows)} kernels, {len(groups)} distinct shapes")
-    for key, n in ordered:
-        probe = next(r for r in rows
+    for key, _n in ordered:
+        next(r for r in rows
                     if (r["dtype"], r["mt0"], r["mt1"], r["tt"],
                         r["depth_u"]) == key)
-        print(f"{n:5d}  {_fmt(probe)}")
     return 0
 
 
-def _cmd_sorted(rows: List[Dict[str, Any]], args: Any) -> int:
+def _cmd_sorted(rows: list[dict[str, Any]], args: Any) -> int:
     if args.by == "vgpr":
         ordered = sorted(rows, key=lambda r: -r["vgpr"])[:args.top]
     elif args.by == "waves":
@@ -413,10 +407,8 @@ def _cmd_sorted(rows: List[Dict[str, Any]], args: Any) -> int:
     else:
         measured = [r for r in rows if r["gflops"] is not None]
         ordered = sorted(measured, key=lambda r: -r["gflops"])[:args.top]
-    print(f"{len(rows)} kernels; "
-          f"{sum(1 for r in rows if r['gflops'] is not None)} with GFLOP/s")
-    for r in ordered:
-        print(_fmt(r))
+    for _r in ordered:
+        pass
     return 0
 
 
@@ -430,12 +422,10 @@ def main() -> int:
     root = Path(args.runs) if args.runs else (_runs_dir(base, _peaks.CODENAME))
     rows = measure_corpus(root, args.dtype)
     if not rows:
-        print(f"no emitted kernels with an amdhsa directive under {root}")
         return 1
 
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=1, default=str))
-        print(f"wrote {len(rows)} rows to {args.json}")
 
     if args.binder:
         return _cmd_binder(rows)

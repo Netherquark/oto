@@ -9,7 +9,8 @@ harness=None) -> dict.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from oto.agents.theoretical_limits import generate as gen_tl
 from oto.agents.tuning_context import generate as gen_tc
@@ -17,9 +18,9 @@ from oto.device.profile import DeviceProfile
 
 
 def run(profile: DeviceProfile, starter_text: str = "",
-        research: Optional[Callable[[str], str]] = None,
-        run_workflow: Optional[Callable[[], Any]] = None,
-        harness: Optional[Callable[[], Any]] = None) -> dict:
+        research: Callable[[str], str] | None = None,
+        run_workflow: Callable[[], Any] | None = None,
+        harness: Callable[[], Any] | None = None) -> dict:
     tl = gen_tl(profile, starter_text, research)
     tc = gen_tc(profile, tl, starter_text, research)
     wf_result = run_workflow() if run_workflow is not None else None

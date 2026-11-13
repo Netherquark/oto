@@ -50,11 +50,12 @@ Public API: assembly_class_valid, assembly_depth_u, ASSEMBLY_DTYPE_ELEM_BYTES.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
+from oto.device.loader import default_profile as _asm_dp
 
 from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
-from oto.device.loader import default_profile as _asm_dp
 
 #: Refactor 2: device feature flags come from the profile (default: the device).
 _ASM_PROFILE = _asm_dp()
@@ -74,7 +75,7 @@ STAGGER_STRIDE_DEFAULT = 256
 STAGGER_U_DEFAULT = 32
 
 
-def assembly_depth_u(config: Dict[str, Any]) -> int:
+def assembly_depth_u(config: dict[str, Any]) -> int:
     """Resolve DepthU: explicit key first, else from the MacroTile string.
 
     Why a second reader: this gate is called with deck/shipped configs, which
@@ -103,7 +104,7 @@ def assembly_depth_u(config: Dict[str, Any]) -> int:
     return 16
 
 
-def _is_hpa(config: Dict[str, Any], dtype_upper: str) -> bool:
+def _is_hpa(config: dict[str, Any], dtype_upper: str) -> bool:
     """True when the config runs half with an f32 accumulator (HPA class).
 
     Thin alias: the reader (key-or-label, the two places the class is recorded)
@@ -113,8 +114,8 @@ def _is_hpa(config: Dict[str, Any], dtype_upper: str) -> bool:
     return is_hpa(config)
 
 
-def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
-                   gsu: int, profile=None) -> Optional[str]:
+def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
+                   gsu: int, profile=None) -> str | None:
     """GlobalSplitU class rejection text, or None when GSU is legal here.
 
     Rules:
@@ -150,8 +151,8 @@ def _gsu_rejection(config: Dict[str, Any], dtype_upper: str,
     return None
 
 
-def _stagger_rejection(config: Dict[str, Any],
-                       depth_u: int) -> Optional[str]:
+def _stagger_rejection(config: dict[str, Any],
+                       depth_u: int) -> str | None:
     """StaggerUStride-vs-DepthU rejection text, or None when legal.
 
     When StaggerU > 0, StaggerUStride must be >= DepthU*BytesPerElement (the
@@ -173,8 +174,8 @@ def _stagger_rejection(config: Dict[str, Any],
 
 
 @memo_gate
-def assembly_class_valid(config: Dict[str, Any],
-                        profile=None) -> Tuple[bool, str]:
+def assembly_class_valid(config: dict[str, Any],
+                        profile=None) -> tuple[bool, str]:
     """Return (True, "") if config is a legal Assembly GEMM class for the device.
 
     CLASS-BASED validity -- single source of truth for both seams (scheduler

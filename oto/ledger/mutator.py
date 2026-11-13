@@ -12,43 +12,55 @@ Public API: Mutator, Proposal, classify_outcome (re-exported).
 
 from __future__ import annotations
 
-import json
 import random
-import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
-
 from oto.device.peaks import FAMILY_DTYPE_CHAR
-from oto.ledger.mutator_outcomes import (OUTCOME_FUNCTIONAL,  # noqa: E402
-                                        OUTCOME_LEGAL_REJECTED,
-                                        OUTCOME_LEGAL_SLOW,
-                                        OUTCOME_NON_FUNCTIONAL,
-                                        OUTCOME_PENDING, TERMINAL_OUTCOMES,
-                                        MutatorOutcomesMixin,
-                                        _per_cell_medians, classify_outcome)
+from oto.ledger.mutator_outcomes import (
+    OUTCOME_FUNCTIONAL,
+    OUTCOME_LEGAL_REJECTED,
+    OUTCOME_LEGAL_SLOW,
+    OUTCOME_NON_FUNCTIONAL,
+    OUTCOME_PENDING,
+    TERMINAL_OUTCOMES,
+    MutatorOutcomesMixin,
+    classify_outcome,
+)
 from oto.metrics.analytics import AnalyticsEngine
 from oto.tensile.legality import TEMPLATE_KEYS
 
-__all__ = ["Mutator", "Proposal", "classify_outcome",
-           "OUTCOME_PENDING", "OUTCOME_FUNCTIONAL", "OUTCOME_NON_FUNCTIONAL",
-           "OUTCOME_LEGAL_REJECTED", "OUTCOME_LEGAL_SLOW", "TERMINAL_OUTCOMES",
-           "ORIGIN_NOVEL", "ORIGIN_REPLICATE",
-           "DEFAULT_NEGATIVE_CACHE_K", "DEFAULT_DRAWS_PER_CELL"]
+__all__ = [
+    "DEFAULT_DRAWS_PER_CELL",
+    "DEFAULT_NEGATIVE_CACHE_K",
+    "ORIGIN_NOVEL",
+    "ORIGIN_REPLICATE",
+    "OUTCOME_FUNCTIONAL",
+    "OUTCOME_LEGAL_REJECTED",
+    "OUTCOME_LEGAL_SLOW",
+    "OUTCOME_NON_FUNCTIONAL",
+    "OUTCOME_PENDING",
+    "TERMINAL_OUTCOMES",
+    "Mutator",
+    "Proposal",
+    "classify_outcome",
+]
 
 #: `legality` is the single owner of TEMPLATE_KEYS (imported above): this module
 #: assembles nothing, it only strips the caller's keys from what `legality`
 #: built. The import used to appear twice -- once here and once in the header --
 #: and the duplicate carried a `noqa: F401` that is no longer needed, because the
 #: name is genuinely used.
-import oto.tensile.legality as legality  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
+from oto.tensile import legality
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted
 #: 59 mutants from one winner, ~25 of which collided on fingerprints; novelty
@@ -70,15 +82,15 @@ class Proposal:
     """One emitted candidate, as recorded in the ledger."""
 
     fp: str
-    family: Optional[str] = None
-    shape: Optional[str] = None
-    parent_fp: Optional[str] = None
+    family: str | None = None
+    shape: str | None = None
+    parent_fp: str | None = None
     origin: str = ORIGIN_NOVEL
-    iteration: Optional[int] = None
-    run_id: Optional[str] = None
+    iteration: int | None = None
+    run_id: str | None = None
     outcome: str = OUTCOME_PENDING
-    build_class: Optional[str] = None
-    detail: Dict[str, Any] = field(default_factory=dict)
+    build_class: str | None = None
+    detail: dict[str, Any] = field(default_factory=dict)
 
 
 class Mutator(MutatorOutcomesMixin):
@@ -93,9 +105,9 @@ class Mutator(MutatorOutcomesMixin):
         self,
         registry,
         base_dir: Path,
-        analytics: Optional[AnalyticsEngine] = None,
+        analytics: AnalyticsEngine | None = None,
         negative_cache_k: int = DEFAULT_NEGATIVE_CACHE_K,
-        slow_threshold: Optional[float] = None,
+        slow_threshold: float | None = None,
         seed: int = 0,
         reference_slow: bool = True,
     ):
@@ -113,9 +125,9 @@ class Mutator(MutatorOutcomesMixin):
         # re-entrant. `reference_slow=False` opts out entirely, which is the
         # right call for tests and for any run that must not touch the corpus.
         self.reference_slow = reference_slow
-        self._slow_bars: Optional[Dict[tuple, Dict[str, Any]]] = None
-        self._slow_bands: Optional[Dict[str, Any]] = None
-        self._consecutive_failures: Dict[str, int] = {}
+        self._slow_bars: dict[tuple, dict[str, Any]] | None = None
+        self._slow_bands: dict[str, Any] | None = None
+        self._consecutive_failures: dict[str, int] = {}
         # Start from durable history rather than empty: an in-memory counter that
         # resets on every process start under-reports a saturated neighbourhood,
         # which is the same class of bug as a novelty ledger that has been
@@ -126,9 +138,9 @@ class Mutator(MutatorOutcomesMixin):
 
     def sample_candidate(self,
                          family: str,
-                         base_config: Optional[Dict[str, Any]] = None,
+                         base_config: dict[str, Any] | None = None,
                          groups: int = 2,
-                         seed: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                         seed: str | None = None) -> dict[str, Any] | None:
         """Return manifest-legal candidate knobs for ``family``.
 
         Phase 2 (Hplan.4): the knob values are drawn from what Tensile actually
@@ -155,10 +167,10 @@ class Mutator(MutatorOutcomesMixin):
 
     def sample_cell(self,
                     family: str,
-                    base_config: Optional[Dict[str, Any]] = None,
+                    base_config: dict[str, Any] | None = None,
                     groups: int = 2,
                     draws: int = DEFAULT_DRAWS_PER_CELL,
-                    seed: Optional[str] = None) -> List[Dict[str, Any]]:
+                    seed: str | None = None) -> list[dict[str, Any]]:
         """Draw up to ``draws`` legal candidates for one cell.
 
         Duplicates are *not* removed here: the caller checks each against the
@@ -166,7 +178,7 @@ class Mutator(MutatorOutcomesMixin):
         (H.3.5). Over-drawing is therefore cheap -- it costs an RNG draw, not a
         phase.
         """
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for i in range(max(0, draws)):
             knobs = self.sample_candidate(
                 family,
@@ -180,15 +192,15 @@ class Mutator(MutatorOutcomesMixin):
 
     def sample_cell_synthesized(self,
                      family: str,
-                     base_config: Optional[Dict[str, Any]] = None,
-                     cell: Optional[Dict[str, Any]] = None,
+                     base_config: dict[str, Any] | None = None,
+                     cell: dict[str, Any] | None = None,
                      groups: int = 2,
                      draws: int = DEFAULT_DRAWS_PER_CELL,
-                     seed: Optional[str] = None,
-                     band_pct: Optional[float] = None,
-                     shape: Optional[str] = None,
-                     sweeps: Optional[Dict[str, List[str]]] = None,
-                     ) -> Dict[str, Any]:
+                     seed: str | None = None,
+                     band_pct: float | None = None,
+                     shape: str | None = None,
+                     sweeps: dict[str, list[str]] | None = None,
+                     ) -> dict[str, Any]:
         """Phase 4 synthesis for one cell: coverage-guided draws plus a sweep.
 
         Returns the `synthesis.synthesize_cell` summary rather than a bare knob
@@ -252,7 +264,7 @@ class Mutator(MutatorOutcomesMixin):
         )
 
     def emit_candidate_phase(self, proposal: Proposal, phase_id: str,
-                             phase_data: Dict[str, Any]) -> bool:
+                             phase_data: dict[str, Any]) -> bool:
         """Record a candidate and the phase that will run it, atomically.
 
         Two separate writes would leave a proposal in the ledger with no phase
@@ -274,7 +286,7 @@ class Mutator(MutatorOutcomesMixin):
 
     # -- outcome ------------------------------------------------------
 
-    def resolve(self, fp: str, outcome: str, build_class: Optional[str] = None) -> bool:
+    def resolve(self, fp: str, outcome: str, build_class: str | None = None) -> bool:
         """Write back a candidate's outcome, at most once.
 
         Also feeds the negative cache, which is the only state that changes what
@@ -286,7 +298,7 @@ class Mutator(MutatorOutcomesMixin):
             self._note_outcome(fp, outcome)
         return applied
 
-    def slow_bars(self) -> Dict[tuple, Dict[str, Any]]:
+    def slow_bars(self) -> dict[tuple, dict[str, Any]]:
         """Per-cell `legal_slow` bars derived from the gfx900 reference chain.
 
         Resolved once, on first use, and cached even when it comes back empty:
@@ -301,7 +313,7 @@ class Mutator(MutatorOutcomesMixin):
             self._slow_bars = {}
             return self._slow_bars
         try:
-            import oto.metrics.coverage as coverage
+            from oto.metrics import coverage
             resolved = coverage.reference_thresholds(self.base_dir)
             self._slow_bars = dict(resolved.get("bars") or {})
             self._slow_bands = {k: resolved.get(k) for k in
@@ -312,7 +324,7 @@ class Mutator(MutatorOutcomesMixin):
             self._slow_bands = {"available": False}
         return self._slow_bars
 
-    def slow_threshold_for(self, cell) -> Optional[float]:
+    def slow_threshold_for(self, cell) -> float | None:
         """The bar for one `(dtype, shape)` cell, or None if unjudgeable."""
         if cell is None:
             return None
@@ -323,8 +335,8 @@ class Mutator(MutatorOutcomesMixin):
         self,
         fp: str,
         phase_dir: Path,
-        build_class: Optional[str] = None,
-        run_id: Optional[str] = None,
+        build_class: str | None = None,
+        run_id: str | None = None,
     ) -> tuple:
         """Classify a phase's output, persist the evidence, then write the verdict.
 
@@ -366,7 +378,7 @@ class Mutator(MutatorOutcomesMixin):
         else:
             self._consecutive_failures[parent] = 0
 
-    def rebuild_negative_cache(self) -> Dict[str, int]:
+    def rebuild_negative_cache(self) -> dict[str, int]:
         """Reconstruct the cache from the durable ledger, and return it.
 
         The cache used to be a plain in-memory counter, which meant a fresh
@@ -385,7 +397,7 @@ class Mutator(MutatorOutcomesMixin):
             stream = self.registry._outcome_stream()
         except Exception:
             return self._consecutive_failures
-        failures: Dict[str, int] = {}
+        failures: dict[str, int] = {}
         for parent_fp, _fp, outcome in stream:
             if outcome == OUTCOME_NON_FUNCTIONAL:
                 failures[parent_fp] = failures.get(parent_fp, 0) + 1
@@ -416,7 +428,7 @@ class Mutator(MutatorOutcomesMixin):
     def overlay_name(self) -> str:
         return "phases.overlay.yaml"
 
-    def write_overlay(self, candidates: Sequence[Dict[str, Any]], run_id: Optional[str] = None) -> Path:
+    def write_overlay(self, candidates: Sequence[dict[str, Any]], run_id: str | None = None) -> Path:
         """Write this run's candidates to a per-run overlay.
 
         `phases.yaml` is the curated deck and stays that way. An overlay is
@@ -444,9 +456,8 @@ class Mutator(MutatorOutcomesMixin):
             yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
         return path
 
-    def load_overlay(self, run_id: str) -> List[Dict[str, Any]]:
+    def load_overlay(self, run_id: str) -> list[dict[str, Any]]:
         """Read back one run's overlay, or [] if there is none."""
-        import yaml
 
         path = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():

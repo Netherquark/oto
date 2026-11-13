@@ -29,7 +29,7 @@ no execution time yet: it reports ``elapsed_minutes: null`` and
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
@@ -66,11 +66,11 @@ class ABVerdict:
     # alongside the clock, never folded into it: core clock is the channel
     # temperature acts through, so a second temperature factor would
     # double-count (see port_tensile.THERMAL_MAX_C).
-    native_temp_c: Optional[float] = None  # median die temp, winning native phase
-    spoof_temp_c: Optional[float] = None
-    native_temp_max_c: Optional[float] = None
-    spoof_temp_max_c: Optional[float] = None
-    native_runs: List[str] = field(default_factory=list)
+    native_temp_c: float | None = None  # median die temp, winning native phase
+    spoof_temp_c: float | None = None
+    native_temp_max_c: float | None = None
+    spoof_temp_max_c: float | None = None
+    native_runs: list[str] = field(default_factory=list)
     native_winner_run: str = ""  # run that produced this cell's best native sample
     native_winner_phase: str = ""
     n_native_runs: int = 0
@@ -91,22 +91,22 @@ class AcceptanceReport:
     """Final acceptance report."""
     timestamp: str
     run_id: str
-    per_family_coverage: Dict[str, Dict[str, Any]]
-    per_cell_verdicts: List[ABVerdict]
-    red_list: List[Dict[str, Any]]
+    per_family_coverage: dict[str, dict[str, Any]]
+    per_cell_verdicts: list[ABVerdict]
+    red_list: list[dict[str, Any]]
     overall_pass: bool
     summary: str
-    all_analytics: List[CellAnalytics] = field(default_factory=list)
-    run_dir: Optional[str] = None
-    family_timing: Optional[Dict[str, Dict[str, Any]]] = None
+    all_analytics: list[CellAnalytics] = field(default_factory=list)
+    run_dir: str | None = None
+    family_timing: dict[str, dict[str, Any]] | None = None
     # Execution time. family_timing is per-family phase cost; this is the
     # wall-clock cost of the run and of the reference chain, which are
     # different numbers for a resumed floor and must not be conflated.
-    execution_timing: Optional[Dict[str, Any]] = None
-    orange_list: List[Dict[str, Any]] = field(default_factory=list)
-    reference_run_id: Optional[str] = None
-    shipped_manifest: Optional[Dict[str, Any]] = None
-    native_arm: Optional[Dict[str, Any]] = None
+    execution_timing: dict[str, Any] | None = None
+    orange_list: list[dict[str, Any]] = field(default_factory=list)
+    reference_run_id: str | None = None
+    shipped_manifest: dict[str, Any] | None = None
+    native_arm: dict[str, Any] | None = None
     # Provenance of the A/B floor. A floor that never finished is not evidence,
     # so the report must say so rather than letting its verdicts read as final.
     reference_floor_status: str = "not attempted"

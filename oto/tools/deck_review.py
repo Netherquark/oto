@@ -39,23 +39,23 @@ import json
 import re
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
-import oto.device.peaks as _peaks  # noqa: E402
-from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
-from oto.tensile.synthesis.db_knobs import (  # noqa: E402
-    FORWARD_KNOB_DOMAINS)
+import oto.device.peaks as _peaks
+from oto.device.peaks import FAMILY_DTYPE_CHAR
 from oto.runners.paths import results_dir as _results_dir
+from oto.tensile.gates.occupancy import ldspad_feasible
+from oto.tensile.synthesis.db_knobs import FORWARD_KNOB_DOMAINS
 
 #: The A/B bases, lenient to strict, with what each one actually asks. The
 #: names and their meaning live in `oto.metrics.ab_delta._stat`; this is the
 #: menu, not a second definition.
-BASES: Tuple[Tuple[str, str], ...] = (
+BASES: tuple[tuple[str, str], ...] = (
     ("winner", "native best-kernel vs spoof best-kernel (the report's basis)"),
     ("median", "typical native vs typical spoof"),
     ("floor_best", "typical native vs spoof's BEST kernel"),
@@ -73,17 +73,13 @@ def _score(base: Path) -> int:
 
     native, floor, _chain = arm_record_sets(base)
     if not native or not floor:
-        print("no native/spoof records found -- run a benchmark first")
         return 1
 
-    print(f"native records={len(native)}  spoof records={len(floor)}")
-    print(f"{'basis':11}{'cells':>6}{'WIN':>6}{'TIE':>6}{'LOSS':>6}   meaning")
-    deltas: Dict[str, Dict[Tuple[str, int], Dict[str, Any]]] = {}
-    for basis, meaning in BASES:
+    deltas: dict[str, dict[tuple[str, int], dict[str, Any]]] = {}
+    for basis, _meaning in BASES:
         d = ab_delta._pair_cells(native, floor, basis, 2.0, None, None)
         deltas[basis] = d
-        c = Counter(v["verdict"] for v in d.values())
-        print(f"{basis:11}{len(d):6}{c['WIN']:6}{c['TIE']:6}{c['LOSS']:6}   {meaning}")
+        Counter(v["verdict"] for v in d.values())
 
     # The losses are the work list, and they only exist on the strict bases.
     worst = deltas["floor_best"]
@@ -91,24 +87,18 @@ def _score(base: Path) -> int:
                      for k, v in worst.items() if v["verdict"] == "LOSS"),
                     key=lambda r: r[0])
     if losers:
-        print(f"\nLOSSES on floor_best ({len(losers)}) -- typical native vs spoof's best:")
-        for pct, key in losers[:12]:
-            v = worst[key]
-            fam = key[2].split("_")[1]
-            side = key[1].split("x")[0]
-            print(f"  {fam + ':' + side:10}{pct:8.1f}%  "
-                  f"nat_typ={v['native_median']:8.1f}  "
-                  f"spoof_best={v['spoof_best_median']:8.1f}")
+        for _pct, key in losers[:12]:
+            worst[key]
+            key[2].split("_")[1]
+            key[1].split("x")[0]
 
     ties = deltas["winner"]
     tied = sorted((v["delta_pct"], k) for k, v in ties.items()
                   if v["verdict"] == "TIE")
     if tied:
-        print(f"\nTIEs on winner ({len(tied)}) -- investigate whether they are walls:")
-        for pct, key in tied:
-            fam = key[2].split("_")[1]
-            side = key[1].split("x")[0]
-            print(f"  {fam + ':' + side:10}{pct:8.1f}%")
+        for _pct, key in tied:
+            key[2].split("_")[1]
+            key[1].split("x")[0]
     return 0
 
 
@@ -120,7 +110,7 @@ def _score(base: Path) -> int:
 TILES_PER_FAMILY = 3
 
 
-def _as_tile_str(value: Any) -> Optional[str]:
+def _as_tile_str(value: Any) -> str | None:
     """`"[128, 128]"` (kernel_db) -> `"128x128"` (what the gates parse)."""
     if value is None:
         return None
@@ -130,7 +120,7 @@ def _as_tile_str(value: Any) -> Optional[str]:
     return "x".join(parts)
 
 
-def _as_tile_list(value: Any) -> Optional[List[int]]:
+def _as_tile_list(value: Any) -> list[int] | None:
     """`"[8, 8]"` (kernel_db) -> `[8, 8]` (what `reconcile_tile` parses)."""
     parts = [p for p in re.split(r"[\s,\[\]]+", str(value or "").strip()) if p]
     if not parts or not all(p.isdigit() for p in parts):
@@ -138,7 +128,7 @@ def _as_tile_list(value: Any) -> Optional[List[int]]:
     return [int(p) for p in parts]
 
 
-def _measured_tiles(base: Path, per_family: int) -> Dict[str, List[Dict[str, Any]]]:
+def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any]]]:
     """The distinct MacroTile/ThreadTile/VectorWidth/DepthU combos per family.
 
     Read from `kernel_db.json` — i.e. the tiles that *actually ran*, not an
@@ -162,7 +152,7 @@ def _measured_tiles(base: Path, per_family: int) -> Dict[str, List[Dict[str, Any
     if not isinstance(db, dict):
         return {}
 
-    seen: Dict[str, Dict[Tuple[str, ...], Dict[str, Any]]] = {}
+    seen: dict[str, dict[tuple[str, ...], dict[str, Any]]] = {}
     for rows in db.values():
         if not isinstance(rows, list):
             continue
@@ -184,7 +174,7 @@ def _measured_tiles(base: Path, per_family: int) -> Dict[str, List[Dict[str, Any
             }
     # kernel_db carries no per-tile observation count, so rank on a stable,
     # documented order instead: widest tile first, then deepest, then widest VW.
-    def _rank(item: Tuple[Tuple[str, ...], Dict[str, Any]]) -> Tuple[int, int, int]:
+    def _rank(item: tuple[tuple[str, ...], dict[str, Any]]) -> tuple[int, int, int]:
         _, t = item
         digits = "".join(ch for ch in str(t["MacroTile"]) if ch.isdigit())
         return (-(int(digits) if digits else 0), -(int(t["DepthU"] or 0)),
@@ -193,7 +183,7 @@ def _measured_tiles(base: Path, per_family: int) -> Dict[str, List[Dict[str, Any
             for fam, tiles in seen.items()}
 
 
-def _family_template(fam: str) -> Dict[str, Any]:
+def _family_template(fam: str) -> dict[str, Any]:
     """The minimal contract template a draw is applied on top of."""
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
@@ -206,11 +196,11 @@ def _family_template(fam: str) -> Dict[str, Any]:
     }
 
 
-def _classify_draw(template: Dict[str, Any], tiles: List[Dict[str, Any]],
+def _classify_draw(template: dict[str, Any], tiles: list[dict[str, Any]],
                    knob: str, value: Any,
-                   gate: Callable[[Dict[str, Any]], Tuple[bool, str]],
-                   reconcile: Callable[[Dict[str, Any]], Dict[str, Any]],
-                   ) -> Tuple[bool, int, str]:
+                   gate: Callable[[dict[str, Any]], tuple[bool, str]],
+                   reconcile: Callable[[dict[str, Any]], dict[str, Any]],
+                   ) -> tuple[bool, int, str]:
     """`(legal, refusals, first_reason)` for one draw across `tiles`.
 
     A draw is **legal** when no informative tile refuses it, **coupled** when
@@ -226,7 +216,7 @@ def _classify_draw(template: Dict[str, Any], tiles: List[Dict[str, Any]],
     for this device is one whose reason is a structural class rule ("illegal on
     the device", "no MatrixInstruction").
     """
-    refusals: List[str] = []
+    refusals: list[str] = []
     for tile in tiles:
         ok, why = gate({**reconcile({**template, **tile}), knob: value})
         if not ok:
@@ -235,37 +225,25 @@ def _classify_draw(template: Dict[str, Any], tiles: List[Dict[str, Any]],
 
 
 def _report_legality(n_fams: int, legal: int, coupled: Counter,
-                     refused: List[Tuple[str, str, Any, str]],
+                     refused: list[tuple[str, str, Any, str]],
                      skipped: Counter) -> None:
     """Print the census. Split out so `_legality` stays inside the line budget."""
-    total = legal + sum(coupled.values()) + len(refused)
-    print(f"{n_fams} families x up to {TILES_PER_FAMILY} measured tiles; "
-          f"{total} (family, knob, value) draws through "
-          f"validate_config + ldspad_feasible")
-    print(f"  legal on >=1 tile: {legal}   coupled: {sum(coupled.values())}"
-          f"   refused standalone: {len(refused)}")
+    legal + sum(coupled.values()) + len(refused)
     if skipped:
-        print(f"  no legal measured tile for {', '.join(sorted(skipped))} — "
-              f"those rows are template-only verdicts")
+        pass
     if coupled:
-        print("\ncoupled (tile-dependent; ordinary, not a defect):")
-        for where, n in coupled.most_common():
-            print(f"  {where:52}{n:4}")
+        for _where, _n in coupled.most_common():
+            pass
     if not refused:
         return
-    print(f"\nrefused standalone — read the reason: it names the knob or rule "
-          f"responsible,\nand most of these resolve when a companion knob is "
-          f"drawn with them.\nA value that is genuinely dead for this device "
-          f"is one whose reason is a\nstructural class rule ('illegal on "
-          f"{_peaks.CODENAME}', 'no MatrixInstruction'):")
-    for fam, knob, value, why in refused:
-        print(f"  {fam:8}{knob:30}{str(value):6} {why}")
+    for _fam, _knob, _value, _why in refused:
+        pass
 
 
-def _legality(base: Path, families: Optional[List[str]]) -> int:
+def _legality(base: Path, families: list[str] | None) -> int:
     """Classify each forward-knob draw as legal, coupled, or refused-standalone.
 
-    Draws come from ``census_domain`` (global ∪ family override), not the
+    Draws come from ``census_domain`` (global U family override), not the
     mutator's narrowed ``forward_domain``: a value a family's domain drops for
     draw economy is still classified here, so a structural refusal
     (``GlobalSplitU>1`` on CC/ZZ) is named rather than silently absent.
@@ -279,7 +257,7 @@ def _legality(base: Path, families: Optional[List[str]]) -> int:
 
     gen = CandidateGenerator(base)
 
-    def gate(cfg: Dict[str, Any]) -> Tuple[bool, str]:
+    def gate(cfg: dict[str, Any]) -> tuple[bool, str]:
         ok, why = gen.validate_config(cfg)
         if ok:
             ok, why = ldspad_feasible(cfg)
@@ -288,7 +266,7 @@ def _legality(base: Path, families: Optional[List[str]]) -> int:
     tiles = _measured_tiles(base, TILES_PER_FAMILY)
     fams = families or sorted(_DEFAULT_PATTERN)
 
-    refused: List[Tuple[str, str, Any, str]] = []
+    refused: list[tuple[str, str, Any, str]] = []
     coupled: Counter = Counter()
     skipped: Counter = Counter()
     legal = 0
@@ -319,22 +297,20 @@ def _legality(base: Path, families: Optional[List[str]]) -> int:
 
 # ----------------------------------------------------------------- flood
 
-def _flood(base: Path, cap: Optional[int]) -> int:
+def _flood(base: Path, cap: int | None) -> int:
     """Per-cell distinct-config census, and what a top-K cap would cost."""
     db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
-    except Exception as exc:
-        print(f"cannot read {db_path}: {exc}")
+    except Exception:
         return 1
     if not isinstance(db, dict):
-        print(f"{db_path} is not a kernel_db map")
         return 1
 
     # (family, shape) -> fingerprint -> [medians]
-    cells: Dict[Tuple[str, str], Dict[str, List[float]]] = defaultdict(
+    cells: dict[tuple[str, str], dict[str, list[float]]] = defaultdict(
         lambda: defaultdict(list))
-    for _run, rows in db.items():
+    for rows in db.values():
         if not isinstance(rows, list):
             continue
         for row in rows:
@@ -347,20 +323,15 @@ def _flood(base: Path, cap: Optional[int]) -> int:
             cells[(str(row.get("family")), str(row.get("shape")))][fp].append(med)
 
     if not cells:
-        print("no cells in kernel_db.json")
         return 1
 
-    print(f"{'cell':12}{'configs':>8}{'records':>8}{'med/best':>9}")
     total_cfg = 0
-    for (fam, shape), fps in sorted(cells.items()):
+    for (_fam, _shape), fps in sorted(cells.items()):
         n_cfg = len(fps)
-        n_rec = sum(len(v) for v in fps.values())
-        best = max((max(v) for v in fps.values()), default=0.0)
+        sum(len(v) for v in fps.values())
+        max((max(v) for v in fps.values()), default=0.0)
         med = sorted(max(v) for v in fps.values())[len(fps) // 2]
         total_cfg += n_cfg
-        print(f"{fam + ':' + shape.split('x')[0]:12}{n_cfg:8}{n_rec:8}"
-              f"{(med / best * 100 if best else 0):9.0f}")
-    print(f"{'TOTAL':12}{total_cfg:8}")
 
     if cap is None:
         return 0
@@ -373,13 +344,10 @@ def _flood(base: Path, cap: Optional[int]) -> int:
         winner = max(fps.items(), key=lambda kv: max(kv[1]))[0]
         if winner not in {fp for fp, _ in ranked}:
             lost += 1
-    print(f"\ntop-{cap} cap: retains {kept}/{total_cfg} configs "
-          f"({100 * kept / total_cfg:.0f}%), LOSES {lost} of {len(cells)} "
-          f"cell winners")
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -14,10 +14,14 @@ Public API: HtmlMixin.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto.metrics.report_css import (DASHBOARD_CSS, JS_THEME_INIT,
-                                     JS_THEME_TOGGLE, JS_COLLAPSIBLE)
+from oto.metrics.report_css import (
+    DASHBOARD_CSS,
+    JS_COLLAPSIBLE,
+    JS_THEME_INIT,
+    JS_THEME_TOGGLE,
+)
 from oto.metrics.report_figures import coverage_section
 from oto.metrics.report_models import AcceptanceReport
 
@@ -90,7 +94,7 @@ class HtmlMixin:
 
     # -- family coverage matrix --------------------------------------------
 
-    def _coverage_data(self, report: AcceptanceReport) -> Dict[str, Any]:
+    def _coverage_data(self, report: AcceptanceReport) -> dict[str, Any]:
         """Per-family coverage rows plus the one scale they are drawn against.
 
         The scale is derived, not fixed: it is ``max(100%, max measured %)`` so a
@@ -98,7 +102,7 @@ class HtmlMixin:
         being clipped to a full bar, and the 100% marker keeps its meaning.
         """
         family_data = []
-        size_data: Dict[str, List[Tuple[Any, ...]]] = {}
+        size_data: dict[str, list[tuple[Any, ...]]] = {}
         for fam, cov in report.per_family_coverage.items():
             best = cov.get("best_median", 0.0)
             ceil = cov.get("ceiling_gflops", 1118.7)
@@ -285,7 +289,7 @@ class HtmlMixin:
             </h2>
             <div class="section-body">
                 <div class="table-wrap">
-                    {verdict_sections if verdict_sections else '<p class="empty">No native-vs-shipped-floor comparisons registered yet — run <code>--gfx900-reference</code> (established once, recalled forever) then a candidate run.</p>'}
+                    {verdict_sections or '<p class="empty">No native-vs-shipped-floor comparisons registered yet — run <code>--gfx900-reference</code> (established once, recalled forever) then a candidate run.</p>'}
                 </div>
             </div>
         </section>
@@ -358,4 +362,3 @@ class HtmlMixin:
 
         with open(html_path, "w") as f:
             f.write(html)
-        print(f"Acceptance dashboard HTML generated at: {html_path}")

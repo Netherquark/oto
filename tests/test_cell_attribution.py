@@ -19,23 +19,22 @@ from __future__ import annotations
 
 import pytest
 
-from oto.metrics.analytics import (
-    extract_family_from_phase_id,
-    resolve_cell_family,
-)
 from oto.device.peaks import (
     FAMILY_DTYPE_CHAR,
     dtype_from_kernel_name,
     family_from_kernel_name,
     kernel_typecode,
 )
-
+from oto.metrics.analytics import (
+    extract_family_from_phase_id,
+    resolve_cell_family,
+)
 
 # ---------------------------------------------------------------------------
 # phase_id family extraction: the 'auto' pool prefix must never be a family
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("phase_id,expected", [
+@pytest.mark.parametrize(("phase_id", "expected"), [
     ("phase_auto_1_hh_1024x1024x1024_3", "hh"),
     ("phase_auto_0_cc_192x192x192_2", "cc"),
     ("phase_auto_0_dd_1365x1365x1365_7", "dd"),
@@ -58,7 +57,7 @@ def test_extract_family_auto_prefix(phase_id: str, expected: str) -> None:
 # kernel typecode -> family (gfx90c_common, the single resolver)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("kernel,fam,code", [
+@pytest.mark.parametrize(("kernel", "fam", "code"), [
     ("Cijk_Ailk_Bjlk_SB_MT32x64x16_SN_K1", "SS", "SB"),
     ("Cijk_Ailk_Bjlk_DB_MT64x64x8_SN_K1", "DD", "DB"),
     ("Cijk_Ailk_Bjlk_HB_MT64x64x16_SN_K1", "HH", "HB"),
@@ -144,6 +143,7 @@ def test_unattributable_returns_empty() -> None:
 
 def test_aggregate_by_cell_typecode_partitions_by_kernel() -> None:
     from pathlib import Path
+
     from oto.metrics.analytics import AnalyticsEngine
 
     engine = AnalyticsEngine(registry=None, base_dir=Path("."))
@@ -197,10 +197,12 @@ def test_ldspad_feasible_stagger_and_af0em_rejects():
     assert ok, reason
     # SUS=0 with default StaggerU=32 -> coupling reject (SUS=0 only valid if SU=0).
     ok, reason = ldspad_feasible({**base, "StaggerUStride": 0})
-    assert not ok and "StaggerU" in reason
+    assert not ok
+    assert "StaggerU" in reason
     # SUS>0 but below the 0.5*DepthU*bpe floor -> reject.
     ok, reason = ldspad_feasible({**base, "StaggerUStride": 16})
-    assert not ok and "StaggerUStride" in reason
+    assert not ok
+    assert "StaggerUStride" in reason
     # SU=0 does NOT reject the stride or the mapping: Tensile FORCES both to 0
     # (SolutionStructs:3334-3336) and overwrites whatever the config carried.
     # The gate used to read that force as a reject and killed the whole
@@ -213,8 +215,11 @@ def test_ldspad_feasible_stagger_and_af0em_rejects():
     assert ok, reason
     # Out-of-domain values -> reject.
     ok, reason = ldspad_feasible({**base, "StaggerU": 3})
-    assert not ok and "StaggerU" in reason
+    assert not ok
+    assert "StaggerU" in reason
     ok, reason = ldspad_feasible({**base, "StaggerUStride": 100})
-    assert not ok and "StaggerUStride" in reason
+    assert not ok
+    assert "StaggerUStride" in reason
     ok, reason = ldspad_feasible({**base, "AssertFree0ElementMultiple": 0})
-    assert not ok and "AssertFree0ElementMultiple" in reason
+    assert not ok
+    assert "AssertFree0ElementMultiple" in reason

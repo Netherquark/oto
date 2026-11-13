@@ -31,15 +31,16 @@ import json
 import sqlite3
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.harness.tensile_oracle import probe_phase  # noqa: E402
 import oto.device.peaks as _peaks
+from oto.harness.tensile_oracle import probe_phase
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
 
@@ -65,7 +66,7 @@ def measured_fingerprints(base_dir: Path) -> set:
             "SELECT data FROM records WHERE record_type='general'").fetchall()
     finally:
         con.close()
-    done: Dict[str, bool] = {}
+    done: dict[str, bool] = {}
     for (raw,) in rows:
         try:
             record = json.loads(raw)
@@ -80,7 +81,7 @@ def measured_fingerprints(base_dir: Path) -> set:
     return set(done)
 
 
-def unmeasured_rows(base_dir: Path, overlay: Path) -> List[Dict[str, Any]]:
+def unmeasured_rows(base_dir: Path, overlay: Path) -> list[dict[str, Any]]:
     """The overlay rows the corpus has never measured.
 
     Args:
@@ -106,13 +107,13 @@ def unmeasured_rows(base_dir: Path, overlay: Path) -> List[Dict[str, Any]]:
 _DTYPE_FAMILY = {"S": "SS", "D": "DD", "H": "HH", "C": "CC", "Z": "ZZ"}
 
 
-def _family_of(row: Dict[str, Any]) -> str:
+def _family_of(row: dict[str, Any]) -> str:
     """The deck family of an overlay row."""
     char = str(row.get("dtype", "")).upper()
     return _DTYPE_FAMILY.get(char, char)
 
 
-def _probed_before(result_path: Optional[Path]) -> set:
+def _probed_before(result_path: Path | None) -> set:
     """The phase ids a previous sweep already probed (so a re-run skips them)."""
     if not result_path or not result_path.is_file():
         return set()
@@ -127,8 +128,8 @@ def _probed_before(result_path: Optional[Path]) -> set:
 
 
 def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
-          limit: Optional[int] = None,
-          result_path: Optional[Path] = None) -> Dict[str, Any]:
+          limit: int | None = None,
+          result_path: Path | None = None) -> dict[str, Any]:
     """Probe every unmeasured row and collect the refusals.
 
     Args:
@@ -152,9 +153,9 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
     if limit:
         rows = rows[:limit]
     started = time.time()
-    refusals: List[Dict[str, Any]] = []
-    checked: List[Dict[str, Any]] = []
-    for index, row in enumerate(rows, 1):
+    refusals: list[dict[str, Any]] = []
+    checked: list[dict[str, Any]] = []
+    for _index, row in enumerate(rows, 1):
         verdict = probe_phase(row, base_dir)
         if not verdict.get("tensile", {}).get("ok"):
             refusals.append({
@@ -163,9 +164,6 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
                 "gate_refusal": verdict.get("gate_refusal"),
                 "tensile_reason": verdict.get("tensile", {}).get("reason"),
             })
-        print(f"[{index}/{len(rows)}] {row.get('phase_id', '')[:72]} "
-              f"{'OK' if verdict.get('tensile', {}).get('ok') else 'REFUSED'}",
-              flush=True)
         checked.append({"phase_id": row.get("phase_id", ""),
                         "ok": bool(verdict.get("tensile", {}).get("ok")),
                         "reason": verdict.get("tensile", {}).get("reason")})
@@ -188,7 +186,7 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
             "note": note}
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None, help="repo root")
@@ -203,16 +201,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                    else (base / args.json) if args.json else None)
     result = check(base, Path(args.overlay), args.family or (), args.limit,
                    result_path)
-    print(f"\nprobed {result['probed']} unmeasured row(s) in "
-          f"{result['seconds']}s -- {len(result['refusals'])} refused by Tensile")
-    for refusal in result["refusals"][:20]:
-        print(f"  REFUSED {refusal['phase_id']}: "
-              f"{refusal['tensile_reason'] or refusal['gate_refusal']}")
+    for _refusal in result["refusals"][:20]:
+        pass
     if args.json:
         out = result_path or (base / args.json)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=1))
-        print(f"wrote -> {out}")
     return 1 if result["refusals"] else 0
 
 

@@ -19,7 +19,6 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
-from typing import List
 
 HERE = Path(__file__).resolve().parent
 
@@ -79,7 +78,7 @@ def _entry(path: Path) -> str:
     return f"* ``{path.relative_to(HERE)}`` — {summary}\n"
 
 
-def _emit_tree(out: List[str], directory: Path, level: int) -> None:
+def _emit_tree(out: list[str], directory: Path, level: int) -> None:
     """Emit ``directory``'s modules, then recurse into every real sub-package.
 
     ``level`` is the ATX heading level (number of ``#``) for a *child*
@@ -87,9 +86,9 @@ def _emit_tree(out: List[str], directory: Path, level: int) -> None:
     A "real" sub-package is one ``_has_modules`` accepts, so stray data
     directories get no empty heading.
     """
-    for path in sorted(directory.glob("*.py")):
-        if path.name not in SKIP:
-            out.append(_entry(path))
+    out.extend(_entry(path)
+               for path in sorted(directory.glob("*.py"))
+               if path.name not in SKIP)
     for nested in sorted(p for p in directory.iterdir()
                          if p.is_dir() and not p.name.startswith("__")
                          and _has_modules(p)):
@@ -113,8 +112,7 @@ def main() -> int:
                      if path.name not in SKIP]
     if root_modules:
         out.append("## oto/ -- the package root\n\n")
-        for path in root_modules:
-            out.append(_entry(path))
+        out.extend(_entry(path) for path in root_modules)
         out.append("\n")
     for sub, title in PACKAGES:
         base = HERE / sub
@@ -124,7 +122,6 @@ def main() -> int:
         _emit_tree(out, base, level=3)
         out.append("\n")
     HERE.joinpath("README.md").write_text("".join(out))
-    print(f"wrote {HERE / 'README.md'}")
     return 0
 
 

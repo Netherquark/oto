@@ -12,19 +12,17 @@ Public API: CoverageMixin.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import yaml
+from oto import yamlio
+from oto.metrics import coverage
 
-import oto.metrics.coverage as coverage
 
-
-from oto import yamlio  # noqa: E402
 class CoverageMixin:
     """Coverage guidance, mixed into ConvergenceAgent."""
 
 
-    def _shape_sweeps(self) -> Dict[str, List[str]]:
+    def _shape_sweeps(self) -> dict[str, list[str]]:
         """Per-family shape sweeps, read once from the curated deck.
 
         The deck is the authority on what a *graded* config looks like, so the
@@ -44,20 +42,20 @@ class CoverageMixin:
             self._shape_sweeps_cache = synthesis.family_shape_sweeps(phases)
         return self._shape_sweeps_cache
 
-    def _cell_coverage(self, family: str, shape: str) -> Optional[Dict[str, Any]]:
+    def _cell_coverage(self, family: str, shape: str) -> dict[str, Any] | None:
         """This cell's coverage evidence from the ledger, or None if unknown."""
         if self._coverage_cells_cache is None:
             self._coverage_cells_cache = self._load_coverage_cells()
         return self._coverage_cells_cache.get((str(family).upper(), str(shape)))
 
-    def _cell_coverage_state(self, family: str, shape: str) -> Optional[str]:
+    def _cell_coverage_state(self, family: str, shape: str) -> str | None:
         """The cell's coverage state, or None when the cell is not yet known."""
         cell = self._cell_coverage(family, shape)
         if cell is None:
             return None
         return coverage.decide_state(cell, band_pct=self.band())
 
-    def _load_coverage_cells(self) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    def _load_coverage_cells(self) -> dict[tuple[str, str], dict[str, Any]]:
         """Coverage evidence keyed by `(family, shape)`, for synthesis guidance.
 
         Failures yield an empty map, which means "no guidance available" and every

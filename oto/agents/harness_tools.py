@@ -14,16 +14,16 @@ from __future__ import annotations
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from oto.device.profile import DeviceProfile
 from oto.harness.candidate_overlay import _round_robin_prune
 from oto.harness.candidate_pool import iter_candidates
 from oto.harness.candidate_rows import TARGET_CELLS
 from oto.harness.cell_knob_diff import _side, _winner_per_cell
-from oto.tensile.gates.loads import validate_tensile_loads
-from oto.tensile.gates.occupancy import occupancy_feasible, ldspad_feasible
 from oto.runners.paths import results_rel
+from oto.tensile.gates.loads import validate_tensile_loads
+from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
 
 KERNEL_DB_RELPATH = Path(results_rel("analysis", "kernel_db.json"))
 
@@ -35,7 +35,7 @@ def _target_cells() -> set:
     return {(fam, side) for fam, sides in TARGET_CELLS.items() for side in sides}
 
 
-def study_kernel_db(base_dir) -> Dict[str, Any]:
+def study_kernel_db(base_dir) -> dict[str, Any]:
     """Census of the measured corpus: runs, native rows, per-family counts,
     TARGET_CELLS coverage, and the native winner per (family, side)."""
     path = Path(base_dir) / KERNEL_DB_RELPATH
@@ -45,7 +45,7 @@ def study_kernel_db(base_dir) -> Dict[str, Any]:
                 "covered_cells": 0, "target_cells": len(_target_cells())}
     db = json.loads(path.read_text())
     target = _target_cells()
-    native: List[Dict[str, Any]] = []
+    native: list[dict[str, Any]] = []
     floor = 0
     for run_id, rows in db.items():
         if str(run_id).startswith("gfx900_ref"):
@@ -66,7 +66,7 @@ def study_kernel_db(base_dir) -> Dict[str, Any]:
             "target_cells": len(target)}
 
 
-def propose_candidates(base_dir, limit: int = 16) -> List[Dict[str, Any]]:
+def propose_candidates(base_dir, limit: int = 16) -> list[dict[str, Any]]:
     """Gate-verified pool rows (the same generator the seed overlay uses),
     round-robin pruned to ``limit`` so big families can't starve the HPA
     families. CPU-only. The pool is generated from the active profile."""
@@ -74,11 +74,11 @@ def propose_candidates(base_dir, limit: int = 16) -> List[Dict[str, Any]]:
     return _round_robin_prune(pool, limit)
 
 
-def verify_candidates(rows: List[Dict[str, Any]],
-                      profile: Optional[DeviceProfile] = None) -> List[Dict[str, Any]]:
+def verify_candidates(rows: list[dict[str, Any]],
+                      profile: DeviceProfile | None = None) -> list[dict[str, Any]]:
     """Re-check each proposed row against the CPU gates (loads, occupancy,
     ldspad). Independent of the emission-time check; no GPU involved."""
-    verified: List[Dict[str, Any]] = []
+    verified: list[dict[str, Any]] = []
     for row in rows:
         cfg = row.get("config") or {}
         ok_l, msg_l = validate_tensile_loads(cfg, profile=profile)
@@ -90,7 +90,7 @@ def verify_candidates(rows: List[Dict[str, Any]],
     return verified
 
 
-def _row_summary(row: Dict[str, Any]) -> Dict[str, Any]:
+def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
     return {"label": row.get("label"), "tier": row.get("tier"),
             "family": (row.get("config") or {}).get("FamilyLabel"),
             "contraction_pattern": row.get("contraction_pattern"),
@@ -98,7 +98,7 @@ def _row_summary(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_harness_study(base_dir, profile: DeviceProfile,
-                        proposal_limit: int = 16) -> Dict[str, Any]:
+                        proposal_limit: int = 16) -> dict[str, Any]:
     """Study the corpus, propose + verify candidates, return the payload plus
     a markdown section the doc generator can embed."""
     try:
@@ -106,7 +106,7 @@ def build_harness_study(base_dir, profile: DeviceProfile,
         rows = verify_candidates(propose_candidates(base_dir, limit=proposal_limit),
                                  profile=profile)
         passed = sum(1 for r in rows if r["verification"]["passed"])
-        payload: Dict[str, Any] = {"status": "success", "profile": profile.codename,
+        payload: dict[str, Any] = {"status": "success", "profile": profile.codename,
                                    "corpus": corpus,
                                    "proposed": len(rows), "passed": passed,
                                    "proposals": [_row_summary(r) for r in rows]}
@@ -118,7 +118,7 @@ def build_harness_study(base_dir, profile: DeviceProfile,
                              f"Harness study failed: {exc}\n")}
 
 
-def _study_markdown(profile: DeviceProfile, payload: Dict[str, Any]) -> str:
+def _study_markdown(profile: DeviceProfile, payload: dict[str, Any]) -> str:
     corpus = payload["corpus"]
     lines = [f"## Harness study — {profile.codename}", ""]
     if not corpus["present"]:

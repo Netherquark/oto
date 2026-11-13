@@ -15,12 +15,8 @@ keeps working; oto.tensile.gates is their only home.
 
 from __future__ import annotations
 
-import json
-import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
+from typing import Any
 
 import oto.device.peaks as _peaks
 from oto.device.peaks import FAMILY_DTYPE_CHAR
@@ -28,10 +24,13 @@ from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.candidate_emission import CandidateEmitMixin
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import cap_vector_width, validate_tensile_loads
-from oto.tensile.gates.occupancy import (dtype_char, ldspad_feasible,
-                                         occupancy_feasible,
-                                         occupancy_workgroups_per_cu,
-                                         tile_dims)
+from oto.tensile.gates.occupancy import (
+    dtype_char,
+    ldspad_feasible,
+    occupancy_feasible,
+    occupancy_workgroups_per_cu,
+    tile_dims,
+)
 from oto.tensile.gates.vgpr_model import depth_u
 
 __all__ = [
@@ -52,7 +51,7 @@ _ = (depth_u, dtype_char, tile_dims, FAMILY_DTYPE_CHAR, _peaks.NUM_CUS)
 
 # Knob neighbour map for single-knob mutations (corpus-wide, kept here so the
 # deck and the mutation logic share one authoritative source).
-KNOB_NEIGHBOURS: Dict[str, Dict[Any, List[Any]]] = {
+KNOB_NEIGHBOURS: dict[str, dict[Any, list[Any]]] = {
     "MacroTile": {
         "96x96x16": ["128x128x16", "64x64x16"],
         "128x128x16": ["96x96x16", "64x64x16"],
@@ -89,9 +88,9 @@ KNOB_NEIGHBOURS: Dict[str, Dict[Any, List[Any]]] = {
 
 
 def _mutants_from_budget(
-    winner_config: Dict[str, Any],
+    winner_config: dict[str, Any],
     mutation_budget: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Generate all 1-knob and (if budget >= 2) 2-knob mutants from the map."""
     current_knobs = {k: v for k, v in winner_config.items() if k in KNOB_NEIGHBOURS}
     mutants = []
@@ -139,9 +138,9 @@ class CandidateGenerator(CandidateEmitMixin):
         #: validate_config. Populated by generate_family_phases; reported so a
         #: deck entry that is silently narrower than intended is visible rather
         #: than inferred from a missing phase.
-        self._clamped_widths: List[Tuple[str, Any, Any, Any, int]] = []
+        self._clamped_widths: list[tuple[str, Any, Any, Any, int]] = []
 
-    def _load_family_decks(self) -> Dict[str, List[Dict[str, Any]]]:
+    def _load_family_decks(self) -> dict[str, list[dict[str, Any]]]:
         """The curated family deck for this device.
 
         The data lives in oto.tensile.decks so the generator and the deck can
@@ -155,15 +154,15 @@ class CandidateGenerator(CandidateEmitMixin):
 
     def mutate_winner(
         self,
-        winner_config: Dict[str, Any],
+        winner_config: dict[str, Any],
         mutation_budget: int = 2
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Mutate winner config by ≤2 knobs (neighbour search). Returns list of mutated configs."""
         return _mutants_from_budget(winner_config, mutation_budget)
 
     # ------------------------------------------------------------------ gates
 
-    def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, str]:
+    def validate_config(self, config: dict[str, Any]) -> tuple[bool, str]:
         """Is this candidate legal to launch on the device?
 
         Why an orchestrator and not a gate: the three gate families each answer
@@ -223,7 +222,7 @@ class CandidateGenerator(CandidateEmitMixin):
         return True, "Valid"
 
 
-def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
+def parse_tensile_shape(shape_str: str) -> dict[str, int]:
     """Parse a Tensile shape string into M, N, B, K (see config_writer).
 
     Re-exported here for the pre-split import surface; the shape grammar is
@@ -250,19 +249,19 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
 ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
 
-def _illegal_knob(config: Dict[str, Any]) -> Optional[str]:
+def _illegal_knob(config: dict[str, Any]) -> str | None:
     """The first knob in :data:`ILLEGAL_KNOBS` set to a truthy value, if any."""
     return next((k for k in ILLEGAL_KNOBS
                  if k in config and config[k] not in (False, 0, None)), None)
 
 
-def _assert_size_multiple_disabled(config: Dict[str, Any]) -> bool:
+def _assert_size_multiple_disabled(config: dict[str, Any]) -> bool:
     """True when AssertSizeMultiple is exactly ``[1]``, which crashes Tensile."""
     asm = config.get("AssertSizeMultiple")
     return isinstance(asm, list) and asm == [1]
 
 
-def _non_generative_knob_rejection(config: Dict[str, Any]) -> Optional[str]:
+def _non_generative_knob_rejection(config: dict[str, Any]) -> str | None:
     """A knob value Tensile declares legal but its assembly path cannot emit.
 
     Only ``AggressivePerfMode`` qualifies today. Tensile declares the domain
@@ -297,7 +296,7 @@ def _non_generative_knob_rejection(config: Dict[str, Any]) -> Optional[str]:
             "TypeError); Tensile declares [0,1,2] at Common.py:1446")
 
 
-def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
+def _tile_divisibility_rejection(config: dict[str, Any]) -> str | None:
     """MacroTile/ThreadTile divisibility and workgroup thread-count legality.
 
     Why here and not in the loads gate: this is a *shape* property (does the
@@ -330,7 +329,7 @@ def _tile_divisibility_rejection(config: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def estimate_lds_usage(config: Dict[str, Any]) -> float:
+def estimate_lds_usage(config: dict[str, Any]) -> float:
     """Estimate LDS usage in KB for a GEMM tile.
 
     Why a separate estimate from the occupancy gate's budget: this is the
@@ -377,7 +376,7 @@ def estimate_lds_usage(config: Dict[str, Any]) -> float:
     return (total_elements * elem_size) / 1024.0
 
 
-def estimate_occupancy(config: Dict[str, Any]) -> float:
+def estimate_occupancy(config: dict[str, Any]) -> float:
     """Modelled workgroups-per-CU from the register file (this device).
 
     Why it delegates: the previous version inferred threads from ThreadTile via

@@ -26,7 +26,7 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from oto.harness import corpus_census as cc  # noqa: E402
+from oto.harness import corpus_census as cc
 
 GEOM_A = {"MacroTile": "[128, 128]", "ThreadTile": "[8, 8]", "DepthU": "8",
           "VectorWidth": "4", "GlobalSplitU": "1", "WorkGroup": "[16, 16, 1]"}
@@ -138,7 +138,8 @@ def test_cli_cell_knob_and_json(database, capsys, tmp_path):
 
     assert cc.main(["--db", database, "--knob", "DepthU", "--family", "SS"]) == 0
     text = capsys.readouterr().out
-    assert "DepthU" in text and "MacroTile" not in text
+    assert "DepthU" in text
+    assert "MacroTile" not in text
 
     assert cc.main(["--db", database, "--family", "SS", "--json", str(out)]) == 0
     payload = json.loads(out.read_text())

@@ -8,31 +8,37 @@ Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_b
 from __future__ import annotations
 
 import re
-from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
-
 import sys
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-from oto import yamlio  # noqa: E402
-from oto.device.peaks import FAMILY_DTYPE_CHAR  # noqa: E402
-import oto.device.peaks as _peaks  # noqa: E402
-from oto.ledger.registry import fingerprint_config  # noqa: E402
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
-from oto.tensile.gates.occupancy import ldspad_feasible  # noqa: E402
-from oto.tensile.shape_order import ordered_shapes  # noqa: E402
-from oto.tensile.synthesis.db_knobs import (  # noqa: E402
-                                            forward_domain)
-from oto.harness.candidate_rows import (_NOT_FORWARDED_YET,  # noqa: E402
-                                        AUTO_EXPLICIT, DU_VARIANTS,
-                                        FAMILY_DTYPE, LADDER,
-                                        NARROW_NEIGHBOURS, PATTERNS,
-                                        PLAN_BATCH, TARGET_CELLS)
+import oto.device.peaks as _peaks
+from oto import yamlio
+from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.harness.candidate_rows import (
+    _NOT_FORWARDED_YET,
+    AUTO_EXPLICIT,
+    DU_VARIANTS,
+    FAMILY_DTYPE,
+    LADDER,
+    NARROW_NEIGHBOURS,
+    PATTERNS,
+    PLAN_BATCH,
+    TARGET_CELLS,
+)
+from oto.ledger.registry import fingerprint_config
 from oto.runners.paths import results_dir as _results_dir
+from oto.tensile.candidate import CandidateGenerator
+from oto.tensile.gates.occupancy import ldspad_feasible
+from oto.tensile.shape_order import ordered_shapes
+from oto.tensile.synthesis.db_knobs import forward_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_PATH = _results_dir(REPO_ROOT, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
@@ -41,14 +47,14 @@ OVERLAY_PATH = _results_dir(REPO_ROOT, _peaks.CODENAME) / "overlays" / "phases.s
 #: multiple assertions. Appended to by ``_offer_row``; drained by
 #: ``iter_candidates`` so a run can report what was pruned and why instead of
 #: losing the information.
-DROPPED_ASSERTIONS: List[str] = []
+DROPPED_ASSERTIONS: list[str] = []
 
 
 def _tile_key(mt: str, tt: str) -> str:
     return f"{mt.lower()}_tt{tt.lower()}"
 
 
-def _shape_list(sides: Tuple[int, ...]) -> List[str]:
+def _shape_list(sides: tuple[int, ...]) -> list[str]:
     """Cube shapes for ``sides`` in canonical ascending order.
 
     A candidate phase carries its ``TARGET_CELLS`` as one ProblemSizes sweep, and
@@ -61,7 +67,7 @@ def _shape_list(sides: Tuple[int, ...]) -> List[str]:
     return ordered_shapes(f"{s}x{s}x{s}" for s in sides)
 
 
-def _merge_shapes(existing: List[str], sides: Tuple[int, ...]) -> List[str]:
+def _merge_shapes(existing: list[str], sides: tuple[int, ...]) -> list[str]:
     """Union ``existing`` with ``sides``, re-ordered numerically.
 
     Used wherever a config already in the pool picks up another cell's shape; a
@@ -70,13 +76,13 @@ def _merge_shapes(existing: List[str], sides: Tuple[int, ...]) -> List[str]:
     return ordered_shapes(set(existing) | {f"{s}x{s}x{s}" for s in sides})
 
 
-def _label_for(fam: str, pattern: str, knobs: Dict[str, Any]) -> str:
+def _label_for(fam: str, pattern: str, knobs: dict[str, Any]) -> str:
     return (f"{fam}_{pattern}_mt{knobs['MacroTile']}_tt{knobs['ThreadTile']}"
             f"_vw{knobs.get('VectorWidth', 1)}_wgm{knobs.get('WorkGroupMapping', 4)}"
             f"_du{knobs.get('DepthU', 16)}_alu")
 
 
-def _base_config(fam: str) -> Dict[str, Any]:
+def _base_config(fam: str) -> dict[str, Any]:
     return {
         "Architecture": _peaks.CODENAME,
         "DataType": FAMILY_DTYPE[fam],
@@ -86,12 +92,12 @@ def _base_config(fam: str) -> Dict[str, Any]:
     }
 
 
-def _fingerprint(config: Dict[str, Any]) -> str:
+def _fingerprint(config: dict[str, Any]) -> str:
     return fingerprint_config(config)
 
 
-def _load_deck_fps() -> Set[str]:
-    fps: Set[str] = set()
+def _load_deck_fps() -> set[str]:
+    fps: set[str] = set()
     p = REPO_ROOT / "phases.yaml"
     if p.exists():
         for row in __yaml_load(p, fallback=[]):
@@ -110,11 +116,11 @@ def __yaml_load(path: Path, fallback: Any = None) -> Any:
         return fallback
 
 
-def _load_seed_fps() -> Set[str]:
+def _load_seed_fps() -> set[str]:
     """fps already scheduled by the *curated* seed rows (never the generator's
     own previous appends: those are exactly what a re-run must skip deduping
     against, or wide rows colliding with the last append silently vanish)."""
-    fps: Set[str] = set()
+    fps: set[str] = set()
     payload = __yaml_load(OVERLAY_PATH, fallback={})
     for row in (payload.get("phases", []) or []):
         if not isinstance(row, dict) or not row.get("fp"):
@@ -125,7 +131,7 @@ def _load_seed_fps() -> Set[str]:
     return fps
 
 
-def _strip_not_forwarded(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+def _strip_not_forwarded(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     dropped = [k for k in _NOT_FORWARDED_YET if k in config]
     return {k: v for k, v in config.items() if k not in _NOT_FORWARDED_YET}, dropped
 
@@ -150,14 +156,14 @@ def _strip_not_forwarded(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
 #: validate a *config*, and these assertions are the one class of Tensile knob
 #: that is about a *shape*. There is no way to check them without both, and the
 #: gates never see the shape.
-_ELEMENT_ASSERTIONS: Tuple[Tuple[str, int, str], ...] = (
+_ELEMENT_ASSERTIONS: tuple[tuple[str, int, str], ...] = (
     ("AssertFree0ElementMultiple", 0, "M"),
     ("AssertFree1ElementMultiple", 1, "N"),
     ("AssertSummationElementMultiple", 2, "K"),
 )
 
 
-def _assertion_failures(config: Dict[str, Any], side: int) -> List[str]:
+def _assertion_failures(config: dict[str, Any], side: int) -> list[str]:
     """Which of the config's element-multiple assertions ``side`` violates.
 
     ``side`` is a cubic size; dims are M, N, K. An absent or non-numeric
@@ -173,9 +179,9 @@ def _assertion_failures(config: Dict[str, Any], side: int) -> List[str]:
     does not fail loudly -- the kernel drops the M/N predication it needed and
     returns **silently wrong numbers**. That is the whole reason this exists.
     """
-    out: List[str] = []
+    out: list[str] = []
     gsu = int(config.get("GlobalSplitU", 1) or 1)
-    for knob, index, label in _ELEMENT_ASSERTIONS:
+    for knob, _index, label in _ELEMENT_ASSERTIONS:
         raw = config.get(knob, 1)
         try:
             mult = int(raw)
@@ -192,7 +198,7 @@ def _assertion_failures(config: Dict[str, Any], side: int) -> List[str]:
 
 
 def _shapes_satisfying_assertions(
-        config: Dict[str, Any], sides: Tuple[int, ...]) -> Tuple[Tuple[int, ...], List[str]]:
+        config: dict[str, Any], sides: tuple[int, ...]) -> tuple[tuple[int, ...], list[str]]:
     """`sides` filtered to the sizes every element-multiple assertion accepts.
 
     Filtering rather than dropping is deliberate: a row offered across a family
@@ -200,8 +206,8 @@ def _shapes_satisfying_assertions(
     for the divisible ones, and a fingerprint is benchmarked once, so silently
     dropping the row would throw away a legitimate measurement.
     """
-    kept: List[int] = []
-    reasons: List[str] = []
+    kept: list[int] = []
+    reasons: list[str] = []
     for side in sides:
         bad = _assertion_failures(config, int(side))
         if bad:
@@ -214,8 +220,8 @@ def _shapes_satisfying_assertions(
 def _candidate_phase_id(
     fam: str,
     pattern: str,
-    knobs: Dict[str, Any],
-    sides: Tuple[int, ...],
+    knobs: dict[str, Any],
+    sides: tuple[int, ...],
     fp: str,
 ) -> str:
     """The deterministic phase_id for a candidate config."""
@@ -230,7 +236,7 @@ def _candidate_phase_id(
     return f"{phase_id}_{fp[:8]}"
 
 
-def _with_depth_u(knobs: Dict[str, Any]) -> Dict[str, Any]:
+def _with_depth_u(knobs: dict[str, Any]) -> dict[str, Any]:
     """`knobs` with an explicit `DepthU`, taken from the MacroTile string."""
     out = dict(knobs)
     if "DepthU" not in out:
@@ -240,9 +246,9 @@ def _with_depth_u(knobs: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _build_row(fam: str, tier: str, pattern: str, knobs: Dict[str, Any],
-               sides: Tuple[int, ...], config: Dict[str, Any], fp: str,
-               note: str) -> Dict[str, Any]:
+def _build_row(fam: str, tier: str, pattern: str, knobs: dict[str, Any],
+               sides: tuple[int, ...], config: dict[str, Any], fp: str,
+               note: str) -> dict[str, Any]:
     """The pool row for a config that is not in the pool and not already scheduled."""
     row = {
         "phase_id": _candidate_phase_id(fam, pattern, knobs, sides, fp),
@@ -264,15 +270,15 @@ def _build_row(fam: str, tier: str, pattern: str, knobs: Dict[str, Any],
 
 def _offer_row(
     sched: CandidateGenerator,
-    seen_fp: Set[str],
-    pool: Dict[str, Dict[str, Any]],
+    seen_fp: set[str],
+    pool: dict[str, dict[str, Any]],
     fam: str,
     tier: str,
     pattern: str,
-    knobs: Dict[str, Any],
-    sides: Tuple[int, ...],
+    knobs: dict[str, Any],
+    sides: tuple[int, ...],
     note: str = "",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Validate one candidate config and fold it into the fp-keyed pool.
 
     Returns the new row the first time a config is seen (None when it is a
@@ -284,7 +290,7 @@ def _offer_row(
     config, dropped = _strip_not_forwarded(config)
     if dropped:
         note = (note + f" [stripped {','.join(dropped)}: not forwarded]").strip()
-    ok, why = sched.validate_config(config)
+    ok, _why = sched.validate_config(config)
     if not ok:
         return None
     pad_ok, _pad_why = ldspad_feasible(config)
@@ -318,7 +324,7 @@ def _offer_row(
     return None
 
 
-def _auto_row_gen(offer) -> Iterator[Dict[str, Any]]:
+def _auto_row_gen(offer) -> Iterator[dict[str, Any]]:
     """The explicit per-family AUTO candidates."""
     for fam, specs in AUTO_EXPLICIT.items():
         for spec_ in specs:
@@ -331,7 +337,7 @@ def _auto_row_gen(offer) -> Iterator[Dict[str, Any]]:
                 yield row
 
 
-def _plan_batch_row_gen(offer) -> Iterator[Dict[str, Any]]:
+def _plan_batch_row_gen(offer) -> Iterator[dict[str, Any]]:
     """Rows from the hand-written PLAN_BATCH plan."""
     for spec_ in PLAN_BATCH:
         fam = spec_["fam"]
@@ -343,7 +349,7 @@ def _plan_batch_row_gen(offer) -> Iterator[Dict[str, Any]]:
             yield row
 
 
-def iter_candidates() -> Iterator[Dict[str, Any]]:
+def iter_candidates() -> Iterator[dict[str, Any]]:
     """Yield validated, fp-deduped candidate rows (open/free of overlay state).
 
     A candidate *phase* is one config carrying a SHAPE LIST (like the deck
@@ -357,21 +363,21 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
     del DROPPED_ASSERTIONS[:]
     sched = CandidateGenerator(REPO_ROOT, registry=None)
 
-    seen_fp: Set[str] = set(_load_deck_fps())
+    seen_fp: set[str] = set(_load_deck_fps())
     seen_fp.update(_load_seed_fps())
 
     # fp -> row, one per config (a row's shapes accumulate from every cell it
     # addresses, so a config is benchmarked once).
-    pool: Dict[str, Dict[str, Any]] = {}
+    pool: dict[str, dict[str, Any]] = {}
 
     def _offer(
         fam: str,
         tier: str,
         pattern: str,
-        knobs: Dict[str, Any],
-        sides: Tuple[int, ...],
+        knobs: dict[str, Any],
+        sides: tuple[int, ...],
         note: str = "",
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         return _offer_row(sched, seen_fp, pool, fam, tier, pattern, knobs,
                           sides, note)
 
@@ -403,9 +409,9 @@ def iter_candidates() -> Iterator[Dict[str, Any]]:
     yield from _plan_batch_row_gen(_offer)
 
 
-def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
-                    seen_fp: Set[str], pool: Dict[str, Dict[str, Any]],
-                    offer) -> Iterator[Dict[str, Any]]:
+def _narrow_row_gen(sched, fam: str, sides: tuple[int, ...],
+                    seen_fp: set[str], pool: dict[str, dict[str, Any]],
+                    offer) -> Iterator[dict[str, Any]]:
     """1-knob neighbours of each cell's deck winner (falls back to the ladder).
 
     Yields the neighbours as their own rows, except when the neighbour's fp
@@ -452,8 +458,8 @@ def _narrow_row_gen(sched, fam: str, sides: Tuple[int, ...],
                     yield row
 
 
-def _deck_rows_by_family() -> Dict[str, List[Dict[str, Any]]]:
-    rows: Dict[str, List[Dict[str, Any]]] = {}
+def _deck_rows_by_family() -> dict[str, list[dict[str, Any]]]:
+    rows: dict[str, list[dict[str, Any]]] = {}
     for row in __yaml_load(REPO_ROOT / "phases.yaml", fallback=[]):
         if not isinstance(row, dict):
             continue
@@ -468,8 +474,8 @@ def _deck_rows_by_family() -> Dict[str, List[Dict[str, Any]]]:
     return rows
 
 
-def _deck_winner_for(deck: Dict[str, List[Dict[str, Any]]], fam: str,
-                     side: int) -> Optional[Dict[str, Any]]:
+def _deck_winner_for(deck: dict[str, list[dict[str, Any]]], fam: str,
+                     side: int) -> dict[str, Any] | None:
     shape = f"{side}x{side}x{side}"
     for row in deck.get(fam, []):
         if shape in (row.get("shapes") or []):

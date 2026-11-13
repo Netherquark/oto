@@ -15,10 +15,9 @@ from __future__ import annotations
 
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES,
-                              REALISTIC_CEILINGS, cube_side)
+from oto.device.peaks import FAMILY_DTYPE_CHAR, cube_side
 from oto.metrics.family_attribution import resolve_cell_family
 from oto.metrics.protocol import SINGLE, protocol_of
 
@@ -30,8 +29,8 @@ CLOCK_MIN_COVERAGE = None
 
 def _coverage_floor() -> float:
     """The minimum clock coverage a cell needs before it may be clock-adjusted."""
-    from oto.metrics.analytics import CLOCK_MIN_COVERAGE as floor
-    return floor
+    from oto.metrics.analytics import CLOCK_MIN_COVERAGE
+    return CLOCK_MIN_COVERAGE
 
 
 #: Aggation-basis resolution: which per-kernel statistic each arm is graded on.
@@ -48,10 +47,10 @@ _SPOOF_KEY = {
 }
 
 
-def _collect(records: List[Dict[str, Any]],
-              sclk_by_gkey: Optional[Dict[Tuple[str, str], float]] = None,
-              sclk_ref: Optional[float] = None
-              ) -> Dict[Tuple[str, int], Dict[str, Any]]:
+def _collect(records: list[dict[str, Any]],
+              sclk_by_gkey: dict[tuple[str, str], float] | None = None,
+              sclk_ref: float | None = None
+              ) -> dict[tuple[str, int], dict[str, Any]]:
     """Per-cell per-kernel statistics for one arm.
 
     A workload cell is (family, cube side). Records are grouped by
@@ -173,7 +172,7 @@ def _build_stat_dict(samples, kernel_meds, kernel_meds_clock, winner,
     }
 
 
-def _stat(stats: Dict[str, Any], which: str, agg: str) -> float:
+def _stat(stats: dict[str, Any], which: str, agg: str) -> float:
     """Resolve one arm's comparison statistic.
 
     Bases, from lenient to strict. `which` is 'native' or 'spoof'.
@@ -201,8 +200,8 @@ def _stat(stats: Dict[str, Any], which: str, agg: str) -> float:
     cell is flagged via clock_adjusted below — never silently presented
     as a clock-corrected number.
     """
-    native_key = {k: v for k, v in _NATIVE_KEY.items()}
-    spoof_key = {k: v for k, v in _SPOOF_KEY.items()}
+    native_key = dict(_NATIVE_KEY.items())
+    spoof_key = dict(_SPOOF_KEY.items())
     key = (native_key if which == "native" else spoof_key).get(agg, agg)
     val = stats.get(key, 0.0)
     if not val and key.endswith("_clock"):
@@ -216,14 +215,14 @@ class ABDeltaMixin:
 
     def compute_native_vs_spoof_delta(
             self,
-            native_records: List[Dict[str, Any]],
-            spoof_records: List[Dict[str, Any]],
+            native_records: list[dict[str, Any]],
+            spoof_records: list[dict[str, Any]],
             agg: str = "winner",
             tie_band_pct: float = 5.0,
-            sclk_by_phase: Optional[Dict[Tuple[str, str], float]] = None,
-            sclk_ref: Optional[float] = None,
+            sclk_by_phase: dict[tuple[str, str], float] | None = None,
+            sclk_ref: float | None = None,
             protocol_basis: str = "family",
-        ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
+        ) -> dict[tuple[str, str, str], dict[str, Any]]:
         """per-cell native-vs-spoof pairing; see the module docstring.
 
         A workload cell is (family/dtype, cube shape) and MUST match on both arms
@@ -253,11 +252,11 @@ class ABDeltaMixin:
 
     def cells_not_beating_floor(
             self,
-            native_records: List[Dict[str, Any]],
-            spoof_records: List[Dict[str, Any]],
+            native_records: list[dict[str, Any]],
+            spoof_records: list[dict[str, Any]],
             tie_band_pct: float = 5.0,
             protocol_basis: str = "family",
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Cells whose native winner has not yet beaten the recalled floor.
 
         Under ``agg="winner"`` BOTH arms are graded on their best per-kernel
@@ -282,11 +281,11 @@ class ABDeltaMixin:
 
 
 def _clock_basis_values(
-    nv: Dict[str, Any],
-    sv: Dict[str, Any],
+    nv: dict[str, Any],
+    sv: dict[str, Any],
     agg: str,
-    sclk_ref: Optional[float],
-) -> Tuple[float, float, bool]:
+    sclk_ref: float | None,
+) -> tuple[float, float, bool]:
     """(native_val, spoof_val, clock_ok) under the clock-fallback rule.
 
     Both arms must be clock-covered or NEITHER is adjusted: a half-adjusted
@@ -306,9 +305,9 @@ def _clock_basis_values(
     return native_val, spoof_val, clock_ok
 
 
-def _clock_fields(nv: Dict[str, Any], sv: Dict[str, Any],
-                  sclk_ref: Optional[float], clock_ok: bool,
-                  agg: str) -> Dict[str, Any]:
+def _clock_fields(nv: dict[str, Any], sv: dict[str, Any],
+                  sclk_ref: float | None, clock_ok: bool,
+                  agg: str) -> dict[str, Any]:
     """The clock-telemetry fields, identical in both bases."""
     return {
         "native_best_median_clock": nv["best_median_clock"],
@@ -333,19 +332,19 @@ def _delta_entry(
     fam: str,
     side: str,
     dtype: str,
-    nv: Dict[str, Any],
-    sv: Dict[str, Any],
+    nv: dict[str, Any],
+    sv: dict[str, Any],
     native_val: float,
     spoof_val: float,
     delta_pct: float,
     tie: bool,
     verdict: str,
     agg: str,
-    sclk_ref: Optional[float],
+    sclk_ref: float | None,
     clock_ok: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """One graded native/spoof pair, as the report dict."""
-    entry: Dict[str, Any] = {
+    entry: dict[str, Any] = {
         "native_value": native_val,
         "spoof_value": spoof_val,
         "native_median": nv["median"],
@@ -385,13 +384,13 @@ def _delta_entry(
 
 
 def _basis_collects(
-        native_records: List[Dict[str, Any]],
-        spoof_records: List[Dict[str, Any]],
+        native_records: list[dict[str, Any]],
+        spoof_records: list[dict[str, Any]],
         protocol_basis: str,
-        sclk_by_phase: Optional[Dict[Tuple[str, str], float]],
-        sclk_ref: Optional[float],
-) -> Tuple[str, Dict[Tuple[str, int], Dict[str, Any]],
-           Dict[Tuple[str, int], Dict[str, Any]], Any, Any]:
+        sclk_by_phase: dict[tuple[str, str], float] | None,
+        sclk_ref: float | None,
+) -> tuple[str, dict[tuple[str, int], dict[str, Any]],
+           dict[tuple[str, int], dict[str, Any]], Any, Any]:
     """Collect per-cell stats for one pairing under the like-for-like rule.
 
     Returns ``(basis, native_stats, spoof_stats, any_stats, iso_stats)``.
@@ -420,14 +419,14 @@ def _basis_collects(
 
 
 def _pair_cells(
-        native_records: List[Dict[str, Any]],
-        spoof_records: List[Dict[str, Any]],
+        native_records: list[dict[str, Any]],
+        spoof_records: list[dict[str, Any]],
         agg: str,
         tie_band_pct: float,
-        sclk_by_phase: Optional[Dict[Tuple[str, str], float]],
-        sclk_ref: Optional[float],
+        sclk_by_phase: dict[tuple[str, str], float] | None,
+        sclk_ref: float | None,
         protocol_basis: str = "family",
-    ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
+    ) -> dict[tuple[str, str, str], dict[str, Any]]:
     """Pair the two arms per cell and grade each pair.
 
     Both arms are CORPUS-WIDE, not per-run: every record passed in is a
@@ -444,7 +443,7 @@ def _pair_cells(
     basis, ns, ss, any_stats, iso_stats = _basis_collects(
         native_records, spoof_records, protocol_basis, sclk_by_phase, sclk_ref)
 
-    deltas: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    deltas: dict[tuple[str, str, str], dict[str, Any]] = {}
     for key in sorted(set(ss) & set(ns)):
         fam, side = key
         sv, nv = ss[key], ns[key]

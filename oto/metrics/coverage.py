@@ -32,7 +32,8 @@ rather than a hardcoded percentage.
 from __future__ import annotations
 
 import statistics
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 from oto.tensile.shape_order import shape_order_key
 
@@ -55,12 +56,12 @@ MIN_SAMPLES_FOR_VERDICT = 2
 #: directory and every registry row, which costs ~90s on the live corpus -- fine
 #: once, ruinous per phase. The key includes the band, so an explicit override
 #: never poisons a later default lookup.
-_REFERENCE_CACHE: Dict[Tuple[str, Optional[float]], Dict[str, Any]] = {}
+_REFERENCE_CACHE: dict[tuple[str, float | None], dict[str, Any]] = {}
 _REFERENCE_BUILDING = False
 
 
 def reference_thresholds(base_dir=None,
-                         band_pct: Optional[float] = None) -> Dict[str, Any]:
+                         band_pct: float | None = None) -> dict[str, Any]:
     """Acceptance band and per-cell slow bars from reference scan.
 
     Band = how far two runs of one config disagree; bars = how far a candidate
@@ -84,15 +85,16 @@ def reference_thresholds(base_dir=None,
 
     _REFERENCE_BUILDING = True
     try:
-        import oto.metrics.ab_audit as ab_audit
         from pathlib import Path as _Path
+
+        from oto.metrics import ab_audit
         base = _Path(base_dir) if base_dir else ab_audit.BASE
         native, floor, chain = ab_audit.arm_record_sets(base)
         band = ab_audit.measured_band(native, floor, band_pct)
         frac = max(0.0, float(band["band_pct"])) / 100.0
 
         deltas = ab_audit.cell_deltas(native, floor, agg="best_median", base=base)
-        bars: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        bars: dict[tuple[str, str], dict[str, Any]] = {}
         for (dtype, shape, _label), d in deltas.items():
             ref = float(d.get("spoof_median") or 0.0)
             if ref <= 0:
@@ -120,7 +122,7 @@ def reference_thresholds(base_dir=None,
     return out
 
 
-def slow_bar(cell, base_dir=None, band_pct: Optional[float] = None):
+def slow_bar(cell, base_dir=None, band_pct: float | None = None):
     """The `legal_slow` bar for one `(dtype, shape)` cell, or None.
 
     None means "no reference ran here", which the classifier reads as *cannot
@@ -136,7 +138,7 @@ def slow_bar(cell, base_dir=None, band_pct: Optional[float] = None):
     return bars.get((str(dtype).upper(), str(shape)))
 
 
-def measured_band_pct(base_dir=None) -> Optional[float]:
+def measured_band_pct(base_dir=None) -> float | None:
     """Read the measured acceptance band, or None if it cannot be measured.
 
     Reads `ab_audit`'s canonical band on the corpus rather than taking a literal.
@@ -153,17 +155,17 @@ def measured_band_pct(base_dir=None) -> Optional[float]:
 
 
 def coverage_cells(
-    proposals: Sequence[Dict[str, Any]],
-    samples_by_fp: Dict[str, List[float]],
-    target_cells: Optional[Iterable[Tuple[str, str]]] = None,
-) -> List[Dict[str, Any]]:
+    proposals: Sequence[dict[str, Any]],
+    samples_by_fp: dict[str, list[float]],
+    target_cells: Iterable[tuple[str, str]] | None = None,
+) -> list[dict[str, Any]]:
     """Per (family, shape) evidence: distinct fps, n, median, spread.
     spread_ratio = (max - median)/median, matching policy.aggregate_cell.
     n counts samples per fp; cell reports min n (worst-measured config).
     target_cells = plan's intended (family, shape) pairs, included even with
     zero proposals (STATE_EXPLORE).
     """
-    by_cell: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    by_cell: dict[tuple[str, str], dict[str, Any]] = {}
     for family, shape in (target_cells or ()):
         by_cell.setdefault((str(family), str(shape)), {"family": str(family), "shape": str(shape), "fingerprints": set(), "n_proposed": 0, "outcomes": {}})
     for row in proposals:
@@ -181,10 +183,10 @@ def coverage_cells(
         entry["fingerprints"].add(row.get("fp"))
         outcome = str(row.get("outcome") or "pending")
         entry["outcomes"][outcome] = entry["outcomes"].get(outcome, 0) + 1
-    cells: List[Dict[str, Any]] = []
+    cells: list[dict[str, Any]] = []
     for (family, shape), entry in by_cell.items():
         fps = [fp for fp in entry["fingerprints"] if fp]
-        per_fp: Dict[str, Dict[str, Any]] = {}
+        per_fp: dict[str, dict[str, Any]] = {}
         for fp in fps:
             samples = [g for g in samples_by_fp.get(fp, []) if g and g > 0]
             if not samples:
@@ -214,8 +216,8 @@ def coverage_cells(
     return cells
 
 
-def decide_state(cell: Dict[str, Any],
-                 band_pct: Optional[float] = None) -> str:
+def decide_state(cell: dict[str, Any],
+                 band_pct: float | None = None) -> str:
     """Classify a cell into exactly one of the three states.
 
     Order matters. Retirement is checked *after* evidence exists, because a cell
@@ -264,8 +266,8 @@ def lower_confidence_bound(samples: Sequence[float], z: float = 1.96) -> float:
     return median - z * statistics.stdev(values) / (len(values) ** 0.5)
 
 
-def select_parent(cell: Dict[str, Any],
-                  fallback: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+def select_parent(cell: dict[str, Any],
+                  fallback: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Choose the parent for the next batch by LCB, never by raw winner.
 
     `Hplan.5` step 3. `harvest()` today takes ``max(median_gflops)``, which is how
@@ -276,18 +278,17 @@ def select_parent(cell: Dict[str, Any],
     measured = [e for e in cell.get("per_fp", []) if e.get("n", 0) > 0]
     if not measured:
         return fallback
-    best = max(measured, key=lambda e: (e.get("lcb", 0.0), e.get("n", 0)))
-    return best
+    return max(measured, key=lambda e: (e.get("lcb", 0.0), e.get("n", 0)))
 
 
-def samples_by_fingerprint(records: Iterable[Dict[str, Any]]) -> Dict[str, List[float]]:
+def samples_by_fingerprint(records: Iterable[dict[str, Any]]) -> dict[str, list[float]]:
     """Group benchmark records into `fp -> [GFLOPS]`, via the canonical column.
 
     Reads `GFLOPS` / `median_gflops` exactly as `AnalyticsEngine.aggregate_by_cell`
     does, and keeps only positive values, so coverage's notion of a sample agrees
     with analytics' rather than being a third definition.
     """
-    out: Dict[str, List[float]] = {}
+    out: dict[str, list[float]] = {}
     for rec in records:
         fp = rec.get("fingerprint", rec.get("fp"))
         if not fp:
@@ -302,10 +303,10 @@ def samples_by_fingerprint(records: Iterable[Dict[str, Any]]) -> Dict[str, List[
     return out
 
 
-def coverage_from_registry(registry, band_pct: Optional[float] = None,
+def coverage_from_registry(registry, band_pct: float | None = None,
                            base_dir=None,
-                           target_cells: Optional[Iterable[Tuple[str, str]]] = None,
-                           ) -> Dict[str, Any]:
+                           target_cells: Iterable[tuple[str, str]] | None = None,
+                           ) -> dict[str, Any]:
     """Build the coverage summary straight from a registry.
 
     Keeps the two join keys explicit: proposals carry `(family, shape)`, records
@@ -324,16 +325,16 @@ def coverage_from_registry(registry, band_pct: Optional[float] = None,
 
 
 def coverage_summary(
-    proposals: Sequence[Dict[str, Any]],
-    samples_by_fp: Dict[str, List[float]],
-    band_pct: Optional[float] = None,
-    target_cells: Optional[Iterable[Tuple[str, str]]] = None,
-) -> Dict[str, Any]:
+    proposals: Sequence[dict[str, Any]],
+    samples_by_fp: dict[str, list[float]],
+    band_pct: float | None = None,
+    target_cells: Iterable[tuple[str, str]] | None = None,
+) -> dict[str, Any]:
     """Cells with their state and chosen parent, for reporting and tests."""
     cells = coverage_cells(proposals, samples_by_fp,
                            target_cells=target_cells)
-    tally: Dict[str, int] = {state: 0 for state in sorted(CELL_STATES)}
-    out: List[Dict[str, Any]] = []
+    tally: dict[str, int] = dict.fromkeys(sorted(CELL_STATES), 0)
+    out: list[dict[str, Any]] = []
     for cell in cells:
         state = decide_state(cell, band_pct=band_pct)
         tally[state] = tally.get(state, 0) + 1

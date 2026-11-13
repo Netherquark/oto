@@ -37,25 +37,25 @@ import json
 import re
 import sys
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from statistics import median
-from typing import Dict, Iterable, List, Optional, Tuple
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks  # noqa: E402
+import oto.device.peaks as _peaks
+
 LDS_PER_CU_KB = _peaks.LDS_PER_CU_KB
 MAX_WAVES_PER_CU = _peaks.MAX_WAVES_PER_CU
 NUM_CUS = _peaks.NUM_CUS
-from oto.tensile.gates.vgpr_model import (  # noqa: E402
+from oto.runners.paths import results_rel
+from oto.tensile.gates.vgpr_model import (
     BYTES_PER_ELEMENT,
     FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,
     VGPR_PER_CU,
 )
-from oto.runners.paths import results_rel
 
 KERNEL_DB = results_rel("analysis", "kernel_db.json")
 
@@ -67,15 +67,15 @@ FAMILY_CHAR = {                            # typecode -> dtype character
 }
 
 
-def _ints(raw: object) -> List[int]:
+def _ints(raw: object) -> list[int]:
     if not raw:
         return []
     return [int(x) for x in re.findall(r"\d+", str(raw))]
 
 
-def _winner_per_cell(rows: Iterable[Dict]) -> Dict[Tuple[str, int], Dict]:
+def _winner_per_cell(rows: Iterable[dict]) -> dict[tuple[str, int], dict]:
     """Best per-(family, side) row by gflops_median (seed-medians pre-folded)."""
-    best: Dict[Tuple[str, int], Dict] = {}
+    best: dict[tuple[str, int], dict] = {}
     for r in rows:
         fam, shape = r.get("family"), r.get("shape")
         if not fam or not shape or not str(shape).count("x"):
@@ -91,7 +91,7 @@ def _winner_per_cell(rows: Iterable[Dict]) -> Dict[Tuple[str, int], Dict]:
     return best
 
 
-def _bounds(row: Dict, lds_factor: int) -> Optional[Tuple[int, int, int, int, str, Dict]]:
+def _bounds(row: dict, lds_factor: int) -> tuple[int, int, int, int, str, dict] | None:
     """(lds_bound, vgpr_bound, wave_bound, resident, binder, info)."""
     fam = row.get("family", "")
     ch = FAMILY_CHAR.get(fam)
@@ -127,7 +127,7 @@ def _bounds(row: Dict, lds_factor: int) -> Optional[Tuple[int, int, int, int, st
     return lds_bound, vgpr_bound, wave_bound, resident, binder, info
 
 
-def _floor_rows(db: Dict[str, List[Dict]]) -> Tuple[List[Dict], List[str]]:
+def _floor_rows(db: dict[str, list[dict]]) -> tuple[list[dict], list[str]]:
     """Floor rows for the audit.
 
     Locked reference runs are preferred (the published floor); when the
@@ -140,9 +140,9 @@ def _floor_rows(db: Dict[str, List[Dict]]) -> Tuple[List[Dict], List[str]]:
     return [r for k in chosen for r in db[k]], chosen
 
 
-def _audit(rows_iter: Iterable[Dict], lds_factor: int) -> List[Dict]:
+def _audit(rows_iter: Iterable[dict], lds_factor: int) -> list[dict]:
     winners = _winner_per_cell(rows_iter)
-    out: List[Dict] = []
+    out: list[dict] = []
     for (fam, side), row in sorted(winners.items()):
         b = _bounds(row, lds_factor)
         if b is None:
@@ -174,46 +174,27 @@ def main() -> int:
     with open(KERNEL_DB) as f:
         db = json.load(f)
     if args.side == "floor":
-        rows, chosen = _floor_rows(db)
+        rows, _chosen = _floor_rows(db)
         if not rows:
-            print("no floor rows found (no gfx900_ref_* keys in kernel_db.json)",
-                  file=sys.stderr)
             return 1
-        print(f"floor runs: {', '.join(chosen)}", file=sys.stderr)
     else:
         rows = [r for run, rs in db.items()
                 for r in rs if not run.startswith("gfx900_ref_")]
     if not rows:
-        print(f"no rows under side={args.side}", file=sys.stderr)
         return 1
 
     cells = _audit(rows, args.lds_factor)
     if not cells:
-        print("no auditable cells (measured-VGPR table missing their TT)", file=sys.stderr)
         return 1
 
-    hdr = (f"{'cell':<9}{'resident':>8}{'binder':>7}{'waves/CU':>9}"
-           f"{'% of 40':>8}{'LDS':>5}{'VGPR':>6}{'WAV':>5}{'med GF':>9}")
-    print(f"occupancy audit: side={args.side} lds_factor={args.lds_factor} "
-          f"cells={len(cells)}")
-    print(hdr)
     for c in cells:
         if args.at_most is not None and c["resident"] > args.at_most:
             continue
-        print(f"{c['cell']:<9}{c['resident']:>8}{c['binder']:>7}"
-              f"{c['waves_per_cu']:>9}{c['pct_of_40']:>7.0f}%"
-              f"{c['lds_bound']:>5}{c['vgpr_bound']:>6}{c['wave_bound']:>5}"
-              f"{c['median_gflops']:>9.1f}")
 
-    res = [c["resident"] for c in cells]
-    waves = [c["waves_per_cu"] for c in cells]
-    low = [c for c in cells if c["resident"] <= 3]
-    binders = Counter(c["binder"] for c in cells)
-    print(f"\nresident wg/CU: min={min(res)} median={median(res)} max={max(res)}")
-    print(f"cells at <=3 resident wg/CU: {len(low)} / {len(cells)}")
-    print(f"waves/CU: min={min(waves)} median={median(waves)} max={max(waves)}"
-          f" (budget {MAX_WAVES_PER_CU}/CU)")
-    print(f"binding resource tally: {dict(binders)}")
+    [c["resident"] for c in cells]
+    [c["waves_per_cu"] for c in cells]
+    [c for c in cells if c["resident"] <= 3]
+    Counter(c["binder"] for c in cells)
     return 0
 
 

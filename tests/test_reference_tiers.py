@@ -23,9 +23,9 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import oto.runners.auto_prompt as ap  # noqa: E402
-import oto.runners.driver as pt  # noqa: E402
-import oto.tensile.library as tl  # noqa: E402
+import oto.runners.auto_prompt as ap
+import oto.runners.driver as pt
+import oto.tensile.library as tl
 
 T1 = ["p_t1_a", "p_t1_b", "p_t1_c"]
 T2 = ["p_t2_a", "p_t2_b"]
@@ -39,9 +39,9 @@ def tiered(mapping):
 
 
 MAPPING = {}
-MAPPING.update({p: tl.TIER_FIRST for p in T1})
-MAPPING.update({p: tl.TIER_HELD for p in T2})
-MAPPING.update({p: tl.TIER_DROP for p in T3})
+MAPPING.update(dict.fromkeys(T1, tl.TIER_FIRST))
+MAPPING.update(dict.fromkeys(T2, tl.TIER_HELD))
+MAPPING.update(dict.fromkeys(T3, tl.TIER_DROP))
 
 # apply_rerun_tiers looks tiers up by phase_key, so build the fixture manifest
 # the same way the real one is built.
@@ -58,40 +58,39 @@ class TestTierSelection(unittest.TestCase):
 
     def test_default_drops_held_and_keeps_t1(self):
         out = tl.apply_rerun_tiers(self.phases, MANIFEST)
-        self.assertEqual([p["phase_id"] for p in out], T1)
+        assert [p["phase_id"] for p in out] == T1
 
     def test_release_puts_held_last(self):
         out = tl.apply_rerun_tiers(self.phases, MANIFEST, release_held=True)
-        self.assertEqual([p["phase_id"] for p in out], T1 + T2)
+        assert [p["phase_id"] for p in out] == T1 + T2
 
     def test_t3_dropped_unless_release_drop(self):
         """T3 is dropped by default, and is NOT bundled with releasing T2."""
         for rel in (False, True):
             out = tl.apply_rerun_tiers(_PHASES, MANIFEST, release_held=rel)
-            self.assertNotIn("p_t3_a", [p["phase_id"] for p in out],
-                             "answering yes to T2 must not stage T3")
+            assert "p_t3_a" not in [p["phase_id"] for p in out], "answering yes to T2 must not stage T3"
 
     def test_t3_staged_at_the_back_on_release_drop(self):
         out = [p["phase_id"] for p in
                tl.apply_rerun_tiers(_PHASES, MANIFEST, release_drop=True)]
-        self.assertIn("p_t3_a", out)
+        assert "p_t3_a" in out
         # T2 stays pinned -- releasing T3 is not a release of T2
-        self.assertEqual(out, T1 + T3)
+        assert out == T1 + T3
 
     def test_t1_precedes_t3_on_release_drop(self):
         out = [p["phase_id"] for p in
                tl.apply_rerun_tiers(_PHASES, MANIFEST, release_drop=True)]
-        self.assertLess(out.index("p_t1_c"), out.index("p_t3_a"))
+        assert out.index("p_t1_c") < out.index("p_t3_a")
 
     def test_both_releases_staged_independently(self):
         out = [p["phase_id"] for p in tl.apply_rerun_tiers(
             _PHASES, MANIFEST, release_held=True, release_drop=True)]
-        self.assertEqual(out, T1 + T2 + T3)
+        assert out == T1 + T2 + T3
 
     def test_t1_precedes_t2_on_release(self):
         out = [p["phase_id"] for p in
                tl.apply_rerun_tiers(self.phases, MANIFEST, release_held=True)]
-        self.assertLess(out.index("p_t1_c"), out.index("p_t2_a"))
+        assert out.index("p_t1_c") < out.index("p_t2_a")
 
     def test_lookup_is_by_phase_key_not_phase_id(self):
         """A rebuilt deck has different phase_ids; tiering must survive it."""
@@ -101,16 +100,16 @@ class TestTierSelection(unittest.TestCase):
                                 for p in _PHASES}}
         # every rebuilt phase is unrecognised -> TIER_KEEP, never a crash
         out = tl.apply_rerun_tiers(rebuilt, man)
-        self.assertEqual(len(out), 3)
+        assert len(out) == 3
 
     def test_no_manifest_is_pass_through(self):
         out = tl.apply_rerun_tiers(self.phases, None)
-        self.assertEqual([p["phase_id"] for p in out], ALL)
+        assert [p["phase_id"] for p in out] == ALL
 
     def test_default_signature_is_conservative(self):
         sig = __import__("inspect").signature(tl.apply_rerun_tiers)
-        self.assertFalse(sig.parameters["release_held"].default)
-        self.assertFalse(sig.parameters["release_drop"].default)
+        assert not sig.parameters["release_held"].default
+        assert not sig.parameters["release_drop"].default
 
 
 def _bare_driver():
@@ -130,11 +129,11 @@ class TestCallSitePlumbing(unittest.TestCase):
     def test_run_gfx900_reference_default_is_false(self):
         sig = __import__("inspect").signature(
             pt.TensileDriver.run_gfx900_reference)
-        self.assertFalse(sig.parameters["release_held"].default)
+        assert not sig.parameters["release_held"].default
 
     def test_run_auto_default_is_false(self):
         sig = __import__("inspect").signature(pt.TensileDriver.run_auto)
-        self.assertFalse(sig.parameters["release_held"].default)
+        assert not sig.parameters["release_held"].default
 
     def test_run_auto_forwards_release_on_fresh_branch(self):
         """No existing reference -> run_gfx900_reference(release_held=...)"""
@@ -150,9 +149,7 @@ class TestCallSitePlumbing(unittest.TestCase):
                                return_value=None):
             pt.TensileDriver.run_auto(drv, budget=0, release_held=True)
         mref.assert_called_once()
-        self.assertTrue(mref.call_args.kwargs.get("release_held"),
-                        "run_auto dropped release_held on the fresh-reference "
-                        "branch")
+        assert mref.call_args.kwargs.get("release_held"), "run_auto dropped release_held on the fresh-reference " "branch"
 
     def test_run_auto_forwards_release_on_resume_branch(self):
         drv = _bare_driver()
@@ -168,7 +165,7 @@ class TestCallSitePlumbing(unittest.TestCase):
                                return_value=None):
             pt.TensileDriver.run_auto(drv, budget=0, release_held=True,
                                       plan=ap.AutoPlan(rerun_illegal=True))
-        self.assertTrue(mref.call_args.kwargs.get("release_held"))
+        assert mref.call_args.kwargs.get("release_held")
 
     def test_run_auto_default_does_not_release(self):
         drv = _bare_driver()
@@ -183,7 +180,7 @@ class TestCallSitePlumbing(unittest.TestCase):
                                return_value=None):
             pt.TensileDriver.run_auto(drv, budget=0,
                                       plan=ap.AutoPlan(rerun_illegal=True))
-        self.assertFalse(mref.call_args.kwargs.get("release_held"))
+        assert not mref.call_args.kwargs.get("release_held")
 
 
 class TestManifestIsPinned(unittest.TestCase):
@@ -213,40 +210,37 @@ class TestManifestIsPinned(unittest.TestCase):
 
     def test_t2_stays_pinned(self):
         held, _, _ = self._tier_counts()
-        self.assertGreater(held, 0, "T2 must remain held by default")
+        assert held > 0, "T2 must remain held by default"
 
     def test_every_shipped_cell_has_exactly_one_known_tier(self):
         known = {tl.TIER_KEEP, tl.TIER_FIRST, tl.TIER_HELD,
                  tl.TIER_LAST, tl.TIER_DROP}
         seen = 0
-        for fam, pats in self.shipped["families"].items():
-            for pat, dt in pats.items():
+        for pats in self.shipped["families"].values():
+            for dt in pats.values():
                 for name in dt["kernels"]:
                     seen += 1
                     k = tl.phase_key(
                         {"kernel": tl._CANON.sub("Cijk", name)})
-                    self.assertIn(k, self.by,
-                                  f"{k} is missing from the audited manifest")
-                    self.assertIn(self.by[k], known,
-                                  f"{k} has an unknown tier {self.by[k]!r}")
-        self.assertEqual(len(self.by), seen,
-                         "manifest must not tier anything outside the corpus")
+                    assert k in self.by, f"{k} is missing from the audited manifest"
+                    assert self.by[k] in known, f"{k} has an unknown tier {self.by[k]!r}"
+        assert len(self.by) == seen, "manifest must not tier anything outside the corpus"
 
     def test_recorded_counts_match_the_keys(self):
         held, first, drop = self._tier_counts()
         counts = self.m.get("counts") or {}
-        self.assertEqual(counts.get(tl.TIER_HELD, 0), held)
-        self.assertEqual(counts.get(tl.TIER_FIRST, 0), first)
-        self.assertEqual(counts.get(tl.TIER_DROP, 0), drop)
+        assert counts.get(tl.TIER_HELD, 0) == held
+        assert counts.get(tl.TIER_FIRST, 0) == first
+        assert counts.get(tl.TIER_DROP, 0) == drop
 
     def test_prompt_numbers_agree_with_the_manifest(self):
         """The banner the user reads is built from the same tiers."""
         import oto.runners.auto_prompt as auto_prompt
         counts = auto_prompt._read_counts(ROOT)
         held, first, drop = self._tier_counts()
-        self.assertEqual(counts["illegal"], first)
-        self.assertEqual(counts["underspecified"], held)
-        self.assertEqual(counts["unreproducible"], drop)
+        assert counts["illegal"] == first
+        assert counts["underspecified"] == held
+        assert counts["unreproducible"] == drop
 
 
 class TestSSUnbuildableTriaged(unittest.TestCase):
@@ -298,8 +292,8 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         self.reasons = self.m.get("tier_reasons") or {}
         # phase_id suffix -> canonical kernel name, i.e. what phase_key hashes
         self.name_of = {}
-        for fam, pats in json.load(open(sm))["families"].items():
-            for pat, dt in pats.items():
+        for pats in json.load(open(sm))["families"].values():
+            for dt in pats.values():
                 for n in dt["kernels"]:
                     self.name_of[hashlib.sha1(n.encode()).hexdigest()[:8]] = \
                         tl._CANON.sub("Cijk", n)
@@ -308,11 +302,10 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         return tl.phase_key({"kernel": self.name_of[tag]})
 
     def test_every_rejected_cell_is_t3(self):
-        self.assertEqual(len(self.REJECTED), 16)
+        assert len(self.REJECTED) == 16
         for tag in self.REJECTED:
             k = self._key(tag)
-            self.assertEqual(self.by.get(k), tl.TIER_DROP,
-                             f"{tag} must be T3_UNREPRODUCIBLE, got {self.by.get(k)!r}")
+            assert self.by.get(k) == tl.TIER_DROP, f"{tag} must be T3_UNREPRODUCIBLE, got {self.by.get(k)!r}"
 
     def test_reject_reason_is_recorded_per_cell(self):
         # tier_reasons is keyed by phase_id. phase_ids are re-derived from the
@@ -324,18 +317,16 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         for tag, frag in self.REJECTED.items():
             key = self._key(tag)
             pid = pid_of.get(key)
-            self.assertIsNotNone(pid, f"{tag} is not in the emitted deck")
-            self.assertIn(pid, self.reasons,
-                          f"{tag} has no recorded reason for its current phase_id")
-            self.assertIn(frag, self.reasons[pid],
-                          f"{tag} is missing reject text {frag!r}")
+            assert pid is not None, f"{tag} is not in the emitted deck"
+            assert pid in self.reasons, f"{tag} has no recorded reason for its current phase_id"
+            assert frag in self.reasons[pid], f"{tag} is missing reject text {frag!r}"
 
     def test_interrupted_cell_is_not_reclassified(self):
         """184f2441 was killed mid-run. That is not a Tensile reject.
 
         It must keep its T1 verdict so the resume re-measures it.
         """
-        self.assertEqual(self.by.get(self._key(self.INTERRUPTED)), tl.TIER_FIRST)
+        assert self.by.get(self._key(self.INTERRUPTED)) == tl.TIER_FIRST
 
     def test_reclassification_did_not_empty_any_cell(self):
         """The floor is best-per-cell, so losing non-winners must not matter.
@@ -343,7 +334,6 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         Guards the actual risk of moving 16 cells to T3: a cell left with no
         reference kernel at all would have no floor to compare against.
         """
-        import hashlib as _h
         sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
         cells = {}
         for fam, pats in json.load(open(sm))["families"].items():
@@ -357,8 +347,7 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
             usable = [k for k in keys if self.by.get(k) != tl.TIER_DROP]
             if not usable:
                 empty.append(cell)
-        self.assertEqual(empty, [],
-                         f"cells left with no floor-usable reference: {empty}")
+        assert empty == [], f"cells left with no floor-usable reference: {empty}"
 
 
 def _name_for(_tag):

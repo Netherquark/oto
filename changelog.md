@@ -9,6 +9,31 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-13 (13th) — ruff + py_compile gates integrated; docs ecosystem
+  updated.** The repo is clean under a pinned, substantive ruff rule set
+  (`ruff.toml`: pycodestyle, pyflakes, bugbear, pyupgrade, import sorting,
+  comprehensions, pep8-naming; E501/E402/E702 deliberately not selected with
+  the rationale in the file header; Tensile's upstream CamelCase names are
+  scoped-allowed in `oto/checks/tensile_build_probe.py`; tests accept their
+  fixture-table mutable class attributes). `tests/test_ruff.py` fails the
+  suite on any finding (`OTO_GUARD_FILES=1` checks only what git reports as
+  changed), and `tests/test_py_compile.py` byte-compiles every tracked `*.py`
+  in memory (no .pyc artifacts) — a tracked-but-never-imported file cannot
+  hide a syntax error. `tests/test_file_length.py` enforces a 600-line ceiling
+  with a ratcheting grandfathered-offender list (1008-line
+  `tests/test_phase1_integration.py`, 780-line `tests/test_synthesis_phase4.py`,
+  779-line `tests/test_occupancy_gate.py`, 620-line `tests/test_run_status.py`,
+  608-line `oto/metrics/run_status.py`); the list may only shrink. ~3,900
+  initial ruff findings, all fixed (~3,700 autofixed, remainder by hand; the
+  undefined-name rebind `from oto.metrics.ab_audit import _registry_records`
+  was re-sourced to `oto.metrics.ab_records`). The docs ecosystem documents
+  the gates alongside pyflakes and the 60-line function rule (`docs/README.md`
+  §The quality gates, `docs/agent_reference.md`, `docs/harness_runbook.md`,
+  `docs/operator_runbook.md`, `claude.md`); the two-class boundary is
+  unchanged. Full-suite re-verification on this loaded machine was infeasible
+  at integration time; the four tree-walking guard suites pass and the gates
+  are the standing commit battery now.
+
 - **2026-10-29 (12th) — best-effort build fixed on system ROCm; default
   destination made explicit.** `_tensile_env` no longer prepends
   compiler-default system includes (`/usr/include`, `/usr/local/include`) to

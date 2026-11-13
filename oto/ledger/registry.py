@@ -13,8 +13,7 @@ Public API: SQLiteRegistry, fingerprint_config.
 
 from oto.ledger.proposals import ProposalMixin
 from oto.ledger.queries import QueryMixin
-from oto.ledger.registry_core import (RegistryCore,
-                                      fingerprint_config)
+from oto.ledger.registry_core import RegistryCore, fingerprint_config
 
 __all__ = ["SQLiteRegistry", "fingerprint_config"]
 

@@ -42,22 +42,34 @@ parser. Every value comes from the canonical owners (``legality``, ``library``,
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from collections.abc import Sequence
+from typing import Any
 
+from oto.metrics.coverage import decide_state
 from oto.tensile import legality
+
 # ALL_GROUPS / TEMPLATE_KEYS / reconcile_tile / tile_product_holds are imported
 # from tile_space and re-exported here so their public names do not move with the
 # extraction; tile_product_holds is re-exported only (used by callers/tests).
-from oto.tensile.synthesis.tile_space import (ALL_GROUPS, TEMPLATE_KEYS,
-                                             reconcile_tile)
-from oto.tensile.synthesis.tile_space import tile_product_holds  # noqa: F401
-from oto.metrics.coverage import STATE_REPLICATE, STATE_RETIRED, decide_state
+from oto.tensile.synthesis.tile_space import (
+    ALL_GROUPS,
+    TEMPLATE_KEYS,
+    reconcile_tile,
+    tile_product_holds,
+)
 
 __all__ = [
-    "family_shape_sweeps", "sweep_for_family", "choose_groups",
-    "annotate_drawn_groups", "synthesize_cell", "synthesize_or_lattice",
-    "reconcile_tile", "tile_product_holds", "ALL_GROUPS", "TEMPLATE_KEYS",
+    "ALL_GROUPS",
     "MIN_SWEEP_SHAPES",
+    "TEMPLATE_KEYS",
+    "annotate_drawn_groups",
+    "choose_groups",
+    "family_shape_sweeps",
+    "reconcile_tile",
+    "sweep_for_family",
+    "synthesize_cell",
+    "synthesize_or_lattice",
+    "tile_product_holds",
 ]
 
 #: A sweep shorter than this is not a sweep. One shape is the defect Hplan.1
@@ -69,8 +81,8 @@ MIN_SWEEP_SHAPES = 2
 # ---------------------------------------------------------------- sweeps
 
 def family_shape_sweeps(
-        phases: Sequence[Dict[str, Any]],
-) -> Dict[str, List[str]]:
+        phases: Sequence[dict[str, Any]],
+) -> dict[str, list[str]]:
     """The shape sweep each family is benchmarked over, read from the deck.
 
     The curated deck is the authority on what a *graded* config looks like: every
@@ -85,8 +97,8 @@ def family_shape_sweeps(
     being measured inconsistently, and silently picking one of the two would
     paper over that.
     """
-    sweeps: Dict[str, List[str]] = {}
-    seen: Dict[str, Set[str]] = {}
+    sweeps: dict[str, list[str]] = {}
+    seen: dict[str, set[str]] = {}
     for phase in phases or ():
         config = phase.get("config") or {}
         family = str(config.get("FamilyLabel") or "").upper()
@@ -105,9 +117,9 @@ def family_shape_sweeps(
 
 def sweep_for_family(
         family: str,
-        sweeps: Dict[str, List[str]],
-        fallback: Optional[Sequence[str]] = None,
-) -> List[str]:
+        sweeps: dict[str, list[str]],
+        fallback: Sequence[str] | None = None,
+) -> list[str]:
     """The family's sweep, or `fallback` when the deck has none.
 
     Falls back rather than failing, and never invents shapes: an empty sweep
@@ -126,11 +138,11 @@ def sweep_for_family(
 # ------------------------------------------------------- coverage guidance
 
 def choose_groups(
-        cell: Optional[Dict[str, Any]],
+        cell: dict[str, Any] | None,
         groups: int,
         rng: random.Random,
-        band_pct: Optional[float] = None,
-) -> List[str]:
+        band_pct: float | None = None,
+) -> list[str]:
     """Pick which knob groups to substitute, given the cell's coverage state.
 
     Coverage guidance, concretely: a group already observed to produce a
@@ -163,8 +175,8 @@ def choose_groups(
     return rng.sample(pool, take)
 
 
-def _unstable_groups(cell: Optional[Dict[str, Any]],
-                     band_pct: Optional[float]) -> Set[str]:
+def _unstable_groups(cell: dict[str, Any] | None,
+                     band_pct: float | None) -> set[str]:
     """Groups whose value co-occurred with a spread beyond the band.
 
     Attribute attribution is per-config, not per-group: a spread is a property
@@ -175,7 +187,7 @@ def _unstable_groups(cell: Optional[Dict[str, Any]],
     if not cell or band_pct is None:
         return set()
     limit = float(band_pct) / 100.0
-    out: Set[str] = set()
+    out: set[str] = set()
     for entry in cell.get("per_fp", ()):
         if entry.get("spread_ratio", 0.0) <= limit:
             continue
@@ -185,8 +197,8 @@ def _unstable_groups(cell: Optional[Dict[str, Any]],
     return out
 
 
-def annotate_drawn_groups(knobs: Dict[str, Any],
-                          drawn: Sequence[str]) -> Dict[str, Any]:
+def annotate_drawn_groups(knobs: dict[str, Any],
+                          drawn: Sequence[str]) -> dict[str, Any]:
     """Record which groups a draw actually changed, for coverage attribution.
 
     Returned as a sidecar key rather than written into the candidate: a key the
@@ -203,15 +215,15 @@ def annotate_drawn_groups(knobs: Dict[str, Any],
 def synthesize_cell(
         base_dir,
         family: str,
-        base_config: Optional[Dict[str, Any]] = None,
-        cell: Optional[Dict[str, Any]] = None,
+        base_config: dict[str, Any] | None = None,
+        cell: dict[str, Any] | None = None,
         groups: int = 2,
         draws: int = 8,
-        seed: Optional[str] = None,
-        band_pct: Optional[float] = None,
-        shape: Optional[str] = None,
-        sweeps: Optional[Dict[str, List[str]]] = None,
-) -> Dict[str, Any]:
+        seed: str | None = None,
+        band_pct: float | None = None,
+        shape: str | None = None,
+        sweeps: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     """Draw coverage-guided, tile-consistent candidates for one cell.
 
     Returns a summary dict rather than a bare list, because the caller has to
@@ -228,12 +240,12 @@ def synthesize_cell(
                              fallback=[shape] if shape else None)
     graded = len(sweep) >= MIN_SWEEP_SHAPES
 
-    out: List[Dict[str, Any]] = []
-    dropped: Dict[str, int] = {}
+    out: list[dict[str, Any]] = []
+    dropped: dict[str, int] = {}
     rng = random.Random(seed if seed is not None else 0)
     state = decide_state(cell, band_pct=band_pct) if cell else None
 
-    for i in range(max(0, draws)):
+    for _i in range(max(0, draws)):
         drawn = choose_groups(cell, groups, rng, band_pct=band_pct)
         config, reason = _draw_with_groups(
             base_dir, family, rng, base_config, drawn)
@@ -260,9 +272,9 @@ def _draw_with_groups(
         base_dir,
         family: str,
         rng: random.Random,
-        base_config: Optional[Dict[str, Any]],
+        base_config: dict[str, Any] | None,
         groups: Sequence[str],
-) -> Tuple[Optional[Dict[str, Any]], str]:
+) -> tuple[dict[str, Any] | None, str]:
     """One draw with a *specific* set of groups, hard-walled before return.
 
     Wraps `legality`'s own machinery rather than re-implementing substitution, so
@@ -297,7 +309,7 @@ def synthesize_or_lattice(
         lattice_fn,
         family: str,
         **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run the constrained sampler, fall back to the lattice when it yields none.
 
     The fallback is what makes `Hplan.6` step 1's "degrades rather than fails"

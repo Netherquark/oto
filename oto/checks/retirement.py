@@ -11,6 +11,7 @@ import argparse
 import json
 import sqlite3
 from pathlib import Path
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 
@@ -26,22 +27,20 @@ def main() -> None:
 
     # Check for retirement records
     cursor.execute("SELECT id, data FROM records WHERE record_type = 'retire'")
-    print('Retirement records:')
     retire_count = 0
     for row in cursor.fetchall():
-        record_id, data_json = row
+        _record_id, data_json = row
         data = json.loads(data_json)
         retire_count += 1
-        print(f'  ID {record_id}: {data}')
 
     if retire_count == 0:
-        print('  No retirement records found')
+        pass
 
     # Check sample counts per cell
     cursor.execute("SELECT id, data FROM records WHERE record_type = 'general'")
     cell_sample_counts = {}
     for row in cursor.fetchall():
-        record_id, data_json = row
+        _record_id, data_json = row
         data = json.loads(data_json)
         dtype = data.get('dtype', data.get('DataType', 'unknown'))
         shape = data.get('shapes', data.get('ProblemType', 'unknown'))
@@ -49,10 +48,9 @@ def main() -> None:
         key = f"{dtype}_{shape}_{fp}"
         cell_sample_counts[key] = cell_sample_counts.get(key, 0) + 1
 
-    print('\nSample counts per cell (showing cells with >=3 samples):')
-    for key, count in sorted(cell_sample_counts.items()):
+    for _key, count in sorted(cell_sample_counts.items()):
         if count >= 3:
-            print(f'  {key}: {count} samples')
+            pass
 
     conn.close()
 

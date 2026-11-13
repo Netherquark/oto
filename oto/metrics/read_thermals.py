@@ -7,15 +7,10 @@ Public API: read_thermals."""
 
 from __future__ import annotations
 
-import os
-import sqlite3
 import statistics
 import sys
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -23,7 +18,7 @@ if str(ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 # thermals
 # ---------------------------------------------------------------------------
-def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
+def read_thermals(run_dir: Path) -> dict[str, Any] | None:
     """Temperature/power/clock envelope from one run's telemetry CSV.
 
     Only gpu-busy samples, matching the filter port_tensile uses for its clock
@@ -35,7 +30,7 @@ def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
         return None
     import csv as _csv
 
-    temp: List[int] = []; power: List[int] = []; sclk: List[int] = []; busy = 0
+    temp: list[int] = []; power: list[int] = []; sclk: list[int] = []; busy = 0
     try:
         with path.open(newline="") as fh:
             rd = _csv.DictReader(fh)
@@ -61,7 +56,7 @@ def read_thermals(run_dir: Path) -> Optional[Dict[str, Any]]:
     if not temp and not power and not sclk:
         return None
 
-    def stat(vals: List[int], scale: float, unit: str) -> str:
+    def stat(vals: list[int], scale: float, unit: str) -> str:
         if not vals:
             return "n/a"
         s = sorted(vals)

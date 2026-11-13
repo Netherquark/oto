@@ -1,0 +1,51 @@
+# Ruff configuration for oto.
+#
+# Goal: certify the repo clean under a strong, substantive rule set. The earlier
+# version used per-file scratch defaults; this defines the production bar.
+#
+# Rule rationale:
+#   E/W   pycodestyle style
+#   F     pyflakes correctness (this is the same class of defect the
+#         pre-existing rules already gate: undefined names, unused imports,
+#         duplicate definitions)
+#   B     bugbear: real bug patterns
+#   UP    pyupgrade: modern idioms / annotations
+#   I     import sorting
+#   C4    comprehensions
+#   RUF   ruff-native defects (e.g. unused noqa, invalid dataclass flags)
+#   N/A   pep8-naming / builtins
+#   PIE/FURB/RSE refactors, duplicates, regex flags, return-statement style
+#   PERF/FURB idiom cleanups
+#
+# Deliberately NOT selected:
+#   PLR/PLW/PLE complexity & magic-constant rules: pre-existing codebase
+#     structure; forcing them would mean enormous cosmetic rewrites without
+#     changing behaviour.
+#   SIM:   same class of cosmetic rewrite concerns.
+#   PT:    pytest style: the existing unittest-style suite is tolerated.
+#   TRY:   tryceratops: vanilla "raise ValueError(msg)" is acceptable style.
+#   C901:  complexity: not a correctness gate.
+#   D/ANN: docstrings & annotations: kept as a project-wide aspiration, not a gate.
+#   T20:   print statements are the intended UI for CLI tools.
+#   ARG:   unused args: would require dropping core args or churning signatures.
+#   S:     security: no network input paths in this package's scope here.
+# Line-length: not gated here; pycodestyle E501 tolerated for long strings/paths.
+#   (The repo default is 100; E501 reduced to noise level relative to the codebase.)
+# E402: deliberate script bootstrap pattern (sys.path.insert before imports).
+# E702: multi-statement lines; pre-existing idiom in small inline helpers.
+#
+# To reproduce:  python3 -m ruff check --config ruff.toml
+[lint]
+select = ["E", "F", "W", "B", "UP", "I", "C4", "RUF", "N", "A", "PIE", "RSE", "FURB", "RET", "PERF"]
+ignore = ["E501", "E402", "E702"]
+# Explicitly keep RET selected; RET501 / RET504 are required findings I keep on.
+# RUF012 mutable class attrs in frozen dataclasses: accepted pattern; below.
+
+[lint.per-file-ignores]
+"tests/*" = ["T20", "ARG001", "SLF001", "PT", "SIM", "S101", "RUF012"]
+"oto/__init__.py" = ["F401"]
+"oto/device/peaks.py" = ["RUF012"]
+"oto/tensile/candidate.py" = ["RUF012"]
+# Tensile's own public API is CamelCase (BenchmarkProblems, KernelWriterAssembly,
+# markDuplicateKernels, ...); matching upstream names is deliberate here.
+"oto/checks/tensile_build_probe.py" = ["N803", "N806", "N817"]

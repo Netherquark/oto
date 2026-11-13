@@ -23,10 +23,15 @@ Public API: shape_parts, shape_order_key, ordered_shapes, is_numerically_ordered
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Tuple
+from collections.abc import Iterable
+from typing import Any
 
-__all__ = ["shape_parts", "shape_order_key", "ordered_shapes",
-           "is_numerically_ordered"]
+__all__ = [
+    "is_numerically_ordered",
+    "ordered_shapes",
+    "shape_order_key",
+    "shape_parts",
+]
 
 
 def _token(part: Any) -> int:
@@ -39,7 +44,7 @@ def _token(part: Any) -> int:
         return -1
 
 
-def shape_parts(shape: Any) -> Tuple[int, ...]:
+def shape_parts(shape: Any) -> tuple[int, ...]:
     """Numeric parts of a shape as a comparable tuple.
 
     Accepts ``"MxNxBxK"`` / ``"MxNxK"`` strings and already-split sequences
@@ -51,7 +56,7 @@ def shape_parts(shape: Any) -> Tuple[int, ...]:
     return tuple(_token(p) for p in str(shape).split("x"))
 
 
-def shape_order_key(shape: Any) -> Tuple[int, ...]:
+def shape_order_key(shape: Any) -> tuple[int, ...]:
     """Sort key ordering shapes by their numeric parts, ascending.
 
     Cubes sort by side; a leading-side mismatch dominates for non-cube shapes,
@@ -61,7 +66,7 @@ def shape_order_key(shape: Any) -> Tuple[int, ...]:
     return shape_parts(shape)
 
 
-def ordered_shapes(shapes: Iterable[Any], *, dedupe: bool = False) -> List[Any]:
+def ordered_shapes(shapes: Iterable[Any], *, dedupe: bool = False) -> list[Any]:
     """``shapes`` in canonical ascending numeric order.
 
     ``dedupe`` removes exact duplicates while preserving the first occurrence;
@@ -70,7 +75,7 @@ def ordered_shapes(shapes: Iterable[Any], *, dedupe: bool = False) -> List[Any]:
     seq = list(shapes)
     if dedupe:
         seen = set()
-        uniq: List[Any] = []
+        uniq: list[Any] = []
         for s in seq:
             if s in seen:
                 continue

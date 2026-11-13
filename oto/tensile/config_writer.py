@@ -52,31 +52,35 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
-from oto.tensile.gates.occupancy import (ldspad_feasible,
-                                         occupancy_feasible)
-from oto.tensile.knob_surface import (DEPRECATED_KEYS as _DEPRECATED_KEYS,
-                                      FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_C_KNOBS,
-                                      FORWARDED_KNOBS as FORWARDED_KNOBS,
-                                      GLOBAL_LOAD_WIDTH_KEYS as GLOBAL_LOAD_WIDTH_KEYS,
-                                      NOT_FORWARDED_KNOBS as NOT_FORWARDED_KNOBS)
-from oto.tensile.patterns import SPELLINGS, TRANSPOSE_MAP as TRANSPOSE_MAP
+from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
+from oto.tensile.knob_surface import DEPRECATED_KEYS as _DEPRECATED_KEYS
+from oto.tensile.knob_surface import FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_C_KNOBS
+from oto.tensile.knob_surface import FORWARDED_KNOBS as FORWARDED_KNOBS
+from oto.tensile.knob_surface import GLOBAL_LOAD_WIDTH_KEYS as GLOBAL_LOAD_WIDTH_KEYS
+from oto.tensile.knob_surface import NOT_FORWARDED_KNOBS as NOT_FORWARDED_KNOBS
+from oto.tensile.patterns import SPELLINGS
+from oto.tensile.patterns import TRANSPOSE_MAP as TRANSPOSE_MAP
 from oto.tensile.shape_order import ordered_shapes
 
 __all__ = [
-    'write_phase_config', 'parse_tensile_shape',
-    'TRANSPOSE_MAP', 'GLOBAL_LOAD_WIDTH_KEYS', 'FORWARDED_GROUP_C_KNOBS',
-    'FORWARDED_KNOBS', 'NOT_FORWARDED_KNOBS',
+    'FORWARDED_GROUP_C_KNOBS',
+    'FORWARDED_KNOBS',
+    'GLOBAL_LOAD_WIDTH_KEYS',
+    'NOT_FORWARDED_KNOBS',
+    'TRANSPOSE_MAP',
+    'parse_tensile_shape',
+    'write_phase_config',
 ]
 
 # ---------------------------------------------------------------- readers
 
-def _pattern_of(label: str, explicit: Optional[str]) -> str:
+def _pattern_of(label: str, explicit: str | None) -> str:
     """Contraction pattern from the explicit field, else from the label.
 
     Why the label fallback exists: shipped reference metadata and deck entries
@@ -91,19 +95,19 @@ def _pattern_of(label: str, explicit: Optional[str]) -> str:
     return ""
 
 
-def _transposes(pattern: str) -> Tuple[bool, bool]:
+def _transposes(pattern: str) -> tuple[bool, bool]:
     """(TransposeA, TransposeB) for a contraction pattern."""
     return TRANSPOSE_MAP.get(pattern, (False, True))          # default NT
 
 
-def _exact_sizes(shapes: List[str]) -> List[List[int]]:
+def _exact_sizes(shapes: list[str]) -> list[list[int]]:
     """Problem sizes as Tensile ``Exact: [M, N, B, K]`` lists."""
     return [[(p := parse_tensile_shape(s))["M"], p["N"], p["B"], p["K"]]
             for s in shapes]
 
 
-def _macro_tile(config: Dict[str, Any]) -> Tuple[Optional[int], Optional[int],
-                                                 Optional[int]]:
+def _macro_tile(config: dict[str, Any]) -> tuple[int | None, int | None,
+                                                 int | None]:
     """(MacroTile0, MacroTile1, DepthU-from-string) from a config.
 
     Explicit MacroTile0/MacroTile1 keys win over the string; DepthU is only ever
@@ -128,7 +132,7 @@ def _macro_tile(config: Dict[str, Any]) -> Tuple[Optional[int], Optional[int],
     return macro_tile0, macro_tile1, depth_u_from_macro
 
 
-def _thread_tile(config: Dict[str, Any]) -> Tuple[int, int]:
+def _thread_tile(config: dict[str, Any]) -> tuple[int, int]:
     """ThreadTile dims from a ``"T0xT1"`` string or a ``[T0, T1]`` list."""
     thread_tile = config.get("ThreadTile")
     tt0, tt1 = 4, 4
@@ -143,7 +147,7 @@ def _thread_tile(config: Dict[str, Any]) -> Tuple[int, int]:
     return tt0, tt1
 
 
-def _hpa_flags(label: str, config: Dict[str, Any]) -> Tuple[bool, bool]:
+def _hpa_flags(label: str, config: dict[str, Any]) -> tuple[bool, bool]:
     """(is_hpa, is_hs_hpa) for a phase.
 
     Case-insensitive: deck labels are uppercase ("HH_HPA_...") while
@@ -162,9 +166,9 @@ def _hpa_flags(label: str, config: Dict[str, Any]) -> Tuple[bool, bool]:
 # --------------------------------------------------------------- assembly
 
 def _problem_type(dtype: str, transpose_a: bool, transpose_b: bool,
-                  is_hpa: bool, is_hs_hpa: bool) -> Dict[str, Any]:
+                  is_hpa: bool, is_hs_hpa: bool) -> dict[str, Any]:
     """The ``ProblemType`` block of a BenchmarkProblems entry."""
-    problem_type: Dict[str, Any] = {
+    problem_type: dict[str, Any] = {
         "OperationType": "GEMM",
         "DataType": dtype,
         "TransposeA": transpose_a,
@@ -181,11 +185,11 @@ def _problem_type(dtype: str, transpose_a: bool, transpose_b: bool,
 
 
 def _fork_thread_macro_workgroup(
-    config: Dict[str, Any], tt0: int, tt1: int,
-    macro_tile0: Optional[int], macro_tile1: Optional[int],
-) -> Dict[str, Any]:
+    config: dict[str, Any], tt0: int, tt1: int,
+    macro_tile0: int | None, macro_tile1: int | None,
+) -> dict[str, Any]:
     """ThreadTile, MacroTile and WorkGroup (with LocalSplitU in element [2])."""
-    fork: Dict[str, Any] = {"ThreadTile": [[tt0, tt1]]}
+    fork: dict[str, Any] = {"ThreadTile": [[tt0, tt1]]}
     # Tensile ForkParameters requires MacroTile: [[M0, M1]] (no DepthU here).
     if macro_tile0 is not None and macro_tile1 is not None:
         fork["MacroTile"] = [[int(macro_tile0), int(macro_tile1)]]
@@ -211,9 +215,9 @@ def _fork_thread_macro_workgroup(
     return fork
 
 
-def _fork_split_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+def _fork_split_knobs(config: dict[str, Any]) -> dict[str, Any]:
     """WorkGroupMapping and GlobalSplitU: explicit > default."""
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     if "WorkGroupMapping" in config:
         fork["WorkGroupMapping"] = [int(config["WorkGroupMapping"])]
     else:
@@ -225,8 +229,8 @@ def _fork_split_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
     return fork
 
 
-def _fork_depth_u(config: Dict[str, Any],
-                  depth_u_from_macro: Optional[int]) -> Dict[str, Any]:
+def _fork_depth_u(config: dict[str, Any],
+                  depth_u_from_macro: int | None) -> dict[str, Any]:
     """DepthU: explicit > from MacroTile string > default."""
     if "DepthU" in config:
         return {"DepthU": [int(config["DepthU"])]}
@@ -235,9 +239,9 @@ def _fork_depth_u(config: Dict[str, Any],
     return {"DepthU": [16]}
 
 
-def _fork_width_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+def _fork_width_knobs(config: dict[str, Any]) -> dict[str, Any]:
     """VectorWidth and the GlobalLoadVectorWidth* keys, when present."""
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     if "VectorWidth" in config:
         fork["VectorWidth"] = [int(config["VectorWidth"])]
     for key in GLOBAL_LOAD_WIDTH_KEYS:
@@ -246,9 +250,9 @@ def _fork_width_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
     return fork
 
 
-def _fork_coalesced_loads(config: Dict[str, Any]) -> Dict[str, Any]:
+def _fork_coalesced_loads(config: dict[str, Any]) -> dict[str, Any]:
     """NumLoadsCoalescedA/B, with the NLCA alias for the A variant."""
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     nlca = config.get("NLCA", config.get("NumLoadsCoalescedA"))
     if nlca is not None:
         fork["NumLoadsCoalescedA"] = [int(nlca)]
@@ -257,14 +261,14 @@ def _fork_coalesced_loads(config: Dict[str, Any]) -> Dict[str, Any]:
     return fork
 
 
-def _fork_prefetch(config: Dict[str, Any]) -> Dict[str, Any]:
+def _fork_prefetch(config: dict[str, Any]) -> dict[str, Any]:
     """PrefetchGlobalRead (int, not bool) and PrefetchLocalRead.
 
     PrefetchGlobalRead is [0,1,2] (Common.py:519) -- it must go as int, not
     bool: bool(2) is True, which Tensile reads as 1, silently collapsing the
     PGR=2 treatment onto PGR=1 (found while preparing the 2026-10-14 run).
     """
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     if "PrefetchGlobalRead" in config:
         fork["PrefetchGlobalRead"] = [int(config["PrefetchGlobalRead"])]
     if "PrefetchLocalRead" in config:
@@ -272,7 +276,7 @@ def _fork_prefetch(config: Dict[str, Any]) -> Dict[str, Any]:
     return fork
 
 
-def _fork_sweep_int_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
+def _fork_sweep_int_knobs(config: dict[str, Any]) -> dict[str, Any]:
     """The sweep deck's int knobs, forwarded when present.
 
     Each of these used to be silently dropped here, so the candidate
@@ -282,7 +286,7 @@ def _fork_sweep_int_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
     Common.py domains (UseSgprForGRO [-1,0,1], FractionalLoad [0,1,2],
     NonTemporalA/B [0,8), the rest plain ints). corpus3 Q-A/Q-B.
     """
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     for key in ("UseSgprForGRO", "InnerUnroll", "MaxOccupancy",
                 "AggressivePerfMode", "FractionalLoad", "NonTemporalA",
                 "NonTemporalB", "NonTemporalC", "NonTemporalD",
@@ -292,16 +296,16 @@ def _fork_sweep_int_knobs(config: Dict[str, Any]) -> Dict[str, Any]:
     return fork
 
 
-def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
-                 macro_tile0: Optional[int], macro_tile1: Optional[int],
-                 depth_u_from_macro: Optional[int]) -> Dict[str, Any]:
+def _fork_params(config: dict[str, Any], tt0: int, tt1: int,
+                 macro_tile0: int | None, macro_tile1: int | None,
+                 depth_u_from_macro: int | None) -> dict[str, Any]:
     """The ``ForkParameters`` list, in a stable order so a config is
     diff-reviewable across runs.
 
     Each block below is a knob that used to be dropped, dropped wrongly, or
     defaulted into contradiction. The comments are the history.
     """
-    fork: Dict[str, Any] = {}
+    fork: dict[str, Any] = {}
     fork.update(_fork_thread_macro_workgroup(config, tt0, tt1,
                                             macro_tile0, macro_tile1))
     fork.update(_fork_split_knobs(config))
@@ -318,8 +322,8 @@ def _fork_params(config: Dict[str, Any], tt0: int, tt1: int,
     return fork
 
 
-def _drop_unsupported(fork_params: Dict[str, Any],
-                      valid_params, not_tensile_param) -> List[str]:
+def _drop_unsupported(fork_params: dict[str, Any],
+                      valid_params, not_tensile_param) -> list[str]:
     """Drop parameter names this Tensile does not know about; return the names.
 
     Tensile's checkParametersAreValid() calls printExit() -- it aborts the whole
@@ -334,7 +338,7 @@ def _drop_unsupported(fork_params: Dict[str, Any],
 
 
 def _global_parameters(schedule_name: str,
-                       num_benchmarks: int) -> Dict[str, Any]:
+                       num_benchmarks: int) -> dict[str, Any]:
     """The fixed ``GlobalParameters`` block. CpuThreads is the only variable."""
     return {
         "MinimumRequiredVersion": "4.4.0",
@@ -365,7 +369,7 @@ def _global_parameters(schedule_name: str,
     }
 
 
-def cpu_threads(config: Optional[Dict[str, Any]] = None) -> int:
+def cpu_threads(config: dict[str, Any] | None = None) -> int:
     """Multi-threaded compilation threads: available CPUs, capped at 16.
 
     Why capped: Tensile's own CpuThreads scales the client build, and a 128-core
@@ -378,8 +382,8 @@ def cpu_threads(config: Optional[Dict[str, Any]] = None) -> int:
 
 # -------------------------------------------------------------- main entry
 
-def _launch_gate_refusal(driver, phase: Dict[str, Any]
-                         ) -> Optional[str]:
+def _launch_gate_refusal(driver, phase: dict[str, Any]
+                         ) -> str | None:
     """CPU legality refusal text, or None when the phase may launch.
 
     Three gates, all CPU-only, all refusing before a config file is written.
@@ -407,37 +411,33 @@ def _launch_gate_refusal(driver, phase: Dict[str, Any]
                             ("occupancy", occupancy_feasible)):
         gate_ok, gate_reason = gate(gate_config)
         if not gate_ok:
-            print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
-                  f"{gate_name} illegal ({gate_reason})")
             return f"{gate_name} illegal: {gate_reason}"
 
     pad_ok, pad_reason = ldspad_feasible(gate_config)
     if not pad_ok:
-        print(f"Skipping {phase.get('phase_id', 'phase_unknown')}: "
-              f"forwarded-knob illegal ({pad_reason})")
         return f"forwarded-knob illegal: {pad_reason}"
     return None
 
 
 def _fork_list_for_phase(
-    config: Dict[str, Any], tt0: int, tt1: int,
-    macro_tile0: Optional[int], macro_tile1: Optional[int],
-    depth_u_from_macro: Optional[int], valid_params, not_tensile_param
-) -> List[Dict[str, Any]]:
+    config: dict[str, Any], tt0: int, tt1: int,
+    macro_tile0: int | None, macro_tile1: int | None,
+    depth_u_from_macro: int | None, valid_params, not_tensile_param
+) -> list[dict[str, Any]]:
     """The ForkParameters list for one phase, with unknown keys removed."""
     fork_params = _fork_params(config, tt0, tt1, macro_tile0, macro_tile1,
                                depth_u_from_macro)
     # Remove deprecated keys, then anything this Tensile does not know.
-    for key in _DEPRECATED_KEYS:
-        fork_params.pop(key, None)
-    for key in _drop_unsupported(fork_params, valid_params, not_tensile_param):
-        print(f"[cfg] dropping parameter {key!r} not supported by this Tensile")
+    for _key in _DEPRECATED_KEYS:
+        fork_params.pop(_key, None)
+    for _key in _drop_unsupported(fork_params, valid_params, not_tensile_param):
+        pass
     return [{k: v} for k, v in fork_params.items()]
 
 
 def _benchmark_group(
-    exact_sizes: List[str], fork_list: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    exact_sizes: list[str], fork_list: list[dict[str, Any]]
+) -> dict[str, Any]:
     """The BenchmarkProblems[0][1] block: the fork list plus the exact sizes."""
     return {
         "InitialSolutionParameters": None,
@@ -459,7 +459,7 @@ def _benchmark_group(
 
 
 def write_phase_config(driver, path: Path,
-                       phase: Dict[str, Any]) -> Tuple[bool, str]:
+                       phase: dict[str, Any]) -> tuple[bool, str]:
     """Write a valid Tensile Top-Level Config (GlobalParameters + BenchmarkProblems).
 
     Args:
@@ -476,7 +476,7 @@ def write_phase_config(driver, path: Path,
         phases still launched Tensile against a config that did not exist, and
         Tensile then failed with its own rejection reason (the GSU/AF0EM gate) -- which looked like a kernel problem and buried the real cause.
     """
-    from oto.runners.driver import NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS
+    from oto.runners.driver import _TENSILE_VALID_PARAMS, NOT_A_TENSILE_PARAM
 
     refusal = _launch_gate_refusal(driver, phase)
     if refusal:
@@ -522,7 +522,7 @@ def write_phase_config(driver, path: Path,
 
 # ---------------------------------------------------------------- shapes
 
-def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
+def parse_tensile_shape(shape_str: str) -> dict[str, int]:
     """
     Parse Tensile shape string into M, N, B, K components.
     Handles formats:
@@ -532,7 +532,7 @@ def parse_tensile_shape(shape_str: str) -> Dict[str, int]:
     """
     result = {"M": 1024, "N": 1024, "B": 1, "K": 1024}
     clean = str(shape_str).strip()
-    
+
     # Check for explicit K specification (e.g. _K4096)
     k_match = re.search(r'[_xX]K(\d+)', clean, re.IGNORECASE)
     if k_match:

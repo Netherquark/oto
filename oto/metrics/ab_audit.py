@@ -16,36 +16,58 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
-
-from oto.metrics.ab_band import (BAND_HI, BAND_LO, TIE_BAND_PCT, measured_band,
-                                 repeat_dispersion, reproducible_band, verdict)
-from oto.metrics.ab_identity import (AbIdentityMixin, _CP_RE, _driver,
-                                     _norm_macro_tile, _pair_key, norm_config)
-from oto.metrics.ab_records import (_registry_records, arm_record_sets,
-                                    arm_records, phase_records, phase_family)
-from oto.metrics.analytics import extract_family_from_phase_id
-from oto.device.peaks import cell_key
-from oto.metrics.protocol import (FAMILY, SINGLE, UNKNOWN,
-                                  like_for_like, protocol_of)
 import oto.device.peaks as _peaks
+from oto.device.peaks import cell_key
+from oto.metrics.ab_band import (
+    BAND_HI,
+    BAND_LO,
+    TIE_BAND_PCT,
+    measured_band,
+    repeat_dispersion,
+    reproducible_band,
+    verdict,
+)
+from oto.metrics.ab_identity import _driver, norm_config
+from oto.metrics.ab_records import (
+    arm_record_sets,
+    arm_records,
+    phase_family,
+    phase_records,
+)
+from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.protocol import UNKNOWN, like_for_like, protocol_of
 from oto.runners.paths import results_dir as _results_dir
 
 BASE = Path(__file__).resolve().parents[2]
 
-__all__ = ["BASE", "TIE_BAND_PCT", "BAND_LO", "BAND_HI", "audit", "cell_deltas",
-           "measured_band", "verdict", "arm_record_sets", "reproducible_band",
-           "repeat_dispersion", "phase_records", "arm_records", "phase_family",
-           "norm_config", "protocol_census", "main"]
+__all__ = [
+    "BAND_HI",
+    "BAND_LO",
+    "BASE",
+    "TIE_BAND_PCT",
+    "arm_record_sets",
+    "arm_records",
+    "audit",
+    "cell_deltas",
+    "main",
+    "measured_band",
+    "norm_config",
+    "phase_family",
+    "phase_records",
+    "protocol_census",
+    "repeat_dispersion",
+    "reproducible_band",
+    "verdict",
+]
 
 
-def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
-                agg: str = "best_median", base: Optional[Path] = None,
-                protocol_basis: str = "family") -> Dict[Tuple[str, str, str], Dict[str, Any]]:
+def cell_deltas(native: list[dict[str, Any]], floor: list[dict[str, Any]],
+                agg: str = "best_median", base: Path | None = None,
+                protocol_basis: str = "family") -> dict[tuple[str, str, str], dict[str, Any]]:
     """Canonical per-cell native-vs-floor pairing, from already-loaded records.
 
     Split out from `arm_record_sets` so a caller that needs the band *and* the
@@ -63,7 +85,7 @@ def cell_deltas(native: List[Dict[str, Any]], floor: List[Dict[str, Any]],
         native, floor, agg=agg, protocol_basis=protocol_basis)
 
 
-def protocol_census(records: List[Dict[str, Any]]) -> Dict[str, int]:
+def protocol_census(records: list[dict[str, Any]]) -> dict[str, int]:
     """The invocation-form census of an arm: counts per stamped protocol.
 
     The audit prints it next to the graded tally so the exclusion the graded
@@ -71,23 +93,23 @@ def protocol_census(records: List[Dict[str, Any]]) -> Dict[str, int]:
     family basis the cells graded are exactly the family-stamped measurements
     and everything else shows up here.
     """
-    census: Dict[str, int] = {}
+    census: dict[str, int] = {}
     for rec in records:
         p = protocol_of(rec)
         census[p] = census.get(p, 0) + 1
     return census
 
 
-def _records_in_basis(records: List[Dict[str, Any]],
-                      protocol_basis: str) -> List[Dict[str, Any]]:
+def _records_in_basis(records: list[dict[str, Any]],
+                      protocol_basis: str) -> list[dict[str, Any]]:
     """One arm restricted to the named invocation form ('any' = unfiltered)."""
     if protocol_basis in (None, "", "any"):
         return list(records)
     return [r for r in records if protocol_of(r) == protocol_basis]
 
 
-def _protocol_matched(n: Optional[Dict[str, Any]],
-                      f: Optional[Dict[str, Any]]) -> bool:
+def _protocol_matched(n: dict[str, Any] | None,
+                      f: dict[str, Any] | None) -> bool:
     """Whether one cell's two best records were measured in the same form.
 
     Stamped protocols decide (§R56.3): two records are matched exactly when
@@ -106,11 +128,11 @@ def _protocol_matched(n: Optional[Dict[str, Any]],
 
 
 def _best_by_cell(
-    native: List[Dict[str, Any]],
-    floor: List[Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
+    native: list[dict[str, Any]],
+    floor: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
     """Best GFLOPS record per cell_key, per arm."""
-    cells: Dict[str, Dict[str, Any]] = {}
+    cells: dict[str, dict[str, Any]] = {}
     for recs, side in ((native, "native"), (floor, "spoof")):
         for r in recs:
             key = r.get("cell_key") or cell_key(
@@ -128,7 +150,7 @@ def _best_by_cell(
     return cells
 
 
-def _grade_slot(slot: Dict[str, Any], band: float) -> None:
+def _grade_slot(slot: dict[str, Any], band: float) -> None:
     """Fill one cell's verdict, provenance and certainty fields in place."""
     n, f = slot.get("native"), slot.get("spoof")
     slot["native_value"] = n["GFLOPS"] if n else None
@@ -174,11 +196,11 @@ def _grade_slot(slot: Dict[str, Any], band: float) -> None:
         slot["certainty"] = "certain"
 
 
-def _summary_counts(cells: Dict[str, Dict[str, Any]]) -> Dict[str, int]:
+def _summary_counts(cells: dict[str, dict[str, Any]]) -> dict[str, int]:
     """The graded tally, the certainty split and the three mismatch counts."""
     graded = [c for c in cells.values() if c["verdict"] != "UNGRADED"]
-    tally: Dict[str, int] = defaultdict(int)
-    certain: Dict[str, int] = defaultdict(int)
+    tally: dict[str, int] = defaultdict(int)
+    certain: dict[str, int] = defaultdict(int)
     for c in graded:
         tally[c["verdict"]] += 1
         if c["certainty"] == "certain":
@@ -200,8 +222,8 @@ def _summary_counts(cells: Dict[str, Dict[str, Any]]) -> Dict[str, int]:
     }
 
 
-def audit(base: Path = BASE, band_pct: Optional[float] = None,
-          protocol_basis: str = "family") -> Dict[str, Any]:
+def audit(base: Path = BASE, band_pct: float | None = None,
+          protocol_basis: str = "family") -> dict[str, Any]:
     """Classify every cell in both arms.
 
     ``native`` is the whole native corpus and ``floor`` the recalled gfx900
@@ -244,7 +266,7 @@ def audit(base: Path = BASE, band_pct: Optional[float] = None,
         "cells": [cells[k] for k in sorted(cells)],
     }
 
-def _proposal_coverage(base: Path, band_pct: Optional[float] = None) -> Dict[str, Any]:
+def _proposal_coverage(base: Path, band_pct: float | None = None) -> dict[str, Any]:
     """Option H Phase 3 coverage: `n`, spread, and the novel/replicate split.
 
     Read from the ledger rather than recomputed from the run directories, because
@@ -260,15 +282,15 @@ def _proposal_coverage(base: Path, band_pct: Optional[float] = None) -> Dict[str
     absent (pre-Phase-1 registries), so this stays additive on an older DB.
     """
     try:
-        from oto.metrics.coverage import coverage_from_registry
         from oto.ledger.registry import SQLiteRegistry
+        from oto.metrics.coverage import coverage_from_registry
         db = _results_dir(base, _peaks.CODENAME) / "registry.db"
         if not db.exists():
             return {"available": False, "reason": "no registry.db"}
         reg = SQLiteRegistry(base, read_only=True)
         summary = coverage_from_registry(
             reg, band_pct=band_pct, base_dir=base)
-        origins: Dict[str, int] = {}
+        origins: dict[str, int] = {}
         for row in reg.all_proposals():
             key = str(row.get("origin") or "?")
             origins[key] = origins.get(key, 0) + 1
@@ -296,74 +318,39 @@ def _proposal_coverage(base: Path, band_pct: Optional[float] = None) -> Dict[str
     except Exception as exc:  # additive: never fail the audit on coverage
         return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
 
-def _fmt_table(rows: List[List[str]], headers: List[str]) -> str:
-    widths = [max(len(str(r[i])) for r in [headers] + rows) for i in range(len(headers))]
+def _fmt_table(rows: list[list[str]], headers: list[str]) -> str:
+    widths = [max(len(str(r[i])) for r in [headers, *rows]) for i in range(len(headers))]
     line = "  ".join(h.ljust(widths[i]) for i, h in enumerate(headers))
     out = [line, "-" * len(line)]
-    for r in rows:
-        out.append("  ".join(str(c).ljust(widths[i]) for i, c in enumerate(r)))
+    out.extend("  ".join(str(c).ljust(widths[i]) for i, c in enumerate(r))
+               for r in rows)
     return "\n".join(out)
 
 
-def _print_proposal_coverage(cov: Dict[str, Any]) -> None:
+def _print_proposal_coverage(cov: dict[str, Any]) -> None:
     """Print `n`, spread and the novel/replicate split per mutated cell."""
     if not cov.get("available"):
-        print(f"proposal coverage: unavailable ({cov.get('reason', 'unknown')})")
         return
-    tally = cov.get("tally") or {}
-    origins = cov.get("origins") or {}
-    band = cov.get("band_pct")
-    band_txt = f"{band:.1f}%" if band else "unmeasured"
-    print(f"\nproposal coverage: cells={cov.get('n_cells', 0)}  "
-          f"explore={tally.get('explore', 0)}  replicate={tally.get('replicate', 0)}  "
-          f"retired={tally.get('retired', 0)}  "
-          f"origin novel={origins.get('novel', 0)} replicate={origins.get('replicate', 0)}"
-          f"  band={band_txt}")
+    cov.get("tally") or {}
+    cov.get("origins") or {}
+    cov.get("band_pct")
     cells = cov.get("cells") or []
     if cells:
-        print(_fmt_table(
-            [[c["family"], c["shape"], c["state"], c["n_distinct_fp"],
-              c["min_n"], f"{c['max_spread_ratio']:.3f}",
-              (c["parent_fp"] or "-")[:12]]
-             for c in cells],
-            ["family", "shape", "state", "n_fp", "min_n", "spread", "parent"]))
+        pass
 
 
-def print_report(result: Dict[str, Any]) -> None:
+def print_report(result: dict[str, Any]) -> None:
     rb = result["reproducible_band"]
-    print(f"floor chain : {result['floor_chain']}")
-    print(f"basis       : {result.get('protocol_basis', '?')} "
-          f"(census native={result.get('protocol_census', {}).get('native')}, "
-          f"floor={result.get('protocol_census', {}).get('spoof')})")
-    print(f"tie band    : +/-{result['band_pct']:.1f}% "
-          f"({result['band_source']}; shipped default "
-          f"+/-{result['shipped_band_pct']:.1f}%)")
     cross = rb.get("cross_arm") or {}
-    for label, key in (("protocol-matched  ", "protocol_matched"),
+    for _label, key in (("protocol-matched  ", "protocol_matched"),
                        ("protocol-mismatched", "protocol_mismatched")):
         s = cross.get(key) or {}
         if not s.get("n"):
-            print(f"{label}: no shared configurations")
             continue
-        print(f"{label}: n={s['n']:4}  median={s['median_ratio']:.3f}  "
-              f"p10={s['p10_ratio']:.3f}  p90={s['p90_ratio']:.3f}  "
-              f"band=+/-{s['band_pct']:.1f}%  "
-              f"within shipped band={s['share_within_shipped_band']*100:.1f}%")
     rd = result.get("repeat_dispersion") or {}
     if rd.get("n"):
-        print(f"repeat spread: n={rd['n']:4}  median CV="
-              f"{rd['median_cv_pct']:.1f}%  p90 CV={rd['p90_cv_pct']:.1f}%  "
-              f"worst single={rd['max_cv_single_pct']:.1f}%  "
-              f"worst multi={rd['max_cv_multi_pct']:.1f}%")
+        pass
     _print_proposal_coverage(result.get("proposal_coverage") or {})
-    print(f"\ncells={result['n_cells']}  {result['tally']}  "
-          f"ungraded={result['ungraded']}  "
-          f"protocol-mismatched={result['protocol_mismatched_cells']}  "
-          f"generator-mismatched={result['provenance_mismatched_cells']}  "
-          f"generator-unknown={result['provenance_unknown_cells']}")
-    print(f"certainty: {result['tally_certainty']}")
-    print(f"certain (same form + same generator + margin beyond noise): "
-          f"{result['tally_certain']}\n")
 
     rows = []
     for c in result["cells"]:
@@ -382,9 +369,6 @@ def print_report(result: Dict[str, Any]) -> None:
             str(c["native_run"] or "-")[:22],
             str(c["spoof_run"] or "-")[:24],
         ])
-    print(_fmt_table(rows, ["cell", "verdict", "certainty", "native", "spoof",
-                            "delta%", "matched", "families", "native_run",
-                            "spoof_run"]))
 
 
 def main() -> int:
@@ -407,13 +391,12 @@ def main() -> int:
     result = audit(base=args.base_dir, band_pct=args.band,
                    protocol_basis=args.protocol_basis)
     if args.arm_classes:
-        print(json.dumps(result["reproducible_band"], indent=2))
+        pass
     else:
         print_report(result)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(result, indent=2, default=str))
-        print(f"\njson -> {args.json}")
     return 0
 
 

@@ -9,12 +9,12 @@ for the consumer-facing re-exports.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-from oto.harness._rows_core import PLAN_BATCH, PATTERNS
+from oto.harness._rows_core import PATTERNS, PLAN_BATCH
 
-_TIE_ADAPT: List[Tuple[str, str, str, str, int, int,
-                       List[Tuple[Dict[str, Any], str]]]] = [
+_TIE_ADAPT: list[tuple[str, str, str, str, int, int,
+                       list[tuple[dict[str, Any], str]]]] = [
     # SS:512-1365 winner; SS:2048/4096 use the DepthU-16 variant below.
     ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, [
         ({"NonTemporalA": 1}, "NonTemporalA (stream past the 1 MiB L2)"),
@@ -124,7 +124,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _variants in _TIE_ADAPT:
 # row lands on the geometry that actually ties. GlobalLoadVectorWidth is left
 # implicit, as in `_TIE_ADAPT`: Tensile defaults it to VectorWidth, which is what
 # every measured winner recorded.
-_PROBE_AXES: List[Tuple[Dict[str, Any], str]] = [
+_PROBE_AXES: list[tuple[dict[str, Any], str]] = [
     ({"UseSgprForGRO": 1}, "UseSgprForGRO (0 of 1137 phases ever set it)"),
     ({"PrefetchLocalRead": 0}, "PrefetchLocalRead=0 (LDS read-prefetch relief)"),
     ({"LdsPadA": 4, "LdsPadB": 4}, "pad both LDS rows to 8 B"),
@@ -135,7 +135,7 @@ _PROBE_AXES: List[Tuple[Dict[str, Any], str]] = [
 #: measured winner of every cell that currently ties the floor. `sides` is
 #: documentation: a row is offered across its whole family, and `_offer_row`
 #: decides which of those sizes its element-multiple assertions accept.
-_TIE_WINNERS: List[Tuple[str, str, str, str, int, int, Tuple[int, ...]]] = [
+_TIE_WINNERS: list[tuple[str, str, str, str, int, int, tuple[int, ...]]] = [
     ("SS", "Ailk_Bjlk", "128x128x8", "8x8", 4, 8, (768, 1000, 1024, 1365)),
     ("SS", "Ailk_Bjlk", "128x128x16", "8x8", 4, 16, (2048, 4096)),
     ("CC", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, (512, 1024, 2048)),
@@ -214,7 +214,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _sides in _TIE_WINNERS:
 # its largest legal tile is 64x64 -- also measured. The 1118.7 GFLOPS CC bar and
 # the 98.6 GFLOPS ZZ bar are therefore unreachable by construction, not by
 # tuning; `<codename>_theoretical_limits.md` §5.1 owns that conclusion.
-_FRONTIER: Dict[str, Tuple[str, Tuple[Tuple[str, str, int, int, Dict[str, Any]], ...]]] = {
+_FRONTIER: dict[str, tuple[str, tuple[tuple[str, str, int, int, dict[str, Any]], ...]]] = {
     "SS": ("float32, DU8 (the deepest depth with (m+n)*8*4 <= 16384 above 128 wide)",
            (("256x128x8", "8x8", 2, 8, {}),
             ("128x256x8", "8x8", 2, 8, {}),
@@ -251,7 +251,7 @@ _FRONTIER: Dict[str, Tuple[str, Tuple[Tuple[str, str, int, int, Dict[str, Any]],
 #: edge predication) and not geometry. `8` is the largest value every measured
 #: side satisfies except 1365, which `_shapes_satisfying_assertions` then drops
 #: from the row instead of silently measuring a false assertion.
-_AF_TILES: Tuple[Tuple[str, str, str, int, int], ...] = (
+_AF_TILES: tuple[tuple[str, str, str, int, int], ...] = (
     ("SS", "128x128x8", "8x8", 4, 8),
     ("SS", "128x128x16", "8x8", 4, 16),
     ("HH", "128x128x16", "8x8", 8, 16),
@@ -261,7 +261,7 @@ _AF_TILES: Tuple[Tuple[str, str, str, int, int], ...] = (
     ("HH_HPA", "64x128x16", "4x8", 4, 16),
     ("HS_HPA", "128x64x16", "8x4", 4, 16),
 )
-_AF_LEVELS: Tuple[int, ...] = (2, 4, 8)
+_AF_LEVELS: tuple[int, ...] = (2, 4, 8)
 
 for _fam, (_why, _tiles) in _FRONTIER.items():
     for _tile, _tt, _vw, _du, _extra in _tiles:
@@ -286,7 +286,7 @@ for _fam, _tile, _tt, _vw, _du in _AF_TILES:
 #: the sides no power-of-two tile divides and which is otherwise at 98 % of its
 #: peak. DD's winner is here rather than in `_FRONTIER` because DD has no legal
 #: tile above 16384 -- it is the only row in this batch that reaches 1365.
-_WGM_ROWS: Tuple[Tuple[str, str, str, int, int, Dict[str, Any]], ...] = (
+_WGM_ROWS: tuple[tuple[str, str, str, int, int, dict[str, Any]], ...] = (
     *((fam, tile, tt, vw, du, extra)
       for fam in ("SS", "HH")
       for tile, tt, vw, du, extra in _FRONTIER[fam][1]),
@@ -317,8 +317,8 @@ for _fam, _tile, _tt, _vw, _du, _extra in _WGM_ROWS:
 #: `_occupancy_limit_check`). The control is not "bad", it is impossible on
 #: this part: at 256x128 the only thread tile that fits 1024 threads needs
 #: more than 64 VGPRs/thread. HH's control survives (H 8x4 emits 57).
-_FRONTIER_THREAD_CONTROLS: Tuple[
-        Tuple[str, str, str, int, int, Dict[str, Any]], ...] = (
+_FRONTIER_THREAD_CONTROLS: tuple[
+        tuple[str, str, str, int, int, dict[str, Any]], ...] = (
     ("HH", "256x128x16", "8x4", 4, 16, {"AssertFree1ElementMultiple": 2}),
     ("HH", "128x256x16", "4x8", 4, 16, {"AssertFree0ElementMultiple": 2}),
 )
@@ -434,7 +434,7 @@ for _fam, _tile, _tt, _vw, _du in (
 #: The winner geometry per family, as the corpus has measured it (the cell's
 #: best seed-median geometry; `kernel_db.json`). These are the geometries the
 #: untried axes are worth probing on.
-_R47_WINNERS: Tuple[Tuple[str, str, str, int, int], ...] = (
+_R47_WINNERS: tuple[tuple[str, str, str, int, int], ...] = (
     ("SS", "128x128x8", "8x8", 4, 8),
     ("HH", "128x128x16", "8x8", 8, 16),
     ("DD", "64x64x8", "4x4", 2, 8),
@@ -496,7 +496,7 @@ for _fam, _tile, _tt, _vw, _du in _R47_WINNERS:
 #: map -- the classic load structure pins the vector width per thread tile
 #: (MT1 * GLVW == TT0 * TT1 * DepthU), so some of them only exist at the
 #: lower width.
-_R47_SMALL_CELLS: Tuple[Tuple[str, str, str, int, int], ...] = (
+_R47_SMALL_CELLS: tuple[tuple[str, str, str, int, int], ...] = (
     ("SS", "96x96x16", "4x6", 2, 16),
     ("SS", "96x96x16", "6x4", 2, 16),
     ("SS", "96x96x16", "8x6", 2, 16),

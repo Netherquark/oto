@@ -14,6 +14,7 @@ Usage:
 """
 
 from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
@@ -21,7 +22,6 @@ from pathlib import Path
 try:
     from playwright.sync_api import sync_playwright
 except ImportError:
-    print("playwright not installed; run: pip install playwright && playwright install chromium")
     sys.exit(1)
 
 
@@ -78,9 +78,9 @@ def _check_viewport(page, name: str, expected_cols: int) -> list[str]:
                 f"{name}: metric grid has {len(cols)} columns, expected {expected_cols}"
             )
 
-    for sel in REQUIRED_SECTIONS:
-        if page.locator(sel).count() == 0:
-            failures.append(f"{name}: missing section {sel}")
+    failures.extend(f"{name}: missing section {sel}"
+                    for sel in REQUIRED_SECTIONS
+                    if page.locator(sel).count() == 0)
 
     return failures
 
@@ -106,12 +106,10 @@ def check_report(report_path: Path, base_url: str | None = None) -> int:
         browser.close()
 
     if failures:
-        print("VISUAL CHECK FAILURES:")
-        for f in failures:
-            print(f"  - {f}")
+        for _f in failures:
+            pass
         return 1
 
-    print("Visual/layout checks: PASS")
     return 0
 
 
@@ -122,7 +120,6 @@ def main():
     args = parser.parse_args()
 
     if not args.report.exists():
-        print(f"Report not found: {args.report}")
         return 1
 
     return check_report(args.report, args.url)

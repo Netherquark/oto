@@ -18,28 +18,34 @@ from __future__ import annotations
 import csv
 import re
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Set
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+import oto.device.peaks as _peaks
+from oto import yamlio
+
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
-
-from oto.device.peaks import (FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES,
-                              PEAK_GFLOPS, REALISTIC_CEILINGS,
-                              DTYPE_TO_FAMILY, cube_side,
-                              family_from_kernel_name, kernel_typecode)
+from oto.device.peaks import FAMILY_DTYPE_CHAR, PEAK_GFLOPS, REALISTIC_CEILINGS
 from oto.metrics.ab_delta import ABDeltaMixin
 from oto.metrics.cell_status import CellStatusMixin
-from oto.metrics.family_attribution import (FAMILY_TO_DTYPE,
-                                            extract_family_from_phase_id,
-                                            resolve_cell_family)
+from oto.metrics.family_attribution import (
+    FAMILY_TO_DTYPE,
+    extract_family_from_phase_id,
+    resolve_cell_family,
+)
 from oto.metrics.policy import aggregate_cell
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 
-__all__ = ["AnalyticsEngine", "CellAnalytics", "extract_family_from_phase_id",
-           "resolve_cell_family", "FAMILY_TO_DTYPE", "CLOCK_MIN_COVERAGE"]
+__all__ = [
+    "CLOCK_MIN_COVERAGE",
+    "FAMILY_TO_DTYPE",
+    "AnalyticsEngine",
+    "CellAnalytics",
+    "extract_family_from_phase_id",
+    "resolve_cell_family",
+]
 
 # Minimum share of an arm's samples that must carry a real per-phase clock
 # before a clock-adjusted statistic is trusted for that cell. Below this the
@@ -72,7 +78,7 @@ class CellAnalytics:
         family: str = "",
         cv: float = 0.0,
         source_run: str = "",
-        seeds: Optional[List[float]] = None
+        seeds: list[float] | None = None
     ):
         self.dtype = dtype
         self.shape = shape
@@ -102,13 +108,12 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         self.results_dir = _results_dir(self.base_dir, _peaks.CODENAME)
         self._phases_cache = None
 
-    def _load_phases_manifest(self) -> List[Dict[str, Any]]:
+    def _load_phases_manifest(self) -> list[dict[str, Any]]:
         """Load and cache phases.yaml manifest."""
         if self._phases_cache is None:
             phases_path = self.base_dir / "phases.yaml"
             if phases_path.exists():
-                import yaml
-                with open(phases_path, 'r') as f:
+                with open(phases_path) as f:
                     self._phases_cache = yamlio.load_yaml_text(f.read()) or []
             else:
                 self._phases_cache = []
@@ -170,16 +175,15 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         if not csv_path.exists():
             return 0
         try:
-            with open(csv_path, "r") as f:
+            with open(csv_path) as f:
                 reader = csv.DictReader(f)
                 if not reader.fieldnames:
                     return 0
                 return sum(1 for _ in reader)
-        except Exception as e:
-            print(f"Error counting rows in CSV {csv_path}: {e}")
+        except Exception:
             return 0
 
-    def read_column(self, csv_path: Path, column: str) -> List[float]:
+    def read_column(self, csv_path: Path, column: str) -> list[float]:
         """Every value of one named column, as floats, unfiltered.
 
         The single canonical place a raw named column is read. `WinnerFreq` is the
@@ -193,11 +197,11 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         Values that cannot be parsed as floats are skipped rather than coerced to
         0.0, so a corrupt row cannot be reported as a measured zero.
         """
-        out: List[float] = []
+        out: list[float] = []
         if not Path(csv_path).exists():
             return out
         try:
-            with open(csv_path, "r") as f:
+            with open(csv_path) as f:
                 reader = csv.DictReader(f)
                 if not reader.fieldnames:
                     return out
@@ -215,7 +219,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
             return out
         return out
 
-    def winner_freq(self, csv_paths: Sequence[Path]) -> Dict[str, Any]:
+    def winner_freq(self, csv_paths: Sequence[Path]) -> dict[str, Any]:
         """WinnerFreq summary over one or more benchmark CSVs.
 
         Returns `{"max": float|None, "positive": bool, "n": int}`. Observed, never
@@ -223,7 +227,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         still functional, which is why `positive` is reported alongside `max`
         rather than folded into an outcome.
         """
-        values: List[float] = []
+        values: list[float] = []
         for path in csv_paths or ():
             values.extend(self.read_column(Path(path), "WinnerFreq"))
         if not values:
@@ -231,28 +235,28 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         return {"max": max(values), "positive": any(v > 0 for v in values),
                 "n": len(values)}
 
-    def load_benchmark_csv(self, csv_path: Path) -> List[Dict[str, Any]]:
+    def load_benchmark_csv(self, csv_path: Path) -> list[dict[str, Any]]:
         """Load a Tensile benchmark CSV; strip whitespace, extract GFlops."""
         records = []
         if not csv_path.exists():
             return records
         try:
-            with open(csv_path, "r") as f:
+            with open(csv_path) as f:
                 reader = csv.DictReader(f)
                 if not reader.fieldnames:
                     return records
                 reader.fieldnames = [h.strip() for h in reader.fieldnames]
                 raw_rows = list(reader)
-                
+
             kern_cols = [h for h in reader.fieldnames if "Cijk" in h or "MT" in h]
-            
+
             for row in raw_rows:
                 clean_row = {k.strip(): v.strip() for k, v in row.items() if k and v}
                 size_i = clean_row.get("SizeI", "1024")
                 size_j = clean_row.get("SizeJ", "1024")
                 size_l = clean_row.get("SizeL", "1024")
                 shape_str = f"{size_i}x{size_j}x{size_l}"
-                
+
                 # If Tensile kernel column exists, extract each kernel's GFlops
                 if kern_cols:
                     for kc in kern_cols:
@@ -282,15 +286,15 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
                         clean_row["shape"] = shape_str
                         clean_row["ProblemType"] = shape_str
                         records.append(clean_row)
-        except Exception as e:
-            print(f"Error reading CSV {csv_path}: {e}")
+        except Exception:
+            pass
         return records
 
     def aggregate_by_cell(
         self,
-        records: List[Dict[str, Any]],
-        dtype_override: Optional[str] = None
-    ) -> Dict[Tuple[str, str, str], List[float]]:
+        records: list[dict[str, Any]],
+        dtype_override: str | None = None
+    ) -> dict[tuple[str, str, str], list[float]]:
         """
         Aggregate benchmark records by (dtype, shape, config_fp).
 
@@ -313,9 +317,9 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
 
     def aggregate_by_cell_typecode(
         self,
-        records: List[Dict[str, Any]],
+        records: list[dict[str, Any]],
         phase_family: str = ""
-    ) -> Dict[Tuple[str, str, str, str], List[float]]:
+    ) -> dict[tuple[str, str, str, str], list[float]]:
         """Aggregate benchmark records by (dtype, shape, fp, family) with the
         typecode-first family filter.
 
@@ -347,8 +351,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         dtype: str,
         shape: str,
         fp: str,
-        seeds: List[float],
-        ceiling_gflops: Optional[float] = None,
+        seeds: list[float],
+        ceiling_gflops: float | None = None,
         red_threshold_pct: float = 50.0,
         family: str = "",
         source_run: str = ""

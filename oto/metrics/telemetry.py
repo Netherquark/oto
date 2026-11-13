@@ -11,10 +11,9 @@ starts a sampler (oto.runners.benchmark).
 Public API: TelemetrySampler, HEADER.
 """
 
-import time
 import threading
+import time
 from pathlib import Path
-from typing import Optional, Dict
 
 # Header is the schema descriptor; CSV consumers use csv.DictReader (name-keyed).
 HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
@@ -25,7 +24,7 @@ class TelemetrySampler:
         self.log_path = Path(log_path)
         self.interval_s = interval_s
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._fh = None
         self._current_phase = ""
         self._warned_missing_busy = False
@@ -63,7 +62,8 @@ class TelemetrySampler:
 
     @staticmethod
     def _parse_dpm(path: Path) -> int:
-        if not path or not path.is_file(): return 0
+        if not path or not path.is_file():
+            return 0
         try:
             for line in path.read_text().splitlines():
                 if "*" in line:
@@ -75,8 +75,9 @@ class TelemetrySampler:
         return 0
 
     @staticmethod
-    def _read_int(path: Optional[Path], default: int = 0) -> int:
-        if not path or not path.is_file(): return default
+    def _read_int(path: Path | None, default: int = 0) -> int:
+        if not path or not path.is_file():
+            return default
         try:
             return int(path.read_text().strip())
         except Exception:
@@ -86,7 +87,7 @@ class TelemetrySampler:
         """Tag subsequent samples with the active phase ('' = between phases)."""
         self._current_phase = phase_id or ""
 
-    def sample_row(self) -> Dict[str, object]:
+    def sample_row(self) -> dict[str, object]:
         now = time.time()
         if not self.device_dir:
             return {"ts": now, "sclk": 0, "mclk": 0, "pwr": 0, "temp": 0, "busy": 0, "vram_u": 0, "vram_t": 0, "phase": ""}
@@ -94,8 +95,6 @@ class TelemetrySampler:
             busy = self._read_int(self.device_dir / "gpu_busy_percent", 0)
         else:
             if not self._warned_missing_busy:
-                print(f"[telemetry] WARNING: no gpu_busy_percent at "
-                      f"{self.device_dir / 'gpu_busy_percent'} — busy reads 0.")
                 self._warned_missing_busy = True
             busy = 0
 
@@ -151,9 +150,6 @@ class TelemetrySampler:
         target = self._resolve_log_path()
         if target != self.log_path:
             self.log_path = target
-            print(f"[telemetry] existing CSV has an older schema; "
-                  f"writing per-phase telemetry to {target.name} instead "
-                  f"(previous file left intact).")
         lines = self.log_path.read_text().splitlines() if self.log_path.exists() else []
         header_missing = not lines or not lines[0].startswith("timestamp")
         if header_missing:

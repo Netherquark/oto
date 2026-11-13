@@ -9,9 +9,10 @@ module imports the other.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
-def tile_dims(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int]]:
+
+def tile_dims(config: dict[str, Any]) -> tuple[int, int, int, int] | None:
     """(MT0, MT1, TT0, TT1) from MacroTile/ThreadTile, or None if unusable.
 
     Args:
@@ -39,7 +40,7 @@ def tile_dims(config: Dict[str, Any]) -> Optional[Tuple[int, int, int, int]]:
     return mt_parts[0], mt_parts[1], tt_parts[0], tt_parts[1]
 
 
-def dtype_char(config: Dict[str, Any]) -> str:
+def dtype_char(config: dict[str, Any]) -> str:
     """Dtype char for a config, or "" when it cannot be determined.
 
     Why: a wrong guess would pick the wrong VGPR weight (Z is 8, S is 1) and

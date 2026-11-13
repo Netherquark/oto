@@ -12,10 +12,9 @@ Public API: MutatorOutcomesMixin (classify_outcome, _per_cell_medians).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 from oto.metrics.analytics import AnalyticsEngine
-
 
 #: Outcome vocabulary. Terminal values may only be written to a pending row, and
 #: the set of them is the classifier's contract with the mutator.
@@ -38,8 +37,8 @@ class MutatorOutcomesMixin:
 
 
 def _per_cell_medians(analytics: AnalyticsEngine,
-                      records: List[Dict[str, Any]],
-                      dtype_override: Optional[str] = None) -> Dict[tuple, float]:
+                      records: list[dict[str, Any]],
+                      dtype_override: str | None = None) -> dict[tuple, float]:
     """Median throughput per `(dtype, shape)` for one phase's records.
 
     Uses the same `aggregate_by_cell` + `aggregate_cell` path as the report, so
@@ -53,7 +52,7 @@ def _per_cell_medians(analytics: AnalyticsEngine,
     in the CSV, exactly as `ab_audit.phase_records` already handles.
     """
     from oto.metrics.policy import aggregate_cell
-    out: Dict[tuple, float] = {}
+    out: dict[tuple, float] = {}
     try:
         cell_map = analytics.aggregate_by_cell(records,
                                                dtype_override=dtype_override)
@@ -67,7 +66,7 @@ def _per_cell_medians(analytics: AnalyticsEngine,
     return out
 
 
-def _empty_detail(csv_count: int) -> Dict[str, Any]:
+def _empty_detail(csv_count: int) -> dict[str, Any]:
     """The mutable detail dict a verdict carries, in its canonical key order."""
     return {
         "csv_count": csv_count,
@@ -85,10 +84,10 @@ def _empty_detail(csv_count: int) -> Dict[str, Any]:
 
 def _load_records(
     analytics: AnalyticsEngine,
-    csvs: List[Path]
-) -> Tuple[List[Dict[str, Any]], int]:
+    csvs: list[Path]
+) -> tuple[list[dict[str, Any]], int]:
     """Every loader-accepted record, and the raw row count, across `csvs`."""
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     rows = 0
     for csv_path in csvs:
         records.extend(analytics.load_benchmark_csv(csv_path))
@@ -96,7 +95,7 @@ def _load_records(
     return records, rows
 
 
-def _median(values: List[float]) -> float:
+def _median(values: list[float]) -> float:
     """Median of `values`, averaging the two middles on an even count."""
     values = sorted(values)
     mid = len(values) // 2
@@ -104,8 +103,8 @@ def _median(values: List[float]) -> float:
 
 
 def _record_winner_freq(analytics: AnalyticsEngine,
-                        csvs: List[Path],
-                        detail: Dict[str, Any]) -> None:
+                        csvs: list[Path],
+                        detail: dict[str, Any]) -> None:
     """Record WinnerFreq alongside the verdict, as H.3.8 requires.
 
     It is observed, never decisive: a kernel that ran but never won its own
@@ -124,9 +123,9 @@ def _record_winner_freq(analytics: AnalyticsEngine,
 
 def _apply_slow_bars(analytics: AnalyticsEngine,
                      phase_dir: Path,
-                     records: List[Dict[str, Any]],
-                     slow_bars: Dict[tuple, Dict[str, Any]],
-                     detail: Dict[str, Any]) -> bool:
+                     records: list[dict[str, Any]],
+                     slow_bars: dict[tuple, dict[str, Any]],
+                     detail: dict[str, Any]) -> bool:
     """Apply the per-cell reference bars; True when *every* measured cell is slow.
 
     `slow_bars` are per-cell bars from `coverage.reference_thresholds`, each
@@ -149,7 +148,7 @@ def _apply_slow_bars(analytics: AnalyticsEngine,
     except Exception:
         dtype = None
     per_cell = _per_cell_medians(analytics, records, dtype_override=dtype)
-    judged: List[tuple] = []
+    judged: list[tuple] = []
     unmatched = 0
     for cell, med in sorted(per_cell.items()):
         bar = slow_bars.get(cell)
@@ -170,8 +169,8 @@ def _apply_slow_bars(analytics: AnalyticsEngine,
 def classify_outcome(
     phase_dir: Path,
     analytics: AnalyticsEngine,
-    slow_threshold: Optional[float] = None,
-    slow_bars: Optional[Dict[tuple, Dict[str, Any]]] = None,
+    slow_threshold: float | None = None,
+    slow_bars: dict[tuple, dict[str, Any]] | None = None,
 ) -> tuple:
     """Decide what a candidate did, from its on-disk output alone.
 

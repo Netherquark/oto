@@ -29,8 +29,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import oto.runners.cli  # noqa: E402
-from oto.runners.cli import TensileDriver  # noqa: E402
+from oto.runners.cli import TensileDriver
 
 
 class _FakeAnalytics:
@@ -47,7 +46,7 @@ def make_driver(tmp: Path) -> TensileDriver:
     """A driver whose only live logic is the CSV glob + record loop."""
     drv = TensileDriver.__new__(TensileDriver)
     drv.run_dir = tmp
-    drv.load_phases_manifest = lambda: []
+    drv.load_phases_manifest = list
     drv.analytics = _FakeAnalytics()
     return drv
 
@@ -71,8 +70,8 @@ class TestAbRecordsProbeGlob(unittest.TestCase):
             drv = make_driver(run_dir)
             # Pre-fix this raised TypeError before the loop body ever ran.
             native, spoof = drv._ab_records_from_csv(run_dir, force_arm="native")
-            self.assertEqual(native, [])
-            self.assertEqual(spoof, [])
+            assert native == []
+            assert spoof == []
 
     def test_probe_only_dir_scans(self):
         """The new capability: a run dir with no phase_* dirs still works."""
@@ -81,13 +80,13 @@ class TestAbRecordsProbeGlob(unittest.TestCase):
             write_csv(run_dir, "probe_s1_xyz789")
             drv = make_driver(run_dir)
             native, spoof = drv._ab_records_from_csv(run_dir, force_arm="native")
-            self.assertEqual((native, spoof), ([], []))
+            assert (native, spoof) == ([], [])
 
     def test_empty_run_dir_returns_empty(self):
         with tempfile.TemporaryDirectory() as td:
             drv = make_driver(Path(td))
             native, spoof = drv._ab_records_from_csv(Path(td), force_arm="native")
-            self.assertEqual((native, spoof), ([], []))
+            assert (native, spoof) == ([], [])
 
 
 if __name__ == "__main__":

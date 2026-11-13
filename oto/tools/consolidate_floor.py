@@ -13,13 +13,13 @@ import shutil
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-from oto.metrics.ab_audit import BASE as _AB_BASE  # noqa: E402
-from oto.tools.consolidate_targets import source_chain  # noqa: E402
 import oto.device.peaks as _peaks
+from oto.metrics.ab_audit import BASE as _AB_BASE
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tools.consolidate_targets import source_chain
 
 BASE = _AB_BASE
 
@@ -34,7 +34,7 @@ PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
 #: them (see explain_archive).
 SINGLE_FORM_ONLY_RUNS = ("run_20261002_021805",)
 
-def plan_floor(base: Path = BASE) -> Dict[str, Any]:
+def plan_floor(base: Path = BASE) -> dict[str, Any]:
     """One logical floor run, built from the completed resume chain.
 
     Per phase, the source run that measured the most distinct shapes wins. That
@@ -43,7 +43,7 @@ def plan_floor(base: Path = BASE) -> Dict[str, Any]:
     happened to be.
     """
     chain = source_chain(base)
-    stats: Dict[str, Dict[str, Any]] = {}
+    stats: dict[str, dict[str, Any]] = {}
     for run in chain:
         rd = _runs_dir(base, _peaks.CODENAME) / run
         for csv in rd.glob("phase_*/2_BenchmarkData/*.csv"):
@@ -56,14 +56,14 @@ def plan_floor(base: Path = BASE) -> Dict[str, Any]:
                 continue
             s = stats.setdefault(pid, {"pid": pid, "per_run": {}})
             s["per_run"][run] = len(shapes)
-    chosen: Dict[str, str] = {}
+    chosen: dict[str, str] = {}
     for pid, s in stats.items():
         chosen[pid] = max(s["per_run"].items(), key=lambda kv: (kv[1], kv[0]))[0]
     return {"chain": chain, "chosen": chosen, "stats": stats,
             "n_phases": len(chosen)}
 
 
-def locked_run_id(chain: List[str]) -> str:
+def locked_run_id(chain: list[str]) -> str:
     """Deterministic id for the locked floor, derived from the chain it locks.
 
     Timestamping this made the pipeline non-idempotent: every re-run minted a new
@@ -75,7 +75,7 @@ def locked_run_id(chain: List[str]) -> str:
     return f"gfx900_ref_locked_{digest}"
 
 
-def build_floor(base: Path, dest: Path, stamp: str) -> Dict[str, Any]:
+def build_floor(base: Path, dest: Path, stamp: str) -> dict[str, Any]:
     """Materialise the locked floor as one logical run holding every floor sample.
 
     Every CSV from every run in the completed chain is copied, with the source run
@@ -129,8 +129,8 @@ def build_floor(base: Path, dest: Path, stamp: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------
 # registry
 # --------------------------------------------------------------------------
-def build_db(base: Path, lock: Dict[str, Any], out: Path,
-             stamp: str) -> Dict[str, Any]:
+def build_db(base: Path, lock: dict[str, Any], out: Path,
+             stamp: str) -> dict[str, Any]:
     """Clone the live registry, then add the locked floor run to the clone.
 
     Cloning rather than rebuilding keeps every historical row, so the consolidated

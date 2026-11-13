@@ -5,8 +5,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from oto.tensile.best_library import (
-    SHIPPED_CELLS, _tensile_env, build_best_library, cell_solution_map,
-    default_best_library_dest, dedupe_configs, emit_logic_yaml,
+    SHIPPED_CELLS,
+    _tensile_env,
+    build_best_library,
+    cell_solution_map,
+    dedupe_configs,
+    default_best_library_dest,
+    emit_logic_yaml,
     logic_filename_hint,
 )
 
@@ -20,7 +25,7 @@ def test_cell_solution_map_family_basis():
     assert len(cm) == 38
     assert refused == []
     assert stats["native_basis_winners"] == 38
-    for cell, info in cm.items():
+    for info in cm.values():
         assert info["chain"] == "native_basis"
         assert info["provenance"]["protocol"] == "family"
 
@@ -36,9 +41,10 @@ def test_dedupe_count():
 def test_emit_logic_yaml_parity(tmp_path):
     cm, _, _ = cell_solution_map(Path("."), "family")
     logic = tmp_path / "3_LibraryLogic"
-    phases, parity = emit_logic_yaml(cm, logic)
+    _phases, parity = emit_logic_yaml(cm, logic)
     assert parity["parity_ok"] is True
-    assert parity["missing"] == [] and parity["extra"] == []
+    assert parity["missing"] == []
+    assert parity["extra"] == []
     yamls = sorted(logic.glob("*.yaml"))
     assert len(yamls) == 7
     for y in yamls:
@@ -55,8 +61,9 @@ def test_build_best_library_carve_only(tmp_path):
 
 
 def test_basis_any_runs():
-    cm, refused, stats = cell_solution_map(Path("."), "any")
-    assert len(cm) == 38 and refused == []
+    cm, refused, _stats = cell_solution_map(Path("."), "any")
+    assert len(cm) == 38
+    assert refused == []
 
 
 def test_default_best_library_dest_is_under_gfx90c_results(tmp_path):

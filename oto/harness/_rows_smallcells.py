@@ -9,12 +9,12 @@ consumer-facing re-exports.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any
 
 from oto.harness._rows_core import AUTO_EXPLICIT, PLAN_BATCH
 
-_R48_SMALL_CELL_ROWS: Tuple[
-        Tuple[str, str, str, int, int, str, Dict[str, Any]], ...] = (
+_R48_SMALL_CELL_ROWS: tuple[
+        tuple[str, str, str, int, int, str, dict[str, Any]], ...] = (
     # SS:256 -- the 96x96 tile, other register blockings
     ("SS", "96x96x16", "8x6", 2, 16, "Ailk_Bjlk", {}),
     ("SS", "96x96x16", "6x8", 2, 16, "Ailk_Bjlk", {}),
@@ -63,7 +63,7 @@ for _fam, _tile, _tt, _vw, _du, _pat, _extra in _R48_SMALL_CELL_ROWS:
 # 16 candidate(s) were dropped as gate-illegal while the batch was built
 # (the load-divisibility coupling on a GLVW/VW pair); the list is the
 # gate-clean remainder, so the whole batch is launchable.
-_R49_UNEXPLORED: Tuple[Tuple[str, str, str, int, int], ...] = (
+_R49_UNEXPLORED: tuple[tuple[str, str, str, int, int], ...] = (
     ("CC", "32x32x16", "4x4", 1, 16),
     ("CC", "32x64x8", "4x4", 1, 8),
     ("CC", "32x64x16", "4x4", 1, 16),
@@ -452,7 +452,7 @@ AUTO_EXPLICIT["ZZ"] = [{
 # 91% unexplored at 589 legal configs).  VW is capped at 4 for HS_HPA
 # (operand B is fp32, 4 x 4 B == the 16 B load cap); VW8 is fp16-only
 # (2 B x 8 == the cap), so it runs on HH_HPA only.
-_R50_HPA: Tuple[Tuple[str, str, str, str, int, int, Dict[str, Any]], ...] = (
+_R50_HPA: tuple[tuple[str, str, str, str, int, int, dict[str, Any]], ...] = (
     ("HH_HPA", "Ailk_Bjlk", "64x64x16", "4x4", 4, 16, {}),
     ("HH_HPA", "Ailk_Bjlk", "64x64x8", "4x4", 2, 8, {}),
     ("HH_HPA", "Ailk_Bjlk", "64x64x16", "4x4", 2, 16, {}),
@@ -491,7 +491,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_HPA:
 # are scheduling and residency, not geometry: WorkGroupMapping order, the
 # MaxOccupancy residency clamp, LdsPad bank offsets and InnerUnroll.  Each row
 # is 1 knob on the measured winner tile, so any delta is attributable.
-_R50_KNOBS: Tuple[Tuple[str, str, str, str, int, int, Dict[str, Any]], ...] = (
+_R50_KNOBS: tuple[tuple[str, str, str, str, int, int, dict[str, Any]], ...] = (
     # SS:256 -- winner 32x64x8/4x8/4/8 (129.9 family, tie like-for-like).
     ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"WorkGroupMapping": 2}),
     ("SS", "Ailk_Bjlk", "32x64x8", "4x8", 4, 8, {"WorkGroupMapping": 8}),
@@ -548,7 +548,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_KNOBS:
 # (128*2 == 32*8) and, with GlobalLoadVectorWidth pinned to 4 (the R50b
 # pattern), the VW4 twin (128*4 == 32*16) -- so the load width stays a
 # controlled variable, not a confound.
-_R50_D: Tuple[Tuple[str, int, int, Dict[str, Any]], ...] = (
+_R50_D: tuple[tuple[str, int, int, dict[str, Any]], ...] = (
     ("HS_HPA", 2, 8, {}),
     ("HS_HPA", 4, 16, {"GlobalLoadVectorWidthA": 4, "GlobalLoadVectorWidthB": 4}),
     ("HH_HPA", 2, 8, {}),

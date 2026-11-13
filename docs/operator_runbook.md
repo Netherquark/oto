@@ -178,7 +178,7 @@ Performance claims are reported as measured, never extrapolated.
 | Corpus missing on first run | Expected; `harness-study` reports "no kernel_db.json". Start with `--best-library` for the floor-less build. |
 | Gates reject every proposal | The generator is profile-driven; a rejection storm means the profile is off (clock/LDS/ISA), not that the deck is wrong. Re-verify §4. |
 | ROCm reports the arch as unsupported | Stop. Record the blocker in `incomplete_work.md`. Do not widen `gates/` to force it through. |
-| You want to relax the 60-line / pyflakes / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/harness_runbook.md` guardrails. |
+| You want to relax the 60-line / 600-line / pyflakes / ruff / py_compile / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/harness_runbook.md` guardrails. |
 
 ## 9. What you must never do
 

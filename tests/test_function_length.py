@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import List, Optional
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -35,7 +34,7 @@ REPO = Path(__file__).resolve().parent.parent
 MAX_FUNCTION_LINES = 60
 
 
-def _functions(only: Optional[List[str]] = None):
+def _functions(only: list[str] | None = None):
     """Every (file, name, lineno, span) function in the oto package.
 
     Args:

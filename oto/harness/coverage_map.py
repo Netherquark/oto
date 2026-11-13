@@ -34,19 +34,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_SHAPES  # noqa: E402
-from oto.harness.candidate_pool import _base_config, _strip_not_forwarded  # noqa: E402
-from oto.tensile.candidate import CandidateGenerator  # noqa: E402
 import oto.device.peaks as _peaks
+from oto.device.peaks import FAMILY_SHAPES
+from oto.harness.candidate_pool import _base_config, _strip_not_forwarded
 from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import results_rel
+from oto.tensile.candidate import CandidateGenerator
 
 #: The thread tiles the harness can express. This is the set the CORPUS has
 #: measured (plus the tile-frontier sweep's set), not an invented grid: the
@@ -75,15 +75,15 @@ _DEFAULT_CELLS = {fam: [f"{s}x{s}x{s}" for s in sides]
                   for fam, sides in FAMILY_SHAPES.items()}
 
 #: A geometry key: (macro tile, thread tile, vector width, depth).
-Geometry = Tuple[str, str, int, int]
+Geometry = tuple[str, str, int, int]
 
 
 def _generator() -> CandidateGenerator:
     return CandidateGenerator(_HERE)
 
 
-def _legal(fam: str, geom: Geometry, extra: Optional[Dict[str, Any]] = None
-           ) -> Tuple[bool, str]:
+def _legal(fam: str, geom: Geometry, extra: dict[str, Any] | None = None
+           ) -> tuple[bool, str]:
     """One geometry through the real generator gate."""
     tile, tt, vw, du = geom
     config = {**_base_config(fam), "MacroTile": f"{tile}x{du}", "ThreadTile": tt,
@@ -93,7 +93,7 @@ def _legal(fam: str, geom: Geometry, extra: Optional[Dict[str, Any]] = None
     return _generator().validate_config(config)
 
 
-def legal_geometries(fam: str) -> List[Geometry]:
+def legal_geometries(fam: str) -> list[Geometry]:
     """Every geometry the gate admits for a family (assertion level 0 or 2).
 
     Args:
@@ -132,7 +132,7 @@ def legal_geometries(fam: str) -> List[Geometry]:
     return sorted(out)
 
 
-def _dims(value: Any) -> Optional[str]:
+def _dims(value: Any) -> str | None:
     """A "[128, 128]" (YAML list) or "128x128" pair as "128x128"."""
     if value is None:
         return None
@@ -155,16 +155,16 @@ def _dims(value: Any) -> Optional[str]:
 _TYPECODE_FAMILY = {"HHS": "HH_HPA", "HSS": "HS_HPA"}
 
 
-def _cell_family(row: Dict[str, Any]) -> str:
+def _cell_family(row: dict[str, Any]) -> str:
     """The deck family a kernel_db row belongs to."""
     typecode = str(row.get("typecode") or "").upper()
     return _TYPECODE_FAMILY.get(typecode) or str(row.get("family") or "")
 
 
-def measured_geometries(db_path: Optional[Path] = None,
+def measured_geometries(db_path: Path | None = None,
                         protocol: str = "family",
-                        base_dir: Optional[Path] = None,
-                        ) -> Dict[Tuple[str, str], Dict[Geometry, float]]:
+                        base_dir: Path | None = None,
+                        ) -> dict[tuple[str, str], dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
 
     Args:
@@ -185,7 +185,7 @@ def measured_geometries(db_path: Optional[Path] = None,
     if not path.exists():
         return {}
     db = json.loads(path.read_text())
-    out: Dict[Tuple[str, str], Dict[Geometry, float]] = {}
+    out: dict[tuple[str, str], dict[Geometry, float]] = {}
     for rows in db.values():
         for r in rows:
             if protocol != "any" and r.get("protocol", "unknown") != protocol:
@@ -208,7 +208,7 @@ def measured_geometries(db_path: Optional[Path] = None,
     return out
 
 
-def neighbour_score(geom: Geometry, measured: Dict[Geometry, float]
+def neighbour_score(geom: Geometry, measured: dict[Geometry, float]
                     ) -> float:
     """How well the *neighbours* of an unmeasured geometry measure.
 
@@ -246,7 +246,7 @@ def neighbour_score(geom: Geometry, measured: Dict[Geometry, float]
 
 
 def coverage_row(fam: str, shape: str, legal: Sequence[Geometry],
-                  measured: Dict[Geometry, float]) -> Dict[str, Any]:
+                  measured: dict[Geometry, float]) -> dict[str, Any]:
     """One cell's coverage: legal space, measured part, and the gaps.
 
     Args:
@@ -280,14 +280,14 @@ def coverage_row(fam: str, shape: str, legal: Sequence[Geometry],
     }
 
 
-def _fmt_geom(geom: Optional[Sequence[Any]]) -> str:
+def _fmt_geom(geom: Sequence[Any] | None) -> str:
     if not geom:
         return "-"
     tile, tt, vw, du = geom
     return f"{tile:>9} {tt:>5} vw{vw} du{du}"
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", action="append",
@@ -315,7 +315,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     measured = measured_geometries(db_path=args.db, protocol=args.protocol,
                                    base_dir=args.base_dir)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for fam in fams:
         legal = legal_geometries(fam)
         shapes = _DEFAULT_CELLS.get(fam, [])
@@ -325,16 +325,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             cell_measured = measured.get((fam, shape), {})
             rows.append(coverage_row(fam, shape, legal, cell_measured))
 
-    print(f"{'cell':<18}{'legal':>7}{'meas':>7}{'cover':>8}{'best':>10}  "
-          f"{'best geometry':<28} unexplored (ranked by neighbour score)")
     for row in rows:
-        print(f"{row['family'] + ':' + row['shape']:<18}{row['n_legal']:>7}"
-              f"{row['n_measured']:>7}{row['coverage_pct']:>7.1f}%"
-              f"{row['best_measured']:>10.1f}  "
-              f"{_fmt_geom(row['best_geometry']):<28} "
-              f"{len(row['unmeasured'])} open")
-        for gap in row["unmeasured"][:args.top]:
-            print(f"    {gap['neighbour_score']:>8.1f}  {_fmt_geom(gap['geometry'])}")
+        for _gap in row["unmeasured"][:args.top]:
+            pass
 
     if args.json:
         out = Path(args.json)
@@ -342,7 +335,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             out = (Path(args.base_dir) if args.base_dir else _HERE) / out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps({"rows": rows}, indent=1))
-        print(f"wrote -> {out}")
     return 0
 
 

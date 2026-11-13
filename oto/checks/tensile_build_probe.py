@@ -17,9 +17,10 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_TENSILE_ROOT = Path(
     os.environ.get("TENSILE_ROOT", "")
@@ -48,14 +49,14 @@ def _default_arch() -> str:
     return default_profile().codename
 
 
-def _init_tensile(arch: Optional[str] = None) -> None:
+def _init_tensile(arch: str | None = None) -> None:
     if arch is None:
         arch = _default_arch()
     tensile_root = _require_tensile_root()
     sys.path.insert(0, str(tensile_root))
     os.environ.setdefault("ROCM_PATH", "/usr")
 
-    import Tensile.Common as Common
+    from Tensile import Common
     from Tensile.Utilities.Toolchain import ToolchainDefaults, validateToolchain
 
     assembler = shutil.which("clang++") or ""
@@ -104,20 +105,20 @@ def _init_tensile(arch: Optional[str] = None) -> None:
         Common2.globalParameters["CurrentISA"] = isa
 
 
-def _require_tensile_root(explicit: Optional[str] = None) -> Path:
+def _require_tensile_root(explicit: str | None = None) -> Path:
     """Locate the Tensile checkout, honouring the repo `.env` convention."""
     from oto.runners.toolchain import require_tensile_root
 
     try:
         return require_tensile_root(Path(explicit) if explicit else None, None)
     except ValueError as exc:
-        raise SystemExit(str(exc))
+        raise SystemExit(str(exc)) from exc
 
 
 # --------------------------------------------------------------------------
 # The proof itself.
 # --------------------------------------------------------------------------
-def _tensile_pipeline() -> Tuple[Any, Any, Any, Any, Any]:
+def _tensile_pipeline() -> tuple[Any, Any, Any, Any, Any]:
     """Import Tensile's writer pipeline.
 
     Imported late (not at module scope) so the tool still imports and runs its
@@ -127,16 +128,16 @@ def _tensile_pipeline() -> Tuple[Any, Any, Any, Any, Any]:
     (BP, constructForkPermutations, Solution, KernelWriterAssembly,
     markDuplicateKernels).
     """
+    from Tensile import BenchmarkProblems as BP
     from Tensile.BenchmarkProblems import constructForkPermutations
     from Tensile.SolutionStructs import Solution
     from Tensile.TensileCreateLibrary import KernelWriterAssembly, markDuplicateKernels
-    from Tensile import BenchmarkProblems as BP
 
     return (BP, constructForkPermutations, Solution, KernelWriterAssembly,
             markDuplicateKernels)
 
 
-def _dedup_kernels(solutions: List[Any], Solution: Any) -> List[Any]:
+def _dedup_kernels(solutions: list[Any], Solution: Any) -> list[Any]:
     """The distinct kernels among forked `solutions`, keyed by full name."""
     kernels = []
     seen = set()
@@ -149,7 +150,7 @@ def _dedup_kernels(solutions: List[Any], Solution: Any) -> List[Any]:
     return kernels
 
 
-def _kernel_writer(kernels: List[Any], Solution: Any,
+def _kernel_writer(kernels: list[Any], Solution: Any,
                    KernelWriterAssembly: Any,
                    markDuplicateKernels: Any) -> Any:
     """Mirror writeBenchmarkFiles: one writer owns naming and duplicate flags."""
@@ -162,12 +163,12 @@ def _kernel_writer(kernels: List[Any], Solution: Any,
     return writer
 
 
-def _probe_kernel(writer: Any, kern: Any, gidx: int) -> Dict[str, Any]:
+def _probe_kernel(writer: Any, kern: Any, gidx: int) -> dict[str, Any]:
     """Compile one kernel through Tensile's writer; return its verdict record."""
     exc_text = ""
     try:
         err, src = writer.getSourceFileString(kern)
-    except Exception as exc:  # noqa: BLE001 - report, don't crash
+    except Exception as exc:
         err, src = -2, ""
         exc_text = f"{type(exc).__name__}: {exc}"
     if err != 0 and not exc_text:
@@ -175,7 +176,7 @@ def _probe_kernel(writer: Any, kern: Any, gidx: int) -> Dict[str, Any]:
         # -2. Re-run the generator to get the actual reason instead of "unknown".
         try:
             writer.getKernelSource(kern)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             exc_text = f"{type(exc).__name__}: {exc}"[:220]
     if err == -1 and not exc_text:
         exc_text = "assembler/subprocess rejected generated source"
@@ -199,8 +200,8 @@ def _probe_group(
     group_cfg: Any,
     gidx: int,
     worst: int,
-    tensile: Tuple[Any, Any, Any, Any, Any],
-) -> Tuple[List[Dict[str, Any]], int, int]:
+    tensile: tuple[Any, Any, Any, Any, Any],
+) -> tuple[list[dict[str, Any]], int, int]:
     """Probe one BenchmarkProblems size group.
 
     Returns (records, kernels_compiled, worst_err); `worst` is threaded through
@@ -209,7 +210,7 @@ def _probe_group(
     """
     (BP, constructForkPermutations, Solution, KernelWriterAssembly,
      markDuplicateKernels) = tensile
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     total = 0
 
     proc = BP.BenchmarkProcess(problem_type_cfg, group_cfg)
@@ -255,7 +256,7 @@ def _probe_group(
     return records, total, worst
 
 
-def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
+def probe_phase_config(phase_yaml: Path) -> dict[str, Any]:
     """Run Tensile's solution + kernel-writer pipeline over one phase config.
 
     Returns a verdict dict; never raises for a bad phase (a bad phase *is* the
@@ -269,7 +270,7 @@ def probe_phase_config(phase_yaml: Path) -> Dict[str, Any]:
         return {"ok": False, "reason": "phase config has no BenchmarkProblems section"}
 
     # Each BenchmarkProblems entry is [[problemType, [sizeGroup, ...]], ...]
-    per_problem: List[Dict[str, Any]] = []
+    per_problem: list[dict[str, Any]] = []
     worst = 0
     total = 0
 
@@ -306,13 +307,13 @@ def _kernel_label(kern: Any) -> str:
     return str(Solution.getNameFull(kern))[:120]
 
 
-def _pool(ko: Any, name: str) -> Optional[int]:
+def _pool(ko: Any, name: str) -> int | None:
     pool = getattr(ko, name, None)
     size = getattr(pool, "size", None)
     if callable(size):
         try:
             return int(size())
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     return None
 

@@ -10,7 +10,7 @@ Public API: JS_THEME_INIT, JS_THEME_TOGGLE, JS_COLLAPSIBLE.
 
 from __future__ import annotations
 
-__all__ = ["JS_THEME_INIT", "JS_THEME_TOGGLE", "JS_COLLAPSIBLE"]
+__all__ = ["JS_COLLAPSIBLE", "JS_THEME_INIT", "JS_THEME_TOGGLE"]
 
 #: Collapsible section handler + expand-all button.
 
@@ -25,7 +25,7 @@ JS_THEME_INIT = """
         })();
         </script>
         """
- 
+
 #: Collapsible section handler + expand-all button.
 
 #: The theme-toggle button handler.
@@ -56,7 +56,7 @@ JS_THEME_TOGGLE = r"""
         })();
         </script>
         """
- 
+
 #: Collapsible section handler + expand-all button.
 
 #: Collapsible section handler + expand-all button.

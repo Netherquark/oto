@@ -14,9 +14,9 @@ _TYPECODE_TO_FAMILY, _KERNEL_LAYOUT_TOKENS.
 from __future__ import annotations
 
 from oto.device.peaks import (
-    DTYPE_TO_FAMILY,
     _KERNEL_LAYOUT_TOKENS,
     _TYPECODE_TO_FAMILY,
+    DTYPE_TO_FAMILY,
     cell_key,
     cube_side,
     dtype_from_kernel_name,

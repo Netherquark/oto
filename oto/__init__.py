@@ -53,7 +53,7 @@ def __getattr__(name):
     side effect) before a caller that only wants ``oto.device.peaks`` asked for
     it. Lazy resolution keeps ``import oto`` cheap and side-effect free.
     """
-    if name in ("TensileDriver",):
+    if name == "TensileDriver":
         from .runners.driver import TensileDriver
 
         return TensileDriver

@@ -12,12 +12,13 @@ Imports the shared tile/dtype helpers from ``oto.tensile.gates.occupancy_common`
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import oto.device.peaks as _peaks
+
 from .memo import memo_gate
-from .vgpr_model import BYTES_PER_ELEMENT, LDS_BUDGET, depth_u
 from .occupancy_common import dtype_char, tile_dims
+from .vgpr_model import BYTES_PER_ELEMENT, LDS_BUDGET, depth_u
 
 #: Legal StaggerU values (Tensile Common.py:945).
 STAGGER_U_DOMAIN = (0, 2, 4, 8, 16, 32, 64)
@@ -34,8 +35,8 @@ STAGGER_STRIDE_DEFAULT = 256
 #: Tensile's own default for StaggerUMapping.
 STAGGER_MAPPING_DEFAULT = 0
 
-def _pads_feasible(config: Dict[str, Any], ku: int,
-                    bpe: Optional[int]) -> Tuple[bool, str]:
+def _pads_feasible(config: dict[str, Any], ku: int,
+                    bpe: int | None) -> tuple[bool, str]:
     """LdsPad legality, including the padded LDS footprint.
 
     Why: `_write_phase_config` used to drop LdsPadA/B silently, so a candidate
@@ -70,7 +71,7 @@ def _pads_feasible(config: Dict[str, Any], ku: int,
     return True, ""
 
 
-def _int_or_reject(value, label: str) -> Tuple[Optional[int], Optional[str]]:
+def _int_or_reject(value, label: str) -> tuple[int | None, str | None]:
     """Parse an int knob, or produce the reject text for a non-integer one."""
     try:
         return int(value), None
@@ -78,7 +79,7 @@ def _int_or_reject(value, label: str) -> Tuple[Optional[int], Optional[str]]:
         return None, f"{label} must be an integer (have {value!r})"
 
 
-def _swizzle_domain_check(config: Dict[str, Any]) -> Optional[str]:
+def _swizzle_domain_check(config: dict[str, Any]) -> str | None:
     """The three swizzle knobs' own domains, or None when they are legal.
 
     Tensile's domains (Common.py:945-947): StaggerU in {0,2,4,8,16,32,64},
@@ -99,8 +100,8 @@ def _swizzle_domain_check(config: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _swizzle_feasible(config: Dict[str, Any], ku: int,
-                       bpe: Optional[int]) -> Tuple[bool, str]:
+def _swizzle_feasible(config: dict[str, Any], ku: int,
+                       bpe: int | None) -> tuple[bool, str]:
     """The coupled StaggerU / StaggerUMapping / StaggerUStride domains.
 
     Tensile source (SolutionStructs:3326-3342, Common.py:945-947, 1599-1601):
@@ -153,7 +154,7 @@ def _swizzle_feasible(config: Dict[str, Any], ku: int,
     return True, ""
 
 
-def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def _store_knobs_feasible(config: dict[str, Any]) -> tuple[bool, str]:
     """AssertFree0ElementMultiple and StoreCInUnroll sanity.
 
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
@@ -202,7 +203,7 @@ def _store_knobs_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
 
 
 @memo_gate
-def ldspad_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
+def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Group C legality gate for the forwarded LDS-pad / RCT knobs.
 
     Why: the launch boundary forwards LdsPadA/B, AssertFree0ElementMultiple,
@@ -225,7 +226,7 @@ def ldspad_feasible(config: Dict[str, Any], profile=None) -> Tuple[bool, str]:
         return _ldspad_feasible_impl(config)
 
 
-def _ldspad_feasible_impl(config: Dict[str, Any]) -> Tuple[bool, str]:
+def _ldspad_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
     """Body of :func:`ldspad_feasible` with any bound profile applied."""
     ku = depth_u(config)
     ch = dtype_char(config)

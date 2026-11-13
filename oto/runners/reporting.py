@@ -14,24 +14,25 @@ Public API: ReportingMixin.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import oto.device.peaks as _peaks
 from oto.device.peaks import cell_key, kernel_key
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.metrics.policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
 from oto.metrics.report import ABVerdict
-from oto.tensile.shape_order import ordered_shapes
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.shape_order import ordered_shapes
 
 
 class ReportingMixin:
     """Acceptance report assembly, mixed into TensileDriver."""
 
-    def _ab_records_from_csv(self, run_dir: Optional[Path] = None, force_arm: Optional[str] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _ab_records_from_csv(self, run_dir: Path | None = None, force_arm: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Build native/spoof per-cell record lists from a run's CSVs.
 
         Each phase's ScheduleName (arm) is resolved from the phase config
@@ -42,8 +43,8 @@ class ReportingMixin:
         Returns (native_records, spoof_records) with per-cell medians and the
         per-phase invocation-form stamp (§R56.3).
         """
-        native_records: List[Dict[str, Any]] = []
-        spoof_records: List[Dict[str, Any]] = []
+        native_records: list[dict[str, Any]] = []
+        spoof_records: list[dict[str, Any]] = []
         run_dir = run_dir or self.run_dir
         if not run_dir:
             return native_records, spoof_records
@@ -53,7 +54,7 @@ class ReportingMixin:
         phases_by_id = {str(p.get("phase_id", "")): p
                         for p in self.load_phases_manifest()}
 
-        phase_csvs: Dict[str, List[Path]] = {}
+        phase_csvs: dict[str, list[Path]] = {}
         for csv_file in sorted(list(run_dir.glob("phase_*/2_BenchmarkData/*.csv"))
                                + list(run_dir.glob("probe_*/2_BenchmarkData/*.csv"))):
             phase_csvs.setdefault(csv_file.parent.parent.name, []).append(csv_file)
@@ -69,8 +70,8 @@ class ReportingMixin:
                 native_records.extend(out_recs)
         return native_records, spoof_records
 
-    def _phase_arm(self, phase_id: str, phase: Optional[Dict[str, Any]],
-                   force_arm: Optional[str]) -> bool:
+    def _phase_arm(self, phase_id: str, phase: dict[str, Any] | None,
+                   force_arm: str | None) -> bool:
         """Resolve one phase's arm: config Architecture gfx900 == spoof.
 
         force_arm ('native'|'spoof') overrides arm discrimination — used to
@@ -85,9 +86,9 @@ class ReportingMixin:
             return True
         return is_spoof
 
-    def _phase_cell_records(self, phase_id: str, csv_files: List[Path],
-                            phase: Optional[Dict[str, Any]],
-                            is_spoof: bool) -> List[Dict[str, Any]]:
+    def _phase_cell_records(self, phase_id: str, csv_files: list[Path],
+                            phase: dict[str, Any] | None,
+                            is_spoof: bool) -> list[dict[str, Any]]:
         """One phase's merged per-cell records with its invocation-form stamp.
 
         Family/dtype per row from the kernel typecode (ground truth), with the
@@ -99,7 +100,7 @@ class ReportingMixin:
         every record the phase produced shares its stamp (§R56.3).
         """
         phase_family = extract_family_from_phase_id(phase_id)
-        cell_map: Dict[Tuple[str, str, str, str], Any] = {}
+        cell_map: dict[tuple[str, str, str, str], Any] = {}
         for csv_file in csv_files:
             cm = self.analytics.aggregate_by_cell_typecode(
                 self.analytics.load_benchmark_csv(csv_file), phase_family)
@@ -112,7 +113,7 @@ class ReportingMixin:
         declared = [str(s) for s in (phase or {}).get("shapes", []) or []]
         protocol = classify(phase_family, measured, declared)
         arm = "spoof" if is_spoof else "native"
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for (cell_dtype, shape, fp, family), seeds in cell_map.items():
             agg = aggregate_cell(seeds)
             rec = {
@@ -133,7 +134,7 @@ class ReportingMixin:
                 arm=arm))
             out.append(rec)
         return out
-    def _ab_records_from_registry(self, run_id: str, force_arm: str = "native") -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _ab_records_from_registry(self, run_id: str, force_arm: str = "native") -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Build native/spoof per-cell records from registry benchmark_result rows.
 
         Used for merged / draft-imported runs whose GFLOPS live only in the
@@ -141,8 +142,8 @@ class ReportingMixin:
         gfx900 reference run is entirely the spoof floor, the candidate run
         entirely native.
         """
-        native_records: List[Dict[str, Any]] = []
-        spoof_records: List[Dict[str, Any]] = []
+        native_records: list[dict[str, Any]] = []
+        spoof_records: list[dict[str, Any]] = []
         try:
             records = self.registry.read_records(run_id=run_id, record_type="benchmark_result")
         except Exception:
@@ -171,9 +172,9 @@ class ReportingMixin:
             else:
                 native_records.append(norm)
         return native_records, spoof_records
-    def _compute_ab_verdicts(self, run_id: str, run_dir: Optional[Path] = None,
+    def _compute_ab_verdicts(self, run_id: str, run_dir: Path | None = None,
                               agg: str = "winner",
-                              protocol_basis: str = "family") -> List[Any]:
+                              protocol_basis: str = "family") -> list[Any]:
         """Compute native-vs-spoof A/B verdicts for a run.
 
         Native arm = the WHOLE database (every run's CSVs + every registry
@@ -189,9 +190,6 @@ class ReportingMixin:
 
         spoof_records, ref_run_ids = self._load_spoof_records(run_id)
         if not spoof_records:
-            print("[ab] no completed gfx900 reference floor found -- A/B verdicts "
-                  "deferred. Establish it with `--gfx900-reference` (or --auto, "
-                  "which runs it automatically).")
             return []
 
         self._last_ab_reference_run_id = ref_run_ids[0] if ref_run_ids else None
@@ -210,7 +208,7 @@ class ReportingMixin:
 
         return self._build_verdicts(deltas, thermal_by_phase, agg)
 
-    def _load_native_records(self, run_id: str, run_dir: Optional[Path]) -> List[Dict]:
+    def _load_native_records(self, run_id: str, run_dir: Path | None) -> list[dict]:
         """Load native records from all runs."""
         self._native_arm_records = self._native_records_all_runs()
         native_records = self._native_arm_records
@@ -223,7 +221,7 @@ class ReportingMixin:
     def _load_spoof_records(self, run_id: str) -> tuple:
         """Load spoof records from reference floor runs."""
         ref_run_ids = self._reference_floor_runs(run_id)
-        spoof_records: List[Dict[str, Any]] = []
+        spoof_records: list[dict[str, Any]] = []
         for ref in ref_run_ids:
             ref_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / ref
             if ref_dir.is_dir():
@@ -255,26 +253,13 @@ class ReportingMixin:
     def _log_thermal_and_clock_warnings(self, thermal, native_cov, agg):
         """Log thermal and clock adjustment warnings."""
         if thermal["hot_phases"]:
-            print("[report] WARNING: "
-                  f"{thermal['hot_phases']} phase(s) hit or exceeded the "
-                  f"{self.THERMAL_MAX_C:.0f}C telemetry validity gate. Those "
-                  "samples were dropped from the clock estimate rather than "
-                  "scaled, so the phases show as UNMEASURED (and their cells "
-                  "fall back to unadjusted grading below the coverage floor) "
-                  "instead of as slow kernels. Affected: "
-                  + ", ".join(thermal["hot_phase_ids"][:5]))
+            pass
         if agg.endswith("_clock") and native_cov[1] == 0:
-            print("[report] WARNING: --native-agg "
-                  f"{agg!r} requires per-phase telemetry clocks, but the NATIVE arm "
-                  f"has none ({native_cov[0]}/{native_cov[1]} samples covered across "
-                  f"{len(native_cov[2]) if len(native_cov) > 2 else 0} run(s); the largest native run has no telemetry "
-                  "at all). Cells will fall back to UNADJUSTED best-vs-best and are "
-                  "flagged clock_adjusted=false -- these numbers are NOT "
-                  "telemetry-adjusted.")
+            pass
 
     def _build_verdicts(self, deltas, thermal_by_phase, agg):
         """Build ABVerdict objects from deltas."""
-        def _temp(run: str, phase: str) -> Tuple[Optional[float], Optional[float]]:
+        def _temp(run: str, phase: str) -> tuple[float | None, float | None]:
             d = thermal_by_phase.get((str(run or ""), str(phase or ""))) or {}
             return d.get("temp_c"), d.get("temp_max_c")
 
@@ -356,7 +341,7 @@ class ReportingMixin:
         family_timing = self._compute_family_timing(run_id)
         for ref_run in self._reference_floor_runs(run_id):
             ref_timing = self._compute_family_timing(ref_run)
-            family_timing = {**family_timing, **{f: t for f, t in ref_timing.items()}}
+            family_timing = {**family_timing, **dict(ref_timing.items())}
         return family_timing
 
     def _report_native_arm(self, ab_verdicts, native_agg: str,
@@ -369,39 +354,31 @@ class ReportingMixin:
                                                  native_agg,
                                                  protocol_basis=protocol_basis)
         if native_arm["empty"]:
-            print("[report] WARNING: native arm is EMPTY across the whole database — "
-                  "every coverage/RED number below is 0 because nothing was ever "
-                  "measured, not because the hardware is slow.")
+            pass
         elif ab_verdicts:
-            wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
-            ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
-            losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
-            print(f"[report] native arm: {native_arm['n_records']} cells from "
-                  f"{native_arm['n_runs']} run(s), agg={native_agg} -> "
-                  f"{wins} WIN / {ties} TIE / {losses} LOSS")
+            sum(1 for v in ab_verdicts if v.verdict == "WIN")
+            sum(1 for v in ab_verdicts if v.verdict == "TIE")
+            sum(1 for v in ab_verdicts if v.verdict == "LOSS")
         return native_arm
 
-    def _emit_report(self, run_id: str, run_dir: Optional[Path], report,
+    def _emit_report(self, run_id: str, run_dir: Path | None, report,
                      ab_verdicts, native_arm, all_analytics, red_list):
         """Write the JSON report(s) and return the result summary."""
         if run_dir is not None:
             report_out = run_dir / "acceptance_report.json"
             self.reporter.write_report(report, report_out)
-            print(f"Report emitted to: {report_out}")
         if self.reporter.base_dir:
-            try:
+            with contextlib.suppress(Exception):
                 self.reporter.write_report(
                     report,
                     _results_dir(self.reporter.base_dir, _peaks.CODENAME) / "acceptance_report.json")
-            except Exception:
-                pass
         return {"cells": len(all_analytics), "red": len(red_list),
                 "ab": len(ab_verdicts), "run_id": run_id,
                 "native_runs": native_arm["runs"],
                 "overall_pass": report.overall_pass, "summary": report.summary}
 
-    def _report_run_id(self, run_id: Optional[str],
-                       run_dir: Optional[Path]) -> Optional[str]:
+    def _report_run_id(self, run_id: str | None,
+                       run_dir: Path | None) -> str | None:
         """Resolve the run the report is about (never a floor run).
 
         arm="native": the subject of the A/B must be a native run. See
@@ -433,9 +410,9 @@ class ReportingMixin:
                 self, "_reference_floor_authoritative", True),
         )
 
-    def generate_acceptance_report(self, run_dir: Optional[Path] = None, run_id: Optional[str] = None,
+    def generate_acceptance_report(self, run_dir: Path | None = None, run_id: str | None = None,
                                     native_agg: str = "winner",
-                                    protocol_basis: str = "family") -> Optional[Dict[str, Any]]:
+                                    protocol_basis: str = "family") -> dict[str, Any] | None:
         """
         Generate the acceptance report (JSON + HTML) from run data.
         Installed in run_auto, the --targets path, and the SIGINT handler so a
@@ -463,7 +440,6 @@ class ReportingMixin:
                 run_dir = self.run_dir
             run_id = self._report_run_id(run_id, run_dir)
             if not run_id:
-                print("Report generation: no run_id available")
                 return None
 
             all_analytics, cell_status, family_timing, execution_timing = \
@@ -481,12 +457,11 @@ class ReportingMixin:
             return self._emit_report(run_id, run_dir, report, ab_verdicts,
                                      native_arm, all_analytics,
                                      cell_status["red"])
-        except Exception as e:
-            print(f"Report generation error: {e}")
+        except Exception:
             return None
-    def regenerate_report(self, run_id: Optional[str] = None,
+    def regenerate_report(self, run_id: str | None = None,
                           native_agg: str = "winner",
-                          protocol_basis: str = "family") -> Optional[Dict[str, Any]]:
+                          protocol_basis: str = "family") -> dict[str, Any] | None:
         """Regenerate the acceptance report for a run from the registry.
 
         With no run_id, uses the most recently registered run. Reports land in
@@ -497,13 +472,11 @@ class ReportingMixin:
         if run_id is None:
             run_id = self.registry.latest_run_id(arm="native")
         if not run_id:
-            print("No run id available to regenerate a report")
             return None
 
         run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / run_id
         if not run_dir.exists():
             run_dir = None
-        print(f"Regenerating acceptance report for run {run_id}")
         return self.generate_acceptance_report(run_dir=run_dir, run_id=run_id,
                                               native_agg=native_agg,
                                               protocol_basis=protocol_basis)

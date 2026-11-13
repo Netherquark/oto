@@ -12,7 +12,7 @@ try:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 except ImportError as exc:  # pragma: no cover - example script
-    raise SystemExit(f"matplotlib is required for this example: {exc}")
+    raise SystemExit(f"matplotlib is required for this example: {exc}") from exc
 import numpy as np
 
 BASE = Path(__file__).resolve().parent
@@ -56,7 +56,7 @@ for b in list(bars_n) + list(bars_s):
                 ha="center", va="bottom", fontsize=8, fontweight="bold", color="#111827")
 
 # verdict + delta annotations above pairs
-for i, (v, d) in enumerate(zip(verdicts, deltas)):
+for i, (v, d) in enumerate(zip(verdicts, deltas, strict=False)):
     ymax = max(native[i], spoof[i])
     color = "#16a34a" if v == "WIN" else ("#ca8a04" if v == "TIE" else "#dc2626")
     sign = "+" if d >= 0 else ""
@@ -79,12 +79,12 @@ env_lines = [
 ]
 fig.text(0.99, 0.93, "\n".join(env_lines), ha="right", va="top",
          fontsize=8, family="monospace", color="#374151",
-         bbox=dict(boxstyle="round,pad=0.4", fc="#f3f4f6", ec="#d1d5db", alpha=0.9))
+         bbox={"boxstyle": "round,pad=0.4", "fc": "#f3f4f6", "ec": "#d1d5db", "alpha": 0.9})
 ax.legend(loc="upper left", frameon=False, fontsize=10)
 ax.grid(axis="y", linestyle=":", alpha=0.4)
 ax.set_axisbelow(True)
 # headroom for annotations
-ax.set_ylim(0, max(max(native), max(spoof)) * 1.22)
+ax.set_ylim(0, max(*native, *spoof) * 1.22)
 
 # summary box
 wins = sum(1 for v in verdicts if v == "WIN")
@@ -96,4 +96,3 @@ fig.text(0.99, 0.01, f"WIN {wins}  /  TIE {ties}  /  LOSS {losses}   (38 cells t
 fig.tight_layout()
 out = BASE / "gfx90c_vs_spoof.png"
 fig.savefig(out, dpi=150, bbox_inches="tight")
-print(f"saved: {out}")

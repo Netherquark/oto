@@ -39,24 +39,28 @@ import importlib
 import importlib.util
 import json
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.harness.gate_calibration import (measurement_produced,  # noqa: E402
-                                          population_of, read_phase_config)
 import oto.device.peaks as _peaks
+from oto.harness.gate_calibration import (
+    measurement_produced,
+    population_of,
+    read_phase_config,
+)
 from oto.runners.paths import runs_dir as _runs_dir
 
 #: A candidate rule. ``True`` = would refuse the config, ``False`` = would allow
 #: it, ``None`` = not applicable (cannot model; excluded from the census).
-Rule = Callable[[Dict[str, Any]], Optional[bool]]
+Rule = Callable[[dict[str, Any]], bool | None]
 
 
-def _iter_rows(base: str, families: Optional[Sequence[str]]):
+def _iter_rows(base: str, families: Sequence[str] | None):
     """Yield ``(population, run, family, phase, cfg, built)`` per phase.
 
     One row per ``phase*`` dir whose ``configs/phase_<name>.yaml`` reconstructs
@@ -82,14 +86,14 @@ def _iter_rows(base: str, families: Optional[Sequence[str]]):
                    cfg, measurement_produced(phase_dir))
 
 
-def _new_population() -> Dict[str, Any]:
+def _new_population() -> dict[str, Any]:
     return {"applicable": 0, "built": 0, "not_applicable": 0, "agrees": 0,
             "allowed_empty": 0, "false_rejections": [], "catches": [],
             "caught_by_family": {}}
 
 
-def _classify(pop: Dict[str, Any], verdict: Optional[bool], built: bool,
-              row: Dict[str, str]) -> None:
+def _classify(pop: dict[str, Any], verdict: bool | None, built: bool,
+              row: dict[str, str]) -> None:
     """Bucket one phase: refuse/allow crossed with built/empty."""
     if verdict is None:
         pop["not_applicable"] += 1
@@ -109,7 +113,7 @@ def _classify(pop: Dict[str, Any], verdict: Optional[bool], built: bool,
 
 
 def probe(rule: Rule, name: str = "rule", base: str = ".",
-          families: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+          families: Sequence[str] | None = None) -> dict[str, Any]:
     """Apply one candidate rule to the corpus and count the confusion.
 
     Args:
@@ -139,7 +143,7 @@ def probe(rule: Rule, name: str = "rule", base: str = ".",
     return {"meta": meta, "populations": populations}
 
 
-def _refuses_apm2(config: Dict[str, Any]) -> Optional[bool]:
+def _refuses_apm2(config: dict[str, Any]) -> bool | None:
     """The generator-seam rule: ``AggressivePerfMode`` outside {0, 1}.
 
     ``None`` when the knob is absent (the rule does not apply) or unreadable,
@@ -154,7 +158,7 @@ def _refuses_apm2(config: Dict[str, Any]) -> Optional[bool]:
         return None
 
 
-def _refuses_nt_budget(config: Dict[str, Any]) -> Optional[bool]:
+def _refuses_nt_budget(config: dict[str, Any]) -> bool | None:
     """ADOPTED 2026-10-21: the per-thread occupancy limit (Tensile's error 4).
 
     ``min(256, 65536 // NumThreads)`` is the budget the EMITTED per-thread
@@ -175,7 +179,7 @@ def _refuses_nt_budget(config: Dict[str, Any]) -> Optional[bool]:
     return refuses_per_thread_occupancy_limit(config)
 
 
-def builtin_rules() -> Dict[str, Rule]:
+def builtin_rules() -> dict[str, Rule]:
     """The rules this project calibrated, as probe-ready predicates.
 
     ``workgroup_file`` and ``lds_reduction`` are *views* of the shipped gate:
@@ -185,8 +189,10 @@ def builtin_rules() -> Dict[str, Rule]:
     occupancy limit, adopted 2026-10-21 after the measured VGPR table was
     corrected (see :func:`_refuses_nt_budget`).
     """
-    from oto.tensile.gates.occupancy import (refuses_lds_reduction_buffer,
-                                             refuses_workgroup_register_file)
+    from oto.tensile.gates.occupancy import (
+        refuses_lds_reduction_buffer,
+        refuses_workgroup_register_file,
+    )
 
     return {"workgroup_file": refuses_workgroup_register_file,
             "lds_reduction": refuses_lds_reduction_buffer,
@@ -221,38 +227,30 @@ def load_rule(spec: str) -> Rule:
         module = _import_file(path) if path.suffix == ".py" and path.exists() \
             else importlib.import_module(mod_part)
     except (ImportError, OSError, SyntaxError) as exc:
-        raise SystemExit(f"--rule {spec}: cannot import {mod_part!r}: {exc}")
+        raise SystemExit(f"--rule {spec}: cannot import {mod_part!r}: {exc}") from exc
     rule = getattr(module, attr, None)
     if not callable(rule):
         raise SystemExit(f"{spec}: no callable {attr!r}")
     return rule
 
 
-def _resolve_rules(specs: Optional[Sequence[str]]) -> Dict[str, Rule]:
+def _resolve_rules(specs: Sequence[str] | None) -> dict[str, Rule]:
     builtins = builtin_rules()
     if not specs:
         return builtins
     return {s: builtins[s] if s in builtins else load_rule(s) for s in specs}
 
 
-def _report(label: str, pop: Dict[str, Any], limit: int) -> None:
-    n_fr = len(pop["false_rejections"])
-    flag = "  ok" if n_fr == 0 else "  <-- the decision rule: must be 0"
-    print(f"  {label}   applicable={pop['applicable']}  built={pop['built']}  "
-          f"not-applicable={pop['not_applicable']}")
-    print(f"    would-refuse BUILT (FALSE REJECTION): {n_fr:6}{flag}")
-    print(f"    would-refuse empty (caught)         : {len(pop['catches']):6}")
-    print(f"    would-allow  built (agree)          : {pop['agrees']:6}")
-    print(f"    would-allow  empty (missed)         : {pop['allowed_empty']:6}")
+def _report(label: str, pop: dict[str, Any], limit: int) -> None:
+    len(pop["false_rejections"])
     if pop["caught_by_family"]:
-        fams = ", ".join(f"{k} {v}"
+        ", ".join(f"{k} {v}"
                          for k, v in sorted(pop["caught_by_family"].items()))
-        print(f"    caught by family: {fams}")
-    for r in pop["false_rejections"][:limit]:
-        print(f"    FALSE REJECTION: {r['run']}/{r['phase']} ({r['family']})")
+    for _r in pop["false_rejections"][:limit]:
+        pass
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -274,12 +272,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     results = {name: probe(rule, name=name, base=args.base, families=args.family)
                for name, rule in rules.items()}
 
-    first = next(iter(results.values()))["meta"]
-    print(f"rule calibration -- {first['base']}")
-    print(f"  {first['runs']} runs, {first['with_config']} phases with a launch "
-          f"config" + (f", families={','.join(args.family)}" if args.family else ""))
-    for name, result in results.items():
-        print(f"\nrule: {name}")
+    next(iter(results.values()))["meta"]
+    for result in results.values():
         _report("OURS (native candidates)", result["populations"]["ours"],
                 args.limit)
         _report("REFERENCE (gfx900 replay)", result["populations"]["reference"],

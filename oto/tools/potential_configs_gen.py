@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
-from oto.device.profile import DeviceProfile
 import oto.device.peaks as _peaks
+from oto.device.profile import DeviceProfile
 from oto.runners.paths import results_dir as _results_dir
 
 
@@ -42,13 +42,13 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
     parts.extend(_acceptance_section(base_dir))
     # Ceilings
     parts.append("## Realistic ceilings (client-reported units)")
-    for fam in sorted(profile.realistic_ceilings):
-        parts.append(f"- {fam}: {profile.realistic_ceilings[fam]}")
+    parts.extend(f"- {fam}: {profile.realistic_ceilings[fam]}"
+                 for fam in sorted(profile.realistic_ceilings))
     parts.append("")
     return "\n".join(parts) + "\n"
 
 
-def _corpus_section(base_dir: Path) -> List[str]:
+def _corpus_section(base_dir: Path) -> list[str]:
     """The `## Corpus` + per-run stats block."""
     kb = _results_dir(base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json"
     db = _load_json(kb)
@@ -63,13 +63,12 @@ def _corpus_section(base_dir: Path) -> List[str]:
              f"- floor rows: {floor_rows}",
              "",
              "## Per-run row counts"]
-    for run_id in sorted(db):
-        lines.append(f"- {run_id}: {len(db[run_id])} rows")
+    lines.extend(f"- {run_id}: {len(db[run_id])} rows" for run_id in sorted(db))
     lines.append("")
     return lines
 
 
-def _acceptance_section(base_dir: Path) -> List[str]:
+def _acceptance_section(base_dir: Path) -> list[str]:
     """The `## Acceptance (like-for-like)` + `## Per-family verdicts` block."""
     ar = _load_json(_results_dir(base_dir, _peaks.CODENAME) / "acceptance_report.json")
     if not isinstance(ar, dict):
@@ -90,7 +89,7 @@ def _acceptance_section(base_dir: Path) -> List[str]:
         vs = by_fam[fam]
         w = sum(1 for v in vs if v.get("verdict") == "WIN")
         t = sum(1 for v in vs if v.get("verdict") == "TIE")
-        l = sum(1 for v in vs if v.get("verdict") == "LOSS")
-        lines.append(f"- {fam}: {len(vs)} cells (W{w}/T{t}/L{l})")
+        n_loss = sum(1 for v in vs if v.get("verdict") == "LOSS")
+        lines.append(f"- {fam}: {len(vs)} cells (W{w}/T{t}/L{n_loss})")
     lines.append("")
     return lines

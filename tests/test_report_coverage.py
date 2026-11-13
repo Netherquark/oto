@@ -25,8 +25,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.metrics.report_figures import (  # noqa: E402
-    coverage_rows, coverage_section, coverage_dir)
+from oto.metrics.report_figures import coverage_dir, coverage_rows, coverage_section
 
 ROWS = [
     {"family": "SS", "shape": "256x256x256", "n_legal": 419,
@@ -53,72 +52,72 @@ class TestCoverageSection(unittest.TestCase):
 
     def test_rows_are_read_from_the_handoff_file(self):
         rows = coverage_rows(self.tmp)
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0]["family"], "SS")
-        self.assertEqual(rows[0]["n_legal"], 419)
+        assert len(rows) == 2
+        assert rows[0]["family"] == "SS"
+        assert rows[0]["n_legal"] == 419
 
     def test_no_rows_without_the_handoff_file(self):
         import tempfile
 
         empty = Path(tempfile.mkdtemp())
-        self.assertEqual(coverage_rows(empty), [])
+        assert coverage_rows(empty) == []
 
     def test_the_section_states_the_unexplored_share(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
-        self.assertIn("Problem-space coverage", html)
+        assert "Problem-space coverage" in html
         # the per-cell share (87% for SS, 71% for ZZ) -- the legal space is
         # the same for every cell of a family, so the ratio is per cell.
-        self.assertIn("87%", html)
-        self.assertIn("never been", html)
-        self.assertIn("run.", html)
+        assert "87%" in html
+        assert "never been" in html
+        assert "run." in html
 
     def test_the_section_carries_the_numbers_and_the_figures(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
-        self.assertIn("419", html)      # legal geometries
-        self.assertIn("54", html)       # measured
-        self.assertIn("figure-grid", html)
-        self.assertIn("SS_256x256x256.svg", html)
+        assert "419" in html      # legal geometries
+        assert "54" in html       # measured
+        assert "figure-grid" in html
+        assert "SS_256x256x256.svg" in html
         # performance belongs to the family matrix; the coverage table owns
         # only the search numbers.
-        self.assertNotIn("412.1", html)
+        assert "412.1" not in html
 
     def test_figure_paths_are_relative_to_the_report(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
-        self.assertIn('src="analysis/coverage/SS_256x256x256.svg"', html)
-        self.assertNotIn(str(self.tmp), html)
+        assert 'src="analysis/coverage/SS_256x256x256.svg"' in html
+        assert str(self.tmp) not in html
 
     def test_the_figures_are_grouped_by_family(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
         # one appendix, then a heading per family: no nested per-family
         # disclosure controls and no second copy of the table.
-        self.assertEqual(html.count("<details class=\"figure-appendix\">"), 1)
-        self.assertEqual(html.count("class=\"figure-family\""), 2)
-        self.assertNotIn("figure-group", html)
-        self.assertIn(">SS<", html)
-        self.assertIn(">ZZ<", html)
+        assert html.count('<details class="figure-appendix">') == 1
+        assert html.count('class="figure-family"') == 2
+        assert "figure-group" not in html
+        assert ">SS<" in html
+        assert ">ZZ<" in html
         # the family group row carries the family's own numbers
-        self.assertIn("class=\"coverage-group\"", html)
-        self.assertIn("1 cell", html)          # SS has one row in the fixture
-        self.assertIn("419", html)             # legal geometries, per cell
-        self.assertIn("87.1%", html)           # the unexplored share of that cell
+        assert 'class="coverage-group"' in html
+        assert "1 cell" in html          # SS has one row in the fixture
+        assert "419" in html             # legal geometries, per cell
+        assert "87.1%" in html           # the unexplored share of that cell
 
     def test_a_family_group_holds_its_own_shapes(self):
         html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
                                 / "acceptance_report.html")
-        self.assertIn("256x256x256", html)
-        self.assertIn("1024x1024x1024", html)
+        assert "256x256x256" in html
+        assert "1024x1024x1024" in html
 
     def test_the_section_says_what_to_run_when_there_is_nothing(self):
         import tempfile
 
         html = coverage_section(Path(tempfile.mkdtemp()),
                                 Path("acceptance_report.html"))
-        self.assertIn("coverage_graph", html)
-        self.assertIn("No coverage figures yet", html)
+        assert "coverage_graph" in html
+        assert "No coverage figures yet" in html
 
 
 if __name__ == "__main__":

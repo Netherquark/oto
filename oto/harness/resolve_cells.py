@@ -10,7 +10,7 @@ native winner's config and the floor's (identical / near / retile / no-floor).
 Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
 report itself (oto.metrics.report), the kernel_db it falls back to
 (oto.harness.kernel_db), or the *reading* of ``cfg_gap`` as a tie taxonomy and
-the routes it implies (potential_configs.md §R17–§R18).
+the routes it implies (potential_configs.md §R17-§R18).
 
 Public API: main, _table, _tsv.
 
@@ -37,11 +37,13 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 # Repo-root import (kept so the module also runs as
 # `python3 oto/harness/resolve_cells.py`; under `python3 -m oto.harness.resolve_cells`
 # the repo root is already on the path, and kernel_db.py and friends bootstrap the
@@ -50,16 +52,19 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import yaml  # noqa: E402
 
-from oto.harness.kernel_db import read_kernel_db  # noqa: E402
-from oto.device.peaks import (FAMILY_DTYPES, PEAK_GFLOPS,  # noqa: E402
-                              REALISTIC_CEILINGS, THEORETICAL_PEAKS)
-from oto.tensile.shape_order import shape_order_key  # noqa: E402
 import oto.device.peaks as _peaks
+from oto.device.peaks import (
+    FAMILY_DTYPES,
+    PEAK_GFLOPS,
+    REALISTIC_CEILINGS,
+    THEORETICAL_PEAKS,
+)
+from oto.harness.kernel_db import read_kernel_db
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.shape_order import shape_order_key
 
 # The full structural knob surface — MUST match the yaml emission surface of
 # port_tensile._write_phase_config so docs citing a knob can find it here.
@@ -81,10 +86,10 @@ KB_CFG_KEYS = [
 ]
 
 
-def _normalize_cfg(cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
     """Keep only known knobs; unwrap single-element lists (how the phase yaml
     emission stores scoped values)."""
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for k in CFG_KEYS:
         if k in cfg:
             v = cfg[k]
@@ -94,12 +99,12 @@ def _normalize_cfg(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _cfg_from_kb_row(row: Dict[str, Any]) -> Dict[str, Any]:
+def _cfg_from_kb_row(row: dict[str, Any]) -> dict[str, Any]:
     """Structural config from a kernel_db row (16-knob fallback)."""
     return {k: row.get(k) for k in KB_CFG_KEYS if row.get(k) is not None}
 
 
-def parse_run_config_yaml(path: str) -> Optional[Dict[str, Any]]:
+def parse_run_config_yaml(path: str) -> dict[str, Any] | None:
     """Full knob config from a Tensile `configs/*.yaml` phase emission.
 
     Same walk as the ad-hoc resolver validated against the live corpus:
@@ -112,7 +117,7 @@ def parse_run_config_yaml(path: str) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
     try:
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for entry in doc.get("BenchmarkProblems", [{}])[0] or []:
             if not isinstance(entry, dict):
                 continue
@@ -124,17 +129,16 @@ def parse_run_config_yaml(path: str) -> Optional[Dict[str, Any]]:
                             out[k] = v[0] if (isinstance(v, list) and v) else v
             bfp = entry.get("BenchmarkFinalParameters")
             if isinstance(bfp, list) and bfp and isinstance(bfp[0], dict):
-                for k, v in bfp[0].items():
-                    if k != "ProblemSizes":
-                        out[k] = v
+                out.update({k: v for k, v in bfp[0].items()
+                            if k != "ProblemSizes"})
         return _normalize_cfg(out) if out else None
     except Exception:
         return None
 
 
-def _load_registry_phases(registry_path: str) -> Tuple[Dict[str, Dict[str, Any]], int]:
+def _load_registry_phases(registry_path: str) -> tuple[dict[str, dict[str, Any]], int]:
     """phase_id -> config for every registry phase (scheduler's record)."""
-    out: Dict[str, Dict[str, Any]] = {}
+    out: dict[str, dict[str, Any]] = {}
     con = sqlite3.connect(f"file:{registry_path}?mode=ro", uri=True)
     try:
         for (pid, data) in con.execute("SELECT phase_id, data FROM phases"):
@@ -150,8 +154,8 @@ def _load_registry_phases(registry_path: str) -> Tuple[Dict[str, Dict[str, Any]]
     return out, len(out)
 
 
-def _load_run_configs(runs_dir: str) -> Tuple[Dict[str, Dict[str, Dict[str, Any]]],
-                                              Dict[str, Dict[str, Any]], int]:
+def _load_run_configs(runs_dir: str) -> tuple[dict[str, dict[str, dict[str, Any]]],
+                                              dict[str, dict[str, Any]], int]:
     """Two views over every `<codename>_runs/*/configs/*.yaml`:
 
     * run_scoped[runs_dir_name][phase_stub] — for winner-run-first lookup;
@@ -160,13 +164,13 @@ def _load_run_configs(runs_dir: str) -> Tuple[Dict[str, Dict[str, Dict[str, Any]
     its raw basename stem (`phase_phase_auto_0_cc_..._2`) — the registry ids
     use the bare form, the run configs use the raw form.
     """
-    run_scoped: Dict[str, Dict[str, Dict[str, Any]]] = {}
-    global_cfg: Dict[str, Dict[str, Any]] = {}
+    run_scoped: dict[str, dict[str, dict[str, Any]]] = {}
+    global_cfg: dict[str, dict[str, Any]] = {}
     n_parsed = 0
     for yf in sorted(glob.glob(os.path.join(runs_dir, "*", "configs", "*.yaml"))):
         run_id = os.path.basename(os.path.dirname(os.path.dirname(yf)))
         stub = os.path.basename(yf)[:-5]
-        bare = stub[len("phase_"):] if stub.startswith("phase_") else stub
+        bare = stub.removeprefix("phase_")
         c = parse_run_config_yaml(yf)
         if not c:
             continue
@@ -178,24 +182,24 @@ def _load_run_configs(runs_dir: str) -> Tuple[Dict[str, Dict[str, Dict[str, Any]
     return run_scoped, global_cfg, n_parsed
 
 
-def _floor_best(rows: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _floor_best(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Best row under the standing winner rule (median-primary, best-secondary)
     — the same predicate regression_matrix uses."""
     return max(rows, key=lambda r: (r.get("gflops_median") or 0.0,
                                     r.get("gflops_best") or 0.0)) if rows else None
 
 
-def _clamp_pct(x: Optional[float]) -> Optional[float]:
+def _clamp_pct(x: float | None) -> float | None:
     return round(x, 1) if x is not None else None
 
 
 def _load_kernel_db(
     db_path: str
-) -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     """Read kernel_db.json -> (gfx900_ref floor rows, native phase->config map)."""
     kdb = read_kernel_db(db_path)
-    floor_rows: List[Dict[str, Any]] = []
-    native_kb_cfg: Dict[str, Dict[str, Any]] = {}
+    floor_rows: list[dict[str, Any]] = []
+    native_kb_cfg: dict[str, dict[str, Any]] = {}
     for rid, rows in kdb.items():
         if "gfx900_ref" in rid:
             floor_rows.extend(rows)
@@ -207,10 +211,10 @@ def _load_kernel_db(
 
 
 def _floor_best_by_cell(
-    floor_rows: List[Dict[str, Any]]
-) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    floor_rows: list[dict[str, Any]]
+) -> dict[tuple[str, str], dict[str, Any]]:
     """Floor best row per (family, shape) cell."""
-    floor_best: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    floor_best: dict[tuple[str, str], dict[str, Any]] = {}
     for r in floor_rows:
         fam = r.get("family")
         shp = r.get("shape")
@@ -226,11 +230,11 @@ def _floor_best_by_cell(
 def _native_config(
     win_phase: str,
     win_run: str,
-    run_scoped: Dict[str, Dict[str, Any]],
-    registry: Dict[str, Any],
-    run_global: Dict[str, Any],
-    native_kb_cfg: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
+    run_scoped: dict[str, dict[str, Any]],
+    registry: dict[str, Any],
+    run_global: dict[str, Any],
+    native_kb_cfg: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
     """The native winner's config, from the first source that has it."""
     if not win_phase:
         return {}
@@ -245,11 +249,11 @@ def _native_config(
 
 
 def _spoof_config(
-    key: Tuple[str, str],
-    floor_best: Dict[Tuple[str, str], Dict[str, Any]],
-    registry: Dict[str, Any],
-    run_global: Dict[str, Any],
-) -> Dict[str, Any]:
+    key: tuple[str, str],
+    floor_best: dict[tuple[str, str], dict[str, Any]],
+    registry: dict[str, Any],
+    run_global: dict[str, Any],
+) -> dict[str, Any]:
     """The spoof (floor) winner's config for a cell."""
     row = floor_best.get(key)
     if row is None:
@@ -270,7 +274,7 @@ _GAP_KEYS = ("MacroTile", "ThreadTile", "VectorWidth", "DepthU",
              "GlobalSplitU", "WorkGroup", "WorkGroupMapping")
 
 
-def _cfg_gap(ncfg: Dict[str, Any], scfg: Dict[str, Any]) -> Optional[str]:
+def _cfg_gap(ncfg: dict[str, Any], scfg: dict[str, Any]) -> str | None:
     """How far the native winner's config sits from the floor's.
 
     The per-cell half of the tie taxonomy (potential_configs.md §R17); the
@@ -296,14 +300,14 @@ def _cfg_gap(ncfg: Dict[str, Any], scfg: Dict[str, Any]) -> Optional[str]:
 
 
 def _cell_row(
-    v: Dict[str, Any],
-    cov: Dict[str, Any],
-    run_scoped: Dict[str, Dict[str, Any]],
-    registry: Dict[str, Any],
-    run_global: Dict[str, Any],
-    native_kb_cfg: Dict[str, Dict[str, Any]],
-    floor_best: Dict[Tuple[str, str], Dict[str, Any]],
-) -> Dict[str, Any]:
+    v: dict[str, Any],
+    cov: dict[str, Any],
+    run_scoped: dict[str, dict[str, Any]],
+    registry: dict[str, Any],
+    run_global: dict[str, Any],
+    native_kb_cfg: dict[str, dict[str, Any]],
+    floor_best: dict[tuple[str, str], dict[str, Any]],
+) -> dict[str, Any]:
     """One resolved cell: values, delta and both winner configs."""
     fam = v["family"]
     shp = v["shape"]
@@ -346,9 +350,9 @@ def _cell_row(
 
 
 def build(base_dir: str = ".",
-          acceptance_path: Optional[str] = None,
-          registry_path: Optional[str] = None,
-          db_path: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+          acceptance_path: str | None = None,
+          registry_path: str | None = None,
+          db_path: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Resolve every cell of the acceptance report -> (cells, meta).
 
     CPU-only. All inputs are canonical repo caches / registries.
@@ -374,7 +378,7 @@ def build(base_dir: str = ".",
 
     floor_best = _floor_best_by_cell(floor_rows)
 
-    cells: List[Dict[str, Any]] = [
+    cells: list[dict[str, Any]] = [
         _cell_row(v, cov, run_scoped, registry, run_global,
                   native_kb_cfg, floor_best)
         for v in sorted(pv, key=lambda v: (v["family"],
@@ -383,7 +387,7 @@ def build(base_dir: str = ".",
 
     meta = {
         "tool": "harness.resolve_cells",
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "acceptance_run_id": run_id,
         "reference_run_id": ref_run,
         "n_cells": len(cells),
@@ -397,17 +401,15 @@ def build(base_dir: str = ".",
     return cells, meta
 
 
-def _compact_cfg(cfg: Dict[str, Any], kb: bool = False) -> str:
+def _compact_cfg(cfg: dict[str, Any], kb: bool = False) -> str:
     if not cfg:
         return "?"
     if kb:
-        return ("MT=%s TT=%s VW=%s DU=%s GSU=%s WG=%s"
-                % (cfg.get("MacroTile"), cfg.get("ThreadTile"),
+        return ("MT={} TT={} VW={} DU={} GSU={} WG={}".format(cfg.get("MacroTile"), cfg.get("ThreadTile"),
                    cfg.get("VectorWidth"), cfg.get("DepthU"),
                    cfg.get("GlobalSplitU"), cfg.get("WorkGroup")))
-    return ("MT=%s TT=%s VW=%s DU=%s GSU=%s WGM=%s WG=%s PGR=%s NLCA=%s "
-            "pads=%s/%s GLVW=%s/%s"
-            % (cfg.get("MacroTile"), cfg.get("ThreadTile"),
+    return ("MT={} TT={} VW={} DU={} GSU={} WGM={} WG={} PGR={} NLCA={} "
+            "pads={}/{} GLVW={}/{}".format(cfg.get("MacroTile"), cfg.get("ThreadTile"),
                cfg.get("VectorWidth"), cfg.get("DepthU"),
                cfg.get("GlobalSplitU"), cfg.get("WorkGroupMapping"),
                cfg.get("WorkGroup"), cfg.get("PrefetchGlobalRead"),
@@ -416,13 +418,13 @@ def _compact_cfg(cfg: Dict[str, Any], kb: bool = False) -> str:
                cfg.get("GlobalLoadVectorWidthB")))
 
 
-def _pct_str(x: Optional[float], w: int = 6) -> str:
+def _pct_str(x: float | None, w: int = 6) -> str:
     if x is None:
         return "-".rjust(w)
-    return ("%+6.1f" % x) if w == 6 else ("%6.1f" % x)
+    return (f"{x:+6.1f}") if w == 6 else (f"{x:6.1f}")
 
 
-def _table(cells: List[Dict[str, Any]]) -> str:
+def _table(cells: list[dict[str, Any]]) -> str:
     lines = [
         f"{'fam':<4}{'shape':<18}{'verdict':<7}{'gap':<10}{'d%':>7}{'nat':>8}{'spoof':>8}"
         f"{'%ceil':>7}{'%theo':>7}  {'NATIVE WINNER CONFIG':<82}  FLOOR CONFIG",
@@ -431,17 +433,17 @@ def _table(cells: List[Dict[str, Any]]) -> str:
         nw = c["native_config"]
         nstr = _compact_cfg(nw)
         sstr = _compact_cfg(c["spoof_config"], kb=not c["spoof_config"])
-        lines.append("%-4s %-18s %-7s %-10s %s %7.1f %7.1f %s %s  %-82s %s"
-                     % (c["family"], c["shape"], c["verdict"],
-                        c["cfg_gap"] or "-",
-                        _pct_str(c["delta_pct"]), c["native_value"],
-                        c["spoof_value"], _clamp_pct(c["pct_ceiling"] or 0) or "-",
-                        _clamp_pct(c["pct_theoretical"] or 0) or "-",
-                        nstr, sstr))
+        lines.append(
+            f"{c['family']:<4} {c['shape']:<18} {c['verdict']:<7} "
+            f"{c['cfg_gap'] or '-':<10} {_pct_str(c['delta_pct'])} "
+            f"{float(c['native_value']):7.1f} {float(c['spoof_value']):7.1f} "
+            f"{_clamp_pct(c['pct_ceiling'] or 0) or '-'} "
+            f"{_clamp_pct(c['pct_theoretical'] or 0) or '-'}  "
+            f"{nstr:<82} {sstr}")
     return "\n".join(lines)
 
 
-def _taxonomy(cells: List[Dict[str, Any]]) -> str:
+def _taxonomy(cells: list[dict[str, Any]]) -> str:
     """The straggler taxonomy: what the verdict is *made of*, per cell.
 
     The acceptance verdict compares two arms that were measured in different
@@ -460,7 +462,7 @@ def _taxonomy(cells: List[Dict[str, Any]]) -> str:
     The band is the point: a verdict band of +/-5% means nothing when the same
     binary measures +1% to +19% in the two arms.
     """
-    groups: Dict[str, List[Dict[str, Any]]] = {}
+    groups: dict[str, list[dict[str, Any]]] = {}
     for c in cells:
         groups.setdefault(c["cfg_gap"] or "?", []).append(c)
     lines = ["", "== tie taxonomy: what each verdict is made of =="]
@@ -473,11 +475,10 @@ def _taxonomy(cells: List[Dict[str, Any]]) -> str:
         band = (f"{min(deltas):+.1f}% .. {max(deltas):+.1f}%"
                 if deltas else "-")
         lines.append(f"\n{gap}  n={len(items)}  delta band {band}")
-        for c in sorted(items, key=lambda x: -(x["delta_pct"] or 0.0)):
-            lines.append("   %-6s %-16s %+7.1f%%  %-5s  roof %5.1f%% of %s"
-                         % (c["family"], c["shape"], c["delta_pct"] or 0.0,
-                            c["verdict"], c["pct_theoretical"] or 0.0,
-                            "theoretical"))
+        lines.extend(
+            f"   {c['family']:<6} {c['shape']:<16} {c['delta_pct'] or 0.0:+7.1f}%  "
+            f"{c['verdict']:<5}  roof {c['pct_theoretical'] or 0.0:5.1f}% of theoretical"
+            for c in sorted(items, key=lambda x: -(x["delta_pct"] or 0.0)))
     identical = [c["delta_pct"] for c in groups.get("identical", [])
                  if c["delta_pct"] is not None]
     if len(identical) >= 2:
@@ -487,13 +488,13 @@ def _taxonomy(cells: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _tsv(cells: List[Dict[str, Any]]) -> str:
+def _tsv(cells: list[dict[str, Any]]) -> str:
     head = ("family\tshape\tdtype\tverdict\tcfg_gap\tdelta_pct\tnative_median\tnative_value"
             "\tspoof_median\tspoof_value\tpct_ceiling\tpct_theoretical"
             "\tnative_winner_phase\tnative_winner_run\tnative_config\tspoof_config")
     rows = [head]
-    for c in cells:
-        rows.append("\t".join(str(v) for v in (
+    rows.extend(
+        "\t".join(str(v) for v in (
             c["family"], c["shape"], c["dtype"], c["verdict"], c["cfg_gap"],
             "" if c["delta_pct"] is None else round(c["delta_pct"], 2),
             c["native_median"], c["native_value"],
@@ -502,11 +503,12 @@ def _tsv(cells: List[Dict[str, Any]]) -> str:
             c["native_winner_phase"], c["native_winner_run"],
             _compact_cfg(c["native_config"]),
             _compact_cfg(c["spoof_config"]),
-        )))
+        ))
+        for c in cells)
     return "\n".join(rows)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", default=None, help="repo root")
@@ -532,9 +534,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cells, meta = build(base, args.acceptance, args.registry, args.db)
 
     if not args.no_table:
-        print(_table(cells))
+        pass
     if args.taxonomy:
-        print(_taxonomy(cells))
+        pass
 
     def _write(flag_off: bool, path: str, payload: str) -> None:
         if flag_off:
@@ -544,7 +546,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             out = Path(base) / out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(payload)
-        print(f"wrote -> {out}")
 
     _write(args.no_json, args.json, json.dumps(
         {"meta": meta, "cells": cells}, indent=1))
@@ -554,7 +555,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
            f"# sources: {json.dumps(meta['sources'])}\n\n" + _table(cells) + "\n")
     if args.tsv:
         _write(False, args.tsv, _tsv(cells) + "\n")
-    print(f"{len(cells)} cells resolved")
     return 0
 
 

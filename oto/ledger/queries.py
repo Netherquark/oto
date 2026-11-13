@@ -13,15 +13,14 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-
+from typing import Any
 
 
 class QueryMixin:
     """The registry's read side: records, phases and run lookups, mixed into SQLiteRegistry."""
 
 
-    def run_row(self, run_id: str) -> Optional[sqlite3.Row]:
+    def run_row(self, run_id: str) -> sqlite3.Row | None:
         """One run's registry row, or None.
 
         Read helper for consumers that need run lifecycle timestamps
@@ -34,7 +33,7 @@ class QueryMixin:
                 "SELECT * FROM runs WHERE run_id = ?", (run_id,)
             ).fetchall()
         return rows[0] if rows else None
-    def append_record(self, record: Dict[str, Any], run_id: str = "default") -> int:
+    def append_record(self, record: dict[str, Any], run_id: str = "default") -> int:
         """
         Append a single record to the ledger.
 
@@ -57,10 +56,10 @@ class QueryMixin:
             return cursor.lastrowid
     def read_records(
         self,
-        run_id: Optional[str] = None,
-        record_type: Optional[str] = None,
-        limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        run_id: str | None = None,
+        record_type: str | None = None,
+        limit: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Read records with optional filtering.
 
@@ -92,7 +91,7 @@ class QueryMixin:
 
             cursor = conn.execute(query, params)
             return [json.loads(row["data"]) for row in cursor]
-    def append_phase(self, phase_id: str, fingerprint: str, phase_data: Dict[str, Any]) -> int:
+    def append_phase(self, phase_id: str, fingerprint: str, phase_data: dict[str, Any]) -> int:
         """
         Append a phase with deduplication by fingerprint.
 
@@ -125,17 +124,17 @@ class QueryMixin:
             )
             if cursor.lastrowid:
                 return cursor.lastrowid
-            
+
             # If ignored due to race, fetch existing
             cursor = conn.execute("SELECT id FROM phases WHERE phase_id = ?", (phase_id,))
             row = cursor.fetchone()
             return row["id"] if row else 0
-    def get_phases(self) -> List[Dict[str, Any]]:
+    def get_phases(self) -> list[dict[str, Any]]:
         """Get all phases from database."""
         with self._get_conn() as conn:
             cursor = conn.execute("SELECT data FROM phases ORDER BY id ASC")
             return [json.loads(row["data"]) for row in cursor]
-    def latest_run_id(self, arm: Optional[str] = None) -> Optional[str]:
+    def latest_run_id(self, arm: str | None = None) -> str | None:
         """Return the most recently registered run id (from the runs table).
 
         arm='native' restricts to non-reference runs. The A/B subject must be a

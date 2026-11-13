@@ -16,14 +16,14 @@ tile_product_holds.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from oto.tensile import legality
 
 #: The tile axes a donor tile is keyed on. Values are the config-format keys a
 #: candidate carries, so the DB-hooked mutator and the manifest sampler agree on
 #: what makes two tiles "the same tile".
-TILE_KNOBS: Tuple[str, ...] = ("MacroTile", "ThreadTile", "VectorWidth",
+TILE_KNOBS: tuple[str, ...] = ("MacroTile", "ThreadTile", "VectorWidth",
                                "GlobalSplitU", "DepthU", "GlobalLoadVectorWidthA",
                                "GlobalLoadVectorWidthB", "WorkGroup")
 
@@ -31,7 +31,7 @@ TILE_KNOBS: Tuple[str, ...] = ("MacroTile", "ThreadTile", "VectorWidth",
 #: name rather than declared by importance: the draw is uniform over the groups
 #: ``choose_groups`` did not exclude, and an order that encoded a preference
 #: would silently bias every uniform draw taken from it.
-ALL_GROUPS: Tuple[str, ...] = tuple(sorted(legality.KNOB_GROUPS))
+ALL_GROUPS: tuple[str, ...] = tuple(sorted(legality.KNOB_GROUPS))
 
 #: Knobs the caller owns and the sampler must never emit (``Architecture``,
 #: ``DataType``, ``ProblemType``, ``ScheduleName``, ``FamilyLabel``). Re-exported
@@ -41,7 +41,7 @@ TEMPLATE_KEYS = legality.TEMPLATE_KEYS
 
 # ---------------------------------------------------------------- tile
 
-def reconcile_tile(config: Dict[str, Any]) -> Dict[str, Any]:
+def reconcile_tile(config: dict[str, Any]) -> dict[str, Any]:
     """Make `WorkGroup * ThreadTile == MacroTile` hold by construction.
 
     Tensile rejects a config unless, per M/N dimension, the product equals the
@@ -96,7 +96,7 @@ def reconcile_tile(config: Dict[str, Any]) -> Dict[str, Any]:
     out["ThreadTile"] = f"{tt[0] or 1}x{tt[1] or 1}"
     return out
 
-def _as_int_triple(value: Any) -> Optional[List[Optional[int]]]:
+def _as_int_triple(value: Any) -> list[int | None] | None:
     """Parse `WxHxD` / `WxH` into `[m, n, k]`, or None if unusable."""
     if value is None:
         return None
@@ -113,7 +113,7 @@ def _as_int_triple(value: Any) -> Optional[List[Optional[int]]]:
     parts = parts[:3]
     return [p if isinstance(p, int) and p > 0 else None for p in parts]
 
-def tile_product_holds(config: Dict[str, Any]) -> bool:
+def tile_product_holds(config: dict[str, Any]) -> bool:
     """True iff `WorkGroup * ThreadTile == MacroTile` per M/N dimension."""
     macro = config.get("MacroTile")
     if not isinstance(macro, str) or "x" not in macro:

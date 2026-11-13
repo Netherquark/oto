@@ -13,15 +13,15 @@ Public API: HarvestMixin.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
 
-import yaml
 
-import oto.metrics.coverage as coverage
+from oto.metrics import coverage
 
 
 class HarvestMixin:
@@ -30,9 +30,9 @@ class HarvestMixin:
 
     def harvest(
         self,
-        all_analytics: List[CellAnalytics],
+        all_analytics: list[CellAnalytics],
         parent_by: str = "lcb"
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Harvest one parent config per (family, shape) cell.
 
         Parent choice by lower confidence bound (Hplan.5); parent_by='median'
@@ -42,7 +42,7 @@ class HarvestMixin:
             raise ValueError(f"parent_by must be 'lcb' or 'median', got {parent_by!r}")
 
         winners = {}
-        by_cell: Dict[str, List[CellAnalytics]] = {}
+        by_cell: dict[str, list[CellAnalytics]] = {}
 
         for a in all_analytics:
             fam = a.family or a.dtype.lower()
@@ -88,7 +88,7 @@ class HarvestMixin:
         self.harvested_winners = winners
         return winners
 
-    def _cell_samples(self, analytics: CellAnalytics) -> List[float]:
+    def _cell_samples(self, analytics: CellAnalytics) -> list[float]:
         """Recover a cell's seed values when a caller built it without them.
 
         `compute_cell_analytics` attaches the seeds, so this is a fallback for
@@ -104,7 +104,7 @@ class HarvestMixin:
         except Exception:
             return []
 
-    def _reconstruct_config(self, analytics: CellAnalytics) -> Dict[str, Any]:
+    def _reconstruct_config(self, analytics: CellAnalytics) -> dict[str, Any]:
         """
         Reconstruct a Tensile config from registry, phases.yaml, or family-specific deck.
         """
@@ -112,7 +112,7 @@ class HarvestMixin:
         phases_path = self.base_dir / "phases.yaml"
         if phases_path.exists():
             try:
-                with open(phases_path, "r") as f:
+                with open(phases_path) as f:
                     phases = yamlio.load_yaml_text(f.read()) or []
                 for p in phases:
                     if isinstance(p, dict) and p.get("fp") == analytics.config_fp:

@@ -41,12 +41,16 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
-from oto.checks.tensile_build_probe import (REPO, _default_arch,
-                                             _init_tensile,
-                                             probe_phase_config)
+from oto import yamlio
+from oto.checks.tensile_build_probe import (
+    REPO,
+    _default_arch,
+    _init_tensile,
+    probe_phase_config,
+)
+
 
 # --------------------------------------------------------------------------
 # Driver: one subprocess per phase (Tensile is heavy global state).
@@ -60,7 +64,7 @@ def _worker(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
-def write_phase_configs(phases: List[Dict[str, Any]], outdir: Path) -> Dict[str, Any]:
+def write_phase_configs(phases: list[dict[str, Any]], outdir: Path) -> dict[str, Any]:
     """Render every phase's real Tensile config, serially, in the main thread.
 
     Done up front and in one thread on purpose: TensileDriver.__init__ installs
@@ -82,13 +86,13 @@ def write_phase_configs(phases: List[Dict[str, Any]], outdir: Path) -> Dict[str,
     finally:
         signal.signal = real_signal
 
-    configs: Dict[str, Any] = {}
+    configs: dict[str, Any] = {}
     for phase in phases:
         pid = phase["phase_id"]
         cfg_path = outdir / f"{pid}.yaml"
         try:
             wrote, refusal = driver._write_phase_config(cfg_path, phase)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             configs[pid] = {"cfg": None, "refusal": f"config generation failed: {exc}"[:300]}
             continue
         configs[pid] = {
@@ -107,7 +111,7 @@ def _rejection_reason(stdout: str) -> str:
     solutions reports only "0 valid solutions", which cannot be acted on.
     """
     lines = [ln.strip() for ln in (stdout or "").splitlines()]
-    out: List[str] = []
+    out: list[str] = []
     for i, ln in enumerate(lines):
         if ln.startswith("reject:"):
             detail = ln[len("reject:"):].strip()
@@ -123,7 +127,7 @@ def _rejection_reason(stdout: str) -> str:
     return "; ".join(out[:3])[:400]
 
 
-def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -> Dict[str, Any]:
+def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -> dict[str, Any]:
     """Build-prove one already-rendered phase config in a dedicated subprocess.
 
     Tensile is heavy global state (globalParameters, working paths, module-level
@@ -167,7 +171,7 @@ def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -
 
 
 # --------------------------------------------------------------------------
-def select_phases(args: argparse.Namespace) -> List[Dict[str, Any]]:
+def select_phases(args: argparse.Namespace) -> list[dict[str, Any]]:
     deck = yamlio.load_yaml(REPO / "phases.yaml") or []
     if args.phase_id:
         deck = [p for p in deck if p.get("phase_id") == args.phase_id]
@@ -182,34 +186,23 @@ def select_phases(args: argparse.Namespace) -> List[Dict[str, Any]]:
     return deck
 
 
-def print_progress(row: Dict[str, Any], i: int, total: int, outdir: Path,
+def print_progress(row: dict[str, Any], i: int, total: int, outdir: Path,
                    passed: int, failed: int) -> None:
     regs = [r for r in row["results"] if r.get("vgprs") is not None]
-    vg = max((r["vgprs"] for r in regs), default=None)
-    ag = max((r.get("accvgprs") or 0 for r in regs), default=None)
-    flag = "PASS" if row["ok"] else "FAIL"
-    print(
-        f"[{i:>3}/{total}] {flag} {row['phase_id']:<44} "
-        f"MT={row['macro_tile']} TT={row['thread_tile']} "
-        f"sols={row['solutions']}"
-        + (f" vgpr<={vg}" if vg is not None else "")
-        + (f" accvgpr<={ag}" if ag else "")
-        + ("" if row["ok"] else f"  <- {row['reason']}"),
-        flush=True,
-    )
+    max((r["vgprs"] for r in regs), default=None)
+    max((r.get("accvgprs") or 0 for r in regs), default=None)
+    "PASS" if row["ok"] else "FAIL"
     if "model_ok" in row:
-        agree = "MATCH" if row["model_ok"] == row["ok"] else "*** MISMATCH ***"
-        print(f"          model: {'legal' if row['model_ok'] else 'illegal'} / Tensile: "
-              f"{'legal' if row['ok'] else 'illegal'}  {agree}", flush=True)
+        "MATCH" if row["model_ok"] == row["ok"] else "*** MISMATCH ***"
 
 
 def _probe_row(
-    i_phase: Tuple[int, Dict[str, Any]],
-    configs: Dict[str, Any],
+    i_phase: tuple[int, dict[str, Any]],
+    configs: dict[str, Any],
     outdir: Path,
     args: Any,
     model_fn: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Probe one phase and shape its report row (may run in a worker thread)."""
     _, phase = i_phase
     pid = phase["phase_id"]
@@ -277,10 +270,8 @@ def main() -> int:
         sys.path.insert(0, str(REPO))
         from oto.tensile.candidate import occupancy_feasible as model_fn
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     passed = failed = 0
-    print(f"Tensile CPU-only build proof: {len(phases)} phase(s), arch={args.arch}, "
-          f"jobs={args.jobs}\n", flush=True)
 
     configs = write_phase_configs(phases, outdir)
 
@@ -306,15 +297,13 @@ def main() -> int:
         failed += 0 if row["ok"] else 1
         rows.append(row)
 
-    print(f"\n{passed} passed, {failed} failed, {len(rows)} total")
     if not args.keep:
         shutil.rmtree(outdir, ignore_errors=True)
     else:
-        print(f"artifacts: {outdir}")
+        pass
 
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=2))
-        print(f"report: {args.json}")
 
     return 0 if failed == 0 else 1
 

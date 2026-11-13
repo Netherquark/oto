@@ -42,9 +42,10 @@ exploring the axes the cells need.
    (every write in the suite goes to a tmp dir) -- the mechanism is there for
    the first test that does not.
 5. **The fast path for the tree-walking guards.** `OTO_GUARD_FILES=1` narrows
-   `test_function_length` and `test_pyflakes` to the files git reports as
-   changed: 2.11 s -> 0.70 s. The full scan stays the default, because a
-   guard that only looks at what you touched is not a guard.
+   `test_function_length`, `test_pyflakes`, `test_ruff`, `test_py_compile` and
+   `test_file_length` to the files git reports as changed: 2.11 s -> 0.70 s. The full scan stays
+   the default, because a guard that only looks at what you touched is not a
+   guard.
 6. **The live run panel** (`oto.metrics.render_status`, `oto.runners.phases`).
    The panel now shows the **per-tier bars** (ILLEGAL / UNDER-SPECIFIED /
    UNREPRODUCIBLE: decided of total) instead of only the aggregate
@@ -88,7 +89,7 @@ carrying since the 2026-10-21 knob batch:
 pytest                     # the whole suite, serial (2 m 10 s)
 pytest -n auto             # the whole suite, distributed (1 m 27 s)
 pytest -m preflight        # the pre-run subset (36 s)
-OTO_GUARD_FILES=1 pytest tests/test_function_length.py tests/test_pyflakes.py
+OTO_GUARD_FILES=1 pytest tests/test_function_length.py tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_file_length.py
 ```
 
 The preflight subset is *faster serial* (36 s) than distributed (44 s): the

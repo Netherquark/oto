@@ -28,8 +28,10 @@ import collections
 import json
 import re
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
+
 import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -79,8 +81,7 @@ def reason_for_phase(phase_dir: Path) -> str:
             stdout_tail = "stdout tail: " + (tail[-1][:60] if tail else "<empty>")
 
     if cands:
-        return ("tensile reject x%d: %s"
-                % (cands.total(), cands.most_common(1)[0][0]))
+        return f"tensile reject x{cands.total()}: {cands.most_common(1)[0][0]}"
     if stderr_first is not None:
         return stderr_first
     if stdout_tail is not None:
@@ -88,8 +89,8 @@ def reason_for_phase(phase_dir: Path) -> str:
     return "no logs at all"
 
 
-def census(base: str = ".", run_filter: Optional[str] = None,
-           sample_limit: int = 12) -> Dict[str, Any]:
+def census(base: str = ".", run_filter: str | None = None,
+           sample_limit: int = 12) -> dict[str, Any]:
     """Walk the run corpus and classify every empty phase.
 
     Args:
@@ -108,9 +109,9 @@ def census(base: str = ".", run_filter: Optional[str] = None,
 
     meta = {"tool": "harness.failure_triage", "base": str(base),
             "runs_scanned": 0, "phase_dirs": 0, "empty": 0}
-    per_run: List[Dict[str, Any]] = []
+    per_run: list[dict[str, Any]] = []
     reasons: collections.Counter = collections.Counter()
-    samples: List[Tuple[str, str, str]] = []
+    samples: list[tuple[str, str, str]] = []
 
     for run in run_dirs:
         meta["runs_scanned"] += 1
@@ -134,32 +135,23 @@ def census(base: str = ".", run_filter: Optional[str] = None,
             "samples": samples}
 
 
-def _report(result: Dict[str, Any], top: int) -> None:
-    meta = result["meta"]
-    print(f"runs scanned: {meta['runs_scanned']}")
-    print(f"phase dirs: {meta['phase_dirs']}   with no non-empty CSV: {meta['empty']}")
+def _report(result: dict[str, Any], top: int) -> None:
+    result["meta"]
 
-    print()
-    print("runs with any empty phase (name, phases, empty):")
     for r in result["per_run"]:
         if r["empty"]:
-            print(f"   {r['run']:44} {r['phases']:4} {r['empty']:4}")
+            pass
 
-    print()
-    print("=" * 78)
-    print("Why the empty ones are empty (reason histogram):")
-    for reason, count in sorted(result["reasons"].items(),
+    for _reason, _count in sorted(result["reasons"].items(),
                                key=lambda kv: -kv[1])[:top]:
-        print(f"   {count:4}  {reason}")
+        pass
 
     if result["samples"]:
-        print()
-        print("samples:")
-        for run, ph, why in result["samples"][:12]:
-            print(f"   {run}/{ph}: {why}")
+        for _run, _ph, _why in result["samples"][:12]:
+            pass
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)

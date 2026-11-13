@@ -2,22 +2,25 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import oto.agents.harness_tools as ht
-from oto.agents.harness_tools import (study_kernel_db, verify_candidates,
-                                       build_harness_study)
+from oto.agents.harness_tools import (
+    build_harness_study,
+    study_kernel_db,
+    verify_candidates,
+)
 from oto.agents.meta import run as meta_run
 from oto.device.loader import load_profile
 
 
-def _row(fam: str, side: int, gflops: float, phase: str = "phase_x") -> Dict[str, Any]:
+def _row(fam: str, side: int, gflops: float, phase: str = "phase_x") -> dict[str, Any]:
     return {"family": fam, "shape": f"{side}x{side}x{side}",
             "gflops_median": gflops, "gflops_best": gflops * 1.1,
             "phase": phase, "kernel": phase}
 
 
-def _pool_row(fam: str, side: int, tier: str, tag: str) -> Dict[str, Any]:
+def _pool_row(fam: str, side: int, tier: str, tag: str) -> dict[str, Any]:
     return {"label": f"{fam}_{side}_{tier}_{tag}", "tier": tier,
             "shapes": [f"{side}x{side}x{side}"],
             "contraction_pattern": "Ailk_Bjlk", "dtype": "s",
@@ -28,8 +31,10 @@ def _pool_row(fam: str, side: int, tier: str, tag: str) -> Dict[str, Any]:
 def test_study_kernel_db_missing_corpus(tmp_path):
     result = study_kernel_db(tmp_path)
     assert result["present"] is False
-    assert result["rows"] == 0 and result["floor_rows"] == 0
-    assert result["target_cells"] > 0 and result["covered_cells"] == 0
+    assert result["rows"] == 0
+    assert result["floor_rows"] == 0
+    assert result["target_cells"] > 0
+    assert result["covered_cells"] == 0
 
 
 def test_study_kernel_db_counts_and_winners(tmp_path):
@@ -43,7 +48,8 @@ def test_study_kernel_db_counts_and_winners(tmp_path):
     result = study_kernel_db(tmp_path)
     assert result["present"] is True
     assert result["runs"] == 2
-    assert result["rows"] == 3 and result["floor_rows"] == 2
+    assert result["rows"] == 3
+    assert result["floor_rows"] == 2
     assert result["families"] == {"HH": 1, "SS": 2}
     assert result["winners"]["SS:256"]["gflops_median"] == 250.0
     assert result["winners"]["HH:256"]["phase"] == "p_hh_256"
@@ -79,7 +85,8 @@ def test_build_harness_study_missing_corpus_ok(tmp_path, monkeypatch):
     prof = load_profile("gfx90c")
     result = build_harness_study(tmp_path, prof)
     assert result["status"] == "success"
-    assert result["proposed"] == 0 and result["passed"] == 0
+    assert result["proposed"] == 0
+    assert result["passed"] == 0
     assert "no kernel_db.json" in result["markdown"]
     assert "## Proposed candidates" in result["markdown"]
 

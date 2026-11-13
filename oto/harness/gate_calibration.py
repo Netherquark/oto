@@ -48,20 +48,21 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
+from oto import yamlio
+
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import yaml  # noqa: E402
 
-from oto.tensile.config_writer import TRANSPOSE_MAP  # noqa: E402
-from oto.tensile.library_parity import phase_family  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile.config_writer import TRANSPOSE_MAP
+from oto.tensile.library_parity import phase_family
 
 #: Transpose pair -> contraction pattern; the inverse of the writer's own map, so
 #: the two cannot drift (``config_writer.TRANSPOSE_MAP`` stays the one home).
@@ -117,7 +118,7 @@ def _tile_parses(value: Any) -> bool:
     return True
 
 
-def read_phase_config(path: Path, phase_id: str) -> Optional[Dict[str, Any]]:
+def read_phase_config(path: Path, phase_id: str) -> dict[str, Any] | None:
     """A gate-ready config from a phase's own ``configs/phase_*.yaml``.
 
     Returns the config dict ``validate_config`` / ``ldspad_feasible`` expect:
@@ -131,7 +132,7 @@ def read_phase_config(path: Path, phase_id: str) -> Optional[Dict[str, Any]]:
     except (OSError, ValueError, TypeError, KeyError, IndexError):
         return None
 
-    cfg: Dict[str, Any] = {}
+    cfg: dict[str, Any] = {}
     for section in _BODY_SECTIONS:
         for entry in (body.get(section) or []):
             if not isinstance(entry, dict):
@@ -169,7 +170,7 @@ def measurement_produced(phase_dir: Path) -> bool:
     return any(p.stat().st_size > 0 for p in data.glob("*.csv"))
 
 
-def _empty_population() -> Dict[str, Any]:
+def _empty_population() -> dict[str, Any]:
     return {"phases": 0, "built": 0, "confusion": {}, "false_rejections": [],
             "misses": []}
 
@@ -183,7 +184,7 @@ def population_of(run_name: str) -> str:
     return "reference" if run_name.startswith("gfx900_ref") else "ours"
 
 
-def audit(base: str = ".", families: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, Any]:
     """Classify every phase with a launch config against the gates.
 
     Args:
@@ -242,32 +243,28 @@ def audit(base: str = ".", families: Optional[Sequence[str]] = None) -> Dict[str
     return {"meta": meta, "populations": populations}
 
 
-def _report(name: str, pop: Dict[str, Any], limit: int) -> None:
+def _report(name: str, pop: dict[str, Any], limit: int) -> None:
     conf = pop["confusion"]
-    print(f"\n{name}   phases={pop['phases']}  built={pop['built']}")
     cells = [
         (True, True, "agree: Tensile built it, gate allowed it"),
         (False, False, "agree: no measurement, gate refused it"),
         (False, True, "MISS: no measurement, gate allowed it (work list)"),
         (True, False, "FALSE REJECTION: Tensile built it, gate refused it"),
     ]
-    for built, ok, label in cells:
-        n = conf.get(f"built={built} gate={ok}", 0)
-        flag = ""
+    for built, ok, _label in cells:
+        conf.get(f"built={built} gate={ok}", 0)
         if built and not ok:
-            flag = "  <-- the decision rule: must be 0" if n else "  ok"
-        print(f"  {n:6}  {label}{flag}")
+            pass
 
-    for tag, rows in (("misses", pop["misses"]),
+    for _tag, rows in (("misses", pop["misses"]),
                       ("false rejections", pop["false_rejections"])):
         if not rows:
             continue
-        print(f"  {tag} ({len(rows)}):")
-        for r in rows[:limit]:
-            print(f"    {r['run']}/{r['phase'][:56]:56} {r['reason'][:48]}")
+        for _r in rows[:limit]:
+            pass
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -284,13 +281,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = ap.parse_args(argv)
 
     result = audit(args.base, args.family)
-    meta = result["meta"]
-    print(f"gate calibration -- {meta['base']}")
-    print(f"  {meta['runs']} runs, {meta['phases']} phases, "
-          f"{meta['with_config']} with a launch config "
-          f"({meta['no_config']} without"
-          + (f", {meta['filtered_out']} filtered by --family"
-             if meta["filtered_out"] else "") + ")")
+    result["meta"]
 
     shown = (("ours", "reference") if args.population == "all"
              else (args.population,))
@@ -303,8 +294,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         args.json.write_text(json.dumps(result, indent=1))
 
     if args.fail_on_false_reject and result["populations"]["ours"]["false_rejections"]:
-        print("\nFAIL: the native gate refused a phase Tensile built "
-              "(false rejection)", file=sys.stderr)
         return 1
     return 0
 

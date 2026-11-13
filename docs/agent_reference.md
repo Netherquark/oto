@@ -21,9 +21,9 @@ python3 check_candidates.py --quiet
 python3 -m oto.harness.generate_candidates --dry-run
 PYTHONPATH=. python3 oto/runners/cli.py --preflight
 
-# 3. Pyflakes safety net (fast, CPU-only)
-python3 -m pytest tests/test_pyflakes.py tests/test_function_length.py -q
-OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_function_length.py -q  # changed files only
+# 3. Pyflakes + ruff + py_compile + length safety nets (fast, CPU-only)
+python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
+OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q  # changed files only
 
 # 4. Full test suite (2m10s serial, 1m27s with -n auto)
 python3 -m pytest -q
@@ -68,6 +68,9 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/conftest.py` | The `serial` / `preflight` markers, the serial rule, the corpus fixtures |
 | `tests/test_pyflakes.py` | Pyflakes safety-net guard |
+| `tests/test_ruff.py` | Ruff safety-net guard (pinned rule set in `ruff.toml`) |
+| `tests/test_py_compile.py` | Every tracked `.py` must byte-compile |
+| `tests/test_file_length.py` | No tracked `.py` over 600 lines (grandfathered list ratchets down) |
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
 | `tests/test_tile_frontier.py` | The legal MacroTile frontier above 16384 elements |
 | `tests/test_corpus_census.py` | Corpus-history census: median basis, geometry collapse, per-cell history |

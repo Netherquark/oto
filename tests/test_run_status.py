@@ -38,8 +38,10 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import oto.metrics.run_status as rs  # noqa: E402
-import oto.tensile.library as tl  # noqa: E402
+import pytest
+
+import oto.metrics.run_status as rs
+import oto.tensile.library as tl
 
 
 def _phase(tag: str, kernel: str) -> dict:
@@ -61,8 +63,8 @@ def _deck() -> list:
     return phases
 
 
-def _record(run_id: str, phase: dict, status: str, result: str = None,
-            *, with_key: bool = True, timestamp: str = None) -> dict:
+def _record(run_id: str, phase: dict, status: str, result: str | None = None,
+            *, with_key: bool = True, timestamp: str | None = None) -> dict:
     rec = {
         "type": "general",
         "phase_id": phase["phase_id"],
@@ -106,8 +108,8 @@ class StatusFixture(unittest.TestCase):
             conn.execute("CREATE INDEX idx_records_run_id ON records(run_id)")
 
     def add_run(self, run_id: str, status: str, records, *,
-                resume_of: str = None, started: str = None,
-                completed: str = None):
+                resume_of: str | None = None, started: str | None = None,
+                completed: str | None = None):
         meta = {"resume_of": resume_of} if resume_of else None
         with sqlite3.connect(self.db) as conn:
             conn.execute(
@@ -147,17 +149,17 @@ class StatusFixture(unittest.TestCase):
 class TestBucket(unittest.TestCase):
     def test_null_result_status_is_a_failure(self):
         # Tensile found no valid solution: status failed, result.status absent.
-        self.assertEqual(rs.bucket("failed", None), "failed")
-        self.assertEqual(rs.bucket("failed", ""), "failed")
+        assert rs.bucket("failed", None) == "failed"
+        assert rs.bucket("failed", "") == "failed"
 
     def test_completed_success(self):
-        self.assertEqual(rs.bucket("completed", "success"), "success")
+        assert rs.bucket("completed", "success") == "success"
 
     def test_skipped_by_user_is_not_a_failure(self):
-        self.assertEqual(rs.bucket("failed", "skipped_by_user"), "skipped")
+        assert rs.bucket("failed", "skipped_by_user") == "skipped"
 
     def test_started_is_active(self):
-        self.assertEqual(rs.bucket("started", None), "active")
+        assert rs.bucket("started", None) == "active"
 
 
 class TestIdentityCounting(StatusFixture):
@@ -170,8 +172,8 @@ class TestIdentityCounting(StatusFixture):
             _record("gfx900_ref_r1", renamed, "completed", "success"),
         ])
         rep = self.report()
-        self.assertEqual(rep["decided"], 1)
-        self.assertLessEqual(rep["decided"], rep["corpus"])
+        assert rep["decided"] == 1
+        assert rep["decided"] <= rep["corpus"]
 
     def test_pre_phase_key_records_resolve_by_tag(self):
         """2026-09-25/26 runs predate phase_key; they must still count."""
@@ -180,8 +182,8 @@ class TestIdentityCounting(StatusFixture):
             for p in self.phases
         ])
         rep = self.report()
-        self.assertEqual(rep["decided"], len(self.phases))
-        self.assertEqual(rep["stale_records"], 0)
+        assert rep["decided"] == len(self.phases)
+        assert rep["stale_records"] == 0
 
     def test_resume_overrides_ancestor_verdict(self):
         """A phase re-run in a resume counts once, with the newer verdict."""
@@ -191,9 +193,9 @@ class TestIdentityCounting(StatusFixture):
         self.add_run("gfx900_ref_r2", "completed", [
             _record("gfx900_ref_r2", p, "failed", None)], resume_of="gfx900_ref_r1")
         rep = self.report()
-        self.assertEqual(rep["decided"], 1)
-        self.assertEqual(rep["tally"]["failed"], 1)
-        self.assertEqual(rep["tally"]["success"], 0)
+        assert rep["decided"] == 1
+        assert rep["tally"]["failed"] == 1
+        assert rep["tally"]["success"] == 0
 
     def test_unresolvable_record_is_reported_not_hidden(self):
         """No phase_key and an unknown tag must not vanish or inflate."""
@@ -201,8 +203,8 @@ class TestIdentityCounting(StatusFixture):
         self.add_run("gfx900_ref_r1", "completed", [
             _record("gfx900_ref_r1", ghost, "failed", None, with_key=False)])
         rep = self.report()
-        self.assertEqual(rep["decided"], 0)
-        self.assertEqual(rep["stale_records"], 1)
+        assert rep["decided"] == 0
+        assert rep["stale_records"] == 1
 
 
 class TestPlanProgress(StatusFixture):
@@ -216,28 +218,28 @@ class TestPlanProgress(StatusFixture):
         self._fill("gfx900_ref_r1", 5)
         rep = self.report(rs.RunPlan(rerun_illegal=True))
         # 2 ILLEGAL released, 2 of them done -> 0 left.
-        self.assertEqual(rep["ref_total"], 2)
-        self.assertEqual(rep["ref_done"], 2)
-        self.assertEqual(rep["ref_remaining"], 0)
+        assert rep["ref_total"] == 2
+        assert rep["ref_done"] == 2
+        assert rep["ref_remaining"] == 0
 
     def test_remaining_counts_undecided_cells_in_released_tiers(self):
         self._fill("gfx900_ref_r1", 1)
         rep = self.report(rs.RunPlan(rerun_illegal=True))
-        self.assertEqual(rep["ref_remaining"], 1)
+        assert rep["ref_remaining"] == 1
 
     def test_percent_never_exceeds_100(self):
         """The whole corpus decided + a small plan must not read >100%."""
         self._fill("gfx900_ref_r1", 5)
         rep = self.report(rs.RunPlan(rerun_illegal=True))
-        self.assertLessEqual(rep["estimate"]["percent"], 100.0)
+        assert rep["estimate"]["percent"] <= 100.0
 
     def test_all_tiers_selected(self):
         self._fill("gfx900_ref_r1", 3)
         rep = self.report(rs.RunPlan(rerun_illegal=True,
                                       rerun_underspecified=True,
                                       rerun_unreproducible=True))
-        self.assertEqual(rep["ref_total"], 5)
-        self.assertEqual(rep["ref_remaining"], 2)
+        assert rep["ref_total"] == 5
+        assert rep["ref_remaining"] == 2
 
     def test_interrupted_phase_is_not_decided(self):
         p = self.phases[0]
@@ -246,16 +248,16 @@ class TestPlanProgress(StatusFixture):
             _record("gfx900_ref_r1", self.phases[1], "started", None),
         ])
         rep = self.report(rs.RunPlan(rerun_illegal=True))
-        self.assertEqual(rep["tally"]["active"], 1)
-        self.assertEqual(rep["ref_done"], 1)
-        self.assertEqual(rep["ref_remaining"], 1)
+        assert rep["tally"]["active"] == 1
+        assert rep["ref_done"] == 1
+        assert rep["ref_remaining"] == 1
 
     def test_skipped_does_not_count_as_done(self):
         self.add_run("gfx900_ref_r1", "completed", [
             _record("gfx900_ref_r1", self.phases[0], "failed", "skipped_by_user")])
         rep = self.report(rs.RunPlan(rerun_illegal=True))
-        self.assertEqual(rep["decided"], 0)
-        self.assertEqual(rep["ref_remaining"], 2)
+        assert rep["decided"] == 0
+        assert rep["ref_remaining"] == 2
 
     def test_tuning_units_follow_plan_and_deck(self):
         """deck * (1 + mutations) * iterations.
@@ -266,25 +268,25 @@ class TestPlanProgress(StatusFixture):
         """
         rep = self.report(rs.RunPlan(rerun_illegal=True, iterations=2,
                                       mutations=1, deck_size=10))
-        self.assertEqual(rep["estimate"]["tuning_units"], 2 * 10 * 2)
+        assert rep["estimate"]["tuning_units"] == 2 * 10 * 2
 
     def test_tuning_units_scale_with_real_deck(self):
         """The 434-phase deck at the default 10x3 is the shipped shape."""
         rep = self.report(rs.RunPlan(rerun_illegal=True, iterations=10,
                                       mutations=3, deck_size=434))
-        self.assertEqual(rep["estimate"]["tuning_units"], 10 * 434 * 4)
+        assert rep["estimate"]["tuning_units"] == 10 * 434 * 4
 
     def test_no_tuning_when_iterations_zero(self):
         rep = self.report(rs.RunPlan(rerun_illegal=True, iterations=0))
-        self.assertEqual(rep["estimate"]["tuning_units"], 0)
+        assert rep["estimate"]["tuning_units"] == 0
 
     def test_empty_plan_reports_zero_units(self):
         rep = self.report(rs.RunPlan(rerun_illegal=False,
                                       rerun_underspecified=False,
                                       rerun_unreproducible=False,
                                       iterations=0))
-        self.assertEqual(rep["estimate"]["units"], 0)
-        self.assertIsNone(rep["estimate"]["percent"])
+        assert rep["estimate"]["units"] == 0
+        assert rep["estimate"]["percent"] is None
 
 
 class TestChainAndClock(StatusFixture):
@@ -297,8 +299,8 @@ class TestChainAndClock(StatusFixture):
         self.add_run("gfx900_ref_r3", "interrupted", [], resume_of="gfx900_ref_r2",
                      started="2026-09-28T10:00:00", completed=None)
         rep = self.report()
-        self.assertEqual(rep["chain"], ["gfx900_ref_r1", "gfx900_ref_r2", "gfx900_ref_r3"])
-        self.assertEqual(rep["head"], "gfx900_ref_r3")
+        assert rep["chain"] == ["gfx900_ref_r1", "gfx900_ref_r2", "gfx900_ref_r3"]
+        assert rep["head"] == "gfx900_ref_r3"
 
     def test_closed_interrupted_run_does_not_outrank_newer_floor(self):
         """A finished interrupted run is history, not the current head.
@@ -315,8 +317,8 @@ class TestChainAndClock(StatusFixture):
                      started="2026-10-03T10:00:00",
                      completed="2026-10-03T12:00:00")
         rep = self.report()
-        self.assertEqual(rep["head"], "gfx900_ref_floor")
-        self.assertEqual(rep["chain"], ["gfx900_ref_floor"])
+        assert rep["head"] == "gfx900_ref_floor"
+        assert rep["chain"] == ["gfx900_ref_floor"]
 
     def test_unclosed_interrupted_run_still_outranks_older_floor(self):
         """The mirror case: no completed_at means live, resumable work."""
@@ -326,7 +328,7 @@ class TestChainAndClock(StatusFixture):
         self.add_run("gfx900_ref_live", "interrupted", [],
                      started="2026-10-05T10:00:00", completed=None)
         rep = self.report()
-        self.assertEqual(rep["head"], "gfx900_ref_live")
+        assert rep["head"] == "gfx900_ref_live"
 
     def test_newer_native_run_outranks_older_reference(self):
         """Default head must span ALL runs, not just gfx900_ref_* chains.
@@ -344,8 +346,8 @@ class TestChainAndClock(StatusFixture):
                       started="2026-10-09T20:54:00",
                       completed="2026-10-10T04:35:00")
         rep = self.report()
-        self.assertEqual(rep["head"], "run_20261009_205427")
-        self.assertEqual(rep["chain"], ["run_20261009_205427"])
+        assert rep["head"] == "run_20261009_205427"
+        assert rep["chain"] == ["run_20261009_205427"]
 
     def test_zero_duration_completed_run_reports_zero_elapsed(self):
         """A completed run that started and stopped at the same instant has
@@ -354,7 +356,7 @@ class TestChainAndClock(StatusFixture):
                       started="2026-10-03T10:00:00",
                       completed="2026-10-03T10:00:00")
         rep = self.report()
-        self.assertEqual(rep["elapsed_minutes"], 0.0)
+        assert rep["elapsed_minutes"] == 0.0
 
     def test_elapsed_is_head_run_not_chain_span(self):
         """Two days of ancestor runs must not inflate this run's elapsed."""
@@ -368,8 +370,8 @@ class TestChainAndClock(StatusFixture):
         rep = self.report(now=datetime(2026, 9, 28, 12, 0, 0))
         # Elapsed tracks r2 (still running -> falls back to now); the chain
         # span keeps the 8 days for context.
-        self.assertLess(rep["elapsed_minutes"], 24 * 60)
-        self.assertGreater(rep["chain_span_minutes"], 7 * 24 * 60)
+        assert rep["elapsed_minutes"] < 24 * 60
+        assert rep["chain_span_minutes"] > 7 * 24 * 60
 
     def test_completed_head_uses_recorded_timestamps(self):
         self.add_run("gfx900_ref_r1", "completed", [
@@ -381,20 +383,20 @@ class TestChainAndClock(StatusFixture):
     def test_cycle_guard_on_self_referential_resume(self):
         self.add_run("gfx900_ref_r1", "completed", [], resume_of="gfx900_ref_r1")
         rep = self.report()
-        self.assertEqual(rep["chain"], ["gfx900_ref_r1"])
+        assert rep["chain"] == ["gfx900_ref_r1"]
 
 
 class TestRender(unittest.TestCase):
     def test_bar_is_bounded(self):
-        self.assertTrue(rs.bar(0.0).startswith("["))
-        self.assertTrue(rs.bar(100.0).endswith("]"))
-        self.assertTrue(rs.bar(-5.0).startswith("["))
-        self.assertTrue(rs.bar(500.0).endswith("]"))
+        assert rs.bar(0.0).startswith("[")
+        assert rs.bar(100.0).endswith("]")
+        assert rs.bar(-5.0).startswith("[")
+        assert rs.bar(500.0).endswith("]")
 
     def test_fmt_duration(self):
-        self.assertEqual(rs.fmt_duration(90), "1h 30m")
-        self.assertIn("d", rs.fmt_duration(60 * 24 * 3))
-        self.assertEqual(rs.fmt_duration(None), "unknown")
+        assert rs.fmt_duration(90) == "1h 30m"
+        assert "d" in rs.fmt_duration(60 * 24 * 3)
+        assert rs.fmt_duration(None) == "unknown"
 
     def test_render_survives_empty_report(self):
         rep = {"chain": [], "head": "", "head_status": "unknown",
@@ -412,27 +414,27 @@ class TestRender(unittest.TestCase):
                "plan": {"rerun_illegal": False, "iterations": 0,
                         "mutations": 0}, "thermals": None}
         out = rs.render(rep, show_thermals=False)
-        self.assertIn("nothing selected", out)
+        assert "nothing selected" in out
 
 
 class TestRunPlan(unittest.TestCase):
     def test_parse_key_values(self):
         plan = rs.RunPlan.from_args(["rerun_illegal=1", "iterations=3",
                                      "mutations=2"])
-        self.assertTrue(plan.rerun_illegal)
-        self.assertEqual(plan.iterations, 3)
-        self.assertEqual(plan.mutations, 2)
+        assert plan.rerun_illegal
+        assert plan.iterations == 3
+        assert plan.mutations == 2
 
     def test_rejects_unknown_key(self):
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             rs.RunPlan.from_args(["nonsense=1"])
 
     def test_rejects_malformed_pair(self):
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             rs.RunPlan.from_args(["iterations"])
 
     def test_rejects_non_integer_iterations(self):
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             rs.RunPlan.from_args(["iterations=many"])
 
     def test_default_matches_auto_prompt_defaults(self):
@@ -446,12 +448,9 @@ class TestRunPlan(unittest.TestCase):
         driver = auto_prompt.AutoPlan()
         for field in ("rerun_illegal", "rerun_underspecified",
                       "rerun_unreproducible"):
-            self.assertEqual(getattr(rs.RunPlan.from_args([]), field),
-                             getattr(driver, field),
-                             f"{field} default diverges from --auto")
-        self.assertEqual(rs.RunPlan.from_args([]).iterations,
-                         driver.iterations)
-        self.assertEqual(rs.RunPlan.from_args([]).mutations, driver.mutations)
+            assert getattr(rs.RunPlan.from_args([]), field) == getattr(driver, field), f"{field} default diverges from --auto"
+        assert rs.RunPlan.from_args([]).iterations == driver.iterations
+        assert rs.RunPlan.from_args([]).mutations == driver.mutations
 
 
 class TestLiveStatus(StatusFixture):
@@ -486,16 +485,16 @@ class TestLiveStatus(StatusFixture):
             p.refresh()          # must not raise
             time.sleep(0.15)
             p.stop()
-        self.assertGreater(p.errors, 0, "missing registry was not counted")
+        assert p.errors > 0, "missing registry was not counted"
 
     def test_start_and_stop_restore_stdout(self):
         self._seed()
         before = sys.stdout
         p = rs.LiveStatus(self.base, interval=0.05, stream=self._Tty())
         p.start()
-        self.assertIsNot(sys.stdout, before, "panel did not wrap stdout")
+        assert sys.stdout is not before, "panel did not wrap stdout"
         p.stop()
-        self.assertIs(sys.stdout, before, "stdout was not restored")
+        assert sys.stdout is before, "stdout was not restored"
 
     def test_non_tty_emits_no_ansi_and_appends(self):
         """A piped log must stay readable: no escape codes, no repainting."""
@@ -507,8 +506,8 @@ class TestLiveStatus(StatusFixture):
         time.sleep(0.15)
         p.stop()
         out = buf.getvalue()
-        self.assertNotIn("\x1b[", out, "ANSI escapes leaked into a non-TTY log")
-        self.assertIn("elapsed", out)
+        assert "\x1b[" not in out, "ANSI escapes leaked into a non-TTY log"
+        assert "elapsed" in out
 
     def test_panel_lines_are_erased_before_run_output(self):
         """A run's own prints must clear the panel, or the next repaint shreds them."""
@@ -522,25 +521,24 @@ class TestLiveStatus(StatusFixture):
         out = buf.getvalue()
         # The erase must come first, so the panel is gone before the new line
         # is written and the next repaint cannot overwrite the line.
-        self.assertTrue(out.startswith("\x1b[5A\x1b[J"),
-                        f"panel was not erased first: {out!r}")
-        self.assertIn("Skipping phase phase_ss_x_1", out)
-        self.assertEqual(p._painted, 0)
+        assert out.startswith("\x1b[5A\x1b[J"), f"panel was not erased first: {out!r}"
+        assert "Skipping phase phase_ss_x_1" in out
+        assert p._painted == 0
 
     def test_errors_do_not_escape_a_refresh(self):
         self._seed()
         p = self._panel()
         with mock.patch.object(rs, "build_report", side_effect=SystemExit("no db")):
             p.refresh()          # must not raise
-        self.assertEqual(p.errors, 1)
+        assert p.errors == 1
 
 
 class TestExecutionTiming(StatusFixture):
     """Execution time in the acceptance report."""
 
     def _driver(self):
-        from oto.runners.cli import TensileDriver
         from oto.ledger.registry import SQLiteRegistry
+        from oto.runners.cli import TensileDriver
         d = TensileDriver.__new__(TensileDriver)
         d.base_dir = self.base
         d._last_run_status = "completed"
@@ -556,8 +554,8 @@ class TestExecutionTiming(StatusFixture):
         t = d._compute_execution_timing("gfx900_ref_floor_r1")
         run = t["native_run"]
         self.assertAlmostEqual(run["elapsed_minutes"], 1590.0, places=1)
-        self.assertEqual(run["elapsed_human"], "1d 2h 30m")
-        self.assertFalse(run["in_flight"])
+        assert run["elapsed_human"] == "1d 2h 30m"
+        assert not run["in_flight"]
 
     def test_in_flight_run_reports_no_elapsed_yet(self):
         """A run still going has no execution time; saying so beats 0.0."""
@@ -565,9 +563,9 @@ class TestExecutionTiming(StatusFixture):
                      started="2026-09-25T10:00:00", completed=None)
         d = self._driver()
         run = d._compute_execution_timing("gfx900_ref_floor_r1")["native_run"]
-        self.assertIsNone(run["elapsed_minutes"])
-        self.assertEqual(run["elapsed_human"], "unknown")
-        self.assertTrue(run["in_flight"])
+        assert run["elapsed_minutes"] is None
+        assert run["elapsed_human"] == "unknown"
+        assert run["in_flight"]
 
     def test_chain_and_native_are_reported_separately(self):
         """A resumed floor spans runs; one number would understate its cost."""
@@ -576,18 +574,18 @@ class TestExecutionTiming(StatusFixture):
         d = self._driver()
         t = d._compute_execution_timing("gfx900_ref_floor_r1",
                                         {"SS": {"total_min": 5.0}})
-        self.assertEqual(t["reference_chain"]["elapsed_minutes"], 120.0)
-        self.assertEqual(t["phase_busy"]["minutes"], 5.0)
-        self.assertIn("SS", t["phase_busy"]["per_family_minutes"])
+        assert t["reference_chain"]["elapsed_minutes"] == 120.0
+        assert t["phase_busy"]["minutes"] == 5.0
+        assert "SS" in t["phase_busy"]["per_family_minutes"]
 
     def test_unknown_run_does_not_raise(self):
         d = self._driver()
         t = d._compute_execution_timing("no_such_run")
-        self.assertIsNone(t["native_run"]["elapsed_minutes"])
-        self.assertEqual(t["native_run"]["elapsed_human"], "unknown")
+        assert t["native_run"]["elapsed_minutes"] is None
+        assert t["native_run"]["elapsed_human"] == "unknown"
 
     def test_summary_includes_execution_time(self):
-        from oto.metrics.report import AcceptanceReporter, ABVerdict
+        from oto.metrics.report import ABVerdict, AcceptanceReporter
         r = AcceptanceReporter(self.base)
         v = [ABVerdict(dtype="S", shape="1024x1024x1024", fp="f",
                        native_median=1.0, spoof_median=1.0, delta_pct=0.0,
@@ -598,8 +596,8 @@ class TestExecutionTiming(StatusFixture):
         rep = r.generate_acceptance_report(
             run_id="r1", ab_verdicts=v, all_analytics=[], red_list=[],
             execution_timing=timing)
-        self.assertIn("Execution time: 1d 2h 30m", rep.summary)
-        self.assertEqual(rep.execution_timing, timing)
+        assert "Execution time: 1d 2h 30m" in rep.summary
+        assert rep.execution_timing == timing
 
     def test_timing_is_serialised_into_the_report_json(self):
         """family_timing used to be computed and then dropped on the floor."""
@@ -614,8 +612,8 @@ class TestExecutionTiming(StatusFixture):
         out = self.base / "rep.json"
         r.write_report(rep, out)
         got = json.loads(out.read_text())
-        self.assertEqual(got["execution_timing"], timing)
-        self.assertEqual(got["family_timing"], ft)
+        assert got["execution_timing"] == timing
+        assert got["family_timing"] == ft
 
 
 if __name__ == "__main__":

@@ -15,11 +15,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
 import yaml
 
-from oto.metrics.analytics import AnalyticsEngine
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
+from oto.metrics.analytics import AnalyticsEngine
 from oto.runners.driver import TensileDriver
 
 HEADER = (" SizeI , SizeJ , SizeL , Cijk_A , WinnerFreq \n"
@@ -32,8 +33,8 @@ class _StubScheduler:
     family_decks = {"SS": [{"MacroTile": "64x64x16", "ThreadTile": "4x4"}]}
 
     def emit_candidate(self, phase_id, label, dtype, shapes, template, knobs):
-        from oto.tensile.candidate import CandidateConfig
         from oto.ledger.registry import fingerprint_config
+        from oto.tensile.candidate import CandidateConfig
         full = {**template, **knobs}
         return CandidateConfig(
             phase_id=phase_id, label=label, dtype=dtype, shapes=list(shapes),
@@ -81,7 +82,6 @@ class Harness(unittest.TestCase):
 
 class OverlayMergeTests(Harness):
     def _driver(self, run_id):
-        import oto.runners.cli
         # Build only what the merge reads, so the test does not depend on Tensile
         # being installed for an unrelated reason.
         driver = TensileDriver.__new__(TensileDriver)
@@ -96,24 +96,24 @@ class OverlayMergeTests(Harness):
             {"phase_id": "phase_auto_0", "fp": "fpA", "label": "m0",
              "dtype": "s", "shapes": ["128x128x128"], "config": {}}])
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertIn("phase_auto_0", [p["phase_id"] for p in phases])
+        assert "phase_auto_0" in [p["phase_id"] for p in phases]
 
     def test_curated_phases_survive_the_merge(self):
         run_id = self._driver("run_keep").run_dir.name
         self.write_overlay(run_id, [
             {"phase_id": "phase_auto_1", "fp": "fpB", "config": {}}])
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertIn("phase_curated_0", [p["phase_id"] for p in phases])
-        self.assertIn("phase_auto_1", [p["phase_id"] for p in phases])
+        assert "phase_curated_0" in [p["phase_id"] for p in phases]
+        assert "phase_auto_1" in [p["phase_id"] for p in phases]
 
     def test_merged_phases_are_tagged(self):
         run_id = self._driver("run_tag").run_dir.name
         self.write_overlay(run_id, [
             {"phase_id": "phase_auto_2", "fp": "fpC", "config": {}}])
         phases = self._driver(run_id).load_phases_manifest()
-        merged = [p for p in phases if p["phase_id"] == "phase_auto_2"][0]
-        self.assertEqual(merged["origin"], "overlay")
-        self.assertEqual(merged["overlay_run_id"], run_id)
+        merged = next(p for p in phases if p["phase_id"] == "phase_auto_2")
+        assert merged["origin"] == "overlay"
+        assert merged["overlay_run_id"] == run_id
 
     def test_phases_yaml_is_never_written(self):
         run_id = self._driver("run_ro").run_dir.name
@@ -121,13 +121,13 @@ class OverlayMergeTests(Harness):
         self.write_overlay(run_id, [
             {"phase_id": "phase_auto_3", "fp": "fpD", "config": {}}])
         self._driver(run_id).load_phases_manifest()
-        self.assertEqual((self.tmp / "phases.yaml").read_text(), before)
-        self.assertEqual(len(self.read_phases_yaml()), 1)
+        assert (self.tmp / "phases.yaml").read_text() == before
+        assert len(self.read_phases_yaml()) == 1
 
     def test_no_overlay_means_the_curated_deck_alone(self):
         run_id = self._driver("run_none").run_dir.name
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_curated_0"]
 
     def test_another_runs_overlay_is_not_applied(self):
         """A stale overlay must not be silently executed in a new run."""
@@ -135,7 +135,7 @@ class OverlayMergeTests(Harness):
             {"phase_id": "phase_auto_old", "fp": "fpE", "config": {}}])
         run_id = self._driver("new_run").run_dir.name
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertNotIn("phase_auto_old", [p["phase_id"] for p in phases])
+        assert "phase_auto_old" not in [p["phase_id"] for p in phases]
 
     def test_seed_overlay_is_merged_and_tagged(self):
         self.write_seed_overlay([
@@ -143,16 +143,16 @@ class OverlayMergeTests(Harness):
         run_id = self._driver("run_seed_merge").run_dir.name
         phases = self._driver(run_id).load_phases_manifest()
         merged = [p for p in phases if p["phase_id"] == "phase_seed_0"]
-        self.assertEqual(len(merged), 1)
-        self.assertEqual(merged[0]["origin"], "seed_overlay")
-        self.assertEqual(merged[0]["overlay_run_id"], "seed")
-        self.assertIn("phase_curated_0", [p["phase_id"] for p in phases])
-        self.assertEqual(len(self.read_phases_yaml()), 1)
+        assert len(merged) == 1
+        assert merged[0]["origin"] == "seed_overlay"
+        assert merged[0]["overlay_run_id"] == "seed"
+        assert "phase_curated_0" in [p["phase_id"] for p in phases]
+        assert len(self.read_phases_yaml()) == 1
 
     def test_seed_overlay_absent_means_deck_alone(self):
         run_id = self._driver("run_no_seed").run_dir.name
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_curated_0"]
 
     def test_no_run_dir_means_no_overlay(self):
         self.write_overlay("anything", [
@@ -160,7 +160,7 @@ class OverlayMergeTests(Harness):
         driver = self._driver("tmp")
         driver.run_dir = None
         phases = driver.load_phases_manifest()
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_curated_0"]
 
     def test_explicit_deck_suppresses_the_overlay(self):
         # --gfx900-reference passes its own phases file; merging native candidates
@@ -172,14 +172,14 @@ class OverlayMergeTests(Harness):
         own.write_text(yaml.safe_dump([
             {"phase_id": "phase_ref_0", "config": {}}]))
         phases = self._driver(run_id).load_phases_manifest(own)
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_ref_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_ref_0"]
 
     def test_include_overlay_false_suppresses_it(self):
         run_id = self._driver("run_off").run_dir.name
         self.write_overlay(run_id, [
             {"phase_id": "phase_auto_off", "fp": "fpH", "config": {}}])
         phases = self._driver(run_id).load_phases_manifest(include_overlay=False)
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_curated_0"]
 
     def test_phase_id_collision_is_dropped_not_duplicated(self):
         # phases.phase_id is UNIQUE, so a colliding overlay row would be silently
@@ -188,8 +188,7 @@ class OverlayMergeTests(Harness):
         self.write_overlay(run_id, [
             {"phase_id": "phase_curated_0", "fp": "fpI", "config": {}}])
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertEqual(
-            [p["phase_id"] for p in phases].count("phase_curated_0"), 1)
+        assert [p["phase_id"] for p in phases].count("phase_curated_0") == 1
 
     def test_unreadable_overlay_does_not_break_the_deck(self):
         run_id = self._driver("run_bad").run_dir.name
@@ -197,7 +196,7 @@ class OverlayMergeTests(Harness):
         d.mkdir(parents=True, exist_ok=True)
         (d / f"phases.{run_id}.overlay.yaml").write_text("phases: [oops\n")
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_curated_0"])
+        assert [p["phase_id"] for p in phases] == ["phase_curated_0"]
 
     def test_missing_phases_yaml_with_overlay_still_runs(self):
         run_id = self._driver("run_nodeck").run_dir.name
@@ -205,7 +204,7 @@ class OverlayMergeTests(Harness):
         self.write_overlay(run_id, [
             {"phase_id": "phase_auto_only", "fp": "fpJ", "config": {}}])
         phases = self._driver(run_id).load_phases_manifest()
-        self.assertEqual([p["phase_id"] for p in phases], ["phase_auto_only"])
+        assert [p["phase_id"] for p in phases] == ["phase_auto_only"]
 
 
 # ------------------------------------------------------------------- run_id
@@ -217,7 +216,7 @@ class ProposalRunIdTests(Harness):
             Proposal(fp="fpR", family="SS", shape="128x128x128", run_id="run_7"),
             phase_id="phase_auto_r", phase_data={"config": {}})
         row = self.registry.get_proposal("fpR")
-        self.assertEqual(row["run_id"], "run_7")
+        assert row["run_id"] == "run_7"
 
     def test_agent_run_id_is_stamped_on_emission(self):
         from oto.ledger.agent import ConvergenceAgent
@@ -242,18 +241,16 @@ class ProposalRunIdTests(Harness):
         finally:
             self.mutator.sample_cell = orig_sample
         rows = self.registry.all_proposals()
-        self.assertTrue(rows, "no proposal was emitted")
+        assert rows, "no proposal was emitted"
         for r in rows:
-            self.assertEqual(r["run_id"], "run_99")
+            assert r["run_id"] == "run_99"
 
     def test_overlay_is_written_for_this_run(self):
-        from oto.ledger.mutator import Proposal
         path = self.mutator.write_overlay(
             [{"phase_id": "phase_auto_o", "fp": "fpO", "config": {}}],
             run_id="run_explicit")
-        self.assertIn("run_explicit", path.name)
-        self.assertEqual([p["phase_id"] for p in self.mutator.load_overlay("run_explicit")],
-                         ["phase_auto_o"])
+        assert "run_explicit" in path.name
+        assert [p["phase_id"] for p in self.mutator.load_overlay("run_explicit")] == ["phase_auto_o"]
 
 
 # ------------------------------------------------------------------- atomicity
@@ -263,20 +260,19 @@ class AtomicEmissionTests(Harness):
         self.registry.emit_proposal_with_phase(
             fp="fpA", family="SS", shape="1x1x1", run_id="r1",
             phase_id="phase_atomic", phase_data={"config": {"a": 1}})
-        self.assertIsNotNone(self.registry.get_proposal("fpA"))
-        self.assertEqual(len(self.registry.get_phases()), 1)
+        assert self.registry.get_proposal("fpA") is not None
+        assert len(self.registry.get_phases()) == 1
 
     def test_a_failing_phase_write_rolls_the_proposal_back(self):
         import sqlite3
-        with self.assertRaises(sqlite3.Error):
-            with self.registry._get_conn() as conn:
-                conn.execute(
-                    "INSERT OR IGNORE INTO proposals (fp, created_at) VALUES ('fpB', 'x')")
-                # Same transaction, second write violates the phases constraint.
-                conn.execute(
-                    "INSERT INTO phases (phase_id, fingerprint, data, created_at) "
-                    "VALUES (NULL, 'fpB', '{}', 'x')")
-        self.assertIsNone(self.registry.get_proposal("fpB"))
+        with pytest.raises(sqlite3.Error), self.registry._get_conn() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO proposals (fp, created_at) VALUES ('fpB', 'x')")
+            # Same transaction, second write violates the phases constraint.
+            conn.execute(
+                "INSERT INTO phases (phase_id, fingerprint, data, created_at) "
+                "VALUES (NULL, 'fpB', '{}', 'x')")
+        assert self.registry.get_proposal("fpB") is None
 
     def test_no_proposal_survives_without_its_phase(self):
         # The hazard: a ledger row with no phase reads as pending forever, so its
@@ -284,25 +280,25 @@ class AtomicEmissionTests(Harness):
         self.registry.emit_proposal_with_phase(
             fp="fpC", phase_id="phase_c", phase_data={"fp": "fpC"})
         phases = self.registry.get_phases()
-        self.assertTrue(phases)
-        self.assertTrue(all(p.get("fp") == "fpC" for p in phases))
+        assert phases
+        assert all(p.get("fp") == "fpC" for p in phases)
 
     def test_duplicate_fp_still_records_the_phase(self):
         first = self.registry.emit_proposal_with_phase(
             fp="fpD", phase_id="phase_d1", phase_data={})
         second = self.registry.emit_proposal_with_phase(
             fp="fpD", phase_id="phase_d2", phase_data={})
-        self.assertTrue(first)
-        self.assertFalse(second)
-        self.assertEqual(len(self.registry.get_phases()), 2)
+        assert first
+        assert not second
+        assert len(self.registry.get_phases()) == 2
 
     def test_mutator_exposes_the_atomic_path(self):
         from oto.ledger.mutator import Proposal
         self.mutator.emit_candidate_phase(
             Proposal(fp="fpE", family="SS", shape="1x1x1", run_id="r"),
             phase_id="phase_e", phase_data={"config": {}})
-        self.assertIsNotNone(self.registry.get_proposal("fpE"))
-        self.assertEqual(len(self.registry.get_phases()), 1)
+        assert self.registry.get_proposal("fpE") is not None
+        assert len(self.registry.get_phases()) == 1
 
 
 # ------------------------------------------------------- winnerfreq durability
@@ -317,20 +313,19 @@ class WinnerFreqPersistenceTests(Harness):
     def test_winner_freq_is_persisted_with_the_verdict(self):
         pdir = self._phase_dir()
         self.registry.record_proposal(fp="fpW", family="SS", shape="1x1x1")
-        outcome, detail = self.mutator.resolve_phase_dir(
+        outcome, _detail = self.mutator.resolve_phase_dir(
             "fpW", pdir, run_id="run_w")
         obs = self.registry.observations_for("fpW")
-        self.assertEqual(len(obs), 1)
-        self.assertEqual(obs[0]["winner_freq"], 3.0)
-        self.assertEqual(obs[0]["outcome"], outcome)
+        assert len(obs) == 1
+        assert obs[0]["winner_freq"] == 3.0
+        assert obs[0]["outcome"] == outcome
 
     def test_the_verdict_and_the_evidence_are_separate(self):
         pdir = self._phase_dir()
         self.registry.record_proposal(fp="fpV", family="SS", shape="1x1x1")
         self.mutator.resolve_phase_dir("fpV", pdir)
-        self.assertEqual(self.registry.get_proposal("fpV")["outcome"],
-                         "functional")
-        self.assertEqual(len(self.registry.observations_for("fpV")), 1)
+        assert self.registry.get_proposal("fpV")["outcome"] == "functional"
+        assert len(self.registry.observations_for("fpV")) == 1
 
     def test_repeated_observations_accumulate(self):
         # Evidence is re-observable; the verdict is decided once. Modelling that
@@ -340,8 +335,8 @@ class WinnerFreqPersistenceTests(Harness):
         self.registry.record_proposal(fp="fpU", family="SS", shape="1x1x1")
         self.mutator.resolve_phase_dir("fpU", pdir)
         outcome, _ = self.mutator.resolve_phase_dir("fpU", pdir)
-        self.assertEqual(outcome, "pending")   # verdict not re-decided
-        self.assertEqual(len(self.registry.observations_for("fpU")), 2)
+        assert outcome == "pending"   # verdict not re-decided
+        assert len(self.registry.observations_for("fpU")) == 2
 
     def test_a_missing_csv_leaves_winner_freq_null(self):
         d = self.tmp / "empty_phase" / "2_BenchmarkData"
@@ -349,8 +344,8 @@ class WinnerFreqPersistenceTests(Harness):
         self.registry.record_proposal(fp="fpT", family="SS", shape="1x1x1")
         self.mutator.resolve_phase_dir("fpT", self.tmp / "empty_phase")
         obs = self.registry.observations_for("fpT")
-        self.assertEqual(len(obs), 1)
-        self.assertIsNone(obs[0]["winner_freq"])
+        assert len(obs) == 1
+        assert obs[0]["winner_freq"] is None
 
     def test_winner_freq_uses_the_canonical_reader(self):
         pdir = self._phase_dir(
@@ -358,7 +353,7 @@ class WinnerFreqPersistenceTests(Harness):
             " 128 , 128 , 128 , 12.5 , 7 \n")
         self.registry.record_proposal(fp="fpS", family="SS", shape="1x1x1")
         self.mutator.resolve_phase_dir("fpS", pdir)
-        self.assertEqual(self.registry.observations_for("fpS")[0]["winner_freq"], 7.0)
+        assert self.registry.observations_for("fpS")[0]["winner_freq"] == 7.0
 
     def test_evidence_write_failure_does_not_block_the_verdict(self):
         self.registry.record_proposal(fp="fpY", family="SS", shape="1x1x1")
@@ -368,8 +363,8 @@ class WinnerFreqPersistenceTests(Harness):
         self.registry.append_observation = lambda *a, **k: (_ for _ in ()).throw(
             RuntimeError("boom"))
         outcome, _ = self.mutator.resolve_phase_dir("fpY", self.tmp / "pd")
-        self.assertEqual(outcome, "functional")
-        self.assertEqual(self.registry.get_proposal("fpY")["outcome"], "functional")
+        assert outcome == "functional"
+        assert self.registry.get_proposal("fpY")["outcome"] == "functional"
 
 
 # -------------------------------------------------------- negative cache durability
@@ -385,8 +380,8 @@ class NegativeCacheDurabilityTests(Harness):
         self._record("c2", "parentX", "non_functional")
         fresh = Mutator(self.registry, self.tmp, self.analytics,
                         negative_cache_k=2)
-        self.assertEqual(fresh.consecutive_failures("parentX"), 2)
-        self.assertTrue(fresh.neighbourhood_saturated("parentX"))
+        assert fresh.consecutive_failures("parentX") == 2
+        assert fresh.neighbourhood_saturated("parentX")
 
     def test_a_success_resets_the_streak(self):
         self._record("s1", "parentY", "non_functional")
@@ -394,8 +389,8 @@ class NegativeCacheDurabilityTests(Harness):
         self._record("s3", "parentY", "functional")
         fresh = Mutator(self.registry, self.tmp, self.analytics,
                         negative_cache_k=2)
-        self.assertEqual(fresh.consecutive_failures("parentY"), 0)
-        self.assertFalse(fresh.neighbourhood_saturated("parentY"))
+        assert fresh.consecutive_failures("parentY") == 0
+        assert not fresh.neighbourhood_saturated("parentY")
 
     def test_incremental_and_rebuilt_caches_agree(self):
         for i in range(4):
@@ -403,15 +398,13 @@ class NegativeCacheDurabilityTests(Harness):
         live = Mutator(self.registry, self.tmp, self.analytics,
                        negative_cache_k=3)
         rebuilt = live.rebuild_negative_cache()
-        self.assertEqual(rebuilt["parentZ"], 4)
-        self.assertEqual(live.consecutive_failures("parentZ"),
-                         rebuilt["parentZ"])
+        assert rebuilt["parentZ"] == 4
+        assert live.consecutive_failures("parentZ") == rebuilt["parentZ"]
 
     def test_proposals_without_a_parent_are_ignored(self):
         self.registry.record_proposal(fp="np", family="SS", shape="1x1x1")
         self.registry.resolve_proposal("np", "non_functional")
-        self.assertEqual(Mutator(self.registry, self.tmp, self.analytics)
-                         .consecutive_failures(""), 0)
+        assert Mutator(self.registry, self.tmp, self.analytics).consecutive_failures("") == 0
 
     def test_the_archived_corpus_still_saturates_nothing(self):
         # Every measured mutant row is non-zero, so replaying the corpus must not
@@ -419,14 +412,13 @@ class NegativeCacheDurabilityTests(Harness):
         # cache firing on data it should not.
         m = Mutator(self.registry, self.tmp, self.analytics,
                     negative_cache_k=3)
-        self.assertEqual(m.rebuild_negative_cache(), {})
+        assert m.rebuild_negative_cache() == {}
 
 
 # --------------------------------------------------------------- skip bypass
 
 class SkipBypassTests(Harness):
     def _driver(self, run_id="run_skip"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
@@ -447,20 +439,20 @@ class SkipBypassTests(Harness):
         from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=None)
-        self.assertTrue(agent.skip_mutation_arm())
+        assert agent.skip_mutation_arm()
 
     def test_bypass_is_on_with_ledger_and_outcomes(self):
         from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
-        self.assertFalse(agent.skip_mutation_arm())
+        assert not agent.skip_mutation_arm()
 
     def test_bypass_is_off_when_outcomes_cannot_be_written(self):
         from oto.ledger.agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         agent.has_outcome_signal = False
-        self.assertTrue(agent.skip_mutation_arm())
+        assert agent.skip_mutation_arm()
 
     def test_identical_fp_skip_is_overridden_for_overlay_phases(self):
         from oto.metrics.policy import should_run
@@ -472,18 +464,19 @@ class SkipBypassTests(Harness):
         # The overlay identity is spelled as literals below rather than built as
         # a dict; this used to build one and never use it.
         # Baseline: the skip fires.
-        allowed, reason = should_run("phase_auto_s", "fpPassed",
+        allowed, _reason = should_run("phase_auto_s", "fpPassed",
                                      registry=self.registry,
                                      opt_in_identical_skip=True)
-        self.assertFalse(allowed)
+        assert not allowed
         # With the bypass authorised it must not.
-        self.assertTrue(driver.agent and not driver.agent.skip_mutation_arm())
+        assert driver.agent
+        assert not driver.agent.skip_mutation_arm()
         bypass_ok = not driver.agent.skip_mutation_arm()
         eff = True and not (True and bypass_ok)
         allowed2, _ = should_run("phase_auto_s", "fpPassed",
                                  registry=self.registry,
                                  opt_in_identical_skip=eff)
-        self.assertTrue(allowed2)
+        assert allowed2
 
     def test_curated_phases_keep_the_identical_fp_skip(self):
         # The bypass must not re-benchmark settled curated phases every run.
@@ -495,8 +488,8 @@ class SkipBypassTests(Harness):
         allowed, reason = should_run(
             "phase_curated_0", "fpCur", registry=self.registry,
             opt_in_identical_skip=True)
-        self.assertFalse(allowed)
-        self.assertEqual(reason, "identical_fp_already_passed")
+        assert not allowed
+        assert reason == "identical_fp_already_passed"
 
     def test_seed_row_is_measured_once_per_run_then_skipped(self):
         """A static seed must not re-benchmark itself every iteration."""
@@ -525,30 +518,29 @@ class SkipBypassTests(Harness):
         driver._read_key = lambda block=False, **k: None
         driver.load_phases_manifest()
         driver.run_phases()
-        self.assertIn("phase_seed_1", calls)
+        assert "phase_seed_1" in calls
         driver.load_phases_manifest()
         driver.run_phases()
         # Second pass: identical fp already passed for this run -> ordinary skip.
-        self.assertEqual(calls.count("phase_seed_1"), 1)
+        assert calls.count("phase_seed_1") == 1
 
     def test_has_run_benchmarked_scopes_to_the_run(self):
         self.registry.append_record(
             {"fp": "fpHas", "status": "completed",
              "result": {"status": "success"}}, run_id="other_run")
-        self.assertFalse(self.registry.has_run_benchmarked("this_run", "fpHas"))
+        assert not self.registry.has_run_benchmarked("this_run", "fpHas")
         self.registry.append_record(
             {"fp": "fpHas", "status": "completed",
              "result": {"status": "success"}}, run_id="this_run")
-        self.assertTrue(self.registry.has_run_benchmarked("this_run", "fpHas"))
+        assert self.registry.has_run_benchmarked("this_run", "fpHas")
         # A failed attempt does not count as benchmarked.
-        self.assertFalse(self.registry.has_run_benchmarked("fail_run", "fpHas"))
+        assert not self.registry.has_run_benchmarked("fail_run", "fpHas")
 
 
 # ------------------------------------------------------- outcome write-back
 
 class OutcomeWriteBackTests(Harness):
     def _driver(self, run_id="run_resolve"):
-        import oto.runners.cli
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
@@ -565,21 +557,19 @@ class OutcomeWriteBackTests(Harness):
         d = driver.run_dir / "phase_auto_res" / "2_BenchmarkData"
         d.mkdir(parents=True)
         (d / "Cijk_y_00.csv").write_text(HEADER)
-        self.assertEqual(driver._resolve_proposal_outcome(phase, driver.run_dir),
-                         "functional")
-        self.assertEqual(self.registry.get_proposal("fpRES")["outcome"],
-                         "functional")
+        assert driver._resolve_proposal_outcome(phase, driver.run_dir) == "functional"
+        assert self.registry.get_proposal("fpRES")["outcome"] == "functional"
 
     def test_a_non_proposal_phase_is_left_alone(self):
         driver = self._driver("run_nonprop")
         phase = {"phase_id": "phase_curated_0", "fp": "fpCUR", "config": {}}
-        self.assertIsNone(driver._resolve_proposal_outcome(phase, driver.run_dir))
+        assert driver._resolve_proposal_outcome(phase, driver.run_dir) is None
 
     def test_no_mutator_is_a_no_op(self):
         driver = self._driver("run_nomut")
         driver.mutator = None
         phase = {"phase_id": "p", "fp": "fpX", "config": {}}
-        self.assertIsNone(driver._resolve_proposal_outcome(phase, driver.run_dir))
+        assert driver._resolve_proposal_outcome(phase, driver.run_dir) is None
 
     def test_a_classification_failure_does_not_raise(self):
         driver = self._driver("run_crash")
@@ -589,8 +579,8 @@ class OutcomeWriteBackTests(Harness):
             raise RuntimeError("classifier exploded")
         driver.mutator.resolve_phase_dir = boom
         phase = {"phase_id": "p", "fp": "fpERR", "config": {}}
-        self.assertIsNone(driver._resolve_proposal_outcome(phase, driver.run_dir))
-        self.assertEqual(self.registry.get_proposal("fpERR")["outcome"], "pending")
+        assert driver._resolve_proposal_outcome(phase, driver.run_dir) is None
+        assert self.registry.get_proposal("fpERR")["outcome"] == "pending"
 
     def test_the_observation_records_the_run(self):
         driver = self._driver("run_obs")
@@ -600,8 +590,7 @@ class OutcomeWriteBackTests(Harness):
         (d / "c.csv").write_text(HEADER)
         driver._resolve_proposal_outcome({"phase_id": "p", "fp": "fpOBS",
                                           "config": {}}, driver.run_dir)
-        self.assertEqual(self.registry.observations_for("fpOBS")[0]["run_id"],
-                         driver.run_dir.name)
+        assert self.registry.observations_for("fpOBS")[0]["run_id"] == driver.run_dir.name
 
 
 if __name__ == "__main__":
@@ -616,7 +605,6 @@ class LoopActuallyCallsTheResolverTests(Harness):
     """
 
     def _driver(self, run_id="run_loop"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
@@ -664,8 +652,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
                                       run_id=driver.run_dir.name)
         self._write_candidate_csv(driver, "phase_auto_loop")
         driver.run_phases([phase["phase_id"]])
-        self.assertEqual(self.registry.get_proposal("fpLOOP")["outcome"],
-                         "functional")
+        assert self.registry.get_proposal("fpLOOP")["outcome"] == "functional"
 
     def test_the_loop_leaves_a_skipped_phase_pending(self):
         # A phase that never launched produced no output; classifying it as
@@ -678,8 +665,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
         driver.execute_phase = lambda phase, run_dir: {
             "status": "skipped", "phase_id": phase.get("phase_id")}
         driver.run_phases([phase["phase_id"]])
-        self.assertEqual(self.registry.get_proposal("fpSKIP")["outcome"],
-                         "pending")
+        assert self.registry.get_proposal("fpSKIP")["outcome"] == "pending"
 
     def test_the_loop_bypasses_the_identical_fp_skip_for_overlay_phases(self):
         driver = self._driver("run_loop_bypass")
@@ -695,7 +681,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
         self.write_overlay(driver.run_dir.name, [
             {"phase_id": "phase_auto_bp", "fp": "fpBP", "config": {}}])
         driver.run_phases(["phase_auto_bp"])
-        self.assertIn("phase_auto_bp", executed)
+        assert "phase_auto_bp" in executed
 
     def test_the_loop_keeps_the_identical_fp_skip_for_curated_phases(self):
         driver = self._driver("run_loop_curated")
@@ -706,7 +692,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
         driver.execute_phase = lambda phase, run_dir: executed.append(
             phase.get("phase_id")) or {"status": "completed"}
         driver.run_phases(["phase_curated_0"])
-        self.assertEqual(executed, [])
+        assert executed == []
 
     def test_the_loop_bypass_is_off_without_the_outcome_signal(self):
         driver = self._driver("run_loop_nosignal")
@@ -720,7 +706,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
         self.write_overlay(driver.run_dir.name, [
             {"phase_id": "phase_auto_ns", "fp": "fpNS", "config": {}}])
         driver.run_phases(["phase_auto_ns"])
-        self.assertEqual(executed, [])
+        assert executed == []
 
 
 class ReadOnlyRegistryTests(Harness):
@@ -735,23 +721,23 @@ class ReadOnlyRegistryTests(Harness):
     def test_read_only_construction_does_not_create_a_database(self):
         base = self.tmp / "empty"
         (base / "gfx90c_results").mkdir(parents=True)
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             SQLiteRegistry(base, read_only=True)
-        self.assertFalse((base / "gfx90c_results" / "registry.db").exists())
+        assert not (base / "gfx90c_results" / "registry.db").exists()
 
     def test_read_only_construction_leaves_the_file_byte_identical(self):
         SQLiteRegistry(self.tmp)          # writable: creates + migrates
         before = self.registry.db_path.read_bytes()
         SQLiteRegistry(self.tmp, read_only=True)
-        self.assertEqual(self.registry.db_path.read_bytes(), before)
+        assert self.registry.db_path.read_bytes() == before
 
     def test_read_only_readers_still_work(self):
         self.registry.record_proposal(fp="ro1", family="SS", shape="1x1x1")
         self.registry.resolve_proposal("ro1", "functional")
         ro = SQLiteRegistry(self.tmp, read_only=True)
-        self.assertEqual(ro.get_proposal("ro1")["outcome"], "functional")
-        self.assertEqual(len(ro.all_proposals()), 1)
-        self.assertEqual(ro.outcome_histogram()["functional"], 1)
+        assert ro.get_proposal("ro1")["outcome"] == "functional"
+        assert len(ro.all_proposals()) == 1
+        assert ro.outcome_histogram()["functional"] == 1
 
     def test_read_only_refuses_every_write(self):
         self.registry.record_proposal(fp="ro2", family="SS", shape="1x1x1")
@@ -765,7 +751,7 @@ class ReadOnlyRegistryTests(Harness):
             lambda: ro.emit_proposal_with_phase(fp="ro4", phase_id="p2"),
             lambda: ro.update_run_status("r", "completed"),
         ):
-            with self.assertRaises(PermissionError):
+            with pytest.raises(PermissionError):
                 call()
 
     def test_a_refused_write_changes_nothing(self):
@@ -773,11 +759,10 @@ class ReadOnlyRegistryTests(Harness):
         self.registry.resolve_proposal("ro5", "functional")
         before = self.registry.db_path.read_bytes()
         ro = SQLiteRegistry(self.tmp, read_only=True)
-        with self.assertRaises(PermissionError):
+        with pytest.raises(PermissionError):
             ro.resolve_proposal("ro5", "non_functional")
-        self.assertEqual(self.registry.db_path.read_bytes(), before)
-        self.assertEqual(self.registry.get_proposal("ro5")["outcome"],
-                         "functional")
+        assert self.registry.db_path.read_bytes() == before
+        assert self.registry.get_proposal("ro5")["outcome"] == "functional"
 
     def test_the_audit_path_is_read_only(self):
         import oto.metrics.ab_audit as ab_audit
@@ -786,12 +771,11 @@ class ReadOnlyRegistryTests(Harness):
         def spy(base, read_only=False):
             seen["read_only"] = read_only
             return SQLiteRegistry(base, read_only=True)
-        import oto.ledger.registry as reg_mod
         # ab_audit imports SQLiteRegistry inside the function; patch the module.
         import unittest.mock as mock
         with mock.patch("oto.ledger.registry.SQLiteRegistry", spy):
             ab_audit._proposal_coverage(self.tmp, band_pct=10.0)
-        self.assertTrue(seen.get("read_only"))
+        assert seen.get("read_only")
 
     def test_full_audit_does_not_change_the_file(self):
         import tempfile as tf
@@ -804,7 +788,7 @@ class ReadOnlyRegistryTests(Harness):
         before = reg.db_path.read_bytes()
         import oto.metrics.ab_audit as ab_audit
         ab_audit.audit(base)          # an empty corpus must not raise
-        self.assertEqual(reg.db_path.read_bytes(), before)
+        assert reg.db_path.read_bytes() == before
 
 
 # ------------------------------------------------------------------- GPU loss
@@ -826,7 +810,6 @@ class GpuLossAbortTests(Harness):
     """
 
     def _driver(self, run_id="run_gpu_loss"):
-        import oto.runners.cli
         from oto.ledger.agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
@@ -912,17 +895,13 @@ class GpuLossAbortTests(Harness):
 
         driver.execute_phase = fake_execute
         driver.run_phases()
-        self.assertEqual(
-            len(executed), ABORT_AFTER_CONSECUTIVE_EMPTY,
-            "the loop iterated past the abort threshold")
-        self.assertTrue(driver._stop_requested)
-        self.assertIn("consecutive phases produced no measurement",
-                      driver._abort_note)
-        self.assertIn("hipErrorNoDevice", driver._abort_note)
+        assert len(executed) == ABORT_AFTER_CONSECUTIVE_EMPTY, "the loop iterated past the abort threshold"
+        assert driver._stop_requested
+        assert "consecutive phases produced no measurement" in driver._abort_note
+        assert "hipErrorNoDevice" in driver._abort_note
         status, meta = self._run_status(driver.run_dir.name)
-        self.assertEqual(status, "failed",
-                         "a GPU-loss abort is a failed run, not an interrupt")
-        self.assertIn("abort_reason", meta)
+        assert status == "failed", "a GPU-loss abort is a failed run, not an interrupt"
+        assert "abort_reason" in meta
 
     def test_a_client_reached_streak_aborts_without_probe_markers(self):
         """The probe markers only sharpen the message; they must not gate it.
@@ -945,10 +924,9 @@ class GpuLossAbortTests(Harness):
 
         driver.execute_phase = fake_execute
         driver.run_phases()
-        self.assertEqual(len(executed), ABORT_AFTER_CONSECUTIVE_EMPTY)
-        self.assertTrue(driver._stop_requested)
-        self.assertIn("consecutive phases produced no measurement",
-                      driver._abort_note)
+        assert len(executed) == ABORT_AFTER_CONSECUTIVE_EMPTY
+        assert driver._stop_requested
+        assert "consecutive phases produced no measurement" in driver._abort_note
 
     def test_a_streak_of_build_failures_does_not_abort(self):
         """run_20261017_092909 pinned: five unbuildable tiles in a row is a deck
@@ -978,11 +956,10 @@ class GpuLossAbortTests(Harness):
 
         driver.execute_phase = fake_execute
         driver.run_phases()
-        self.assertEqual(len(executed), n,
-                         "a build failure is not evidence the GPU is gone")
-        self.assertFalse(driver._stop_requested)
-        self.assertIsNone(driver._abort_note)
-        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")
+        assert len(executed) == n, "a build failure is not evidence the GPU is gone"
+        assert not driver._stop_requested
+        assert driver._abort_note is None
+        assert self._run_status(driver.run_dir.name)[0] == "completed"
 
     def test_a_measured_phase_resets_the_streak(self):
         driver = self._driver("run_gpu_reset")
@@ -1000,10 +977,10 @@ class GpuLossAbortTests(Harness):
 
         driver.execute_phase = fake_execute
         driver.run_phases()
-        self.assertEqual(len(executed), 8, "a lone success must reset the streak")
-        self.assertFalse(driver._stop_requested)
-        self.assertIsNone(driver._abort_note)
-        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")
+        assert len(executed) == 8, "a lone success must reset the streak"
+        assert not driver._stop_requested
+        assert driver._abort_note is None
+        assert self._run_status(driver.run_dir.name)[0] == "completed"
 
     def test_a_refused_tile_does_not_count_towards_the_streak(self):
         driver = self._driver("run_gpu_refused")
@@ -1013,9 +990,8 @@ class GpuLossAbortTests(Harness):
             executed.append(phase["phase_id"]) or
             {"status": "skipped_illegal", "phase_id": phase["phase_id"]})
         driver.run_phases()
-        self.assertEqual(len(executed), 8,
-                         "a decided refusal is not a lost GPU")
-        self.assertFalse(driver._stop_requested)
+        assert len(executed) == 8, "a decided refusal is not a lost GPU"
+        assert not driver._stop_requested
 
     def test_a_run_shorter_than_the_threshold_still_completes(self):
         from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
@@ -1028,5 +1004,5 @@ class GpuLossAbortTests(Harness):
 
         driver.execute_phase = fake_execute
         driver.run_phases()
-        self.assertFalse(driver._stop_requested, "aborted below the threshold")
-        self.assertEqual(self._run_status(driver.run_dir.name)[0], "completed")
+        assert not driver._stop_requested, "aborted below the threshold"
+        assert self._run_status(driver.run_dir.name)[0] == "completed"

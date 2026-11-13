@@ -13,6 +13,7 @@ Public API: BenchmarkMixin.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import select
 import signal
@@ -22,14 +23,14 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import oto.device.peaks as _peaks
 import oto.tensile.library as tlib
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
 from oto.runners.toolchain import resolve_rocm_paths
 from oto.tensile import config_writer
-import oto.device.peaks as _peaks
 
 
 def _refuse_reuse_of(phase_out_dir: Path) -> None:
@@ -47,7 +48,7 @@ def _tensile_command(
     tensile_bin: Path,
     config_path: Path,
     phase_out_dir: Path
-) -> Tuple[List[str], Dict[str, str]]:
+) -> tuple[list[str], dict[str, str]]:
     """The Tensile argv and environment for one phase config."""
     rocm = resolve_rocm_paths()
     assembler = rocm["TENSILE_ASSEMBLER"]
@@ -118,25 +119,21 @@ class BenchmarkMixin:
         Returns True if cooldown completed or skipped, False if quit requested.
         """
         if self._gpu_phases_run > 0 and self.cooldown_s > 0 and not self._stop_requested and not self._finish_after_iteration:
-            print(f"Thermal cooldown: waiting {self.cooldown_s}s ('s' to skip sleep, 'e' to end run after current phase, 'q' to quit)...")
             start = time.time()
             while time.time() - start < self.cooldown_s:
                 if self._stop_requested:
                     return False
                 key = self._read_key()
                 if key == 's':
-                    print("\n[USER ACTION] 's' pressed: Skipping thermal cooldown...")
                     break
-                elif key == 'e':
-                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+                if key == 'e':
                     self._finish_after_iteration = True
                     break
-                elif key == 'q':
-                    print("\n[USER ACTION] 'q' pressed: Quitting run during cooldown...")
+                if key == 'q':
                     self._stop_requested = True
                     return False
         return not self._stop_requested
-    def _ensure_telemetry(self) -> Optional[SysfsTelemetrySampler]:
+    def _ensure_telemetry(self) -> SysfsTelemetrySampler | None:
         """Run-wide telemetry: one sampler per run_dir, kept alive across all
         phases so a whole run's timeline survives (no per-phase truncation).
         Rows are tagged with the active phase via set_phase(). A run_dir swap
@@ -155,7 +152,7 @@ class BenchmarkMixin:
         self._telemetry_run_id = run_id
         return sampler
     def _write_phase_config(self, path: Path,
-                            phase: Dict[str, Any]) -> Tuple[bool, str]:
+                            phase: dict[str, Any]) -> tuple[bool, str]:
         """Render one phase's Tensile YAML, refusing illegal configs.
 
         Kept as a method (the pre-split `TensileDriver._write_phase_config`
@@ -167,24 +164,22 @@ class BenchmarkMixin:
 
     def execute_phase(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         run_dir: Path
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a single phase (Stage 1 + Stage 3).
         """
         phase_id = phase.get("phase_id", "unknown")
-        label = phase.get("label", "unknown")
-        dtype = phase.get("dtype", "S")
-        schedule_name = phase.get("ScheduleName", "isa")
+        phase.get("label", "unknown")
+        phase.get("dtype", "S")
+        phase.get("ScheduleName", "isa")
         config = phase.get("config", {})
         fp = phase.get("fp", fingerprint_config(config))
 
-        print(f"\n--- Phase {phase_id}: {label} ({schedule_name}, {dtype}) ---")
 
         # Apply cooldown before GPU work (first GPU phase exempt)
         if not self._apply_cooldown():
-            print(f"Skipping phase {phase_id} due to stop request.")
             return {"status": "interrupted"}
 
         # Write phase config file
@@ -202,10 +197,10 @@ class BenchmarkMixin:
 
     def _refuse_phase(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         fp: str,
         refusal: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Record a phase the config writer refused, before any GPU work.
 
         A refused phase is settled as `skipped_illegal` so the completeness gate
@@ -220,7 +215,6 @@ class BenchmarkMixin:
         schedule_name = phase.get("ScheduleName", "isa")
         num_benchmarks = phase.get("NumBenchmarks", 8)
         reason = f"{refusal} (refused before Tensile launch)"
-        print(f"Skipping {phase_id}: {reason}")
         self.registry.append_record({
             "run_id": self.run_dir.name,
             "phase_id": phase_id,
@@ -238,7 +232,7 @@ class BenchmarkMixin:
         }, run_id=self.run_dir.name)
         return {"status": "skipped_illegal", "reason": reason}
 
-    def _start_record(self, phase: Dict[str, Any], fp: str) -> Dict[str, Any]:
+    def _start_record(self, phase: dict[str, Any], fp: str) -> dict[str, Any]:
         """The `started` ledger record for a phase."""
         record = {
             "run_id": self.run_dir.name,
@@ -257,11 +251,11 @@ class BenchmarkMixin:
 
     def _end_record(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         fp: str,
         status: str,
-        result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        result: dict[str, Any]
+    ) -> dict[str, Any]:
         """The completion record, tagged with the phase's content identity.
 
         `phase_id` alone is not safe for the next run's reuse decision (see
@@ -287,11 +281,11 @@ class BenchmarkMixin:
 
     def _outcome_record(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         fp: str,
         status: str,
-        error: Optional[str] = None
-    ) -> Dict[str, Any]:
+        error: str | None = None
+    ) -> dict[str, Any]:
         """A minimal timeout/failure ledger record (no result payload)."""
         record = {
             "run_id": self.run_dir.name,
@@ -310,7 +304,7 @@ class BenchmarkMixin:
         phase_id: str,
         label: str,
         fp: str,
-        result: Dict[str, Any]
+        result: dict[str, Any]
     ) -> None:
         """Write the completion record if the benchmark returned without one."""
         try:
@@ -325,17 +319,16 @@ class BenchmarkMixin:
                 "result": result
             }
             self.registry.append_record(end_record, run_id=self.run_dir.name)
-            print(f"[RECOVERY] Logged {status} record for {phase_id} in finally block")
-        except Exception as e:
-            print(f"[RECOVERY ERROR] Failed to log completion record in finally: {e}")
+        except Exception:
+            pass
 
     def _benchmark_phase(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         fp: str,
         phase_config_path: Path,
         run_dir: Path
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Launch one phase's Tensile run and ledger its outcome.
 
         Tags the run-wide telemetry sampler with the active phase for the
@@ -364,7 +357,6 @@ class BenchmarkMixin:
             return result
 
         except subprocess.TimeoutExpired:
-            print(f"Phase {phase_id} timed out after {self.phase_timeout_s}s")
             self.registry.append_record(
                 self._outcome_record(phase, fp, "timeout"),
                 run_id=self.run_dir.name)
@@ -372,7 +364,6 @@ class BenchmarkMixin:
             return {"status": "timeout"}
 
         except Exception as e:
-            print(f"Phase {phase_id} failed: {e}")
             self.registry.append_record(
                 self._outcome_record(phase, fp, "failed", error=str(e)),
                 run_id=self.run_dir.name)
@@ -395,12 +386,9 @@ class BenchmarkMixin:
                         break
                     file.write(line)
                     file.flush()
-                    print(f"{prefix}{line.rstrip()}")
             finally:
-                try:
+                with contextlib.suppress(Exception):
                     stream.close()
-                except Exception:
-                    pass
         t = threading.Thread(target=_pump, daemon=True)
         t.start()
         return t
@@ -409,7 +397,7 @@ class BenchmarkMixin:
         config_path: Path,
         phase_out_dir: Path,
         timeout: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run Tensile benchmark via CLI in detached process group with interactive 's'/'e'/'q' key listener.
         """
@@ -456,10 +444,10 @@ class BenchmarkMixin:
 
     def _spawn_tensile(
         self,
-        cmd: List[str],
-        env: Dict[str, str],
+        cmd: list[str],
+        env: dict[str, str],
         phase_out_dir: Path
-    ) -> Tuple[Any, List[threading.Thread], Any, Any]:
+    ) -> tuple[Any, list[threading.Thread], Any, Any]:
         """Open the phase logs, spawn Tensile detached, tee both streams."""
         log_out = open(phase_out_dir / "stdout.log", "w")
         log_err = open(phase_out_dir / "stderr.log", "w")
@@ -485,12 +473,12 @@ class BenchmarkMixin:
     def _supervise_tensile(
         self,
         proc,
-        cmd: List[str],
+        cmd: list[str],
         timeout: int,
-        tee_workers: List[threading.Thread],
+        tee_workers: list[threading.Thread],
         log_out,
         log_err
-    ) -> Tuple[int, bool]:
+    ) -> tuple[int, bool]:
         """Poll a live Tensile proc for timeout/keys, then drain and reap it.
 
         Returns (returncode, skipped); raises TimeoutExpired once the process
@@ -509,24 +497,19 @@ class BenchmarkMixin:
                 # Wait up to the poll interval for 's'/'e'/'q' (no-op off a TTY).
                 key = self._read_key()
                 if key == 's':
-                    print("\n[USER ACTION] 's' pressed: Skipping current phase...")
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     skipped = True
                     break
-                elif key == 'e':
-                    print("\n[USER ACTION] 'e' pressed: Ending run after current phase completes...")
+                if key == 'e':
                     self._finish_after_iteration = True
                 elif key == 'q':
-                    print("\n[USER ACTION] 'q' pressed: Quitting run...")
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     self._stop_requested = True
                     break
 
             if self._stop_requested and proc.poll() is None:
-                try:
+                with contextlib.suppress(Exception):
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                except Exception:
-                    pass
 
             rc = proc.poll() if not skipped else -1
         finally:

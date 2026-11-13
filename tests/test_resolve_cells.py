@@ -30,8 +30,8 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import shipped_cell_set  # noqa: E402
-from oto.harness import resolve_cells  # noqa: E402
+from oto.device.peaks import shipped_cell_set
+from oto.harness import resolve_cells
 
 
 @pytest.fixture(scope="module")
@@ -78,7 +78,8 @@ def test_every_native_winner_resolves_full_config(evidence):
     # invariant (a full, documented tile), never the snapshot.
     cc512 = by[("CC", "512x512x512")]["native_config"]
     assert cc512["WorkGroupMapping"] == 4
-    assert cc512["MacroTile"] == [64, 64] and cc512["ThreadTile"] == [4, 4]
+    assert cc512["MacroTile"] == [64, 64]
+    assert cc512["ThreadTile"] == [4, 4]
     # ZZ:1024 winner is the DepthU-8 tile (phase_cand_zz_128_32x32x8_..._du8_...),
     # not the DepthU-16 tile that won under run_20261009_205427. Pinned from the
     # acceptance report this resolver ran against; if the winner moves again this
@@ -119,7 +120,8 @@ def test_cfg_gap_classifies_every_cell(evidence):
     for c in identical:
         shared = [k for k in resolve_cells._GAP_KEYS
                   if k in c["native_config"] and k in c["spoof_config"]]
-        assert shared and all(c["native_config"][k] == c["spoof_config"][k]
+        assert shared
+        assert all(c["native_config"][k] == c["spoof_config"][k]
                               for k in shared)
     assert "cfg_gap" in resolve_cells._tsv(cells).split("\n")[0]
 

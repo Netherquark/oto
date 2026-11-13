@@ -15,16 +15,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import yaml
-
+import oto.device.peaks as _peaks
+from oto import yamlio
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
-
-from oto import yamlio  # noqa: E402
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
+
 #: Consecutive executed phases that *launched the client and measured nothing*
 #: before the harness declares the GPU lost and aborts the run. The 2026-10-19
 #: overnight run lost the device after its first phase and burned 9h47m emitting
@@ -55,9 +53,9 @@ _CLIENT_ABORT_MARKERS = ("exited with code 134", "hipErrorNoDevice")
 class PhaseMixin:
     """Deck merge + policy-filtered phase execution, mixed into TensileDriver."""
 
-    def load_phases_manifest(self, phases_path: Optional[Path] = None,
+    def load_phases_manifest(self, phases_path: Path | None = None,
                              include_overlay: bool = True
-                             ) -> List[Dict[str, Any]]:
+                             ) -> list[dict[str, Any]]:
         """Load phases.yaml manifest plus this run's overlay.
 
         phases.yaml curated deck (never written). Candidates live in per-run
@@ -72,9 +70,9 @@ class PhaseMixin:
         else:
             explicit_deck = True
 
-        phases: List[Dict[str, Any]] = []
+        phases: list[dict[str, Any]] = []
         if phases_path.exists():
-            with open(phases_path, "r") as f:
+            with open(phases_path) as f:
                 phases = yamlio.load_yaml_text(f.read()) or []
 
         if explicit_deck or not include_overlay:
@@ -87,8 +85,7 @@ class PhaseMixin:
                 merged = self._merge_overlay_entries(
                     phases, overlay, origin_label="overlay", src=run_id)
                 if merged:
-                    print(f"[overlay] merged {merged} candidate phase(s) from "
-                          f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
+                    pass
 
         # Persistent seed overlay (proposal D2, potential_configs.md §8): the
         # proven-winner rows and next-phase probes queued for every native run,
@@ -103,14 +100,13 @@ class PhaseMixin:
                 merged = self._merge_overlay_entries(
                     phases, seed, origin_label="seed_overlay", src="seed")
                 if merged:
-                    print(f"[overlay] merged {merged} seed phase(s) from "
-                          f"phases.seed.overlay.yaml (D2 list, phases.yaml untouched)")
+                    pass
         return phases
 
     def _merge_overlay_entries(
         self,
-        phases: List[Dict[str, Any]],
-        entries: List[Dict[str, Any]],
+        phases: list[dict[str, Any]],
+        entries: list[dict[str, Any]],
         origin_label: str,
         src: str,
     ) -> int:
@@ -137,7 +133,7 @@ class PhaseMixin:
             merged += 1
         return merged
 
-    def _load_seed_overlay(self) -> List[Dict[str, Any]]:
+    def _load_seed_overlay(self) -> list[dict[str, Any]]:
         """This project's persistent seed overlay, or [] when there is none.
 
         `<codename>_results/overlays/phases.seed.overlay.yaml` is curated by hand /
@@ -151,11 +147,10 @@ class PhaseMixin:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
-        except Exception as e:
-            print(f"[overlay] seed overlay unreadable, ignoring: {e}")
+        except Exception:
             return []
 
-    def _load_run_overlay(self, run_id: str) -> List[Dict[str, Any]]:
+    def _load_run_overlay(self, run_id: str) -> list[dict[str, Any]]:
         """This run's overlay phases, or [] when there is none.
 
         Read through the mutator when one exists so overlay parsing has a single
@@ -175,13 +170,12 @@ class PhaseMixin:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
             return payload.get("phases", []) or []
-        except Exception as e:
-            print(f"[overlay] unreadable, ignoring: {e}")
+        except Exception:
             return []
 
     _KEY_POLL_S = 0.2
-    def _resolve_proposal_outcome(self, phase: Dict[str, Any],
-                                     run_dir: Path) -> Optional[str]:
+    def _resolve_proposal_outcome(self, phase: dict[str, Any],
+                                     run_dir: Path) -> str | None:
         """Write a mutated candidate's measured outcome back to the ledger.
 
         Called after a phase that came from the mutation overlay has actually run.
@@ -208,23 +202,21 @@ class PhaseMixin:
 
         phase_dir = run_dir / str(phase.get("phase_id", ""))
         try:
-            outcome, detail = self.mutator.resolve_phase_dir(
+            outcome, _detail = self.mutator.resolve_phase_dir(
                 fp, phase_dir, run_id=self.run_dir.name if self.run_dir else None)
-        except Exception as e:
+        except Exception:
             # A classification failure must not abort a run whose phases have
             # already executed; the candidate simply stays pending.
-            print(f"[ledger] could not resolve {fp}: {e}")
             return None
         if outcome and outcome != "pending":
-            print(f"[ledger] {fp} -> {outcome} "
-                  f"(winner_freq={detail.get('winner_freq')})")
+            pass
         return None if outcome == "pending" else outcome
     def run_phases(
         self,
-        target_ids: Optional[List[str]] = None,
+        target_ids: list[str] | None = None,
         opt_in_identical_skip: bool = True,
-        phases_path: Optional[Path] = None
-    ) -> List[Dict[str, Any]]:
+        phases_path: Path | None = None
+    ) -> list[dict[str, Any]]:
         """
         Run a set of targets with policy filtering (Stage 1-4).
         target_ids matches against phase_id, label, or clean target key.
@@ -233,8 +225,6 @@ class PhaseMixin:
         phases = self.load_phases_manifest(phases_path) if phases_path else self.load_phases_manifest()
 
         if self.run_dir is None:
-            print(f"[plan] {len(phases)} phase(s) in the manifest; no run "
-                  f"directory, so this is a dry run and nothing is executed.")
             return []
 
         phases = self._filter_target_phases(phases, target_ids)
@@ -249,17 +239,17 @@ class PhaseMixin:
 
     def _execute_phase_loop(
         self,
-        phases: List[Dict[str, Any]],
-        target_ids: Optional[List[str]],
+        phases: list[dict[str, Any]],
+        target_ids: list[str] | None,
         opt_in_identical_skip: bool
-    ) -> tuple[List[Dict[str, Any]], tuple[int, int, int]]:
+    ) -> tuple[list[dict[str, Any]], tuple[int, int, int]]:
         """Walk the deck; return ``(results, (executed, skipped, refused))``.
 
         Halts early on a user stop, an end-after-iteration request, or the
         GPU-loss guard: consecutive phases that measure nothing mean the device
         is gone, and continuing would spend the budget on void phases.
         """
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         executed_count = skipped_count = refused_count = empty_streak = 0
         for phase in phases:
             if self._check_stop_requested():
@@ -295,16 +285,15 @@ class PhaseMixin:
                 break
 
             if self._finish_after_iteration:
-                print("End-after-iteration requested, halting phase execution")
                 break
         return results, (executed_count, skipped_count, refused_count)
 
     def _track_empty_streak(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         phase_id: str,
         empty_streak: int
-    ) -> Optional[int]:
+    ) -> int | None:
         """Advance the no-measurement streak; abort and return None when full."""
         empty_streak = (empty_streak + 1
                         if self._phase_produced_no_measurement(result, phase_id)
@@ -314,7 +303,7 @@ class PhaseMixin:
             return None
         return empty_streak
 
-    def _phase_produced_no_measurement(self, result: Dict[str, Any],
+    def _phase_produced_no_measurement(self, result: dict[str, Any],
                                        phase_id: str) -> bool:
         """True when the client ran a phase and measured nothing.
 
@@ -344,9 +333,6 @@ class PhaseMixin:
             note += (" -- the client aborted at the hardware probe "
                      "(SIGABRT / hipErrorNoDevice: the GPU is no longer visible "
                      "to HIP, e.g. a lost /dev/kfd or a driver-level reset)")
-        print(f"\n[ABORT] {note}")
-        print("[ABORT] halting the run instead of burning the remaining budget "
-              "on void phases")
         self._abort_note = note
         self._stop_requested = True
 
@@ -372,9 +358,9 @@ class PhaseMixin:
 
     def _filter_target_phases(
         self,
-        phases: List[Dict[str, Any]],
-        target_ids: Optional[List[str]]
-    ) -> List[Dict[str, Any]]:
+        phases: list[dict[str, Any]],
+        target_ids: list[str] | None
+    ) -> list[dict[str, Any]]:
         """Filter phases by target_ids if provided."""
         if not target_ids:
             return phases
@@ -388,16 +374,13 @@ class PhaseMixin:
 
     def _check_stop_requested(self) -> bool:
         """Check if stop was requested. Returns True if should break."""
-        if self._stop_requested or self._finish_after_iteration:
-            print("Stop requested, halting phase execution")
-            return True
-        return False
+        return bool(self._stop_requested or self._finish_after_iteration)
 
     def _should_execute_phase(
         self,
-        phase: Dict[str, Any],
+        phase: dict[str, Any],
         fp: str,
-        target_ids: Optional[List[str]],
+        target_ids: list[str] | None,
         opt_in_identical_skip: bool
     ) -> bool:
         """Determine if a phase should be executed."""
@@ -428,10 +411,7 @@ class PhaseMixin:
                 and reason == "identical_fp_already_passed":
             allowed, reason = True, "bypassed_identical_fp_via_ledger"
 
-        if not allowed:
-            print(f"Skipping phase {phase_id} ({reason})")
-            return False
-        return True
+        return allowed
 
     def _record_skip(self, phase_id: str, fp: str, reason: str) -> None:
         """Record a skipped phase in the registry."""
@@ -448,18 +428,16 @@ class PhaseMixin:
         """Handle user key presses during skip. Returns 'stop' if should break."""
         key = self._read_key(block=False)
         if key == 'q':
-            print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")
             self._stop_requested = True
             return "stop"
-        elif key == 'e':
-            print("\n[USER ACTION] 'e' pressed: Ending run after current phase...")
+        if key == 'e':
             self._finish_after_iteration = True
             return "stop"
         return "continue"
 
     def _update_counters(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         executed_count: int,
         refused_count: int
     ) -> tuple[int, int]:
@@ -488,7 +466,7 @@ class PhaseMixin:
             final_status = "skipped"
         else:
             final_status = "completed"
-        run_meta: Dict[str, Any] = {
+        run_meta: dict[str, Any] = {
             "phases_executed": executed_count,
             "phases_skipped": skipped_count,
         }

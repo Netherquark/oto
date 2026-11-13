@@ -24,13 +24,15 @@ Public API: DbPatternsMixin.
 
 from __future__ import annotations
 
+import contextlib
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto.tensile.synthesis.db_knobs import (_DEFAULT_PATTERN, _DONOR_POOL,
-                                            _FORWARD_DRAWS,
-                                            FORWARD_KNOB_DOMAINS,
-                                            forward_domain)
+from oto.tensile.synthesis.db_knobs import (
+    _FORWARD_DRAWS,
+    FORWARD_KNOB_DOMAINS,
+    forward_domain,
+)
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
@@ -38,8 +40,8 @@ class DbPatternsMixin:
     """Per-family mutation patterns, mixed into DBMutator."""
 
 
-    def _joint_domain(self, family: Optional[str], knob: str,
-                      parent_config: Dict[str, Any]) -> Tuple[Any, ...]:
+    def _joint_domain(self, family: str | None, knob: str,
+                      parent_config: dict[str, Any]) -> tuple[Any, ...]:
         """``forward_domain`` (family, knob) narrowed to the values this tile
         can actually carry.
 
@@ -73,8 +75,8 @@ class DbPatternsMixin:
                      if self._gate({**base, knob: value}))
 
     def _forward_draws(self, rng: random.Random,
-                       parent_config: Dict[str, Any],
-                       family: Optional[str] = None) -> List[Dict[str, Any]]:
+                       parent_config: dict[str, Any],
+                       family: str | None = None) -> list[dict[str, Any]]:
         """Small random combos of forward knobs (the NARROW/WIDE surface).
 
         Each draw changes 1-3 forward knobs, each to a value the gates admit
@@ -87,10 +89,10 @@ class DbPatternsMixin:
         single-knob changes to escape local optima faster.
         """
         knobs = list(FORWARD_KNOB_DOMAINS)
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for _ in range(_FORWARD_DRAWS):
             n_knobs = rng.randint(1, 3)  # 1-3 knobs per draw
-            draw: Dict[str, Any] = {}
+            draw: dict[str, Any] = {}
             for k in rng.sample(knobs, n_knobs):
                 domain = self._joint_domain(
                     family, k, {**parent_config, **draw})
@@ -102,15 +104,15 @@ class DbPatternsMixin:
 
     # -- family-specific mutation patterns -------------------------------
 
-    def _ss_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
+    def _ss_mutation_pattern(self, parent_config: dict[str, Any],
+                             rng: random.Random) -> list[dict[str, Any]]:
         """SS-family-specific mutations targeting sore losers.
 
         SS family suffers from wave-quantization and occupancy starvation.
         These patterns target the exact knobs that improve wave coverage:
         NLCA, WGM, GSU, StaggerU, LdsPad, GLVW.
         """
-        patterns: List[Dict[str, Any]] = []
+        patterns: list[dict[str, Any]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: NLCA toggle (1→3 or 3→1) + LdsPad increase
@@ -161,14 +163,14 @@ class DbPatternsMixin:
 
         return patterns
 
-    def _dd_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
+    def _dd_mutation_pattern(self, parent_config: dict[str, Any],
+                             rng: random.Random) -> list[dict[str, Any]]:
         """DD-family-specific mutations targeting sore losers.
 
         DD family suffers from register pressure and VGPR bottlenecks.
         These patterns target DepthU, GLVW, and GSU to improve occupancy.
         """
-        patterns: List[Dict[str, Any]] = []
+        patterns: list[dict[str, Any]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: DepthU increase + GLVW change
@@ -212,15 +214,15 @@ class DbPatternsMixin:
 
         return patterns
 
-    def _cc_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
+    def _cc_mutation_pattern(self, parent_config: dict[str, Any],
+                             rng: random.Random) -> list[dict[str, Any]]:
         """CC-family-specific mutations targeting sore losers.
 
         CC family suffers from total-elements divisibility and LDS padding.
         These patterns target LdsPad, MacroTile, and NLCA to fix the
         totalElements 768 % (NumThreads*grvw) ≠ 0 issue.
         """
-        patterns: List[Dict[str, Any]] = []
+        patterns: list[dict[str, Any]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: LdsPad combination + NLCA change
@@ -260,14 +262,14 @@ class DbPatternsMixin:
 
         return patterns
 
-    def _zz_mutation_pattern(self, parent_config: Dict[str, Any],
-                             rng: random.Random) -> List[Dict[str, Any]]:
+    def _zz_mutation_pattern(self, parent_config: dict[str, Any],
+                             rng: random.Random) -> list[dict[str, Any]]:
         """ZZ-family-specific mutations targeting sore losers.
 
         ZZ family (complex double) has the lowest ceilings and requires
         different VW/ThreadTile/MacroTile combinations.
         """
-        patterns: List[Dict[str, Any]] = []
+        patterns: list[dict[str, Any]] = []
         knobs = list(FORWARD_KNOB_DOMAINS)
 
         # Pattern 1: DepthU change. VectorWidth is not a forward knob (it is a
@@ -306,8 +308,8 @@ class DbPatternsMixin:
 
         return patterns
 
-    def _floor_direction(self, parent_config: Dict[str, Any],
-                         floor: Dict[str, Any]) -> Dict[str, Any]:
+    def _floor_direction(self, parent_config: dict[str, Any],
+                         floor: dict[str, Any]) -> dict[str, Any]:
         """Knob deltas that move the parent toward the floor winner.
 
         Only structural knobs the floor actually carries are copied (in
@@ -315,7 +317,7 @@ class DbPatternsMixin:
         alone.
         """
         norm = self._normalize_tile(floor)
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for k in TILE_KNOBS:
             if norm.get(k) is not None and norm.get(k) != parent_config.get(k):
                 out[k] = norm[k]
@@ -323,7 +325,7 @@ class DbPatternsMixin:
 
     # -- synthesis --------------------------------------------------------
 
-    def _normalize_parent_config(self, parent_config: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_parent_config(self, parent_config: dict[str, Any]) -> dict[str, Any]:
         """Normalize tile knobs in parent_config from DB format to config format.
 
         The kernel_db stores tile knobs as lists (e.g. MacroTile=[64, 64]),
@@ -337,10 +339,8 @@ class DbPatternsMixin:
             du = out.get("DepthU")
             du_str = ""
             if du is not None:
-                try:
+                with contextlib.suppress(TypeError, ValueError):
                     du_str = f"x{int(du)}"
-                except (TypeError, ValueError):
-                    pass
             out["MacroTile"] = f"{mt[0]}x{mt[1]}{du_str}"
         # Normalize ThreadTile
         tt = self._parse_dims(out.get("ThreadTile"))
@@ -356,8 +356,6 @@ class DbPatternsMixin:
                   "WorkGroupMapping"):
             v = out.get(k)
             if v is not None:
-                try:
+                with contextlib.suppress(TypeError, ValueError):
                     out[k] = int(v)
-                except (TypeError, ValueError):
-                    pass
         return out

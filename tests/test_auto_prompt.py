@@ -24,9 +24,8 @@ from unittest import mock
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-import oto.runners.auto_prompt as auto_prompt  # noqa: E402
-from oto.runners.auto_prompt import (DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan,  # noqa: E402
-                         ask)
+import oto.runners.auto_prompt as auto_prompt
+from oto.runners.auto_prompt import DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan, ask
 
 
 def fake_tty(answers, isatty=True):
@@ -40,36 +39,35 @@ class TestDefaults(unittest.TestCase):
     """The numbers the user asked for: 10 iterations, 3 mutations."""
 
     def test_default_iterations_is_ten(self):
-        self.assertEqual(DEFAULT_ITERATIONS, 10)
+        assert DEFAULT_ITERATIONS == 10
 
     def test_default_mutations_is_three(self):
-        self.assertEqual(DEFAULT_MUTATIONS, 3)
+        assert DEFAULT_MUTATIONS == 3
 
     def test_old_values_are_gone(self):
-        self.assertNotEqual(DEFAULT_ITERATIONS, 100)
-        self.assertNotEqual(DEFAULT_MUTATIONS, 2)
+        assert DEFAULT_ITERATIONS != 100
+        assert DEFAULT_MUTATIONS != 2
 
     def test_prompt_asks_five_questions_in_order(self):
         src = (BASE / "oto" / "runners" / "auto_prompt.py").read_text()
-        order = [m for m in re.findall(r'"\s*([1-5])\. [^"]+"', src)]
-        self.assertEqual(order, ["1", "2", "3", "4", "5"],
-                         "the questions must be numbered 1-5 in order")
+        order = list(re.findall(r'"\s*([1-5])\. [^"]+"', src))
+        assert order == ["1", "2", "3", "4", "5"], "the questions must be numbered 1-5 in order"
 
     def test_plan_defaults_match(self):
         p = AutoPlan()
-        self.assertEqual((p.iterations, p.mutations), (10, 3))
-        self.assertFalse(p.rerun_illegal)
-        self.assertFalse(p.rerun_underspecified)
-        self.assertFalse(p.rerun_unreproducible)
-        self.assertFalse(p.reruns_any_reference)
+        assert (p.iterations, p.mutations) == (10, 3)
+        assert not p.rerun_illegal
+        assert not p.rerun_underspecified
+        assert not p.rerun_unreproducible
+        assert not p.reruns_any_reference
 
     def test_cli_no_longer_defaults_to_100(self):
         src = (BASE / "oto" / "runners" / "flags.py").read_text()
-        self.assertIn('"--budget"', src)
+        assert '"--budget"' in src
         # the argparse default must be None so the prompt owns it
         idx = src.index('"--budget"')
         window = src[idx:idx + 260]
-        self.assertIn("default=None", window)
+        assert "default=None" in window
 
 
 class TestNonInteractive(unittest.TestCase):
@@ -77,25 +75,25 @@ class TestNonInteractive(unittest.TestCase):
         out = io.StringIO()
         with fake_tty([], isatty=False):
             plan = ask(stream=out)
-        self.assertTrue(plan.assumed)
-        self.assertEqual(plan.iterations, 10)
-        self.assertEqual(plan.mutations, 3)
-        self.assertFalse(plan.rerun_illegal)
-        self.assertIn("Not an interactive terminal", out.getvalue())
+        assert plan.assumed
+        assert plan.iterations == 10
+        assert plan.mutations == 3
+        assert not plan.rerun_illegal
+        assert "Not an interactive terminal" in out.getvalue()
 
     def test_assume_yes_also_takes_defaults(self):
         out = io.StringIO()
         with fake_tty([], isatty=True):
             plan = ask(stream=out, assume_yes=True)
-        self.assertTrue(plan.assumed)
-        self.assertEqual(plan.iterations, 10)
+        assert plan.assumed
+        assert plan.iterations == 10
 
     def test_noninteractive_does_not_hang(self):
         """A closed stdin must resolve, not block a cron run forever."""
         out = io.StringIO()
         with mock.patch.object(sys, "stdin", io.StringIO("")):
             plan = ask(stream=out)
-        self.assertEqual(plan.iterations, 10)
+        assert plan.iterations == 10
 
 
 class TestInteractiveAnswers(unittest.TestCase):
@@ -107,71 +105,71 @@ class TestInteractiveAnswers(unittest.TestCase):
 
     def test_yes_to_all_three_remeasurements(self):
         plan, _ = self._ask(["y", "y", "n", "", ""])
-        self.assertTrue(plan.rerun_illegal)
-        self.assertTrue(plan.rerun_underspecified)
-        self.assertTrue(plan.reruns_any_reference)
-        self.assertEqual((plan.iterations, plan.mutations), (10, 3))
-        self.assertFalse(plan.assumed)
+        assert plan.rerun_illegal
+        assert plan.rerun_underspecified
+        assert plan.reruns_any_reference
+        assert (plan.iterations, plan.mutations) == (10, 3)
+        assert not plan.assumed
 
     def test_no_to_all_three_remeasurements(self):
         plan, _ = self._ask(["n", "n", "n", "", ""])
-        self.assertFalse(plan.rerun_illegal)
-        self.assertFalse(plan.rerun_underspecified)
+        assert not plan.rerun_illegal
+        assert not plan.rerun_underspecified
 
     def test_unreproducible_question_is_asked_and_default_is_no(self):
         plan, text = self._ask(["n", "n", "n", "", ""])
-        self.assertFalse(plan.rerun_unreproducible)
-        self.assertIn("UNREPRODUCIBLE", text)
-        self.assertIn("3. Re-attempt the", text)
+        assert not plan.rerun_unreproducible
+        assert "UNREPRODUCIBLE" in text
+        assert "3. Re-attempt the" in text
 
     def test_unreproducible_can_be_accepted_alone(self):
         plan, _ = self._ask(["n", "n", "y", "", ""])
-        self.assertFalse(plan.rerun_illegal)
-        self.assertFalse(plan.rerun_underspecified)
-        self.assertTrue(plan.rerun_unreproducible)
-        self.assertTrue(plan.reruns_any_reference)
+        assert not plan.rerun_illegal
+        assert not plan.rerun_underspecified
+        assert plan.rerun_unreproducible
+        assert plan.reruns_any_reference
 
     def test_reruns_any_reference_is_false_for_all_no(self):
         plan, _ = self._ask(["n", "n", "n", "", ""])
-        self.assertFalse(plan.reruns_any_reference)
+        assert not plan.reruns_any_reference
 
     def test_answers_are_independent(self):
         plan, _ = self._ask(["y", "n", "n", "", ""])
-        self.assertTrue(plan.rerun_illegal)
-        self.assertFalse(plan.rerun_underspecified)
+        assert plan.rerun_illegal
+        assert not plan.rerun_underspecified
 
     def test_explicit_numbers(self):
         plan, _ = self._ask(["n", "n", "n", "4", "1"])
-        self.assertEqual(plan.iterations, 4)
-        self.assertEqual(plan.mutations, 1)
+        assert plan.iterations == 4
+        assert plan.mutations == 1
 
     def test_blank_uses_default(self):
         plan, _ = self._ask(["n", "n", "n", "", ""])
-        self.assertEqual(plan.iterations, DEFAULT_ITERATIONS)
-        self.assertEqual(plan.mutations, DEFAULT_MUTATIONS)
+        assert plan.iterations == DEFAULT_ITERATIONS
+        assert plan.mutations == DEFAULT_MUTATIONS
 
     def test_long_spelled_yes(self):
         plan, _ = self._ask(["YES", "Yes", "no", "", ""])
-        self.assertTrue(plan.rerun_illegal)
-        self.assertTrue(plan.rerun_underspecified)
+        assert plan.rerun_illegal
+        assert plan.rerun_underspecified
 
     def test_invalid_number_is_re_asked(self):
         plan, _ = self._ask(["n", "n", "n", "abc", "0", "-3", "7", "2"])
-        self.assertEqual(plan.iterations, 7)
-        self.assertEqual(plan.mutations, 2)
+        assert plan.iterations == 7
+        assert plan.mutations == 2
 
     def test_banner_shows_live_counts(self):
         _, text = self._ask(["n", "n", "n", "", ""])
-        self.assertIn("ILLEGAL", text)
-        self.assertIn("UNDER-SPECIFIED", text)
-        self.assertIn("UNREPRODUCIBLE", text)
+        assert "ILLEGAL" in text
+        assert "UNDER-SPECIFIED" in text
+        assert "UNREPRODUCIBLE" in text
         # all five questions must actually be posed
         for q in ("Re-measure", "iterations", "mutations"):
-            self.assertIn(q, text)
+            assert q in text
 
     def test_plan_echoed_before_the_run_starts(self):
         _, text = self._ask(["y", "n", "n", "6", "1"])
-        self.assertIn("Plan: iterations=6 mutations=1", text)
+        assert "Plan: iterations=6 mutations=1" in text
 
 
 class TestCountReading(unittest.TestCase):
@@ -184,6 +182,7 @@ class TestCountReading(unittest.TestCase):
         test is that nothing in the codebase pins the corpus size.
         """
         import json
+
         import oto.tensile.library as tlib
 
         counts = auto_prompt._read_counts(BASE)
@@ -192,8 +191,8 @@ class TestCountReading(unittest.TestCase):
             open(BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"))
 
         expected = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
-        for fam, pats in shipped["families"].items():
-            for pat, dt in pats.items():
+        for pats in shipped["families"].values():
+            for dt in pats.values():
                 for name in dt["kernels"]:
                     tier = tlib.tier_for(
                         {"kernel": tlib._CANON.sub("Cijk", name)}, manifest)
@@ -205,11 +204,8 @@ class TestCountReading(unittest.TestCase):
                         expected["unreproducible"] += 1
 
         for tier in ("illegal", "underspecified", "unreproducible"):
-            self.assertEqual(counts[tier], expected[tier],
-                             f"{tier} count drifted from the audited tiers")
-        self.assertEqual(counts["total"],
-                         sum(expected.values()),
-                         "every shipped cell must land in exactly one tier")
+            assert counts[tier] == expected[tier], f"{tier} count drifted from the audited tiers"
+        assert counts["total"] == sum(expected.values()), "every shipped cell must land in exactly one tier"
 
     def test_no_hardcoded_corpus_counts_in_the_prompt_source(self):
         """A transcribed count in the prompt module is a bug, not a comment.
@@ -220,14 +216,12 @@ class TestCountReading(unittest.TestCase):
         src = (BASE / "oto" / "runners" / "auto_prompt.py").read_text()
         body = src.split('"""', 2)[-1]  # drop the module docstring
         for literal in ("2285", "1881"):
-            self.assertNotIn(
-                literal, body,
-                f"{literal} is hardcoded in auto_prompt.py; counts must be read live")
+            assert literal not in body, f"{literal} is hardcoded in auto_prompt.py; counts must be read live"
 
     def test_missing_db_yields_zeros_not_a_crash(self):
         counts = auto_prompt._read_counts(Path("/tmp/opencode/does-not-exist"))
-        self.assertEqual(counts["illegal"], 0)
-        self.assertEqual(counts["underspecified"], 0)
+        assert counts["illegal"] == 0
+        assert counts["underspecified"] == 0
 
 
 if __name__ == "__main__":

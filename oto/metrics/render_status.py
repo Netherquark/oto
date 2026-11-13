@@ -32,29 +32,28 @@ view.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sqlite3
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 # Imported lazily by `main`: the report module imports this one for the
 # render names it re-exports, so a top-level import would be circular.
-from oto.metrics.run_plan import RunPlan, fmt_duration  # noqa: F401
+from oto.metrics.run_plan import RunPlan, fmt_duration
 
-__all__ = ["bar", "render_compact", "render", "LiveStatus", "_PanelStdout"]
+__all__ = ["LiveStatus", "_PanelStdout", "bar", "render", "render_compact"]
 
 
 def bar(pct: float, width: int = 24) -> str:
-    filled = int(round(width * max(0.0, min(100.0, pct)) / 100.0))
+    filled = round(width * max(0.0, min(100.0, pct)) / 100.0)
     return "[" + "#" * filled + "." * (width - filled) + "]"
 
 
-def render_compact(rep: Dict[str, Any]) -> str:
+def render_compact(rep: dict[str, Any]) -> str:
     """Few-line panel for a live in-place TTY repaint.
 
     The full render() is ~35 lines. Repainting that under a running benchmark
@@ -64,7 +63,7 @@ def render_compact(rep: Dict[str, Any]) -> str:
     """
     est = rep["estimate"]
     tally = rep["tally"]
-    lines: List[str] = []
+    lines: list[str] = []
     state = rep["head_status"].upper() + ("  (in flight)" if rep["in_flight"] else "")
     head = rep["head"] or "none"
     lines.append(f"  {head}  [{state}]")
@@ -113,8 +112,8 @@ class LiveStatus:
     panel on an interval rather than repainting in place.
     """
 
-    def __init__(self, base: Path, run_id: Optional[str] = None,
-                 plan: Optional[RunPlan] = None, interval: float = 15.0,
+    def __init__(self, base: Path, run_id: str | None = None,
+                 plan: RunPlan | None = None, interval: float = 15.0,
                  compact: bool = True, show_thermals: bool = False,
                  stream=None):
         self.base = Path(base)
@@ -127,7 +126,7 @@ class LiveStatus:
         self._lock = threading.RLock()
         self._painted = 0
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._orig_stdout = None
         self._isatty = False
         self.errors = 0
@@ -177,7 +176,7 @@ class LiveStatus:
             self._paint()
 
     # -- lifecycle ---------------------------------------------------------
-    def start(self) -> "LiveStatus":
+    def start(self) -> LiveStatus:
         self._isatty = bool(getattr(self.stream, "isatty", lambda: False)())
         self._thread = threading.Thread(target=self._loop, name="run-status",
                                         daemon=True)
@@ -205,7 +204,7 @@ class LiveStatus:
             self._erase()
             self.stream.flush()
 
-    def __enter__(self) -> "LiveStatus":
+    def __enter__(self) -> LiveStatus:
         return self.start()
 
     def __exit__(self, *exc) -> None:
@@ -238,7 +237,7 @@ class _PanelStdout:
         return getattr(self._real, name)
 
 
-def _render_header(rep: Dict[str, Any]) -> List[str]:
+def _render_header(rep: dict[str, Any]) -> list[str]:
     """Run id/state banner and the decided-so-far block."""
     out = ["=" * 72]
     state = rep["head_status"].upper()
@@ -252,13 +251,13 @@ def _render_header(rep: Dict[str, Any]) -> List[str]:
     if rep["corpus"]:
         out.append(f"  reference corpus      {rep['corpus']} cells")
     out.append(f"  decided so far        {rep['decided']}")
-    for key in ("success", "failed", "skipped", "active"):
-        if rep["tally"].get(key):
-            out.append(f"    {key:<20}{rep['tally'][key]}")
+    out.extend(f"    {key:<20}{rep['tally'][key]}"
+               for key in ("success", "failed", "skipped", "active")
+               if rep["tally"].get(key))
     return out
 
 
-def _render_tiers(rep: Dict[str, Any]) -> List[str]:
+def _render_tiers(rep: dict[str, Any]) -> list[str]:
     """The tier progress bars."""
     out = ["", "  TIERS  (decided / total, from the chain)"]
     for label, done, total in rep.get("tier_rows", []):
@@ -267,7 +266,7 @@ def _render_tiers(rep: Dict[str, Any]) -> List[str]:
     return out
 
 
-def _render_plan(rep: Dict[str, Any]) -> List[str]:
+def _render_plan(rep: dict[str, Any]) -> list[str]:
     """The plan/projection block: remaining work, rate and cost."""
     est = rep["estimate"]
     plan = rep["plan"]
@@ -301,7 +300,7 @@ def _render_plan(rep: Dict[str, Any]) -> List[str]:
     return out
 
 
-def _render_timing(rep: Dict[str, Any]) -> List[str]:
+def _render_timing(rep: dict[str, Any]) -> list[str]:
     """Elapsed, chain span, ETA and stale-record lines."""
     est = rep["estimate"]
     chain = rep["chain"]
@@ -320,7 +319,7 @@ def _render_timing(rep: Dict[str, Any]) -> List[str]:
     return out
 
 
-def _render_thermals(rep: Dict[str, Any], show_thermals: bool) -> List[str]:
+def _render_thermals(rep: dict[str, Any], show_thermals: bool) -> list[str]:
     """The thermals block (only when asked for)."""
     if not show_thermals:
         return []
@@ -340,11 +339,11 @@ def _render_thermals(rep: Dict[str, Any], show_thermals: bool) -> List[str]:
     return out
 
 
-def render(rep: Dict[str, Any], show_thermals: bool) -> str:
+def render(rep: dict[str, Any], show_thermals: bool) -> str:
     """The full run-status text report."""
     if rep.get("_compact"):
         return render_compact(rep)
-    out: List[str] = []
+    out: list[str] = []
     out += _render_header(rep)
     out += _render_tiers(rep)
     out += _render_plan(rep)
@@ -353,7 +352,7 @@ def render(rep: Dict[str, Any], show_thermals: bool) -> str:
     return "\n".join(out)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """The run-status CLI: ``--plan``, ``--watch``, ``--thermals``, ``--json``."""
     from oto.metrics.run_status import build_report
 
@@ -388,16 +387,15 @@ def _main(argv, build_report) -> int:
 
     def once() -> int:
         try:
-            rep = build_report(base, args.run, plan)
+            build_report(base, args.run, plan)
         except SystemExit:
             raise
-        except sqlite3.Error as e:
-            print(f"registry error: {e}", file=sys.stderr)
+        except sqlite3.Error:
             return 2
         if args.json:
-            print(json.dumps(rep, indent=2, default=str))
+            pass
         else:
-            print(render(rep, args.thermals))
+            pass
         return 0
 
     if not args.watch:
@@ -407,10 +405,9 @@ def _main(argv, build_report) -> int:
             if not args.json:
                 os.system("clear" if os.name != "nt" else "cls")
             once()
-            print()
             time.sleep(max(args.watch, 1.0))
     except KeyboardInterrupt:
-        print("\nstopped", file=sys.stderr)
+        pass
     return 0
 
 

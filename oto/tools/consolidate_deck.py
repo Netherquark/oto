@@ -10,37 +10,41 @@ from __future__ import annotations
 import statistics
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from oto import yamlio  # noqa: E402
-from oto.metrics.ab_audit import (  # noqa: E402
-    BASE as _AB_BASE, _driver, _registry_records, phase_records,
-)
-from oto.device.peaks import cell_key  # noqa: E402
-from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
-from oto.tools.consolidate_floor import PREFERRED_FORMS  # noqa: E402
-from oto.tools.consolidate_targets import (  # noqa: E402
-    _fam, native_runs, target_cells)
 import oto.device.peaks as _peaks
+from oto import yamlio
+from oto.device.peaks import cell_key
+from oto.metrics.ab_audit import (
+    BASE as _AB_BASE,
+)
+from oto.metrics.ab_identity import _driver
+from oto.metrics.ab_records import (
+    _registry_records,
+    phase_records,
+)
+from oto.metrics.analytics import extract_family_from_phase_id
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tools.consolidate_floor import PREFERRED_FORMS
+from oto.tools.consolidate_targets import _fam, native_runs, target_cells
 
 BASE = _AB_BASE
 
 #: Read-only use of Tensile: dtype byte widths are read from its tables.
 _TENSILE_ROOT = Path("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
 
-def _median(vals: List[float]) -> float:
+def _median(vals: list[float]) -> float:
     return statistics.median(vals) if vals else 0.0
 
 
-def measured_index(base: Path = BASE) -> Dict[Tuple[str, str], Dict[str, Any]]:
+def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
     """Every (phase_id, cell_key) native measurement, with stability counts.
 
     GFLOPS for one phase/cell is the median across every run that measured it, so
     a phase that got lucky once does not outrank one that reproduced.
     """
     drv = _driver(base)
-    per: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    per: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for run in native_runs(base):
         for rec in phase_records(drv, _runs_dir(base, _peaks.CODENAME) / run, "native"):
             key = rec.get("cell_key") or cell_key(
@@ -57,7 +61,7 @@ def measured_index(base: Path = BASE) -> Dict[Tuple[str, str], Dict[str, Any]]:
         if key:
             per[(rec["phase_id"], key)].append(rec)
 
-    out: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    out: dict[tuple[str, str], dict[str, Any]] = {}
     for (phase_id, ckey), recs in per.items():
         forms = sorted({r["shapes_per_phase"] for r in recs})
         out[(phase_id, ckey)] = {
@@ -75,7 +79,7 @@ def measured_index(base: Path = BASE) -> Dict[Tuple[str, str], Dict[str, Any]]:
     return out
 
 
-def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
+def load_deck(base: Path = BASE) -> list[dict[str, Any]]:
     """Every phase solution ever written to this repo, live deck included.
 
     Selection has to draw from the whole solution universe, not just the live
@@ -86,10 +90,9 @@ def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
     record of everything that came before, so they are part of the pool. Live
     entries win on phase_id collision.
     """
-    import yaml
-    pool: Dict[str, Dict[str, Any]] = {}
+    pool: dict[str, dict[str, Any]] = {}
     archived = sorted((base / "archive").glob("phases.yaml.*"))
-    for path in archived + [base / "phases.yaml"]:
+    for path in [*archived, base / "phases.yaml"]:
         if not path.is_file():
             continue
         try:
@@ -102,7 +105,7 @@ def load_deck(base: Path = BASE) -> List[Dict[str, Any]]:
     return list(pool.values())
 
 
-def _form_rank(forms: List[int]) -> int:
+def _form_rank(forms: list[int]) -> int:
     """Lower is better: prefer the widest sweep, matching the floor."""
     known = [f for f in forms if f in PREFERRED_FORMS]
     if known:
@@ -110,7 +113,7 @@ def _form_rank(forms: List[int]) -> int:
     return len(PREFERRED_FORMS) + (min(forms) if forms else 0)
 
 
-def dtype_bytes(char: str) -> Optional[int]:
+def dtype_bytes(char: str) -> int | None:
     """Bytes per element for a dtype char, read from Tensile itself.
 
     ``Tensile.DataType.DataType.properties`` is the authority: numBytes() is
@@ -139,7 +142,7 @@ def dtype_bytes(char: str) -> Optional[int]:
     return None
 
 
-def _is_legal(phase: Dict[str, Any]) -> Tuple[bool, str]:
+def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     """Full pre-run legality gate for a deck phase.
 
     All three seams the candidate generator enforces, because each has caught a real
@@ -182,9 +185,9 @@ def _is_legal(phase: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
-def _candidates(deck: List[Dict[str, Any]], fam: str, shape: str,
-                idx: Dict[Tuple[str, str], Dict[str, Any]]
-                ) -> List[Dict[str, Any]]:
+def _candidates(deck: list[dict[str, Any]], fam: str, shape: str,
+                idx: dict[tuple[str, str], dict[str, Any]]
+                ) -> list[dict[str, Any]]:
     out = []
     for p in deck:
         if _fam(str(p.get("phase_id", ""))) != fam.upper():
@@ -209,14 +212,14 @@ def _candidates(deck: List[Dict[str, Any]], fam: str, shape: str,
     return out
 
 
-def select_deck(base: Path = BASE) -> Dict[str, Any]:
+def select_deck(base: Path = BASE) -> dict[str, Any]:
     """Build deck from existing phases; keep best + sweep per cell. Illegal dropped."""
     deck = load_deck(base)
     idx = measured_index(base)
     by_pid = {str(p.get("phase_id")): p for p in deck}
-    legality: Dict[str, str] = {}
+    legality: dict[str, str] = {}
 
-    picks: Dict[str, Dict[str, Any]] = {}
+    picks: dict[str, dict[str, Any]] = {}
     for fam, shape, ckey in target_cells():
         cands = _candidates(deck, fam, shape, idx)
         legal = []

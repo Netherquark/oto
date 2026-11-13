@@ -11,12 +11,12 @@ import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
 
-from oto.device.peaks import FAMILY_SHAPES, cell_key  # noqa: E402
-from oto.metrics.ab_audit import BASE as _AB_BASE, _driver  # noqa: E402
-from oto.metrics.analytics import extract_family_from_phase_id  # noqa: E402
 import oto.device.peaks as _peaks
+from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.metrics.ab_audit import BASE as _AB_BASE
+from oto.metrics.ab_identity import _driver
+from oto.metrics.analytics import extract_family_from_phase_id
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -43,7 +43,7 @@ def _fam(phase_id: str) -> str:
 # --------------------------------------------------------------------------
 # target matrix
 # --------------------------------------------------------------------------
-def target_cells() -> List[Tuple[str, str, str]]:
+def target_cells() -> list[tuple[str, str, str]]:
     """(family, shape, cell_key) for every cell the shipped floor covers."""
     out = []
     for fam, sides in FAMILY_SHAPES.items():
@@ -73,17 +73,17 @@ def manifest_cells() -> set:
 # --------------------------------------------------------------------------
 # measurement inventory
 # --------------------------------------------------------------------------
-def native_runs(base: Path = BASE) -> List[str]:
+def native_runs(base: Path = BASE) -> list[str]:
     return sorted(d.name for d in (_runs_dir(base, _peaks.CODENAME)).glob("run_*") if d.is_dir())
 
 
-def floor_chain(base: Path = BASE) -> List[str]:
+def floor_chain(base: Path = BASE) -> list[str]:
     drv = _driver(base)
     return [r for r in drv._reference_floor_runs(None)
             if (_runs_dir(base, _peaks.CODENAME) / r).is_dir()]
 
 
-def source_chain(base: Path = BASE) -> List[str]:
+def source_chain(base: Path = BASE) -> list[str]:
     """The original measured floor runs, even after locking.
 
     ``reference_chain`` resolves to the locked floor once one exists, so feeding

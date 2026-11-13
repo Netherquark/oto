@@ -15,8 +15,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from oto import yamlio
 
-from oto import yamlio  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
@@ -90,18 +90,18 @@ def load_old():
     mod = types.ModuleType("old_port_tensile")
     mod.__file__ = str(ROOT / "port_tensile.py")
     mod.__dict__["__name__"] = "old_port_tensile"
-    SRC2 = lift(SRC)
-    exec(compile(SRC2, str(ROOT / "port_tensile.py"), "exec"), mod.__dict__)
+    src2 = lift(SRC)
+    exec(compile(src2, str(ROOT / "port_tensile.py"), "exec"), mod.__dict__)
     return mod
 
 
-import importlib  # noqa: E402
+import importlib
 
 old = load_old()
-from oto.tensile import config_writer  # noqa: E402
 import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
+from oto.tensile import config_writer
 
 
 class _Stub:
@@ -121,7 +121,6 @@ def phases_from(path):
 all_phases = yamlio.load_yaml(ROOT / "phases.yaml") or []
 all_phases += phases_from(_runs_dir(ROOT, _peaks.CODENAME))
 all_phases += phases_from(_results_dir(ROOT, _peaks.CODENAME) / "gfx900_ref_locked_52149f315d")
-print(f"phases under test: {len(all_phases)}")
 
 d = _Stub()
 mismatch = []
@@ -264,11 +263,7 @@ with tempfile.TemporaryDirectory() as td:
         else:
             n_refused += 1
 
-print(f"written: {n_ok}, refused: {n_refused}")
-print(f"accepted as newly-forwarded knobs: {n_forwarded}")
-print(f"mismatches: {len(mismatch)}")
-for m in mismatch[:6]:
-    print("  ", m)
+for _m in mismatch[:6]:
+    pass
 if mismatch:
     sys.exit(1)
-print("CONFIG WRITER EQUIVALENCE: OK")

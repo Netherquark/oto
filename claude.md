@@ -239,6 +239,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Does Tensile build every *unmeasured* deck row? (the pre-run sweep) | `python3 -m oto.harness.deck_check` (`--family CC --limit 10`, `--json out.json`; ~75 s/row, resumable, CPU-only) |
 | Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
 | Run the test suite (2m10s serial, 1m27s with `-n auto`, 37s for `-m preflight`) | `python3 -m pytest -q` (`-n auto` to distribute, `-m preflight` for the pre-run subset) |
+| Is the repo clean under the tree-walking guards? (pyflakes, ruff, py_compile, 60-line and 600-line rules) | `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q` (`OTO_GUARD_FILES=1` for changed files only) |
 | Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 port_tensile.py --best-library [DEST]` (default `gfx90c_results/best_effort_library/`; `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
 | What is the *legal* geometry space per cell, what has been measured inside it, and which legal geometry is untried but sits next to a fast one? (the numbers, then the picture) | `python3 -m oto.harness.coverage_map` (`--family SS`, `--cell SS:256`, `--top 12`, `--json out.json`) and `python3 -m oto.harness.coverage_graph` (writes `gfx90c_results/analysis/coverage/*.svg` + an index page) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 check_candidates.py` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
@@ -501,7 +502,9 @@ Before changing code: inspect current diff/status; identify affected owner MDs; 
 existing experiments/results/config fingerprints; preserve prior behavior unless the
 change is explicitly intended; record rationale in the owning document.
 
-After changing code: run the narrowest useful validation first; then required
+After changing code: run the narrowest useful validation first, and keep the
+tree-walking guards green (`test_pyflakes` / `test_ruff` / `test_py_compile` /
+`test_function_length` / `test_file_length` — `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q`); then required
 acceptance checks from `implementation_plan.md`; update `results.md` from actual
 generated data, not hand-edited conclusions; update `changelog.md` only for durable
 state changes; update `potential_configs.md` for candidate outcomes; bug disposition

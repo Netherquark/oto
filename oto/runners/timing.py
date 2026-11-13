@@ -14,7 +14,7 @@ Public API: TimingMixin.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from oto.metrics.analytics import extract_family_from_phase_id
 
@@ -22,10 +22,10 @@ from oto.metrics.analytics import extract_family_from_phase_id
 class TimingMixin:
     """Execution-time accounting, mixed into TensileDriver."""
 
-    def _compute_family_timing(self, run_id: str) -> Dict[str, Dict[str, Any]]:
+    def _compute_family_timing(self, run_id: str) -> dict[str, dict[str, Any]]:
         """Per-family throughput timing from registry started -> ended pairs."""
-        started: Dict[str, datetime] = {}
-        ended: Dict[str, datetime] = {}
+        started: dict[str, datetime] = {}
+        ended: dict[str, datetime] = {}
         try:
             records = self.registry.read_records(run_id=run_id)
         except Exception:
@@ -44,7 +44,7 @@ class TimingMixin:
                 started.setdefault(pid, t)
             elif status in ("completed", "success", "failed", "timeout", "interrupted", "aborted"):
                 ended.setdefault(pid, t)
-        per_fam: Dict[str, List[float]] = {}
+        per_fam: dict[str, list[float]] = {}
         for pid, start in started.items():
             end = ended.get(pid)
             if not end or end <= start:
@@ -59,7 +59,7 @@ class TimingMixin:
             }
             for fam, durs in per_fam.items()
         }
-    def _run_span_minutes(self, run_id: str) -> Optional[float]:
+    def _run_span_minutes(self, run_id: str) -> float | None:
         """Wall-clock minutes a run occupied, from its registry row.
 
         None when the run has no start stamp, or when it is still in flight --
@@ -74,7 +74,7 @@ class TimingMixin:
         except TypeError:      # naive vs aware datetimes
             return None
         return round(delta.total_seconds() / 60.0, 2)
-    def _run_stamp(self, run_id: str, column: str) -> Optional[datetime]:
+    def _run_stamp(self, run_id: str, column: str) -> datetime | None:
         row = None
         try:
             row = self.registry.run_row(run_id)
@@ -92,7 +92,7 @@ class TimingMixin:
             return datetime.fromisoformat(str(value))
         except ValueError:
             return None
-    def _compute_execution_timing(self, run_id: str, family_timing: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _compute_execution_timing(self, run_id: str, family_timing: dict[str, Any] | None = None) -> dict[str, Any]:
         """Execution-time block for the acceptance report.
 
         Three different numbers get conflated as "runtime", so all three are
@@ -147,13 +147,13 @@ class TimingMixin:
             },
         }
     @staticmethod
-    def _stamp_str(dt: Optional[datetime]) -> Optional[str]:
+    def _stamp_str(dt: datetime | None) -> str | None:
         return dt.isoformat() if dt else None
     @staticmethod
-    def _fmt_minutes(minutes: Optional[float]) -> str:
+    def _fmt_minutes(minutes: float | None) -> str:
         if minutes is None:
             return "unknown"
-        total = int(round(minutes))
+        total = round(minutes)
         days, rem = divmod(total, 24 * 60)
         hours, mins = divmod(rem, 60)
         if days:

@@ -31,7 +31,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -69,7 +69,7 @@ PREFLIGHT_FILES = (
 
 
 def pytest_collection_modifyitems(config: pytest.Config,
-                                  items: List[pytest.Item]) -> None:
+                                  items: list[pytest.Item]) -> None:
     """Tag the preflight subset, and keep the serial tests out of a
     distributed run.
 
@@ -93,7 +93,7 @@ def pytest_collection_modifyitems(config: pytest.Config,
 
 
 @pytest.fixture(scope="session")
-def kernel_db_rows() -> Dict[str, List[Dict[str, Any]]]:
+def kernel_db_rows() -> dict[str, list[dict[str, Any]]]:
     """The corpus database, parsed once per session.
 
     Returns:
@@ -117,18 +117,18 @@ def default_profile():
 
 
 @pytest.fixture(scope="session")
-def shipped_manifest() -> Dict[str, Any]:
+def shipped_manifest() -> dict[str, Any]:
     """The shipped gfx900 footprint manifest, read once per session."""
     from oto.tensile.library import load_shipped_manifest
 
     try:
         return load_shipped_manifest(REPO)
-    except Exception:  # noqa: BLE001 -- a missing library is not a test failure
+    except Exception:
         return {}
 
 
 @pytest.fixture(scope="session")
-def changed_python_files() -> List[str]:
+def changed_python_files() -> list[str]:
     """The Python files changed in the working tree, for the fast guards.
 
     The function-length and pyflakes guards walk the whole tree. When the
