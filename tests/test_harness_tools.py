@@ -108,3 +108,46 @@ def test_meta_run_harness_hook():
     assert with_harness["harness"] == {"marker": 1}
     without = meta_run(prof)
     assert without["harness"] is None
+
+
+def test_compare_runs_missing_corpus(tmp_path):
+    result = ht.compare_runs(tmp_path, "a", "b")
+    assert result["present"] is False
+
+
+def test_compare_runs_detects_regression(tmp_path):
+    analysis = tmp_path / "gfx90c_results" / "analysis"
+    analysis.mkdir(parents=True)
+    db = {
+        "run_a": [_row("SS", 256, 100.0, "p1"), _row("HH", 256, 80.0, "p2")],
+        "run_b": [_row("SS", 256, 90.0, "p1"), _row("HH", 256, 90.0, "p2")],
+    }
+    (analysis / "kernel_db.json").write_text(json.dumps(db))
+    result = ht.compare_runs(tmp_path, "run_a", "run_b")
+    assert result["present"] is True
+    assert len(result["regressions"]) == 1
+    assert result["regressions"][0]["cell"] == "SS:256"
+    assert len(result["improvements"]) == 1
+    assert result["improvements"][0]["cell"] == "HH:256"
+
+
+def test_find_regressions_no_corpus(tmp_path):
+    result = ht.find_regressions(tmp_path)
+    assert result == []
+
+
+def test_export_summary_text(tmp_path):
+    out = ht.export_summary(tmp_path)
+    assert "Corpus summary" in out
+
+
+def test_export_summary_json(tmp_path):
+    import json as _json
+    out = ht.export_summary(tmp_path, fmt="json")
+    data = _json.loads(out)
+    assert "present" in data
+
+
+def test_validate_deck_missing(tmp_path):
+    result = ht.validate_deck(tmp_path)
+    assert result["present"] is False
