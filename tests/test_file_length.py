@@ -30,7 +30,6 @@ LIMIT = 600
 OFFENDERS = {
     "tests/test_phase1_integration.py",  # 1008 lines
     "tests/test_synthesis_phase4.py",    # 780 lines
-    "tests/test_occupancy_gate.py",      # 779 lines
 }
 
 
