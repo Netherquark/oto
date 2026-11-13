@@ -240,7 +240,7 @@ Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
 python3 -m oto.harness.resolve_cells            # per-cell winners + cfg_gap
-python3 allruns.py --json gfx90c_results/analysis/post.json
+python3 oto.py stats --json gfx90c_results/analysis/post.json
 PYTHONPATH=. python3 oto/runners/cli.py --native-agg floor_best
 ```
 

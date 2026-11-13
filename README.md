@@ -276,14 +276,14 @@ python3 oto --synthesize
 oto/
 ├── oto            # driver CLI  (→ oto/runners/cli.py)
 ├── phases.yaml                # the phase manifest: targets, per-family decks
-├── verify_run.py              # append-only corpus snapshot/diff + telemetry funnel
+├── oto.py                     # CLI entry point (oto <cmd>)
 ├── oto check candidates        # deck Tensile-legality preflight (four gates)
 ├── check_library_parity.py    # produced library must match the shipped gfx900 grid
 ├── check_tensile_build.py     # CPU-only "does Tensile accept this phase's config?"
 ├── check_db.py                # registry label-contamination inspector
 ├── check_retirement.py        # retirement-record + per-cell-sample inspector
 ├── oto.py                     # CLI entry point (oto <cmd>)
-├── consolidate.py             # deck/floor consolidation miner (mine / all)
+├── oto/tools/consolidate.py   # deck/floor consolidation miner (mine / all)
 │
 ├── oto/                       # the package (see §5 and oto/README.md)
 │   ├── device/                # hardware facts: peaks, family/cell vocabulary
@@ -318,14 +318,14 @@ orientation layer over it.
 | Script | Purpose |
 |---|---|
 | [`oto`](oto) | Suite CLI. Thin wrapper over [`oto/runners/cli.py`](oto/runners/cli.py): argparse dispatch, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, the real-time key listener (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
-| [`verify_run.py`](verify_run.py) | Append-only checker (→ [`oto/tools/verify_run.py`](oto/tools/verify_run.py)): corpus `snapshot`/`diff` (proves a run only appended — nothing rewritten, nothing lost), the per-run `telemetry` funnel, and `cheapest` legal phase. |
+| [`oto.py`](oto.py) | CLI entry point — `oto <cmd>` (→ [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
 | [`oto check candidates`](oto check candidates) | Deck lint (→ [`oto/checks/candidates.py`](oto/checks/candidates.py)): resource legality **and** deck self-consistency (an id that embeds MT/TT must match its config; `fp` must hash the config actually stored). Non-zero exit on failure, so it can gate a pipeline. |
 | [`check_library_parity.py`](check_library_parity.py) | Coverage-parity enforcement (→ [`oto/checks/library_parity.py`](oto/checks/library_parity.py)): the produced `tensilelibrary.dat` must address exactly the shipped gfx900 cell grid — no contraction, no extension. |
 | [`check_tensile_build.py`](check_tensile_build.py) | CPU-only build proof (→ [`oto/checks/tensile_build.py`](oto/checks/tensile_build.py)): asks Tensile itself to generate + compile kernels for every phase and reports any `reject()` reason. Not a full code-object/library build. |
 | [`check_db.py`](check_db.py) | Registry inspector (→ [`oto/checks/db.py`](oto/checks/db.py)): label contamination (`'auto'` / `'Unknown'` cells). |
 | [`check_retirement.py`](check_retirement.py) | Retirement inspector (→ [`oto/checks/retirement.py`](oto/checks/retirement.py)): retirement records and per-cell sample counts. |
 | [`oto.py`](oto.py) | CLI entry point — `oto <cmd>` (→ [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
-| [`consolidate.py`](consolidate.py) | Deck/floor consolidation miner (→ [`oto/tools/consolidate.py`](oto/tools/consolidate.py)). |
+
 
 ### `oto/tensile/` — the candidate pipeline
 
@@ -429,18 +429,18 @@ python3 check_tensile_build.py --compare            # cross-check our gate vs Te
 # Enforce the append-only data law (knowledge_base.md §10). Take a snapshot
 # around any run, then diff: a new run dir and more registry rows is clean;
 # anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
-python3 verify_run.py snapshot --out before.json
+python3 oto.py verify run snapshot --out before.json
 #   ... run the driver ...
-python3 verify_run.py diff before.json after.json
+python3 oto.py verify run diff before.json after.json
 
 # Is this run's telemetry actually usable? Prints per-phase survival at every
 # clock filter (busy -> sclk range -> thermal), so an over-strict filter is
 # visible instead of reading as "no clock data".
-python3 verify_run.py telemetry run_20261005_170141
+python3 oto.py verify run telemetry run_20261005_170141
 
 # Cheapest LEGAL phase in the live deck, for a smoke run that costs ~nothing.
 # Prints the exact --targets command to drive it.
-python3 verify_run.py cheapest --family ZZ
+python3 oto.py verify run cheapest --family ZZ
 
 # Best config per cell across ALL runs, and the knob reach per family.
 python3 oto.py stats
