@@ -9,6 +9,16 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
+  ran end-to-end against the rocm-libraries Tensile build on gfx90c: torch
+  `2.12.0+rocm7.15.0a20260728`, `ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library`,
+  MIOpen conv solver (GEMM), CPU NMS, frame saved, person box **0.87** verified
+  visually. Library artifacts: `gfx90c_results/best_effort_library_rocmlibs/FinalLibrary/library/gfx90c/`
+  (TensileLibrary.dat + `.co` + `.hsaco` + TensileManifest.txt, built 2026-11-13 04:19
+  from rocm-libraries develop @ d950c74 with the nightly-venv toolchain). GPU-acceptance
+  criterion satisfied. Remaining: C4 (needs API key), CLI UX implementation (needs
+  the 5 answers in plans/CLI_UX_REWORK.md §7), C2.5–C2.9 explicit signature
+  threading (deliberately deferred — mechanism equivalent).
 - **2026-11-13 (13th) — ruff + py_compile gates integrated; docs ecosystem
   updated.** The repo is clean under a pinned, substantive ruff rule set
   (`ruff.toml`: pycodestyle, pyflakes, bugbear, pyupgrade, import sorting,
