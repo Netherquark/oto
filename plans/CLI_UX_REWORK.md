@@ -1,7 +1,9 @@
 # CLI UX rework plan — oneshot evergreen (2026-11-13)
 
-Status: **proposed, nothing implemented**. Awaiting decisions on the five open
-questions at the end of this document before any code lands.
+Status: **IMPLEMENTED (Phases 1-4).** All 25 questions answered and resolved.
+Phases 1-4 landed as commits 362744b..423ecbe. Remaining: stdout/stderr contract
+(narration already redirected to stderr for mutating commands) and deeper
+docs rewrite (command references updated, full Class B rewrite pending).
 
 Motivation: the current CLI is "impossible to make sense of" — 11 root shims
 plus `-m` module invocations, ~50 flat flags on one mega-parser, stale/broken
