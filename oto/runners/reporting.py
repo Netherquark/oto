@@ -79,7 +79,16 @@ class ReportingMixin:
         run is entirely the spoof floor).
         """
         arch = str((phase or {}).get("config", {}).get("Architecture", ""))
-        is_spoof = "gfx900" in arch
+        # Profile-aware spoof reference (Refactor 2): a device whose
+        # spoof_reference differs from gfx900 must still be classified by its
+        # own reference arch, not the hardcoded gfx900 literal. Falls back to
+        # "gfx900" for legacy data / profiles without a spoof_reference.
+        try:
+            spoof_ref = (getattr(self, "profile", None) and
+                         getattr(self.profile, "spoof_reference", "")) or "gfx900"
+        except Exception:
+            spoof_ref = "gfx900"
+        is_spoof = spoof_ref in arch
         if force_arm == "native":
             return False
         if force_arm == "spoof":
