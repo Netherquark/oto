@@ -28,7 +28,6 @@ LIMIT = 600
 # Grandfathered offenders, captured 2026-11-13. Each entry is a commitment to
 # split the file in a later commit; the list may only shrink.
 OFFENDERS = {
-    "tests/test_synthesis_phase4.py",    # 780 lines
 }
 
 
