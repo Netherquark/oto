@@ -43,6 +43,19 @@ and NOT the experimental data (that is `results.md`).
   its removed behavior; none are caused by the four commits above. Re-run after
   the rework lands; the smoke tests asserting the pre-rework UX should be
   re-asserted against the final renderer.
+- **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
+  front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
+  f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8
+  skipped, 242 subtests, ~156 s**, and the five-gate pack (ruff / pyflakes /
+  py_compile / function-length / file-length) passes 5/5. The 7 reds recorded at
+  dec8b59 were all resolved by the front-door rework — including the deletion-side
+  of the `oto.py` removal (the tracked-but-deleted file no longer trips the
+  byte-compile walk) and the two CLI-UX smoke tests, which the rework
+  re-asserted against the final renderer (`tests/test_docs_cli.py`,
+  `tests/test_cli_smoke.py`). Also absorbed the stale `plans/verify_all.py`
+  citation in `docs/docstrings.md` (now cites `oto/tools/verifiers/verify_all.py`;
+  b4d1c87). This closes the re-run caveat in the 15th entry. Nothing in this
+  entry was pushed.
 - **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
   ran end-to-end against the rocm-libraries Tensile build on gfx90c: torch
   `2.12.0+rocm7.15.0a20260728`, `ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library`,
