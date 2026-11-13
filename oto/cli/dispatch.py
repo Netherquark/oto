@@ -202,6 +202,18 @@ def _with_argv(argv: list[str], func: Any, *args: Any, **kwargs: Any) -> Any:
         _sys.argv = old
 
 
+
+def _mute_stdout(func, *args, **kwargs):
+    """Run func with stdout redirected to stderr (mutating commands)."""
+    import sys as _sys
+    _old = _sys.stdout
+    _sys.stdout = _sys.stderr
+    try:
+        return func(*args, **kwargs)
+    finally:
+        _sys.stdout = _old
+
+
 def _resolve_base(args: Any) -> Path:
     from pathlib import Path
     if getattr(args, "base_dir", None):
@@ -228,7 +240,7 @@ def _run_run(args: Any) -> int:
         argv += ["--dry-run"]
     if args.force:
         argv += ["--force"]
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_tune(args: Any) -> int:
@@ -257,7 +269,7 @@ def _run_tune(args: Any) -> int:
             result = _with_argv(argv, cli_main)
             bar.update(1)
             return result
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_status(args: Any) -> int:
@@ -281,7 +293,7 @@ def _run_doctor(args: Any) -> int:
     argv = ["--base-dir", str(_resolve_base(args)), "--preflight"]
     if getattr(args, "json", False):
         argv += ["--json"]
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_verify_all(args: Any) -> int:
@@ -352,7 +364,7 @@ def _run_bench(args: Any) -> int:
         argv += ["--shape", *args.shape]
     if args.dry_run:
         argv += ["--dry-run"]
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_report(args: Any) -> int:
@@ -369,7 +381,7 @@ def _run_library_best_effort(args: Any) -> int:
     if args.dest:
         argv += [args.dest]
     argv += ["--protocol-basis", args.protocol_basis]
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_library_verify(args: Any) -> int:
@@ -390,7 +402,7 @@ def _run_library_build_proof(args: Any) -> int:
 
 def _run_consolidate(args: Any) -> int:
     from oto.tools.consolidate import main as m
-    return _with_argv(["--base-dir", str(_resolve_base(args))], m)
+    return _mute_stdout(_with_argv, ["--base-dir", str(_resolve_base(args))], m)
 
 
 def _run_stats(args: Any) -> int:
@@ -415,7 +427,7 @@ def _run_docs_generate(args: Any) -> int:
     argv = ["--base-dir", str(_resolve_base(args)), "--generate-device-docs"]
     if args.starter:
         argv += [args.starter]
-    return _with_argv(argv, cli_main)
+    return _mute_stdout(_with_argv, argv, cli_main)
 
 
 def _run_docs_index(args: Any) -> int:
