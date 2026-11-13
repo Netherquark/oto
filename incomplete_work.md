@@ -915,6 +915,36 @@ Note: this register's 2026-10 snapshots above predate Refactor 2 landing —
 - **Suite** — RC=0, 1021 passed, 8 skipped, 242 subtests (zz_suite8).
 - **ruff/pyflakes** — zero findings repo-wide.
 
+### C8 — Acceptance verification (formal write-up)
+
+**GPU leg (already succeeded, 2026-11-13 ~10:53):**
+- Command: `cd …/yolo26 && ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library /home/netherquark/rocm-nightly-venv/bin/python -u webcam.py --source <jpeg> --no-show --max-frames 1 --save-frames --save-dir runs/rocmlibs_test`
+- torch: `2.12.0+rocm7.15.0a20260728`
+- Library: `gfx90c_results/best_effort_library_rocmlibs/FinalLibrary/library/gfx90c/` (TensileLibrary.dat 33953 B + `.co` + `.hsaco` + TensileManifest.txt, built 2026-11-13 04:19)
+- Tensile source: rocm-libraries develop @ d950c74 (2026-11-12 21:41)
+- Toolchain: nightly-venv `_rocm_sdk_core` amdclang++ (TheRock)
+- Result: device cuda:0, MIOpen conv solver (GEMM), CPU NMS, frame saved, person box **0.87** verified visually
+- GPU-acceptance criterion: **SATISFIED**
+
+**CPU-side verification (this session):**
+- Full test suite: 1021 passed, 8 skipped, 242 subtests (RC=0, zz_suite8)
+- Gate suites: 9/9 green (pyflakes, ruff, py_compile, function_length, file_length, docs_registry, docs_index)
+- ruff: zero findings repo-wide
+- pyflakes: zero findings repo-wide
+- No file >600 LOC (OFFENDERS empty)
+- No function >60 LOC
+- No /tmp paths in any tracked *.py (0 matches)
+- docs registry: 36/36 tracked .md registered
+
+**Acceptance criteria status (Refactor 2 §9):**
+1. gfx90c parity: SATISFIED (suite green, identical behaviour)
+2. No device literals in code: SATISFIED (only oto/device/ + legacy compat remain)
+3. Auto-detect: SATISFIED (detect.py reads rocminfo, falls back to gfx90c)
+4. Starter-driven: SATISFIED (load_profile_from_starter handles fenced JSON + pair + bare codename)
+5. Two-agent docs: SATISFIED (agent-1/agent-2 generate from profile, research callable wired)
+6. Automated potential_configs: SATISFIED (potential_configs_gen generates full doc, wired in synthesis.py)
+7. Tests generalised: SATISFIED (test_profile, test_profile_gates, test_profile_second_device all pass with gfx906 synthetic)
+
 **Still blocked (external input required):**
 - C4 (gfx902 starter research) — needs API key.
 - gfx906 real-hardware validation — no hardware.
