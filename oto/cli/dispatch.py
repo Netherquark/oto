@@ -32,7 +32,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _add_core_subcommands(sub: Any) -> None:
-    p = sub.add_parser("tune", help="Run the convergence loop")
+    p = sub.add_parser("tune", help="Run the convergence loop",
+                       epilog="Examples:\n  oto tune --dry-run              # preview without executing\n  oto tune --budget 10 --yes      # accept default plan, no prompts\n  oto tune --resume               # continue from latest run\n  oto tune --include-illegal     # re-measure illegal reference cells")
     add_global_flags(p)
     p.add_argument("--budget", type=int, default=None, help="Auto-convergence iterations")
     p.add_argument("--mutations", type=int, default=None, help="Max mutations per candidate")
@@ -44,7 +45,8 @@ def _add_core_subcommands(sub: Any) -> None:
     p.add_argument("--live", choices=["on", "off"], default="on", help="Live status repaint")
     p.set_defaults(func=_run_tune)
 
-    p = sub.add_parser("status", help="Run status, ETA, and live panel")
+    p = sub.add_parser("status", help="Run status, ETA, and live panel",
+                       epilog="Examples:\n  oto status                     # one-shot report\n  oto status --watch 30          # refresh every 30s\n  oto status --thermals --json   # machine-readable with thermals")
     add_global_flags(p)
     p.add_argument("--watch", type=float, metavar="SECONDS", help="Refresh every N seconds")
     p.add_argument("--thermals", action="store_true", help="Include thermal envelope")
@@ -52,7 +54,8 @@ def _add_core_subcommands(sub: Any) -> None:
     p.add_argument("--run", help="run_id to report on (default: newest)")
     p.set_defaults(func=_run_status)
 
-    p = sub.add_parser("doctor", help="Diagnose environment (toolchain, GPU, registry)")
+    p = sub.add_parser("doctor", help="Diagnose environment (toolchain, GPU, registry)",
+                       epilog="Examples:\n  oto doctor                     # full diagnostic\n  oto doctor --json              # machine-readable")
     add_global_flags(p)
     p.set_defaults(func=_run_doctor)
 
@@ -83,7 +86,8 @@ def _add_core_subcommands(sub: Any) -> None:
 
 
 def _add_bench_subcommands(sub: Any) -> None:
-    p = sub.add_parser("bench", help="Benchmark phases")
+    p = sub.add_parser("bench", help="Benchmark phases",
+                       epilog="Examples:\n  oto bench --dry-run            # list matched targets\n  oto bench --family SS --shape 1024x1024x1024\n  oto bench --native --limit 5   # native-only smoke test")
     add_global_flags(p)
     p.add_argument("--native", action="store_true", help="Native-only (no reference floor)")
     p.add_argument("--limit", type=int, help="Max phases to benchmark")
@@ -119,7 +123,8 @@ def _add_bench_subcommands(sub: Any) -> None:
 
 
 def _add_library_subcommands(sub: Any) -> None:
-    p = sub.add_parser("library", help="Tensile library operations")
+    p = sub.add_parser("library", help="Tensile library operations",
+                       epilog="Examples:\n  oto library best-effort        # carve best-effort .dat (CPU-only)\n  oto library verify             # coverage parity check\n  oto library build-proof        # build-proof assertion")
     lsub = p.add_subparsers(dest="library_cmd")
     lp = lsub.add_parser("best-effort", help="Carve best-effort .dat (CPU-only)")
     add_global_flags(lp)
@@ -136,7 +141,8 @@ def _add_library_subcommands(sub: Any) -> None:
 
 
 def _add_agent_subcommands(sub: Any) -> None:
-    p = sub.add_parser("agent", help="Agent operations (doc generation, harness study)")
+    p = sub.add_parser("agent", help="Agent operations (doc generation, harness study)",
+                       epilog="Examples:\n  oto agent generate starter.md  # agent-1 + agent-2 docs\n  oto agent index                # regenerate docs index")
     asub = p.add_subparsers(dest="agent_cmd")
     ap = asub.add_parser("generate", help="Generate device docs (agent-1/agent-2)")
     add_global_flags(ap)
