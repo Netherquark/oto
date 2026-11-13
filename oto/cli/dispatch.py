@@ -104,7 +104,7 @@ def _add_bench_subcommands(sub: Any) -> None:
     vp2 = vsub.add_parser("run", help="Corpus snapshot/diff/telemetry")
     add_global_flags(vp2)
     vp2.add_argument("verify_run_cmd", nargs="?", choices=["snapshot", "diff", "telemetry", "cheapest"])
-    vp2.add_argument("verify_run_args", nargs="*")
+    vp2.add_argument("verify_run_args", nargs=argparse.REMAINDER)
     vp2.set_defaults(func=_run_verify_run)
 
     p = sub.add_parser("check", help="Diagnostic checks")
