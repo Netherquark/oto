@@ -24,7 +24,7 @@
 ## Tools you use
 - `pytest`, `ruff`, `pyflakes`
 - `python3 -m oto.harness.generate_candidates --dry-run`
-- `python3 oto.py check candidates --quiet`
+- `python3 -m oto check candidates --quiet`
 - `python3 -m oto.tools.deck_review`
 - `python3 -m oto.harness.gate_calibration`
 - `python3 -m oto.harness.failure_triage`

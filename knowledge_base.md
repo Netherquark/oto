@@ -97,7 +97,7 @@ python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
 
 This project's driver source (outside that tree, still **calls into** it):
 
-- `port_tensile.py` — the oto driver (phases from `phases.yaml`; specification in
+- `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
   `implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
   `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
@@ -289,13 +289,13 @@ Two clauses, both enforced CPU-only:
 Enforcement (the rule has one home here; every pointer below is a mechanical
 check, never a restatement):
 
-- `check_library_parity.py` — grades `phases.yaml` + current overlays (deck +
+- `python3 -m oto check library-parity` — grades `phases.yaml` + current overlays (deck +
   seed, plus a run's overlay via `--run-id`) against the grid; exit 1 on
   divergence. This is the *starter* gate for any agent or human editing the
   deck or adding candidates.
-- `port_tensile.py --preflight` — the library-parity verdict is one of the
+- `python3 -m oto preflight` — the library-parity verdict is one of the
   Phase-0 checks (non-fatal, like the rest of preflight).
-- `consolidate.py all --commit` — refuses to install a consolidated deck whose
+- `python3 -m oto consolidate --commit` — refuses to install a consolidated deck whose
   cell set diverges from the grid.
 - `tests/test_library_parity.py` — pins the committed `phases.yaml` + seed
   overlay to exact parity (38/38 today), so a future D1-style edit that breaks
@@ -474,7 +474,7 @@ Measurement no-go's:
 
 ### 8.1 Reading the raw evidence (canonical, do not re-derive)
 
-Getting these wrong produces confident, wrong conclusions. `allruns.py` encodes
+Getting these wrong produces confident, wrong conclusions. `oto.tools.allruns` encodes
 all of them and drives oto's own loaders, so use it instead of hand-parsing.
 
 - **A `2_BenchmarkData` CSV is a multi-size sweep, one row per shape** — not one
@@ -537,7 +537,7 @@ easy to get wrong:
 Gate 4 is the one that was silently absent. Tensile sets
 `overflowedResources = 4` ("Occupancy limit", user-visible as
 `Generating kernel source resulted in error 4`) when the register file cannot
-hold one workgroup. Run `python3 check_candidates.py` to sweep a deck; it exits
+hold one workgroup. Run `python3 -m oto check candidates` to sweep a deck; it exits
 1 on any illegal config, so legality is provable **before** a GPU run. That error
 is now *caught*: it is the workgroup register-file rule modelled below
 (`occupancy_feasible`), so a phase that carries it is refused at preflight rather
@@ -677,14 +677,14 @@ pass-1 sweep's own record of the same list is `archive/corpus.pass1_20261014.md`
 
 Pipeline (in order):
 
-1. `port_tensile.py` + `oto/ledger/registry.py` — persist raw benchmark records to SQLite
+1. `python3 -m oto tune` (the driver) + `oto/ledger/registry.py` — persist raw benchmark records to SQLite
    (`gfx90c_results/registry.db`, append-only `records`).
 2. `oto/metrics/analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
 3. `oto/metrics/report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
    (single-file dashboard). Report dtype extraction is token-based
    (`extract_dtype_from_phase_id`), no longer regex-dependent.
 4. `run_status.py` — progress/ETA accounting, and the live TTY panel
-   (`LiveStatus`) that `port_tensile.py --live` paints while phases execute.
+   (`LiveStatus`) that `oto tune --live` paints while phases execute.
 
 ### 9.1 Execution time in the acceptance report
 
@@ -825,9 +825,10 @@ overwrite, or rewrite **benchmark evidence**.
 
 ## 11. Glossary
 
-- **run** — one execution of the driver over a set of phases (`port_tensile.py` with
-  semantic filters `--targets`/`--family`/`--pattern`/`--shape`/`--stage`, or
-  `--gfx900-reference` for the spoof floor); captured in an era-named
+- **run** — one execution of the driver over a set of phases (`python3 -m oto tune`
+  or `python3 -m oto bench` with semantic filters `--targets`/`--family`/`--pattern`/`--shape`
+  and stages via `--stage`, or `python3 -m oto bench --refresh` for the spoof floor);
+  captured in an era-named
   `run_YYYYMMDD_HHMMSS/` directory.
 - **phase** — one manifest row of the driver (`phases.yaml`); the spoof/reference
   floor lives in its own `gfx900_ref_*` run chain (recalled via `--resume`, never

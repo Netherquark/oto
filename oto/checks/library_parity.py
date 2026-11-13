@@ -11,10 +11,10 @@ non-fatal ``--preflight`` check (oto.runners.driver), or the install-time refusa
 
 Public API: main.
 
-    python3 check_library_parity.py                     # deck + seed overlay
-    python3 check_library_parity.py --run-id <run>      # + that run's overlay
-    python3 check_library_parity.py --phases deck.yaml --no-seed
-    python3 check_library_parity.py --json parity.json
+    python3 -m oto check library-parity                  # deck + seed overlay
+    python3 -m oto check library-parity --run-id <run>  # + that run's overlay
+    python3 -m oto check library-parity --phases deck.yaml --no-seed
+    python3 -m oto check library-parity --json > parity.json
 
 Exit code 0 = parity holds (the deck addresses exactly the shipped cells); exit
 code 1 = divergence, which prints the missing (contraction) and the extra

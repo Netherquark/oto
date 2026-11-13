@@ -138,23 +138,23 @@ the flowchart and again in the [stage table](#stage--owning-package) below.
 ### 1. Preflight Verification (Stage 1 Check)
 Validate the Tensile binary, GPU hardware access, and registry accessibility:
 ```bash
-python3 oto --preflight
+python3 -m oto preflight
 ```
 
 ### 2. Semantic Target Filtering & Execution
 Run specific mathematical families, contraction patterns, or shapes:
 ```bash
-# Preview matched targets without running benchmarks:
-python3 oto --family SS --pattern Ailk_Bljk --dry-run
+# Preview the matched manifest targets without running benchmarks:
+python3 -m oto bench --family SS --pattern Ailk_Bljk --dry-run
 
-# Run full SS (SGEMM) and HH (HGEMM) families:
-python3 oto --family SS HH
+# Benchmark full SS (SGEMM) and HH (HGEMM) families against the reference floor:
+python3 -m oto bench --family SS HH
 
 # Run specific problem shapes across all families:
-python3 oto --shape 1024x1024x1024 2048x2048x2048
+python3 -m oto bench --shape 1024x1024x1024 2048x2048x2048
 
 # Run specific contraction patterns:
-python3 oto --family DD --pattern Ailk_Bjlk Alik_Bljk
+python3 -m oto bench --family DD --pattern Ailk_Bjlk Alik_Bljk
 ```
 The seven native families are `SS`, `HH`, `HH_HPA`, `HS_HPA`, `DD`, `ZZ`, `CC`
 (the last three are the split/complex classes); each family has its own curated
@@ -172,14 +172,14 @@ xdg-open gfx90c_results/acceptance_report.html
 A dedicated `gfx900_ref_*` run benchmarks every shipped gfx900 kernel once (from
 the system ROCm `TensileLibrary.dat`), recalled by every later report:
 ```bash
-# 1. One-time: benchmark every shipped gfx900 kernel (dedicated gfx900_ref_* run)
-python3 oto --gfx900-reference          # --refresh to re-scan the dat, --limit N to smoke-test
+# 1. Build the reference floor (a full bench pass; --refresh re-scans the dat, --limit N to smoke-test)
+python3 -m oto bench --refresh
 
 # 2. Resume an interrupted floor (recalls the whole chain, retries failed once)
-python3 oto --gfx900-reference --resume
+python3 -m oto bench --resume
 
 # 3. Any later report recalls the reference floor automatically
-python3 oto --report
+python3 -m oto report
 ```
 The A/B verdict compares the spoof floor vs native by workload cell
 `(family, dtype, shape)`: best-of-cell per arm, medians the unit, ±5% tie band.
@@ -200,9 +200,11 @@ JSON.
 ### 5. Auto-Convergence Loop
 Run the end-to-end deterministic convergence loop across all phase families.
 
-In a terminal, `--auto` **asks first** and then runs to that plan:
+`python3 -m oto tune` **asks first** (on a TTY) and then runs to that plan;
+`--yes` accepts the default plan without asking:
 ```bash
-python3 oto --auto
+python3 -m oto tune
+python3 -m oto tune --yes
 ```
 
 It opens with the live size of the reference corpus, split by tier, then asks
@@ -238,34 +240,34 @@ Outside a TTY (cron, CI) nothing is asked; the defaults are taken and printed.
 `--yes` takes them explicitly:
 ```bash
 # Non-interactive, all defaults (no re-measurement, 10 iterations, 3 mutations)
-python3 oto --auto --yes
+python3 -m oto tune --yes
 
 # Override the numbers the prompt would ask for (defaults are 10 and 3)
-python3 oto --auto --budget 50 --mutation-budget 5
+python3 -m oto tune --budget 50 --mutations 5
 
 # Non-interactive answer to questions 2 and 3
-python3 oto --auto --yes \
-    --release-under-specified --release-unreproducible
+python3 -m oto tune --yes \
+    --include-underspecified --include-unreproducible
 ```
 
 | Flag | Effect |
 |---|---|
 | `--yes` | Take the default plan without asking. |
 | `--budget N` | Iterations. Overrides the answer to question 4. |
-| `--mutation-budget N` | Knobs mutated per candidate. Overrides question 5. |
-| `--release-under-specified` | Non-interactive "yes" to question 2 (~1 day of GPU). |
-| `--release-unreproducible` | Non-interactive "yes" to question 3. Worth using after a Tensile upgrade, when "unreproducible" may no longer hold. |
+| `--mutations N` | Knobs mutated per candidate. Overrides question 5. |
+| `--include-underspecified` | Non-interactive "yes" to question 2 (~1 day of GPU). |
+| `--include-unreproducible` | Non-interactive "yes" to question 3. Worth using after a Tensile upgrade, when "unreproducible" may no longer hold. |
 
-Native-only tuning, with no reference floor at all:
+Native-only pass, with no reference floor at all (a native-loop sweep, handy as a smoke test):
 ```bash
-python3 oto --native
+python3 -m oto bench --native
 ```
 
 ### 6. Library Synthesis (Stage 6)
 Generate and validate the final merged native HIP library with zero `gfx900`
 leak anti-alias verification:
 ```bash
-python3 oto --synthesize
+python3 -m oto synthesis
 ```
 
 ---
@@ -274,16 +276,8 @@ python3 oto --synthesize
 
 ```text
 oto/
-├── oto            # driver CLI  (→ oto/runners/cli.py)
+├── bin/oto                    # repo-root CLI entry — shell wrapper over `python3 -m oto`
 ├── phases.yaml                # the phase manifest: targets, per-family decks
-├── oto.py                     # CLI entry point (oto <cmd>)
-├── oto check candidates        # deck Tensile-legality preflight (four gates)
-├── check_library_parity.py    # produced library must match the shipped gfx900 grid
-├── check_tensile_build.py     # CPU-only "does Tensile accept this phase's config?"
-├── check_db.py                # registry label-contamination inspector
-├── check_retirement.py        # retirement-record + per-cell-sample inspector
-├── oto.py                     # CLI entry point (oto <cmd>)
-├── oto/tools/consolidate.py   # deck/floor consolidation miner (mine / all)
 │
 ├── oto/                       # the package (see §5 and oto/README.md)
 │   ├── device/                # hardware facts: peaks, family/cell vocabulary
@@ -313,19 +307,13 @@ orientation layer over it.
 
 ## 5. Module Overview
 
-### Root entry points
+### Entry points
 
-| Script | Purpose |
+| Entry | Purpose |
 |---|---|
-| [`oto`](oto) | Suite CLI. Thin wrapper over [`oto/runners/cli.py`](oto/runners/cli.py): argparse dispatch, multi-threaded kernel compilation, subprocess management, continuous telemetry sampling, the real-time key listener (`'s'`/`'e'`/`'q'`), and Stage 6/7 orchestration. |
-| [`oto.py`](oto.py) | CLI entry point — `oto <cmd>` (→ [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
-| [`oto check candidates`](oto check candidates) | Deck lint (→ [`oto/checks/candidates.py`](oto/checks/candidates.py)): resource legality **and** deck self-consistency (an id that embeds MT/TT must match its config; `fp` must hash the config actually stored). Non-zero exit on failure, so it can gate a pipeline. |
-| [`check_library_parity.py`](check_library_parity.py) | Coverage-parity enforcement (→ [`oto/checks/library_parity.py`](oto/checks/library_parity.py)): the produced `tensilelibrary.dat` must address exactly the shipped gfx900 cell grid — no contraction, no extension. |
-| [`check_tensile_build.py`](check_tensile_build.py) | CPU-only build proof (→ [`oto/checks/tensile_build.py`](oto/checks/tensile_build.py)): asks Tensile itself to generate + compile kernels for every phase and reports any `reject()` reason. Not a full code-object/library build. |
-| [`check_db.py`](check_db.py) | Registry inspector (→ [`oto/checks/db.py`](oto/checks/db.py)): label contamination (`'auto'` / `'Unknown'` cells). |
-| [`check_retirement.py`](check_retirement.py) | Retirement inspector (→ [`oto/checks/retirement.py`](oto/checks/retirement.py)): retirement records and per-cell sample counts. |
-| [`oto.py`](oto.py) | CLI entry point — `oto <cmd>` (→ [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
-
+| [`bin/oto`](bin/oto) | Repo-root CLI entry — a thin shell wrapper over `python3 -m oto` (put `bin/` on `PATH`, or run `./bin/oto` from the repo root). |
+| [`python3 -m oto`](oto/__main__.py) | The CLI itself: every `oto <cmd>` subcommand (tune, run, bench, status, report, doctor, preflight, candidate, retirement, analytics, synthesis, verify, check, library, agent, consolidate, stats, chart, version, help, completion). Dispatch: [`oto/cli/dispatch.py`](oto/cli/dispatch.py); full command reference: [docs/cli.md](docs/cli.md). |
+| [`bin/` note](#entry-points) | The checks the old root shims exposed (`check candidates`, `check db`, `check retirement`, `check library-parity`, `check tensile-build`) are now `oto check …` / `oto library …` subcommands — see [docs/cli.md](docs/cli.md). |
 
 ### `oto/tensile/` — the candidate pipeline
 
@@ -404,14 +392,14 @@ deck, prove a build, verify the append-only law, and inspect the corpus.
 # Lint a candidate deck. Checks resource legality AND deck self-consistency
 # (an id that embeds MT/TT must match its config; fp must be the hash of the
 # config actually stored). Exits non-zero on any failure, so it can gate a pipeline.
-python3 oto check candidates --quiet
-python3 oto check candidates --family ZZ --json out.json
+python3 -m oto check candidates --quiet
+python3 -m oto check candidates --family ZZ --json > candidates.json
 
 # Enforcement of the coverage-parity rule: the produced tensilelibrary.dat must
 # address EXACTLY the shipped gfx900 cell grid -- no contraction, no extension.
 # Exits non-zero on divergence.
-python3 check_library_parity.py --quiet          # deck + seed (+ --run-id's overlay)
-python3 check_library_parity.py --json out.json  # machine-readable verdict
+python3 -m oto check library-parity --quiet     # deck + seed (+ --run-id's overlay)
+python3 -m oto check library-parity --json > parity.json  # machine-readable verdict
 
 # Ground-truth candidate machinery for agents (CPU-only). Builds the per-kernel
 # measurement DB and the deck-vs-floor-vs-all-time regression matrix (median
@@ -422,36 +410,36 @@ python3 -m oto.harness.regression_matrix --base-dir .
 # Ask Tensile itself to generate and compile kernels for every phase, and report
 # any reject() reason. Proves solution generation and kernel resource legality --
 # it is NOT a complete code-object or library build.
-python3 check_tensile_build.py --jobs 8 --json build.json
-python3 check_tensile_build.py --family ZZ          # just the ZZ family
-python3 check_tensile_build.py --compare            # cross-check our gate vs Tensile
+python3 -m oto check tensile-build --jobs 8 --json > build.json
+python3 -m oto check tensile-build --family ZZ    # just the ZZ family
+python3 -m oto check tensile-build --compare      # cross-check our gate vs Tensile
 
 # Enforce the append-only data law (knowledge_base.md §10). Take a snapshot
 # around any run, then diff: a new run dir and more registry rows is clean;
 # anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
-python3 oto.py verify run snapshot --out before.json
+python3 -m oto verify run snapshot --out before.json
 #   ... run the driver ...
-python3 oto.py verify run diff before.json after.json
+python3 -m oto verify run diff before.json after.json
 
 # Is this run's telemetry actually usable? Prints per-phase survival at every
 # clock filter (busy -> sclk range -> thermal), so an over-strict filter is
 # visible instead of reading as "no clock data".
-python3 oto.py verify run telemetry run_20261005_170141
+python3 -m oto verify run telemetry run_20261005_170141
 
 # Cheapest LEGAL phase in the live deck, for a smoke run that costs ~nothing.
 # Prints the exact --targets command to drive it.
-python3 oto.py verify run cheapest --family ZZ
+python3 -m oto verify run cheapest --family ZZ
 
 # Best config per cell across ALL runs, and the knob reach per family.
-python3 oto.py stats
+python3 -m oto stats
 
 # Registry sanity: label contamination and retirement records.
-python3 check_db.py
-python3 check_retirement.py
+python3 -m oto check db
+python3 -m oto check retirement
 ```
 
 Current state is reported live by each tool: `oto check candidates` prints the
-checked/illegal counts it finds, and `check_tensile_build.py` prints the pass/fail
+checked/illegal counts it finds, and `oto check tensile-build` prints the pass/fail
 counts it computes. Neither is transcribed here (they move when cells are
 re-triaged).
 

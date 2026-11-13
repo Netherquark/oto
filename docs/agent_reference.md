@@ -17,9 +17,9 @@ python3 -m oto.tools.deck_review legality
 python3 -m oto.tools.deck_review flood --cap 24
 
 # 2. CPU-only pre-flight
-python3 oto.py check candidates --quiet
+python3 -m oto check candidates --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-python3 oto.py doctor
+python3 -m oto doctor
 
 # 3. Pyflakes + ruff + py_compile + length safety nets (fast, CPU-only)
 python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
@@ -218,13 +218,13 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 ```bash
 # CPU-only (any session)
 python3 -m oto.harness.generate_candidates          # wire the seed overlay
-python3 oto.py check candidates --quiet
-python3 oto.py check candidates --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
+python3 -m oto check candidates --quiet
+python3 -m oto check candidates --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-python3 oto.py doctor
+python3 -m oto doctor
 
 # TTY only — the real run
-python3 oto.py tune --budget 10 --yes
+python3 -m oto tune --budget 10 --yes
 ```
 
 The overlay is gitignored, so wiring it in is a required step, not a no-op.
@@ -240,7 +240,7 @@ Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
 python3 -m oto.harness.resolve_cells            # per-cell winners + cfg_gap
-python3 oto.py stats --json gfx90c_results/analysis/post.json
+python3 -m oto stats --json gfx90c_results/analysis/post.json
 PYTHONPATH=. python3 oto/runners/cli.py --native-agg floor_best
 ```
 

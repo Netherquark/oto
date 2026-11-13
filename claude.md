@@ -200,8 +200,8 @@ microbenchmark of any size. **Everything the agent needs to know about the devic
 is already in `gfx90c_theoretical_limits.md` §1–§3 and `oto/device/peaks.py`.**
 Full Tensile benchmark runs are also not the agent's to launch: only in a TTY, and
 only when the USER runs them. Agent work is CPU-only — code, DB and docs, plus the
-repo's own CPU-only tools (`oto check candidates`, `oto stats`,
-`check_tensile_build.py`, `check_library_parity.py`, the gate/test suite, deck
+repo's own CPU-only tools (`python3 -m oto check candidates`, `python3 -m oto stats`,
+`python3 -m oto check tensile-build`, `python3 -m oto check library-parity`, the gate/test suite, deck
 generation, dry-run, result inspection).
 
 ### 2.1 Documents
@@ -240,9 +240,9 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
 | Run the test suite (2m10s serial, 1m27s with `-n auto`, 37s for `-m preflight`) | `python3 -m pytest -q` (`-n auto` to distribute, `-m preflight` for the pre-run subset) |
 | Is the repo clean under the tree-walking guards? (pyflakes, ruff, py_compile, 60-line and 600-line rules) | `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q` (`OTO_GUARD_FILES=1` for changed files only) |
-| Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 oto --best-library [DEST]` (default `gfx90c_results/best_effort_library/`; `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
+| Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 -m oto library best-effort` (default `gfx90c_results/best_effort_library/`; `--dest DEST`, `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
 | What is the *legal* geometry space per cell, what has been measured inside it, and which legal geometry is untried but sits next to a fast one? (the numbers, then the picture) | `python3 -m oto.harness.coverage_map` (`--family SS`, `--cell SS:256`, `--top 12`, `--json out.json`) and `python3 -m oto.harness.coverage_graph` (writes `gfx90c_results/analysis/coverage/*.svg` + an index page) |
-| Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 oto check candidates` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
+| Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 -m oto check candidates` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |

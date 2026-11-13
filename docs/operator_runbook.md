@@ -98,7 +98,7 @@ export OTO_API_ENDPOINT=...    # explicit endpoint always wins (OTO_API_MODEL to
 ```
 
 ```bash
-PYTHONPATH=. python3 oto.py agent generate docs/<codename>_starter.md
+PYTHONPATH=. python3 -m oto agent generate docs/<codename>_starter.md
 ```
 
 The agent writes `docs/<codename>_theoretical_limits.md` and
