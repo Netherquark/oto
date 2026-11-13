@@ -1,5 +1,20 @@
 # Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26; 2026-11-13)
 
+**2026-11-13 (evening) — honest suite status + in-flight rework caveat.**
+Suite re-ran (zz_suite24): RC=1, 7 failed / 1036 passed / 8 skipped / 242 subtests.
+All 7 reds attribute to the concurrently in-flight, UNCOMMITTED CLI rework in
+this tree (replacing the root `oto.py` with `bin/oto`; splitting
+`oto/cli/dispatch.py` into `oto/cli/{parser,commands,docs,doctor}.py`; checks
+moved under `oto check …`). None are caused by commit line:
+7168516 (build-proof restore), dcef6dc (scour), 6ad8e9f (test entry migration),
+32d1a5d (docs scour) — every file those commits touch passes every gate.
+The rework is not to be committed or fixed as part of this workstream; the
+4 CLI-UX-asserting smoke tests and the ruff/pyflakes/function-length/gate
+findings belong to it and should be re-asserted once it lands. Previously
+recorded lint defects (FAMILY_DTYPE_CHAR, fake_emit) remain fixed; the
+file-length OFFENDERS list is empty (all five offenders split); the two
+c0mpliance gates re-verified green for the committed tree.
+
 **2026-11-13 refresh — two classes of finding.** (a) *Landed and proven this
 session*: ruff + py_compile + file-length gates; profile seam made load-bearing
 (downstream rebind); second-profile gate tests; spoof_reference parameterised
@@ -21,10 +36,9 @@ Open items, tracked:
   `bound_profile`), but the diff is large and the full suite is unverifiable
   here. Cheap interim guards exist: `tests/test_profile_second_device.py`,
   gate rebind tests, import sweeps, compile-all.
-- File-length offenders (the `OFFENDERS` list in `tests/test_file_length.py`):
-  `test_phase1_integration.py` 1008, `test_synthesis_phase4.py` 780,
-  `test_occupancy_gate.py` 779, `test_run_status.py` 620, `run_status.py` 608.
-  Splitting is mechanical but suite-verifiable only.
+- ~~File-length offenders~~ — RESOLVED: all five split
+  (`run_status.py` → facade+3; the four test files split); the OFFENDERS list in
+  `tests/test_file_length.py` is empty.
 - C4 (gfx902 starter research, agent-1/agent-2 outputs) — needs an API key,
   not provided.
 - GPU runtime verification (yolo26 e2e, C3.5 parity, C7.1, C8 GPU legs,

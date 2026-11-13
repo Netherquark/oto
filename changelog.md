@@ -9,6 +9,40 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-13 (15th) — Repo scour: build-proof restored end-to-end; docs/tests
+  migrated off the deleted root shim.** A repo-wide pending-work audit found the
+  CPU-only Tensile build proof fully broken since the CLI rework's Phase 2 deleted
+  the `check_tensile_build.py` root shim: `run_phase()` spawned the deleted path
+  with `arch=None` (every phase => file-not-found), and `_init_tensile` called
+  `ToolchainDefaults.HIP_CONFIG`, an attribute this Tensile (rocm-libraries
+  d950c74) never had. Fixed: worker now runs this module via `__main__` with
+  repo-root on the child PYTHONPATH, `--arch` is normalized on the non-worker path,
+  and the toolchain is validated positionally (mirrors `Tensile/Tensile.py main()`).
+  Verified PASS for one CC and two SS phases through the real worker subprocess
+  (arch=gfx90c). Also: removed the hardcoded user-machine `TENSILE_ROOT` fallbacks
+  (`candidates.py`, `allruns.py`, `consolidate_deck.py`), deleted dead code
+  (empty `SQLiteRegistry` class in `registry_core.py`, the `depth_u` re-export in
+  `tensile/candidate.py`), eradicated deleted-shim references from live
+  docstrings/help text, rewrote README §3/§4/§5 + `docs/cli.md` to the real
+  `python3 -m oto` subcommand surface (`--yes`, `--mutations`, `--include-*`,
+  `bench` for the floor, `oto check tensile-build`), regenerated `oto/README.md`,
+  and migrated the test entry invocations to `python3 -m oto`. Commits:
+  7168516, dcef6dc, 6ad8e9f, 32d1a5d.
+  **In-flight, uncommitted concurrently:** a CLI rework (replacing the root
+  `oto.py` with `bin/oto` and splitting `oto/cli/dispatch.py` into
+  `parser/commands/docs/doctor` modules) is being written in this tree as these
+  commits landed. It owns all 7 red tests/gates at this commit:
+  test_cli_smoke bare_invocation/help_subcommand (pre-rework rendering
+  assertions), test_verify_run snapshot/diff flag-ordering rejection, ruff /
+  pyflakes findings in `checks/db.py`, `cli/*`, `tools/verify_run.py`,
+  `tools/chart.py`, `tools/verifiers/verify_all.py`, function-length offenders
+  `oto/cli/parser.py::_add_core` (72>60) and `oto/tools/chart.py::main` (65>60),
+  and the tracked-but-deleted `oto.py` failing the byte-compile walk.
+  **Suite RC=1 (zz_suite24): 7 failed, 1036 passed, 8 skipped, 242 subtests,
+  ~143 s** — every red test/gate is in the in-flight rework's files or asserts
+  its removed behavior; none are caused by the four commits above. Re-run after
+  the rework lands; the smoke tests asserting the pre-rework UX should be
+  re-asserted against the final renderer.
 - **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
   ran end-to-end against the rocm-libraries Tensile build on gfx90c: torch
   `2.12.0+rocm7.15.0a20260728`, `ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library`,
