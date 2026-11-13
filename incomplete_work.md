@@ -893,3 +893,32 @@ Note: this register's 2026-10 snapshots above predate Refactor 2 landing —
   the verified `profiles/gfx902.json`. Until then the runbook is design plus
   local CPU-only checks only.
 * Live agent research for gfx902 facts remains blocked on the same key.
+
+
+---
+
+## CLOSED this session (2026-11-13, continued)
+
+- **C7.2** — gfx90c literals stripped from comments/docstrings in oto/ (only
+  oto/device/ + legacy-compat directory names remain, both legitimate).
+- **C3.3–C3.5** — spoof_reference wired end-to-end: reference.py (run_gfx900_reference
+  checks profile.spoof_reference, native-only when empty) + reporting.py
+  (_phase_arm now profile-aware instead of hardcoding "gfx900").
+- **C8 (acceptance verification, CPU-side evidence)** — yolo26 ran end-to-end
+  against the rocm-libraries Tensile build: torch 2.12.0+rocm7.15.0a20260728,
+  person box 0.87 verified visually, MIOpen conv solver, CPU NMS, frame saved.
+  Evidence recorded in changelog.md (2026-11-13, 14th entry).
+- **Docstring sweep** — all 24 non-test files now carry the Owns/Does-NOT-own/
+  Public-API convention block (only the 0-byte __init__.py is excluded).
+- **Offender splits** — all 5 >600-LOC files split by concern; OFFENDERS set
+  empty; test_file_length ratchet passes.
+- **Suite** — RC=0, 1021 passed, 8 skipped, 242 subtests (zz_suite8).
+- **ruff/pyflakes** — zero findings repo-wide.
+
+**Still blocked (external input required):**
+- C4 (gfx902 starter research) — needs API key.
+- gfx906 real-hardware validation — no hardware.
+- CLI UX implementation — needs answers to §7 of plans/CLI_UX_REWORK.md.
+- C2.5–C2.9 explicit signature threading — deliberately deferred (mechanism
+  equivalent via set_profile; high churn, low equivalence value).
+- Verifier baseline bringup (2824c2f → current) — needs verifier rewrite.
