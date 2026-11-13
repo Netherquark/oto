@@ -39,7 +39,7 @@ _TRACKED = ("GLOBAL_LOAD_BYTE_CAP", "VGPR_PER_CU", "LDS_PER_CU_KB")
 #: Gate modules that captured a profile-derived name with
 #: ``from .vgpr_model import X`` at import time (the plain name in their
 #: module namespace is a snapshot, so rebinding *our* globals would leave the
-#: gates reading the gfx90c value). set_profile/restore_profile rebind these
+#: gates reading the device value). set_profile/restore_profile rebind these
 #: module globals too; restore reverses them exactly. Only profile-derived
 #: names are listed -- calibrated constants (LDS_BUDGET, MAX_LDS_BYTES,
 #: ACCVGPR_BUDGET) stay fixed by design.

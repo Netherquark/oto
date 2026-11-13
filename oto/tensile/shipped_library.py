@@ -303,7 +303,7 @@ def emit_spoof_phases(manifest: dict[str, Any],
     Every phase carries a distinct fp (kernel-derived config) so no phase
     collides with candidates or with any other shipped kernel. ``arch`` is
     the reference architecture (the profile's ``spoof_reference``); for
-    gfx90c that is gfx900.
+    this device that is gfx900.
     """
     phases: list[dict[str, Any]] = []
     by_family = manifest.get("families", {})

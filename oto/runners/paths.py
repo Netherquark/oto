@@ -81,7 +81,8 @@ def legacy_results_dir(base_dir) -> Path:
 def results_rel(*parts: str) -> str:
     """Repo-relative results subpath for the current device.
 
-    Import-time safe (peaks is a constants module): for gfx90c this yields
+    Import-time safe (peaks is a constants module): for the default
+    device this yields
     ``gfx90c_results/...`` exactly as before; for another profile it yields
     ``<codename>_results/...``. No literal appears in calling code.
     """
