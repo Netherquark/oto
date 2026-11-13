@@ -23,11 +23,11 @@ that launches GEMMs on the device) is never invoked. The ROCm tools touched are
 the path-locating helpers real runs use (``hipconfig``,
 ``rocm_agent_enumerator``), which only print config.
 
-    python3 check_tensile_build.py                 # all phases
-    python3 check_tensile_build.py --family ZZ     # just ZZ
-    python3 check_tensile_build.py --phase-id <id> # one phase
-    python3 check_tensile_build.py --compare       # also check the model
-    python3 check_tensile_build.py --json out.json
+    python3 -m oto check tensile-build             # all phases
+    python3 -m oto check tensile-build --family ZZ # just ZZ
+    python3 -m oto check tensile-build --phase-id <id> # one phase
+    python3 -m oto check tensile-build --compare   # also check the model
+    python3 -m oto check tensile-build --json > out.json
 """
 
 
@@ -139,14 +139,18 @@ def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -
     work = outdir / pid
     work.mkdir(parents=True, exist_ok=True)
 
+    # The repo-root shim was deleted in the 2026-11-13 CLI rework; invoke this
+    # module directly (it has an __main__ guard) rather than a removed path.
     cmd = [
-        sys.executable, str(REPO / "check_tensile_build.py"),
+        sys.executable, str(Path(__file__).resolve()),
         "--_worker",
         "--phase-yaml", str(cfg_path),
         "--result-json", str(result_path),
         "--arch", arch,
     ]
+    # The worker __main__-guard imports `oto`, so repo root must be on its path
     env = dict(os.environ)
+    env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
     try:
         proc = subprocess.run(
             cmd, cwd=str(work), capture_output=True, text=True, timeout=timeout, env=env
@@ -271,6 +275,9 @@ def main() -> int:
 
     if args._worker:
         return _worker(args)
+
+    if args.arch is None:
+        args.arch = _default_arch()
 
     phases = select_phases(args)
     outdir = Path(args.keep) if args.keep else Path(tempfile.mkdtemp(prefix="tensile_build_"))

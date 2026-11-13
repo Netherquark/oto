@@ -14,7 +14,6 @@ Public API: probe_phase_config (the driver re-exports it).
 from __future__ import annotations
 
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -59,13 +58,19 @@ def _init_tensile(arch: str | None = None) -> None:
     from Tensile import Common
     from Tensile.Utilities.Toolchain import ToolchainDefaults, validateToolchain
 
-    assembler = shutil.which("clang++") or ""
-    cxx, cc, asm, bundler, hipconfig, dev_enum = validateToolchain(
-        "hipcc",
-        "hipcc",
+    # Mirror Tensile/Tensile.py main(): validate the canonical components in
+    # PATH order. ROCM_PATH is set from the nightly venv or .env above.
+    (
+        cxxCompiler,
+        cCompiler,
         assembler,
+        offloadBundler,
+        deviceEnumerator,
+    ) = validateToolchain(
+        ToolchainDefaults.CXX_COMPILER,
+        ToolchainDefaults.C_COMPILER,
+        ToolchainDefaults.ASSEMBLER,
         ToolchainDefaults.OFFLOAD_BUNDLER,
-        ToolchainDefaults.HIP_CONFIG,
         ToolchainDefaults.DEVICE_ENUMERATOR,
     )
 
@@ -85,12 +90,11 @@ def _init_tensile(arch: str | None = None) -> None:
             "ShortNames": False,
             "MergeFiles": False,
             "RemoveTemporariesFromAssembler": False,
-            "CxxCompiler": cxx,
-            "CCompiler": cc,
-            "Assembler": asm,
-            "OffloadBundler": bundler,
-            "HipConfig": hipconfig,
-            "ROCmAgentEnumeratorPath": dev_enum,
+            "CxxCompiler": cxxCompiler,
+            "CCompiler": cCompiler,
+            "Assembler": assembler,
+            "OffloadBundler": offloadBundler,
+            "ROCmAgentEnumeratorPath": deviceEnumerator,
         }
     )
 
