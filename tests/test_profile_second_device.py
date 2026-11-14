@@ -12,6 +12,10 @@ are deliberately NOT profile-rebound: they are calibration results of this
 repo, not device facts. Only ``_loader.current_profile().vgpr_per_cu`` / ``_loader.current_profile().global_load_byte_cap`` /
 ``_loader.current_profile().lds_per_cu_kb`` are.
 """
+# 'probe_test' is a fabricated probe: an ISA (9,9,99) device that never shipped.
+# It exists only to prove the explicit-profile threading seam is load-bearing
+# (profile facts flip verdicts, ambient resolution stays out of the way). It is
+# NEVER a description of gfx90c or any real silicon that appeared in this tree.
 from __future__ import annotations
 
 import dataclasses
@@ -29,7 +33,7 @@ def _synthetic_device():
     base = load_profile("gfx90c")
     return dataclasses.replace(
         base,
-        codename="synthetictest",
+        codename="probe_test",
         isa=(9, 9, 99),
         num_cus=64,
         max_clock_mhz=1500,
@@ -50,7 +54,7 @@ def default_profile():
 
 def test_synthetic_profile_differs_from_gfx90c():
     p = _synthetic_device()
-    assert p.codename == "synthetictest"
+    assert p.codename == "probe_test"
     assert p.isa == (9, 9, 99)
     assert p.num_cus == 64
     assert p.num_cus != load_profile("gfx90c").num_cus

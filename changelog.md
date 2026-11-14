@@ -4117,3 +4117,21 @@ the pre-built seed pool.
   self-contained payload contract, and the post-batch autonomous refinement
   loop. No fact remembered; every claim checked against the tree or the two
   reference checkouts (backrocm, ROCm/).
+
+- **2026-11-14 (31st) — the test suite is hardware-adaptive.** The triage of
+  `test_explicit_profile_threading.py` flagging a misread of a fabricated
+  `has_mfma=True` probe (`synthetictest`) surfaced three real defects, all
+  fixed: (1) the probe fixture is renamed `probe_test` with a module-level
+  note spelling out that it is a synthetic ISA (9,9,99) fragment, not a
+  description of any target silicon; (2) the three ambient-codename tests now
+  assert the loader's invariant (`DEFAULT_CODENAME == "gfx90c"`, explicit
+  always wins, bounded rebinds restore the prior ambient) instead of assuming
+  the ambient *is* gfx90c — a gfx902 box no longer trips these; (3) every test
+  that reads the live, gitignored campaign outputs (kernel_db.json,
+  phases.seed.overlay.yaml, acceptance_report.json, reference_rerun_manifest)
+  now skips cleanly when those artifacts are absent — a fresh gfx902 checkout
+  stays green minus the gfx90c-acceptance anchors, and the deliberate ones
+  (load_profile("gfx90c") anchors + best-library carve tests, which require
+  the corpus) skip with a reason instead of failing, so a gfx902 checkout
+  fails loudly nowhere; every skip reason says "run the tuning campaign
+  first". ruff clean; suite runs unchanged against this machine's corpus.

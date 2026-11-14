@@ -6,6 +6,10 @@ API, not decoration. Complements ``test_profile_gates.py`` (ambient/bound
 profile) with the per-call explicit argument.
 """
 
+# 'probe_test' is a fabricated probe: an ISA (9,9,99) device that never shipped.
+# It exists only to prove the explicit-profile threading seam is load-bearing
+# (profile facts flip verdicts, ambient resolution stays out of the way). It is
+# NEVER a description of gfx90c or any real silicon that appeared in this tree.
 import dataclasses
 
 from oto.device.loader import load_profile
@@ -14,9 +18,9 @@ from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.assembly import assembly_class_valid
 
 
-def _mfma_synthetic():
+def _mfma_probe_device():
     base = load_profile("gfx90c")
-    return dataclasses.replace(base, codename="synthetictest", isa=(9, 9, 99),
+    return dataclasses.replace(base, codename="probe_test", isa=(9, 9, 99),
                                num_cus=64, max_clock_mhz=1500, has_mfma=True)
 
 
@@ -29,7 +33,7 @@ def _cc_gsu_config():
 def test_assembly_gate_honors_explicit_profile():
     cfg = _cc_gsu_config()
     base = load_profile("gfx90c")
-    synth = _mfma_synthetic()
+    synth = _mfma_probe_device()
     ok_gfx, why_gfx = assembly_class_valid(cfg, profile=base)
     ok_synth, _ = assembly_class_valid(cfg, profile=synth)
     assert ok_gfx is False
@@ -43,16 +47,16 @@ def test_validate_config_threads_explicit_profile_into_gates():
     cfg = _cc_gsu_config()
     gen = CandidateGenerator(".")
     _, why_gfx = gen.validate_config(cfg, profile=load_profile("gfx90c"))
-    _, why_synth = gen.validate_config(cfg, profile=_mfma_synthetic())
+    _, why_synth = gen.validate_config(cfg, profile=_mfma_probe_device())
     assert "complex" in why_gfx.lower()
-    # The MFMA-capable synthetic device reaches a later (or no) refusal: the
+    # The MFMA-capable probe_device device reaches a later (or no) refusal: the
     # complex GSU>1 rule no longer fires.
     assert "complex" not in why_synth.lower()
 
 
 def test_family_to_dtype_reads_explicit_profile():
     base = load_profile("gfx90c")
-    synth = dataclasses.replace(base, codename="synthetictest",
+    synth = dataclasses.replace(base, codename="probe_test",
                                 family_dtype_char={**base.family_dtype_char, "SS": "B"})
     assert family_to_dtype(synth)["ss"] == "B"
     assert family_to_dtype(base)["ss"] == "S"

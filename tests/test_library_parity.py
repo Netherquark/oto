@@ -34,10 +34,18 @@ from oto.tensile.library_parity import (
 )
 
 DECK = yaml.safe_load((REPO / "phases.yaml").read_text())
-SEED_DOC = yaml.safe_load(
-    (REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml").read_text())
-SEED = list(SEED_DOC["phases"].values()) if isinstance(
-    SEED_DOC.get("phases"), dict) else SEED_DOC["phases"]
+_SEED_OVERLAY = REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+
+
+def _load_seed_or_skip():
+    """Live overlay is a gitignored artifact (gfx90c_results/); skip on fresh checkouts."""
+    if not _SEED_OVERLAY.is_file():
+        pytest.skip("phases.seed.overlay.yaml absent (gitignored): "
+                    "run `python3 -m oto.harness.generate_candidates` first")
+    doc = yaml.safe_load(_SEED_OVERLAY.read_text())
+    return list(doc["phases"].values()) if isinstance(
+        doc.get("phases"), dict) else doc["phases"]
+
 
 GRID_TOTAL = sum(len(v) for v in _loader.current_profile().family_shapes.values())
 
@@ -85,13 +93,15 @@ class TestDeckParity:
 
 class TestSeedOverlayParity:
     def test_seed_only_extends_within_grid(self):
-        for family, shape in phases_cells(SEED):
+        seed = _load_seed_or_skip()
+        for family, shape in phases_cells(seed):
             assert (family, shape) in {
                 (f, s) for f, ss in _loader.current_profile().family_shapes.items() for s in
                 (f"{side}x{side}x{side}" for side in ss)}
 
     def test_seed_does_not_shrink_deck(self):
-        assert phases_cells(DECK) == phases_cells(DECK) | phases_cells(SEED)
+        seed = _load_seed_or_skip()
+        assert phases_cells(DECK) == phases_cells(DECK) | phases_cells(seed)
 
 
 class TestPipelineManifestParity:

@@ -3,7 +3,10 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import pytest
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 from oto.tensile.best_library import (
     SHIPPED_CELLS,
     _tensile_env,
@@ -15,12 +18,21 @@ from oto.tensile.best_library import (
     logic_filename_hint,
 )
 
+_LIVE_CORPUS = REPO / "gfx90c_results" / "analysis" / "kernel_db.json"
+
+
+def _require_live_corpus():
+    if not _LIVE_CORPUS.is_file():
+        pytest.skip("live gfx90c corpus absent (gitignored artifact) -- "
+                    "run the tuning campaign for this device first")
+
 
 def test_shipped_cells_count():
     assert len(SHIPPED_CELLS) == 38
 
 
 def test_cell_solution_map_family_basis():
+    _require_live_corpus()
     cm, refused, stats = cell_solution_map(Path("."), "family")
     assert len(cm) == 38
     assert refused == []
@@ -31,6 +43,7 @@ def test_cell_solution_map_family_basis():
 
 
 def test_dedupe_count():
+    _require_live_corpus()
     cm, _, _ = cell_solution_map(Path("."), "family")
     fams, _ = dedupe_configs(cm)
     total = sum(len(v) for v in fams.values())
@@ -39,6 +52,7 @@ def test_dedupe_count():
 
 
 def test_emit_logic_yaml_parity(tmp_path):
+    _require_live_corpus()
     cm, _, _ = cell_solution_map(Path("."), "family")
     logic = tmp_path / "3_LibraryLogic"
     _phases, parity = emit_logic_yaml(cm, logic)
@@ -52,6 +66,7 @@ def test_emit_logic_yaml_parity(tmp_path):
 
 
 def test_build_best_library_carve_only(tmp_path):
+    _require_live_corpus()
     res = build_best_library(Path("."), tmp_path / "lib", basis="family",
                              tensile_root=None)
     assert res["status"] == "success"
@@ -61,6 +76,7 @@ def test_build_best_library_carve_only(tmp_path):
 
 
 def test_basis_any_runs():
+    _require_live_corpus()
     cm, refused, _stats = cell_solution_map(Path("."), "any")
     assert len(cm) == 38
     assert refused == []
@@ -133,6 +149,7 @@ def test_logic_filename_hint_falls_back_on_error(monkeypatch):
 def test_emit_logic_yaml_names_files_for_tensile_selection(tmp_path, monkeypatch):
     """ROCm 7.x maps gfx90c -> vega10; the merge step selects logic files by
     the mapped name as a stem substring, so the YAML filenames must carry it."""
+    _require_live_corpus()
     monkeypatch.setattr("oto.tensile.best_library.logic_filename_hint",
                         lambda root, cn: "vega10")
     cm, _, _ = cell_solution_map(Path("."), "family")

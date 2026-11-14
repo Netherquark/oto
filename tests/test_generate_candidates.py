@@ -20,6 +20,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "harness"))
 
+import pytest
 import yaml
 
 from oto.device import loader as _loader
@@ -99,8 +100,10 @@ class TestPoolInvariants:
         assert not ({r["fp"] for r in _rows()} & deck_fps)
 
     def test_no_fp_collision_with_curated_seed(self):
-        doc = yaml.safe_load(
-            (REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml").read_text())
+        overlay = REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        if not overlay.is_file():
+            pytest.skip("phases.seed.overlay.yaml absent (gitignored artifact)")
+        doc = yaml.safe_load(overlay.read_text())
         seed_fps = {
             str(p["fp"]) for p in doc["phases"]
             if not str(p.get("origin", "")).startswith("generated_")

@@ -36,6 +36,8 @@ from oto.harness import resolve_cells
 
 @pytest.fixture(scope="module")
 def evidence():
+    if not (BASE / "gfx90c_results" / "acceptance_report.json").is_file():
+        pytest.skip("no acceptance_report.json: run the tuning campaign for this device first")
     cells, meta = resolve_cells.build(str(BASE))
     return cells, meta
 

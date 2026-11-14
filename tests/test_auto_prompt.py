@@ -181,6 +181,11 @@ class TestCountReading(unittest.TestCase):
         going stale. Deliberately asserts no literal count: the point of this
         test is that nothing in the codebase pins the corpus size.
         """
+        manifest_path = BASE / "gfx90c_results" / "reference_rerun_manifest.json"
+        shipped_path = BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        if not (manifest_path.is_file() and shipped_path.is_file()):
+            self.skipTest("live reference manifests absent (gitignored campaign outputs)")
+
         import json
 
         import oto.tensile.library as tlib

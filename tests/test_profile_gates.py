@@ -1,5 +1,9 @@
 """Refactor 2 Phase 6: gate tests run against a second (synthetic) profile."""
 
+# 'probe_test' is a fabricated probe: an ISA (9,9,99) device that never shipped.
+# It exists only to prove the explicit-profile threading seam is load-bearing
+# (profile facts flip verdicts, ambient resolution stays out of the way). It is
+# NEVER a description of gfx90c or any real silicon that appeared in this tree.
 import sys
 from pathlib import Path
 
@@ -15,7 +19,7 @@ from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
 
 def _synthetic():
     base = load_profile("gfx90c")
-    return dataclasses.replace(base, codename="synthetictest", isa=(9, 9, 99),
+    return dataclasses.replace(base, codename="probe_test", isa=(9, 9, 99),
                                num_cus=64, max_clock_mhz=1500)
 
 
@@ -41,7 +45,7 @@ def test_profile_switching_restores_gfx90c():
     """Switching profiles must not leak state."""
     p1 = load_profile("gfx90c")
     p2 = dataclasses.replace(load_profile("gfx90c"),
-                             codename="synthetictest", isa=(9, 9, 99),
+                             codename="probe_test", isa=(9, 9, 99),
                              num_cus=64, max_clock_mhz=1500)
     _loader.rebind_profile(p2)
     assert load_profile("gfx90c").num_cus == 7
@@ -54,7 +58,7 @@ def test_gfx90c_profile_restored_after_second():
     from oto.device.loader import load_profile
     p1 = load_profile("gfx90c")
     p2 = dataclasses.replace(load_profile("gfx90c"),
-                             codename="synthetictest", isa=(9, 9, 99),
+                             codename="probe_test", isa=(9, 9, 99),
                              num_cus=64, max_clock_mhz=1500)
     _loader.rebind_profile(p2)
     assert p2.num_cus == 64
@@ -85,7 +89,7 @@ def test_gates_dont_crash_on_profile(synthetic):
     from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
     prof = load_profile("gfx90c")
     if synthetic:
-        prof = dataclasses.replace(prof, codename="synthetictest", isa=(9, 9, 99),
+        prof = dataclasses.replace(prof, codename="probe_test", isa=(9, 9, 99),
                                    num_cus=64, max_clock_mhz=1500)
     _loader.rebind_profile(prof)
     cfg = {"DataType": "S", "MacroTile": "64x64x8", "ThreadTile": "4x4",
