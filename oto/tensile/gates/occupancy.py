@@ -2,7 +2,7 @@
 
 Owns: the CPU-only model that reproduces every observed occupancy
 outcome on the reference device -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget); the
-LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad_gate`` and is
+LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad`` and is
 re-exported here for the historical import path.
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* tables (oto.tensile.gates.vgpr_model), the legality class rules
@@ -58,7 +58,7 @@ old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model
 post-mortem in potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible (re-exported),
 occupancy_workgroups_per_cu, dtype_char, tile_dims (shared; see
-``oto.tensile.gates.occupancy_common``), refuses_workgroup_register_file,
+``oto.tensile.gates.gate_common``), refuses_workgroup_register_file,
 refuses_per_thread_occupancy_limit, refuses_lds_reduction_buffer.
 """
 
@@ -81,9 +81,9 @@ __all__ = [
 from oto.device import loader as _loader
 from oto.device.profile import DeviceProfile
 
-from .ldspad_gate import ldspad_feasible as ldspad_feasible  # re-export
-from .occupancy_common import dtype_char as dtype_char
-from .occupancy_common import tile_dims as tile_dims  # re-export
+from .gate_common import dtype_char as dtype_char
+from .gate_common import tile_dims as tile_dims  # re-export
+from .ldspad import ldspad_feasible as ldspad_feasible  # re-export
 from .vgpr_model import (
     ACCVGPR_BUDGET,
     BYTES_PER_ELEMENT,

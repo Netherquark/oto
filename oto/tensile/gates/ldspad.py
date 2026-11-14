@@ -8,7 +8,7 @@ gate cannot prove legal is refused at the launch boundary, never forwarded
 to a mid-run error 4.
 
 Public API: ldspad_feasible.
-Imports the shared tile/dtype helpers from ``oto.tensile.gates.occupancy_common``.
+Imports the shared tile/dtype helpers from ``oto.tensile.gates.gate_common``.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from typing import Any
 
 from oto.device import loader as _loader
 
+from .gate_common import dtype_char, tile_dims
 from .memo import memo_gate
-from .occupancy_common import dtype_char, tile_dims
 from .vgpr_model import BYTES_PER_ELEMENT, LDS_BUDGET, depth_u
 
 #: Legal StaggerU values (Tensile Common.py:945).

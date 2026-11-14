@@ -267,7 +267,7 @@ def collect(path: Path):
     """{qualified_name: (kind, arg_signature, normalised_body)} for a module.
 
     Import aliases re-exported at module top level are recorded too: the new
-    tree re-exports helpers (e.g. ``from .ldspad_gate import ldspad_feasible``),
+    tree re-exports helpers (e.g. ``from .ldspad import ldspad_feasible``),
     and those names are its public API as much as a def is.
     """
     try:

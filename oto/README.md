@@ -15,6 +15,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/device/ — hardware facts
 
+* ``device/derive.py`` — Deterministic ALU-peak derivation for any ``DeviceProfile``.
 * ``device/detect.py`` — Device auto-detection: resolve the GPU codename from the system.
 * ``device/loader.py`` — Device profile loader — the frozen, in-memory view of one GPU.
 * ``device/profile.py`` — Device profile: the frozen, in-memory view of one GPU.
@@ -41,11 +42,11 @@ counts are never quoted here -- they go wrong the day a file moves.
 ### ``tensile/gates/``
 
 * ``tensile/gates/assembly.py`` — The assembly-class gate: is this GEMM class legal on this device at all?
-* ``tensile/gates/ldspad_gate.py`` — The LDS-pad and swizzle group-C legality gate.
+* ``tensile/gates/gate_common.py`` — Shared occupancy-gate vocabulary.
+* ``tensile/gates/ldspad.py`` — The LDS-pad and swizzle group-C legality gate.
 * ``tensile/gates/loads.py`` — Classic-path global-load divisibility, and the 16 B load-width cap.
 * ``tensile/gates/memo.py`` — A content-keyed memo for the pure legality gates.
 * ``tensile/gates/occupancy.py`` — Register-file and LDS occupancy gates.
-* ``tensile/gates/occupancy_common.py`` — Shared occupancy-gate vocabulary.
 * ``tensile/gates/vgpr_model.py`` — The measured VGPR model: tables and budgets the occupancy gate cites.
 
 ### ``tensile/synthesis/``
