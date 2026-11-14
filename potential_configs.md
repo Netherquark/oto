@@ -161,7 +161,7 @@ HH_HPA:512 35, HS_HPA:512 33, HH_HPA:4096 1. None went to any cell that ties.
 The mechanism is one line. `_mutate_cell` returned early when
 `winner_info["is_below_ceiling"] is False`, and `is_below_ceiling`
 (`oto/metrics/analytics.py`) is measured against `REALISTIC_CEILINGS`
-(`oto/device/peaks.py`), a measured-empirical snapshot the large cells have since
+(`oto/device/loader.py` and `oto/device/vocabulary.py`), a measured-empirical snapshot the large cells have since
 *passed*: SS publishes 1118.7 and measures **1135.1**. So the cells that tie the
 floor are exactly the cells the arm refuses to touch, and the budget recirculates
 into the small cells forever.
@@ -734,7 +734,7 @@ python3 -m oto.runners.cli --preflight
 python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
 
 # TTY only — the real run:
-python3 port_tensile.py --auto --budget 10 --yes
+python3 -m oto tune --budget 10 --yes
 ```
 
 The gate calibration must print `0 MISS` and `0 FALSE REJECTION`, and the rule
@@ -990,7 +990,7 @@ python3 -m oto.harness.generate_candidates --dry-run
 python3 -m oto.runners.cli --preflight
 
 # TTY only — the real run:
-python3 port_tensile.py --auto --budget 10 --yes
+python3 -m oto tune --budget 10 --yes
 ```
 
 The overlay `gfx90c_results/overlays/phases.seed.overlay.yaml` is a generated,
@@ -1341,7 +1341,7 @@ python3 -m oto.harness.generate_candidates --dry-run
 python3 -m oto.runners.cli --preflight
 
 # TTY only — the real run
-python3 port_tensile.py --auto --budget 10 --yes
+python3 -m oto tune --budget 10 --yes
 ```
 
 Sizing: `phases.yaml` plus the seed overlay is what a run builds;
@@ -2399,7 +2399,7 @@ python3 -m oto.harness.generate_candidates --dry-run  # prints the per-family ta
 python3 -m oto.runners.cli --preflight   # 38/38 parity, all OK
 
 # 2. TTY only — the real run
-python3 port_tensile.py --auto --budget 10 --yes
+python3 -m oto tune --budget 10 --yes
 ```
 
 Sizing: `phases.yaml` plus the seed overlay is what a run builds;
@@ -2758,7 +2758,7 @@ no clock on the floor side (`spoof_clock_coverage` 0.0 in all 38 cells) and a
 +/-5 % verdict band, while the same binary varies 17.5 points between the two
 arms.
 
-- **Re-measure the floor in the same session.** `port_tensile.py --gfx900-reference`
+- **Re-measure the floor in the same session.** `python3 -m oto bench --refresh`
   re-benchmarks the shipped gfx900 kernels into a fresh `gfx900_ref_*` run, with
   telemetry, next to the native arm. The driver's auto loop already attempts
   the reference chain; the last run's report says the floor re-measurement was
@@ -3293,7 +3293,7 @@ into their existing family-wide rows, and the rest fingerprint-deduped —
 older has a measurement. Pool = 1141 fingerprinted candidates,
 budget-trimmed by the round-robin to the
 `--budget` value at launch. The run remains the standing TTY command:
-`python3 port_tensile.py --auto --budget 10 --yes` (checklist in
+`python3 -m oto tune --budget 10 --yes` (checklist in
 `command.txt`, untracked). Post-run reads that this deck makes
 more valuable than usual: (1) the R50a iso rows' single-problem medians vs
 their family twins — quantifies the split natively, per cell, in one run;
@@ -3347,7 +3347,7 @@ invocation-form classifier; every record, kernel_db row and report payload
 carries it. The rule (verified against the corpus before locking):
 
 - `FAMILY` — the invocation covers the family's graded cell list
-  (`FAMILY_CELLS`, single-sourced in `oto.device.peaks` and re-exported by the
+  (`FAMILY_CELLS` (derived from the profile tables) and re-exported by the
   deck as `TARGET_CELLS`). This is deliberately not the benchmark contract
   (`FAMILY_SHAPES`): DD's contract has 7 sides but grades 6 cells, HS_HPA's 4
   but grades 3 — anchoring on the contract would exclude exactly the deck's

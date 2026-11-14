@@ -9,7 +9,7 @@
 (tracked in-tree checkout holding the **minimal native gfx90c support**: the 2-file
 `Common.py` + `AsmCaps.py` patch, landed 2026-09-19 — not pristine, no shim)
 **Date:** 2026-09-13 (mechanism updated 2026-09-19)
-**Numeric source:** `oto.device.peaks.PEAK_GFLOPS` — the single source for every peak figure in this ecosystem
+**Numeric source:** `oto.device.loader.current_profile().peak_gflops` — the single source for every peak figure in this ecosystem
 
 This file is the **WHAT** layer of the oto ecosystem: the baseline repository and
 code architecture — what Tensile is, what the gfx90c port path is, and what a library
@@ -78,7 +78,7 @@ folder is docs + the new python **driver**. It does not contain Tensile.
 ├── Tensile/bin/Tensile              benchmark CLI  (TENSILE_BIN)
 ├── Tensile/bin/TensileCreateLibrary library CLI
 ├── Tensile/                         python package (import Tensile)
-├── oto/device/peaks.py              PEAK_GFLOPS authority
+├── oto/device/loader.py             PEAK_GFLOPS authority (via profiles/gfx90c.json)
 ├── gfx90c_runs/                     live per-run artifacts
 ├── gfx90c_results/                  live ledgers (jsonl today; registry.db next)
 ├── configs/                         vendor YAML problem sets
@@ -102,7 +102,7 @@ This project's driver source (outside that tree, still **calls into** it):
   `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
   reference-floor chain).
-- `oto/device/peaks.py` — shared constants and hardware identity (`PEAK_GFLOPS`, rate
+- `oto/device/loader.py` — device profile loader + canonical accessors (profile tables via `current_profile()`)
   card, dtype tables)
 - `oto/metrics/report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
   (single-file HTML dashboard; inline SVG/CSS, Carbon design language)
@@ -271,7 +271,7 @@ Translation constraint:
 > **The `tensilelibrary.dat` this pipeline produces must map EXACTLY to the
 > shipped gfx900 TensileLibrary in the (shape, dtype) combinations addressed —
 > no contraction, no extension.** "Addressed" cells are the canonical contract
-> grid `oto.device.peaks.shipped_cells()`: per family, the cube shapes in
+> grid `oto.device.vocabulary.shipped_cells()`: per family, the cube shapes in
 > `FAMILY_SHAPES`, family → dtype char via `FAMILY_DTYPE_CHAR` (38 cells, the
 > same deck the acceptance report classifies RED/ORANGE/GREEN against).
 
@@ -301,8 +301,8 @@ check, never a restatement):
   overlay to exact parity (38/38 today), so a future D1-style edit that breaks
   the grid fails CI before any GPU time is spent.
 
-The grid's single source is `oto.device.peaks.shipped_cells()`; family keys,
-shape lists and dtype chars live in `oto.device.peaks.FAMILY_*` and are imported,
+The grid's single source is `oto.device.vocabulary.shipped_cells()`; family keys,
+shape lists and dtype chars live in `oto.device.loader.FAMILY_*` and are imported,
 never transcribed, anywhere else. Non-cube probe shapes (e.g. `32x4096x1`)
 have no cell and are excluded from the check by construction — they are
 reported separately, never counted as coverage.
@@ -316,7 +316,7 @@ every function of the 28-family footprint (section 6). The levers below are the
 measured truths (frozen prior conclusions in `prior_INSIGHTS_CAVEMAN_ULTRA.md`
 §5.1) that make coverage cheap and correct on gfx90c.
 
-Rate card (peaks @ 1800 MHz; single source `oto.device.peaks.PEAK_GFLOPS`; ceiling
+Rate card (peaks @ 1800 MHz; single source `oto.device.loader.current_profile().peak_gflops`; ceiling
 authority `gfx90c_theoretical_limits.md`):
 
 - FP32 — 1613 GFLOPS (448 FP32 lanes)
@@ -811,7 +811,7 @@ overwrite, or rewrite **benchmark evidence**.
   dashboard wholesale from the registry data.
 - Legacy `make_results_md.py`-style `results.md` `<!-- DERIVED:* -->` marker-block
   regeneration no longer exists; `results.md` hand prose is append-only.
-- The single peak authority is `oto.device.peaks.PEAK_GFLOPS` (see section 7); derived
+- The single peak authority is `oto.device.loader.current_profile().peak_gflops` (see section 7); derived
   prose that contradicts it is regenerated, not hand-patched.
 
 ### 10.4 Consequences of a change

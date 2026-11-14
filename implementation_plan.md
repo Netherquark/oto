@@ -15,7 +15,7 @@ Beat the gfx900-spoof floor across the whole shipped gfx90c footprint and
 approach the per-family ceilings as closely as the machine allows. The goal and
 the standing success bar are stated in `tensile_tuning_context.md` (Scope); the
 footprint contract is `mapping.md`; the campaign is driven by
-`port_tensile.py --auto`.
+`oto tune`.
 
 ## Core Strategy (one-shot deterministic convergence)
 
@@ -79,7 +79,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 ### D. Measurement discipline (carried, fixed, non-negotiable)
 - Winner = **median-of-seeds** (NumBenchmarks ≥3); max = reference only.
 - Comparisons = **throttle-ADJUSTED** per (datatype, bound_class) ruler; missing
-  controls reported, never inferred (`oto/device/peaks.py`).
+  controls reported, never inferred (`oto/device/loader.py`).
 - Envelope: raw cross-run ±23–31% ALU / ±6–19% DDR. Ties at ±5% = parity.
 - Retirement is the evidence-gated single Tier-2 path
   (`policy.check_retirement_eligibility`); the spoof/peak floor is never a
@@ -281,7 +281,7 @@ mirrors the predicate.
 
 ```
                     ┌─────────────────────────────────────┐
-                    │         START: port_tensile.py        │
+                    │         START: `bin/oto`               │
                     │         (read phases.yaml)            │
                     └─────────────────┬───────────────────┘
                                       │
@@ -413,7 +413,7 @@ retirement signal**.
    data layout.
 2. `phases.yaml` transcribed (mechanical).
 3. `oto/metrics/policy.py` + `scheduler.py` extracted; gate-matrix re-run.
-4. `port_tensile.py` takes over phase-by-phase-group; `--targets` scoping parity
+4. The driver takes over phase-by-phase-group; `--targets` scoping parity
    checked against the reference-floor chain.
 5. Agent loop + `--auto`; convergence budget configurable.
 6. Single entrypoint: the python driver.
@@ -462,7 +462,7 @@ they pin the plan's own claims rather than the design's:
 - [x] `phases.yaml` byte-identical across an `--auto` run. Candidates are written to the
       per-run overlay by `mutator.write_overlay`; `mutate_and_feed`'s only `phases.yaml`
       path is the pre-Phase-1 no-mutator fallback, which is not the configured path
-      (`port_tensile.py` constructs a `Mutator`).
+      (`oto tune` constructs a `Mutator` via `agent.py`).
 - [x] Every proposal row carries `origin`, `run_id`, and a resolved `outcome`; `parent_fp`
       is non-null wherever a parent exists. The one deliberate exception: an exploration
       draw in a cell with *no measured candidate at all* has no parent
@@ -483,14 +483,14 @@ they pin the plan's own claims rather than the design's:
 
 ## Next Move — Steps 1–6
 
-### Step 1 — Approve + build the driver (`port_tensile.py`), per the architecture above
+### Step 1 — Approve + build the driver (the `bin/oto` front door), per the architecture above
 - Python driver + `phases.yaml` data-only manifest. `oto/metrics/policy.py` `should_run(phase,fp)`
   encodes tier-1 → tier-2 → phase-1-first-only → identical-fp skip. All evidence
   writes via `json.dumps` + SQLite `records` INSERT. `--auto` loops
   run→report→harvest→mutate. Harvest **appends `phases.yaml`**, never a DB-only
   manifest.
 - **Do-not-reinvent + PoC gate**: argparse, stdlib `json`/`csv`/`statistics`/`sqlite3`,
-  git for diffs, sysfs for monitoring, `PEAK_GFLOPS` imported from `oto/device/peaks.py`,
+  git for diffs, sysfs for monitoring, `peak_gflops` imported from the profile loader,
   ceilings imported from `gfx90c_theoretical_limits.md`. **Every module is PoC'd and
   fully functional in `/tmp/opencode/` before it lands.** No change lands without a PoC
   + a scoped parity run. `/tmp/opencode` currently contains analysis scratch
@@ -498,7 +498,7 @@ they pin the plan's own claims rather than the design's:
   see `changelog.md` (2026-10-12). Do not land that tree as-is.
 
 ### Step 2 — gfx900 reference floor (user executes) — GATE
-- `python3 port_tensile.py --gfx900-reference` launches the dedicated floor chain;
+- `python3 -m oto bench --refresh` launches the dedicated floor chain;
   `--gfx900-reference --resume` continues an interrupted chain (retries failed once).
 - `--auto` auto-resumes an incomplete floor and refuses any tuning until
   `_reference_remaining() == 0`; verdicts then fold per-cell into `results.md`
@@ -541,7 +541,7 @@ they pin the plan's own claims rather than the design's:
 
 ## Exit criteria
 
-- [ ] `port_tensile.py` + `phases.yaml` driver operational; it is the only entrypoint.
+- [ ] `bin/oto` + `phases.yaml` driver operational; it is the only entrypoint.
 - [ ] Reference floor fully decided; verdicts
       re-derived per cell vs the recalled `gfx900_ref_*` chain.
 - [x] Verdicts grade like-for-like (§R56.3-A resolved 2026-10-23): one
@@ -579,7 +579,7 @@ they pin the plan's own claims rather than the design's:
 - `command.txt` — the current user-run invocation (native deck, single iteration,
   no mutations). Its header records why `--auto` cannot express that today
   (archived: `changelog.md` 2026-10-12).
-- Live repo: `oto/device/peaks.py`, `oto/tensile/library.py` (gfx900 dat parse + reference
+- Live repo: `oto/device/loader.py`, `oto/tensile/library.py` (gfx900 dat parse + reference
   chain), `oto/metrics/report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
   native gfx90c patch (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile
   tree), `gfx90c_results/registry.db`, `gfx90c_runs/` (`gfx900_ref_*` + `run_*`).

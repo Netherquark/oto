@@ -274,7 +274,7 @@ def cell_history(rows: Sequence[dict[str, Any]], family: str, side: int,
     collapsed into that geometry's record (``n`` rows, ``gflops`` the best of
     them), because replication is evidence about noise, not a distinct
     candidate. ``top=0`` returns every geometry. Non-cube shapes have no cell
-    and are excluded by ``oto.device.peaks.cell_key``. The floor reference is
+    and are excluded by ``oto.device.vocabulary.cell_key``. The floor reference is
     computed from rows tagged ``side='floor'``; it is absent when the caller
     loaded only native rows.
     """

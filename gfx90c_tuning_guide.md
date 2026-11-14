@@ -5,7 +5,7 @@
 > actually wins, why "nothing moved", and what to try next. Read
 > `gfx90c_theoretical_limits.md` first — its §5 ceilings are the acceptance bar.
 > Cite keys: **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
-> **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/peaks.py,
+> **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/loader.py,
 > **D**=implementation_plan.md, **M**=oto/harness/measure_vgprs.py,
 > **C**=oto/harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.

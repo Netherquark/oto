@@ -24,7 +24,7 @@
 - `oto tune` (convergence loop)
 - `oto library best-effort` (CPU-only carve)
 - `oto check candidates` (deck linter)
-- `oto verify all` (refactor verifiers)
+- `oto verify all` (evergreen equivalence verifiers)
 
 ## Hard rules (READ-ONLY on oto codebase)
 1. **NEVER modify any file under `oto/`, `tests/`, or root shims**

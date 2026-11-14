@@ -6,7 +6,7 @@ LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad_gate`` and is
 re-exported here for the historical import path.
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* tables (oto.tensile.gates.vgpr_model), the legality class rules
-(oto.tensile.gates.assembly), or any device constant (oto.device.peaks).
+(oto.tensile.gates.assembly), or any device constant (oto.device.loader).
 
 Why this is CPU-only: error 4 (``overflowedResources``) is raised while Tensile
 generates the kernel, so without a model every rejected config costs a full

@@ -19,7 +19,7 @@ they read (<codename>_runs/), or the acceptance report they cite
 Public API: none at import time; the module names live in ``__all__``, and the
 public names each one exposes are in its own docstring.
 
-All tools import the repo's canonical sources (`oto.device.peaks`,
+All tools import the repo's canonical sources (`oto.device.loader` and `oto.device.vocabulary`,
 `oto.tensile.library_parity`) instead of re-deriving family/shape maps and
 coverage.
 """

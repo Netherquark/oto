@@ -10,5 +10,7 @@ DataType-char mapping, the realistic acceptance ceilings, the hardware limits
 Does NOT own: any legality rule (oto.tensile.gates), any measurement or
 statistics (oto.metrics.*), or the driver's behaviour (oto.runners.*).
 Public API: none at import time; this package re-exports nothing. The names
-above live in oto/device/peaks.py, which is the module callers import.
+the profile facts come from ``profiles/<codename>.json``; runtime access goes through
+``oto.device.loader.current_profile()``; cell/kernel identity helpers live in
+``oto.device.vocabulary``.
 """

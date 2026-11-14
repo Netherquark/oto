@@ -10,7 +10,7 @@
 
 - **Acceptance sourcing:** every oto family ceiling in `potential_configs.md` /
   `implementation_plan.md` / `mapping.md` derives from the per-family ceilings in §5 —
-  the same way `oto.device.peaks.PEAK_GFLOPS` is the single peak authority. Squaring a
+  the same way `oto.device.loader.current_profile().peak_gflops` is the single peak authority. Squaring a
   family's best median against its §5 ceiling is how "approach the theoretical limit"
   is scored, per (datatype, bound_class).
 - **No re-derivation:** never re-derive these ceilings from model memory. Extend only
@@ -88,7 +88,7 @@ complexDouble** (FP64 lane class) — matching CBLAS c/z convention.
    the shipped gfx900 i8 kernels do) → pragmatic bound ≈ half; measured 881.
 3. **FP64 ratio? Exactly 1/16** of FP32 → 100.8 GFLOPS. Empirically vindicated:
    the measured prior FP64 best 98.6 = 98% of 100.8 (a 1/8 or 1/32 part would read
-   197% / 49%). `oto.device.peaks.PEAK_GFLOPS['FP64']` stores the rounded **101**
+   197% / 49%). `oto.device.loader.current_profile().peak_gflops['FP64']` stores the rounded **101**
    (matches the §2 table); §5 ceilings use the measured 98.6.
 4. **Complex real-FMA cost?** An FMA counts once; a complex MAC = 4 real FMAs. CC (C =
    complex single) @ SS rate, ZZ (Z = complex double) @ DD rate, when counting BLAS-8
@@ -149,7 +149,7 @@ Measured-empirical on this box: FP32 best 1118.7 → **69%** of 1613; FP16 2461 
 of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6 → **98%**
 (saturated). ZZ/CC/HH_HPA/HS_HPA have no prior measurement → derived-analytical
 (lane-class efficiency × §2 roof). Exact values below are canonical in
-`oto.device.peaks.REALISTIC_CEILINGS`; this table quotes them:
+`oto.device.loader.current_profile().realistic_ceilings`; this table quotes them:
 
 > **UNIT — read this before quoting a complex number (2026-10-21, §5.2).**
 > This table is in **BLAS-8 GFLOPS** (8·M·N·K for a complex GEMM, 2·M·N·K for a
@@ -157,7 +157,7 @@ of 3226; BF16 1109 → **69%**; INT8 881 → **55%** (tricks, no dot); FP64 98.6
 > does not report complex GEMMs in that unit**: it charges `2 · packing` flops
 > per MAC with `packing == 1` for complex types (`ContractionProblem::flopCount`,
 > `DataTypes.hpp:177`), so a reported complex GFLOPS is **1/4 of its BLAS-8
-> value**. The acceptance tables in `oto.device.peaks` therefore carry the
+> value**. The acceptance tables in `the loader therefore carry the
 > complex ceilings in client-reported units (CC 403.25 / 279.675,
 > ZZ 25.25 / 24.65) — the same unit the measurement arrives in. The real
 > families are 1:1 in both.
@@ -275,7 +275,7 @@ Consequences, all of which the code now carries:
 - The **"CC cannot allocate a big tile"** argument in `potential_configs.md`
   §R42.2 is true and irrelevant: the tile cap is real (128×64 is the widest
   legal CC tile), but the bar it was compared against was 4× too big.
-- The fix is one table: `oto.device.peaks.REPORTED_TO_BLAS8` (CC/ZZ = 4.0) with
+- The fix is one table: `oto.device.loader.current_profile().reported_to_blas8` (CC/ZZ = 4.0) with
   the ceilings derived from it, pinned by
   `tests/test_complex_flop_accounting.py`.
 

@@ -19,8 +19,8 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``device/loader.py`` — Device profile loader.
 * ``device/peaks.py`` — Hardware peaks and the canonical cell/family vocabulary.
 * ``device/profile.py`` — Device profile: the single source of truth for device facts.
-* ``device/resolvers.py`` — Device-independent resolvers: kernel name -> family, cell identity helpers.
 * ``device/tensile_isa.py`` — Tensile ``CurrentISA`` version triples for the gfx9 family.
+* ``device/vocabulary.py`` — The cell/kernel vocabulary and the coverage-grid derivation.
 
 ## oto/tensile/ — the Tensile-facing candidate pipeline
 
@@ -141,12 +141,14 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ### ``tools/verifiers/``
 
-* ``tools/verifiers/verify_all.py`` — Run every Refactor-1 equivalence verification against the pre-refactor tree.
-* ``tools/verifiers/verify_ast_equivalence.py`` — Symbol-level equivalence: every public symbol of every pre-split module.
-* ``tools/verifiers/verify_config_writer.py`` — _write_phase_config equivalence.
-* ``tools/verifiers/verify_gate_differential.py`` — : The last commit before the package split. Every check in this directory
+* ``tools/verifiers/_evergreen.py`` — Shared machinery for the evergreen verification checks.
+* ``tools/verifiers/_verdicts_worker.py`` — Shared verdict worker for the evergreen gate differential.
+* ``tools/verifiers/verify_all.py`` — Orchestrator for the evergreen verification checks.
+* ``tools/verifiers/verify_ast_equivalence.py`` — Evergreen symbol-level equivalence check.
+* ``tools/verifiers/verify_config_writer.py`` — Evergreen config-writer equivalence.
+* ``tools/verifiers/verify_gate_differential.py`` — Evergreen gate differential.
 * ``tools/verifiers/verify_method_equivalence.py`` — Method-level equivalence: every TensileDriver method moved into a mixin, and every port_tensile function moved into a new module, must keep its exact body.
-* ``tools/verifiers/verify_report_html.py`` — Byte-identity check for the report_html.py split.
+* ``tools/verifiers/verify_report_html.py`` — Evergreen HTML report check.
 
 ## oto/harness/ — the analysis harness
 

@@ -77,7 +77,7 @@ def phase_family(phase: dict[str, Any]) -> str:
     """Resolve a phase's canonical family name ('' when unresolvable).
 
     ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
-    so HH / HH_HPA / HS_HPA never collapse — see `oto.device.peaks.cell_key`).
+    so HH / HH_HPA / HS_HPA never collapse — see `oto.device.vocabulary.cell_key`).
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
     """

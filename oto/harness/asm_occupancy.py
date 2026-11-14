@@ -7,7 +7,7 @@ actual resident-wave occupancy, joined to the GFLOP/s those kernels measured —
 plus the Tensile CSV column trap that joins it.
 Does NOT own: the *predicted* occupancy gate (oto.tensile.gates.occupancy), the
 VGPR/LDS calibration tables (oto.tensile.gates.vgpr_model), the device constants
-(oto.device.peaks), or the predicted resident-workgroup audit
+(`oto.device.loader`), or the predicted resident-workgroup audit
 (oto.harness.occupancy_audit). This module measures what was emitted; that
 module predicts what a gate would allow.
 
@@ -45,7 +45,7 @@ from typing import Any
 _HERE = Path(__file__).resolve().parents[2]
 
 # Device constants have one home. Read them off the profile at call time
-# (attribute reads re-bind on oto.device.peaks.set_profile); nothing in this
+# (attribute reads re-bind on rebind_profile()); nothing in this
 # module may import-bind a scalar.
 from oto.device import loader as _loader
 from oto.runners.paths import runs_dir as _runs_dir
@@ -92,7 +92,7 @@ _DTYPE_FACTS = {
     "S": (4, 2), "D": (8, 2), "H": (2, 2), "C": (8, 8), "Z": (16, 8),
 }
 
-#: LDS in bytes per CU, one home in peaks.py.
+#: LDS in bytes per CU, one home in the device profile.
 def _lds_per_cu() -> int:
     return _loader.current_profile().lds_per_cu_kb * 1024
 

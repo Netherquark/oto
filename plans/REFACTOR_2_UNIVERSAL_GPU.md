@@ -13,10 +13,10 @@
 ## Phase 1 — DeviceProfile dataclass + gfx90c extraction
 
 - **C1.1** Create `oto/device/profile.py`: frozen `DeviceProfile` dataclass (codename, isa, num_cus, simds_per_cu, lanes_per_simd, max_waves_per_cu, max_clock_mhz, lds_per_cu_kb, l2_size_kb, vgpr_per_cu, has_mfma, has_dp4a, has_packed_bf16, global_load_byte_cap, peak_gflops, family_shapes, realistic_ceilings, family_dtype_char, family_dtypes, family_bytes_per_element, assembly_gates, theoretical). Nested frozen `AssemblyGatePolicy`, `TheoreticalLimits`. Gate: import + dataclass construction test.
-- **C1.2** Create `profiles/gfx90c.json`: mechanical extraction of current constants from `oto/device/peaks.py` (PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_BYTES_PER_ELEMENT, REALISTIC_CEILINGS, NUM_CUS=7, clock=1800, LDS=64KB, VGPR=65536, has_mfma=False, has_dp4a=False). Gate: `json.load` + equals hand-derived expected.
+- **C1.2** Create `profiles/gfx90c.json`: mechanical extraction of current constants from `oto/device/peaks.py` (then moved to `loader.py` + `vocabulary.py`) (PEAK_GFLOPS, FAMILY_SHAPES, FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_BYTES_PER_ELEMENT, REALISTIC_CEILINGS, NUM_CUS=7, clock=1800, LDS=64KB, VGPR=65536, has_mfma=False, has_dp4a=False). Gate: `json.load` + equals hand-derived expected.
 - **C1.3** `oto/device/loader.py`: `load_profile(codename)` reads `profiles/<codename>.json` → `DeviceProfile`. `load_profile_from_starter(path)` for new devices. Gate: load gfx90c → equals C1.2 constants.
 - **C1.4** `oto/device/__init__.py`: export `load_profile`, `DeviceProfile`. Update `peaks.py` docstring: "constants live in profiles/ now; peaks.py is the gfx90c re-export shim for compat". Gate: existing imports unchanged.
-- **C1.5** Add `tests/test_profile.py`: assert gfx90c profile reproduces every current constant in `oto/device/peaks.py` exactly (PEAK_GFLOPS, FAMILY_SHAPES, etc.). Gate: green.
+- **C1.5** Add `tests/test_profile.py`: assert gfx90c profile reproduces every current constant in `oto/device/peaks.py` (then moved to `loader.py` + `vocabulary.py`) exactly (PEAK_GFLOPS, FAMILY_SHAPES, etc.). Gate: green.
 
 ## Phase 2 — Route consumers through profile (remove literals)
 

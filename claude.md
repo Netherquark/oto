@@ -47,7 +47,7 @@ Re-checking a settled fact is *waste*. Re-deriving it in code is a *regression*:
 it creates a second home for a fact, which §3.1 forbids.
 
 **Constants have exactly one home.** Peaks, family shapes, dtype maps and ceilings:
-`oto/device/peaks.py`. Register-file / LDS / occupancy model:
+`oto/device/loader.py`. Register-file / LDS / occupancy model:
 `oto/tensile/gates/vgpr_model.py` + `occupancy.py`. Tensile's own limits: the
 Tensile source, cited by file. The repo `.env`: read by `python-dotenv` in
 `oto/runners/toolchain.py`. Import or cite these; **never retype them.**
@@ -74,7 +74,7 @@ number is a WIN, a TIE, a ceiling, or a peak.
 
 1. **Do not redefine, re-derive or second-guess** the tie band, the verdict
    thresholds, the realistic ceilings, or the theoretical peaks. Their owner is
-   `gfx90c_theoretical_limits.md`; the machine-readable form is `peaks.py`.
+   `gfx90c_theoretical_limits.md`; the machine-readable form is `profiles/gfx90c.json`.
    Apply them.
 2. **Never present an alternative acceptance framework as a finding.** If you
    believe one is wrong, it goes in the owner MD as a dated, evidence-backed
@@ -197,7 +197,7 @@ there is no size at which it becomes safe. Exhaustively banned: no `Tensile`, no
 program, no `hipDeviceProp_t`/`rocminfo`-style device query written for this
 purpose, no `amdgpu_top` sampling under load, no FMA/latency/bandwidth
 microbenchmark of any size. **Everything the agent needs to know about the device
-is already in `gfx90c_theoretical_limits.md` §1–§3 and `oto/device/peaks.py`.**
+is already in `gfx90c_theoretical_limits.md` §1–§3 and `oto/device/loader.py`.**
 Full Tensile benchmark runs are also not the agent's to launch: only in a TTY, and
 only when the USER runs them. Agent work is CPU-only — code, DB and docs, plus the
 repo's own CPU-only tools (`python3 -m oto check candidates`, `python3 -m oto stats`,
@@ -379,7 +379,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
    `Tensile/bin/Tensile` and `Tensile/bin/TensileCreateLibrary` **in that tree**.
     Native gfx90c support = a 2-file minimal Tensile patch (`Tensile/Common.py` +
     `Tensile/AsmCaps.py`) **in that tree**. Run ledgers (`gfx90c_runs/`,
-    `gfx90c_results/`), the peak table (`oto/device/peaks.py`) and the driver modules
+    `gfx90c_results/`), the peak table (`oto/device/loader.py`) and the driver modules
     live in the oto base dir (`--base-dir`, default repo root).
    `PYTHONPATH` = `<TENSILE_ROOT>:…`.
    Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
@@ -390,7 +390,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - Native `gfx90c` is the target. Do not substitute RDNA/Navi/MFMA assumptions.
   rocminfo_output.txt is the golden reference for hardware decisions.
 - Hardware facts come from project evidence (`rocminfo`, source, runtime, logs), not
-  model memory. Do NOT re-derive peak rates (File: `oto/device/peaks.py`).
+  model memory. Do NOT re-derive peak rates (File: `oto/device/loader.py`).
 - `gfx900` spoof is a reference baseline/floor, never target identity, never a signal.
 - Never silently weaken acceptance criteria (subset success ≠ whole-library success;
   one good run ≠ convergence).
@@ -527,7 +527,7 @@ checks are demonstrated and remaining gaps are stated.
 - **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
   the frozen `prior_*` files. Live docs (this file, `implementation_plan.md`,
   `potential_configs.md`, `knowledge_base*`, `results.md`, `mapping.md`,
-  `README.md`, `oto/device/peaks.py` comments, etc.) state current fact only. They
+  `README.md`, `oto/device/loader.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
 - **`todo.txt` is a USER-ONLY file** (restated here).
 - One fact, one canonical home. Fix stale docs in the owner + dependent generated

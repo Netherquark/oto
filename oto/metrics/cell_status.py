@@ -5,7 +5,7 @@ Owns: ``classify_cell_status`` -- which contractual cells are missing, which sit
 below half their realistic ceiling, and which are graded. A pure function of the
 analytics list.
 Does NOT own: the analytics themselves (oto.metrics.analytics), the ceilings they
-are graded against (oto.device.peaks), or the report layout
+are graded against (`oto.device.loader`), or the report layout
 (oto.metrics.report).
 
 Acceptance-report colour mapping (moved here from design_language.md; the report

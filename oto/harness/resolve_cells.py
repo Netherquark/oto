@@ -314,7 +314,7 @@ def _cell_row(
     ncfg = _native_config(nwp, nrun, run_scoped, registry, run_global,
                           native_kb_cfg)
     scfg = _spoof_config(key, floor_best, registry, run_global)
-    # The ceilings come from the canonical table (oto.device.peaks), NOT from
+    # The ceilings come from the device profile (oto.device.loader.current_profile()), NOT from
     # the acceptance report's coverage block: the report is a snapshot, and its
     # complex-family percentages were computed against a 4x-too-large bar until
     # 2026-10-21 (<codename>_theoretical_limits.md 5.2). The tables are in

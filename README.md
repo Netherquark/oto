@@ -294,7 +294,7 @@ oto/
 ├── gfx90c_results/            # registry.db + emitted reports  (data, append-only)
 ├── gfx90c_runs/               # per-run output directories (telemetry, logs)
 ├── docs/                      # ecosystem docs + the harness runbook (see §7)
-├── plans/                     # tracked verification helpers (verify_*.py)
+├── plans/                     # tracked implementation & refactor plans (MD)
 └── *.md                       # the live MD docs (see §7)
 ```
 
@@ -357,7 +357,7 @@ orientation layer over it.
 
 | Module | Purpose |
 |---|---|
-| [`cli.py`](oto/runners/cli.py) | The argparse stage dispatch — the `oto` command line. |
+| [`cli.py`](oto/runners/cli.py) | The driver's stage dispatch — the `--preflight`/`--bench`-style flag routing consumed by [`oto/cli/`](oto/cli/) (`oto <cmd>` itself lives there, in [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
 | [`driver.py`](oto/runners/driver.py) | The driver composition root: identity, toolchain, wiring. |
 | [`phases.py`](oto/runners/phases.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
 | [`benchmark.py`](oto/runners/benchmark.py) | The one place a Tensile subprocess is launched. |

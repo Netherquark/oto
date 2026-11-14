@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 
 # HEAD module -> new package module(s) that own it.
 MOVES = [
-    ("gfx90c_common.py", ["oto/device/peaks.py"]),
+    ("gfx90c_common.py", ["oto/device/loader.py"]),
     ("policy.py", ["oto/metrics/policy.py"]),
     ("telemetry.py", ["oto/metrics/telemetry.py"]),
     ("coverage.py", ["oto/metrics/coverage.py"]),

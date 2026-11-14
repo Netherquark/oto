@@ -16,7 +16,7 @@ Owns: the CPU-only model that reproduces every observed gfx90c occupancy
 outcome (occupancy_feasible, ldspad_feasible, the swizzle StaggerU rules).
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* table (oto.tensile.gates.vgpr_model), or any device constant
-(oto.device.peaks).
+(resolved via oto.device.loader.current_profile).
 Public API: occupancy_feasible, ldspad_feasible.
 """
 ```
@@ -62,7 +62,7 @@ class HarvestMixin:
 Example, from `oto/tensile/gates/occupancy.py`:
 
 ```python
-def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
+def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Register-file gate: reject configs Tensile cannot generate.
 
     Why fail closed on an unknown dtype: a wrong guess would pick the wrong
@@ -87,7 +87,8 @@ def occupancy_feasible(config: Dict[str, Any]) -> Tuple[bool, str]:
 
 ## Enforcement
 
-`oto/tools/verifiers/verify_all.py` proves the code did not change during the package split.
-It says nothing about docstrings. The convention is enforced by review: when you
-touch a module, check its three clauses still describe it, and check its
-`Does NOT own` neighbours have not quietly absorbed one of its jobs.
+`oto/tools/verifiers/verify_all.py` runs the evergreen check battery (gate
+differential, method equivalence, config writer, report HTML, AST equivalence)
+against `--base REF`; all five pass before any commit. Docstrings are enforced
+by review, not by a linter, because the "does not own" clause is the part that
+drifts and only a reader can catch that.

@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Any
 
 # Repo-root import for the canonical typecode->family resolver (single source of
-# truth in oto/device/peaks.py). kernel_db runs as
+# truth in oto/device/loader.py). kernel_db runs as
 # `python3 -m oto.harness.kernel_db`,
 # where sys.path[0] is the harness dir, so the repo root must be inserted first.
 _HERE = Path(__file__).resolve().parents[2]

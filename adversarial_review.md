@@ -41,10 +41,11 @@ Classes: `MEM` memory leak/lifetime · `RACE` race condition/deadlock ·
 How to run an audit:
 
 1. User invokes an expert agent (or several in parallel) over the repo.
-2. Scope = the whole `oto` suite (`port_tensile.py` + `oto/ledger/registry.py`,
+2. Scope = the whole `oto` suite (`bin/oto` / `oto/runners/driver.py` +
+   `oto/ledger/registry.py`,
    `oto/tensile/candidate.py`, `oto/metrics/policy.py`,
    `oto/metrics/analytics.py`, `oto/ledger/agent.py`, `oto/metrics/telemetry.py`,
-   `oto/metrics/report.py`, `oto/device/peaks.py`) plus the docs/logs it reads and
+   `oto/metrics/report.py`, `oto/device/loader.py`) plus the docs/logs it reads and
    writes.
 3. Agent reports each finding as an exact `file:line` with repro/evidence; new
    entries are appended to the register. Existing entries are never edited in
@@ -87,7 +88,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   manifest unless `policy.should_run` says otherwise (tier-1 fp-less retire →
   tier-2 (phase,fp) retire → identical-fp skip opt-in).
 
-## 3. Audit checklist for port_tensile.py
+## 3. Audit checklist for the driver
 
 - [ ] **Manifest order == execution.** phases.yaml order is the run order;
   pytest asserts count + order + reserved-gap exclusion. No awk header self-check
@@ -99,7 +100,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
 - [ ] **Telemetry header-in-file.** First row is the header inside telemetry.csv;
   sampler reads `hwmon[0-9]*`; `power1_input` fallback; units canonical Hz/µW/
   mC/% .
-- [ ] **PEAK single-source import.** `from oto.device.peaks import PEAK_GFLOPS` —
+- [ ] **PEAK single-source import.** The peak table (now `oto.device.loader`) —
   no duplicated dict in the driver; BF16/INT8 = 1613 single-rate.
 - [ ] **policy.should_run unit-test matrix.** Re-run the gate matrix: empty-registry→RUN,
   prior PASS fp→SKIP, deck-scope-exempt→RUN. New cases: tier-1 fp-less record→SKIP;

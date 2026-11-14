@@ -8,7 +8,7 @@ used before the package split (``TensileDriver``, ``CandidateGenerator``,
 
 Layout -- one responsibility per package, named for it:
 
-    oto.device     hardware peaks + canonical cell/family vocabulary
+    oto.device     hardware facts: device profile access + cell/kernel vocabulary
     oto.tensile    the Tensile-facing candidate pipeline and its legality gates
     oto.ledger     durable state + the mutation/convergence state machine
     oto.metrics    turning benchmark rows into verdicts, reports and status
@@ -50,7 +50,7 @@ def __getattr__(name):
 
     A module-level import of every subpackage would make ``import oto`` pay for
     the whole tree and, worse, would import the driver (and its ``load_dotenv``
-    side effect) before a caller that only wants ``oto.device.peaks`` asked for
+    side effect) before a caller that only wants ``oto.device`` asked for
     it. Lazy resolution keeps ``import oto`` cheap and side-effect free.
     """
     if name == "TensileDriver":
