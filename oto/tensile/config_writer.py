@@ -340,7 +340,15 @@ def _drop_unsupported(fork_params: dict[str, Any],
 
 def _global_parameters(schedule_name: str,
                        num_benchmarks: int) -> dict[str, Any]:
-    """The fixed ``GlobalParameters`` block. CpuThreads is the only variable."""
+    """The fixed ``GlobalParameters`` block. CpuThreads is the only variable.
+
+    ``NumElementsToValidate`` is Tensile's own default (128): every benchmarked
+    kernel is checked against Tensile's scalar CPU reference on every run, and a
+    mismatch means the kernel is wrong. Owner call 2026-11-14: never set it to
+    0 -- validation is the correctness gate for headless runs (a handful of
+    sampled C elements vs a host contraction per problem; negligible next to a
+    benchmark). This is what makes the AF0/AF1-assert deck rows safe to adopt.
+    """
     return {
         "MinimumRequiredVersion": "4.4.0",
         "PrintLevel": 1,
@@ -351,7 +359,7 @@ def _global_parameters(schedule_name: str,
         "EnqueuesPerSync": 1,
         "SyncsPerBenchmark": 1,
         "LibraryPrintDebug": False,
-        "NumElementsToValidate": 0,
+        "NumElementsToValidate": 128,
         "ValidationMaxToPrint": 4,
         "ValidationPrintValids": False,
         "ShortNames": False,

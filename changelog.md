@@ -9,6 +9,15 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (22nd) — Tensile validation turned on (`NumElementsToValidate = 128`).**
+  `oto.tensile.config_writer` emitted `NumElementsToValidate: 0` — the owner rejected that as
+  a must-not-stand copout: validation is the correctness gate for headless GPU runs. Every
+  benchmarked kernel is now checked against Tensile's own scalar CPU reference on every run;
+  a mismatch is a hard, self-explanatory signal that a kernel is wrong. This is exactly what
+  the CC AF0/AF1-assert deck rows need before adoption; Tensile's default (128) is restored,
+  never to be set to 0 again. Cost is a few sampled elements of C vs a host contraction per
+  problem — negligible next to any benchmark. `ctest`/build proof workers see the same
+  GlobalParameters; no test pins the old 0.
 - **2026-11-14 (21st) — LDS gate option A adopted; ZZ boundary evidence gathered.**
   Owner decision on the §6.1 DECISION REQUIRED: `BYTES_PER_ELEMENT["Z"]` is now Tensile's
   own `DataType.numBytes()` (= 16), and `LDS_BUDGET` stays at 16384. The table is no longer a
