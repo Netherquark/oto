@@ -155,7 +155,9 @@ def _swizzle_feasible(config: dict[str, Any], ku: int,
     return True, ""
 
 
-def _store_knobs_feasible(config: dict[str, Any]) -> tuple[bool, str]:
+def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
+    if profile is None:
+        profile = _loader.current_profile()
     """AssertFree0ElementMultiple and StoreCInUnroll sanity.
 
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
@@ -194,7 +196,7 @@ def _store_knobs_feasible(config: dict[str, Any]) -> tuple[bool, str]:
             return False, err
         if tv == 1:
             return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           f"(SolutionStructs:4519-4521) and {_loader.current_profile().codename} has no MFMA")
+                           f"(SolutionStructs:4519-4521) and {profile.codename} has no MFMA")
         if tv == -1:
             return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
                            "classic (VALU) path rejects: 'didn't support "
@@ -220,14 +222,13 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     Returns:
         ``(True, "")`` or ``(False, reason)``.
     """
+    return _ldspad_feasible_impl(config, profile=profile)
+
+
+def _ldspad_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
+    """Body of :func:`ldspad_feasible`; ``profile`` defaults to the ambient one."""
     if profile is None:
-        return _ldspad_feasible_impl(config)
-    with _loader.bound_profile(profile):
-        return _ldspad_feasible_impl(config)
-
-
-def _ldspad_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
-    """Body of :func:`ldspad_feasible` with any bound profile applied."""
+        profile = _loader.current_profile()
     ku = depth_u(config)
     ch = dtype_char(config)
     bpe = BYTES_PER_ELEMENT.get(ch)
@@ -254,5 +255,5 @@ def _ldspad_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
         ok, reason = gate(config, ku, bpe)
         if not ok:
             return False, reason
-    return _store_knobs_feasible(config)
+    return _store_knobs_feasible(config, profile=profile)
 

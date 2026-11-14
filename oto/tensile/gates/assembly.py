@@ -52,13 +52,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from oto.device.loader import default_profile as _asm_dp
+from oto.device import loader as _loader
 
 from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
-
-#: Device feature flags come from `oto.device.loader.current_profile()` at call time.
-_ASM_PROFILE = _asm_dp()
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
 #: :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT`, which is an LDS
@@ -128,9 +125,8 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
     """
-    is_hpa = _is_hpa(config, dtype_upper)
-    is_hs_hpa = is_hpa and dtype_upper in ("H", "B")
-    prof = profile if profile is not None else _ASM_PROFILE
+    prof = profile if profile is not None else _loader.current_profile()
+    is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
 
     if dtype_upper in ("Z", "C") and gsu > 1 and not prof.has_mfma:
         return (f"GlobalSplitU={gsu} on complex {dtype_upper}: illegal on "

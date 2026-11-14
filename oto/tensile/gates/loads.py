@@ -366,7 +366,7 @@ class _Operand:
 
 # -------------------------------------------------------------- public API
 
-def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
+def cap_vector_width(family: str, macro_tile: str, thread_tile: str, profile=None) -> int:
     """Widest VectorWidth that still reaches the 16 B global-load cap.
 
     A tile only converts load width into throughput once the contiguous load is
@@ -403,7 +403,9 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper())
     if not bpe:
         return 0
-    limit = _loader.current_profile().global_load_byte_cap // bpe
+    if profile is None:
+        profile = _loader.current_profile()
+    limit = profile.global_load_byte_cap // bpe
     parts = [int(x) for x in str(macro_tile).split("x") if x.strip().isdigit()]
     tt = [int(x) for x in str(thread_tile).split("x") if x.strip().isdigit()]
     if len(parts) >= 2 and len(tt) == 2 and min(tt) > 0:
@@ -434,12 +436,11 @@ def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, 
         ``(False, reason)`` naming the operand (A/B) and the branch that failed.
     """
     if profile is None:
-        return _validate_tensile_loads_impl(config)
-    with _loader.bound_profile(profile):
-        return _validate_tensile_loads_impl(config)
+        profile = _loader.current_profile()
+    return _validate_tensile_loads_impl(config, profile=profile)
 
 
-def _validate_tensile_loads_impl(config: dict[str, Any]) -> tuple[bool, str]:
+def _validate_tensile_loads_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Body of :func:`validate_tensile_loads` with any bound profile applied."""
     geom = _load_geometry(config)
     if geom is None:

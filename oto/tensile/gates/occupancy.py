@@ -79,6 +79,7 @@ __all__ = [
     'tile_dims',
 ]
 from oto.device import loader as _loader
+from oto.device.profile import DeviceProfile
 
 from .ldspad_gate import ldspad_feasible as ldspad_feasible  # re-export
 from .occupancy_common import dtype_char as dtype_char
@@ -100,6 +101,12 @@ from .vgpr_model import (
     num_threads,
     per_thread_vgpr,
 )
+
+
+def _profile(profile) -> "DeviceProfile":
+    """The DeviceProfile to use: the passed-in one, or the ambient profile."""
+    return profile if profile is not None else _loader.current_profile()
+
 
 # ---------------------------------------------------------------- rejections
 #
@@ -129,27 +136,27 @@ def _accvgpr_rejection(ch: str, r: int, tt0: int, tt1: int, acc: int) -> str:
 
 
 def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
-                              nt: int) -> str:
+                              nt: int, profile=None) -> str:
     """Reject text for a workgroup whose accumulators alone fill the register file."""
     return (
         f"MacroTile {mt0}x{mt1} (LocalSplitU {lsu}, NumThreads {nt}) needs "
         f"{r*mt0*mt1*lsu} accumulator VGPRs across the workgroup ({ch} weight "
-        f"{r}); the file holds {_loader.current_profile().vgpr_per_cu}. The accumulators alone fill it, so "
+        f"{r}); the file holds {_profile(profile).vgpr_per_cu}. The accumulators alone fill it, so "
         f"Tensile raises 'Generating kernel source resulted in error 4' "
         f"(overflowedResources / the 'Occupancy limit' in KernelWriterAssembly "
         f"functionSuffix) with no room left for operands. Reduce MacroTile area "
-        f"(<= {_loader.current_profile().vgpr_per_cu // r} elements per workgroup) or drop LocalSplitU."
+        f"(<= {_profile(profile).vgpr_per_cu // r} elements per workgroup) or drop LocalSplitU."
     )
 
 
 def _occupancy_limit_rejection(ch: str, tt0: int, tt1: int, vgpr: int,
-                                nt: int) -> str:
+                               nt: int, profile=None) -> str:
     """Reject text for a kernel whose per-thread VGPRs do not fit the file."""
     return (
         f"ThreadTile {tt0}x{tt1} emits {vgpr} VGPRs/thread and the workgroup "
         f"has {nt} threads: Tensile's occupancy limit is "
-        f"65536 // {nt} = {_loader.current_profile().vgpr_per_cu // nt} VGPRs/thread, so the workgroup "
-        f"needs {vgpr * nt} VGPRs against the file's {_loader.current_profile().vgpr_per_cu}. Tensile "
+        f"65536 // {nt} = {_profile(profile).vgpr_per_cu // nt} VGPRs/thread, so the workgroup "
+        f"needs {vgpr * nt} VGPRs against the file's {_profile(profile).vgpr_per_cu}. Tensile "
         f"raises 'Generating kernel source resulted in error 4' "
         f"(KernelWriterAssembly.functionSuffix: "
         f"numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1). "
@@ -194,7 +201,7 @@ def _lds_rejection(ch: str, mt0: int, mt1: int, ku: int, lds: int) -> str:
 
 # ------------------------------------------------------------------- gates
 
-def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
+def occupancy_workgroups_per_cu(config: dict[str, Any], profile=None) -> int:
     """Modelled workgroups per CU; 0 when the gate rejects the config.
 
     Per-thread register demand is fixed by the thread tile (accumulators) and
@@ -220,7 +227,7 @@ def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
         return 0
-    if r * mt0 * mt1 * lsu >= _loader.current_profile().vgpr_per_cu:
+    if r * mt0 * mt1 * lsu >= _profile(profile).vgpr_per_cu:
         return 0
     compute = compute_bytes(config, ch)
     if lsu > 1 and compute and lsu * mt0 * mt1 * compute > MAX_LDS_BYTES:
@@ -230,11 +237,11 @@ def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
         return 0
     if lds_base_bytes(mt0, mt1, dtype_char(config)) * ku > LDS_BUDGET:
         return 0
-    return _loader.current_profile().vgpr_per_cu // acc
+    return _profile(profile).vgpr_per_cu // acc
 
 
 def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
-                          lsu: int) -> str | None:
+                          lsu: int, profile=None) -> str | None:
     """The register-file rules, in the order Tensile reaches them.
 
     * the LocalSplitU spelling contradiction (a config that means two things),
@@ -247,10 +254,10 @@ def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
     if reason:
         return reason
     mt0, mt1, _tt0, _tt1 = dims
-    reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch)
+    reason = _workgroup_file_check(dims, mt0, mt1, r, lsu, ch, profile=profile)
     if reason:
         return reason
-    reason = _occupancy_limit_check(dims, ch, dims[2], dims[3], lsu)
+    reason = _occupancy_limit_check(dims, ch, dims[2], dims[3], lsu, profile=profile)
     if reason:
         return reason
     return _lds_reduction_check(config, ch, mt0, mt1, lsu)
@@ -287,13 +294,10 @@ def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]
         No readable tile dims -> ``(True, "")`` ("nothing to model"); other
         gates own that case.
     """
-    if profile is None:
-        return _occupancy_feasible_impl(config)
-    with _loader.bound_profile(profile):
-        return _occupancy_feasible_impl(config)
+    return _occupancy_feasible_impl(config, profile=profile)
 
 
-def _occupancy_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
+def _occupancy_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Body of :func:`occupancy_feasible` with any bound profile applied."""
     dims = tile_dims(config)
     if not dims:
@@ -309,7 +313,7 @@ def _occupancy_feasible_impl(config: dict[str, Any]) -> tuple[bool, str]:
     if acc > ACCVGPR_BUDGET:
         return False, _accvgpr_rejection(ch, r, tt0, tt1, acc)
     lsu = local_split_u(config)
-    reason = _register_file_checks(config, dims, ch, r, lsu)
+    reason = _register_file_checks(config, dims, ch, r, lsu, profile=profile)
     if reason:
         return False, reason
     ku = depth_u(config)
@@ -348,7 +352,7 @@ def _local_split_u_contradiction(config: dict[str, Any]) -> str | None:
             f"would run as LSU={have}. Use one spelling.")
 
 
-def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> str | None:
+def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch, profile=None) -> str | None:
     """Reason when the accumulator set alone fills the 64K file, else None.
 
     Tensile's ``KernelWriterAssembly.functionSuffix`` sets ``overflowedResources
@@ -357,13 +361,13 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> str | None:
     bound on the workgroup total and ``>= 65536`` is exactly "no room for one
     workgroup". ThreadTile cancels, so this bounds MacroTile *area*.
     """
-    if weight * mt0 * mt1 * lsu >= _loader.current_profile().vgpr_per_cu:
+    if weight * mt0 * mt1 * lsu >= _profile(profile).vgpr_per_cu:
         return _workgroup_vgpr_rejection(
-            ch, weight, mt0, mt1, lsu, num_threads(dims, lsu))
+            ch, weight, mt0, mt1, lsu, num_threads(dims, lsu), profile=profile)
     return None
 
 
-def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> str | None:
+def _occupancy_limit_check(dims, ch, tt0, tt1, lsu, profile=None) -> str | None:
     """Reason when the EMITTED per-thread VGPRs do not fit the workgroup.
 
     Tensile's error-4 test (``KernelWriterAssembly.functionSuffix``) is
@@ -386,8 +390,8 @@ def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> str | None:
     vgpr = per_thread_vgpr(ch, tt0, tt1)
     if not vgpr:
         return None
-    if _loader.current_profile().vgpr_per_cu // nt < vgpr:
-        return _occupancy_limit_rejection(ch, tt0, tt1, vgpr, nt)
+    if _profile(profile).vgpr_per_cu // nt < vgpr:
+        return _occupancy_limit_rejection(ch, tt0, tt1, vgpr, nt, profile=profile)
     return None
 
 
@@ -409,7 +413,7 @@ def _lds_reduction_check(config, ch, mt0, mt1, lsu) -> str | None:
     return None
 
 
-def refuses_workgroup_register_file(config: dict[str, Any]) -> bool | None:
+def refuses_workgroup_register_file(config: dict[str, Any], profile=None) -> bool | None:
     """The workgroup-register-file rule as a standalone predicate.
 
     ``None`` when the config cannot be modelled (unreadable tile dims or an
@@ -428,10 +432,10 @@ def refuses_workgroup_register_file(config: dict[str, Any]) -> bool | None:
     if weight is None:
         return None
     return _workgroup_file_check(
-        dims, mt0, mt1, weight, local_split_u(config), ch) is not None
+        dims, mt0, mt1, weight, local_split_u(config), ch, profile=profile) is not None
 
 
-def refuses_per_thread_occupancy_limit(config: dict[str, Any]) -> bool | None:
+def refuses_per_thread_occupancy_limit(config: dict[str, Any], profile=None) -> bool | None:
     """The per-thread occupancy limit (Tensile's error 4) as a predicate.
 
     ``None`` when the config cannot be modelled (unreadable tile dims), else
@@ -456,10 +460,10 @@ def refuses_per_thread_occupancy_limit(config: dict[str, Any]) -> bool | None:
     vgpr = per_thread_vgpr(dtype_char(config), tt0, tt1)
     if not vgpr:
         return None
-    return _loader.current_profile().vgpr_per_cu // nt < vgpr
+    return _profile(profile).vgpr_per_cu // nt < vgpr
 
 
-def refuses_lds_reduction_buffer(config: dict[str, Any]) -> bool | None:
+def refuses_lds_reduction_buffer(config: dict[str, Any], profile=None) -> bool | None:
     """The LSU LDS-reduction-buffer rule as a standalone predicate.
 
     ``None`` when the config cannot be modelled, else whether Tensile's
