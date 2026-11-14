@@ -21,7 +21,7 @@ rescue partial forms either.
 
 ## The four invocation forms
 
-Defined once in `oto/metrics/protocol.py` (`classify`, `protocol_of`,
+Defined once in `oto/metrics/measurement_protocol.py` (`classify`, `protocol_of`,
 `like_for_like`). A record carries its invocation form as `protocol`, stamped
 by the kernel_db builder; the four forms:
 

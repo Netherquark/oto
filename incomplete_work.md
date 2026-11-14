@@ -36,7 +36,7 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   routing; the gfx902 starter pair (research output) is the missing piece;
   it depends on C4 above.
 - **Refactor-1 slop (still open).**
-  `oto/runners/reporting.py`: the registry-read failure silently returns
+  `oto/runners/acceptance_reporting.py`: the registry-read failure silently returns
   "no arm data" (a real fault is indistinguishable from a dry run), and the
   report-generation failure prints a warning and returns `None` instead of
   failing loudly — both are review-grade swallowed exceptions, open since

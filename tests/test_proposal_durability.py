@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 1 durability regression tests: atomic emission, WinnerFreq persistence and the negative cache.
+"""Durability regression tests: atomic emission, WinnerFreq persistence and the negative cache.
 
 These paths existed but nothing landed atomically: the proposal and its phase
 were two commits, WinnerFreq was parsed by a private reader, and the negative

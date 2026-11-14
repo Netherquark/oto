@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_ledger_durability.py — Hplan.9 exit criterion 1.
+test_ledger_durability.py — the append-only ledger contract.
 
 > `proposals` ledger exists, survives a registry flush on a DB copy, and never
 > loses a row to a retention or rebuild operation.

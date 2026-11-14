@@ -395,7 +395,7 @@ false rejections to both populations.** Tests:
 
 `python3 -m oto check candidates --floor` sweeps all **6 855** shipped gfx900
 manifest kernels (`gfx90c_results/gfx900_shipped_manifest.json`, 84 `.dat`
-entries; rebuilt into configs via `oto/tensile/library.py:shipped_kernel_config`)
+entries; rebuilt into configs via `oto/tensile/shipped_floor.py:shipped_kernel_config`)
 through the same CPU-only preflight the deck must pass. `oto/checks/candidates.py`
 owns the scope and the gate order (illegal knobs → tile divisibility → assembly
 class → classic-load divisibility → LDS footprint → register-file occupancy).
@@ -472,7 +472,7 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 | **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | **DECKED** — CC/ZZ pad rows (A/B {1,2,4}) on the winner geometries in the seed; ZZ pads on the du8 tile only (32x32x16 winner is budget-full at 16 B/element); TTY benchmark next |
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
 | **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
-| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/donor_mutator.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
+| **Mutator overhaul** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/donor_mutator.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
 
 ### 9.1 The virgin axes — where the floor has zero variance
 

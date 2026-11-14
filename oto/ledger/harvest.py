@@ -35,7 +35,7 @@ class HarvestMixin:
     ) -> dict[str, dict[str, Any]]:
         """Harvest one parent config per (family, shape) cell.
 
-        Parent choice by lower confidence bound (Hplan.5); parent_by='median'
+        Parent choice by lower confidence bound; parent_by='median'
         retains old rule. Family tag travels with the winner.
         """
         if parent_by not in ("lcb", "median"):

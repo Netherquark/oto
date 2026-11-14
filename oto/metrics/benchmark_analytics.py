@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 5 analytics: CSV loading and per-cell aggregation.
+"""the analytics stage analytics: CSV loading and per-cell aggregation.
 
 Owns: ``AnalyticsEngine`` -- the composition root over the family-attribution
 helpers (family_attribution), the A/B delta (ab_delta) and the cell-coverage
@@ -100,12 +100,12 @@ class CellAnalytics:
         # The seeds themselves travel with the cell. An LCB cannot be recovered
         # from a median, a CV and a count, so parent selection needs the samples;
         # keeping them here avoids a second read of every CSV just to pick a
-        # parent (`Hplan.5` step 3).
+        # parent.
         self.seeds = list(seeds) if seeds else []
 
 
 class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
-    """Stage 5 analytics engine."""
+    """the analytics stage analytics engine."""
 
     def __init__(self, registry, base_dir: Path, profile=None):
         """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""

@@ -73,9 +73,8 @@ __all__ = [
     "tile_product_holds",
 ]
 
-#: A sweep shorter than this is not a sweep. One shape is the defect Hplan.1
-#: item 5 describes, so a "multi-shape" candidate of length 1 would reintroduce
-#: it while satisfying the word.
+#: A sweep shorter than this is not a sweep. One shape would reintroduce
+#: exactly the ungradable-candidate defect the multi-shape rule exists to prevent.
 MIN_SWEEP_SHAPES = 2
 
 
@@ -232,7 +231,7 @@ def synthesize_cell(
     retired (and so should be skipped), and which shapes the candidate will be
     benchmarked over. Both are reported here instead of being inferred.
 
-    The ``sweep_for_family(..., fallback=[shape])`` escape hatch `Hplan.6` step 1 requires: when the
+    The ``sweep_for_family(..., fallback=[shape])`` escape hatch: when the
     manifest has no support for a family the sampler returns None, and the caller
     falls back to the ≤2-knob lattice. That is a *degradation* in search quality
     and is reported as such (`source: "lattice"`), never silently.
@@ -315,8 +314,8 @@ def synthesize_or_lattice(
 ) -> dict[str, Any]:
     """Run the constrained sampler, fall back to the lattice when it yields none.
 
-    The fallback is what makes `Hplan.6` step 1's "degrades rather than fails"
-    true. It is reported in `source` so a run that spent an iteration on the
+    The fallback is what makes degradation (not failure) the behaviour.
+ It is reported in `source` so a run that spent an iteration on the
     lattice is visible afterwards rather than being counted as prior-guided work.
     """
     result = synthesize_fn(family=family, **kwargs)

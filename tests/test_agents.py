@@ -1,4 +1,4 @@
-"""Tests for Refactor 2 Phase 4/5: agents + potential_configs."""
+"""Agent-1/agent-2 generators and the meta-agent potential-configs synthesis."""
 
 import sys
 from pathlib import Path

@@ -139,7 +139,7 @@ for every phase after the first. The GPU is healthy now (`rocm-smi`: gfx90c,
 client, so this is the documented "do not launch under the full GNOME/Wayland
 compositor" failure, not a hardware fault.
 
-The driver had no way to notice. **Fixed** in `oto/runners/phases.py`
+The driver had no way to notice. **Fixed** in `oto/runners/phase_runner.py`
 (`cf18277`): `ABORT_AFTER_CONSECUTIVE_EMPTY = 5`, a refused tile
 (`skipped_illegal` / `skipped_by_user`) does **not** count toward the streak, and
 an aborted run finalises as **`failed`** with an `abort_reason` rather than as
@@ -160,7 +160,7 @@ HH_HPA:512 35, HS_HPA:512 33, HH_HPA:4096 1. None went to any cell that ties.
 
 The mechanism is one line. `_mutate_cell` returned early when
 `winner_info["is_below_ceiling"] is False`, and `is_below_ceiling`
-(`oto/metrics/analytics.py`) is measured against `REALISTIC_CEILINGS`
+(`oto/metrics/benchmark_analytics.py`) is measured against `REALISTIC_CEILINGS`
 (`oto/device/loader.py` and `oto/device/kernel_vocabulary.py`), a measured-empirical snapshot the large cells have since
 *passed*: SS publishes 1118.7 and measures **1135.1**. So the cells that tie the
 floor are exactly the cells the arm refuses to touch, and the budget recirculates
@@ -1714,7 +1714,7 @@ eleven axes are untouched.
 `FractionalLoad=0`. The experiments are the *non-default* values; a sweep value
 equal to the default re-measures the baseline. Verified defaults:
 `docs/knowledge_base.md` §7.1; machine-readable `TENSILE_KNOB_DEFAULTS` in
-`oto/tensile/decks.py`, enforced by `tests/test_knob_sweep.py`.
+`oto/tensile/family_decks.py`, enforced by `tests/test_knob_sweep.py`.
 
 **F3. The complex families are the two *narrowest* searches in the deck, which
 is exactly backwards.** Measured distinct `(MacroTile, ThreadTile,
@@ -1946,7 +1946,7 @@ because the floor won there and native never generated the tile.
 fills every absent knob from `defaultBenchmarkCommonParameters`, so several of
 these are already active at a fixed value, and only their *non-default* values are
 experiments. The verified default for each is in `docs/knowledge_base.md` §7.1;
-`TENSILE_KNOB_DEFAULTS` in `oto/tensile/decks.py` is the machine-readable copy, and
+`TENSILE_KNOB_DEFAULTS` in `oto/tensile/family_decks.py` is the machine-readable copy, and
 `tests/test_knob_sweep.py` refuses a sweep row that offers no non-default value.
 Concretely, per family, with the reason:
 
@@ -2061,7 +2061,7 @@ one the physics asks for.
 
 Every entry below was checked through `validate_config` (CPU-only) and reported
 `Valid`; the rejections found along the way are recorded so they are not
-re-proposed. Entries land in `oto/tensile/decks.py` `FAMILY_DECKS`, which is
+re-proposed. Entries land in `oto/tensile/family_decks.py` `FAMILY_DECKS`, which is
 where the generator reads them.
 
 ### 8.1 Legality matrix for the un-varied knobs (measured, 2026-10-14)
@@ -2267,7 +2267,7 @@ ZZ/DD. The unpaired row was removed. See §8.1 and
 Constraints: full Tensile benchmark runs are TTY-only and the user's to
 launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
 
-1. **Deck** — `oto/tensile/decks.py` `FAMILY_DECKS` gains the §8.2 tiles and the
+1. **Deck** — `oto/tensile/family_decks.py` `FAMILY_DECKS` gains the §8.2 tiles and the
    §8.1 knob sweeps. Every entry is gated by `validate_config` at the append
    boundary, so an illegal row costs a rejection, never a crashed run.
    Emit with trials and controls:
@@ -3357,7 +3357,7 @@ Per-run empties: 10-15 31/612, 10-17 31/395, 10-18 7/412, 10-20 8/715,
 ### R56.3 The two grading fixes to wire next (non-blocker, listed for the record)
 
 **A (reporter): RESOLVED 2026-10-23 — like-for-like graded basis wired
-end-to-end.** `oto/metrics/protocol.py` now owns the canonical
+end-to-end.** `oto/metrics/measurement_protocol.py` now owns the canonical
 invocation-form classifier; every record, kernel_db row and report payload
 carries it. The rule (verified against the corpus before locking):
 

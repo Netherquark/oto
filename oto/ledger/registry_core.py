@@ -76,7 +76,7 @@ _SCHEMA_DDL = (
         completed_at TEXT
     )
     """,
-    # Proposals ledger (Option H Phase 1). Append-only: rows are never deleted
+    # Proposals ledger. Append-only: rows are never deleted
     # and never rewritten, and `outcome` only advances pending -> terminal. A
     # monotonic status column is not a mutation of history (docs/knowledge_base.md
     # §10), which is why the write-back is an UPDATE guarded on
@@ -99,7 +99,7 @@ _SCHEMA_DDL = (
         updated_at  TEXT
     )
     """,
-    # Per-proposal observations (Option H Phase 1 integration). The `proposals`
+    # Per-proposal observations. The `proposals`
     # row carries the *verdict*; this table carries the *evidence* for it --
     # including WinnerFreq, which H.3.8 requires be recorded alongside the verdict
     # but which is a property of the measurement rather than of the verdict.

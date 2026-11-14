@@ -24,7 +24,7 @@ from oto.runners import stage_flags as flags
 from oto.runners.driver import TensileDriver
 from oto.runners.result_paths import runs_dir as _runs_dir
 
-#: Stage names/numbers that only read the registry or prior runs and must
+#: Invocation labels that only read the registry or prior runs and must
 #: therefore NOT mint a new run directory. A stage that mints a run for a
 #: read-only query pollutes the ledger with an empty run and shifts
 #: ``latest_run_id`` away from the run the operator meant.
@@ -47,13 +47,13 @@ def build_parser() -> argparse.ArgumentParser:
 # ------------------------------------------------------------- stage handlers
 
 def _ends_after_preflight(args, stage: set) -> bool:
-    """True when Stage 1 is the last thing this invocation will do."""
+    """True when the preflight stage is the last thing this invocation will do."""
     return (bool(args.preflight or stage & PREFLIGHT_STAGES)
             and not (stage - PREFLIGHT_STAGES))
 
 
 def _stage_preflight(driver, args, stage) -> int | None:
-    """Stage 1: Phase-0 preflight. Returns an exit code, or None to continue.
+    """the preflight stage. Returns an exit code, or None to continue.
 
     ``--preflight`` alone stops here; as a gate for a later stage it returns None
     so the rest of the table still runs.
@@ -67,7 +67,7 @@ def _stage_preflight(driver, args, stage) -> int | None:
 
 
 def _stage_report(driver, args, stage) -> int | None:
-    """Stage 7: regenerate the acceptance report from prior runs."""
+    """the acceptance-report stage: regenerate the acceptance report from prior runs."""
     if args.report is None and "7" not in stage and "report" not in stage:
         return None
     result = driver.regenerate_report(args.report or None,
@@ -112,7 +112,7 @@ def _stage_generate_device_docs(driver, args, stage) -> int | None:
 
 
 def _stage_synthesis(driver, args, stage) -> int | None:
-    """Stage 6: emit the family logic files and build the library."""
+    """the synthesis/build stage: emit the family logic files and build the library."""
     if not (args.synthesize or "6" in stage or "synthesis" in stage
             or "build" in stage):
         return None
@@ -120,12 +120,12 @@ def _stage_synthesis(driver, args, stage) -> int | None:
         print("dry run: would synthesize and build the native library")
         return 0
     result = driver.synthesize_library()
-    print(f"Stage 6 Synthesis complete: {result}")
+    print(f"the synthesis/build stage Synthesis complete: {result}")
     return 0 if result.get("status") != "failed" else 1
 
 
 def _stage_candidate_plan(driver, args, stage) -> int | None:
-    """Stage 2: manifest summary only -- no execution, no run minted."""
+    """the candidate stage: manifest summary only -- no execution, no run minted."""
     if not ("2" in stage or "candidate" in stage):
         return None
     phases = driver.load_phases_manifest()
@@ -145,7 +145,7 @@ def _stage_candidate_plan(driver, args, stage) -> int | None:
 
 
 def _stage_retirement(driver, args, stage) -> int | None:
-    """Stage 4: retirement sweep for stable cells (registry-only)."""
+    """the retirement stage: retirement sweep for stable cells (registry-only)."""
     if not ("4" in stage or "retirement" in stage):
         return None
     if args.dry_run:
@@ -156,7 +156,7 @@ def _stage_retirement(driver, args, stage) -> int | None:
 
 
 def _stage_analytics(driver, args, stage, profile=None) -> int | None:
-    """Stage 5: per-dtype analytics summary for the latest run (registry-only).
+    """the analytics stage: per-dtype analytics summary for the latest run (registry-only).
 
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
@@ -248,7 +248,7 @@ def _match_targets(driver, args) -> list[dict[str, Any]]:
 
 
 def _stage_benchmark(driver, args) -> int | None:
-    """Stage 3: execute the matched targets, then emit the acceptance report."""
+    """the benchmark stage: execute the matched targets, then emit the acceptance report."""
     matched = _match_targets(driver, args)
 
     if args.dry_run:
@@ -257,7 +257,7 @@ def _stage_benchmark(driver, args) -> int | None:
             print(f"  - {_t.get('phase_id')}: {_t.get('label')} (shapes: {_t.get('shapes')})")
         return 0
 
-    print(f"Executing {len(matched)} matched targets across Stage 3 benchmark...")
+    print(f"Executing {len(matched)} matched targets across the benchmark stage benchmark...")
     results = []
     executed_count = 0
     for target in matched:
@@ -376,7 +376,7 @@ def _stage_auto(driver, args) -> int | None:
                                 progress=_tick(bar))
     finally:
         _close_progress(bar)
-    print(f"7-Stage Auto loop complete: {result}")
+    print(f"Auto loop complete: {result}")
     return 0 if result.get("converged") or result.get("dry_run") else 1
 
 

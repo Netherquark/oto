@@ -142,7 +142,7 @@ class Mutator(MutatorOutcomesMixin):
                          seed: str | None = None, profile=None) -> dict[str, Any] | None:
         """Return manifest-legal candidate knobs for ``family``.
 
-        Phase 2 (Hplan.4): the knob values are drawn from what Tensile actually
+        The knob values are drawn from what Tensile actually
         ships for this family, so the reject set is never proposed rather than
         proposed and then filtered. Returns only the *knobs* -- the caller owns
         Architecture / ScheduleName / FamilyLabel through its own template.
@@ -175,7 +175,7 @@ class Mutator(MutatorOutcomesMixin):
 
         Duplicates are *not* removed here: the caller checks each against the
         novelty ledger, which is the single owner of fingerprint de-duplication
-        (H.3.5). Over-drawing is therefore cheap -- it costs an RNG draw, not a
+        . Over-drawing is therefore cheap -- it costs an RNG draw, not a
         phase.
         """
         out: list[dict[str, Any]] = []
@@ -201,13 +201,13 @@ class Mutator(MutatorOutcomesMixin):
                      shape: str | None = None,
                      sweeps: dict[str, list[str]] | None = None,
                      ) -> dict[str, Any]:
-        """Phase 4 synthesis for one cell: coverage-guided draws plus a sweep.
+        """Coverage-guided synthesis for one cell: draws plus a shape sweep.
 
         Returns the `synthesis.synthesize_cell` summary rather than a bare knob
         list, because the caller needs two things the sampler cannot decide for
         it: the cell's state (so a retired cell can be skipped) and the shape
         sweep (so the candidate is graded rather than born ungradable —
-        `Hplan.1` item 5).
+        the design's gradeability rule).
 
         The ≤2-knob lattice remains the deterministic fallback via
         `synthesis.synthesize_or_lattice`; `sample_cell` above is retained for
@@ -229,7 +229,7 @@ class Mutator(MutatorOutcomesMixin):
         structural. If the ledger is missing or unreadable, that bypass is no
         longer justified, so `ledger_available()` exists and the caller must
         check it: a novelty-only ledger over a non-functional search makes a run
-        look productive while measuring nothing (Hplan.3 step 11).
+        look productive while measuring nothing.
         """
         return self.registry.is_novel(fp)
 
@@ -447,7 +447,7 @@ class Mutator(MutatorOutcomesMixin):
             "run_id": run_id,
             "created_at": datetime.now().isoformat(),
             "note": (
-                "Per-run candidate overlay (Option H H.3.7). Not curated. "
+                "Per-run candidate overlay. Not curated. "
                 "phases.yaml is authoritative for the deck; this file exists so "
                 "the mutation arm can run without writing to it."
             ),

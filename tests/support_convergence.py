@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Shared scaffolding for the Phase 1 production-integration tests.
+"""Shared scaffolding for the convergence-loop integration tests.
 
 Owns: the one-row Cijk CSV fixture (``HEADER``), the ``TensileDriver`` stand-in
-scheduler (``_StubScheduler``), and the ``Harness`` base class every Phase 1
-test builds on (temp dir, one-phase ``phases.yaml``, sqlite registry, analytics
-engine, mutator). ``tests/test_phase1_*.py`` import these; the repo root is
-already on ``sys.path`` via ``tests/conftest.py``.
+scheduler (``_StubScheduler``), and the ``Harness`` base class the convergence-loop
+tests build on (temp dir, one-phase ``phases.yaml``, sqlite registry, analytics
+engine, mutator). ``tests/test_outcome_writeback.py`` and friends import these;
+the repo root is already on ``sys.path`` via ``tests/conftest.py``.
 Does NOT own: any assertions or driver internals (those live in the tests).
 """
 import shutil

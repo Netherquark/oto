@@ -1,4 +1,4 @@
-"""Tests for LCB parent selection in `ConvergenceAgent.harvest` (`Hplan.5` step 3).
+"""Tests for lower-confidence-bound parent selection in `ConvergenceAgent.harvest`.
 
 The defect being closed is specific: `harvest()` used to take
 `max(median_gflops)`, so a config whose median was high because one seed landed

@@ -137,7 +137,7 @@ RESTRUCTURED = {
     # pure extraction of the CLI drivers; proved by their own tests.
     "allruns.py::main",
     "verify_run.py::main",
-    # Second decomposition pass (2026-10-16, AC 1b "no function over 60 lines").
+    # Second decomposition pass (2026-10-16, the 60-line rule "no function over 60 lines").
     # Registered here because the pass left this check red on arrival, and a
     # guard that is red before you touch anything is one nobody reads. Evidence
     # that these are extractions and not behaviour changes:
@@ -245,7 +245,7 @@ def _threading_shaped(old_sig: str, new_sig: str) -> bool:
     """True when ``new_sig`` is ``old_sig`` plus a trailing ``profile=None``.
 
     Signatures here are the arguments tuple unparsed *without* surrounding
-    parens (see :func:`sig`). Refactor 2 (C2.5-C2.9) makes the device profile
+    parens (see :func:`sig`). Device-independence work makes the device profile
     an explicit argument on every profile-consuming API, appended as a
     defaulted kwarg -- callers unaware of it bind the ambient profile exactly
     as before. That delta is the expected shape of the sweep, not drift.
@@ -442,44 +442,30 @@ def _print_report(all_missing: list[str], all_differs: list[str],
 #: Intentional file renames within the package (old rel path -> new rel
 #: path). The post-split equivalence check follows these so a rename does not
 #: read as a wholesale public-API loss. Maintained alongside the rename work;
-#: every entry must correspond to a real git mv. See plans/RENAME_AND_DOC_CLEANUP_PLAN.md.
+#: every entry must correspond to a real git mv. Every entry must correspond to a real git mv.
 RENAMES: dict[str, str] = {
-    "oto/tensile/gates/ldspad_gate.py": "oto/tensile/gates/ldspad.py", "oto/tensile/gates/occupancy_common.py": "oto/tensile/gates/gate_common.py",
-    "oto/agents/harness_tools.py": "oto/agents/agent_tools.py", "oto/agents/meta.py": "oto/agents/meta_agent.py",
-    "oto/agents/orchestrator.py": "oto/agents/meta_agent.py", "oto/agents/research.py": "oto/agents/research_client.py",
+    "oto/_map.py": "oto/readme_gen.py", "oto/inventory.py": "oto/readme_gen.py", "oto/_version.py": "oto/version.py",
+    "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py", "oto/agents/harness_tools.py": "oto/agents/agent_tools.py",
+    "oto/agents/meta.py": "oto/agents/meta_agent.py", "oto/agents/orchestrator.py": "oto/agents/meta_agent.py", "oto/agents/research.py": "oto/agents/research_client.py",
     "oto/checks/candidates.py": "oto/checks/deck_legality.py", "oto/checks/db.py": "oto/checks/registry_audit.py", "oto/checks/retirement.py": "oto/checks/stability_retirement.py",
-    "oto/metrics/policy.py": "oto/metrics/cell_policy.py", "oto/metrics/report_build.py": "oto/metrics/build_status.py",
-    "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
-    "oto/metrics/_status_common.py": "oto/metrics/status_helpers.py", "oto/metrics/status_common.py": "oto/metrics/status_helpers.py",
-    "oto/metrics/analytics.py": "oto/metrics/benchmark_analytics.py", "oto/metrics/coverage.py": "oto/metrics/cell_coverage.py",
-    "oto/metrics/protocol.py": "oto/metrics/measurement_protocol.py", "oto/metrics/read_thermals.py": "oto/metrics/thermal_telemetry.py",
-    "oto/metrics/report.py": "oto/metrics/acceptance_report.py",
-    "oto/tensile/library.py": "oto/tensile/shipped_floor_manifest.py", "oto/harness/_rows_core.py": "oto/harness/rows_ladders.py",
-    "oto/harness/_rows_frontier.py": "oto/harness/rows_frontier.py", "oto/harness/_rows_smallcells.py": "oto/harness/rows_smallcells.py",
-    "oto/harness/deck_check.py": "oto/harness/deck_probe.py", "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py",
-    "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py", "oto/tensile/synthesis/db.py": "oto/tensile/synthesis/donor_mutator.py",
-    "oto/tensile/synthesis/db_knobs.py": "oto/tensile/synthesis/donor_knobs.py", "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py",
-    "oto/ledger/queries.py": "oto/ledger/registry_queries.py", "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
-    "oto/tools/allruns.py": "oto/tools/run_census.py", "oto/tools/all_runs.py": "oto/tools/run_census.py",
-    "oto/tools/chart.py": "oto/tools/benchmark_chart.py", "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
-    "oto/tools/verify_run.py": "oto/tools/corpus_audit.py", "oto/runners/reference.py": "oto/runners/reference_floor.py",
-    "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py", "oto/runners/cli.py": "oto/runners/stage_cli.py",
-    "oto/runners/flags.py": "oto/runners/stage_flags.py", "oto/runners/synthesis.py": "oto/runners/library_build.py",
-    "oto/_map.py": "oto/readme_gen.py", "oto/cli/flags.py": "oto/cli/global_flags.py", "oto/cli/docs.py": "oto/cli/help_command.py",
-    "oto/device/derive.py": "oto/device/derive_limits.py", "oto/device/detect.py": "oto/device/device_detect.py",
-    "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py",
-    "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
-    "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py", "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py",
-    "oto/ledger/agent.py": "oto/ledger/convergence_agent.py", "oto/ledger/agent_mutate.py": "oto/ledger/agent_mutation.py",
-    "oto/tensile/best_library.py": "oto/tensile/best_effort_library.py",
-    "oto/tensile/decks.py": "oto/tensile/family_decks.py", "oto/tensile/patterns.py": "oto/tensile/contraction_patterns.py",
-    "oto/tensile/shipped_library.py": "oto/tensile/shipped_floor.py", "oto/tensile/shipped_manifest.py": "oto/tensile/shipped_floor_manifest.py",
-    "oto/tensile/synthesis/manifest.py": "oto/tensile/synthesis/pipeline_manifest.py",
-    "oto/runners/auto.py": "oto/runners/convergence_loop.py", "oto/runners/clocks.py": "oto/runners/clock_telemetry.py",
-    "oto/runners/paths.py": "oto/runners/result_paths.py", "oto/runners/phases.py": "oto/runners/phase_runner.py",
-    "oto/runners/reporting.py": "oto/runners/acceptance_reporting.py",
-    "oto/inventory.py": "oto/readme_gen.py",
-    "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py",
+    "oto/cli/docs.py": "oto/cli/help_command.py", "oto/cli/flags.py": "oto/cli/global_flags.py", "oto/device/derive.py": "oto/device/derive_limits.py",
+    "oto/device/detect.py": "oto/device/device_detect.py", "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py", "oto/harness/_rows_core.py": "oto/harness/rows_ladders.py",
+    "oto/harness/_rows_frontier.py": "oto/harness/rows_frontier.py", "oto/harness/_rows_smallcells.py": "oto/harness/rows_smallcells.py", "oto/harness/deck_check.py": "oto/harness/deck_probe.py",
+    "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py", "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py", "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
+    "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py", "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py", "oto/ledger/agent.py": "oto/ledger/convergence_agent.py",
+    "oto/ledger/agent_mutate.py": "oto/ledger/agent_mutation.py", "oto/ledger/queries.py": "oto/ledger/registry_queries.py", "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
+    "oto/metrics/policy.py": "oto/metrics/cell_policy.py", "oto/metrics/report_build.py": "oto/metrics/build_status.py", "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
+    "oto/metrics/_status_common.py": "oto/metrics/status_helpers.py", "oto/metrics/status_common.py": "oto/metrics/status_helpers.py", "oto/metrics/analytics.py": "oto/metrics/benchmark_analytics.py",
+    "oto/metrics/coverage.py": "oto/metrics/cell_coverage.py", "oto/metrics/protocol.py": "oto/metrics/measurement_protocol.py", "oto/metrics/read_thermals.py": "oto/metrics/thermal_telemetry.py",
+    "oto/metrics/report.py": "oto/metrics/acceptance_report.py", "oto/tensile/library.py": "oto/tensile/shipped_floor_manifest.py", "oto/tensile/shipped_library.py": "oto/tensile/shipped_floor.py",
+    "oto/tensile/shipped_manifest.py": "oto/tensile/shipped_floor_manifest.py", "oto/tensile/best_library.py": "oto/tensile/best_effort_library.py", "oto/tensile/decks.py": "oto/tensile/family_decks.py",
+    "oto/tensile/patterns.py": "oto/tensile/contraction_patterns.py", "oto/tensile/synthesis/db.py": "oto/tensile/synthesis/donor_mutator.py", "oto/tensile/synthesis/db_knobs.py": "oto/tensile/synthesis/donor_knobs.py",
+    "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py", "oto/tensile/synthesis/manifest.py": "oto/tensile/synthesis/pipeline_manifest.py", "oto/runners/cli.py": "oto/runners/stage_cli.py",
+    "oto/runners/flags.py": "oto/runners/stage_flags.py", "oto/runners/synthesis.py": "oto/runners/library_build.py", "oto/runners/reference.py": "oto/runners/reference_floor.py",
+    "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py", "oto/runners/auto.py": "oto/runners/convergence_loop.py", "oto/runners/clocks.py": "oto/runners/clock_telemetry.py",
+    "oto/runners/paths.py": "oto/runners/result_paths.py", "oto/runners/phases.py": "oto/runners/phase_runner.py", "oto/runners/reporting.py": "oto/runners/acceptance_reporting.py",
+    "oto/tools/allruns.py": "oto/tools/run_census.py", "oto/tools/all_runs.py": "oto/tools/run_census.py", "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
+    "oto/tools/verify_run.py": "oto/tools/corpus_audit.py", "oto/tools/chart.py": "oto/tools/benchmark_chart.py",
 }
 
 def _head_path_for(rel, old_syms, all_missing):

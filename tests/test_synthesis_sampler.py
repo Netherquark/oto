@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Option H Phase 4 (``Hplan.6``): coverage-guided constrained synthesis.
+"""coverage-guided, tile-legal candidate draws.
 
 Step 1 — coverage-guided sampling replaces the lattice walk, and the lattice
 remains a deterministic fallback so behaviour degrades rather than fails; and

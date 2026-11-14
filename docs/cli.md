@@ -77,7 +77,7 @@ Flags:
 
 ### `oto analytics`
 
-Stage 5: analytics summary for a run
+the analytics stage: analytics summary for a run
 
 ```bash
 oto analytics
@@ -128,7 +128,7 @@ Flags:
 
 ### `oto candidate`
 
-Stage 2: print the candidate plan by family
+the candidate stage: print the candidate plan by family
 
 ```bash
 oto candidate
@@ -382,7 +382,7 @@ Flags:
 
 ### `oto preflight`
 
-Stage 1: validate the run environment
+the preflight stage: validate the run environment
 
 ```bash
 oto preflight
@@ -420,7 +420,7 @@ Flags:
 
 ### `oto retirement`
 
-Stage 4: retire stable cells (registry-only)
+the retirement stage: retire stable cells (registry-only)
 
 ```bash
 oto retirement --dry-run
@@ -453,7 +453,7 @@ Flags:
 - `-v`, `--verbose` — Show the command being run and full tracebacks on failure
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
-- `--stage` (default: `[]`) — Stages: 1..7 or preflight,candidate,benchmark,retirement,analytics,synthesis,report
+- `--stage` (default: `[]`) — preflight, candidate, benchmark, retirement, analytics, synthesis, report
 - `--targets` — Target IDs or labels
 - `--family` — Family labels (e.g. SS or CC DD)
 - `--pattern` — Contraction patterns
@@ -508,7 +508,7 @@ Flags:
 
 ### `oto synthesis`
 
-Stage 6: build and validate the native library
+the synthesis/build stage: build and validate the native library
 
 ```bash
 oto synthesis --dry-run

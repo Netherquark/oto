@@ -84,7 +84,7 @@ def _add_auto_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--auto",
         action="store_true",
-        help="Run Stage 1-7 deterministic auto-convergence loop across all shipped gfx900 families"
+        help="Run the preflight stage-7 deterministic auto-convergence loop across all shipped gfx900 families"
     )
     parser.add_argument(
         "--budget",
@@ -181,12 +181,12 @@ def _add_reference_run_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--synthesize",
         action="store_true",
-        help="Run Stage 6 (synthesis + anti-alias scan + regression gate)"
+        help="Run the synthesis/build stage (synthesis + anti-alias scan + regression gate)"
     )
     parser.add_argument(
         "--preflight",
         action="store_true",
-        help="Run Stage 1 preflight validation checks"
+        help="Run the preflight stage preflight validation checks"
     )
     parser.add_argument(
         "--refresh",
@@ -266,7 +266,7 @@ def _add_run_flags(parser: argparse.ArgumentParser, profile=None) -> None:
         default=None,
         metavar="STARTER",
         help="Run agent-1 + agent-2 to generate device-specific docs from a "
-             "starter file (Refactor 2). Optional STARTER path; API key from "
+             "starter file. Optional STARTER path; API key from "
              "starter or OTO_API_KEY env."
     )
 
@@ -340,6 +340,6 @@ def build_parser(profile=None) -> argparse.ArgumentParser:
         default=None,
         metavar="CODENAME",
         help="GPU codename (auto-detected from rocminfo when omitted). "
-             "Loads profiles/<codename>.json. Refactor 2 device selector."
+             "Device selector — loads profiles/<codename>.json."
     )
     return parser

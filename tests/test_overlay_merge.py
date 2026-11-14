@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 1 overlay-merge and proposal run_id regression tests.
+"""Overlay-merge and proposal run_id regression tests.
 
 The overlay was written and never merged, and ``run_id`` was dropped on
 emission; these drive the driver's merge path and the proposal emission

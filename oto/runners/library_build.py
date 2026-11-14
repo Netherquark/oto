@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 6: emit the per-family library logic and build it with TensileCreateLibrary.
+"""the synthesis/build stage: emit the per-family library logic and build it with TensileCreateLibrary.
 
 Owns: ``synthesize_library`` -- the 7 family logic YAMLs, the TensileCreateLibrary
 invocation, the anti-alias scan that rejects any ``gfx900``/``vega10`` leak into
@@ -110,14 +110,14 @@ class SynthesisMixin:
 
     def synthesize_library(self) -> dict[str, Any]:
         """
-        Synthesize final HIP library (Stage 6):
+        Synthesize final HIP library (the synthesis/build stage):
         - Query certified winners from DB
         - Emit per-family logic YAML files into 3_LibraryLogic/
         - Invoke TensileCreateLibrary --architecture=<codename> --merge-files
         - Perform strict anti-alias scan rejecting any 'gfx900' or 'vega10' tokens
         - Enforce the shipped gfx900 footprint regression gate
         """
-        print("Synthesizing final HIP library (Stage 6)...")
+        print("Synthesizing final HIP library (the synthesis/build stage)...")
         tcl_bin = self.tensile_root / "Tensile" / "bin" / "TensileCreateLibrary"
         logic_dir = self.run_dir / "3_LibraryLogic"
         final_lib_dir = self.run_dir / "FinalLibrary"

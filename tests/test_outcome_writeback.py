@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 1 write-back regression tests: skip/bypass, outcome write-back and the
+"""Write-back regression tests: skip/bypass, outcome write-back and the
 run loop's resolver call.
 
 The driver computed winner-freq skips but never consulted them, the outcome
@@ -191,8 +191,8 @@ class LoopActuallyCallsTheResolverTests(Harness):
     """`run_phases` must invoke the write-back and the overlay-aware skip.
 
     Testing `_resolve_proposal_outcome` and `should_run` in isolation would pass
-    even if the loop never called either, which is precisely the state Phase 1 was
-    in: both existed, both were correct, and neither ran.
+    even if the loop never called either, which is precisely the state the early
+    ledger was in: both existed, both were correct, and neither ran.
     """
 
     def _driver(self, run_id="run_loop"):

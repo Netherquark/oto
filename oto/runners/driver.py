@@ -3,7 +3,7 @@
 
 Owns: what an oto run *is* -- the Tensile root and ROCm toolchain resolution, the
 ledger/analytics/mutator/agent wiring, signal handling, the Tensile subprocess
-environment, the Phase-0 preflight, and the run-wide live status panel.
+environment, the preflight check, and the run-wide live status panel.
 ``TensileDriver`` is the composition root: it inherits one mixin per
 responsibility (benchmark.py, phases.py, reference.py, auto.py, reporting.py,
 clocks.py, timing.py, synthesis.py) and owns nothing else.
@@ -134,7 +134,7 @@ class TensileDriver(
     """Main driver for oto Tensile port.
 
     One mixin per responsibility; see each module's docstring for what it owns.
-    The composition root itself holds only the wiring, the Phase-0 preflight, the
+    The composition root itself holds only the wiring, the preflight check, the
     live status panel, and the shared class-level constants.
     """
 
@@ -154,7 +154,7 @@ class TensileDriver(
         self.tensile_root = require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)
         self.cooldown_s = cooldown_s
         self.create_run = create_run
-        # Refactor 2: resolve the device profile (auto-detect if not given).
+        # Resolve the device profile (auto-detect if not given).
         if codename is None:
             try:
                 from oto.device.device_detect import detect_codename
@@ -198,7 +198,7 @@ class TensileDriver(
 
     def _init_analytics_and_mutator(self) -> None:
         self.analytics = AnalyticsEngine(self.registry, self.base_dir)
-        # Option H Phase 1: the ledger-backed mutator. Constructed here so the
+        # The ledger-backed mutator. Constructed here so the
         # mutation arm records proposals and resolves outcomes; when it is
         # absent ConvergenceAgent falls back to appending to phases.yaml and
         # keeps the identical-fp skip on (see ConvergenceAgent.skip_mutation_arm).
@@ -298,10 +298,10 @@ class TensileDriver(
         return env
     def run_preflight(self) -> bool:
         """
-        Phase-0 Preflight validation:
+        Preflight validation:
         Check Tensile binary, device info, and registry.
         """
-        print("Running Phase-0 Preflight checks...")
+        print("Running preflight checks...")
         tensile_bin = self.tensile_root / "Tensile" / "bin" / "Tensile"
 
         parity_line = "not checked"

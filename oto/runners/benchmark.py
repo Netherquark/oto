@@ -201,7 +201,7 @@ class BenchmarkMixin:
         run_dir: Path
     ) -> dict[str, Any]:
         """
-        Execute a single phase (Stage 1 + Stage 3).
+        Execute a single phase (the preflight stage + the benchmark stage).
         """
         phase_id = phase.get("phase_id", "unknown")
         label = phase.get("label", "unknown")

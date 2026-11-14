@@ -77,10 +77,10 @@ class MutateMixin:
         """
         Mutate harvested configs and record them in the proposals ledger.
 
-        Two behaviours changed under Option H Phase 1:
+        Two behaviours changed in the mutation loop:
         * Candidates go to the ledger, not to `phases.yaml`.
         * Novelty is checked before emission against ledger/registry fingerprints.
-        With no mutator configured, pre-Phase-1 append-to-phases.yaml fallback is preserved.
+        With no mutator configured, the pre-ledger append-to-phases.yaml fallback is preserved.
         """
         new_candidates: list[CandidateConfig] = []
         rejected_non_novel = 0

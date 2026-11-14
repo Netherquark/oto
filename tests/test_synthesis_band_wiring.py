@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Option H Phase 4 (``Hplan.6``): band laziness/re-entrancy and the agent wiring.
+"""coverage-guided, tile-legal draws: band laziness/re-entrancy and the agent wiring.
 
 Step 3 end-to-end: the band resolver is lazily built, re-enters the sampler
 safely, and the mutator-side wiring feeds synthesized candidates into the run
@@ -152,7 +152,7 @@ class BandResolutionTests(unittest.TestCase):
 
 
 class AgentWiringTests(unittest.TestCase):
-    """Hplan.6 step 3 end to end: the sweep must reach the overlay.
+    """end to end: the sweep must reach the overlay.
 
     The sampler is stubbed here. Its internals are covered above; what is new and
     easy to get wrong is the wiring -- that the sweep replaces `[shape]`, that

@@ -149,7 +149,7 @@ def assembly_gsu_vector_width(config: dict[str, Any]) -> tuple[bool, str]:
     ``VectorAtomicWidth < 2 -> reject``. A live sweep showed it firing on shipped
     HS_HPA vectors with GlobalSplitU 2/3/5/7 -- every one a false rejection --
     the signature of *modelling* the reject set rather than reading
-    it, which is exactly what Hplan.4 step 1 forbids. Enforcing the reachable GSU
+    it, which is exactly what these gates forbid. Enforcing the reachable GSU
     rules is already ``assembly_class_valid``'s job (rules 2 and 3, both
     source-cited and tested): half with f32 accumulate, and half Assembly GSU with
     ``AssertFree0ElementMultiple < 2``.
@@ -249,9 +249,9 @@ KNOB_TO_GROUP = {knob: group for group, knobs in KNOB_GROUPS.items()
 #: the split group because it is the donor's real beta-on-edge setting. The one
 #: remaining parsed knob, `grvw`, is deliberately *not* here -- it is not a
 #: Tensile parameter, and BenchmarkStructs printExit()s on unrecognised names
-#: (see ``oto.tensile.shipped_floor._config_from_kernel``). So Phase 4's "extend beyond the
-#: lattice" is satisfied by covering all eight legal knobs, not by inventing
-#: parameters that would abort parameter filling.
+#: (see ``oto.tensile.shipped_floor._config_from_kernel``). The donor space is
+#: the whole knob space, so lattice coverage is satisfied by covering all eight
+#: legal knobs, not by inventing parameters that would abort parameter filling.
 TEMPLATE_KEYS = frozenset({
     "Architecture", "ProblemType", "DataType", "FamilyLabel", "ScheduleName",
 })
@@ -327,7 +327,7 @@ def mt_has_shipped_schedule(config: dict[str, Any],
 
     Note this is intentionally *narrower* than full schedule validity -- it
     bounds the MacroTile, and ``validate_config`` remains the assertion for
-    everything else (Hplan.4 step 4).
+    everything else (validate_config is the assertion).
     """
     mt = config.get("MacroTile")
     if not mt:

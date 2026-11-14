@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 7 acceptance report: the verdict compute and the JSON writer.
+"""the acceptance-report stage acceptance report: the verdict compute and the JSON writer.
 
 Owns: ``AcceptanceReporter`` -- the composition root over the section builders
 (``SectionMixin``) and the HTML renderer (``HtmlMixin``), plus the compute

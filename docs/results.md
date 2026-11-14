@@ -3,7 +3,7 @@
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
 > `archive/prior_insights.md`, also absorbed in `archive/prior_research_archive.md`).
 > This file's hand prose is preserved append-only
-> (`docs/knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/report.py`
+> (`docs/knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/acceptance_report.py`
 > (`gfx90c_results/acceptance_report.json/.html`).
 
 ## 1. Run Summary

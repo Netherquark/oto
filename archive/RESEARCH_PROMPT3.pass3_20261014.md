@@ -3,7 +3,7 @@
 **What this is:** a short, sharply-targeted brief. Pass 1 (`RESEARCH_PROMPT.md`
 → `corpus.md`) settled the hardware and tile physics. Pass 2
 (`RESEARCH_PROMPT2.md` → `corpus2.md`) settled the eleven never-varied knobs'
-mechanisms, and the deck now sweeps them (`oto/tensile/decks.py`
+mechanisms, and the deck now sweeps them (`oto/tensile/family_decks.py`
 `KNOB_SWEEPS`, `docs/potential_configs.md` §8.1) plus decision-labelled trials
 (`DECISION_TRIAL_TILES`, §9 D1–D4). This pass asks only what is *still* open
 after both corpora were mined — six question groups, no more.

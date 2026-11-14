@@ -1,4 +1,4 @@
-"""Refactor 2 Phase 6: gate tests run against a second (synthetic) profile."""
+"""Gate tests run against a second (synthetic) profile."""
 
 # 'probe_test' is a fabricated probe: an ISA (9,9,99) device that never shipped.
 # It exists only to prove the explicit-profile threading seam is load-bearing

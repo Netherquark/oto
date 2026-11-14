@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""test_function_length.py — acceptance criterion 1b of Refactor 1.
+"""test_function_length.py — no function in oto/**/*.py spans more than 60 lines.
 
-"No function over 60 lines" is a documented acceptance criterion
-(`incomplete_work.md`, AC 1b). This test is the executable form of it: the rule
-used to live only in that register, and the script that enforced it was deleted
-with the other untracked `plans/` scripts on 2026-10-14, so nothing stopped a
-regression.
+The 60-line rule is a hard acceptance criterion (`incomplete_work.md`); this is its
+executable form, so a regression fails the suite instead of shipping.
 
 The measure is the whole ``def .. end_lineno`` span, which is what the
 criterion names. It deliberately does NOT subtract the docstring: the criterion
@@ -60,7 +57,7 @@ def _functions(only: list[str] | None = None):
 
 
 def test_no_function_exceeds_the_line_limit(changed_python_files):
-    """AC 1b: no function in oto/**/*.py spans more than 60 lines."""
+    """the 60-line rule: no function in oto/**/*.py spans more than 60 lines."""
     offenders = [
         (path, name, lineno, span)
         for path, name, lineno, span in _functions(changed_python_files or None)
@@ -68,7 +65,7 @@ def test_no_function_exceeds_the_line_limit(changed_python_files):
     ]
     assert not offenders, (
         f"{len(offenders)} function(s) over {MAX_FUNCTION_LINES} lines "
-        f"(AC 1b, incomplete_work.md). Decompose them, or amend the criterion "
+        f"(the 60-line rule, incomplete_work.md). Decompose them, or amend the criterion "
         f"there with a reason:\n"
         + "\n".join(f"  {span:4d}  {path}:{lineno}  {name}"
                     for path, name, lineno, span in

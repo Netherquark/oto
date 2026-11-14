@@ -317,7 +317,6 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 | `docs/gfx90c_tuning_guide.md` | Live tuning guidance for gfx90c (current fact only) |
 | `docs/research/kernel_tuning.md` | Live research notes on kernel tuning (current fact only) |
 | `docs/research/complex_gemm_brief.md` | Live research brief on complex GEMM (current fact only) |
-| `plans/REFACTOR_*.md` | The refactor plans + their executable equivalence proofs |
 
 One fact, one canonical home. When information belongs in one owner, update that
 owner; do not copy it into several MDs.

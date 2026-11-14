@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Option H Phase 4 (``Hplan.6``): shape sweeps and MacroTile->ThreadTile
+"""coverage-guided, tile-legal draws: shape sweeps and MacroTile->ThreadTile
 reconciliation.
 
 Two requirements, and the failure each guards against:
 
-* step 3 — multi-shape family sweeps, or a mutant is born ungradable (Hplan.1
-  item 5);
-* step 4 — ``ThreadTile``/``WorkGroup`` derived from ``MacroTile`` so the
+* multi-shape family sweeps — a mutant must not be born ungradable;
+* ``ThreadTile``/``WorkGroup`` derived from ``MacroTile`` so the
   product constraint holds by construction.
 See ``tests/test_synthesis_sampler.py`` for the coverage sampler, and
 ``tests/test_synthesis_band_wiring.py`` for the band/agent wiring.

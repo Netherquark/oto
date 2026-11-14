@@ -26,7 +26,7 @@ class ProposalMixin:
 
 
     # ------------------------------------------------------------------
-    # Proposals ledger (Option H Phase 1)
+    # Proposals ledger. Append-only: rows are never deleted
     #
     # Append-only. There is deliberately no delete method, and resolve_proposal
     # refuses to rewrite a row that already has a terminal outcome. See

@@ -99,15 +99,15 @@ This project's driver source (outside that tree, still **calls into** it):
 
 - `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
   `docs/implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
-  `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/convergence_agent.py`,
-  `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
+  `oto/metrics/acceptance_report.py`, `oto/metrics/benchmark_analytics.py`, `oto/metrics/cell_policy.py`, `oto/tensile/candidate.py`, `oto/ledger/convergence_agent.py`,
+  `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/shipped_floor.py` (gfx900 dat parser +
   reference-floor chain).
 - `oto/device/loader.py` — device profile loader + canonical accessors (profile tables via `current_profile()`)
   card, dtype tables)
-- `oto/metrics/report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
+- `oto/metrics/acceptance_report.py` — acceptance reporting → `gfx90c_results/acceptance_report.json/.html`
   (single-file HTML dashboard; inline SVG/CSS, Carbon design language)
 - `oto/ledger/registry.py` — append-only SQLite registry (`gfx90c_results/registry.db`, WAL)
-- `oto/metrics/analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing, ORANGE = below ceiling)
+- `oto/metrics/benchmark_analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing, ORANGE = below ceiling)
 
 The gfx90c delta (the entire change vs upstream — see section 3):
 
@@ -382,7 +382,7 @@ set*, **not** *never varied*. A candidate whose value equals the default above
 re-measures the baseline; only a non-default value is an experiment. This is why
 `KNOB_SWEEPS`' `BufferLoad: True` row was removed on 2026-10-14 — the default is
 already `True`, so the row tested nothing. `TENSILE_KNOB_DEFAULTS` in
-`oto/tensile/decks.py` is the machine-readable copy of this table, and
+`oto/tensile/family_decks.py` is the machine-readable copy of this table, and
 `tests/test_knob_sweep.py` asserts every sweep row offers at least one non-default
 value.
 
@@ -679,8 +679,8 @@ Pipeline (in order):
 
 1. `python3 -m oto tune` (the driver) + `oto/ledger/registry.py` — persist raw benchmark records to SQLite
    (`gfx90c_results/registry.db`, append-only `records`).
-2. `oto/metrics/analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
-3. `oto/metrics/report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
+2. `oto/metrics/benchmark_analytics.py` — per-cell analytics, native-vs-spoof deltas, cell-status classification (RED = missing contract cell, ORANGE = <50% ceiling, GREEN = at/above).
+3. `oto/metrics/acceptance_report.py` — builds the `gfx90c_results/acceptance_report.json` + `.html`
    (single-file dashboard). Report dtype extraction is token-based
    (`extract_dtype_from_phase_id`), no longer regex-dependent.
 4. `run_status.py` — progress/ETA accounting, and the live TTY panel
@@ -800,14 +800,14 @@ overwrite, or rewrite **benchmark evidence**.
   always reversible by a later append.
 - Phase-number reservations and run-order are asserted (order self-check) so a
   run can never silently skip or reorder intended work.
-- Stats/analytics pipeline (`oto/metrics/analytics.py` → `oto/metrics/report.py`) reads derived data from the
+- Stats/analytics pipeline (`oto/metrics/benchmark_analytics.py` → `oto/metrics/acceptance_report.py`) reads derived data from the
   SQLite `records` table (via the registry). The driver may **also** append a jsonl
   *export* of new `records` (dual-write). Dual-write is export, not a second
   source of truth. Canonical ledger = `records`.
 
 ### 10.3 Derived artifacts
 
-- `oto/metrics/report.py` `write_report()` writes `acceptance_report.json` and its `.html`
+- `oto/metrics/acceptance_report.py` `write_report()` writes `acceptance_report.json` and its `.html`
   dashboard wholesale from the registry data.
 - Legacy `make_results_md.py`-style `docs/results.md` `<!-- DERIVED:* -->` marker-block
   regeneration no longer exists; `docs/results.md` hand prose is append-only.

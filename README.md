@@ -122,14 +122,14 @@ the flowchart and again in the [stage table](#stage--owning-package) below.
 
 | Stage | Owns | Package |
 |---|---|---|
-| Manifest & target match | `phases.yaml` merge, semantic filters | [`oto/runners/phases.py`](oto/runners/phases.py) |
+| Manifest & target match | `phases.yaml` merge, semantic filters | [`oto/runners/phase_runner.py`](oto/runners/phase_runner.py) |
 | Candidate generation | family decks, legality gates, mutants | [`oto/tensile/`](oto/tensile/) |
 | Benchmark execution | Tensile subprocess, setsid, telemetry | [`oto/runners/benchmark.py`](oto/runners/benchmark.py) |
-| Adaptive repeat & policy | median-of-seeds, CV gate, retirement | [`oto/metrics/policy.py`](oto/metrics/policy.py) |
-| Analytics & ledger | aggregation, SQLite persistence | [`oto/metrics/analytics.py`](oto/metrics/analytics.py), [`oto/ledger/`](oto/ledger/) |
+| Adaptive repeat & policy | median-of-seeds, CV gate, retirement | [`oto/metrics/cell_policy.py`](oto/metrics/cell_policy.py) |
+| Analytics & ledger | aggregation, SQLite persistence | [`oto/metrics/benchmark_analytics.py`](oto/metrics/benchmark_analytics.py), [`oto/ledger/`](oto/ledger/) |
 | Convergence loop | harvest → mutate → decide | [`oto/ledger/convergence_agent.py`](oto/ledger/convergence_agent.py) |
 | Synthesis / build | per-family logic + `TensileCreateLibrary` | [`oto/runners/library_build.py`](oto/runners/library_build.py) |
-| Acceptance A/B & report | native-vs-floor verdicts + dashboard | [`oto/metrics/ab_audit.py`](oto/metrics/ab_audit.py), [`oto/metrics/report.py`](oto/metrics/report.py) |
+| Acceptance A/B & report | native-vs-floor verdicts + dashboard | [`oto/metrics/ab_audit.py`](oto/metrics/ab_audit.py), [`oto/metrics/acceptance_report.py`](oto/metrics/acceptance_report.py) |
 
 ---
 
@@ -158,7 +158,7 @@ python3 -m oto bench --family DD --pattern Ailk_Bjlk Alik_Bljk
 ```
 The seven native families are `SS`, `HH`, `HH_HPA`, `HS_HPA`, `DD`, `ZZ`, `CC`
 (the last three are the split/complex classes); each family has its own curated
-tile deck under [`oto/tensile/decks.py`](oto/tensile/decks.py).
+tile deck under [`oto/tensile/family_decks.py`](oto/tensile/family_decks.py).
 
 ### 3. Automated HTML & JSON Report Generation
 Reports are generated automatically at the end of every run (and on early quit via
@@ -320,14 +320,14 @@ orientation layer over it.
 | Module | Purpose |
 |---|---|
 | [`candidate.py`](oto/tensile/candidate.py) | Candidate generation: the family deck, the sampler, and the append boundary. |
-| [`decks.py`](oto/tensile/decks.py) | The curated per-family tile decks — the starting candidates and what kind each is. |
+| [`decks.py`](oto/tensile/family_decks.py) | The curated per-family tile decks — the starting candidates and what kind each is. |
 | [`legality.py`](oto/tensile/legality.py) | The legality prior: the manifest-derived legal domain and source-cited walls. |
 | [`config_writer.py`](oto/tensile/config_writer.py) | The launch-boundary config writer: the single place a candidate's knobs become Tensile YAML. |
 | [`gates/`](oto/tensile/gates/) | The **four-gate preflight** — `assembly.py` (GEMM-class reachability), `loads.py` (classic-path global-load divisibility + 16 B load cap), `occupancy.py` (VGPR + LDS budget), `vgpr_model.py` (the measured VGPR tables). Unknown dtype or unresolvable depth fails **closed**. |
 | [`synthesis/`](oto/tensile/synthesis/) | `db.py` (DB-hooked wide/narrow/direction mutants), `manifest.py` (coverage-guided synthesis for one cell), `tile_space.py` (the shared tile/knob vocabulary), `db_knobs.py` / `db_patterns.py` (the mutator's domains and per-family patterns). |
-| [`library.py`](oto/tensile/library.py) | The shipped gfx900 manifest: pinning, identity, and the rerun-tier triage. |
+| [`shipped_floor_manifest.py`](oto/tensile/shipped_floor_manifest.py) | The shipped gfx900 manifest: pinning, identity, and the rerun-tier triage. |
 | [`library_parity.py`](oto/tensile/library_parity.py) | The coverage-parity rule: what the produced `TensileLibrary` may address. |
-| [`shipped_library.py`](oto/tensile/shipped_library.py) | Locating/parsing the system ROCm gfx900 `TensileLibrary.dat` and rebuilding a kernel from its name. |
+| [`shipped_library.py`](oto/tensile/shipped_floor.py) | Locating/parsing the system ROCm gfx900 `TensileLibrary.dat` and rebuilding a kernel from its name. |
 
 ### `oto/ledger/` — durable state + the convergence state machine
 
@@ -344,11 +344,11 @@ orientation layer over it.
 
 | Module | Purpose |
 |---|---|
-| [`policy.py`](oto/metrics/policy.py) | Median-of-seeds aggregation, the CV≤15% stability gate, evidence-gated Tier-2 retirement, and the `should_run` / `should_repeat` gates. |
-| [`analytics.py`](oto/metrics/analytics.py) | Stage 5 analytics: CSV loading and per-cell aggregation. |
+| [`policy.py`](oto/metrics/cell_policy.py) | Median-of-seeds aggregation, the CV≤15% stability gate, evidence-gated Tier-2 retirement, and the `should_run` / `should_repeat` gates. |
+| [`analytics.py`](oto/metrics/benchmark_analytics.py) | Stage 5 analytics: CSV loading and per-cell aggregation. |
 | [`cell_status.py`](oto/metrics/cell_status.py) | Cell classification: RED (missing) / ORANGE (`<50%` ceiling) / graded coverage. |
 | [`ab_audit.py`](oto/metrics/ab_audit.py), [`ab_delta.py`](oto/metrics/ab_delta.py), [`ab_band.py`](oto/metrics/ab_band.py) | Stage 7 A/B: the native-vs-spoof delta arithmetic, the acceptance band, and the audit CLI. |
-| [`report.py`](oto/metrics/report.py) | Acceptance report: verdict compute + JSON writer; per-family coverage vs the pinned shipped manifest. |
+| [`report.py`](oto/metrics/acceptance_report.py) | Acceptance report: verdict compute + JSON writer; per-family coverage vs the pinned shipped manifest. |
 | [`report_html.py`](oto/metrics/report_html.py), [`report_sections.py`](oto/metrics/report_sections.py), [`report_css.py`](oto/metrics/report_css.py) | The HTML acceptance dashboard (JSON payload → one self-contained file). |
 | [`run_status.py`](oto/metrics/run_status.py), [`render_status.py`](oto/metrics/render_status.py) | Run-status text renderings and the live TTY panel. |
 | [`telemetry.py`](oto/metrics/telemetry.py) | Per-run CSV sampling of the GPU's clocks and power (non-root `sysfs`). |
@@ -359,13 +359,13 @@ orientation layer over it.
 |---|---|
 | [`cli.py`](oto/runners/stage_cli.py) | The driver's stage dispatch — the `--preflight`/`--bench`-style flag routing consumed by [`oto/cli/`](oto/cli/) (`oto <cmd>` itself lives there, in [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
 | [`driver.py`](oto/runners/driver.py) | The driver composition root: identity, toolchain, wiring. |
-| [`phases.py`](oto/runners/phases.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
+| [`phases.py`](oto/runners/phase_runner.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
 | [`benchmark.py`](oto/runners/benchmark.py) | The one place a Tensile subprocess is launched. |
 | [`reference.py`](oto/runners/reference_floor.py) | The gfx900 reference floor: build, resume, recall. |
-| [`auto.py`](oto/runners/auto.py), [`auto_prompt.py`](oto/runners/auto_prompt.py) | The `--auto` convergence loop and the five questions → `AutoPlan`. |
+| [`auto.py`](oto/runners/convergence_loop.py), [`auto_prompt.py`](oto/runners/auto_prompt.py) | The `--auto` convergence loop and the five questions → `AutoPlan`. |
 | [`synthesis.py`](oto/runners/library_build.py) | Stage 6: emit per-family library logic and build with `TensileCreateLibrary`. |
 | [`toolchain.py`](oto/runners/toolchain.py) | Toolchain discovery: the Tensile checkout and the ROCm toolchain. |
-| [`timing.py`](oto/runners/timing.py), [`clocks.py`](oto/runners/clocks.py) | The three numbers conflated as "runtime"; per-phase telemetry clocks and the thermal envelope. |
+| [`timing.py`](oto/runners/timing.py), [`clocks.py`](oto/runners/clock_telemetry.py) | The three numbers conflated as "runtime"; per-phase telemetry clocks and the thermal envelope. |
 
 ### `oto/harness/` — ground-truth candidate machinery
 

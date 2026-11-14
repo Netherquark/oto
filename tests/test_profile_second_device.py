@@ -1,4 +1,4 @@
-"""Second-profile gate tests (Refactor 2, C6.2-C6.4).
+"""Second-profile gate tests.
 
 Proves the ``DeviceProfile`` seam is load-bearing, not decorative: binding a
 *different* profile flips gate inputs and verdicts, and restoring returns

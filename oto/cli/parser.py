@@ -128,7 +128,7 @@ def _add_run(sub: Any) -> None:
              "  oto run --stage benchmark --family SS --dry-run",
              mutating=True)
     p.add_argument("--stage", nargs="+", default=[],
-                   help="Stages: 1..7 or preflight,candidate,benchmark,retirement,analytics,synthesis,report")
+                   help="preflight, candidate, benchmark, retirement, analytics, synthesis, report")
     _add_scope(p)
     _add_run_flags(p)
 
@@ -178,31 +178,31 @@ def _add_status_report(sub: Any) -> None:
 
 
 def _add_stages(sub: Any) -> None:
-    p = _add(sub, "preflight", "Stage 1: validate the run environment",
+    p = _add(sub, "preflight", "the preflight stage: validate the run environment",
              "  oto preflight\n  oto preflight --json",
              read=True)
     p.add_argument("--tensile-root")
     add_json_flag(p)
 
-    p = _add(sub, "candidate", "Stage 2: print the candidate plan by family",
+    p = _add(sub, "candidate", "the candidate stage: print the candidate plan by family",
              "  oto candidate\n  oto candidate --json",
              read=True)
     p.add_argument("--tensile-root")
     add_json_flag(p)
 
-    p = _add(sub, "retirement", "Stage 4: retire stable cells (registry-only)",
+    p = _add(sub, "retirement", "the retirement stage: retire stable cells (registry-only)",
              "  oto retirement --dry-run\n  oto retirement",
              mutating=True)
     p.add_argument("--tensile-root")
     add_dry_run_flag(p)
 
-    p = _add(sub, "analytics", "Stage 5: analytics summary for a run",
+    p = _add(sub, "analytics", "the analytics stage: analytics summary for a run",
              "  oto analytics\n  oto analytics --stage 5",
              read=True)
     p.add_argument("--tensile-root")
     add_json_flag(p)
 
-    p = _add(sub, "synthesis", "Stage 6: build and validate the native library",
+    p = _add(sub, "synthesis", "the synthesis/build stage: build and validate the native library",
              "  oto synthesis --dry-run\n  oto synthesis",
              mutating=True)
     p.add_argument("--tensile-root")

@@ -58,12 +58,12 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         self.analytics = analytics
         self.iteration = 0
         self.harvested_winners: dict[str, dict[str, Any]] = {}
-        # Option H Phase 1 (docs/implementation_plan.md Hplan.3 step 8). The ledger
+        # the convergence-loop ledger (see docs/implementation_plan.md). The ledger
         # is what makes bypassing the identical-fp skip correct, so its absence
         # is not a soft degradation -- it flips `skip_mutation_arm` back on.
         self.mutator = mutator
         self.ledger_enabled = bool(mutator and mutator.ledger_available())
-        # DB-hooked synthesis (Option H overhaul, 2026-10-09). The manifest
+        # DB-hooked synthesis (2026-10-09). The manifest
         # sampler alone decays to a trickle and never touches the wall
         # families; the DB mutator re-combines measured tile donors with the
         # forward-knob space so every iteration emits novel mutants. Built
@@ -75,9 +75,8 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
                 self.db_mutator = DBMutator(self.base_dir, mutator)
             except Exception:
                 self.db_mutator = None
-        # Outcome feedback (H.3.8) is a separate capability from novelty. Kept as
-        # its own flag so Hplan.3 step 11 ("revert the skip-bypass claim if phase 1
-        # lands partially") is a one-line change rather than an audit.
+        # Outcome feedback is a capability separate from novelty. Kept as its own
+        # flag so a skip-bypass correction is a one-line change, not an audit.
         self.has_outcome_signal = bool(mutator) and callable(
             getattr(mutator, "resolve_phase_dir", None))
         # Which run this agent is emitting into. Without it every proposal lands
@@ -85,7 +84,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         # cannot be answered after the fact and the ledger cannot be scoped per
         # run. Set by the driver once its run dir exists.
         self.run_id: str | None = None
-        # Phase 4 (Hplan.6): coverage guidance and multi-shape grading. Both
+        # Coverage guidance and multi-shape grading. Both
         # caches are per-run — the deck does not change within a run, and the
         # ledger only grows, so recomputing per cell is pure waste.
         self._shape_sweeps_cache: dict[str, list[str]] | None = None
@@ -130,7 +129,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         """Whether the mutation arm must honour the identical-fp skip.
 
         False only when the ledger is present *and* the outcome signal exists.
-        Hplan.3 step 8 is explicit that the bypass is a correctness dependency on
+        the design is explicit that the bypass is a correctness dependency on
         the ledger, not an optimisation: with no ledger, novelty cannot be
         established and every candidate looks novel. Step 11 adds the outcome
         requirement, because a novelty-only ledger over a non-functional search

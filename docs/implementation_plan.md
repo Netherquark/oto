@@ -21,7 +21,7 @@ footprint contract is `docs/shipped_floor_contract.md`; the campaign is driven b
 
 ```
 shipped gfx900 footprint (28 families, 4 patterns; the live phase list is
-    generated and printed by `oto/tools/all_runs.py`, never transcribed here)
+    generated and printed by `oto/tools/run_census.py`, never transcribed here)
     ↓ translate decks (docs/shipped_floor_contract.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
@@ -409,10 +409,10 @@ recalled — never re-rolled — by every acceptance report. It is a **floor, ne
 retirement signal**.
 
 ### 6. Migration order (don't rewrite blind)
-1. `oto/ledger/registry.py` + `oto/metrics/report.py` extracted, unit-tested, still fed by the existing
+1. `oto/ledger/registry.py` + `oto/metrics/acceptance_report.py` extracted, unit-tested, still fed by the existing
    data layout.
 2. `phases.yaml` transcribed (mechanical).
-3. `oto/metrics/policy.py` + `scheduler.py` extracted; gate-matrix re-run.
+3. `oto/metrics/cell_policy.py` + `scheduler.py` extracted; gate-matrix re-run.
 4. The driver takes over phase-by-phase-group; `--targets` scoping parity
    checked against the reference-floor chain.
 5. Agent loop + `--auto`; convergence budget configurable.
@@ -420,16 +420,15 @@ retirement signal**.
 
 ---
 
-## Option H — acceptance and exit criteria
+## Acceptance and exit criteria
 
-> Option H's design, evidence and the four landed phases are archived in
+> The convergence design's evidence and the four landed phases are archived in
 > `changelog.md`; the code contracts live in the `oto/ledger/*` and
 > `oto/tensile/synthesis/*` docstrings. These two sections are the live gates.
 
-### Hplan.7 Acceptance criteria
+### Acceptance criteria
 
-The thirteen criteria in `proposal.md` §H.7 are the authority and are load-bearing: each
-names the test that fails if its section is reverted. Three deserve emphasis here because
+The acceptance criteria below are load-bearing: each names the test that fails if its section is reverted. Three deserve emphasis here because
 they pin the plan's own claims rather than the design's:
 
 - the outcome classifier is validated against the **archived** mutant directories plus a
@@ -439,7 +438,7 @@ they pin the plan's own claims rather than the design's:
 - structural legality is asserted **without** calling `validate_config`, so the sampler
   cannot pass by leaning on the assertion it is supposed to precede.
 
-### Hplan.9 Exit criteria
+### Exit criteria
 
 - [x] `proposals` ledger exists, survives a registry flush on a DB copy, and never loses a
       row to a retention or rebuild operation. — `tests/test_ledger_durability.py` drives the
@@ -451,17 +450,17 @@ they pin the plan's own claims rather than the design's:
       counts the rejects).
 - [x] Outcome classification reproduces the archived mutant population exactly, with a
       control population at the expected yield. — `tests/test_mutator.py` +
-      `tests/test_phase1_readonly_gpu.py` replay the archived mutant directories through the
+      `tests/test_readonly_reporting.py` replay the archived mutant directories through the
       classifier and assert nothing non-functional is misread (every measured row is
       non-zero); the negative cache must **not** fire on it.
-- [x] Legal rate of emitted candidates ≥ the bar in `proposal.md` §H.7, measured live.
+- [x] Legal rate of emitted candidates ≥ the acceptance bar, measured live.
       100% (232/232) across all 29 deck cells, all 7 families proposing, measured with
-      `band=None` against the live registry (`/tmp/opencode/legality_p4.py`); the bar is
+      `band=None` against the live registry; the bar is
       95%. The mid-phase 88% reading (HS_HPA 0%, HH_HPA declining) was the pre-gate sampler
-      crossing `DepthU`/`GlobalSplitU` onto incompatible tiles; see Hplan.6 for the fix.
+      crossing `DepthU`/`GlobalSplitU` onto incompatible tiles; see the 2026-10-09 mutator fix in `changelog.md` for the disposition.
 - [x] `phases.yaml` byte-identical across an `--auto` run. Candidates are written to the
       per-run overlay by `mutator.write_overlay`; `mutate_and_feed`'s only `phases.yaml`
-      path is the pre-Phase-1 no-mutator fallback, which is not the configured path
+      path is the pre-ledger no-mutator fallback, which is not the configured path
       (`oto tune` constructs a `Mutator` via `agent.py`).
 - [x] Every proposal row carries `origin`, `run_id`, and a resolved `outcome`; `parent_fp`
       is non-null wherever a parent exists. The one deliberate exception: an exploration
@@ -484,7 +483,7 @@ they pin the plan's own claims rather than the design's:
 ## Next Move — Steps 1–6
 
 ### Step 1 — Approve + build the driver (the `bin/oto` front door), per the architecture above
-- Python driver + `phases.yaml` data-only manifest. `oto/metrics/policy.py` `should_run(phase,fp)`
+- Python driver + `phases.yaml` data-only manifest. `oto/metrics/cell_policy.py` `should_run(phase,fp)`
   encodes tier-1 → tier-2 → phase-1-first-only → identical-fp skip. All evidence
   writes via `json.dumps` + SQLite `records` INSERT. `--auto` loops
   run→report→harvest→mutate. Harvest **appends `phases.yaml`**, never a DB-only
@@ -545,7 +544,7 @@ they pin the plan's own claims rather than the design's:
 - [ ] Reference floor fully decided; verdicts
       re-derived per cell vs the recalled `gfx900_ref_*` chain.
 - [x] Verdicts grade like-for-like (§R56.3-A resolved 2026-10-23): one
-      invocation protocol per pairing (`oto/metrics/protocol.py`), stamps in
+      invocation protocol per pairing (`oto/metrics/measurement_protocol.py`), stamps in
       records/kernel_db/payload, mixed + isolated numbers preserved as
       provenance; the report regen reproduced the honest regrade (19/19/0,
       7 protocol artefacts un-inflated). R56.3-B (per-cell protocol-normalised
@@ -561,26 +560,23 @@ they pin the plan's own claims rather than the design's:
       ceilings (GSU/WGM/MT/TT right-sizing recorded as a first-class knob campaign).
 - [ ] Statistics/HTML tooling intact end-to-end after the refactor (Verify by inspecting the
       live `gfx90c_results/acceptance_report.json` + `acceptance_report.html` that the current
-      `oto/metrics/report.py` pipeline writes).
+      `oto/metrics/acceptance_report.py` pipeline writes).
 - [ ] Peak-table prose corrected everywhere to single-rate 1613 for BF16/INT8.
 - [ ] Final synthesis + zero-leak anti-alias + whole-library native-vs-spoof readout.
-- [x] **Option H decision recorded** — **APPROVED 2026-10-09** (§H.10 answered in
-      full; see `changelog.md` 2026-10-12). Approval of the design and the
+- [x] **The convergence-design decision recorded** — **APPROVED 2026-10-09** (see `changelog.md` 2026-10-12). Approval of the design and the
       go-ahead for the mutation arm were the same call this time.
 
 ## Relevant Files
 - `implementation_plan.md` (this plan), `docs/gfx90c_theoretical_limits.md`
   (ceiling authority), `docs/shipped_floor_contract.md` (footprint contract), `docs/potential_configs.md`
   (candidate deck), `changelog.md` (evolution), `docs/results.md` (data, append-only),
-  `claude.md` (entry contract), `docs/knowledge_base.md` (data law §10), `proposal.md`
-  (measurement-protocol history + the Option H mutator design; its §Option H addendum is
-  the evidence and rationale behind the archived Option H plan, now in
-  `changelog.md`).
+  `claude.md` (entry contract), `docs/knowledge_base.md` (data law §10), `changelog.md` (measurement-protocol history and the mutator design; the
+  Option-H addendum is the evidence and rationale behind the archived design).
 - `command.txt` — the current user-run invocation (native deck, single iteration,
   no mutations). Its header records why `--auto` cannot express that today
   (archived: `changelog.md` 2026-10-12).
-- Live repo: `oto/device/loader.py`, `oto/tensile/library.py` (gfx900 dat parse + reference
-  chain), `oto/metrics/report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
+- Live repo: `oto/device/loader.py`, `oto/tensile/shipped_floor.py` (gfx900 dat parse + reference
+  chain), `oto/metrics/acceptance_report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
   native gfx90c patch (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile
   tree), `gfx90c_results/registry.db`, `gfx90c_runs/` (`gfx900_ref_*` + `run_*`).
 - Sanctioned prior conclusions: `archive/prior_insights.md`,

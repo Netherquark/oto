@@ -226,7 +226,7 @@ class PhaseMixin:
         phases_path: Path | None = None
     ) -> list[dict[str, Any]]:
         """
-        Run a set of targets with policy filtering (Stage 1-4).
+        Run a set of targets with policy filtering (the preflight stage-4).
         target_ids matches against phase_id, label, or clean target key.
         phases_path overrides the manifest source.
         """

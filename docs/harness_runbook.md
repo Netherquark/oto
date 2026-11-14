@@ -21,7 +21,7 @@ oto/harness/coverage_map.py       # legal geometry space per cell + what the cor
 oto/harness/tensile_probe.py     # the legality oracle: Tensile's own verdict on a config
 oto/harness/deck_probe.py          # the pre-run sweep: every unmeasured deck row through Tensile
 oto/harness/coverage_graph.py      # the coverage graphs: the legal space, what is unexplored, the peaks and the traps
-oto/metrics/report_figures.py        # the report's problem-space coverage section (reads the figures' hand-off)
+oto/metrics/report_coverage.py        # the report's problem-space coverage section (reads the figures' hand-off)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)

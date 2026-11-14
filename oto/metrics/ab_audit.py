@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Stage 7 acceptance A/B audit, and the CLI that prints it.
+"""the acceptance-report stage acceptance A/B audit, and the CLI that prints it.
 
 Owns: ``audit`` (classify every cell in both arms with a certainty grade),
 ``cell_deltas`` (the canonical per-cell pairing), ``_proposal_coverage``
-(Option-H Phase-3 coverage from the ledger), ``print_report`` and ``main``.
+(cell coverage from the ledger), ``print_report`` and ``main``.
 Does NOT own: the record loading (oto.metrics.ab_records), the identity
 (oto.metrics.ab_identity), the band (oto.metrics.ab_band), or the report layout
 (oto.metrics.acceptance_report).
@@ -267,7 +267,7 @@ def audit(base: Path = BASE, band_pct: float | None = None,
     }
 
 def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) -> dict[str, Any]:
-    """Option H Phase 3 coverage: `n`, spread, and the novel/replicate split.
+    """cell coverage coverage: `n`, spread, and the novel/replicate split.
 
     Read from the ledger rather than recomputed from the run directories, because
     the ledger is the only place a proposal's *origin* is recorded. A cell whose
@@ -279,7 +279,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) 
     calling `ab_audit.audit()` from inside `audit()` would recurse.
 
     Returns a zeroed summary rather than raising when the `proposals` table is
-    absent (pre-Phase-1 registries), so this stays additive on an older DB.
+    absent (pre-ledger registries), so this stays additive on an older DB.
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     try:

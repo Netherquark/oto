@@ -43,9 +43,9 @@ How to run an audit:
 1. User invokes an expert agent (or several in parallel) over the repo.
 2. Scope = the whole `oto` suite (`bin/oto` / `oto/runners/driver.py` +
    `oto/ledger/registry.py`,
-   `oto/tensile/candidate.py`, `oto/metrics/policy.py`,
-   `oto/metrics/analytics.py`, `oto/ledger/convergence_agent.py`, `oto/metrics/telemetry.py`,
-   `oto/metrics/report.py`, `oto/device/loader.py`) plus the docs/logs it reads and
+   `oto/tensile/candidate.py`, `oto/metrics/cell_policy.py`,
+   `oto/metrics/benchmark_analytics.py`, `oto/ledger/convergence_agent.py`, `oto/metrics/telemetry.py`,
+   `oto/metrics/acceptance_report.py`, `oto/device/loader.py`) plus the docs/logs it reads and
    writes.
 3. Agent reports each finding as an exact `file:line` with repro/evidence; new
    entries are appended to the register. Existing entries are never edited in

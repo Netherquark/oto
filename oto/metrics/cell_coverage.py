@@ -270,7 +270,7 @@ def select_parent(cell: dict[str, Any],
                   fallback: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Choose the parent for the next batch by LCB, never by raw winner.
 
-    `Hplan.5` step 3. `harvest()` today takes ``max(median_gflops)``, which is how
+    Lower-confidence-bound parent selection. `harvest()` today takes ``max(median_gflops)``, which is how
     a noise-level win becomes the parent of the next batch: a config whose median
     is high because of one lucky seed outranks a config that is merely good.
     Ranking by the lower bound inverts exactly that case.

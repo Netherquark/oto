@@ -70,9 +70,7 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                                      "test_reference_tiers/test_reference_floor",
                 "execute_phase": "decomposed into _refuse_phase/_start_record/"
                                  "_benchmark_phase and the _*_record builders; "
-                                 "proved by the test_phase1_* suite "
-                                 "(split of test_phase1_integration.py, "
-                                 "4b9fcb4)",
+                                 "proved by the outcome-writeback/overlay-merge suite",
                 "_run_tensile_benchmark": "decomposed into _refuse_reuse_of/"
                                           "_tensile_command/_spawn_tensile/"
                                           "_supervise_tensile; proved by "
@@ -85,7 +83,7 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                                               "verify_report_render.py",
                 "synthesize_library": "decomposed into _emit_* helpers; proved "
                                       "by test_*synthes*",
-                # Second decomposition pass (2026-10-16, AC 1b). These three
+                # Second decomposition pass (2026-10-16, the 60-line rule). These three
                 # were not registered when the pass ran, which left this check
                 # red on arrival -- a guard that is red before you touch
                 # anything is one nobody reads. Each is a statement-preserving
@@ -100,9 +98,7 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                             "and the driver tests that construct the loop",
                 "run_phases": "decomposed into the phase handlers in "
                               "oto/runners/phase_runner.py; proved by "
-                              "the test_phase1_* suite "
-                              "(split of test_phase1_integration.py, "
-                              "4b9fcb4)",
+                              "the outcome-writeback/overlay-merge suite",
                 }
 
 # Modules to normalise: replace these substrings before comparing so the moved

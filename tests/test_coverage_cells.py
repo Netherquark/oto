@@ -1,4 +1,4 @@
-"""Tests for Option H Phase 3 (coverage.py) — `Hplan.5`.
+"""Tests for cell coverage: the three cell states and parent fitness.
 
 The three cell states are the load-bearing part: the failure mode this phase
 exists to prevent is a cell that has never been tried being recorded the same
@@ -25,7 +25,7 @@ def _cell(proposals, samples):
 
 
 class TestThreeStatesStayDistinct(unittest.TestCase):
-    """Hplan.5 step 2 / §H.1.2a."""
+    """state transition into EXPLORE."""
 
     def test_no_candidate_is_explore_not_retired(self):
         cell = _cell([_proposal("SS", "1x1x1", "a")], {"a": [10.0] * 8})
@@ -143,7 +143,7 @@ class TestLowerConfidenceBound(unittest.TestCase):
 
 
 class TestSelectParent(unittest.TestCase):
-    """Hplan.5 step 3: LCB, never raw winner."""
+    """LCB parent selection, never raw winner."""
 
     def _cell(self):
         return _cell([_proposal("SS", "1", "steady"),

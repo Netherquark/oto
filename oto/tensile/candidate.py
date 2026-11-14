@@ -112,7 +112,7 @@ def _mutants_from_budget(
 
 
 class CandidateGenerator(CandidateEmitMixin):
-    """Stage 2 candidate generation engine."""
+    """the candidate stage candidate generation engine."""
 
     def __init__(self, base_dir: Path, registry=None):
         """Set up the generator.

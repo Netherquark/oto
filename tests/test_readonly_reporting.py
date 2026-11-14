@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 1 read-only reporting and GPU-loss abort regression tests.
+"""Read-only reporting and GPU-loss abort regression tests.
 
 Read-only surfaces must never mutate the registry, and a lost GPU during a run
 must abort the outcome write-back cleanly instead of persisting garbage.

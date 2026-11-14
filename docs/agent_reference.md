@@ -50,7 +50,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/device/device_detect.py` | `detect_codename()` — auto-detect via rocminfo |
 | `oto/yaml_cached.py` | The project's YAML reader: libyaml when present, memoised by content |
 | `oto/tensile/gates/memo.py` | The content-keyed memo the pure legality gates use |
-| `oto/tensile/decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |
+| `oto/tensile/family_decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |
 | `oto/tensile/gates/occupancy.py` | LDS + VGPR occupancy gate |
 | `oto/tensile/gates/loads.py` | Classic-path global-load divisibility + 16B cap |
 | `oto/tensile/gates/assembly.py` | Assembly-class gate (MFMA rejection is here) |
@@ -65,8 +65,8 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/tensile_probe.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
 | `oto/harness/deck_probe.py` | The pre-run sweep: every *unmeasured* deck row through Tensile's kernel writer, resumable, CPU-only |
 | `oto/harness/coverage_graph.py` | The coverage graphs: the legal geometry space per cell as a 2D picture, with the unexplored part hatched, the peaks ringed green and the traps ringed red |
-| `oto/metrics/report_figures.py` | The acceptance report's problem-space coverage section (the figures + their numbers) |
-| `oto/tensile/patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |
+| `oto/metrics/report_coverage.py` | The acceptance report's problem-space coverage section (the figures + their numbers) |
+| `oto/tensile/contraction_patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |
 | `oto/harness/candidate_rows.py` | The candidate deck (`PLAN_BATCH`) and the emitted-overlay rows |
 | `oto/tensile/config_writer.py` | The launch boundary: `FORWARDED_KNOBS` / `NOT_FORWARDED_KNOBS` |
 | `tests/conftest.py` | The `serial` / `preflight` markers, the serial rule, the corpus fixtures |
@@ -79,7 +79,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `tests/test_corpus_census.py` | Corpus-history census: median basis, geometry collapse, per-cell history |
 | `tests/test_donor_mutator.py` | GlobalSplitU ban guard |
 | `tests/test_deck_review.py` | Deck-review scores counter guard |
-| `tests/test_function_length.py` | AC 1b (functions ≤ 60 lines) |
+| `tests/test_function_length.py` | the 60-line function rule (tests/test_function_length.py) |
 
 ## Hardware — gfx90c (reads from `docs/gfx90c_tuning_guide.md` §0–§1.2)
 

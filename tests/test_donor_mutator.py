@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """test_donor_mutator.py — the DB-hooked mutator synthesises novel, wide+narrow.
 
-Option H overhaul (2026-10-09). The manifest sampler decays and starves the
+The DB-hooked mutator re-combines measured tile donors with the
 wall families; these tests pin the replacement's guarantees:
 
   * synthesis returns the requested number of mutants for the CC/ZZ wall

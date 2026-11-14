@@ -114,7 +114,7 @@ def kernel_db_rows() -> dict[str, list[dict[str, Any]]]:
 
 @pytest.fixture(scope="session")
 def default_profile():
-    """The default (gfx90c) device profile, loaded once per session (Refactor 2)."""
+    """The default (gfx90c) device profile, loaded once per session."""
     from oto.device.loader import load_profile
 
     return load_profile("gfx90c")

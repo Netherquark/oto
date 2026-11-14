@@ -258,7 +258,7 @@ class ReferenceMixin:
         release_held=False keeps the audited-but-under-specified T2 kernels pinned
         out of the deck. Pass --release-under-specified to finally measure them.
 
-        Refactor 2: a profile with no spoof_reference runs native-only.
+        A profile with no spoof_reference runs native-only.
         """
         if not getattr(self, "profile", None) or not getattr(self.profile, "spoof_reference", ""):
             print("[reference] no spoof_reference in profile; native-only run")

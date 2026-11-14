@@ -314,7 +314,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   (`candidate._non_generative_knob_rejection`) — every family, 0/28 built. The
   *writer* still forwards any value (its contract test probes APM=2 to prove the
   forwarding), so this is a draw-time refusal, beside `AssertSizeMultiple: [1]`;
-  recorded in `oto/tensile/decks.py` and out of the sweep (docs/potential_configs.md
+  recorded in `oto/tensile/family_decks.py` and out of the sweep (docs/potential_configs.md
   §R24).
 - **`StreamK` is unavailable on gfx90c**: rejected unless
   `MIWaveGroup0×MIWaveGroup1 == 4` (`Tensile/SolutionStructs.py:2976`) —

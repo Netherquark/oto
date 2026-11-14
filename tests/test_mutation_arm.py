@@ -2,15 +2,14 @@
 """
 test_mutation_arm.py — the mutation arm must not touch the curated deck.
 
-This is the behavioural half of Option H Phase 1. The ledger tests prove the
-table works; these prove the loop actually uses it, and that the two conditions
-Hplan.3 flags as correctness dependencies really do flip the behaviour:
+This is the behavioural half of the ledger. The ledger tests prove the table
+works; these prove the loop actually uses it:
 
   * ledger present + outcome signal present -> bypass the identical-fp skip
-  * ledger missing                            -> skip stays ON (step 8)
-  * ledger present but no outcome signal      -> skip stays ON (step 11)
+  * ledger missing                            -> skip stays ON
+  * ledger present but no outcome signal      -> skip stays ON
 
-Step 11 is the one that is easy to get wrong. A novelty-only ledger over a
+The no-outcome-signal case is the one that is easy to get wrong. A novelty-only ledger over a
 non-functional search makes a run *look* productive while measuring nothing, so
 novelty alone must not unlock the bypass.
 
@@ -210,7 +209,7 @@ class ValidationAssertionTests(AgentTestCase):
 
 
 class SkipBypassTests(AgentTestCase):
-    """Hplan.3 steps 8 and 11."""
+    """skip-bypass correctness dependency behaviour."""
 
     def test_bypass_allowed_with_ledger_and_outcome(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
@@ -234,7 +233,7 @@ class SkipBypassTests(AgentTestCase):
         assert self.agent.skip_mutation_arm(), "a missing ledger must not unlock novelty-based bypass"
 
     def test_skip_re_enabled_without_outcome_signal(self):
-        """Step 11: novelty alone is not enough."""
+        """The no-outcome-signal case: novelty alone is not enough."""
         self.make_agent([{"MacroTile": "64x64x16"}])
         with mock.patch.object(type(self.mutator), "resolve_phase_dir", None):
             agent = ConvergenceAgent(

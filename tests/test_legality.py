@@ -1,9 +1,9 @@
-"""Tests for the Option H Phase 2 legality prior (`legality.py`).
+"""Tests for the the legality prior legality prior (`legality.py`).
 
 The core assertions are deliberately structural: sampled candidates are checked
 against the hard walls and the manifest-derived domains *without* calling
 `scheduler.validate_config`. Re-running the full assertion over the sampler
-would measure the assertion, not the prior (Hplan.7).
+would measure the assertion, not the prior.
 """
 
 import random
