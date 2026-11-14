@@ -20,7 +20,7 @@ Owns: read-only decision support for candidate generation:
 
 Does NOT own: the winners themselves (`oto.harness.resolve_cells`), the
 acceptance verdicts (`oto.metrics.ab_audit`), the knob domains
-(`oto.tensile.synthesis.db_knobs`), or the gates
+(`oto.tensile.synthesis.donor_knobs`), or the gates
 (`oto.tensile.gates`). It re-implements no aggregation: it drives the repo's own
 loaders, so it cannot disagree with the pipeline that produced the ledger.
 
@@ -49,7 +49,7 @@ sys.path.insert(0, str(BASE))
 from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.gates.occupancy import ldspad_feasible
-from oto.tensile.synthesis.db_knobs import FORWARD_KNOB_DOMAINS
+from oto.tensile.synthesis.donor_knobs import FORWARD_KNOB_DOMAINS
 
 #: The A/B bases, lenient to strict, with what each one actually asks. The
 #: names and their meaning live in `oto.metrics.ab_delta._stat`; this is the
@@ -198,7 +198,7 @@ def _family_template(fam: str, profile=None) -> dict[str, Any]:
 
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
-    from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
+    from oto.tensile.synthesis.donor_knobs import _DEFAULT_PATTERN
     return {
         "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(fam, "S",),
@@ -280,7 +280,7 @@ def _legality(base: Path, families: list[str] | None) -> int:
     are in `_classify_draw` and `_measured_tiles`.
     """
     from oto.tensile.candidate import CandidateGenerator
-    from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN, census_domain
+    from oto.tensile.synthesis.donor_knobs import _DEFAULT_PATTERN, census_domain
     from oto.tensile.synthesis.tile_space import reconcile_tile
 
     gen = CandidateGenerator(base)

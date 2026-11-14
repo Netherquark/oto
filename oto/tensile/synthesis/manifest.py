@@ -10,7 +10,7 @@ here unchanged, so the public names do not move.
 
 Does NOT own: the legality prior it draws inside (oto.tensile.legality), the
 ledger that records the drawn candidate (oto.ledger.mutator), the DB-hooked
-synthesis (oto.tensile.synthesis.db), or the tile/group vocabulary itself
+synthesis (oto.tensile.synthesis.donor_mutator), or the tile/group vocabulary itself
 (oto.tensile.synthesis.tile_space).
 
 Public API: family_shape_sweeps, sweep_for_family, reconcile_tile,

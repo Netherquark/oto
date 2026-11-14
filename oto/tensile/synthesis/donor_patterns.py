@@ -17,8 +17,8 @@ Both ``_forward_draws`` and the family patterns draw through ``_joint_domain``,
 never through ``forward_domain`` directly: a forward knob's *legal* values depend
 on the rest of the tile, so treating the domains as independent axes generates
 configs the launch boundary then refuses (``potential_configs.md`` §R23).
-Does NOT own: the domains they draw from (oto.tensile.synthesis.db_knobs) or the
-mutant synthesis that gates them (oto.tensile.synthesis.db).
+Does NOT own: the domains they draw from (oto.tensile.synthesis.donor_knobs) or the
+mutant synthesis that gates them (oto.tensile.synthesis.donor_mutator).
 Public API: DbPatternsMixin.
 """
 
@@ -28,7 +28,7 @@ import contextlib
 import random
 from typing import Any
 
-from oto.tensile.synthesis.db_knobs import (
+from oto.tensile.synthesis.donor_knobs import (
     _FORWARD_DRAWS,
     FORWARD_KNOB_DOMAINS,
     forward_domain,

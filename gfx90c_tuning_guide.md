@@ -12,7 +12,7 @@
 > §11 is the loop for proposing the next candidate.
 > §1.1/§1.2 are the primary-source knob reference — Tensile's own legal domains
 > and the 7-CU geometry behind every tile choice; §9.1 is the virgin-axis census.
-> Before changing a domain in `oto/tensile/synthesis/db_knobs.py`, read §1.1 and
+> Before changing a domain in `oto/tensile/synthesis/donor_knobs.py`, read §1.1 and
 > then prove the change with `python3 -m oto.tools.deck_review legality`.
 
 ## 0. The one-line truth
@@ -87,7 +87,7 @@ deciding which class an axis is in: ask Tensile
 
 ### 1.1 Primary-source legal domains (Tensile's own `validParameters`)
 
-The domains in `oto/tensile/synthesis/db_knobs.py` are a *narrowing* of Tensile's
+The domains in `oto/tensile/synthesis/donor_knobs.py` are a *narrowing* of Tensile's
 legal set, so the legal set has to be written down somewhere or every domain
 change is guesswork. This is it — read from `Tensile/Common.py`'s
 `validParameters` (`ROCm/Tensile@develop`). **Line numbers deliberately omitted**;
@@ -472,7 +472,7 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 | **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | **DECKED** — CC/ZZ pad rows (A/B {1,2,4}) on the winner geometries in the seed; ZZ pads on the du8 tile only (32x32x16 winner is budget-full at 16 B/element); TTY benchmark next |
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
 | **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
-| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/db.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
+| **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/donor_mutator.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
 
 ### 9.1 The virgin axes — where the floor has zero variance
 
@@ -559,7 +559,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    gate refuses**). Keep the pool for the run; strip `phase_cand_*` ids AFTER
    the run to keep later runs light (the mirror preserves them) —
    `oto.harness.generate_candidates --prune-candidates` (archives first).
-3. Mutations are **DB-hooked** (`oto/tensile/synthesis/db.py`): every iteration synthesises
+3. Mutations are **DB-hooked** (`oto/tensile/synthesis/donor_mutator.py`): every iteration synthesises
    novel wide (DB tile donors × forward draws) + narrow (single-knob deltas on
    pads/PGR/PLR/NLCA/WGM/StaggerU/GLVW) + direction (floor-steal) mutants for
    every **active** cell (below-ceiling winners only — settled cells are
@@ -640,7 +640,7 @@ Three builders exist, all keyed by family/cell:
 - **Neighbour search on a harvested winner** — `CandidateGenerator.mutate_winner`
   in `oto/tensile/candidate.py`: ≤2-knob deltas over `MacroTile`, `ThreadTile`,
   `NLCA`, `VectorWidth`, `WorkGroupMapping`, `GlobalSplitU`.
-- **DB-hooked synthesis** — `oto/tensile/synthesis/db.py` (`DBMutator`): WIDE
+- **DB-hooked synthesis** — `oto/tensile/synthesis/donor_mutator.py` (`DBMutator`): WIDE
   (DB tile donors × 5 forward draws), NARROW (1–3 knobs from
   `FORWARD_KNOB_DOMAINS`: LdsPadA/B `{0,1,2,4}`, PGR/PLR `{0,1}`, GLVW A/B
   `{1,2,4}`, NLCA `{1,2,3}`, WGM `{1,4,8}`, StaggerU `{0,8,16,32}`,

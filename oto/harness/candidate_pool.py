@@ -37,7 +37,7 @@ from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.occupancy import ldspad_feasible
 from oto.tensile.shape_order import ordered_shapes
-from oto.tensile.synthesis.db_knobs import forward_domain
+from oto.tensile.synthesis.donor_knobs import forward_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

@@ -43,9 +43,9 @@ MOVES = [
                       "oto/tensile/gates/vgpr_model.py"]),
     ("synthesis.py", ["oto/tensile/synthesis/manifest.py",
                       "oto/tensile/synthesis/tile_space.py"]),
-    ("db_mutator.py", ["oto/tensile/synthesis/db.py",
-                      "oto/tensile/synthesis/db_knobs.py",
-                      "oto/tensile/synthesis/db_patterns.py",
+    ("db_mutator.py", ["oto/tensile/synthesis/donor_mutator.py",
+                      "oto/tensile/synthesis/donor_knobs.py",
+                      "oto/tensile/synthesis/donor_patterns.py",
                       "oto/tensile/synthesis/tile_space.py"]),
     ("registry.py", ["oto/ledger/registry.py", "oto/ledger/registry_core.py",
                      "oto/ledger/queries.py", "oto/ledger/proposals.py"]),
@@ -461,6 +461,11 @@ RENAMES: dict[str, str] = {
     "oto/harness/deck_check.py": "oto/harness/deck_probe.py",
     "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py",
     "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py",
+    "oto/tensile/synthesis/db.py": "oto/tensile/synthesis/donor_mutator.py",
+    "oto/tensile/synthesis/db_knobs.py": "oto/tensile/synthesis/donor_knobs.py",
+    "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py",
+    "oto/ledger/queries.py": "oto/ledger/registry_queries.py",
+    "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
 }
 
 def _postsplit_check(ref: str) -> int:

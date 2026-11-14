@@ -41,7 +41,7 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   report-generation failure prints a warning and returns `None` instead of
   failing loudly — both are review-grade swallowed exceptions, open since
   the Refactor-1 pass.
-- **Dead mutators in `oto/tensile/synthesis/db_patterns.py`.** The four
+- **Dead mutators in `oto/tensile/synthesis/donor_patterns.py`.** The four
   `_<fam>_mutation_pattern` methods (`_ss/_dd/_cc/_zz`) are dead base-deck
   leftovers, not called by `synthesize_mutants`; `_ss_mutation_pattern`
   reads the nonexistent `FORWARD_KNOB_DOMAINS["GSU"]` (latent KeyError).

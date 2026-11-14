@@ -7,7 +7,7 @@ survive (``_scheduler``/``ldspad_feasible`` CPU gate + novelty) and the per-fami
 mutation patterns (``_ss_``, ``_dd_``, ``_cc_``, ``_zz_``) plus the
 floor-direction walk that moves a parent toward the shipped winner.
 Does NOT own: the forward-knob domains it draws from
-(oto.tensile.synthesis.db_knobs), the manifest-driven synthesis
+(oto.tensile.synthesis.donor_knobs), the manifest-driven synthesis
 (oto.tensile.synthesis.manifest), or the ledger that records what it emits
 (oto.ledger.mutator).
 
@@ -53,12 +53,12 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
-from oto.tensile.synthesis.db_knobs import (
+from oto.tensile.synthesis.donor_knobs import (
     _DEFAULT_PATTERN,
     _DONOR_POOL,
     FORWARD_KNOB_DOMAINS,
 )
-from oto.tensile.synthesis.db_patterns import DbPatternsMixin
+from oto.tensile.synthesis.donor_patterns import DbPatternsMixin
 from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 

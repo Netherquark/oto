@@ -496,7 +496,7 @@ losing information).
     `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest
     cache vs the binary .dat; newcomers swap them every time.
-20. `oto/tensile/synthesis/db.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis
+20. `oto/tensile/synthesis/donor_mutator.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis
     kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
 
 Honourable mentions (kept, with notes): `oto/yamlio.py`, `oto/runners/auto.py`,
@@ -630,7 +630,7 @@ independently shippable.
 17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
-20. `oto/tensile/synthesis/db.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
+20. `oto/tensile/synthesis/donor_mutator.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
 
 ---
 
@@ -844,9 +844,9 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 | `oto/tensile/library.py` | `oto/tensile/shipped_manifest.py` | inverted pair with `shipped_library.py` | medium |
 | `oto/tensile/gates/ldspad_gate.py` | `oto/tensile/gates/ldspad.py` | redundant `_gate` suffix | low |
 | `oto/tensile/gates/occupancy_common.py` | `oto/tensile/gates/gate_common.py` | named for one of two consumers | low |
-| `oto/tensile/synthesis/db.py` | `oto/tensile/synthesis/donor_mutator.py` | "db" is insider shorthand | low |
-| `oto/tensile/synthesis/db_knobs.py` | `oto/tensile/synthesis/donor_knobs.py` | same | low |
-| `oto/tensile/synthesis/db_patterns.py` | `oto/tensile/synthesis/donor_patterns.py` | same | low |
+| `oto/tensile/synthesis/donor_mutator.py` | `oto/tensile/synthesis/donor_mutator.py` | "db" is insider shorthand | low |
+| `oto/tensile/synthesis/donor_knobs.py` | `oto/tensile/synthesis/donor_knobs.py` | same | low |
+| `oto/tensile/synthesis/donor_patterns.py` | `oto/tensile/synthesis/donor_patterns.py` | same | low |
 | `oto/harness/rows_ladders.py` | `oto/harness/rows_ladders.py` | underscore-private yet effectively public | medium (import-order fragility) |
 | `oto/harness/rows_frontier.py` | `oto/harness/rows_frontier.py` | same | medium |
 | `oto/harness/rows_smallcells.py` | `oto/harness/rows_smallcells.py` | same | medium |
@@ -995,7 +995,7 @@ independently shippable.
 17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
-20. `oto/tensile/synthesis/db.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
+20. `oto/tensile/synthesis/donor_mutator.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
 
 Honourable mentions (kept, with notes): `oto/yamlio.py`, `oto/runners/auto.py`,
 `oto/metrics/read_thermals.py`, `oto/metrics/analytics.py` ("Stage 5"), `oto/tools/consolidate_*`

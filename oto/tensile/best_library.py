@@ -35,7 +35,7 @@ from oto.metrics.protocol import UNKNOWN, protocol_of
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
 from oto.tensile.library_parity import parity_report
-from oto.tensile.synthesis.db import DBMutator
+from oto.tensile.synthesis.donor_mutator import DBMutator
 
 
 def _tensile_candidates() -> list[str]:

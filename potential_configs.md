@@ -1569,7 +1569,7 @@ Practically, reorder §11's loop as: **prune by the analytic model first
 
 ### R6 — two live wastes in the mutator's domain table (and one latent crash).
 
-`oto/tensile/synthesis/db_knobs.py:FORWARD_KNOB_DOMAINS`:
+`oto/tensile/synthesis/donor_knobs.py:FORWARD_KNOB_DOMAINS`:
 
 | current | problem | fix |
 |---|---|---|
@@ -1577,7 +1577,7 @@ Practically, reorder §11's loop as: **prune by the analytic model first
 | `WorkGroupMapping: (1,4,8)` | misses the negative (I/J-swap) family and the small-box set; 8 is wrong for 7 CUs (R3). | `(1,2,3,4,−1,−4)` |
 | `StaggerUStride: (0,256,512)` | Tensile silently raises `StaggerUStride` to a whole multiple of `DepthU × bpe`, so **`256` becomes 64** for DU=16/bpe=4. Most of the domain collapses to one point. | `(0,64,128,256)` — 64/128 are already legal in `STAGGER_STRIDE_DOMAIN` |
 
-Plus a latent crash: `oto/tensile/synthesis/db_patterns.py` reads
+Plus a latent crash: `oto/tensile/synthesis/donor_patterns.py` reads
 `FORWARD_KNOB_DOMAINS["GSU"]` (twice) but the table keys it **`GlobalSplitU`** —
 a `KeyError` the moment that branch is taken.
 

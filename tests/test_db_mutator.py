@@ -31,7 +31,7 @@ sys.path.insert(0, str(REPO))
 
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.occupancy import ldspad_feasible
-from oto.tensile.synthesis.db import FORWARD_KNOB_DOMAINS, DBMutator
+from oto.tensile.synthesis.donor_mutator import FORWARD_KNOB_DOMAINS, DBMutator
 
 
 class _StubMutator:
@@ -253,7 +253,7 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
                         self._assert_legal(family, parent, draw)
 
     def test_family_patterns_are_jointly_legal(self):
-        """Same for the four per-family passes (db.synthesis.db_patterns)."""
+        """Same for the four per-family passes (db.synthesis.donor_patterns)."""
         emitted = {}
         for family in ("SS", "DD", "CC", "ZZ"):
             pattern = getattr(self.db, f"_{family.lower()}_mutation_pattern")
@@ -269,7 +269,7 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
 
     def test_joint_domain_is_a_subset_of_the_forward_domain(self):
         """The filter narrows; it never invents a value the family may not draw."""
-        from oto.tensile.synthesis.db_knobs import FORWARD_KNOB_DOMAINS, forward_domain
+        from oto.tensile.synthesis.donor_knobs import FORWARD_KNOB_DOMAINS, forward_domain
         for family, parent in PARENTS.items():
             for knob in FORWARD_KNOB_DOMAINS:
                 with self.subTest(family=family, knob=knob):
@@ -282,7 +282,7 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
         Each of these is a value the *naive* independent draw still offers:
         the assertion is only meaningful because the full domain is wider.
         """
-        from oto.tensile.synthesis.db_knobs import forward_domain
+        from oto.tensile.synthesis.donor_knobs import forward_domain
 
         # GlobalLoadVectorWidth must be the tile's VectorWidth or 1
         # (SolutionStructs:4583-4596): 2 is offered by the SS domain and
