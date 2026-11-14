@@ -35,7 +35,7 @@ from oto.metrics.family_attribution import (
     family_to_dtype,
     resolve_cell_family,
 )
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 __all__ = [
     "CLOCK_MIN_COVERAGE",

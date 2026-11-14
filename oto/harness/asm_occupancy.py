@@ -48,7 +48,7 @@ _HERE = Path(__file__).resolve().parents[2]
 # (attribute reads re-bind on rebind_profile()); nothing in this
 # module may import-bind a scalar.
 from oto.device import loader as _loader
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 #: Wave size on gfx9. Fixed at 64; there is no wave32 mode on this target.
 WAVE = 64

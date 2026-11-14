@@ -22,7 +22,7 @@ from oto.device import loader as _loader
 from oto.metrics.benchmark_analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.cell_policy import check_retirement_eligibility
 from oto.metrics.measurement_protocol import classify
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes
 
 

@@ -47,7 +47,7 @@ BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile.gates.occupancy import ldspad_feasible
 from oto.tensile.synthesis.donor_knobs import FORWARD_KNOB_DOMAINS
 

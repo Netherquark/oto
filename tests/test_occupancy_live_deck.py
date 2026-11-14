@@ -63,7 +63,7 @@ class TestTensileBuildProof(unittest.TestCase):
         are schema-validated before use; anything else fails loudly, and no
         /tmp path is ever consulted.
         """
-        from oto.runners.paths import results_rel
+        from oto.runners.result_paths import results_rel
         env = os.environ.get("OCCUPANCY_PROOF")
         if env:
             return Path(env)

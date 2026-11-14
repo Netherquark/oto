@@ -7,7 +7,7 @@ in-place rewrite as a violation; the telemetry funnel; and the cheapest LEGAL
 live-deck phases for a smoke run.
 
 Does NOT own: the ledger it counts (oto.ledger.registry) or the clocks it parses
-(oto.runners.clocks).
+(oto.runners.clock_telemetry).
 
 Public API: snapshot, diff_snapshots, telemetry, cheapest, main.
 
@@ -46,8 +46,8 @@ from typing import Any
 
 from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 BASE = Path(__file__).resolve().parents[2]
 if str(BASE) not in sys.path:

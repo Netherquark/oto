@@ -58,7 +58,7 @@ __all__ = [
 #: built. The import used to appear twice -- once here and once in the header --
 #: and the duplicate carried a `noqa: F401` that is no longer needed, because the
 #: name is genuinely used.
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile import legality
 
 #: Candidate draws attempted per cell. The prior replaced a lattice that emitted

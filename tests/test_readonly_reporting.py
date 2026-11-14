@@ -13,7 +13,7 @@ from support_convergence import Harness, _StubScheduler
 
 from oto.ledger.registry import SQLiteRegistry
 from oto.runners.driver import TensileDriver
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 class ReadOnlyRegistryTests(Harness):
@@ -184,7 +184,7 @@ class GpuLossAbortTests(Harness):
         return status, json.loads(meta or "{}")
 
     def test_a_streak_of_empty_phases_aborts_the_run(self):
-        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        from oto.runners.phase_runner import ABORT_AFTER_CONSECUTIVE_EMPTY
         driver = self._driver()
         self._deck(driver, n=8)
         executed = []
@@ -218,7 +218,7 @@ class GpuLossAbortTests(Harness):
         at ``Log level: Debug``. Deciding the abort on the markers would have
         missed that phase and kept the night burning.
         """
-        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        from oto.runners.phase_runner import ABORT_AFTER_CONSECUTIVE_EMPTY
         driver = self._driver("run_gpu_no_probe")
         self._deck(driver, n=8)
         executed = []
@@ -245,7 +245,7 @@ class GpuLossAbortTests(Harness):
         run_20261018_004835 opened with the same failure three phases deep. A
         guard that counts them aborts a healthy run.
         """
-        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        from oto.runners.phase_runner import ABORT_AFTER_CONSECUTIVE_EMPTY
         driver = self._driver("run_build_fail")
         n = ABORT_AFTER_CONSECUTIVE_EMPTY + 3
         self._deck(driver, n=n)
@@ -301,7 +301,7 @@ class GpuLossAbortTests(Harness):
         assert not driver._stop_requested
 
     def test_a_run_shorter_than_the_threshold_still_completes(self):
-        from oto.runners.phases import ABORT_AFTER_CONSECUTIVE_EMPTY
+        from oto.runners.phase_runner import ABORT_AFTER_CONSECUTIVE_EMPTY
         driver = self._driver("run_gpu_short")
         self._deck(driver, n=ABORT_AFTER_CONSECUTIVE_EMPTY - 1)
 

@@ -24,8 +24,8 @@ from oto.metrics.acceptance_report import ABVerdict
 from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.metrics.cell_policy import aggregate_cell
 from oto.metrics.measurement_protocol import UNKNOWN, classify
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes
 
 

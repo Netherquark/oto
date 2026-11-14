@@ -19,7 +19,7 @@ import sqlite3
 from pathlib import Path
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 
 def main(profile=None) -> int:

@@ -229,7 +229,7 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
 def corpus(root: Path, profile=None) -> list[dict]:
     """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.device import loader as _loader
-    from oto.runners.paths import results_dir, runs_dir
+    from oto.runners.result_paths import results_dir, runs_dir
 
     phases = list(yamlio.load_yaml(root / "phases.yaml") or [])
     for base in (runs_dir(root, _loader.resolve_profile(profile).codename),

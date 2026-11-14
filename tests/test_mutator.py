@@ -43,7 +43,7 @@ from oto.ledger.mutator import (
 )
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.benchmark_analytics import AnalyticsEngine
-from oto.runners.paths import results_rel, runs_rel
+from oto.runners.result_paths import results_rel, runs_rel
 
 REPO = Path(__file__).resolve().parent.parent
 

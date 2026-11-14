@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from oto.device import loader as _loader
 from oto.harness.candidate_pool import __yaml_load
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

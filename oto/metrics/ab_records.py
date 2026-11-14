@@ -24,8 +24,8 @@ from oto.metrics.ab_identity import _driver, _resolved_config, norm_config
 from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.metrics.cell_policy import aggregate_cell
 from oto.metrics.measurement_protocol import UNKNOWN, classify
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes
 
 #: The project root, resolved from this module's location.

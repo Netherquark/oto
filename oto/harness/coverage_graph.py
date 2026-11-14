@@ -65,7 +65,7 @@ from oto.harness.coverage_map import (
     legal_geometries,
     measured_geometries,
 )
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 #: Where the figures go (and the index that lists them).
 OUT_DIR_REL = results_rel("analysis", "coverage")

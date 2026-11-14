@@ -47,7 +47,7 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
         sys.path.insert(0, _p)
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.occupancy import (

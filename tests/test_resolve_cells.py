@@ -32,7 +32,7 @@ sys.path.insert(0, str(BASE))
 
 from oto.device.kernel_vocabulary import shipped_cell_set
 from oto.harness import cell_resolver as resolve_cells
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 @pytest.fixture(scope="module")

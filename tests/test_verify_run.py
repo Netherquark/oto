@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import oto.tools.corpus_audit as vr
-from oto.runners.paths import results_rel, runs_rel
+from oto.runners.result_paths import results_rel, runs_rel
 
 TELEMETRY_HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
                     "vram_used_bytes,vram_total_bytes,phase_id")

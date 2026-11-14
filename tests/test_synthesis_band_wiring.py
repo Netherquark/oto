@@ -14,7 +14,7 @@ import yaml
 
 import oto.metrics.cell_coverage as coverage
 from oto.ledger.mutator import Mutator
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tensile.candidate import CandidateConfig
 
 REPO = Path(__file__).resolve().parent.parent

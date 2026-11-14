@@ -40,7 +40,7 @@ from typing import Any
 
 import oto.tensile.shipped_manifest as tlib
 from oto.device import loader as _loader
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 #: Tensile checkout the citations below were verified against.
 TENSILE_COMMIT = "e8a8999e"

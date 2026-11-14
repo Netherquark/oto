@@ -17,8 +17,8 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.metrics.ab_audit import BASE as _AB_BASE
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tools.consolidate_targets import source_chain
 
 BASE = _AB_BASE

@@ -35,7 +35,7 @@ from oto.metrics.run_plan import (
 )
 from oto.metrics.status_helpers import _jittery
 from oto.metrics.thermal_telemetry import read_thermals
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 
 def _price_plan(plan: RunPlan, minutes: float | None,

@@ -26,7 +26,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.metrics.report_coverage import coverage_dir, coverage_rows, coverage_section
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 ROWS = [
     {"family": "SS", "shape": "256x256x256", "n_legal": 419,

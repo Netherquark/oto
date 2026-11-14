@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from oto.device.profile import DeviceProfile
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 
 def _load_json(path: Path) -> Any:

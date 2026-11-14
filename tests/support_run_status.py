@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 import oto.metrics.run_status as rs
 import oto.tensile.shipped_manifest as tl
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 def _phase(tag: str, kernel: str) -> dict:

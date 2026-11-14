@@ -39,7 +39,7 @@ from oto.runners.driver import (
     TensileDriver,
     _require_tensile_root,
 )
-from oto.runners.paths import runs_rel
+from oto.runners.result_paths import runs_rel
 from oto.tensile import config_writer
 
 failures = []

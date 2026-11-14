@@ -41,8 +41,8 @@ if str(_HERE) not in sys.path:
 
 from oto.device import loader as _loader
 from oto.harness.tensile_probe import probe_phase
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import results_rel
 
 #: The launch set: the persistent seed overlay.
 OVERLAY = Path(results_rel("overlays", "phases.seed.overlay.yaml"))

@@ -23,7 +23,7 @@ sys.path.insert(0, str(REPO))
 import pytest
 
 from oto.harness import rule_calibration as rc
-from oto.runners.paths import runs_rel
+from oto.runners.result_paths import runs_rel
 from oto.tensile.gates.occupancy import occupancy_feasible
 
 

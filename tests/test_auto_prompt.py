@@ -26,7 +26,7 @@ sys.path.insert(0, str(BASE))
 
 import oto.runners.auto_prompt as auto_prompt
 from oto.runners.auto_prompt import DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan, ask
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 def fake_tty(answers, isatty=True):

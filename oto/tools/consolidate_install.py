@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.runners.paths import legacy_runs_dir as _legacy_runs_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import legacy_runs_dir as _legacy_runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tools.consolidate_floor import SINGLE_FORM_ONLY_RUNS
 from oto.tools.consolidate_targets import LIVE_DB
 

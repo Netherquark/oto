@@ -31,10 +31,10 @@ from oto.tools.verifiers.ref_worktree import print_drift_summary
 
 NEW = [
     "oto/ledger/registry_core.py", "oto/ledger/queries.py",
-    "oto/ledger/proposals.py", "oto/runners/driver.py", "oto/runners/benchmark.py", "oto/runners/phases.py",
-    "oto/runners/reference_floor.py", "oto/runners/auto.py",
-    "oto/runners/corpus_loaders.py", "oto/runners/reporting.py",
-    "oto/runners/clocks.py", "oto/runners/timing.py",
+    "oto/ledger/proposals.py", "oto/runners/driver.py", "oto/runners/benchmark.py", "oto/runners/phase_runner.py",
+    "oto/runners/reference_floor.py", "oto/runners/convergence_loop.py",
+    "oto/runners/corpus_loaders.py", "oto/runners/acceptance_reporting.py",
+    "oto/runners/clock_telemetry.py", "oto/runners/timing.py",
     "oto/runners/library_build.py", "oto/runners/stage_cli.py",
     "oto/tensile/config_writer.py",
 ]
@@ -93,13 +93,13 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                 # point is a strict superset of the original's, so nothing the
                 # originals called became unreachable. Proved by the suite.
                 "_compute_ab_verdicts": "decomposed into the per-cell verdict "
-                                        "builders in oto/runners/reporting.py; "
+                                        "builders in oto/runners/acceptance_reporting.py; "
                                         "proved by the ab_audit/ab_delta tests",
                 "run_auto": "decomposed into the _auto_* handlers in "
-                            "oto/runners/auto.py; proved by test_auto_prompt "
+                            "oto/runners/convergence_loop.py; proved by test_auto_prompt "
                             "and the driver tests that construct the loop",
                 "run_phases": "decomposed into the phase handlers in "
-                              "oto/runners/phases.py; proved by "
+                              "oto/runners/phase_runner.py; proved by "
                               "the test_phase1_* suite "
                               "(split of test_phase1_integration.py, "
                               "4b9fcb4)",

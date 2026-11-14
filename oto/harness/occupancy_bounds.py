@@ -42,7 +42,7 @@ from pathlib import Path
 from statistics import median
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir
+from oto.runners.result_paths import results_dir
 from oto.tensile.gates.vgpr_model import (
     BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,

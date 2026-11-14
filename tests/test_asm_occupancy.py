@@ -30,7 +30,7 @@ from oto.device import loader as _loader
 
 _profile = _loader.current_profile()
 from oto.harness import asm_occupancy as ao
-from oto.runners.paths import runs_rel
+from oto.runners.result_paths import runs_rel
 
 # The AMD/ORNL GFX9 table, VGPR/thread -> waves/SIMD. Reproduced here rather
 # than imported because it is the oracle this module is calibrated against.

@@ -30,7 +30,7 @@ from oto.harness.candidate_generator import (
     _write_overlay,
     iter_candidates,
 )
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 def _rows():

@@ -42,7 +42,7 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cube_side, shipped_cell_set
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 #: Family-name normalisation for the `phase_id` fallback path.
 _FAMILY_ALIASES = {
@@ -161,7 +161,7 @@ def load_pipeline_phases(base_dir: str | None = None,
                          include_seed: bool = True, profile=None) -> list[dict[str, Any]]:
     """Deck + current overlays, merged in the manifest order the run uses.
 
-    Mirrors ``oto.runners.phases`` (``PhaseMixin.load_phases_manifest``)'s merge order (deck, then the
+    Mirrors ``oto.runners.phase_runner`` (``PhaseMixin.load_phases_manifest``)'s merge order (deck, then the
     live run's overlay when one is active, then the persistent seed overlay)
     so a preflight parity verdict covers the exact manifest a run would build.
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold

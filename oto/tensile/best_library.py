@@ -32,8 +32,8 @@ from oto.device import loader as _loader
 from oto.harness.coverage_map import _cell_family
 from oto.harness.kernel_db import read_kernel_db
 from oto.metrics.measurement_protocol import UNKNOWN, protocol_of
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import results_rel
 from oto.tensile.library_parity import parity_report
 from oto.tensile.synthesis.donor_mutator import DBMutator
 

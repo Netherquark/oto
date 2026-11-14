@@ -40,7 +40,7 @@ from oto.metrics.ab_records import (
 )
 from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.metrics.measurement_protocol import UNKNOWN, like_for_like, protocol_of
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 BASE = Path(__file__).resolve().parents[2]
 

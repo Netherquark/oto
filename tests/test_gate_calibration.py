@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from oto.harness import gate_calibration as gc
-from oto.runners.paths import runs_rel
+from oto.runners.result_paths import runs_rel
 
 
 def _phase_yaml(path: Path, macro, tt, du, vw, dtype="s", ta=False, tb=True):

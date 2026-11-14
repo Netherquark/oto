@@ -9,7 +9,7 @@ import yaml
 from support_convergence import Harness, _StubScheduler
 
 from oto.runners.driver import TensileDriver
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 class OverlayMergeTests(Harness):

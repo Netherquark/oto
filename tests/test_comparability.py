@@ -15,7 +15,7 @@ import json
 
 from oto.device import loader
 from oto.harness import occupancy_bounds, regression_matrix
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tools.potential_configs import generate
 
 

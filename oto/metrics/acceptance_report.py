@@ -24,8 +24,8 @@ from oto.metrics.family_attribution import family_to_dtype
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 __all__ = ["ABVerdict", "AcceptanceReport", "AcceptanceReporter"]
 

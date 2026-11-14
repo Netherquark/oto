@@ -23,7 +23,7 @@ import yaml
 import oto.tensile.shipped_manifest as tlib
 from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 
 def _spoof_arch(self) -> str:

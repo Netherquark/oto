@@ -19,7 +19,7 @@ from pathlib import Path
 
 from oto.device import loader as _loader
 from oto.metrics.ab_audit import BASE
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.library_parity import parity_report
 from oto.tools.consolidate_deck import (
     _TENSILE_ROOT,

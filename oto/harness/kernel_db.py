@@ -58,8 +58,8 @@ from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import family_from_kernel_name, kernel_typecode
 from oto.metrics.family_attribution import extract_family_from_phase_id
 from oto.metrics.measurement_protocol import classify_count, problem_count_text
-from oto.runners.paths import results_rel
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_rel
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 ENUM_TO_DTYPE = {0: "S", 1: "D", 2: "C", 3: "Z", 4: "H"}
 # Family token immediately after the phase / probe / auto-pool prefix, so

@@ -56,7 +56,7 @@ if str(_HERE) not in sys.path:
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cell_key
 from oto.harness.kernel_db import read_kernel_db
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 DEFAULT_DB_REL = results_rel("analysis", "kernel_db.json")
 

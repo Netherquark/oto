@@ -25,7 +25,7 @@ import yaml
 
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cube_side
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tensile.library_parity import (
     load_pipeline_phases,
     parity_report,

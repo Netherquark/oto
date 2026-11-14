@@ -7,7 +7,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tensile.best_library import (
     SHIPPED_CELLS,
     _tensile_env,

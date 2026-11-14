@@ -44,7 +44,7 @@ if str(_HERE) not in sys.path:
 
 from oto.device import loader as _loader
 from oto.harness.candidate_pool import _base_config, _strip_not_forwarded
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
 
 #: The thread tiles the harness can express. This is the set the CORPUS has

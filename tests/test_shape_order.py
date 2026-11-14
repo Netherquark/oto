@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO))
 
 import yaml
 
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tensile.shape_order import (
     is_numerically_ordered,
     ordered_shapes,

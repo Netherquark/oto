@@ -27,7 +27,7 @@ sys.path.insert(0, str(BASE))
 
 import oto.harness.kernel_db as kernel_db_mod
 from oto.ledger.registry import SQLiteRegistry
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 @pytest.fixture(autouse=True)

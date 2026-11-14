@@ -53,7 +53,7 @@ from oto.harness.gate_calibration import (
     population_of,
     read_phase_config,
 )
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 #: A candidate rule. ``True`` = would refuse the config, ``False`` = would allow
 #: it, ``None`` = not applicable (cannot model; excluded from the census).

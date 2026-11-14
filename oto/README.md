@@ -102,17 +102,17 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/runners/ — execution
 
-* ``runners/auto.py`` — The ``--auto`` convergence loop: floor first, then tune to convergence.
+* ``runners/acceptance_reporting.py`` — The acceptance report: verdicts, arms, and the emitted JSON.
 * ``runners/auto_prompt.py`` — The five --auto questions, and the AutoPlan their answers bind.
 * ``runners/benchmark.py`` — Phase execution: the one place a Tensile subprocess is launched.
-* ``runners/clocks.py`` — Per-phase telemetry clocks and the thermal envelope around them.
+* ``runners/clock_telemetry.py`` — Per-phase telemetry clocks and the thermal envelope around them.
+* ``runners/convergence_loop.py`` — The ``--auto`` convergence loop: floor first, then tune to convergence.
 * ``runners/corpus_loaders.py`` — Corpus readers: how the driver loads measurements from every run.
 * ``runners/driver.py`` — The driver composition root: identity, toolchain, and wiring.
 * ``runners/library_build.py`` — Stage 6: emit the per-family library logic and build it with TensileCreateLibrary.
-* ``runners/paths.py`` — Shared path conventions for the driver.
-* ``runners/phases.py`` — The phase runner: manifest merge, policy filter, identical-fp skip bypass.
+* ``runners/phase_runner.py`` — The phase runner: manifest merge, policy filter, identical-fp skip bypass.
 * ``runners/reference_floor.py`` — The gfx900 reference floor: build, resume, and recall.
-* ``runners/reporting.py`` — The acceptance report: verdicts, arms, and the emitted JSON.
+* ``runners/result_paths.py`` — Shared path conventions for the driver.
 * ``runners/stage_cli.py`` — The argparse stage dispatch: the ``python3 -m oto`` command line.
 * ``runners/stage_flags.py`` — The driver's argparse flags, one helper per group.
 * ``runners/timing.py`` — The three numbers that get conflated as "runtime".

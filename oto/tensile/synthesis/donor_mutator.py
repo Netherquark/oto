@@ -52,7 +52,7 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile.synthesis.donor_knobs import (
     _DEFAULT_PATTERN,
     _DONOR_POOL,

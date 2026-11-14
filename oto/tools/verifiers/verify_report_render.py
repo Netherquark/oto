@@ -49,7 +49,7 @@ def _payload_parts(run_id: str, profile=None):
     d = TensileDriver(base_dir=ROOT, create_run=False)
     d.regenerate_report(run_id,)
     from oto.device import loader as _loader
-    from oto.runners.paths import results_dir as _results_dir
+    from oto.runners.result_paths import results_dir as _results_dir
 
     payload_path = _results_dir(ROOT, _loader.resolve_profile(profile).codename) / "acceptance_report.json"
     return payload_path.read_bytes(), payload_path

@@ -31,7 +31,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 #: Where the coverage tool writes its figures and its hand-off file.
 COVERAGE_DIR = Path(results_rel("analysis", "coverage"))

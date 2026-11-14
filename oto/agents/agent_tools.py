@@ -21,7 +21,7 @@ from oto.harness.candidate_overlay import _round_robin_prune
 from oto.harness.candidate_pool import iter_candidates
 from oto.harness.candidate_rows import TARGET_CELLS
 from oto.harness.cell_knob_diff import _side, _winner_per_cell
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
 

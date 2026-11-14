@@ -31,8 +31,8 @@ sys.path.insert(0, str(ROOT))
 # Patch each where the implementation looks it up.
 import oto.runners.benchmark as bench_mod
 import oto.runners.driver as pt
-import oto.runners.phases as phases_mod
-from oto.runners.paths import runs_rel
+import oto.runners.phase_runner as phases_mod
+from oto.runners.result_paths import runs_rel
 
 # The parser and the option wiring live in the CLI module; the entrypoint the
 # operator actually runs is the repo-root CLI entry (`python3 -m oto`).

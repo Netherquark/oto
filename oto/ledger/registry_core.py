@@ -36,8 +36,8 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 # Run-terminal statuses that imply benchmark data may have landed and the
 # kernel_db cache should be refreshed. `skipped` / `smoke` / `failed`

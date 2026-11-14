@@ -47,7 +47,7 @@ from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cube_side, dtype_to_family
 from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.runners.driver import TensileDriver
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 # bytes per element for the GLOBAL LOAD. Read from Tensile via
 # consolidate.dtype_bytes rather than hardcoded: this table used to be a second

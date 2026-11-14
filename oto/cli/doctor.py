@@ -211,7 +211,7 @@ def _profile(base: Path, profile=None) -> Check:
 def _registry(base: Path, profile=None) -> list[Check]:
     """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.device.loader import resolve_profile
-    from oto.runners.paths import results_dir
+    from oto.runners.result_paths import results_dir
     results = results_dir(base, resolve_profile(profile).codename)
     db = results / "registry.db"
     out = [_ok("registry", "Results directory", str(results))

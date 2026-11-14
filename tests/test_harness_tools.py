@@ -12,7 +12,7 @@ from oto.agents.agent_tools import (
 )
 from oto.agents.meta_agent import run as meta_run
 from oto.device.loader import load_profile
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 
 def _row(fam: str, side: int, gflops: float, phase: str = "phase_x") -> dict[str, Any]:

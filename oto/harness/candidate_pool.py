@@ -33,7 +33,7 @@ from oto.harness.candidate_rows import (
     TARGET_CELLS,
 )
 from oto.ledger.registry import fingerprint_config
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.occupancy import ldspad_feasible
 from oto.tensile.shape_order import ordered_shapes

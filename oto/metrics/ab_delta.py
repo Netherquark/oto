@@ -8,7 +8,7 @@ reference clock -- and ``cells_not_beating_floor`` (the same pairing, reduced to
 the set of cells the port has not yet won). Both grade like-for-like (§R56.3):
 ``protocol_basis="family"`` admits only records whose invocation form matches
 across arms; cross-form evidence is carried as provenance fields, never graded.
-Does NOT own: the records it is fed (oto.metrics.benchmark_analytics), the clocks (oto.runners.clocks), or the verdict threshold (oto.metrics.ab_audit).
+Does NOT own: the records it is fed (oto.metrics.benchmark_analytics), the clocks (oto.runners.clock_telemetry), or the verdict threshold (oto.metrics.ab_audit).
 Public API: ABDeltaMixin."""
 
 from __future__ import annotations

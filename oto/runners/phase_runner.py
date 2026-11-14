@@ -21,7 +21,7 @@ from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.cell_policy import should_run
-from oto.runners.paths import results_dir as _results_dir
+from oto.runners.result_paths import results_dir as _results_dir
 
 #: Consecutive executed phases that *launched the client and measured nothing*
 #: before the harness declares the GPU lost and aborts the run. The 2026-10-19

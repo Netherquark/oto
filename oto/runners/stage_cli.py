@@ -22,7 +22,7 @@ from oto.device import loader as _loader
 from oto.metrics.benchmark_analytics import CellAnalytics
 from oto.runners import stage_flags as flags
 from oto.runners.driver import TensileDriver
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 #: Stage names/numbers that only read the registry or prior runs and must
 #: therefore NOT mint a new run directory. A stage that mints a run for a

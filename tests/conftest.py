@@ -35,7 +35,7 @@ from typing import Any
 
 import pytest
 
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:

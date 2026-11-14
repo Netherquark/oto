@@ -18,7 +18,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from oto.runners import paths
+from oto.runners import result_paths as paths
 
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))

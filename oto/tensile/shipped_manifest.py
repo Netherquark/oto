@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from oto.runners.paths import results_rel
+from oto.runners.result_paths import results_rel
 
 #: Where the pinned shipped manifest is cached, relative to the project root.
 MANIFEST_PATH = results_rel("gfx900_shipped_manifest.json")

@@ -55,9 +55,9 @@ if str(_HERE) not in sys.path:
 
 from oto.device import loader as _loader
 from oto.harness.kernel_db import read_kernel_db
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import results_rel
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import results_rel
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import shape_order_key
 
 # The full structural knob surface — MUST match the yaml emission surface of

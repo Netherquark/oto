@@ -60,7 +60,7 @@ if str(_HERE) not in sys.path:
 
 
 from oto.device import loader as _loader
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.config_writer import TRANSPOSE_MAP
 from oto.tensile.library_parity import phase_family
 

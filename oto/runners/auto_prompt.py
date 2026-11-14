@@ -5,7 +5,7 @@ Owns: ``ask`` (the TTY prompt, five questions, in answer order), ``AutoPlan``,
 the non-TTY defaults, and ``_read_counts`` (tier counts read live from the audited
 manifest -- never transcribed).
 
-Does NOT own: what the plan does (oto.runners.auto) or the tier manifest it reads
+Does NOT own: what the plan does (oto.runners.convergence_loop) or the tier manifest it reads
 (oto.tensile.shipped_manifest).
 
 Public API: AutoPlan, ask, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, _read_counts.
@@ -37,8 +37,8 @@ from typing import Any
 
 from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
-from oto.runners.paths import results_dir as _results_dir
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import results_dir as _results_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 #: Re-measure the cells that previously ran with a config our own extractors got
 #: wrong. These measurements are the ones everything downstream trusts.

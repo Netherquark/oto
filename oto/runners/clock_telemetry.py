@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.runners.paths import runs_dir as _runs_dir
+from oto.runners.result_paths import runs_dir as _runs_dir
 
 
 class ClockMixin:
