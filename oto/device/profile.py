@@ -40,6 +40,9 @@ class TheoreticalLimits:
     coherent_host_access: bool = False
     # boundary thresholds (elements) per family, derived by agent-1
     boundaries: dict[str, int] = field(default_factory=dict)
+    # memory channels + per-channel transfer rate, for bandwidth derivation
+    memory_channels: int = 0
+    memory_rate_mtps: int = 0
 
 
 @dataclass(frozen=True)

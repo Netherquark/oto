@@ -146,10 +146,16 @@ def _wheel_layout_llvms(prefix: Path) -> list[Path]:
 
 
 def _llvm_bin(prefix: Path) -> str:
-    """Derive ROCM_LLVM_BIN: explicit env, else the layout-aware probe order."""
+    """Derive ROCM_LLVM_BIN: explicit env, else the layout-aware probe order;
+    an explicit env that points nowhere is a hard error, never a silent skip."""
     explicit = os.environ.get("ROCM_LLVM_BIN", "").strip()
-    if explicit and Path(explicit).is_dir():
-        return explicit
+    if explicit:
+        if Path(explicit).is_dir():
+            return explicit
+        raise ValueError(
+            f"ROCM_LLVM_BIN={explicit!r} is set in the environment/.env but is "
+            f"not a directory (expected a directory in the layout defined by "
+            ".env.example). Fix the value; there is no fallback.")
     for cand in (prefix / "lib" / "llvm" / "bin",
                  prefix / "llvm" / "bin",
                  prefix / "lib64" / "rocm" / "llvm" / "bin",
@@ -159,11 +165,36 @@ def _llvm_bin(prefix: Path) -> str:
     return ""
 
 
+def _bin_dir(prefix: Path) -> str:
+    """Resolve ROCM_BIN: explicit env wins; must exist; else prefix/bin."""
+    explicit = os.environ.get("ROCM_BIN", "").strip()
+    if explicit:
+        if Path(explicit).is_dir():
+            return explicit
+        raise ValueError(
+            f"ROCM_BIN={explicit!r} is set in the environment/.env but is not "
+            f"a directory. Fix the value; there is no fallback.")
+    candidate = str(prefix / "bin")
+    if not os.path.isdir(candidate):
+        raise ValueError(
+            f"ROCM_BIN could not be derived: {candidate} (derived from "
+            f"ROCM_PATH={prefix}) is not a directory, and ROCM_BIN is not set. "
+            "Set ROCM_BIN explicitly or fix ROCM_PATH.")
+    return candidate
+
+
 def _assembler(prefix: Path, llvm_bin: str) -> str:
-    """Prefer the SDK's `amdclang++` (Tensile's native default), else `clang++`."""
+    """Prefer the SDK's `amdclang++` (Tensile's native default), else `clang++`.
+
+    An explicit TENSILE_ASSEMBLER pointing at a non-file is a hard error;
+    nothing silently picks another compiler."""
     explicit = os.environ.get("TENSILE_ASSEMBLER", "").strip()
-    if explicit and Path(explicit).is_file():
-        return explicit
+    if explicit:
+        if Path(explicit).is_file():
+            return explicit
+        raise ValueError(
+            f"TENSILE_ASSEMBLER={explicit!r} is set in the environment/.env but "
+            "is not a file. Fix the value; there is no fallback.")
     candidates = []
     if llvm_bin:
         candidates += [Path(llvm_bin) / "amdclang++", Path(llvm_bin) / "clang++"]
@@ -184,15 +215,11 @@ def resolve_rocm_paths() -> dict[str, str]:
     Disposition per key: explicit env value wins; otherwise derived from
     `ROCM_PATH` (see `require_rocm_path` / `_llvm_bin` / `_assembler`). No
     `hipconfig` fallback, no `/usr` escape hatch -- a user who needs a
-    different toolchain points `ROCM_PATH` at it.
+    different toolchain points `ROCM_PATH` at it. Every path this returns
+    must exist; a dangling path raises with the .env context spelled out.
     """
     prefix = require_rocm_path()
-    bin_dir = os.environ.get("ROCM_BIN", "").strip() or str(prefix / "bin")
-    if not os.path.isdir(bin_dir):
-        raise ValueError(
-            f"ROCM_BIN {bin_dir!r} (from env/.env or derived from "
-            f"ROCM_PATH={prefix}) is not a directory."
-        )
+    bin_dir = _bin_dir(prefix)
     llvm_bin = _llvm_bin(prefix)
     assembler = _assembler(prefix, llvm_bin)
     paths = {
@@ -203,6 +230,13 @@ def resolve_rocm_paths() -> dict[str, str]:
         "TENSILE_ASSEMBLER": assembler,
         "TENSILE_ASSEMBLER_FALLBACK": assembler,
     }
+    # HIP_DEVICE_LIB_PATH must point at the user's own bitcode directory, or
+    # stay unset; never silently fall back to a system tree.
+    bitcode_dir = Path(prefix) / "lib" / "llvm" / "amdgcn" / "bitcode"
+    if not bitcode_dir.is_dir():
+        bitcode_dir = Path(prefix) / "amdgcn" / "bitcode"
+    if bitcode_dir.is_dir():
+        paths["HIP_DEVICE_LIB_PATH"] = str(bitcode_dir)
     version = os.environ.get("ROCM_VERSION", "").strip()
     if version:
         paths["ROCM_VERSION"] = version

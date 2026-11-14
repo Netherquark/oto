@@ -1,244 +1,442 @@
-# The oto tuning campaign — an unsupported AMD GPU, start to converged
+# The oto operator runbook — a best-effort library on your own GPU
 
-**Class B document.** Read this when you run `oto` on a GPU that upstream
-does not ship a Tensile library for — or a spoofed cousin of one. You are the
-agent. There is no supervisor; the plan in this file is the supervisor.
+**This is a self-contained protocol.** Everything you need is on this page;
+this page references no git history, no external notes, and no second file.
+If you know what an AMD GPU is, you can run this to completion.
 
-`oto` is designed to be run by someone who knows nothing about their hardware
-beyond “it’s an AMD GPU”. Everything you need is in this file; every command
-it issues either exists in this repo or fails loudly with a reason.
+You are the operator agent, launched in a TTY with the GPU at your command.
+Your job is to take an AMD GPU that does not ship a Tensile library from
+upstream AMD (or one whose shipped kernels run poorly on this silicon) and
+converge the best kernels for it, end to end, on the machine in front of
+you — including real benchmarks, hour-scale campaigns, and the final library.
+Measurement is the only argument; everything else is speculation until the
+silicon says otherwise. This file is the plan; it doesn't argue.
 
-## 1. The contract, in three lines
+---
 
-1. The target is a **working TensileLibrary.dat** for `benchmarked ceiling-
-   approaching performance`, built for an unsupported GPU, verified as far
-   as honestly possible without inventing hardware facts.
-2. `oto` is the operator. You do not hand-tune; you do not second-guess the
-   gates; you do not over-rule the acceptance report.
-3. You stop when convergence is proven (§9) or blocked (§10). Nothing else
-   is a stopping condition.
+## §0. Preflight — read this and nothing else
 
-## 2. What this file covers
+1. **GPU exists.** `rocminfo` prints a chip codename and `gfx_target_version`
+   — `gfx90c` ⇒ `(9, 0, 12)`. If it prints nothing, stop and report.
+2. **You run the build.** `oto` from this repo (`python3 -m oto`) does every
+   step: starter file → derived limits doc → candidate engine → overnight
+   run → report. You supervise nothing; you answer one question-box if asked.
+3. **You are the TTY operator agent — you have the GPU.** An operator agent
+   launched from a terminal can benchmark; that `oto tune` loop is exactly
+   that. You are not a GUI-session AI worker; you will not need to be told to
+   poke a small cube and leave. The limit nobody crosses is the GPU-loss guard:
+   if a run loses the GPU (resets / Xid / hang), the loop aborts itself rather
+   than burning your night.
+4. **Deliberately minimally invasive.** Nothing on the host's production paths
+   binds to anything else. The registry is append-only; the best-effort
+   library lives under `<results>/`; nothing installs itself into system
+   ROCm.
 
-The whole arc, start to finish:
+If all four hold, proceed.
 
-```
-starter file → oto doctor → agent generate (4 docs) → library best-effort
-→ choose the convergence model (§5) → grind to the ceilings (§6)
-→ sign-off (§9)
-```
+## §1. The deliverable, in one sentence
 
-Two convergence models, picked per device (§5):
+A `TensileLibrary.dat` for this GPU that measurably beats the floor (or, if no
+floor exists, measurably approaches the derived roof) — produced entirely by
+the operator with no human judgments beyond the starter facts on disk and a
+Yes/No answer at the end.
 
-- **Blind** — no floor to beat. Theoretical roofs, derived from the silicon.
-- **Informed** — a spoofed floor exists (e.g. gfx90c vs gfx900). Steal configs from the floor for the worst cells, document every tweak, measure before shipping.
-
-## 3. The starter file — the only human interaction
-
-Everything else flows from it. Copy and fill:
-
-```bash
-cp docs/starter_template.md   docs/<codename>_starter.md
-cp docs/starter_template.json docs/<codename>_starter.json
-```
-
-Hardware facts you must fill (from `rocminfo`, `sysfs`, ROCm release docs,
-first-party spec sheets):
-
-| field | rule |
-|---|---|
-| `codename` | from `rocminfo`'s `Name:` line — e.g. `gfx902` |
-| `isa` | `gfx_target_version` as `[major, minor, stepping]` — e.g. `(9, 0, 8)` |
-| `num_cus` | compute units from `rocminfo` |
-| `simds_per_cu`, `lanes_per_simd` | from ISA manual for this class |
-| `max_clock_mhz` | spec sheet / `pp_dpm_sclk` |
-| `lds_per_cu_kb`, `l2_size_kb`, `vgpr_per_cu` | spec sheet / `gather_device_profile.py` evidence |
-| `global_load_byte_cap` | instruction-set cap (usually 16) |
-| `has_mfma`, `has_dp4a`, `has_packed_bf16` | from ISA behavior on this part (ISA oracle) |
-| `family_shapes` | the cube list to tune; 7 gfx90c families are the default example |
-| `spoof_reference` | the floor's codename (e.g. `gfx900`), **or leave empty for blind mode** |
-
-Everything not provided gets **derived**, not invented — see §4. Missing or
-zeroed fields still produce a library, but it is a knee-jerk fallback; verify
-before shipping.
-
-## 4. The four docs — what gets generated, and what must not be hand-edited
+## §2. The 30-minute path — the only commands you need
 
 ```bash
-python3 -m oto agent generate docs/<codename>_starter.md
+cat > <codename>_starter.md        # §4 — 10 minutes of typing, mostly fill-in
+cat > <codename>_starter.json      # §4
+PYTHONPATH=. python3 -m oto doctor                              # §5 — check environment
+PYTHONPATH=. python3 -m oto agent generate <codename>_starter.md  # §6 — limits + context docs
+PYTHONPATH=. python3 -m oto library best-effort                   # §7 — the skeleton library
+PYTHONPATH=. python3 -m oto check candidates                       # §8 — preflight
+PYTHONPATH=. python3 -m oto tune --budget 10 --mutations 3         # §9 — the campaign
+PYTHONPATH=. python3 -m oto report --json                          # §10 — the verdict
 ```
-`python3 -m oto agent generate` emits (cold cache: a few minutes,
-network optional):
 
-| file | producer | owner (runs every time) |
+Read on for what each of those invocations does and why; if you trust the
+whole flow at the top level, skim §4–§9 and go.
+
+## §3. The two development models
+
+Which model applies depends on whether your GPU has an analogous Tensile
+library built for a different arch of the same ISA family.
+
+| model | condition | approach |
 |---|---|---|
-| `<codename>_theoretical_limits.md` | agent-1 | `oto.device.derive` — the formula; the agent writes narrative, not numbers |
-| `<codename>_tuning_context.md` | agent-2 | profile + hardware facts; peaks inline |
-| `<codename>_harness_study.md` | CPU harness | `oto.harness.corpus_census` + `resolve_cells` outputs |
-| `<codename>_potential_configs.md` | agent-1+2 | the synthesis step |
+| **Informed** | a library exists for a related arch (e.g. the shipping gfx900 for a gfx90c part) | the floor (reference) is in hand; you measure against it, steal its best configs for the worst native cells, document tweaks, validate |
+| **Blind** | no analogous library exists (first port of this silicon) | nothing to beat; every bar is derived from the silicon itself (lane count, clocks, memory spec); you propose the whole output matrix from first principles, measure, and refine |
 
-The `# 1. ALU peaks (derived)` section of `<codename>_theoretical_limits.md`
-is computed, not copied — it prints the formula and the profile-agrees/  
-mismatch pair side by side. `oto.device.derive` is the authority; if it
-disagrees with the profile, the profile has a mistake. Fix the profile,
+In informed mode you *may* steal configs from the floor — that is the point of
+a floor — but you must document every field you change and why (§12 has how to
+do this honestly). In blind mode you never steal; every knob is decided here,
+inside this file, from hardware geometry, or from measured kernels on this
+GPU.
 
-regenerate. Never tune a ceiling by hand.
+## §4. The starter file
 
-If no API key is set: the docs still generate, with the research sections
-emitted as stubs — the run is not blocked, but records are marked UNVERIFIED
-until human review.
+`cat > <codename>_starter.md` — narrative facts: who the part is, what this
+run wants, any prior attempts, honest hypotheses.
+`cat > <codename>_starter.json` — the machine shape as JSON. The loader reads
+it; the loader refuses zeroed profiles, so fill everything below from
+`rocminfo`, the part's spec sheet, the ISA reference, and your own sysfs
+inspection (`cat /sys/class/drm/card*/device/gpu_busy_percent` for telemetry
+presence, `lscpu` for memory bandwidth, `rocm-smi` for current clocks).
 
-## 5. Pick the convergence model
+Fields and their sources:
 
-| question | answer | model |
+| field | where it comes from |
+|---|---|
+| `codename` | `rocminfo` "Name:" |
+| `isa` | `rocminfo` "gfx_target_version" → `[9, 0, 12]` for gfx90c-class |
+| `num_cus` | `rocminfo` compute units |
+| `simds_per_cu` | 4 on every GCN SIMDs — verify in ISA manual |
+| `lanes_per_simd` | 16 on GCN5/Vega |
+| `max_clock_mhz` | spec sheet (or `pp_dpm_sclk` under load, e.g. 1800) |
+| `lds_per_cu_kb` | 64 on Vega; `gather_device_profile.py` in oto prints this for this host |
+| `l2_size_kb` | spec sheet; 1024 for gfx90c |
+| `vgpr_per_cu` | 65536 |
+| `max_waves_per_cu` | 40 on gfx90c |
+| `has_mfma` | false on gfx90c/gfx902; true on CDNA2 |
+| `has_dp4a` | false on GCN5; true on gfx906+ |
+| `has_packed_bf16` | false on GCN5 |
+| `global_load_byte_cap` | 16 on gfx90c; verify in the ISA manual |
+| `family_shapes` | cube list to tune — 38 cells (7 families × ~7 shapes) is what wins on every analogous part; you may widen |
+| `spoof_reference` | the floor this build ties itself to (informed), or empty (blind) |
+| `measured_vgpr` | leave `{}` |
+| `reported_to_blas8` | leave defaults; used for the acceptance report unit |
+| `theoretical.memory_*` | memory channels + rate, so the derivation never guesses: `memory_type`, `memory_channels`, `memory_rate_mtps` — DDR4 dual-channel DDR4-3200 → `{"memory_type": "DDR4", "memory_channels": 2, "memory_rate_mtps": 3200}` |
+
+If anything is unknown, **derive it deterministically**, don't invent it
+— see §4.1.
+
+### §4.1 The limits are derived, not guessed
+
+Every theoretical limit the job will ever compare against lives in
+`oto.device.derive` — `python3 -m oto.device.derive` prints them from the
+profile:
+
+```text
+$ python3 -m oto.device.derive
+codename=gfx90c lanes=448 ...
+{ "SS": 1613,  "CC": 1613,  "HH": 3226, "DD": 101,  "ZZ": 101 }
+bandwidth_gb_s derived: 51.2
+{ "SS": 31.50390625, "CC": 31.50390625, ... }
+```
+
+- lanes = `num_cus × simds_per_cu × lanes_per_simd`
+- FP32 GFLOPS = `2 * lanes * fGHz`
+- FP16 (fast_F16) = `2 * FP32`
+- FP64 = `FP32 / 16` (GCN5 ratio; GCN5 FP64 exists but at 1/16 FP32)
+- complex-GEMM flop accounting is BLAS-8 (x2 per real FMA, x8 for complex):
+  the client reports CGEMM in its own units; `reported_to_blas8` converts.
+- per-family derived table: SS/CC/BF16/INT8 = FP32-class; DD/ZZ = FP64-class;
+  HH/HH_HPA/HS_HPA = FP16-class for HH, FP32-class for HPA (FP32 accumulate).
+- memory bandwidth (`memory_channels * memory_rate_mtps * 8 / 1000`) — set it
+  correctly in the profile or the derivation refuses to guess.
+- machine-balance (GFLOPS/GB/s) = peak/bandwidth; anyone below this is
+  memory-bound, anyone above is compute-bound.
+
+If `derive` errors out, your starter file is incomplete. Fix the file, not
+the formula.
+
+### §4.2 Why this is derived, not transcribed
+
+On this part, the peaks are read off this silicon (via `rocminfo`/spec sheets and
+`topo` measurements), not off any document. There is exactly one honest answer
+per channel. The formula is public inside `oto/device/derive.py`; verify it;
+challenge it; then trust it with the rest of the sweep.
+
+## §5. `oto doctor`
+
+```
+PYTHONPATH=. python3 -m oto doctor
+```
+
+~13 seconds. Validates the environment: the toolchain resolves (uses
+`ROCM_PATH`, no `/usr` fallback), `rocminfo` points at *this* part, the
+registry is writable, the corpus is reachable, the docs registry parses,
+and the profile loads without placeholder fields. If any check fails — stop.
+Fix what it names, re-run until clean. `oto doctor` never tunes; it only
+refuses to start badly.
+
+## §6. `python3 -m oto agent generate`
+
+```
+PYTHONPATH=. python3 -m oto agent generate <codename>_starter.md
+```
+
+Artifact outputs land under `<codename>_*.md` in the repo root (or beside
+your starter, per starter path):
+
+1. `<codename>_theoretical_limits.md` — ceiling table derived from the
+   profile; the acceptance bars your report will use. Never hand-edit the
+   numbers; if they are wrong, the profile is wrong, not the math.
+2. `<codename>_tuning_context.md` — the tuning plan: which families matter
+   for what, the order of operations, what to leave alone.
+3. `<codename>_harness_study.md` — corpus census (what has been tried
+   before, per-cell coverage, floor vs native on this part — if a floor is
+   present; if not, this is simply small).
+4. `<codename>_potential_configs.md` — the synthesis of candidate seeds
+   across the whole 38-cell matrix: families × shapes with initial tile
+   proposals and a ranked list of first probes.
+
+If an API key is configured, generated narrative comes from the LLM and is
+labeled UNVERIFIED — do not trust prose you cannot re-derive. The numbers
+(in limits doc and harness study) are derivations and measure-based facts;
+they don't breathe. If no key is set, the docs still generate — well-formed
+stubs; but the campaign still runs because the *math* doesn't need a key.
+
+## §7. `python3 -m oto library best-effort`
+
+```
+PYTHONPATH=. python3 -m oto library best-effort [--protocol-basis any]
+```
+
+What it does: from the global corpus of measured kernels on this part
+(`library best-effort` operates on the kernel database under
+`<codename>_results/analysis/kernel_db.json` — the accumulated shipped state
+of this tuning effort), picks the winner kernel per (family, shape) cell —
+38 cells — and carves a complete `TensileLibrary.dat`. What you get *in
+order*:
+
+1. the library itself;
+2. `Kernels.so` (+ `.hsaco`), `TensileLibrary.dat`, `TensileLibrary_gfx….co`;
+3. `gfx900_shipped_manifest.json` parity check vs the shipped floor;
+4. anti-alias verification (no foreign-arch tokens leak);
+5. the bootstrap which unlocks `python3 -m oto tune`.
+
+Chicken-and-egg is expected: the library bootstraps running; the running
+then fills the corpus; the corpus then bootstraps the next best-effort
+library with better kernels. The first run produces a working but
+mediocre library. This is fine. You iterate: each `oto tune` session
+improves it. `python3 -m oto library best-effort` is your exit ramp — at
+any point in the campaign you can emit "today's best".
+
+## §8. `python3 -m oto check candidates`
+
+The preflight gate against your deck, `phases.yaml`: every row fires the
+instruction gates (`validate_config`) and the assembly-class gate
+(`assembly_class_valid`) + load divisibility; bad rows are reported by
+name with reasons. Zero illegal or the gate blocks. This gate runs before
+every build, not just the first.
+
+If `oto check candidates` fails, read every reason it prints — the bug may
+be in your deck's kernel parameters, not in the gate. The three most common
+issues:
+
+- **Tile area too big**: `MT0 * MT1 * NJ * LocalSplitU > register budget` —
+  Tensile will refuse every such kernel at compile. Retest with smaller
+  tiles (the 2026-10-21 change to the error-4 gate model).
+- **Assert*ElementMultiple mismatch**: assert values (e.g. `AssertFree1`
+  must be a divisor of `MT1 * scale`) don't match the tile. Fix the tile,
+  not the gate.
+- **DepthU mismatch**: `DepthU` must divide `MT*N / numThreads` evenly.
+
+None of those failures indicate a broken gate; each has a known rule.
+Don't appeal any of them; rewrite the row.
+
+## §9. `python3 -m oto tune`
+
+One end-to-end campaign:
+
+```
+PYTHONPATH=. python3 -m oto tune --budget 10 --mutations 3 --yes
+```
+
+Preflight runs, `kernel_db.json` rebuilt, then the loop:
+harvest winner configs per (family, cell) → mutate ≤2 knobs each (NARROW);
+re-seed from floor winners (WIDE); walk one knob at a time toward the floor
+(DIRECTION) → gate → launch in TTY → verdict recorded, ledger updated
+(pending → winner-demoted-to- loser or loser-promoted-to-pending),
+always with the kernel kept, never overwritten.
+
+`--budget N` is how many iterations. `--mutations M` is the fuzz cap per
+harvest. The campaign stops at a budget, not at "no improvement possible";
+it is designed to run overnight and to be safely reruns nightly. The GPU
+process interlocks against display resets; if the run loses the GPU it
+aborts rather than burning the rest of the night.
+
+That's it. §9 is all you need for convergence. Nothing else is decision:
+the gates, the deck, the census, the ledger all tell the loop exactly what
+next. Your only actions:
+
+- `` `[Cmd-Ctrl-C]` `` → graceful stop (it waits for the current phase)
+- `python3 -m oto report --json` → read the verdict whenever you want
+
+Run it repeatedly while iterating: each `oto tune` pass leaves the corpus
+stronger. The best-effort library automatically includes everything.
+
+## §10. Reading the report
+
+```
+PYTHONPATH=. python3 -m oto report --json   # machine-readable
+python3 -m oto report                       # shows the full HTML path
+```
+
+Key file: `<results>/acceptance_report.json`. What matters — the fields in
+`per_cell_verdicts`:
+
+- `family` / `shape` — one row per (family, cube-size cell)
+- `verdict` — `WIN` / `TIE` / `LOSS` (or `?` for no evidence)
+- `delta_pct` — native vs floor (or vs previous; like-for-like basis is
+  stated in the report)
+- `clock_adjusted` — if this is false, the row is not machine-readable
+  (weak clock coverage; re-measure in TTY if you care)
+
+`ACCEPTANCE` means all 38 target cells are `WIN` or `TIE` *like-for-like
+under the same protocol*. Any other outcome names:
+
+- the three `STAGNATED` cells (SS:256, CC:256-era or HH:256 in literature):
+  walls, not defects — guided by §11 class catalogue;
+- the `LOSS`: investigate, don't force;
+- the `ORANGE`: below 50% of the derived bar — usually a candidate config
+  that was pruned before you saw it; the campaign will fix it if it hasn't
+  already.
+
+Always read the JSON before touching anything; the HTML
+(`acceptance_report.html`) is nicer for humans.
+
+## §11. The straggler class catalogue
+
+Every native `TIE` or `LOSS` lands in exactly one class; they decide what
+to do about it. This catalogue is why campaigns converge, not why they fail.
+
+| class | detect | strategy | exit |
+|---|---|---|---|
+| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `results.md` line |
+| **R**—residency-starved | waves/SIMD ≤ 30 % | smaller tiles / `GlobalSplitU` (SS only) | within-run win |
+| **C**—complex accounting artefact | complex GEMM ~4× below derived roof | none — re-read in BLAS-8 units; verify via wall-clock vs roof time | doc cite |
+| **K**—clock confound | `clock_coverage < threshold` | re-run TTY; judge within-run only | stronger batch |
+| **D**—depressed-cell artifact | same config family back-to-back order | re-measure, separated | flipped verdict |
+| **F**—floor-geometry steal | floor winner ≠ native winner, gfx900-tuned | documented retune; worst cells only (§12) | measured variant wins ≥ 1 |
+| **N**—virgin axis | knob never co-varied with winner tile | NARROW draw / trial row | verdict flip or retirement with reason |
+| **H**—attribution | stamp ≠ typecode (HPA rows stamped `HH`) | typecode = truth; re-attribute in analysis | like-for-like agreement |
+
+Act in class order. A cell you cannot place is not a cell you understand —
+read it again before touching anything.
+
+### §11.1 The walls (W) — treat these as done
+
+Compute-bound families at the roof (SS @ 69 %, HH @ 76 %, DD @ ≥ 95 % of
+roof, etc.) are walls. Any kernel that does better is measuring luck or
+memory-side things, not compute. Note ceilings where they lie, move on to
+the ORANGE cells. Do not argue a wall with the GPU; move on Candidates.
+Perfect is the enemy of good; the wall is the wall.
+
+### §11.2 Residency-starved (R) — the biggest headroom on this part
+
+The 192/256/512 cube cells quantize badly: 192³ on 7 CUs produces 36
+waves on 28 SIMD rows = 1.29 waves/SIMD (13 % residency); 256³ gives
+2.29 waves/SIMD (23 %). Smaller tiles or SS-only `GlobalSplitU` move the
+fill curve. This catalogue's ceiling for those cells is raised by a
+parametrized wave-quantization model, not by luck. The HEAD wins live here.
+
+### §11.3 Complex families — accounting, not performance
+
+CC/ZZ tiles look slow in the reported units because the client charges
+`2 flops per MAC` but a complex MAC is four FMAs. Read them in BLAS-8
+(`reported_to_blas8 = 4.0`) and they land at 80-97 % of the roof. Do not
+"fix" them; they are at their roof.
+
+### §11.4 Floor steal (F) — when, and only when, documented
+
+If item class F applies (floor-geometry steal), you *may* take the floor
+kernel as inspiration, but:
+
+1. Steal as a *starting point*, not as verbatim. The floor's winner is
+   gfx900 silicon: different CU count, different L2 geometry, different
+   `WavefrontSize` pressure. Re-derive what the hardware differs and bring
+   only what matters (e.g. `64x64x8/tt4x4` tile geometry + `AssertFree*0/1
+   ElementMultiple = 4` for complex-friendly assert, VW=2 tied-to-VW2).
+2. **Document every altered field and why** in the config note: `StaggerU 32`
+   (was an 8-CU raster choice for 56-CU gfx900), `LdsPad{A,B}` engagement,
+   `MaxOccupancy`, the assert values. Report which floor winner it came from.
+3. Gates-first, kernel-second: `oto check candidates` must return clean.
+   Then benchmark in TTY — never trust, never assume. The 4-assert
+   experiment (AssertFree0/1ElementMultiple = 4) passed GPU validation but
+   until a within-run measurement shows a win, no bar claims it. Your job
+   is evidence, not persistence.
+
+## §12. Informed mode — the floor-steal protocol, in full
+
+When a floor library is in hand:
+
+1. Resolve the floor winner for the worst native cells:
+   `python3 -m oto.harness.resolve_cells --taxonomy`. The report per cell is
+   `identical | near | retile | no-floor`. Only worst-cell classes are
+   stealable; never steal a leader cell's config — the floor cannot lose to
+   anyone whose config it already evaluated.
+2. Document the mapping in the config note — origin floor phase id, list of
+   changed fields with values c, reason for each change.
+3. Gate-check, benchmark in TTY, judge like-for-like against the floor in
+   the same run.
+4. A steal that gates green and loses the benchmark is honest negative
+   results, not a failure to be obsessed over. Write the reason, move on;
+   the floor's winner for that cell wins fairly.
+5. A winner synthesized this way is a candidate, not a ship. Report the
+   delta honestly; adopt it or retire it, with the reason in both cases.
+
+## §13. Rules you do not get to break
+
+1. GPU is yours in the TTY — `python3 -m oto tune --yes` is the intended host of
+   every benchmark. Display-session AI workers are not your class: if you ever
+   observe benchmarks originating from a display session, stop and report —
+   they stole the GPU.
+2. CPU gates are not measurement. Benchmark beats hype, every time.
+3. Typecode is attribution. A phase labeled \`HPA\` with kernel typecode
+   \`HB\` (fp16) is \`HH\`-attributed; report it as such, never as \`HS_HPA\`.
+4. Clock coverage or nothing. A row with weak \`*_clock_coverage\` is noise.
+   Re-measure before calling it verdicts.
+5. The append-only law applies to the database (`registry.db`), the kernel
+   DB (`kernel_db.json`), and every `verdicts`/`baseline` file. Fresh state
+   comes from fresh runs — never hand edits.
+6. Like-for-like: verdicts compare under one protocol, never cross protocol.
+   `report` defaults to `family`; do not grade anything else against it.
+7. The GPU belongs to the user, not to the program — if the run
+   says \`control-c\`, the campaign stops cleanly and the registry writes
+   what is pending.
+8. Absolute values across runs with different SCLK or sweep order are not
+   comparable; only within-run reads and bisected controls are.
+
+## §14. Preflight failure table — symptoms → fixes
+
+| symptom | cause | fix |
 |---|---|---|
-| Is there a reference TensileLibrary for your codename (or your ISA family) built for a related but different arch? | yes | **informed** — floor to beat |
-| No reference — you are the first to ship it? | yes | **blind** — only this part's contents |
-| Can you SEE a reasonable floor by retargeting another arch's library for your part? | yes (rare) | **informed + caveat** — treat floor proof as weak |
+| `oto check candidates` red — MT0/MT1 too big | tile exceeds register budget | shrink MacroTile; keep MT1 within tile ceiling |
+| `LDS` rejection | tile footprint larger than 16 KB/WG budget | smaller DepthU, smaller MT |
+| `stagnation` ≥ 3 runs, no cell moves > ±2 % | hypothesis space exhausted in this cell | re-seed from the corpus; check `python3 -m oto.harness.corpus_census --cell FAM:side` |
+| `stagnation` … all cells tie at a wall count | deck dry | report `N` class cells explicitly; the campaign is done tuning them — switch the campaign focus to non-wall cells |
+| `oto doctor` profile failure | the profile is unverified | fill the starter file properly and re-run |
+| all cells `?` / empty kernel_db | run never reached the GPU | check `oto tune --yes` from the outset; check for GPU-loss guard |
+| `clock_coverage` weak everywhere | run measured no clock | re-run in TTY with `pp_dpm_sclk` pinned or normal reading |
 
-### 5.1 Informed convergence (spoof exists, e.g. gfx90c/gfx900)
+## §15. Files this tool writes / never writes without asking
 
-Library to beat: `gfx900` (or the spoofed GEMM from another arch). The
-workflow:
+Written by you (operator): `<codename>_starter.{md,json}`, config TOMLs for
+the deck (`phases.yaml` stays as it is), `gfx90c_results/…` tree (generated).
 
-1. `oto agent generate` → docs carry the floor pointer in
-   `spoof_reference` — the report compares native vs floor.
-2. `python3 -m oto library best-effort` — carve a `.dat` from whatever your
-   deck has beaten so far. Cells not yet beaten from the floor are sourced
-   from the floor.
-3. Tune with the **floor-steal protocol** (the only conservative copy in
-   the codebase):
-   - Pick the WORST native cells, not the leaders.
-   - Take the floor winner for that cell.
-   - Keep the floor kernel's full config, then port to `<this-device>` by
-     re-deriving the parts that differ in CU count / L2 / LDS / wave
-   - **Document every altered field and why** in the config note (`note`).
-   - Gate-test, benchmark — never ship an unmeasured steal.
-4. Accept when ≥ 38/38 of the cells beat or tie the floor cell verdict.
+Never written by you outside campaign control: `profiles/<cn>.json` (the
+profile is yours to author; otherwise the tool refuses), `potential_configs.md`
+skeleton, `incomplete_work.md` (append-only), `registry.db`,
+`knowledge_base.md`, `oto/` (Class A trust — tree rewrite is Refactor 2's
+contract; Class B commands must not edit it).
 
-Example: the CC:256 cell once read native ≈ 211 vs floor ≈ 215 (−0.74 %).
-The steal (`AssertFree0ElementMultiple: 4, AssertFree1ElementMultiple: 4`) was
-GPU-validated, gate-legal, and shipped as a first-class deck row at both
-256³ and 512³ — adoption was a decision the owner made, not a ceiling such
-as “must win”. Steal then A/B — never steal then assume.
+## §16. Appendix: the 38-cell matrix as built by this toolset
 
-### 5.2 Blind convergence (no floor exists)
+From the profile — seven families × 7 cube sizes each (typical on this
+class of hardware):
 
-No floor to beat means the bars are the theoretical roofs for this device —
-which are *derived*, not inherited, and deterministic:
+| family | dtype | shapes |
+|---|---|---|
+| SS | S | 192, 256, 512, 768, 1024, 1365, 2048, 4096 |
+| DD | D | 192, 256, 768, 1024, 1365, 2048 |
+| HH | H | 256, 512, 1024, 2048, 4096 |
+| HH_HPA | H\|S | 512, 2048, 4096 |
+| HS_HPA | H\|S | 512, 2048 |
+| CC | C | 192, 256, 512, 1024, 2048 |
+| ZZ | Z | 128, 192, 256, 512, 1024 |
 
-1. `oto agent generate` → `*_theoretical_limits.md` carries §1 “ALU peaks
-   (derived)”: lanes, FMA rate, table. **These are arithmetic.** Nobody
-   set them; nobody can override them. If the hardware cannot reach them,
-   that is the truth about the hardware — not about the tuning.
-2. From the profile, the 38-cell matrix is the full seat to fill.
-3. Propose the full matrix *without a floor*:
-   - large-square middle (1024³-class) — sensible tile ladders from
-     `TARGET_CELLS` in `oto.harness.candidate_rows` (shared geometry wheel,
-     not derived per-arch assumptions),
-   - sweep dummy kernels at each shape: `python3 -m oto.harness.generate_candidates --dry-run`,
-   - run overnight: `python3 -m oto tune --budget 10 --mutations 3`.
-4. Fill the weak cells one at a time using the same apparatus as §5.1 — a
-   blind floor is just a *guess shaped like a floor* that gets replaced as
-   soon as first measurements exist. Keep the guess small and cheap: a
-   plausible tile at the largest cube is all it takes to start measuring.
-5. The first blind run is the calibration: enqueue cells, measure,
-   learn which knobs matter on *this* silicon, refine the geometry wheel,
-   inherit nothing blindly.
-
-Blind acceptance = “as close to the derived roofs as the kernels can be,
-measured per family, per cell, with clock coverage in every verdict. No
-claim of “converged” without enough cells at the ceiling gates — the same
-bar informed mode has, with nothing to steal from.
-
-## 6. The campaign
-
-Once the library exists (`library best-effort`), the real work runs through
-the autonomous convergence loop:
-
-```bash
-python3 -m oto tune --budget 10 --mutations 3
-```
-`oto tune` is the convergence loop: it harvests winners from the last batch,
-mutates at most two knobs at a time (`NARROW` draws: 1–3 forward-knob deltas;
-`WIDE`: floor/DB tile donors × forward draws; `DIRECTION`: move parent
-toward the floor winner), gates every mutant, novelty-checks by fingerprint
-against the ledger, and benchmarks in the TTY — no human per phase. It stops
-at `--budget` plain n iterations.
-
-You supervise cold-start: the first pass harvests nothing, so set sensible
-geometry seeds by adding `phases.yaml` entries (see §8) — that is the only
-hand-authorable part left.
-
-## 7. The rules you cannot break
-
-1. **GPU only in the TTY.** Every benchmark metric originates from runs in
-   a terminal launched by `oto tune` or from the launch/proof commands in this
-   file — never from a desktop session, never from an unattended queue. GPU
-   probes from a desktop MUST stay ≤ 512² build probes.
-2. **CPU gates are not measurement.** A candidate passing `oto check
-   candidates` is legal to try, not proven competitive.
-3. **Measured only.** Every claims-based drop in performance bars MUST be
-   accompanied by a TTY measurement.
-4. **Typecode is truth.** Family attribution reads kernel headers only; no
-   phase ids, no directory prefixes, no filenames implying anything.
-5. **Append-only.** Registry.db, kernel_db.json, reports — never edit. Fresh
-   state comes from fresh runs, full stop.
-6. **Like-for-like.** Verdicts compare under the same protocol, always. The acceptance report grades one protocol at a time; do not re-implement its logic.
-7. **Clock coverage or silence.** A verdict over a run with weak
-   `clock_coverage` is a NULL, not a number — re-measure.
-8. **No silent skips.** A dropped phase must have a reason written next to it.
-9. **Steal documented.** Any foreign config lifted into this deck carries a
-   note naming intention (see §5.1).
-10. **Walls are walls.** A cell that hits the ceiling after multiple runs
-    stops being worked on. Walls live in `incomplete_work.md` with
-    `MEASURED` beside them. Do not re-litigate.
-
-## 8. Extending the deck for a run
-
-The deck (`phases.yaml`) is seeded by the generator; you add rows when a
-new hypothesis lands:
-
-```bash
-python3 -m oto.harness.generate_candidates --dry-run   # sizes the pool
-python3 -m oto.harness.generate_candidates             # emits overlay + deck entries
-python3 -m oto check candidates                          # 0 illegal or stop
-```
-
-`phases.yaml` growth is by `git commit` by the owner (the user) — one commit
-per row; never batch-edit.
-
-## 9. Sign-off — what “done” means
-
-A campaign is done when, for the 38 target cells (or the cells your starter
-file defined), all hold:
-
-| gate | how to check |
-|---|---|
-| library builds | `python3 -m oto library best-effort` exits 0; `.dat` loads under PyTorch; a GEMM vs reference on random inputs matches within dtype tolerance |
-| `oto.check candidates` passes | 0 illegal on the current deck |
-| acceptance report like-for-like | `oto report --json`; verdicts recorded |
-| floor/roof | informed: every cell beats or ties floor verdicts; blind: measured % of §1 derived roof printed in the report |
-| clocks | every verdict has ≥ e.g. 50 % clock coverage in its run |
-| sign-off doc | `incomplete_work.md` lists residual gaps; every one carries a measured reason |
-
-Do not declare convergence from one run; require ≥ 2 (one preload + one
-measurement).
-
-## 10. If stuck
-
-| symptom | response |
-|---|---|
-| `oto doctor` reports a profile failure | fix the profile, not the code — the profile is the data, the code is derived |
-| a kernel always fails with error 4 | occupancy gate refusal: shrink tile / increase residency |
-| a kernel hits the barrier but the bar says orange | it is at the ceiling (see §7) — walls are not failures; note them and move on |
-| `stagnation`: three runs, no cell moves beyond ±2 % | your hypotheses are exhausted — check `incomplete_work.md`, `potential_configs.md` for untouched neighbours/axes; if truly no move, declare measured and escalate |
-
-### Running the command
-
-```bash
-python3 -m oto doctor ; python3 -m oto library best-effort ; \
-  python3 -m oto tune --budget 10 --mutations 3 ; python3 -m oto report --json
-```
-
-Long pages of logs are a feature. The report is the point; the rest is plumbing.
+If your profile disagrees with this, fine — the output of the campaign is
+(cells you listed) × (measured winner per cell) — the internal tool prints the
+full list with `oto check candidates --quiet`.

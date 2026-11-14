@@ -120,25 +120,56 @@ def _tensile_root() -> Check:
         return _fail("toolchain", "TENSILE_ROOT", str(exc),
                      "Point TENSILE_ROOT at a Tensile checkout or a "
                      "rocm-libraries root containing shared/tensile.")
-    return _ok("toolchain", "TENSILE_ROOT", str(resolved))
+    version = ""
+    bin_ = resolved / "Tensile" / "bin" / "Tensile"
+    out = subprocess_probe([str(bin_), "--version"], "Tensile")
+    if out:
+        version = " (version line seen)"
+    return _ok("toolchain", "TENSILE_ROOT", f"{resolved}{version}")
 
 
-def _rocm() -> Check:
+def _rocm() -> list[Check]:
+    """The full resolved-toolchain dashboard: resolved paths, verified files,
+    queried versions. No fallback, no system /usr, every row is this repo's
+    user-provided env, or a clear reason it cannot be used."""
     from oto.runners.toolchain import resolve_rocm_paths
-    paths = resolve_rocm_paths()
-    missing = [k for k in ("ROCM_PATH", "ROCM_LLVM_BIN", "TENSILE_ASSEMBLER")
-               if not paths.get(k)]
-    if missing:
-        return _fail("toolchain", "ROCm toolchain",
-                     "unresolved: " + ", ".join(missing),
-                     "Install ROCm or set ROCM_PATH/ROCM_LLVM_BIN explicitly "
-                     "in .env; then run 'oto doctor' again.")
-    asm = Path(paths["TENSILE_ASSEMBLER"])
-    if not asm.is_file():
-        return _fail("toolchain", "ROCm assembler", str(asm),
-                     "The assembler path does not exist; fix TENSILE_ASSEMBLER.")
-    return _ok("toolchain", "ROCm toolchain",
-               f"{paths['ROCM_PATH']} (assembler {asm.name})")
+    try:
+        paths = resolve_rocm_paths()
+    except Exception as exc:
+        return [_fail("toolchain", "ROCm toolchain (resolve)", str(exc),
+                      "Fix ROCM_PATH / ROCM_LLVM_BIN / TENSILE_ASSEMBLER in "
+                      ".env, or export them; no system fallback exists.")]
+    rows: list[Check] = []
+    paths_true_paths = {"ROCM_PATH", "HIP_PATH", "ROCM_BIN",
+                        "ROCM_LLVM_BIN", "TENSILE_ASSEMBLER",
+                        "HIP_DEVICE_LIB_PATH"}
+    for key in ("ROCM_PATH", "HIP_PATH", "ROCM_BIN", "ROCM_LLVM_BIN",
+                "TENSILE_ASSEMBLER", "HIP_DEVICE_LIB_PATH", "ROCM_VERSION"):
+        val = paths.get(key)
+        if not val:
+            rows.append(_warn("toolchain", key, "not derived or set", ""))
+            continue
+        pf = Path(val)
+        if key in paths_true_paths and not pf.exists():
+            rows.append(_fail("toolchain", key, f"missing: {val}",
+                              "Existence check failed; the value in .env or the "
+                              "derived layout is broken."))
+            continue
+        rows.append(_ok("toolchain", key, str(val)))
+    # Neighbour probes: reported paths only, never a different interpreter.
+    asm = Path(paths.get("TENSILE_ASSEMBLER", ""))
+    if asm.is_file():
+        import subprocess
+        try:
+            proc = subprocess.run([str(asm), "--version"],
+                                  capture_output=True, text=True, timeout=30)
+            line = (proc.stdout or proc.stderr or "").splitlines()[0][:200] if (proc.stdout or proc.stderr) else ""
+            rows.append(_ok("toolchain", "ROCm assembler (version)", line))
+        except Exception as exc:
+            rows.append(_warn("toolchain", "ROCm assembler (version)",
+                              f"{type(exc).__name__}: {exc}",
+                              "assembler ran but query failed"))
+    return rows
 
 
 def _gpu() -> Check:
@@ -327,10 +358,10 @@ def _all_checks(base: Path) -> list[Check]:
         _safe("toolchain", "Python dependencies", _dependencies),
         _safe("toolchain", ".env", _dotenv),
         _safe("toolchain", "TENSILE_ROOT", _tensile_root),
-        _safe("toolchain", "ROCm toolchain", _rocm),
-        _safe("gpu", "GPU", _gpu),
-        _safe("toolchain", "Device profile", lambda: _profile(base)),
     ]
+    checks.extend(_rocm())
+    checks.append(_safe("gpu", "GPU", _gpu))
+    checks.append(_safe("toolchain", "Device profile", lambda: _profile(base)))
     checks.extend(_registry(base))
     checks.append(_coverage(base))
     checks.extend(_docs(base))

@@ -22,11 +22,18 @@ reference devices for this project; other archs may need a wider table):
 * FP16 (fast F16, v_pk_fma_f16): FP32 * 2.
 * BF16 (no dot, no packed-in GCN5): FP32.
 * INT8 (no dot, no dp4a): FP32 upper bound.
+* Bandwidth (dual-channel DDR): ``memory_channels * memory_rate_mtps *
+  per_channel_bytes / 1000`` with DDR4/DDR5 = 8 B/channel. If either field is
+  zero the derivation fails loudly — a forgotten spec is an error, never a guess.
+* Memory roofline: ``peak_flops / bandwidth_gb_s`` yields the minimum FLOP/byte
+  (the machine balance); a family operating below that ratio is bandwidth-
+  limited, above it compute-limited.
 
 Rounding is ``floor(x + 0.5)`` — deterministic, no banker's rounding.
 
-Public API: lanes, derive_lane_classes, derive_peak_gflops,
-derive_theoretical_peaks_blas8.
+Public API: lanes, derive_bandwidth_gb_s, derive_lane_classes,
+derive_peak_gflops, derive_theoretical_peaks_blas8,
+derive_machine_balance.
 """
 
 from __future__ import annotations
@@ -51,6 +58,46 @@ FAMILY_LANE = {
 def lanes(profile: DeviceProfile) -> int:
     """Total FP lanes across the GPU (CUs * SIMDs/CU * lanes/SIMD)."""
     return profile.num_cus * profile.simds_per_cu * profile.lanes_per_simd
+
+
+def _per_channel_bytes(memory_type: str) -> int:
+    m = memory_type.upper()
+    if m.startswith(("DDR4", "DDR5")):
+        return 8
+    if m.startswith(("LPDDR4", "LPDDR5")):
+        return 8               # also 8-byte channel width
+    if "HBM" in m:
+        raise ValueError("HBM width varies by variant; record channels+rate "
+                         "explicitly in the profile instead of guessing")
+    raise ValueError(f"memory_type {memory_type!r} unknown; cannot derive bandwidth")
+
+
+def derive_bandwidth_gb_s(profile: DeviceProfile) -> float:
+    """Peak theoretical bandwidth derivable from the profile's memory spec.
+
+    Raises ValueError when the profile carries an unexplained memory type or
+    omits ``memory_channels``/``memory_rate_mtps``.
+    """
+    t = profile.theoretical
+    if t.memory_channels <= 0 or t.memory_rate_mtps <= 0:
+        raise ValueError(
+            f"{profile.codename}: memory_channels/memory_rate_mtps must be set "
+            f"for {t.memory_type!r} to derive bandwidth (have "
+            f"{t.memory_channels}/{t.memory_rate_mtps})")
+    return t.memory_channels * t.memory_rate_mtps * _per_channel_bytes(t.memory_type) / 1000.0
+
+
+def derive_machine_balance(profile: DeviceProfile) -> dict[str, float]:
+    """FLOP per byte (the machine-balance point) per peak unit.
+
+    Derived purely from the ALU derivation and the bandwidth derivation:
+    a family is *compute-limited* above it, *bandwidth-limited* below it.
+    """
+    bw = derive_bandwidth_gb_s(profile)
+    if bw <= 0:
+        raise ValueError("bandwidth derived as zero — cannot compute balance; "
+                         "fix memory channels / rate first")
+    return {fam: g / bw for fam, g in derive_theoretical_peaks_blas8(profile).items()}
 
 
 def _round_half_up(x: float) -> int:
@@ -104,6 +151,11 @@ def _main() -> None:
           f"num_cus={p.num_cus} simds_per_cu={p.simds_per_cu} "
           f"lanes_per_simd={p.lanes_per_simd}) f={p.max_clock_mhz/1000.0} GHz")
     print(json.dumps(blas8, indent=2, sort_keys=True))
+    try:
+        print("bandwidth_gb_s derived:", derive_bandwidth_gb_s(p))
+        print(json.dumps(derive_machine_balance(p), indent=2, sort_keys=True))
+    except ValueError as exc:
+        print(f"bandwidth derivation: {exc}")
 
 
 if __name__ == "__main__":

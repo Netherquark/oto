@@ -234,7 +234,9 @@
     "memory_type": "DDR4",
     "bandwidth_gb_s": 0.0,
     "coherent_host_access": false,
-    "boundaries": {}
+    "boundaries": {},
+    "memory_channels": 2,
+    "memory_rate_mtps": 3200
   },
   "measured_vgpr": {},
   "spoof_reference": "gfx900"

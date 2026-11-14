@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dataclasses import replace
 
+import pytest
+
+from oto.device import derive
 from oto.device import loader as _loader
 from oto.device.derive import (
     derive_lane_classes,
@@ -101,3 +104,38 @@ def test_derive_module_cli_prints_and_exits_zero():
     assert r.returncode == 0
     assert "codename=gfx90c" in r.stdout
     assert '"SS": 1613' in r.stdout
+
+
+def test_bandwidth_from_spec():
+    assert derive.derive_bandwidth_gb_s(GFX90C) == 51.2
+
+
+def test_bandwidth_refuses_guessing():
+    import dataclasses
+    zeroed = dataclasses.replace(
+        GFX90C,
+        theoretical=dataclasses.replace(
+            GFX90C.theoretical, memory_channels=0, memory_rate_mtps=0))
+    with pytest.raises(ValueError, match="memory_channels"):
+        derive.derive_bandwidth_gb_s(zeroed)
+
+
+def test_bandwidth_refuses_unknown_memory():
+    import dataclasses
+    bad = dataclasses.replace(
+        GFX90C, theoretical=dataclasses.replace(GFX90C.theoretical,
+                                                 memory_type="LPDDR9"))
+    with pytest.raises(ValueError, match="memory_type"):
+        derive.derive_bandwidth_gb_s(bad)
+
+
+def test_machine_balance_is_peak_over_bandwidth():
+    balance = derive.derive_machine_balance(GFX90C)
+    bw = derive.derive_bandwidth_gb_s(GFX90C)
+    for fam, v in balance.items():
+        assert abs(v - GFX90C.theoretical_peaks_blas8[fam] / bw) < 1e-10, fam
+
+
+def test_machine_balance_keys_are_family_keys():
+    assert set(derive.derive_machine_balance(GFX90C)) == set(
+        GFX90C.theoretical_peaks_blas8)

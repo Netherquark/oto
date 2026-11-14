@@ -4182,3 +4182,37 @@ the pre-built seed pool.
   human-supervised process; GPU legs remain TTY-only; walls stay walls.
   gfx90c_theoretical_limits §2 now points directly at the derivation so the
   doc can never silently disagree with the formula.
+
+- **2026-11-14 (35th) — operator_campaign.md is now self-contained; the operator agent holds the GPU.**
+  The first re-draft was wrong on three counts, all fixed in this entry: (1) it
+  shipped no content copyable from the project's own history without pointing
+  the agent at git logs it does not have; (2) it stripped the GPU from the
+  operator agent as if the operator were a GUI-session worker — the operator is
+  the TTY runner and benchmarks are its job; (3) the 38-cell matrix is now
+  carried verbatim in the doc so the agent never needs a second file to know
+  the target list. The doc is now: preflight → starter file → `oto doctor` →
+  `oto agent generate` → `oto library best-effort` → `oto tune` →
+  `oto report --json`, with §5 branching into two development models
+  (informed convergence with a spoof floor; blind convergence with derived roofs
+  and no floor at all) and §11 decomposing every tie/loss into its class
+  catalogue with an exit condition. The runbook breaks TTY/bench semantics only
+  for the GPU-loss guard: the loop aborts rather than burn a night on a dead
+  GPU. Initial framing fixed the agent class boundary instead of conflating
+  it with display-session workers.
+
+- **2026-11-14 (36th) — the toolchain contract is closed: explicit env, never a silent skip.**
+  `oto/runners/toolchain.py`: the resolver accepted a ROCM_LLVM_BIN/ROCM_BIN/
+  TENSILE_ASSEMBLER set to a nonexistent path and silently fell back to the
+  derived layout — a user who typo'd their path got a working site built
+  against the system tree instead of the one they asked for, with zero
+  signal. Every explicit value now raises with the bad path spelled out;
+  the derived layout is probed in order and reported; HIP_DEVICE_LIB_PATH is
+  derived from the user's ROCM_PATH (lib/llvm/amdgcn/bitcode or the old RPM
+  layout), never defaults to a system tree. `oto doctor` prints the full
+  resolved dashboard: every path variable with existence, plus the exact
+  assembler version line and the Tensile bin/Tensile version line; a broken
+  .env reports the broken key with its bad value, no fallback. `.env`
+  pins HIP_PATH=ROCM_PATH (explicit, removes ambiguity) and ROCM_VERSION
+  for the nightly build; `.env.example` now states the contract in line 1:
+  nothing falls back to /usr, /usr/lib64, or /opt/rocm unless you write it
+  there yourself.

@@ -80,6 +80,8 @@ def _to_profile(data: dict[str, Any], source: str = "<profile>") -> DeviceProfil
             bandwidth_gb_s=th.get("bandwidth_gb_s", 0.0),
             coherent_host_access=th.get("coherent_host_access", False),
             boundaries=th.get("boundaries", {}),
+            memory_channels=int(th.get("memory_channels", 0) or 0),
+            memory_rate_mtps=int(th.get("memory_rate_mtps", 0) or 0),
         ),
         measured_vgpr=data.get("measured_vgpr", {}),
         spoof_reference=data.get("spoof_reference", ""),
