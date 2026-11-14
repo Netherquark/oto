@@ -25,7 +25,7 @@ one defaults to the wrong entry document. Pick first, then read.
 | Class | Who | Entry document | Optimises for |
 |---|---|---|---|
 | **A — developer** | coding agent working **on** oto | `claude.md` | the codebase itself |
-| **B — operator** | agent **using** oto to produce a library for an unsupported platform | `docs/operator_runbook.md` | a best-effort library for the target device |
+| **B — operator** | agent **using** oto to produce a library for an unsupported platform | `docs/operator_runbook.md` (then [`docs/operator_campaign.md`](operator_campaign.md) for the tuning campaign) | a best-effort library for the target device, then a converged one |
 
 Both classes share: this file's boundary (below), `claude.md`'s invariants
 (§2.0), the append-only ledger, the no-GPU-outside-the-user's-TTY rule, and
@@ -41,7 +41,7 @@ serves — `dev`, `operator`, or `shared`.
 |---|---|---|---|
 | Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
 | Class A — reviewer/auditor subagent | `adversarial_review.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
-| Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
+| Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) → `docs/operator_campaign.md` (the tuning campaign) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
 | Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md` and their siblings), `potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
 | Any agent, any class | `docs/comparability.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
 
@@ -105,6 +105,7 @@ Corollaries:
 | `docs/skills/*.md` | shared | Ecosystem | Per-class agent skill definitions (Class A developer, Class B operator) |
 | `docs/harness_runbook.md` | dev | Ecosystem | Harness runbook |
 | `docs/operator_runbook.md` | operator | Ecosystem | **Class B entry** — best-effort library on an unsupported AMD platform, end to end |
+| `docs/operator_campaign.md` | operator | Ecosystem | The persistent autonomous tuning campaign: corpus study → straggler classes → candidate routes → consultation triggers |
 | `docs/starter_pair.md` | operator | Ecosystem | The starter Markdown+JSON pair protocol |
 | `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
@@ -158,7 +159,8 @@ Nothing else. In particular:
 ## Reading order for the operator agent (class B)
 
 `docs/operator_runbook.md` — the runbook is the entry point (§0 preconditions
-first). Then: `claude.md` **§2.0 only** (the shared invariants) →
+first; after the best-effort library exists, `docs/operator_campaign.md` is the
+living procedure for the tuning campaign). Then: `claude.md` **§2.0 only** (the shared invariants) →
 [`docs/starter_pair.md`](starter_pair.md) (the pair protocol) →
 [`docs/agent_reference.md`](agent_reference.md) (CPU-only harness commands) →
 [`plans/REFACTOR_2_UNIVERSAL_GPU.md`](../plans/REFACTOR_2_UNIVERSAL_GPU.md) (implementation context and backlog) → the module

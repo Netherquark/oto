@@ -177,6 +177,13 @@ proposals still generate and gate-check. Analysis guides for each tool:
 
 ## 7. Verification matrix — what "done" means for best-effort
 
+Best-effort is the floor, not the goal. Once the library builds and the
+verification matrix passes, the campaign — the multi-session work that
+turns a working library into a converged one — is specified in
+[`operator_campaign.md`](operator_campaign.md). It is the standing procedure
+for persistent, autonomous tuning across sessions with judgment-only
+consultations at defined triggers.
+
 | Gate | How | Done when |
 |---|---|---|
 | Profile refuses placeholders | loader sanity check | §4 sanity load passes |
@@ -215,7 +222,7 @@ Performance claims are reported as measured, never extrapolated.
 
 ## 10. Reading order (class B)
 
-`claude.md` (shared invariants only) → this file → [`docs/README.md`](README.md) (the registry) →
+`claude.md` (shared invariants only) → this file → [`operator_campaign.md`](operator_campaign.md) (the tuning campaign) → [`docs/README.md`](README.md) (the registry) →
 [`docs/starter_pair.md`](starter_pair.md) → [`docs/agent_reference.md`](agent_reference.md) →
 [`plans/REFACTOR_2_UNIVERSAL_GPU.md`](../plans/REFACTOR_2_UNIVERSAL_GPU.md) → the module
 docstring of anything you edit.

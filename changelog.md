@@ -4034,3 +4034,27 @@ the pre-built seed pool.
   were expanded in place, and the required-`profile` agent entry points are
   documented as required, not "optional ambient" (an injected claim caught
   and corrected).
+
+- **2026-11-14 (27th) — the operator campaign playbook lands (`docs/operator_campaign.md`).**
+  The convergence prompt that produced the gfx90c work is formalised as the
+  standing, persistent procedure for Class B operators running a multi-session
+  tuning campaign after the best-effort library exists. Content: the two hard
+  display-session rules (GPU only in the user's TTY; CPU gates are not
+  measurement); the persistent operating model (state lives in the ledger /
+  kernel_db / acceptance report / deck overlay, never in context); the
+  session-start checklist (`oto doctor`, `oto verify all`, `kernel_db --rebuild`,
+  `resolve_cells --taxonomy`); Phase 1 corpus study with the exact tools and the
+  like-for-like/clock-coverage/typecode attribution rules; Phase 2 straggler
+  decomposition (W walls, R residency, C complex accounting, K clock confounds,
+  D depressed-cell/sweep-order, F floor-steal-with-documented-tweak, N virgin
+  axes — detect / route / closing evidence each); Phase 3 candidate routes in
+  priority order (machine-driven narrow/wide via `oto tune` + the DB mutator,
+  targeted DECISION_TRIAL_TILES rows, documented floor steals, virgin axes);
+  Phase 4 consultation triggers (T1 verdict flip, T2 three batches without a
+  band move, T3 CPU-unexplainable anomaly, T4 hardware-fact consequence,
+  T5 campaign complete) with a self-contained payload protocol — never spend a
+  consultation on a question a CPU tool answers; Phase 5 the per-batch
+  autonomous loop (rebuild → report → census → triage → deck → next batch);
+  Phase 6 the 10+ h overnight run. Registered in `docs/README.md` (Class B);
+  `operator_runbook.md` and `skills/class_b_operator.md` now route the campaign
+  there; `docs_index.json` regenerated; registry + index tests green.

@@ -181,6 +181,12 @@
     },
     {
       "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Automated agentic consult: API key \u2192 `potential_configs.md` with fewest GPU legs",
+      "path": "plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md"
+    },
+    {
+      "class": "dev",
       "kind": "Ecosystem (frozen)",
       "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
       "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
@@ -277,6 +283,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 37,
+  "total": 38,
   "version": 1
 }
