@@ -260,7 +260,7 @@ is decided.** Both are gate policy, and the second is load-bearing for the first
    = 16, and the same module's `FAMILY_BYTES_PER_ELEMENT` already says `"ZZ": 16`
    — the two tables in one file disagree.
 2. **The budget was calibrated against the 8-byte value.**
-   `tests/test_occupancy_gate.py::TestLdsGate::test_budget_sits_at_measured_boundary`
+   `tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_measured_boundary`
    asserts `(64+64)*16*bpe == 16384`, which holds only at `bpe = 8`. Measured from
    `amdhsa_group_segment_fixed_size`: Tensile emits **65536** for a ZZ 64x64x16
    (single-buffered 32768), so the current model understates the ZZ LDS footprint

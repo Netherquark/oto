@@ -145,7 +145,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
     `(64+64)·16·8 == 16384 == LDS_BUDGET` sits exactly on the measured complex
     boundary (16384 B/WG legal; 20480 B/WG dead; `128x32x16` needs 106496 B and
     Tensile rejects it). The lock is
-    `tests/test_occupancy_gate.py::TestLdsGate::test_budget_sits_at_measured_boundary`.
+    `tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_measured_boundary`.
   - `ASSEMBLY_DTYPE_ELEM_BYTES` (`oto/tensile/gates/assembly.py`) — the
     **assembly class** rule, which counts the *element*: `Z = 16`.
   - The older note here — "suspected 2× LDS under-count of ZZ, `scheduler.py`

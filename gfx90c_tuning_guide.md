@@ -349,7 +349,7 @@ measured totals per (dtype, TT):
 Invariant (tested): **gate-legal ⇔ measured total < 256**. Z 8x4/8x8 objects are
 absent from the corpus exactly because Tensile refused to emit them — the model
 and reality agree on every observed outcome. Regression:
-`tests/test_occupancy_gate.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`.
+`tests/test_occupancy_model_vgpr.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`.
 
 ### 6.1 The two rules the per-thread model was missing (2026-10-18)
 
@@ -382,7 +382,7 @@ must fit the 64 KiB LDS:
 (`LDS_BUDGET = 16384`) on large-DepthU gfx900 kernels (SS 29, DD 12, HH 1,
 HS_HPA 1; DepthU 16/32/64), a reference-only story. **The three new rules add 0
 false rejections to both populations.** Tests:
-`tests/test_occupancy_gate.py::TestWorkgroupRegisterFile`,
+`tests/test_occupancy_model_lds.py::TestWorkgroupRegisterFile`,
 `::TestLdsReductionBuffer`.
 
 > 2026-10-09: for the physical per-cell **resident-workgroup** audit (the

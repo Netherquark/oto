@@ -451,7 +451,7 @@ they pin the plan's own claims rather than the design's:
       counts the rejects).
 - [x] Outcome classification reproduces the archived mutant population exactly, with a
       control population at the expected yield. — `tests/test_mutator.py` +
-      `tests/test_phase1_integration.py` replay the archived mutant directories through the
+      `tests/test_phase1_readonly_gpu.py` replay the archived mutant directories through the
       classifier and assert nothing non-functional is misread (every measured row is
       non-zero); the negative cache must **not** fire on it.
 - [x] Legal rate of emitted candidates ≥ the bar in `proposal.md` §H.7, measured live.

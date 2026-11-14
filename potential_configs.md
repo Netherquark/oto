@@ -151,7 +151,7 @@ every phase that produced a measurement and in none of the 951 that did not,
 corpus-wide — so the void run's GPU loss still trips it while
 run_20261018_004835's three and run_20261017_092909's five consecutive
 unbuildable tiles do not. Pinned by
-`tests/test_phase1_integration.py::GpuLossAbortTests`.
+`tests/test_phase1_readonly_gpu.py::GpuLossAbortTests`.
 
 **Cause 2: the mutation arm cannot see the cells it exists to fix.** Of that
 run's 412 candidates, every single one went to a small cell that already beat the
@@ -351,7 +351,7 @@ CPU-only, safe under GNOME (the legality proof is `--dry-run`):
 
 ```bash
 python3 -m oto.harness.generate_candidates --dry-run   # 0 drops, 0 strips, 0 refusals
-python3 -m pytest -q tests/test_phase1_integration.py tests/test_mutation_arm.py \
+python3 -m pytest -q tests/test_phase1_readonly_gpu.py tests/test_mutation_arm.py \
     tests/test_ab_audit.py tests/test_function_length.py tests/test_pyflakes.py
 ```
 
@@ -693,7 +693,7 @@ vendor's.
 * **`DECISION_TRIAL_TILES` D3** becomes the widest legal ZZ pair (D1/D2
   unchanged).
 * **New model pins (tests):** `TestWorkgroupRegisterFile`,
-  `TestLdsReductionBuffer` (`tests/test_occupancy_gate.py`);
+  `TestLdsReductionBuffer` (`tests/test_occupancy_model_lds.py`);
   `test_generator_refuses_the_dead_perf_mode` and
   `test_no_legal_complex_tile_is_wider_than_the_measured_max`
   (`tests/test_knob_sweep.py`); `TestEveryDeckRowIsGenerative`
@@ -731,7 +731,7 @@ python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
 python3 -m oto.harness.rule_calibration --fail-on-false-reject
 python3 -m oto.harness.failure_triage
 python3 -m oto preflight
-python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
+python3 -m pytest -q tests/test_occupancy_model_lds.py tests/test_occupancy_model_vgpr.py tests/test_knob_sweep.py
 
 # TTY only — the real run:
 python3 -m oto tune --budget 10 --yes
@@ -2124,7 +2124,7 @@ Two caveats that are **not** in this matrix:
   pv-cancels it, and for SS/HH/HPA (VW4) the pair is a *narrow*, not a widen. The
   paired CC row is swept as a trial (added 2026-10-14, §9 D4). Home:
   `oto/tensile/gates/loads.py` `_glvw_for` + `_Operand._restriction_active`,
-  `tests/test_occupancy_gate.py::TestGlobalLoadVectorWidthRule`.
+  `tests/test_occupancy_model_vgpr.py::TestGlobalLoadVectorWidthRule`.
 
 ### 8.2 Tiles that are legal but were never generated (the real CC/ZZ headroom)
 
@@ -2654,7 +2654,7 @@ The following illegal/placeholder configs have been observed or are at risk:
    would refuse 67 kernels including the ZZ winner. Decision pending (user).
 
 Tests to add: `tests/test_legality_virgin.py` pinning each new gate; extend
-`tests/test_occupancy_gate.py` with the new rules.
+`tests/test_occupancy_model_lds.py` with the new rules.
 
 ---
 

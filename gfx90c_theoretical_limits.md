@@ -44,7 +44,8 @@
   double" intuition gives 8 and silently admits `VW=2`. This is now read from
   `DataType.properties` rather than a hand-kept table — see
   `oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT` (with the cap itself,
-  `GLOBAL_LOAD_BYTE_CAP`), which lists `ZZ: 16` and is locked by
+  read from `oto.device.loader.current_profile().global_load_byte_cap`), which
+  lists `ZZ: 16` and is locked by
   `tests/test_measurement_integrity.py`
   (`test_complex_double_is_16_bytes`, `test_zz_vector_width_capped_at_one`).
   Worst legal `VectorWidth` per dtype under the cap: S 4, H 8, D 2, C 2, **Z 1**.
@@ -325,7 +326,7 @@ pool to it.
 
 **Why it is coupled and cannot be fixed alone.** `LDS_BUDGET = 16384` was chosen
 so `(64+64)*16*8 == 16384` puts the measured complex boundary at the wall —
-`tests/test_occupancy_gate.py::TestLdsGate::test_budget_sits_at_measured_boundary`
+`tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_measured_boundary`
 asserts exactly that identity, so it fails at bpe=16. Corrected baseline that
 preserves today's accept/reject boundary: `"Z": 16` with `LDS_BUDGET = 32768`.
 Note the consequence the user is choosing between: keeping 8/16384 refuses

@@ -62,8 +62,9 @@ UNKNOWN? not in any owner MD                -> a real gap: record it in that
                                               continue the task
 ```
 
-Worked examples, all **settled — do not recompute or "fix" them**: `VGPR_PER_CU =
-65536` (read from Tensile's own kernel writer, confirmed against the device);
+Worked examples, all **settled — do not recompute or "fix" them**: `vgpr_per_cu =
+65536` (read from Tensile's own kernel writer, confirmed against the device; the
+profile field is now `vgpr_per_cu`);
 7 CUs on this box; the ±27.8% tie band.
 
 #### 2.0.2 Verdict, ceiling and roofline semantics are decided — apply them
@@ -418,7 +419,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   classic path caps a contiguous load at `GLVW * bytesPerElement <= 16`. A tile
   reaching only 8 B leaves ~5-15% on the table for no legal reason, and the
   native deck hardcoded exactly that for SS/HH/DD. `cap_vector_width()` derives
-  the width; `test_occupancy_gate.py` fails if any family deck cannot reach 16 B.
+  the width; `tests/test_occupancy_model_vgpr.py::TestGlobalLoadVectorWidthRule` fails if any family deck cannot reach 16 B.
   Do not re-add a hand-picked narrower width as the only option.
 - **Four calibrated resource limits gate every candidate** (all derived from
   Tensile's own source, not guessed). The launch boundary runs them in

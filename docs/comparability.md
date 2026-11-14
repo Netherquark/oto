@@ -84,7 +84,7 @@ rule, floor discovery, run tagging, per-side counts).
 ```bash
 python3 -m pytest tests/test_comparability.py tests/test_ab_audit.py tests/test_protocol.py -q
 python3 -m oto.harness.regression_matrix --help           # must show --any-protocol
-python3 -m oto.harness.occupancy_audit --side floor       # prints chosen floor runs
+python3 -m oto.harness.regression_matrix [--any-protocol]   # admit non-family protocols only for deck generation
 ```
 
 If you add a new DB-reading entry point, it must adopt the same default:
