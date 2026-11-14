@@ -4164,3 +4164,21 @@ the pre-built seed pool.
   worker (which executes inside a REF worktree) builds its own scratch
   inline. `logs/oto-error.log` untracked. Suite 1062 passed, 8 skipped;
   `oto verify all` ALL EQUIVALENCE CHECKS PASSED; ruff clean.
+
+- **2026-11-14 (34th) — deterministic limits derivation; operator campaign doc is self-contained.**
+  New `oto/device/derive.py`: ALU peaks derived from profile hardware facts
+  by one formula (lanes = num_cus x simds_per_cu x lanes_per_simd; FP32 =
+  2 x lanes x fGHz; FP16 fast_F16 = 2 x FP32; FP64 = FP32 / 16; complex
+  families inherit their lane class), with `python3 -m oto.device.derive`
+  printing them on demand — agent-1's `_peak_table` emits derivation-by-loop
+  matches from `oto.device.derive` so the limits doc can never drift from the
+  formula. `tests/test_derive.py` locks it in (10 tests, exact-int equality
+  against both `peak_gflops` and `theoretical_peaks_blas8`). Docs ecosystem:
+  `docs/operator_campaign.md` rewritten fully self-contained — no
+  requirements on reading git history; the doc spells the two development
+  models (informed = a spoof reference exists, floor-steal protocol;
+  blind = unsupported silicon, derive everything from scratch and propose
+  the matrix from gh facts); the operator is a first-class runner, not a
+  human-supervised process; GPU legs remain TTY-only; walls stay walls.
+  gfx90c_theoretical_limits §2 now points directly at the derivation so the
+  doc can never silently disagree with the formula.

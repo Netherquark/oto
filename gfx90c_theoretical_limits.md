@@ -1,10 +1,14 @@
 # gfx90c Theoretical Performance Limits — oto
 
 > Authoritative acceptance-reference for "as close to the gfx90c theoretical limit as
-> possible". Derived by a research subagent (2026-09-13) from (a) READ-ONLY hardware
-> introspection of the actual machine (`rocminfo`, `rocm-smi`, sysfs/kfd, amdgpu
-> `pp_dpm_*`), (b) the installed ROCm 6.4.4 clang-19 used as an ISA oracle
-> (compile-only — NO benchmarks, NO GPU work allocated), and (c) first-party web docs.
+> possible". The per-family peak table (§2) is now derived deterministically from
+> hardware facts on every call — see `oto.device.derive` (`python3 -m oto.device.derive`),
+> which reproduces exactly the numbers this file records. The limits and the recipe
+> both live behind one Python formula: lanes × 2 (FMA) × f(GHz), FP16 = 2× FP32
+> (fast F16), FP64 = FP32 / 16 (GCN5), complex families inherit their lane class
+> (HGEMM-packed FP16 anti-gates stay FP32). The research narrative and the
+> roofline/boundary thresholds (§3) remain first-party-derived and
+> measure-anchored as before.
 
 ## 0. How this file is used
 
@@ -61,6 +65,13 @@
   ROCm GPU-specs + gpu-arch pages; Tom's Hardware Vega-10 FP64 1:16 analysis.
 
 ## 2. Per-family theoretical ALU peaks (FMA-pipe ceilings)
+
+> These numbers are derivable on demand — `python3 -m oto.device.derive` and
+> `tests/test_derive.py` re-compute them from `profiles/gfx90c.json`. Identical
+> formula: `lanes = num_cus * simds_per_cu * lanes_per_simd`, choose the lane
+> class per family (FP32 / FP64+8:16 / FP16 fast-F16 = 2× FP32), multiply by
+> `2 * fGHz`. Any edit to this table without a corresponding edit in
+> `oto/device/derive.py` is by construction wrong.
 
 BLAS flop accounting: real GEMM 2·M·N·K; complex GEMM 8·M·N·K (4 mul + 4 add);
 HGEMM/HPA 2 flops/MAC regardless of accumulate type. Complex MAC = 4 real FMAs
