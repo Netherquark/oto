@@ -25,6 +25,7 @@ import yaml
 
 from oto.device import loader as _loader
 from oto.device.vocabulary import cube_side
+from oto.runners.paths import results_rel
 from oto.tensile.library_parity import (
     load_pipeline_phases,
     parity_report,
@@ -34,11 +35,11 @@ from oto.tensile.library_parity import (
 )
 
 DECK = yaml.safe_load((REPO / "phases.yaml").read_text())
-_SEED_OVERLAY = REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+_SEED_OVERLAY = REPO / results_rel("overlays", "phases.seed.overlay.yaml")
 
 
 def _load_seed_or_skip():
-    """Live overlay is a gitignored artifact (gfx90c_results/); skip on fresh checkouts."""
+    """Live overlay is a gitignored artifact (results dir); skip on fresh checkouts."""
     if not _SEED_OVERLAY.is_file():
         pytest.skip("phases.seed.overlay.yaml absent (gitignored): "
                     "run `python3 -m oto.harness.generate_candidates` first")

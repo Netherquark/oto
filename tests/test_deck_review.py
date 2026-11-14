@@ -25,6 +25,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+from oto.runners.paths import results_rel
 from oto.tools import deck_review
 
 
@@ -129,7 +130,7 @@ class TestLegality(unittest.TestCase):
 class TestFlood(unittest.TestCase):
     def test_cap_never_drops_a_winner(self):
         """The whole point of the cap: retain the frontier, drop the junk."""
-        db_path = REPO / "gfx90c_results" / "analysis" / "kernel_db.json"
+        db_path = REPO / results_rel("analysis", "kernel_db.json")
         if not db_path.is_file():
             self.skipTest("no kernel_db.json -- rebuild the analysis cache")
         import json

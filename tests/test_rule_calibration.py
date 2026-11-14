@@ -23,6 +23,7 @@ sys.path.insert(0, str(REPO))
 import pytest
 
 from oto.harness import rule_calibration as rc
+from oto.runners.paths import runs_rel
 from oto.tensile.gates.occupancy import occupancy_feasible
 
 
@@ -53,7 +54,7 @@ def _phase_yaml(path: Path, macro, tt, du, vw, dtype="s"):
 
 def _make_corpus(root: Path) -> None:
     """One native run (a built + an empty phase) and one reference run."""
-    run = root / "gfx90c_runs" / "run_test"
+    run = root / runs_rel("run_test")
     cfg = run / "configs"
     cfg.mkdir(parents=True)
     ph = run / "phase_built"
@@ -63,7 +64,7 @@ def _make_corpus(root: Path) -> None:
     (run / "phase_empty").mkdir()
     _phase_yaml(cfg / "phase_phase_empty.yaml", (64, 64), (4, 4), 8, 2)
 
-    rref = root / "gfx90c_runs" / "gfx900_ref_test"
+    rref = root / runs_rel("gfx900_ref_test")
     rcfg = rref / "configs"
     rcfg.mkdir(parents=True)
     ph = rref / "phase_ref_built"
@@ -108,7 +109,7 @@ class TestProbe(unittest.TestCase):
 
     def test_family_filter(self):
         with tempfile.TemporaryDirectory() as td:
-            run = Path(td) / "gfx90c_runs" / "run_test"
+            run = Path(td) / runs_rel("run_test")
             cfg = run / "configs"
             cfg.mkdir(parents=True)
             (run / "phase_dd").mkdir()

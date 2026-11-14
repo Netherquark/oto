@@ -4135,3 +4135,32 @@ the pre-built seed pool.
   the corpus) skip with a reason instead of failing, so a gfx902 checkout
   fails loudly nowhere; every skip reason says "run the tuning campaign
   first". ruff clean; suite runs unchanged against this machine's corpus.
+
+- **2026-11-14 (32nd) — tracked tree stops referencing machine-local scratch.**
+  `oto/tools/verifiers/ verify_ast_equivalence.py`, `verify_gate_differential.py`,
+  `verify_report_html.py` and `_verdicts_worker.py` wrote candidate-side byte
+  artefacts into a hardcoded `/tmp/opencode/`; the evergreen verifier now
+  materialises scratch under `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")`
+  via a new `oto.tools.verifiers._evergreen.scratch_dir()` (process-lifetime,
+  atexit-cleaned), and the worker that executes inside a *ref worktree* builds
+  its own `tempfile.mkdtemp` (it must stay oto-free).
+  `oto/tensile/best_library.py` no longer silently prepends a system clang
+  (`/usr/lib64/rocm/llvm/bin`) to `PATH` when the user did not set
+  `ROCM_LLVM_BIN` — the LLVM bindir is derived from the user's own
+  `ROCM_PATH` (wheel layout `lib/llvm/bin`, tarball layout `llvm/bin`).
+  `logs/oto-error.log` (a tracked live log containing this machine's absolute
+  paths) is untracked; `logs/` is now gitignored — never commit logs.
+  Verifiers: ALL EQUIVALENCE CHECKS PASSED; ruff clean; suite 1061 passed.
+
+- **2026-11-14 (33rd) — tests fully path-portable; tracked tree scrubbed of
+  machine-local paths.** Every test that referenced the historical
+  `gfx90c_runs/` / `gfx90c_results/` names now resolves them from the profile
+  via `oto.runners.paths` (`runs_rel`/`results_rel`), so the suite runs
+  unchanged on any codename with a matching profile. No tracked test or
+  source file references `/tmp/` or any machine path; the evergreen verifier's
+  candidate-side artefacts now materialise under
+  `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")` owned by
+  `oto.tools.verifiers._evergreen` (atexit-cleaned), the gate-differential
+  worker (which executes inside a REF worktree) builds its own scratch
+  inline. `logs/oto-error.log` untracked. Suite 1062 passed, 8 skipped;
+  `oto verify all` ALL EQUIVALENCE CHECKS PASSED; ruff clean.

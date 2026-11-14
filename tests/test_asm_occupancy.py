@@ -30,6 +30,7 @@ from oto.device import loader as _loader
 
 _profile = _loader.current_profile()
 from oto.harness import asm_occupancy as ao
+from oto.runners.paths import runs_rel
 
 # The AMD/ORNL GFX9 table, VGPR/thread -> waves/SIMD. Reproduced here rather
 # than imported because it is the oracle this module is calibrated against.
@@ -108,9 +109,9 @@ def test_dtype_facts_agree_with_tensile_datatypes():
 
 def test_corpus_parses_when_present():
     """Guard the emitted-kernel reader against a missing or empty corpus."""
-    rows = ao.measure_corpus(BASE / "gfx90c_runs")
+    rows = ao.measure_corpus(BASE / runs_rel(""))
     if not rows:
-        pytest.skip("no gfx90c_runs corpus on this checkout")
+        pytest.skip(f"no {runs_rel("")} corpus on this checkout")
     # every row that has a GFLOP/s number must have consumed the real field
     gfloated = [r for r in rows if r["gflops"] is not None]
     assert gfloated, "the CSV reader is reading the misaligned field 0"
@@ -124,9 +125,9 @@ def test_corpus_parses_when_present():
 def test_corpus_occupancy_is_not_pathologically_low():
     """The corpus is not uniformly occupancy-starved; if this fails, the model
     or the assumptions behind MAX_WAVES_PER_CU changed."""
-    rows = ao.measure_corpus(BASE / "gfx90c_runs")
+    rows = ao.measure_corpus(BASE / runs_rel(""))
     if not rows:
-        pytest.skip("no gfx90c_runs corpus on this checkout")
+        pytest.skip(f"no {runs_rel("")} corpus on this checkout")
     low = [r for r in rows if r["waves_per_cu"] <= 3]
     fraction = len(low) / len(rows)
     assert fraction < 0.25, (

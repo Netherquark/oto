@@ -32,6 +32,7 @@ sys.path.insert(0, str(ROOT))
 import oto.runners.benchmark as bench_mod
 import oto.runners.driver as pt
 import oto.runners.phases as phases_mod
+from oto.runners.paths import runs_rel
 
 # The parser and the option wiring live in the CLI module; the entrypoint the
 # operator actually runs is the repo-root CLI entry (`python3 -m oto`).
@@ -127,7 +128,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
             deck = Path(td) / "phases.yaml"
             import yaml
             deck.write_text(yaml.safe_dump(phases))
-            run_dir = Path(td) / "gfx90c_runs" / "run_x"
+            run_dir = Path(td) / runs_rel("run_x")
             run_dir.mkdir(parents=True)
             d.run_dir = run_dir
             d.base_dir = Path(td)
@@ -138,7 +139,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
 
     def test_q_stops_a_fully_skipped_deck(self):
         with tempfile.TemporaryDirectory() as td:
-            run_dir = Path(td) / "gfx90c_runs" / "run_x"
+            run_dir = Path(td) / runs_rel("run_x")
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             # 'q' delivered on the first skip; every later phase must not run.
@@ -151,7 +152,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
 
     def test_e_stops_a_fully_skipped_deck(self):
         with tempfile.TemporaryDirectory() as td:
-            run_dir = Path(td) / "gfx90c_runs" / "run_x"
+            run_dir = Path(td) / runs_rel("run_x")
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["e"])):
@@ -163,7 +164,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
 
     def test_unrelated_keys_do_not_stop_the_run(self):
         with tempfile.TemporaryDirectory() as td:
-            run_dir = Path(td) / "gfx90c_runs" / "run_x"
+            run_dir = Path(td) / runs_rel("run_x")
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             # 's' has nothing to skip here; the deck must still drain.
@@ -182,7 +183,7 @@ class TestKeysDuringIdenticalFpSkip(unittest.TestCase):
         completely different statement from 'the operator stopped it'.
         """
         with tempfile.TemporaryDirectory() as td:
-            run_dir = Path(td) / "gfx90c_runs" / "run_x"
+            run_dir = Path(td) / runs_rel("run_x")
             run_dir.mkdir(parents=True)
             d = self._driver_with_skips(run_dir)
             with mock.patch.object(bench_mod.sys, "stdin", FakeStdin(keys=["q"])):

@@ -14,6 +14,7 @@ import yaml
 
 import oto.metrics.coverage as coverage
 from oto.ledger.mutator import Mutator
+from oto.runners.paths import results_rel
 from oto.tensile.candidate import CandidateConfig
 
 REPO = Path(__file__).resolve().parent.parent
@@ -209,7 +210,7 @@ class AgentWiringTests(unittest.TestCase):
 
     def _overlay_entries(self):
         entries = []
-        for p in (self.tmp / "gfx90c_results" / "overlays").glob("*.yaml"):
+        for p in (self.tmp / results_rel("overlays")).glob("*.yaml"):
             entries += ((yaml.safe_load(p.read_text()) or {}).get("phases")
                         or [])
         return entries

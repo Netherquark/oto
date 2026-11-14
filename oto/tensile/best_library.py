@@ -78,13 +78,12 @@ def __getattr__(name: str):
         return _shipped_cells()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-#: Default output location, relative to the oto checkout.
-DEFAULT_BEST_LIBRARY_SUBDIR = Path(results_rel("best_effort_library"))
-
-
 def default_best_library_dest(base_dir: Path) -> Path:
-    """Return the default destination for ``--best-library``."""
-    return Path(base_dir) / DEFAULT_BEST_LIBRARY_SUBDIR
+    """Return the default destination for ``--best-library``.
+
+    Derived from the profile on every call -- never frozen at import.
+    """
+    return Path(base_dir) / results_rel("best_effort_library")
 
 
 def _expand_tensile_root(root: str) -> list[str]:
@@ -413,6 +412,17 @@ def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> tuple[bool, list[st
     return anti_alias_passed, leak_files
 
 
+def _llvm_bin_from_rocm(rocm_for_libs: str) -> str:
+    """LLVM bin/layout from the user's ROCM_PATH (wheel vs tarball layout)."""
+    if not rocm_for_libs:
+        return ""
+    for cand in (os.path.join(rocm_for_libs, "lib", "llvm", "bin"),
+                 os.path.join(rocm_for_libs, "llvm", "bin")):
+        if os.path.isdir(cand):
+            return cand
+    return ""
+
+
 def _tensile_env(tensile_root: Path) -> dict[str, str]:
     from oto.runners.toolchain import resolve_rocm_paths
     env = os.environ.copy()
@@ -468,8 +478,9 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
         if os.path.isdir(device_lib):
             env.setdefault("HIP_DEVICE_LIB_PATH", device_lib)
             env.setdefault("ROCM_DEVICE_LIB_PATH", device_lib)
-    llvm_bin = env.get("ROCM_LLVM_BIN", "/usr/lib64/rocm/llvm/bin")
-    if os.path.isdir(llvm_bin) and llvm_bin not in env.get("PATH", ""):
+    # LLVM bindir: from the user's ROCM_PATH or nothing; never a system guess.
+    llvm_bin = env.get("ROCM_LLVM_BIN") or _llvm_bin_from_rocm(rocm_for_libs)
+    if llvm_bin and llvm_bin not in env.get("PATH", ""):
         env["PATH"] = f"{llvm_bin}:{env.get('PATH', '')}"
     return env
 

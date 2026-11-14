@@ -177,8 +177,8 @@ def main() -> int:
 
     print(f"base: {args.base}")
     shim, archs = _compress_shim()
-    cur_path = Path("/tmp/opencode/_gate_cur.jsonl")
-    ref_path = Path("/tmp/opencode/_gate_ref.jsonl")
+    cur_path = _evergreen.scratch_dir() / "_gate_cur.jsonl"
+    ref_path = _evergreen.scratch_dir() / "_gate_ref.jsonl"
 
     _emit(ROOT, cur_path, args.base, shim, archs)
     try:

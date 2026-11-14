@@ -2,7 +2,7 @@
 """Tests for consolidate.py's selection and legality rules.
 
 No GPU work. The floor build and registry clone are exercised against the real
-corpus but only read from it; nothing here writes to gfx90c_results/.
+corpus but only read from it; nothing here writes to the results dir.
 
 Three things are pinned because each one produced a wrong answer at least once:
 

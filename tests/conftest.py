@@ -35,6 +35,8 @@ from typing import Any
 
 import pytest
 
+from oto.runners.paths import results_rel
+
 REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
@@ -104,7 +106,7 @@ def kernel_db_rows() -> dict[str, list[dict[str, Any]]]:
     """
     from oto.harness.kernel_db import load_kernel_db
 
-    cache = REPO / "gfx90c_results" / "analysis" / "kernel_db.json"
+    cache = REPO / results_rel("analysis", "kernel_db.json")
     if not cache.is_file():
         return {}
     return load_kernel_db(str(cache))

@@ -2,7 +2,7 @@
 """
 test_registry_kernel_db_auto.py — automatic kernel_db refresh on run completion.
 
-The cache `gfx90c_results/analysis/kernel_db.json` must be fresh for the next
+The analysis cache (`kernel_db.json`) must be fresh for the next
 mutation whenever a run finishes. `SQLiteRegistry.update_run_status` is the
 single choke point every run-finalisation path goes through (run loop, SIGINT,
 gfx900-reference, --auto driver), so the rebuild hooks there:
@@ -27,6 +27,7 @@ sys.path.insert(0, str(BASE))
 
 import oto.harness.kernel_db as kernel_db_mod
 from oto.ledger.registry import SQLiteRegistry
+from oto.runners.paths import results_rel
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +37,7 @@ def _no_env_optout(monkeypatch):
 
 
 def _cache(base: Path) -> Path:
-    return base / "gfx90c_results" / "analysis" / "kernel_db.json"
+    return base / results_rel("analysis", "kernel_db.json")
 
 
 def test_completed_triggers_rebuild(tmp_path):

@@ -18,11 +18,13 @@ import sys
 import unittest
 from pathlib import Path
 
+from oto.runners import paths
+
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-# Use the latest run's report as the test artifact
-REPORT = BASE / "gfx90c_runs" / "run_20261022_030543" / "acceptance_report.html"
+# The report of record lives at <base>/<codename>_results/acceptance_report.html
+REPORT = BASE / paths.results_rel("acceptance_report.html")
 
 
 class TestVisualCheck(unittest.TestCase):

@@ -12,6 +12,7 @@ from oto.agents.harness_tools import (
 )
 from oto.agents.meta import run as meta_run
 from oto.device.loader import load_profile
+from oto.runners.paths import results_rel
 
 
 def _row(fam: str, side: int, gflops: float, phase: str = "phase_x") -> dict[str, Any]:
@@ -42,8 +43,8 @@ def test_study_kernel_db_counts_and_winners(tmp_path):
                        _row("SS", 256, 250.0, "p_ss_256_best"),
                        _row("HH", 256, 80.0, "p_hh_256")],
           "gfx900_ref_x": [_row("DD", 192, 5.0), _row("DD", 192, 6.0)]}
-    (tmp_path / "gfx90c_results" / "analysis").mkdir(parents=True)
-    (tmp_path / "gfx90c_results" / "analysis" / "kernel_db.json").write_text(
+    (tmp_path / results_rel("analysis")).mkdir(parents=True)
+    (tmp_path / results_rel("analysis", "kernel_db.json")).write_text(
         json.dumps(db))
     result = study_kernel_db(tmp_path)
     assert result["present"] is True
@@ -116,7 +117,7 @@ def test_compare_runs_missing_corpus(tmp_path):
 
 
 def test_compare_runs_detects_regression(tmp_path):
-    analysis = tmp_path / "gfx90c_results" / "analysis"
+    analysis = tmp_path / results_rel("analysis")
     analysis.mkdir(parents=True)
     db = {
         "run_a": [_row("SS", 256, 100.0, "p1"), _row("HH", 256, 80.0, "p2")],

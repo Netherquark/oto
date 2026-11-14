@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest import mock
 
 # This file lives in tests/, so the repo root is one level up. BASE is both the
-# import root and the data root (phases.yaml, gfx90c_results/), and both are the
+# import root and the data root (phases.yaml, the results dir), and both are the
 # repo root -- the harness modules are imported flat, so they sit beside this
 # file's parent rather than in a package.
 BASE = Path(__file__).resolve().parent.parent
@@ -26,6 +26,7 @@ sys.path.insert(0, str(BASE))
 
 import oto.runners.auto_prompt as auto_prompt
 from oto.runners.auto_prompt import DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, AutoPlan, ask
+from oto.runners.paths import results_rel
 
 
 def fake_tty(answers, isatty=True):
@@ -181,8 +182,8 @@ class TestCountReading(unittest.TestCase):
         going stale. Deliberately asserts no literal count: the point of this
         test is that nothing in the codebase pins the corpus size.
         """
-        manifest_path = BASE / "gfx90c_results" / "reference_rerun_manifest.json"
-        shipped_path = BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        manifest_path = BASE / results_rel("reference_rerun_manifest.json")
+        shipped_path = BASE / results_rel("gfx900_shipped_manifest.json")
         if not (manifest_path.is_file() and shipped_path.is_file()):
             self.skipTest("live reference manifests absent (gitignored campaign outputs)")
 
@@ -194,7 +195,7 @@ class TestCountReading(unittest.TestCase):
         counts = auto_prompt._read_counts(BASE)
         manifest = tlib.load_rerun_manifest(BASE)
         shipped = json.load(
-            open(BASE / "gfx90c_results" / "gfx900_shipped_manifest.json"))
+            open(BASE / results_rel("gfx900_shipped_manifest.json")))
 
         expected = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
         for pats in shipped["families"].values():

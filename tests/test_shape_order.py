@@ -29,6 +29,7 @@ sys.path.insert(0, str(REPO))
 
 import yaml
 
+from oto.runners.paths import results_rel
 from oto.tensile.shape_order import (
     is_numerically_ordered,
     ordered_shapes,
@@ -36,7 +37,7 @@ from oto.tensile.shape_order import (
     shape_parts,
 )
 
-SEED_OVERLAY = REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+SEED_OVERLAY = REPO / results_rel("overlays", "phases.seed.overlay.yaml")
 
 
 def _sides(shapes):

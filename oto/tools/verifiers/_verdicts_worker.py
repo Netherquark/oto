@@ -127,7 +127,9 @@ def _load_legacy(root):
 
     src = subprocess.run(["git", "show", f"{REF}:scheduler.py"], cwd=root,
                          capture_output=True, text=True, check=True).stdout
-    mod_path = Path("/tmp/opencode") / f"scheduler_orig_{abs(hash(REF)) & 0xffff:x}.py"
+    import tempfile
+    mod_path = Path(tempfile.mkdtemp(prefix="oto_gate_ref_")) / \
+        f"scheduler_orig_{abs(hash(REF)) & 0xffff:x}.py"
     mod_path.write_text(src)
     import importlib.util
     spec = importlib.util.spec_from_file_location("scheduler_orig", mod_path)

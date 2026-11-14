@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import oto.tools.verify_run as vr
+from oto.runners.paths import results_rel, runs_rel
 
 TELEMETRY_HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
                     "vram_used_bytes,vram_total_bytes,phase_id")
@@ -96,11 +97,11 @@ class TestSnapshotShape(unittest.TestCase):
     def test_snapshot_of_temp_corpus_counts_dirs_and_rows(self):
         with tempfile.TemporaryDirectory() as d:
             base = Path(d)
-            (base / "gfx90c_runs" / "run_x" / "phase_y").mkdir(parents=True)
-            (base / "gfx90c_runs" / "run_x" / "phase_y" / "a.csv").write_text("1,2\n")
-            (base / "gfx90c_results").mkdir()
+            (base / runs_rel("run_x", "phase_y")).mkdir(parents=True)
+            (base / runs_rel("run_x", "phase_y", "a.csv")).write_text("1,2\n")
+            (base / results_rel("")).mkdir()
             import sqlite3
-            conn = sqlite3.connect(base / "gfx90c_results" / "registry.db")
+            conn = sqlite3.connect(base / results_rel("registry.db"))
             conn.execute("create table runs (run_id text)")
             conn.execute("insert into runs values ('run_x')")
             conn.commit()
@@ -124,7 +125,7 @@ class TestTelemetryFunnel(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        logs = base / "gfx90c_runs" / "run_x" / "logs"
+        logs = base / runs_rel("run_x", "logs")
         logs.mkdir(parents=True)
         (logs / "telemetry.csv").write_text(
             "\n".join([header] + [",".join(str(c) for c in r) for r in rows]) + "\n")
@@ -219,7 +220,7 @@ class TestCliExitCodes(unittest.TestCase):
         """Real repo, no writes: two snapshots must be identical.
 
         This is the tool's own smoke test, and it fails loudly if some other
-        module has started writing into gfx90c_runs/ during a read-only command.
+        module has started writing into the runs dir during a read-only command.
         """
         with tempfile.TemporaryDirectory() as d:
             a, b = Path(d) / "a.json", Path(d) / "b.json"

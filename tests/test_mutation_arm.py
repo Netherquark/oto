@@ -32,6 +32,7 @@ from oto.ledger.agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine
+from oto.runners.paths import results_rel
 from oto.tensile.candidate import CandidateConfig
 
 CURATED = """\
@@ -127,7 +128,7 @@ class OverlayRoutingTests(AgentTestCase):
         self.make_agent([{"MacroTile": "64x64x16"}])
         run_id = self.registry.create_run_dir("run_arm").name
         self.agent.mutate_and_feed(WINNERS)
-        overlays = sorted((self.tmp / "gfx90c_results" / "overlays").glob("*.yaml"))
+        overlays = sorted((self.tmp / results_rel("overlays")).glob("*.yaml"))
         # create_run_dir returns a path; latest_run_id is what write_overlay binds
         assert overlays or self.mutator.load_overlay("run_arm")
         assert self.mutator.load_overlay(run_id) or self.mutator.load_overlay(self.registry.latest_run_id())

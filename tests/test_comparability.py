@@ -15,6 +15,7 @@ import json
 
 from oto.device import loader
 from oto.harness import occupancy_audit, regression_matrix
+from oto.runners.paths import results_rel
 from oto.tools.potential_configs_gen import generate
 
 
@@ -79,7 +80,7 @@ def test_filter_protocol_missing_stamp_dropped() -> None:
 
 
 def test_generate_reports_per_side_counts(tmp_path) -> None:
-    analysis = tmp_path / "gfx90c_results" / "analysis"
+    analysis = tmp_path / results_rel("analysis")
     analysis.mkdir(parents=True)
     (analysis / "kernel_db.json").write_text(json.dumps({
         "run_a1": [_row(), _row()],

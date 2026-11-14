@@ -310,7 +310,8 @@ def new_bare_names(head_rel: str) -> set:
 
 def _collect_old_tree(ref: str, head_rel: str) -> tuple[dict[str, Any] | None, str]:
     """Dump one ref-tree module and collect its public symbols."""
-    old_path = Path("/tmp/opencode/ast_check") / head_rel
+    from oto.tools.verifiers import _evergreen
+    old_path = _evergreen.scratch_dir() / "ast_check" / head_rel
     old_path.parent.mkdir(parents=True, exist_ok=True)
     old_path.write_text(head_text(ref, head_rel))
     old_syms, err = collect(old_path)
@@ -442,6 +443,7 @@ def _postsplit_check(ref: str) -> int:
     """Public-API loss check vs a post-split ref: missing symbols + signature drift."""
     import subprocess as _sp
 
+    from oto.tools.verifiers import _evergreen
     from oto.tools.verifiers._evergreen import print_drift_summary
 
     out = _sp.run(["git", "ls-tree", "-r", "--name-only", ref],
@@ -455,7 +457,7 @@ def _postsplit_check(ref: str) -> int:
             continue
         if "__pycache__" in rel or "tools/verifiers" in rel:
             continue
-        ref_path = Path("/tmp/opencode/ast_check") / rel
+        ref_path = _evergreen.scratch_dir() / "ast_check" / rel
         ref_path.parent.mkdir(parents=True, exist_ok=True)
         ref_text = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=ROOT,
                                   capture_output=True, text=True).stdout
@@ -484,9 +486,7 @@ def _postsplit_check(ref: str) -> int:
             if name not in new_syms:
                 all_missing.append(f"{rel}::{name}")
                 continue
-            if new_syms[name][1] != args:
-                if _threading_shaped(args, new_syms[name][1]):
-                    continue  # explicit profile= kwarg appended: the Refactor 2 shape
+            if new_syms[name][1] != args and not _threading_shaped(args, new_syms[name][1]):
                 sig_changes.append(f"{rel}::{name} signature changed")
 
     print(f"public symbols at risk of loss or signature change, vs {ref}:")

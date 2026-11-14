@@ -13,6 +13,7 @@ from phase1_harness import Harness, _StubScheduler
 
 from oto.ledger.registry import SQLiteRegistry
 from oto.runners.driver import TensileDriver
+from oto.runners.paths import results_rel
 
 
 class ReadOnlyRegistryTests(Harness):
@@ -26,10 +27,10 @@ class ReadOnlyRegistryTests(Harness):
 
     def test_read_only_construction_does_not_create_a_database(self):
         base = self.tmp / "empty"
-        (base / "gfx90c_results").mkdir(parents=True)
+        (base / results_rel("")).mkdir(parents=True)
         with pytest.raises(FileNotFoundError):
             SQLiteRegistry(base, read_only=True)
-        assert not (base / "gfx90c_results" / "registry.db").exists()
+        assert not (base / results_rel("registry.db")).exists()
 
     def test_read_only_construction_leaves_the_file_byte_identical(self):
         SQLiteRegistry(self.tmp)          # writable: creates + migrates
@@ -87,7 +88,7 @@ class ReadOnlyRegistryTests(Harness):
         import tempfile as tf
         base = Path(tf.mkdtemp(prefix="oto_ro_audit_"))
         self.addCleanup(shutil.rmtree, base, ignore_errors=True)
-        (base / "gfx90c_results").mkdir(parents=True)
+        (base / results_rel("")).mkdir(parents=True)
         (base / "phases.yaml").write_text("[]")
         reg = SQLiteRegistry(base)
         reg.create_run_dir("run_ro")

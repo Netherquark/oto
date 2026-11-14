@@ -14,10 +14,11 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from oto.harness import failure_triage as ft
+from oto.runners.paths import runs_rel
 
 
 def _make_corpus(root: Path) -> None:
-    run = root / "gfx90c_runs" / "run_test"
+    run = root / runs_rel("run_test")
     run.mkdir(parents=True)
 
     # built phase
@@ -45,7 +46,7 @@ class TestMeasurementProduced(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            run = root / "gfx90c_runs" / "run_test"
+            run = root / runs_rel("run_test")
             assert ft.measurement_produced(run / "phase_built")
             assert not ft.measurement_produced(run / "phase_empty_reject")
 
@@ -55,7 +56,7 @@ class TestReasonForPhase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            run = root / "gfx90c_runs" / "run_test"
+            run = root / runs_rel("run_test")
             r = ft.reason_for_phase(run / "phase_empty_reject")
             assert r.startswith("tensile reject x1:")
             assert "GLVW 2 * bpe 8 > 16" in r
@@ -64,7 +65,7 @@ class TestReasonForPhase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            run = root / "gfx90c_runs" / "run_test"
+            run = root / runs_rel("run_test")
             r = ft.reason_for_phase(run / "phase_empty_stderr")
             assert r.startswith("stderr non-empty:")
 
@@ -72,7 +73,7 @@ class TestReasonForPhase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _make_corpus(root)
-            run = root / "gfx90c_runs" / "run_test"
+            run = root / runs_rel("run_test")
             r = ft.reason_for_phase(run / "phase_empty_nolog")
             assert r == "no logs at all"
 

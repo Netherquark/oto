@@ -18,6 +18,7 @@ import yaml
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine
+from oto.runners.paths import results_rel
 
 HEADER = (" SizeI , SizeJ , SizeL , Cijk_A , WinnerFreq \n"
           " 128 , 128 , 128 , 12.5 , 3 \n")
@@ -48,7 +49,7 @@ class Harness(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_phase1_integration_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
-        (self.tmp / "gfx90c_results").mkdir()
+        (self.tmp / results_rel("")).mkdir()
         (self.tmp / "phases.yaml").write_text(yaml.safe_dump([
             {"phase_id": "phase_curated_0", "label": "curated",
              "dtype": "s", "shapes": ["128x128x128"], "fp": "fpCURATED",
@@ -59,13 +60,13 @@ class Harness(unittest.TestCase):
         self.mutator = Mutator(self.registry, self.tmp, self.analytics)
 
     def write_overlay(self, run_id, phases):
-        d = self.tmp / "gfx90c_results" / "overlays"
+        d = self.tmp / results_rel("overlays")
         d.mkdir(parents=True, exist_ok=True)
         (d / f"phases.{run_id}.overlay.yaml").write_text(
             yaml.safe_dump({"run_id": run_id, "phases": phases}))
 
     def write_seed_overlay(self, phases):
-        d = self.tmp / "gfx90c_results" / "overlays"
+        d = self.tmp / results_rel("overlays")
         d.mkdir(parents=True, exist_ok=True)
         (d / "phases.seed.overlay.yaml").write_text(
             yaml.safe_dump({"run_id": "seed", "phases": phases}))

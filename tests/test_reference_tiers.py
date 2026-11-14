@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest import mock
 
 # This file lives in tests/, so the repo root is one level up. ROOT is both the
-# import root and the data root (gfx90c_results/), and both are the repo root --
+# import root and the data root (the results dir), and both are the repo root --
 # the harness modules are imported flat, so they sit beside this file's parent.
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT))
 import oto.runners.auto_prompt as ap
 import oto.runners.driver as pt
 import oto.tensile.library as tl
+from oto.runners.paths import results_rel
 from oto.tensile.shipped_library import _CANON
 
 T1 = ["p_t1_a", "p_t1_b", "p_t1_c"]
@@ -196,8 +197,8 @@ class TestManifestIsPinned(unittest.TestCase):
     """
 
     def setUp(self):
-        p = ROOT / "gfx90c_results" / "reference_rerun_manifest.json"
-        sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        p = ROOT / results_rel("reference_rerun_manifest.json")
+        sm = ROOT / results_rel("gfx900_shipped_manifest.json")
         if not p.exists() or not sm.exists():
             self.skipTest("manifest not present")
         self.m = json.load(open(p))
@@ -284,8 +285,8 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
 
     def setUp(self):
         import json
-        p = ROOT / "gfx90c_results" / "reference_rerun_manifest.json"
-        sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        p = ROOT / results_rel("reference_rerun_manifest.json")
+        sm = ROOT / results_rel("gfx900_shipped_manifest.json")
         if not p.exists() or not sm.exists():
             self.skipTest("manifest not present")
         self.m = json.load(open(p))
@@ -312,7 +313,7 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         # tier_reasons is keyed by phase_id. phase_ids are re-derived from the
         # shipped knobs and have changed between runs, so resolve the current one
         # from the deck rather than trusting a tag-shaped substring.
-        sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        sm = ROOT / results_rel("gfx900_shipped_manifest.json")
         pid_of = {tl.phase_key(p): p["phase_id"]
                   for p in tl.emit_spoof_phases(json.load(open(sm)))}
         for tag, frag in self.REJECTED.items():
@@ -335,7 +336,7 @@ class TestSSUnbuildableTriaged(unittest.TestCase):
         Guards the actual risk of moving 16 cells to T3: a cell left with no
         reference kernel at all would have no floor to compare against.
         """
-        sm = ROOT / "gfx90c_results" / "gfx900_shipped_manifest.json"
+        sm = ROOT / results_rel("gfx900_shipped_manifest.json")
         cells = {}
         for fam, pats in json.load(open(sm))["families"].items():
             for pat, dt in pats.items():

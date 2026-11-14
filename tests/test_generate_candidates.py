@@ -30,6 +30,7 @@ from oto.harness.generate_candidates import (
     _write_overlay,
     iter_candidates,
 )
+from oto.runners.paths import results_rel
 
 
 def _rows():
@@ -100,7 +101,7 @@ class TestPoolInvariants:
         assert not ({r["fp"] for r in _rows()} & deck_fps)
 
     def test_no_fp_collision_with_curated_seed(self):
-        overlay = REPO / "gfx90c_results" / "overlays" / "phases.seed.overlay.yaml"
+        overlay = REPO / results_rel("overlays", "phases.seed.overlay.yaml")
         if not overlay.is_file():
             pytest.skip("phases.seed.overlay.yaml absent (gitignored artifact)")
         doc = yaml.safe_load(overlay.read_text())

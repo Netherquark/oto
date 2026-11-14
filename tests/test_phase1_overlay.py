@@ -9,6 +9,7 @@ import yaml
 from phase1_harness import Harness, _StubScheduler
 
 from oto.runners.driver import TensileDriver
+from oto.runners.paths import results_rel
 
 
 class OverlayMergeTests(Harness):
@@ -123,7 +124,7 @@ class OverlayMergeTests(Harness):
 
     def test_unreadable_overlay_does_not_break_the_deck(self):
         run_id = self._driver("run_bad").run_dir.name
-        d = self.tmp / "gfx90c_results" / "overlays"
+        d = self.tmp / results_rel("overlays")
         d.mkdir(parents=True, exist_ok=True)
         (d / f"phases.{run_id}.overlay.yaml").write_text("phases: [oops\n")
         phases = self._driver(run_id).load_phases_manifest()

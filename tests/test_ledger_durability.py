@@ -39,10 +39,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
+from oto.runners.paths import results_rel
 
 
 def _db(base):
-    return Path(base) / "gfx90c_results" / "registry.db"
+    return Path(base) / results_rel("registry.db")
 
 
 def _checkpoint(base):
@@ -100,11 +101,11 @@ class LedgerDurabilityTests(unittest.TestCase):
         # still sitting in the write-ahead log.
         fps = self._seed()
         _checkpoint(self.tmp)
-        assert not (_db(self.tmp).with_name("registry.db-wal").exists() and (Path(self.tmp) / "gfx90c_results" / "registry.db-wal").stat().st_size > 0), "checkpoint left data in the WAL; the copy would lose it"
+        assert not (_db(self.tmp).with_name("registry.db-wal").exists() and (Path(self.tmp) / results_rel("registry.db-wal")).stat().st_size > 0), "checkpoint left data in the WAL; the copy would lose it"
         dest = Path(tempfile.mkdtemp(prefix="oto_dur_copy_"))
         self.addCleanup(shutil.rmtree, dest, ignore_errors=True)
-        (dest / "gfx90c_results").mkdir(parents=True)
-        shutil.copy2(_db(self.tmp), dest / "gfx90c_results" / "registry.db")
+        (dest / results_rel("")).mkdir(parents=True)
+        shutil.copy2(_db(self.tmp), dest / results_rel("registry.db"))
         self._assert_all_present(dest, fps)
 
     def test_a_copy_taken_before_a_checkpoint_may_be_missing_recent_rows(self):
@@ -119,8 +120,8 @@ class LedgerDurabilityTests(unittest.TestCase):
                                           phase_id="p_late")
         dest = Path(tempfile.mkdtemp(prefix="oto_dur_nock_"))
         self.addCleanup(shutil.rmtree, dest, ignore_errors=True)
-        (dest / "gfx90c_results").mkdir(parents=True)
-        shutil.copy2(_db(self.tmp), dest / "gfx90c_results" / "registry.db")
+        (dest / results_rel("")).mkdir(parents=True)
+        shutil.copy2(_db(self.tmp), dest / results_rel("registry.db"))
         found = SQLiteRegistry(dest, read_only=True).proposed_fps()
         # Either outcome is acceptable; what matters is that we know which.
         if "early" not in found:
@@ -139,9 +140,9 @@ class LedgerDurabilityTests(unittest.TestCase):
         _checkpoint(self.tmp)
         dest = Path(tempfile.mkdtemp(prefix="oto_dur_vac_"))
         self.addCleanup(shutil.rmtree, dest, ignore_errors=True)
-        (dest / "gfx90c_results").mkdir(parents=True)
-        shutil.copy2(_db(self.tmp), dest / "gfx90c_results" / "registry.db")
-        with sqlite3.connect(dest / "gfx90c_results" / "registry.db") as conn:
+        (dest / results_rel("")).mkdir(parents=True)
+        shutil.copy2(_db(self.tmp), dest / results_rel("registry.db"))
+        with sqlite3.connect(dest / results_rel("registry.db")) as conn:
             conn.execute("VACUUM")
         self._assert_all_present(dest, fps)
 
@@ -181,10 +182,10 @@ class LedgerDurabilityTests(unittest.TestCase):
         fps = self._seed()
         _checkpoint(self.tmp)
         before = sorted(p.name for p in Path(self.tmp).joinpath(
-            "gfx90c_results").iterdir())
+            results_rel("")).iterdir())
         SQLiteRegistry(self.tmp, read_only=True)
         after = sorted(p.name for p in Path(self.tmp).joinpath(
-            "gfx90c_results").iterdir())
+            results_rel("")).iterdir())
         assert before == after
         self._assert_all_present(self.tmp, fps)
 

@@ -23,7 +23,7 @@ from pathlib import Path
 
 # This file lives in tests/, so the repo root is one level up. Used as the
 # import root, as the driver's base_dir, and to locate phases.yaml and
-# gfx90c_runs/ -- the harness modules are imported flat, so they sit beside this
+# the runs dir is device-derived; the harness modules are imported flat
 # file's parent.
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -39,6 +39,7 @@ from oto.runners.driver import (
     TensileDriver,
     _require_tensile_root,
 )
+from oto.runners.paths import runs_rel
 from oto.tensile import config_writer
 
 failures = []
@@ -99,7 +100,7 @@ check(
 d = driver()
 deck = REPO_ROOT / "phases.yaml"
 phases = yaml.safe_load(deck.read_text()) or []
-ref_file = REPO_ROOT / "gfx90c_runs"
+ref_file = REPO_ROOT / runs_rel("")
 ref_candidates = sorted(ref_file.glob("*/phases_reference.yaml"))
 
 # `ProblemSizes` is special-cased by Tensile and lives in BenchmarkFinalParameters.

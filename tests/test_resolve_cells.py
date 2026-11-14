@@ -32,11 +32,12 @@ sys.path.insert(0, str(BASE))
 
 from oto.device.vocabulary import shipped_cell_set
 from oto.harness import resolve_cells
+from oto.runners.paths import results_rel
 
 
 @pytest.fixture(scope="module")
 def evidence():
-    if not (BASE / "gfx90c_results" / "acceptance_report.json").is_file():
+    if not (BASE / results_rel("acceptance_report.json")).is_file():
         pytest.skip("no acceptance_report.json: run the tuning campaign for this device first")
     cells, meta = resolve_cells.build(str(BASE))
     return cells, meta
@@ -51,7 +52,7 @@ def test_deck_is_exactly_the_shipped_grid(evidence):
 
 def test_verdicts_and_values_match_acceptance_report(evidence):
     cells, _ = evidence
-    report = json.load(open(BASE / "gfx90c_results" / "acceptance_report.json"))
+    report = json.load(open(BASE / results_rel("acceptance_report.json")))
     by_cell = {c["family"] + ":" + c["shape"]: c for c in cells}
     for v in report["per_cell_verdicts"]:
         c = by_cell[v["family"] + ":" + v["shape"]]
@@ -146,7 +147,7 @@ def test_meta_provenance_is_consistent(evidence):
     that the key/yaml/registry relationships stay intact.
     """
     _, meta = evidence
-    report = json.load(open(BASE / "gfx90c_results" / "acceptance_report.json"))
+    report = json.load(open(BASE / results_rel("acceptance_report.json")))
     assert meta["acceptance_run_id"] == report["run_id"]
     assert meta["n_cells"] == len(report["per_cell_verdicts"])
     assert meta["sources"]["run_config_yamls"] >= 6000

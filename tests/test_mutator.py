@@ -43,6 +43,7 @@ from oto.ledger.mutator import (
 )
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine
+from oto.runners.paths import results_rel, runs_rel
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -345,7 +346,7 @@ class OverlayTests(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_overlay_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.reg = SQLiteRegistry(self.tmp)
-        (self.tmp / "gfx90c_runs").mkdir(parents=True, exist_ok=True)
+        (self.tmp / runs_rel("")).mkdir(parents=True, exist_ok=True)
         self.reg.create_run_dir("run_test")
         self.mut = Mutator(self.reg, self.tmp)
         (self.tmp / "phases.yaml").write_text("- phase_id: phase_curated\n")
@@ -372,7 +373,7 @@ class OverlayTests(unittest.TestCase):
 
     def test_discarding_a_batch_deletes_only_the_overlay(self):
         self.mut.write_overlay([{"phase_id": "p"}], run_id="run_test")
-        path = self.tmp / "gfx90c_results" / "overlays" / "phases.run_test.overlay.yaml"
+        path = self.tmp / results_rel("overlays", "phases.run_test.overlay.yaml")
         path.unlink()
         assert not path.exists()
         assert (self.tmp / "phases.yaml").exists()

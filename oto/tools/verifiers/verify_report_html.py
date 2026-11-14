@@ -87,7 +87,7 @@ def _ref_render(ref: str, payload_path: Path) -> bytes | None:
     except _evergreen.EvergreenError as exc:
         print(f"REF comparison BLOCKED: {exc}")
         return None
-    out = Path("/tmp/opencode") / f"_evergreen_report_{abs(hash(ref)) & 0xffffff:x}.html"
+    out = _evergreen.scratch_dir() / f"_evergreen_report_{abs(hash(ref)) & 0xffffff:x}.html"
     code = _REF_SRC.format(tree=str(tree), payload_path=str(payload_path), out=str(out), main_root=str(ROOT))
     proc = _evergreen.probe(tree, code, timeout=900)
     if proc.returncode != 0:

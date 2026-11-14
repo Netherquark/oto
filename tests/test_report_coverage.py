@@ -26,6 +26,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.metrics.report_figures import coverage_dir, coverage_rows, coverage_section
+from oto.runners.paths import results_rel
 
 ROWS = [
     {"family": "SS", "shape": "256x256x256", "n_legal": 419,
@@ -63,7 +64,7 @@ class TestCoverageSection(unittest.TestCase):
         assert coverage_rows(empty) == []
 
     def test_the_section_states_the_unexplored_share(self):
-        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+        html = coverage_section(self.tmp, self.tmp / results_rel("")
                                 / "acceptance_report.html")
         assert "Problem-space coverage" in html
         # the per-cell share (87% for SS, 71% for ZZ) -- the legal space is
@@ -73,7 +74,7 @@ class TestCoverageSection(unittest.TestCase):
         assert "run." in html
 
     def test_the_section_carries_the_numbers_and_the_figures(self):
-        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+        html = coverage_section(self.tmp, self.tmp / results_rel("")
                                 / "acceptance_report.html")
         assert "419" in html      # legal geometries
         assert "54" in html       # measured
@@ -84,13 +85,13 @@ class TestCoverageSection(unittest.TestCase):
         assert "412.1" not in html
 
     def test_figure_paths_are_relative_to_the_report(self):
-        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+        html = coverage_section(self.tmp, self.tmp / results_rel("")
                                 / "acceptance_report.html")
         assert 'src="analysis/coverage/SS_256x256x256.svg"' in html
         assert str(self.tmp) not in html
 
     def test_the_figures_are_grouped_by_family(self):
-        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+        html = coverage_section(self.tmp, self.tmp / results_rel("")
                                 / "acceptance_report.html")
         # one appendix, then a heading per family: no nested per-family
         # disclosure controls and no second copy of the table.
@@ -106,7 +107,7 @@ class TestCoverageSection(unittest.TestCase):
         assert "87.1%" in html           # the unexplored share of that cell
 
     def test_a_family_group_holds_its_own_shapes(self):
-        html = coverage_section(self.tmp, self.tmp / "gfx90c_results"
+        html = coverage_section(self.tmp, self.tmp / results_rel("")
                                 / "acceptance_report.html")
         assert "256x256x256" in html
         assert "1024x1024x1024" in html

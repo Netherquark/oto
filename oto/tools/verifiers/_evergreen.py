@@ -26,6 +26,23 @@ class EvergreenError(Exception):
     pass
 
 
+_SCRATCH_DIR: Path | None = None
+
+
+def scratch_dir() -> Path:
+    """A process-lifetime scratch directory for verifier artifacts.
+
+    Created lazily under the system temp root, removed at process exit.
+    Verifiers write candidate-side byte artefacts here; nothing else owns it.
+    """
+    global _SCRATCH_DIR
+    if _SCRATCH_DIR is None:
+        d = Path(tempfile.mkdtemp(prefix="oto_evergreen_scratch_"))
+        atexit.register(shutil.rmtree, d, True)
+        _SCRATCH_DIR = d
+    return _SCRATCH_DIR
+
+
 def ref_worktree(ref: str) -> Path:
     """Materialise ``ref`` as a detached worktree in a temp dir.
 

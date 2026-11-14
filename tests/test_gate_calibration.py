@@ -17,6 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from oto.harness import gate_calibration as gc
+from oto.runners.paths import runs_rel
 
 
 def _phase_yaml(path: Path, macro, tt, du, vw, dtype="s", ta=False, tb=True):
@@ -40,7 +41,7 @@ def _phase_yaml(path: Path, macro, tt, du, vw, dtype="s", ta=False, tb=True):
 
 def _make_corpus(root: Path) -> None:
     # native run
-    run = root / "gfx90c_runs" / "run_test"
+    run = root / runs_rel("run_test")
     run.mkdir(parents=True)
     cfg = run / "configs"
     cfg.mkdir()
@@ -68,7 +69,7 @@ def _make_corpus(root: Path) -> None:
     _phase_yaml(cfg / "phase_phase_refused.yaml", (1024, 1024), (8, 8), 16, 4)
 
     # reference run
-    rref = root / "gfx90c_runs" / "gfx900_ref_test"
+    rref = root / runs_rel("gfx900_ref_test")
     rref.mkdir()
     rcfg = rref / "configs"
     rcfg.mkdir()
@@ -157,7 +158,7 @@ class TestPlaceholderTileExcluded(unittest.TestCase):
         """A phase with a placeholder tile is not counted at all, not 'legal'."""
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            run = root / "gfx90c_runs" / "run_test"
+            run = root / runs_rel("run_test")
             cfg = run / "configs"
             cfg.mkdir(parents=True)
             ph = run / "phase_none"

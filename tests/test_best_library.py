@@ -7,6 +7,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
+from oto.runners.paths import results_rel
 from oto.tensile.best_library import (
     SHIPPED_CELLS,
     _tensile_env,
@@ -18,7 +19,7 @@ from oto.tensile.best_library import (
     logic_filename_hint,
 )
 
-_LIVE_CORPUS = REPO / "gfx90c_results" / "analysis" / "kernel_db.json"
+_LIVE_CORPUS = REPO / results_rel("analysis", "kernel_db.json")
 
 
 def _require_live_corpus():
@@ -82,9 +83,9 @@ def test_basis_any_runs():
     assert refused == []
 
 
-def test_default_best_library_dest_is_under_gfx90c_results(tmp_path):
+def test_default_best_library_dest_is_per_device(tmp_path):
     assert default_best_library_dest(tmp_path) == (
-        tmp_path / "gfx90c_results" / "best_effort_library")
+        tmp_path / results_rel("best_effort_library"))
 
 
 def test_tensile_env_keeps_system_include_out_of_prepend_path(tmp_path, monkeypatch):

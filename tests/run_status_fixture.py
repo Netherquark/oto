@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 import oto.metrics.run_status as rs
 import oto.tensile.library as tl
+from oto.runners.paths import results_rel
 
 
 def _phase(tag: str, kernel: str) -> dict:
@@ -64,8 +65,8 @@ class StatusFixture(unittest.TestCase):
         import tempfile
         self._tmp = tempfile.TemporaryDirectory()
         self.base = Path(self._tmp.name)
-        # build_report reads the registry at <base>/gfx90c_results/registry.db
-        self.db = self.base / "gfx90c_results" / "registry.db"
+        # build_report reads the registry at <base>/<codename>_results/registry.db
+        self.db = self.base / results_rel("registry.db")
         self.db.parent.mkdir(parents=True)
         self.phases = _deck()
         self.tiers = {tl.phase_key(p): p["_tier"] for p in self.phases}

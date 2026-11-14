@@ -27,8 +27,9 @@ sys.path.insert(0, str(BASE))
 
 from oto.device import loader as _loader
 from oto.device.vocabulary import blas8_gflops
+from oto.runners.paths import runs_rel as _runs_rel
 
-RUNS = BASE / "gfx90c_runs"
+RUNS = BASE / _runs_rel("")
 
 
 class TestFlopFactor(unittest.TestCase):
