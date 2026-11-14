@@ -21,8 +21,8 @@ import yaml
 import oto.tensile.best_library as bestlib
 import oto.tensile.shipped_manifest as tlib
 from oto.agents import agent_tools as harness_tools
-from oto.agents import orchestrator as agent_meta
-from oto.agents.research import make_researcher
+from oto.agents import meta_agent as agent_meta
+from oto.agents.research_client import make_researcher
 from oto.device import loader as _loader
 from oto.tools import potential_configs
 

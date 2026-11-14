@@ -10,7 +10,7 @@ from oto.agents.agent_tools import (
     study_kernel_db,
     verify_candidates,
 )
-from oto.agents.orchestrator import run as meta_run
+from oto.agents.meta_agent import run as meta_run
 from oto.device.loader import load_profile
 from oto.runners.paths import results_rel
 

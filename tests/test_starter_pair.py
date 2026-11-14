@@ -10,9 +10,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.agents import research
-from oto.agents.orchestrator import run as meta_run
-from oto.agents.research import make_researcher
+from oto.agents import research_client as research
+from oto.agents.meta_agent import run as meta_run
+from oto.agents.research_client import make_researcher
 from oto.device.loader import load_profile, load_profile_from_starter
 
 

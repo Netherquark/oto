@@ -445,7 +445,8 @@ def _print_report(all_missing: list[str], all_differs: list[str],
 #: every entry must correspond to a real git mv. See plans/RENAME_AND_DOC_CLEANUP_PLAN.md.
 RENAMES: dict[str, str] = {
     "oto/tensile/gates/ldspad_gate.py": "oto/tensile/gates/ldspad.py", "oto/tensile/gates/occupancy_common.py": "oto/tensile/gates/gate_common.py",
-    "oto/agents/harness_tools.py": "oto/agents/agent_tools.py", "oto/agents/meta.py": "oto/agents/orchestrator.py",
+    "oto/agents/harness_tools.py": "oto/agents/agent_tools.py", "oto/agents/meta.py": "oto/agents/meta_agent.py",
+    "oto/agents/orchestrator.py": "oto/agents/meta_agent.py", "oto/agents/research.py": "oto/agents/research_client.py",
     "oto/checks/candidates.py": "oto/checks/deck_legality.py", "oto/checks/db.py": "oto/checks/registry_audit.py",
     "oto/metrics/policy.py": "oto/metrics/cell_policy.py", "oto/metrics/report_build.py": "oto/metrics/build_status.py",
     "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py", "oto/metrics/_status_common.py": "oto/metrics/status_common.py",

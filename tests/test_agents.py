@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.agents.orchestrator import run as meta_run
+from oto.agents.meta_agent import run as meta_run
 from oto.agents.theoretical_limits import generate as gen_tl
 from oto.agents.tuning_context import generate as gen_tc
 from oto.device.loader import load_profile
