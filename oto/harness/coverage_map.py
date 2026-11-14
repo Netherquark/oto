@@ -10,7 +10,7 @@ same thread tile, other tile) measure well is the one worth running next.
 
 Does NOT own: the gate (oto.tensile.gates), the corpus (oto.harness.kernel_db),
 the candidate deck (oto.harness.candidate_rows), the per-cell winners
-(oto.harness.resolve_cells) or the verdicts (oto.metrics.ab_audit).
+(oto.harness.cell_resolver) or the verdicts (oto.metrics.ab_audit).
 
 Public API: legal_geometries, measured_geometries, coverage_row, neighbour_score,
 main.

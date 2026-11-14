@@ -18,7 +18,7 @@ python3 -m oto.tools.deck_review flood --cap 24
 
 # 2. CPU-only pre-flight
 python3 -m oto check candidates --quiet
-python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.candidate_generator --dry-run
 python3 -m oto doctor
 
 # 3. Pyflakes + ruff + py_compile + length safety nets (fast, CPU-only)
@@ -60,7 +60,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/gate_calibration.py` | Gate-vs-corpus agreement census: false rejections (gate too strict) and misses (gate too loose) |
 | `oto/harness/rule_calibration.py` | Probe a proposed gate rule in isolation: false rejections (must be 0) + empty-phase catches, by family |
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
-| `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
+| `oto/harness/cell_resolver.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
 | `oto/harness/tensile_probe.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
 | `oto/harness/deck_probe.py` | The pre-run sweep: every *unmeasured* deck row through Tensile's kernel writer, resumable, CPU-only |
@@ -157,12 +157,12 @@ the legal-but-unmeasured geometries ranked by how well their neighbours
 measured. That is the local-minimum finder: the neighbourhood is fast and the
 point itself is untried.
 
-`python3 -m oto.harness.resolve_cells --taxonomy` says what each verdict is
+`python3 -m oto.harness.cell_resolver --taxonomy` says what each verdict is
 made of: on the `identical` cells both arms run the *same* config, so their
 delta is measurement environment, and the spread over those cells (17.5
 points) is the band any real win has to clear.
 
-`python3 -m oto.harness.resolve_cells` prints one row per cell with a `cfg_gap`
+`python3 -m oto.harness.cell_resolver` prints one row per cell with a `cfg_gap`
 class; `docs/potential_configs.md` §R17 reads it into a route:
 
 | `cfg_gap` | meaning | lever |
@@ -220,10 +220,10 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 
 ```bash
 # CPU-only (any session)
-python3 -m oto.harness.generate_candidates          # wire the seed overlay
+python3 -m oto.harness.candidate_generator          # wire the seed overlay
 python3 -m oto check candidates --quiet
 python3 -m oto check candidates --deck gfx90c_results/overlays/phases.seed.overlay.yaml --quiet
-python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.candidate_generator --dry-run
 python3 -m oto doctor
 
 # TTY only — the real run
@@ -242,7 +242,7 @@ Judge **within-run only**, ≥3 seeds, median, ±2% tie band.
 
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
-python3 -m oto.harness.resolve_cells            # per-cell winners + cfg_gap
+python3 -m oto.harness.cell_resolver            # per-cell winners + cfg_gap
 python3 -m oto stats --json > gfx90c_results/analysis/post.json
 python3 -m oto.runners.stage_cli --report --native-agg floor_best   # the strict basis
 ```

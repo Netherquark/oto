@@ -159,7 +159,7 @@ These work before any GPU run exists, on any device:
 ```bash
 python3 -m oto.harness.corpus_census --family SS --knob DepthU   # corpus history
 python3 -m oto.tools.deck_review score                            # deck sanity
-python3 -m oto.harness.generate_candidates --dry-run               # candidate pool size
+python3 -m oto.harness.candidate_generator --dry-run               # candidate pool size
 ```
 
 `oto agent generate` additionally synthesises:

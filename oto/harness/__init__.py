@@ -9,7 +9,7 @@ Workflow (see ``docs/harness_runbook.md`` for the full runbook):
 
     python3 -m oto.harness.kernel_db --base-dir . --rebuild   # (re)build kernel_db.json
     python3 -m oto.harness.regression_matrix --base-dir .    # deck vs all-time vs floor
-    python3 -m oto.harness.resolve_cells --base-dir .        # per-cell native+floor winners
+    python3 -m oto.harness.cell_resolver --base-dir .        # per-cell native+floor winners
 
 Owns: nothing at import time — this package holds no logic, only the docstrings
 of the modules underneath it.

@@ -62,7 +62,7 @@ class TestMeasuredRule(unittest.TestCase):
         assert MEASURED_VGPR == OBSERVED
 
     def test_corpus_measured_totals_agree_with_gate(self):
-        """Corpus code-object measurements (harness/measure_vgprs.py) must
+        """Corpus code-object measurements (harness/vgpr_measurement.py) must
         agree with the gate for every dtype: totals of gate-passing configs are
         < 256 VGPRs, totals of gate-failing ones are >= 256. This is the
         empirical link between the accVGPR model and emitted reality."""

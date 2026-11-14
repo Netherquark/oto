@@ -104,7 +104,7 @@ MEASURED_VGPR = {
 
 #: Measured TOTAL per-thread VGPRs (kernarg + operand + accumulator), read
 #: 2026-10-21 from the run corpus' emitted code objects with
-#: `python3 -m oto.harness.measure_vgprs` (llvm-readelf on the Tensile assembly
+#: `python3 -m oto.harness.vgpr_measurement` (llvm-readelf on the Tensile assembly
 #: .o metadata, CPU-only) over 4419 code objects. These are the corpus MEDIANs
 #: per (dtype, thread tile): a median, not a worst case, because the occupancy
 #: gate needs a representative number -- a pessimistic one refuses kernels

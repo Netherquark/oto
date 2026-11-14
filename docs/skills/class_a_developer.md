@@ -23,7 +23,7 @@
 
 ## Tools you use
 - `pytest`, `ruff`, `pyflakes`
-- `python3 -m oto.harness.generate_candidates --dry-run`
+- `python3 -m oto.harness.candidate_generator --dry-run`
 - `python3 -m oto check candidates --quiet`
 - `python3 -m oto.tools.deck_review`
 - `python3 -m oto.harness.gate_calibration`

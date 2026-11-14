@@ -31,7 +31,7 @@ def _overlay_path() -> Path:
     ``generate_candidates.OVERLAY_PATH`` is honoured rather than shadowed by
     this module's own copy. The tests use exactly that seam.
     """
-    import oto.harness.generate_candidates as cli
+    import oto.harness.candidate_generator as cli
     return cli.OVERLAY_PATH
 
 
@@ -113,7 +113,7 @@ def _write_overlay(rows: list[dict[str, Any]], dry_run: bool) -> int:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     payload["note"] = (payload.get("note", "") +
                        f"\nAppended {len(added)} generated candidates at "
-                       f"{stamp} by oto.harness.generate_candidates"
+                       f"{stamp} by oto.harness.candidate_generator"
                        + (f"\nDropped {len(stored_illegal)} stored row(s) the "
                           f"launch gate refuses at {stamp}" if stored_illegal else ""))
     import yaml
@@ -124,7 +124,7 @@ def _write_overlay(rows: list[dict[str, Any]], dry_run: bool) -> int:
     mirror_payload = {
         "run_id": f"candidates-{stamp}",
         "created_at": stamp,
-        "note": ("Candidate pool emitted by oto.harness.generate_candidates; "
+        "note": ("Candidate pool emitted by oto.harness.candidate_generator; "
                  "every row addresses a shipped-grid cell. Safe to load as a "
                  "run overlay, or archive after the run and strip these "
                  "phase_ids from phases.seed.overlay.yaml to keep future runs "

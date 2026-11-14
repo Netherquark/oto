@@ -18,9 +18,9 @@ whose AMDGPU metadata holds the true ``vgpr_count``. This tool parses them with
 measured per-kernel counts and median, the model's accumulator VGPRs for the same
 ThreadTile, and the measured/model ratio -- the headroom indicator.
 
-    python3 -m oto.harness.measure_vgprs                 # whole corpus
-    python3 -m oto.harness.measure_vgprs --run run_20261008_030033
-    python3 -m oto.harness.measure_vgprs --json out.json
+    python3 -m oto.harness.vgpr_measurement                 # whole corpus
+    python3 -m oto.harness.vgpr_measurement --run run_20261008_030033
+    python3 -m oto.harness.vgpr_measurement --json out.json
 """
 
 

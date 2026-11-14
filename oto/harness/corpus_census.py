@@ -7,7 +7,7 @@ GFLOP/s at each, the distinct geometries and their best, and every geometry
 measured on one cell next to the floor's best.
 
 Does NOT own: the database builder (``oto.harness.kernel_db``), the per-cell
-winner resolution (``oto.harness.resolve_cells``), the native-vs-floor knob
+winner resolution (``oto.harness.cell_resolver``), the native-vs-floor knob
 diff (``oto.harness.cell_knob_diff``), the forward-knob legality domain
 (``oto.tools.deck_review legality``), or the regression verdicts
 (``oto.harness.regression_matrix``).

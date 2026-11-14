@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_resolve_cells.py — harness.resolve_cells per-cell winner resolution.
+test_resolve_cells.py — harness.cell_resolver per-cell winner resolution.
 
 Regression guards for the 38-cell evidence generator (docs/potential_configs.md
 §R25, the per-cell reading — §R26 is the class tracker):
@@ -31,7 +31,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.device.kernel_vocabulary import shipped_cell_set
-from oto.harness import resolve_cells
+from oto.harness import cell_resolver as resolve_cells
 from oto.runners.paths import results_rel
 
 

@@ -42,7 +42,7 @@ def _load_seed_or_skip():
     """Live overlay is a gitignored artifact (results dir); skip on fresh checkouts."""
     if not _SEED_OVERLAY.is_file():
         pytest.skip("phases.seed.overlay.yaml absent (gitignored): "
-                    "run `python3 -m oto.harness.generate_candidates` first")
+                    "run `python3 -m oto.harness.candidate_generator` first")
     doc = yaml.safe_load(_SEED_OVERLAY.read_text())
     return list(doc["phases"].values()) if isinstance(
         doc.get("phases"), dict) else doc["phases"]

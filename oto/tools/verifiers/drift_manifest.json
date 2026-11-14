@@ -368,15 +368,15 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
-      "key": "harness/resolve_cells.py::build",
+      "key": "harness/cell_resolver.py::build",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
-      "key": "harness/resolve_cells.py::main",
+      "key": "harness/cell_resolver.py::main",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
-      "key": "harness/resolve_cells.py::parse_run_config_yaml",
+      "key": "harness/cell_resolver.py::parse_run_config_yaml",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {

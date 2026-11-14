@@ -27,7 +27,7 @@
 - `oto tune` (convergence loop + mutation machinery)
 - `oto report --json` (per-cell verdicts)
 - `python3 -m oto.harness.kernel_db --rebuild` (always rebuild before quoting)
-- `python3 -m oto.harness.resolve_cells --taxonomy`
+- `python3 -m oto.harness.cell_resolver --taxonomy`
 - `python3 -m oto.harness.cell_knob_diff`
 - `oto library best-effort` (CPU-only carve)
 - `oto check candidates` (deck linter)

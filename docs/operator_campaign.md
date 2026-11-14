@@ -312,7 +312,7 @@ Reading order for any cell before proposing a row:
 
 ```bash
 python3 -m oto.harness.corpus_census --cell FAM:side   # what's been tried?
-python3 -m oto.harness.resolve_cells --taxonomy          # what kind of cell?
+python3 -m oto.harness.cell_resolver --taxonomy          # what kind of cell?
 python3 -m oto check candidates                          # will the gates accept it?
 ```
 
@@ -595,7 +595,7 @@ and are never interpolated from these lessons.
 When a floor library is in hand:
 
 1. Resolve the floor winner for the worst native cells:
-   `python3 -m oto.harness.resolve_cells --taxonomy`. The report per cell is
+   `python3 -m oto.harness.cell_resolver --taxonomy`. The report per cell is
    `identical | near | retile | no-floor`. Only worst-cell classes are
    stealable; never steal a leader cell's config — the floor cannot lose to
    anyone whose config it already evaluated.
@@ -665,7 +665,7 @@ When a floor library is in hand:
   fill seems wrong);
 - `<codename>_results/acceptance_report.json` (+ `.html`) — re-written on every run;
 - `<codename>_results/kernel_db.json` — rebuilt via `oto.harness.kernel_db --rebuild` (verb, not hand-written);
-- `<codename>_results/overlay/*.yaml` — only by `python3 -m oto.harness.generate_candidates` (verb);
+- `<codename>_results/overlay/*.yaml` — only by `python3 -m oto.harness.candidate_generator` (verb);
 - `<codename>_results/best_effort_library/` — only by `python3 -m oto library best-effort` (verb);
 - `<codename>_results/bugs.md` — your own log of what you found but did not touch;
 - `<codename>_results/notes.md` — your free-form scratch notes during the campaign;

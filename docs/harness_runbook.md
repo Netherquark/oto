@@ -16,7 +16,7 @@ oto/harness/rule_calibration.py   # probe a *proposed* rule in isolation (false 
 oto/harness/kernel_db.py          # kernel_db.json builder (ground truth)
 oto/harness/corpus_census.py      # corpus history: axis/geometry coverage + per-cell geometry history
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
-oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
+oto/harness/cell_resolver.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/harness/coverage_map.py       # legal geometry space per cell + what the corpus measured in it
 oto/harness/tensile_probe.py     # the legality oracle: Tensile's own verdict on a config
 oto/harness/deck_probe.py          # the pre-run sweep: every unmeasured deck row through Tensile
@@ -142,8 +142,8 @@ the per-cell triage (docs/potential_configs.md §3/§5) and any spoof-steal
 (§9: **configure, never copy**) are argued from:
 
 ```bash
-python3 -m oto.harness.resolve_cells                      # table + caches (JSON, full.txt)
-python3 -m oto.harness.resolve_cells --tsv verdicts.tsv   # + tabular verdict dump
+python3 -m oto.harness.cell_resolver                      # table + caches (JSON, full.txt)
+python3 -m oto.harness.cell_resolver --tsv verdicts.tsv   # + tabular verdict dump
 ```
 
 For every acceptance-gradeable cell it reports: verdict, delta %, % of
@@ -254,7 +254,7 @@ traps (a legal configuration whose measured neighbours are all faster) sit
 ### 7. Ship the legal tile frontier (§R40)
 
 Authoritative green-lighted next step (user runs in a TTY): wire the seed
-overlay (`python3 -m oto.harness.generate_candidates`; the overlay is
+overlay (`python3 -m oto.harness.candidate_generator`; the overlay is
 gitignored, so this is required), run the CPU-only preflight, then
 `python3 -m oto tune --budget 10 --yes`. The deck rationale and its
 four-outcome reading are in `docs/potential_configs.md` §R40. After the run, rebuild

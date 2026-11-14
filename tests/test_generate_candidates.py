@@ -1,4 +1,4 @@
-"""CPU-only tests for harness/generate_candidates.py (proposal D4).
+"""CPU-only tests for harness/candidate_generator.py (proposal D4).
 
 Covers the structural invariants of the generated candidate pool:
 
@@ -24,7 +24,7 @@ import pytest
 import yaml
 
 from oto.device import loader as _loader
-from oto.harness.generate_candidates import (
+from oto.harness.candidate_generator import (
     _round_robin_prune,
     _strip_not_forwarded,
     _write_overlay,
@@ -85,7 +85,7 @@ class TestPoolInvariants:
                 assert shape in grid[fam], (r["phase_id"], shape)
 
     def test_every_target_cell_is_covered(self):
-        from oto.harness.generate_candidates import TARGET_CELLS
+        from oto.harness.candidate_generator import TARGET_CELLS
         found = set()
         for r in _rows():
             fam = str(r["config"].get("FamilyLabel", "")).upper()
@@ -200,7 +200,7 @@ class TestWriteOverlayScoping:
         return {"phase_id": f"phase_cand_zz_{tag}", "fp": fp}
 
     def test_dry_run_counts_only_new_rows(self, tmp_path, monkeypatch):
-        import oto.harness.generate_candidates as gen
+        import oto.harness.candidate_generator as gen
         seed = tmp_path / "phases.seed.overlay.yaml"
         seed.write_text(
             "phases:\n- phase_id: phase_cand_zz_old\n  fp: z\n")
@@ -229,7 +229,7 @@ class TestPruneCandidatesFromSeed:
         return p
 
     def test_dry_run_counts_only(self, tmp_path, monkeypatch):
-        import oto.harness.generate_candidates as gen
+        import oto.harness.candidate_generator as gen
         monkeypatch.setattr(gen, "OVERLAY_PATH", self._seed(tmp_path))
         stripped, kept = gen._prune_candidates_from_seed(dry_run=True)
         assert (stripped, kept) == (2, 2)
@@ -237,7 +237,7 @@ class TestPruneCandidatesFromSeed:
     def test_strip_archives_and_keeps_rest(self, tmp_path, monkeypatch):
         import yaml
 
-        import oto.harness.generate_candidates as gen
+        import oto.harness.candidate_generator as gen
         seed = self._seed(tmp_path)
         monkeypatch.setattr(gen, "OVERLAY_PATH", seed)
         stripped, kept = gen._prune_candidates_from_seed(dry_run=False)
@@ -255,7 +255,7 @@ class TestPruneCandidatesFromSeed:
     def test_noop_when_nothing_to_strip(self, tmp_path, monkeypatch):
         import yaml
 
-        import oto.harness.generate_candidates as gen
+        import oto.harness.candidate_generator as gen
         seed = tmp_path / "phases.seed.overlay.yaml"
         seed.write_text(yaml.safe_dump({"phases": [
             {"phase_id": "probe_N1_SS_64x64x8", "fp": "c"}]}))

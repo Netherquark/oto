@@ -23,9 +23,9 @@ Outputs, under ``<codename>_results/analysis/``: ``cells_resolved.json`` (machin
 cache: metadata plus one row per graded cell) and ``cells_resolved.full.txt``
 (the aligned human evidence table).
 
-    python3 -m oto.harness.resolve_cells                     # table + caches
-    python3 -m oto.harness.resolve_cells --tsv verdicts.tsv  # + verdicts dump
-    python3 -m oto.harness.resolve_cells --no-json --no-text # table only
+    python3 -m oto.harness.cell_resolver                     # table + caches
+    python3 -m oto.harness.cell_resolver --tsv verdicts.tsv  # + verdicts dump
+    python3 -m oto.harness.cell_resolver --no-json --no-text # table only
 """
 
 
@@ -45,7 +45,7 @@ from typing import Any
 from oto import yaml_cached as yamlio
 
 # Repo-root import (kept so the module also runs as
-# `python3 oto/harness/resolve_cells.py`; under `python3 -m oto.harness.resolve_cells`
+# `python3 oto/harness/cell_resolver.py`; under `python3 -m oto.harness.cell_resolver`
 # the repo root is already on the path, and kernel_db.py and friends bootstrap the
 # same way).
 _HERE = Path(__file__).resolve().parents[2]
@@ -385,7 +385,7 @@ def build(base_dir: str = ".",
     ]
 
     meta = {
-        "tool": "harness.resolve_cells",
+        "tool": "harness.cell_resolver",
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "acceptance_run_id": run_id,
         "reference_run_id": ref_run,

@@ -6,7 +6,7 @@
 > `docs/gfx90c_theoretical_limits.md` first — its §5 ceilings are the acceptance bar.
 > Cite keys: **L**=docs/gfx90c_theoretical_limits.md, **P**=docs/potential_configs.md,
 > **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/loader.py,
-> **D**=docs/implementation_plan.md, **M**=oto/harness/measure_vgprs.py,
+> **D**=docs/implementation_plan.md, **M**=oto/harness/vgpr_measurement.py,
 > **C**=oto/harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.
 > §11 is the loop for proposing the next candidate.
@@ -262,7 +262,7 @@ config mutation moves these.** The user's "bunch of ties" is mostly this.
 > so no cell is clock-corrected. A tie on an identical cell is a measurement
 > of the machine, not of the kernel, and a "WIN" on one is an environment win.
 > **Read the verdict against the gap, not against the band**
-> (`oto.harness.resolve_cells --taxonomy` prints the gap next to the delta;
+> (`oto.harness.cell_resolver --taxonomy` prints the gap next to the delta;
 > `docs/potential_configs.md` §R47.2, §R48.5).
 
 **M2 — wave quantization on the small cells.** 192/256 cubes with sensible tiles
@@ -334,7 +334,7 @@ floor; seven of those floor "wins" were inside the ±2 % tie band.)
 Tensile's dead byte-identical rejection). The model's calibration tables
 (weights, budgets, measured totals) live in `oto/tensile/gates/vgpr_model.py`;
 the model narrative is the `occupancy.py` module docstring. Measured reality was
-verified over the whole run corpus with `oto/harness/measure_vgprs.py`
+verified over the whole run corpus with `oto/harness/vgpr_measurement.py`
 (llvm-readelf on Tensile's emitted assembly objects — CPU only, no GPU). Median
 measured totals per (dtype, TT):
 
@@ -554,11 +554,11 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    **1101** (of which **401 are unmeasured** — the R47 axes that were never
    varied, the R48 geometries for the three ORANGE cells, and the R49 ranked
    unexplored space of those cells: ~9 h of new work at the measured 83 s per
-   phase). Regenerate it every run (`oto.harness.generate_candidates`, which is
+   phase). Regenerate it every run (`oto.harness.candidate_generator`, which is
    idempotent, appends only what is missing and **prunes the rows the launch
    gate refuses**). Keep the pool for the run; strip `phase_cand_*` ids AFTER
    the run to keep later runs light (the mirror preserves them) —
-   `oto.harness.generate_candidates --prune-candidates` (archives first).
+   `oto.harness.candidate_generator --prune-candidates` (archives first).
 3. Mutations are **DB-hooked** (`oto/tensile/synthesis/donor_mutator.py`): every iteration synthesises
    novel wide (DB tile donors × forward draws) + narrow (single-knob deltas on
    pads/PGR/PLR/NLCA/WGM/StaggerU/GLVW) + direction (floor-steal) mutants for
@@ -586,7 +586,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    of which **401 are unmeasured**) = **401 new phases ≈ 9 h** at the measured
    83 s per phase, and the DB mutator adds ~10 per iteration on top. The
    per-tier counts are read live — the deck from `phases.yaml` and the seed
-   overlay via `oto/harness/generate_candidates.py` /
+   overlay via `oto/harness/candidate_generator.py` /
    `oto/runners/auto_prompt._read_counts` — never transcribed here;
    `--budget <iterations>` governs the run. The DB mutator's
    novelty throttle keeps each mutation iteration ~1-2 h without starving the
@@ -655,8 +655,8 @@ occupancy) and the launch boundary additionally calls `ldspad_feasible` for the
 forwarded knobs. Deck a whole overlay with:
 
 ```
-python3 -m oto.harness.generate_candidates --dry-run   # validate + count, no write
-python3 -m oto.harness.generate_candidates             # write phases.seed.overlay.yaml
+python3 -m oto.harness.candidate_generator --dry-run   # validate + count, no write
+python3 -m oto.harness.candidate_generator             # write phases.seed.overlay.yaml
 python3 -m oto check candidates --family CC                # preflight the live deck
 python3 -m oto check candidates --floor                    # verify the floor is stealable
 ```

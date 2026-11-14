@@ -350,7 +350,7 @@ the value is that it can no longer spend a night on SS:256.
 CPU-only, safe under GNOME (the legality proof is `--dry-run`):
 
 ```bash
-python3 -m oto.harness.generate_candidates --dry-run   # 0 drops, 0 strips, 0 refusals
+python3 -m oto.harness.candidate_generator --dry-run   # 0 drops, 0 strips, 0 refusals
 python3 -m pytest -q tests/test_phase1_readonly_gpu.py tests/test_mutation_arm.py \
     tests/test_ab_audit.py tests/test_function_length.py tests/test_pyflakes.py
 ```
@@ -701,7 +701,7 @@ vendor's.
   batch row is gate-refused under any contraction pattern.
 * **Preflight is the authority, not a number written here.** `python3
   `oto check candidates --quiet` → `0 illegal`;
-  `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;
+  `python3 -m oto.harness.candidate_generator --dry-run` → `0 refused`;
   `python3 -m oto preflight` → parity (38/38 cells).
 
 ## R31 — what to stop doing
@@ -726,7 +726,7 @@ vendor's.
 ```bash
 # CPU-only, safe under GNOME (no GPU stress):
 python3 -m oto check candidates --quiet
-python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.candidate_generator --dry-run
 python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
 python3 -m oto.harness.rule_calibration --fail-on-false-reject
 python3 -m oto.harness.failure_triage
@@ -945,7 +945,7 @@ dtypes, and forces `1LDSBuffer`).
   `KNOB_SWEEP_BASES` at module scope without importing them, so its CLI raised
   `NameError` and three tests were red. Now imported; the sweep test file is green.
 * **Preflight is the authority, not a number written here** (`claude.md`: never
-  write a corpus count down). `python3 -m oto.harness.generate_candidates --dry-run`
+  write a corpus count down). `python3 -m oto.harness.candidate_generator --dry-run`
   must report `0 refused`, `python3 -m oto check candidates --quiet` must report
   `0 illegal`, and `python3 -m oto preflight` must show
   full parity (38/38 shipped cells) before the run.
@@ -986,7 +986,7 @@ out of the deck: a candidate carrying them is a no-op (R16).
 ```bash
 # CPU-only, safe under GNOME (no GPU stress):
 python3 -m oto check candidates --quiet
-python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.candidate_generator --dry-run
 python3 -m oto preflight
 
 # TTY only — the real run:
@@ -995,7 +995,7 @@ python3 -m oto tune --budget 10 --yes
 
 The overlay `gfx90c_results/overlays/phases.seed.overlay.yaml` is a generated,
 gitignored artifact; it has already been refreshed for this run with
-`python3 -m oto.harness.generate_candidates` (no `--dry-run`), which appended the
+`python3 -m oto.harness.candidate_generator` (no `--dry-run`), which appended the
 tie-adapt rows.
 
 Sizing is honest-estimate territory: the latest completed run took 8 h 39 m wall
@@ -1337,7 +1337,7 @@ overnight run command:
 ```bash
 # CPU-only, from any session (safe under GNOME)
 python3 -m oto check candidates --quiet
-python3 -m oto.harness.generate_candidates --dry-run
+python3 -m oto.harness.candidate_generator --dry-run
 python3 -m oto preflight
 
 # TTY only — the real run
@@ -2156,7 +2156,7 @@ sequence in the harness, F needs a kernel-writer change. They are recorded in
 
 All numbers in §1–§8 are reproduced by repo tooling, which is the citation:
 `all_runs.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
-measured occupancy + GFLOP/s join), `oto.harness.resolve_cells` (per-cell
+measured occupancy + GFLOP/s join), `oto.harness.cell_resolver` (per-cell
 winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
 `run_20261013_214649`.
@@ -2410,7 +2410,7 @@ retains **765 of 3831 configs (20 %)** and **loses 0 of 35 cell winners**
 ```bash
 # 1. CPU-only, from any session (safe under GNOME)
 python3 -m oto check candidates --family CC --quiet   # legal, or it names the rows
-python3 -m oto.harness.generate_candidates --dry-run  # prints the per-family tally
+python3 -m oto.harness.candidate_generator --dry-run  # prints the per-family tally
 python3 -m oto preflight       # 38/38 parity, all OK
 
 # 2. TTY only — the real run
@@ -2733,7 +2733,7 @@ the batch spec for the next run.
    ORANGE list shrinks from **12 cells to 3**: `SS:256`, `HH:256`, `CC:192`.
    §R42.2 (Class A) and §R43 Routes 1-3 (3M/Karatsuba, non-atomic split-K) are
    **struck**: they were answers to a mis-scaled bar.
-2. **Most ties carry no kernel difference at all.** `oto.harness.resolve_cells
+2. **Most ties carry no kernel difference at all.** `oto.harness.cell_resolver
    --taxonomy` groups the 38 cells by how far the two arms' winning configs are
    apart. Of the 15 ties: **9 are `identical`** (the native and floor arms run
    the *same* config -- the vendor's gfx900 tile transferred unchanged, which is

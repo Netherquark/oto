@@ -154,26 +154,26 @@ counts are never quoted here -- they go wrong the day a file moves.
 ## oto/harness/ — the analysis harness
 
 * ``harness/asm_occupancy.py`` — Measured occupancy of every emitted Tensile kernel in the run corpus.
+* ``harness/candidate_generator.py`` — The candidate-generator CLI.
 * ``harness/candidate_overlay.py`` — The candidate overlay: what is written, pruned and mirrored.
 * ``harness/candidate_pool.py`` — The candidate loaders and the new module's helpers.
 * ``harness/candidate_rows.py`` — The candidate row builders: per-family tile ladders and the auto rows.
 * ``harness/cell_knob_diff.py`` — Per-cell native-vs-floor winner knob fingerprint diff.
+* ``harness/cell_resolver.py`` — Per-cell native-vs-floor winner resolution on the full knob surface.
 * ``harness/corpus_census.py`` — Corpus census: what the corpus has ever measured, per family and per cell.
 * ``harness/coverage_graph.py`` — Coverage graphs: the problem space as a 2D picture, and what is unexplored.
 * ``harness/coverage_map.py`` — Coverage map: what the corpus has measured, and what it has not.
 * ``harness/deck_probe.py`` — Deck check: does every *unmeasured* deck row actually build in Tensile?
 * ``harness/failure_triage.py`` — Failed-candidate triage: which phases produced nothing, and why.
 * ``harness/gate_calibration.py`` — Gate calibration: do the launch gates agree with what Tensile actually built?
-* ``harness/generate_candidates.py`` — The candidate-generator CLI.
 * ``harness/kernel_db.py`` — Ground-truth per-kernel-per-shape GFLOPS database.
-* ``harness/measure_vgprs.py`` — Measure real per-thread VGPRs from Tensile-emitted code objects.
 * ``harness/occupancy_bounds.py`` — Resident-workgroup audit per (family, shape) cell.
 * ``harness/regression_matrix.py`` — Deck-vs-floor-vs-all-time cell regression matrix.
-* ``harness/resolve_cells.py`` — Per-cell native-vs-floor winner resolution on the full knob surface.
 * ``harness/rows_frontier.py`` — Candidate row builders, part 2: the tie-adapt and frontier blocks.
 * ``harness/rows_ladders.py`` — Candidate row builders, part 1: the tile ladders and the batch literal.
 * ``harness/rows_smallcells.py`` — Candidate row builders, part 3: the small-cell evidence blocks.
 * ``harness/rule_calibration.py`` — Rule calibration: would a *proposed* gate rule add false rejections?
 * ``harness/tensile_probe.py`` — The legality oracle: ask Tensile itself whether a config builds.
+* ``harness/vgpr_measurement.py`` — Measure real per-thread VGPRs from Tensile-emitted code objects.
 * ``harness/visual_check.py`` — Visual/layout regression check for the acceptance report.
 

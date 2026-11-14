@@ -18,7 +18,7 @@ Owns: read-only decision support for candidate generation:
                  census and what a top-K cap would retain, and whether that cap
                  loses any cell winner.
 
-Does NOT own: the winners themselves (`oto.harness.resolve_cells`), the
+Does NOT own: the winners themselves (`oto.harness.cell_resolver`), the
 acceptance verdicts (`oto.metrics.ab_audit`), the knob domains
 (`oto.tensile.synthesis.donor_knobs`), or the gates
 (`oto.tensile.gates`). It re-implements no aggregation: it drives the repo's own

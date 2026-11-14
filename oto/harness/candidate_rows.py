@@ -10,7 +10,7 @@ load-bearing -- the sibling modules mutate ``PLAN_BATCH`` at import time.
 
 Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
 the overlay read/write (``oto.harness.candidate_overlay``), or candidate
- generation (``oto.harness.generate_candidates``).
+ generation (``oto.harness.candidate_generator``).
 """
 
 from __future__ import annotations

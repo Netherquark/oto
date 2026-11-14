@@ -91,15 +91,15 @@ MOVES = [
     ("check_db.py", ["oto/checks/db.py"]),
     ("check_retirement.py", ["oto/checks/stability_retirement.py"]),
     ("harness/cell_knob_diff.py", ["oto/harness/cell_knob_diff.py"]),
-    ("harness/generate_candidates.py", ["oto/harness/generate_candidates.py",
+    ("harness/generate_candidates.py", ["oto/harness/candidate_generator.py",
                                       "oto/harness/candidate_rows.py",
                                       "oto/harness/candidate_pool.py",
                                       "oto/harness/candidate_overlay.py"]),
     ("harness/kernel_db.py", ["oto/harness/kernel_db.py"]),
-    ("harness/measure_vgprs.py", ["oto/harness/measure_vgprs.py"]),
+    ("harness/measure_vgprs.py", ["oto/harness/vgpr_measurement.py"]),
     ("harness/occupancy_bounds.py", ["oto/harness/occupancy_bounds.py"]),
     ("harness/regression_matrix.py", ["oto/harness/regression_matrix.py"]),
-    ("harness/resolve_cells.py", ["oto/harness/resolve_cells.py"]),
+    ("harness/resolve_cells.py", ["oto/harness/cell_resolver.py"]),
 ]
 
 #: Modules this refactor deliberately decomposed, so a "body differs" for their
@@ -463,6 +463,8 @@ RENAMES: dict[str, str] = {
     "oto/_map.py": "oto/readme_gen.py", "oto/cli/flags.py": "oto/cli/global_flags.py", "oto/cli/docs.py": "oto/cli/help_command.py",
     "oto/device/derive.py": "oto/device/derive_limits.py", "oto/device/detect.py": "oto/device/device_detect.py",
     "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py",
+    "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
+    "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py", "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py",
     "oto/inventory.py": "oto/readme_gen.py",
     "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py",
 }
