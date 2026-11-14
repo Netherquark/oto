@@ -1,9 +1,9 @@
-# mapping.md — Shipped gfx900 footprint → native gfx90c replication contract
+# docs/shipped_floor_contract.md — Shipped gfx900 footprint → native gfx90c replication contract
 
 Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
 Floor: 2,285
 Date: 2026-09-13 (kernel counts re-derived live from the dat on 2026-09-25)
-Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `oto/device/loader.py` (`oto.device.vocabulary` for the cell vocabulary), measured prior conclusions (`prior_INSIGHTS_CAVEMAN_ULTRA.md` §5.1). Kernel identity now comes from `oto/tensile/library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
+Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `oto/device/loader.py` (`oto.device.vocabulary` for the cell vocabulary), measured prior conclusions (`archive/prior_insights.md` §5.1). Kernel identity now comes from `oto/tensile/library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
 
 ## 1. What the shipped gfx900 library actually is
 
@@ -41,7 +41,7 @@ emit per-family tile decks from:
 1. the mapped gfx900 top-tiles above (translated, never copied: `_ISA900_` kernels are
    not runnable), and
 2. the measured frozen prior winners (below) — the only datapoints
-   already gfx90c-native (frozen prior conclusions, per `prior_INSIGHTS_CAVEMAN_ULTRA.md`).
+   already gfx90c-native (frozen prior conclusions, per `archive/prior_insights.md`).
 
 The spoof floor for A/B is the **shipped footprint itself**: `--gfx900-reference`
 benchmarks every shipped kernel once (ScheduleName `vega10`, at the family deck shapes
@@ -67,7 +67,7 @@ Expected coverage denominators now come from that pinned manifest, not this (his
 | Grid underfill fix | GSU only when grid underfills 7 CUs: 256³→GSU8, 512³→GSU2, 128x128x2048→GSU1 |
 | Label-only (ignore) | `ScheduleName: "isa"` vs `"vega10"` — verdict G, no measured effect |
 
-Ruler/floor numbers (single-rate; ceiling authority `gfx90c_theoretical_limits.md`):
+Ruler/floor numbers (single-rate; ceiling authority `docs/gfx90c_theoretical_limits.md`):
 FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
 
 ## 4. Enforcement (how the contract is kept)
@@ -78,7 +78,7 @@ FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
   *policy* choice, not a measured fact: the corpus-measured noise floor is ±27.8%
   (repeat CV p90, `ab_audit.repeat_dispersion`), so a ±5% tie band reports
   sub-noise differences as if they were parity. `ab_audit.py` grades at ±27.8%.
-  See `results.md` §12.3.
+  See `docs/results.md` §12.3.
 - Peaks are never a signal; gfx900 spoof is a floor; `SPOOF floor is never re-rolled`
   (dedicated `gfx900_ref_*` chain; `--resume` only, no partial re-runs).
 - **Retire only on sampling-gated evidence** (≥2 independent runs/cell + CV gates),

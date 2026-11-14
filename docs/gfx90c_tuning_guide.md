@@ -3,8 +3,8 @@
 > Plain words. Hard numbers. Every claim traceable in the repo (cite keys below).
 > This file formalizes the kernel-tuning research: what the deck controls, what
 > actually wins, why "nothing moved", and what to try next. Read
-> `gfx90c_theoretical_limits.md` first — its §5 ceilings are the acceptance bar.
-> Cite keys: **L**=gfx90c_theoretical_limits.md, **P**=potential_configs.md,
+> `docs/gfx90c_theoretical_limits.md` first — its §5 ceilings are the acceptance bar.
+> Cite keys: **L**=docs/gfx90c_theoretical_limits.md, **P**=docs/potential_configs.md,
 > **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/loader.py,
 > **D**=implementation_plan.md, **M**=oto/harness/measure_vgprs.py,
 > **C**=oto/harness/cell_knob_diff.py. Numbers below are kernel_db post-2026-10-09
@@ -22,7 +22,7 @@ already pinned to the ALU wall (M1). The real headroom is the **small cells**
 (M2: the machine idles below 25 % residency) and nothing else — **M3 is
 retired**: the complex families are at 80-97 % of the FMA roof, and their
 "shortfall" was a 4x unit error in the bar (2026-10-21,
-`gfx90c_theoretical_limits.md` §5.2). Everything else is measurement hygiene
+`docs/gfx90c_theoretical_limits.md` §5.2). Everything else is measurement hygiene
 (M4: suppressed clock), not tuning.
 
 ## 1. Knob surface — what the deck actually controls
@@ -133,7 +133,7 @@ The `MatrixInstruction` shapes enumerated in the same table are **gfx908+ only a
 unreachable here** (`HasMFMA=False`) — recorded as a dead end, not an omission.
 
 **Two register bounds, not one** (both gated since 2026-10-18, 0 false
-rejections; mechanics in `kernel_tuning_research.md` §4):
+rejections; mechanics in `docs/research/kernel_tuning.md` §4):
 
 | bound | rule | binds on |
 |---|---|---|
@@ -145,10 +145,10 @@ rule is Tensile's own `65536 // NumThreads // max(vgpr, agpr) >= 1`; ThreadTile
 cancels out of it, so it caps MacroTile *area* at `65536/R` — `SS/HH` 65536,
 `DD` 32768, `CC` 16384, `ZZ` 8192. Consequently the widest *legal* MacroTile is
 CC `128x64`, ZZ `64x64`/`128x32`; the wider "headroom" tiles in
-`potential_configs.md` §8.2 fill the file (65536) and are unbuildable. A third
+`docs/potential_configs.md` §8.2 fill the file (65536) and are unbuildable. A third
 rule bounds `LocalSplitU > 1`: the LDS reduction buffer
 `LSU*MT0*MT1*computeBytes` must stay ≤ 65536
-(`kernel_tuning_research.md` §4, rule 2).
+(`docs/research/kernel_tuning.md` §4, rule 2).
 
 ### 1.2 The small-box geometry, which drives `WorkGroupMapping` and tile choice
 
@@ -172,10 +172,10 @@ with a 6×6 per-thread tile (arithmetic, not a proof). **No published derivation
 proves `96×96` or `6×6` intrinsically optimal for GCN5** — treat every ladder rung
 as empirical and filter it by register/LDS legality, grid size and edge waste
 ([Tensile parameters](https://rocm.docs.amd.com/projects/Tensile/en/latest/src/conceptual/kernel-parameters.html);
-`kernel_tuning_research.md` §3.4). Larger tiles buy reuse and fewer blocks but cost
+`docs/research/kernel_tuning.md` §3.4). Larger tiles buy reuse and fewer blocks but cost
 accumulator registers, edge waste and occupancy; the small-box table above is the
 gfx90c-specific half of that trade. The grid/tail arithmetic behind the table is
-the CPU-only predictor in `kernel_tuning_research.md` §3.4 — use it to *rank* tiles,
+the CPU-only predictor in `docs/research/kernel_tuning.md` §3.4 — use it to *rank* tiles,
 and remember the ~1 MiB L2 makes traversal order a locality question
 (`WorkGroupMapping`) rather than a throughput oracle.
 
@@ -233,10 +233,10 @@ the old `phase_auto_1_hh` rows are gone from SS:1024. Unit tests:
 | lever | winner | evidence (all-run kernel_db sweep) |
 |---|---|---|
 | direction | `Ailk_Bjlk` (**NT**) dominates | the only non-NT winners: DD:192 `Alik_Bljk` (TT), the DD/Z:1024 `64x32` TN pocket; the spoof is NT-everywhere too |
-| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range; the area is also legality-bounded — above 16384 elements only 256×128 / 128×256 survive (64×512 / 512×64 at DU8 for 16-bit inputs), and CC/DD/ZZ admit none (`gfx90c_theoretical_limits.md` §5.1) |
+| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range; the area is also legality-bounded — above 16384 elements only 256×128 / 128×256 survive (64×512 / 512×64 at DU8 for 16-bit inputs), and CC/DD/ZZ admit none (`docs/gfx90c_theoretical_limits.md` §5.1) |
 | VectorWidth | pinned to the 16-B cap: S vw4, H vw8, C vw2, D vw1-2, Z vw1, HPA vw4 | not free; the cap is hardware |
 | DepthU | 8 for S/D/C/Z, 16 for H/HPA | family-locked, not a sweep knob |
-| WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`potential_configs.md` §R41) | 2 and 3 are untested and decked (§R40) |
+| WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`docs/potential_configs.md` §R41) | 2 and 3 are untested and decked (§R40) |
 | GlobalSplitU | 1 at every winner | closed: SS:1024 G1 1135 / G2 936 / G4 740; DD:2048 99 / 95 / 95 (§R41) |
 | register hygiene | real families saturate; the complex families saturate too (80-97 % of the FMA roof) | M1 |
 
@@ -263,11 +263,11 @@ config mutation moves these.** The user's "bunch of ties" is mostly this.
 > of the machine, not of the kernel, and a "WIN" on one is an environment win.
 > **Read the verdict against the gap, not against the band**
 > (`oto.harness.resolve_cells --taxonomy` prints the gap next to the delta;
-> `potential_configs.md` §R47.2, §R48.5).
+> `docs/potential_configs.md` §R47.2, §R48.5).
 
 **M2 — wave quantization on the small cells.** 192/256 cubes with sensible tiles
 physically cannot produce ≥ 40 waves (the arithmetic, per cell, is in
-`potential_configs.md` §R48.2 -- the winners are at 53-83 % of their own
+`docs/potential_configs.md` §R48.2 -- the winners are at 53-83 % of their own
 fill-and-waste bound, so the cells are starved, not badly tuned):
 
 | cell | winner (tt) | waves | waves/SIMD | ~residency |
@@ -293,14 +293,14 @@ complex types), while a complex MAC is *executed* as four real FMAs = 8 BLAS
 flops. A reported complex GFLOPS is therefore **¼ of its BLAS-8 value**, and
 the plateau was being compared against a BLAS-8 roof. The truth: **CC runs at
 80-97 % of the FP32 FMA roof and ZZ at 96-97 % of the FP64 roof**
-(`gfx90c_theoretical_limits.md` §5.2, three independent checks). There is no
+(`docs/gfx90c_theoretical_limits.md` §5.2, three independent checks). There is no
 wall to break; the complex cells were the *best* cells in the corpus, and the
 ORANGE list shrank from twelve cells to three (`SS:256`, `HH:256`, `CC:192`).
 The 4-real-MAC-per-complex-MAC ALU cost is irreducible and irrelevant to the
 verdict, because both the ceiling and the measurement are in the same unit.
 
 The 3M/Karatsuba and split-K routes that were proposed against this "wall"
-(`potential_configs.md` §R43 Routes 1-2) are struck: at 97 % of the roof there
+(`docs/potential_configs.md` §R43 Routes 1-2) are struck: at 97 % of the roof there
 is nothing for a 25 % instruction saving to win. What is *still* true of the
 complex families: GSU>1 is validator-legal via MultipleBuffer
 (`SolutionStructs.py:2958-2976/3543-3553`) but the atomics cost more than the
@@ -320,7 +320,7 @@ cross-run number.
 floor win was **CC:256** (native 193.8 vs floor 214.0, floor **+10.4 %**) —
 outside the ±2 % tie band. **Superseded 2026-10-15:** the native CC:256 reading
 was depressed by a candidate-pool sweep-order defect (256³ measured immediately
-after 2048³; `results.md` §13.4 / `potential_configs.md` F1). The clean re-run
+after 2048³; `docs/results.md` §13.4 / `docs/potential_configs.md` F1). The clean re-run
 `run_20261015_041159` reads CC:256 as **TIE** (native 210.772 vs floor 214.882,
 −0.74 %), leaving no strict floor win. (The pre-fold snapshot read 22 native / 8
 floor; seven of those floor "wins" were inside the ±2 % tie band.)
@@ -387,7 +387,7 @@ false rejections to both populations.** Tests:
 
 > 2026-10-09: for the physical per-cell **resident-workgroup** audit (the
 > "occupancy ≤3 everywhere" question, incl. the VGPR-vs-LDS binder split and
-> the single-buffer probe), see `potential_configs.md` §5 +
+> the single-buffer probe), see `docs/potential_configs.md` §5 +
 > `python3 -m oto.harness.occupancy_bounds`. `occupancy_feasible` gates legality;
 > the audit answers residency.
 
@@ -417,9 +417,9 @@ failure. Results (re-measured 2026-10-12):
 Spoof-steal rule (sanctioned): take the floor's winning config per cell, adapt
 for gfx90c (16-B cap / LDS budget — the gate does this), document, benchmark in
 TTY. Only cell in scope was **CC:256**; the 2026-10-15 sweep-order fix first
-took it to TIE (`results.md` §13.4), and the R8 steal **landed** on the
+took it to TIE (`docs/results.md` §13.4), and the R8 steal **landed** on the
 2026-10-18 run: `run_20261018_004835` reads CC:256 **WIN (+7.8 %)**. No cell is
-a LOSS, so no further steal is open (`potential_configs.md` §R24/§R25).
+a LOSS, so no further steal is open (`docs/potential_configs.md` §R24/§R25).
 
 ## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
 
@@ -432,7 +432,7 @@ DepthU, VectorWidth, GlobalLoadVectorWidthA/B) and the ±% delta, read from
 shared; 29 native / 1 floor** (superseded 2026-10-15 — the one floor win,
 CC:256, is a sweep-order artifact and reads TIE on the clean re-run; the R8
 steal then landed it as **WIN (+7.8 %)** on 2026-10-18; see below and
-`results.md` §14).
+`docs/results.md` §14).
 Findings (same kernel name almost everywhere; the deltas are the subtle ones):
 
 - **CC:256 — the former floor win (now TIE).** Native
@@ -441,7 +441,7 @@ Findings (same kernel name almost everywhere; the deltas are the subtle ones):
   TT 4×4, VW2) **214.0** → floor **+10.4 %** (2026-10-12 db). The delta is
   **tile area** (32×32 → 64×64), not direction — both kernels are `Ailk_Bjlk`
   (NT). The native 193.8 was swept at the poisoned 256³ position (256³
-  immediately after 2048³); after the sweep-order fix (`results.md` §13.4) the
+  immediately after 2048³); after the sweep-order fix (`docs/results.md` §13.4) the
   same geometry reads **210.772** vs floor 214.882 = TIE, run
   `run_20261015_041159`. (Group B; the earlier note calling this a TT-vs-NT
   direction delta is stale.)
@@ -604,7 +604,7 @@ the ±2 % tie band. Walls (M1) and settled cells are skipped. Then read the
 cell's history with `python3 -m oto.harness.corpus_census --cell FAM:side`:
 it names every geometry already measured there and the evidence behind each,
 so you neither re-propose a losing geometry nor re-spend a closed axis
-(`potential_configs.md` §R41).
+(`docs/potential_configs.md` §R41).
 
 **Step 2 — choose the knob (mechanism first).** Match the knob to the failure
 mode named in §5/§11's mechanism column, not to a blind sweep:

@@ -41,7 +41,7 @@ from __future__ import annotations
 from oto.device.profile import DeviceProfile
 
 #: Lane classes keyed to the family. HPA runs at the FP32 rate (the pipe
-#: computes v_fma_f32 on 16-bit data); see gfx90c_theoretical_limits.md §2.2.
+#: computes v_fma_f32 on 16-bit data); see docs/gfx90c_theoretical_limits.md §2.2.
 FAMILY_LANE = {
     "SS": "FP32",
     "DD": "FP64",

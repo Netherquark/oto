@@ -48,9 +48,9 @@ Order: gates first (most isolated), then analytics/report, then harness.
 - **C4.3** API key handling: read from starter YAML block or env var; never persisted. Gate: test no key on disk.
 - **C4.4** Wire agents into meta-agent orchestrator. Gate: end-to-end gfx90c doc gen.
 
-## Phase 5 — Automated potential_configs.md
+## Phase 5 — Automated docs/potential_configs.md
 
-- **C5.1** `oto/tools/potential_configs.py`: reads run outputs (kernel_db + ledger) + agent research, synthesises potential_configs.md sections (verdict anatomy, occupancy audit, ranked plan). Gate: generates gfx90c potential_configs matching current structure.
+- **C5.1** `oto/tools/potential_configs.py`: reads run outputs (kernel_db + ledger) + agent research, synthesises docs/potential_configs.md sections (verdict anatomy, occupancy audit, ranked plan). Gate: generates gfx90c potential_configs matching current structure.
 - **C5.2** Meta-agent orchestrates: agents → workflow → potential_configs gen. Gate: full pipeline on gfx90c.
 
 ## Phase 6 — Generalise tests

@@ -18,7 +18,7 @@
 
 ```
 shipped gfx900 footprint (28 families, 4 patterns)
-    ↓ translate decks (mapping.md) — never copy ISA900 kernels
+    ↓ translate decks (docs/shipped_floor_contract.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
 HW benchmark (median-of-seeds, ruler-adjusted)
@@ -76,7 +76,7 @@ The `Core Strategy` above says *that* the loop mutates ≤2 knobs; it does not s
 *which* knobs first. This section does, and it is the one place that owns the
 ordering. It is the conclusion of the external autotuning literature applied to
 7 CUs / 64 KiB LDS / 1 MiB L2 / no MFMA; the per-knob legal domains live in
-`gfx90c_tuning_guide.md` §1.1 and the virgin axes in §9.1.
+`docs/gfx90c_tuning_guide.md` §1.1 and the virgin axes in §9.1.
 
 **Stage 0 — analytic pre-filter, zero GPU cost.** A draw that fails any of these
 is a guaranteed refusal, and every refusal costs one of the mutator's five draws
@@ -184,7 +184,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
    repo: **14–25 configs/cell is a *small shortlist*** — sensible after strong legality/resource
    pruning, risky when the candidates are near-duplicates. The corpus's ZZ cell (5 distinct
    geometries, and the family furthest from ceiling) is the near-duplicate end of that scale
-   (`potential_configs.md` §R28/§R33).
+   (`docs/potential_configs.md` §R28/§R33).
 8. **Surrogate / Bayesian / bandit selection is published for GPU kernels** (rough, discrete,
    constrained spaces, expensive evaluations — Willemsen et al.; KernelTuner's multiple
    optimisers; Ansor's learned cost model). It is **explicitly OUT of this project's contract**:
@@ -196,7 +196,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
 9. **Per-shape tuning is established practice, not a guaranteed gain.** CLBlast tunes on the
    actual dimensions; Triton uses shape-keyed autotune. Specialise only where grid quantisation,
    edge waste, K length or cache reuse differ materially (gfx90c: the small-shape band,
-   `potential_configs.md` §R29); keep the family-wide config as baseline/fallback and retain a
+   `docs/potential_configs.md` §R29); keep the family-wide config as baseline/fallback and retain a
    specialisation only when the gain repeats outside the tie band.
 
 **Cost model (cheap, no GPU).** Predicted time ≈ `max(flops/peak, bytes/bw) + LDS_conflict_penalty`,

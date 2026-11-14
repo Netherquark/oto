@@ -35,7 +35,7 @@ from oto.tensile.config_writer import NOT_FORWARDED_KNOBS
 # and can add anisotropy the decks never expressed.
 #
 # 2026-10-18: five rows that the gate refuses were removed/repointed here too
-# (potential_configs.md §R24/§R27). This ladder was the *second* home of the
+# (docs/potential_configs.md §R24/§R27). This ladder was the *second* home of the
 # dead wide tiles: SS/HH `32x32x16/2x2` at VW4/VW8 (TT 2 cannot be a multiple
 # of a 4/8-wide load), CC `128x128x8/4x4` (the accumulators alone fill the 64K
 # register file -> Tensile error 4; the widest legal CC tile is 128x64 with 8x4
@@ -135,7 +135,7 @@ WGM_VARIANTS = (4, 1, 8)
 #: Builder keys the launch boundary does not forward; a candidate carrying
 #: one is stripped of it at emit time and the strip is reported (never a silent
 #: no-op). The single home is ``config_writer.NOT_FORWARDED_KNOBS``
-#: (potential_configs.md §R16); this is the name the harness reads it under.
+#: (docs/potential_configs.md §R16); this is the name the harness reads it under.
 _NOT_FORWARDED_YET = frozenset(NOT_FORWARDED_KNOBS)
 
 PATTERNS = {
@@ -217,7 +217,7 @@ AUTO_EXPLICIT: dict[str, list[dict[str, Any]]] = {
 # HH GSU2 stays banned here as everywhere (§13.4); HH wave-fill runs through
 # the 64x64 alternates that TARGET_CELLS now includes for HH:256.
 PLAN_BATCH: list[dict[str, Any]] = [
-    # 2026-10-16 Route G — the CC:256 steal (potential_configs.md §0 R8).
+    # 2026-10-16 Route G — the CC:256 steal (docs/potential_configs.md §0 R8).
     # CC:256 is the ONLY cell in the corpus that is a genuine shortcoming: native
     # 210.8 vs spoof 212.3 (TIE, -0.7 %) while both sit at 19 % of the CC
     # realistic ceiling, and native's typical kernel is 63.6 % below spoof's
@@ -471,7 +471,7 @@ for fam, pattern, tile, tt, vw, du, rows in (
                            **kw, "note": "2026-10-09: " + note})
 
 
-# --- tie-geometry adaptation (potential_configs.md rewrite 5 §R16) ----------
+# --- tie-geometry adaptation (docs/potential_configs.md rewrite 5 §R16) ----------
 # The big-shape TIEs (SS 768-4096, HH 1024-4096, and the two HPA columns) are
 # ties *because* native reproduces the floor's own gfx900 geometry -- the config
 # is copied across SKUs and never adapted for a 7-CU / 1 MiB-L2 part.  The

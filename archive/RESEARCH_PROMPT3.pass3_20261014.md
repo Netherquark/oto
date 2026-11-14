@@ -4,7 +4,7 @@
 → `corpus.md`) settled the hardware and tile physics. Pass 2
 (`RESEARCH_PROMPT2.md` → `corpus2.md`) settled the eleven never-varied knobs'
 mechanisms, and the deck now sweeps them (`oto/tensile/decks.py`
-`KNOB_SWEEPS`, `potential_configs.md` §8.1) plus decision-labelled trials
+`KNOB_SWEEPS`, `docs/potential_configs.md` §8.1) plus decision-labelled trials
 (`DECISION_TRIAL_TILES`, §9 D1–D4). This pass asks only what is *still* open
 after both corpora were mined — six question groups, no more.
 
@@ -51,8 +51,8 @@ FP64 101 / complex `flopsPerMac = 8`. Tensile v4.44 at pinned commit `e8a8999e`,
 emits GCN ISA text. Verdicts 19 WIN / 18 TIE / 1 LOSS (CC:256, a floor-arm
 telemetry artifact). Complex is issue-bound (4 real FMAs per MAC); LDS binds
 61.7% of kernels; median 8 waves/CU; zero spills. Full tables:
-`potential_configs.md` §§1,8–9, `knowledge_base.md` §7, `kernel_tuning_research.md`
-§§9.1–9.3, `gfx90c_theoretical_limits.md` §§6–7.
+`docs/potential_configs.md` §§1,8–9, `docs/knowledge_base.md` §7, `docs/research/kernel_tuning.md`
+§§9.1–9.3, `docs/gfx90c_theoretical_limits.md` §§6–7.
 
 **Provenance rule (non-negotiable):** every claim about Tensile behaviour must be
 traced to the *pinned* `e8a8999e` checkout (`Tensile/Common.py` defaults block

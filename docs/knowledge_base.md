@@ -232,7 +232,7 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 ## 6. Shipped gfx900 Footprint
 
-> The replication goal (see `mapping.md`): **28 frozen family libraries, 2,285
+> The replication goal (see `docs/shipped_floor_contract.md`): **28 frozen family libraries, 2,285
 > distinct shipped kernels** — zero of which are loadable on gfx90c today. That absence is the gap:
 > replicate this footprint and produce a `tensilelibrary` that performs all of these
 > functions natively on gfx90c (performing better than gfx900 spoofing). No more, no
@@ -313,11 +313,11 @@ reported separately, never counted as coverage.
 
 Operational ordering: **coverage first**. Lever selection is subordinate to covering
 every function of the 28-family footprint (section 6). The levers below are the
-measured truths (frozen prior conclusions in `prior_INSIGHTS_CAVEMAN_ULTRA.md`
+measured truths (frozen prior conclusions in `archive/prior_insights.md`
 §5.1) that make coverage cheap and correct on gfx90c.
 
 Rate card (peaks @ 1800 MHz; single source `oto.device.loader.current_profile().peak_gflops`; ceiling
-authority `gfx90c_theoretical_limits.md`):
+authority `docs/gfx90c_theoretical_limits.md`):
 
 - FP32 — 1613 GFLOPS (448 FP32 lanes)
 - FP16 — 3226 GFLOPS (dual-issue `v_pk_fma_f16`)
@@ -431,7 +431,7 @@ mechanisms as verified and any speedup as unmeasured.
 - **`LocalSplitU`** is `WorkGroup[2]` and splits the summation dimension *inside* a
   workgroup; it does **not** multiply the output grid (`GlobalSplitU` does). A
   TensileLite dtype guard might exclude complex, but the project's own
-  `validate_config` accepts it for every family (`potential_configs.md` §8.1), so
+  `validate_config` accepts it for every family (`docs/potential_configs.md` §8.1), so
   the local gate at `e8a8999e` is the authority.
 - **`GlobalLoadVectorWidth` ≠ `VectorWidth` and ≠ 1** is rejected by Tensile
   (`SolutionStructs.py:4584-4596`, "must be == VectorWidth … or == 1") **only when**
@@ -445,7 +445,7 @@ mechanisms as verified and any speedup as unmeasured.
   refuses (`failurelogs.txt`; reference-rerun hashes `7f866dcf` / `a0edeb30`). So
   widening is **not** a free lever — unpaired it is a refusal or a no-op, and the one
   realizable widen is the CC-only pair `GLVW=2 + AssertFree0ElementMultiple=2`
-  (`potential_configs.md` §8.1, §9 D4) — swept as a trial row since 2026-10-14.
+  (`docs/potential_configs.md` §8.1, §9 D4) — swept as a trial row since 2026-10-14.
   Local writer/ISA wins over any general statement.
 
 ---
@@ -529,7 +529,7 @@ easy to get wrong:
   the Tensile Table verbatim — with `LDS_BUDGET` unchanged (16384). For ZZ the
   wall is `(MT0+MT1)*DepthU <= 1024`; the D2/D3 decision trials (64x64x16,
   128x32x8, 32x128x8) are refused by the gate by design. **See
-  `gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ LDS byte count.**
+  `docs/gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ LDS byte count.**
 - §8.1's "complex types are 8 B" refers to the **global-load** element width
   under the `GLVW x bytes <= 16` cap — a different quantity on a different path.
   Both can be true at once; they are not a contradiction.
@@ -541,7 +541,7 @@ hold one workgroup. Run `python3 -m oto check candidates` to sweep a deck; it ex
 1 on any illegal config, so legality is provable **before** a GPU run. That error
 is now *caught*: it is the workgroup register-file rule modelled below
 (`occupancy_feasible`), so a phase that carries it is refused at preflight rather
-than dying on the GPU — see `claude.md` §2.2 / §5 and `potential_configs.md`
+than dying on the GPU — see `claude.md` §2.2 / §5 and `docs/potential_configs.md`
 §R24. Gate semantics live in `oto/tensile/gates/*` (each gate module documents
 itself).
 
@@ -585,7 +585,7 @@ different machine than a warm one, and two arms measured at different
 temperatures are not comparable. The floor arm has no telemetry at all, so no
 cross-arm clock correction is possible. (The sole LOSS in
 `run_20261013_214649` was first read as this failure, but it was a candidate
-sweep-order defect — `results.md` §13.4 — and the clean re-run reads CC:256 as
+sweep-order defect — `docs/results.md` §13.4 — and the clean re-run reads CC:256 as
 TIE.)
 
 Steps, all operator-side (TTY):
@@ -667,7 +667,7 @@ defect, not a shortcut. Each names what was actually found, if anything.
 | "`ScheduleGlobalRead`/`ScheduleLocalWrite` tune the non-MI kernel" | No direct use in the pinned Assembly writer. ISA-diff preflight required. |
 | "Vega has a packed/dual-lane FP32 FMA (`V_PK_FMA_F32`)" | Vega ISA lists `V_PK_FMA_F16` (packed half) and `V_MAD_MIX_F32` (mixed-width) but **not** `V_PK_FMA_F32`; `V_MAD_MIX_F32` is not two packed FP32 FMAs. No FP32 lane-doubling exists on this part. |
 
-Full detail, including what each source *does* say, is in `kernel_tuning_research.md`
+Full detail, including what each source *does* say, is in `docs/research/kernel_tuning.md`
 §9 — same list, kept in one place, with a per-row "what is actually known" and one
 entry resolved (AMD's shipped library is **not** uniformly small-tiled). The
 pass-1 sweep's own record of the same list is `archive/corpus.pass1_20261014.md`
@@ -732,7 +732,7 @@ Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
 
 This is the module docstring of `oto/metrics/render_status.py`.
 
-Acceptance ceilings: per-family bars come from `gfx90c_theoretical_limits.md`
+Acceptance ceilings: per-family bars come from `docs/gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK
 table here when scoring "approach the theoretical limit".
 
@@ -771,7 +771,7 @@ Every stream of benchmark evidence, past and future:
   never "migrated in place". Readers may ingest them into SQLite as **new** `records`
   rows (copy-forward), never truncate the jsonl. The canonical **live** ledger is
   `gfx90c_results/registry.db`; no jsonl ledger currently exists there.
-- `results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
+- `docs/results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
 - `acceptance_report.json` + `acceptance_report.html` (in `gfx90c_results/`) — regenerated from data, never hand-repaired.
 - Corrupt jsonl records from the frozen set remain **in place** (triage: readers
   must tolerate and mark, never repair the file by deleting the row).
@@ -809,8 +809,8 @@ overwrite, or rewrite **benchmark evidence**.
 
 - `oto/metrics/report.py` `write_report()` writes `acceptance_report.json` and its `.html`
   dashboard wholesale from the registry data.
-- Legacy `make_results_md.py`-style `results.md` `<!-- DERIVED:* -->` marker-block
-  regeneration no longer exists; `results.md` hand prose is append-only.
+- Legacy `make_results_md.py`-style `docs/results.md` `<!-- DERIVED:* -->` marker-block
+  regeneration no longer exists; `docs/results.md` hand prose is append-only.
 - The single peak authority is `oto.device.loader.current_profile().peak_gflops` (see section 7); derived
   prose that contradicts it is regenerated, not hand-patched.
 
@@ -854,6 +854,6 @@ overwrite, or rewrite **benchmark evidence**.
 
 ---
 
-Related documents: `changelog.md` (the evolution narrative), `gfx90c_theoretical_limits.md`
-(ceiling authority), `mapping.md` (footprint contract), `prior_INSIGHTS_CAVEMAN_ULTRA.md`
-/ `prior_RESEARCH_ARCHIVE.md` (frozen prior conclusions).
+Related documents: `changelog.md` (the evolution narrative), `docs/gfx90c_theoretical_limits.md`
+(ceiling authority), `docs/shipped_floor_contract.md` (footprint contract), `archive/prior_insights.md`
+/ `archive/prior_research_archive.md` (frozen prior conclusions).

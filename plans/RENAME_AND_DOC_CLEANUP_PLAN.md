@@ -653,9 +653,9 @@ but the phrasing should be reworded to point at the replacement:
 | `docs/cli.md` (8) | `port_tensile.py --auto` etc. (in the MIGRATION table) | exempt the migration table explicitly in `claude.md` §8.1, or delete the table |
 | `plans/REFACTOR_2_UNIVERSAL_GPU.md` (4) | `gfx90c_common.py`, `peaks.py`, `resolvers.py` | frozen plan doc; only used as history; leave or archive |
 | `plans/CLI_UX_REWORK.md` (4) | `port_tensile.py` shorthand | archive (status: implemented) |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md` (3) | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is; the cites are the *point* of the file |
-| `kernel_tuning_research.md` (2) | `gates/assembly.py`, `scheduler.py` (as shorthand) | reword to `oto/tensile/gates/assembly.py` + full path |
-| `prior_RESEARCH_ARCHIVE.md` (1) | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
+| `archive/prior_insights.md` (3) | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is; the cites are the *point* of the file |
+| `docs/research/kernel_tuning.md` (2) | `gates/assembly.py`, `scheduler.py` (as shorthand) | reword to `oto/tensile/gates/assembly.py` + full path |
+| `archive/prior_research_archive.md` (1) | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
 | `implementation_plan.md` (1) | `scheduler.py` shorthand | reword or archive |
 | `changelog.md` (65) | all of the above | append-only history; keep verbatim |
 
@@ -669,15 +669,15 @@ Files that cite `/tmp/`, `todo.txt`, `command.txt`, concrete run ids, or
 
 | file | evidence |
 |---|---|
-| `adversarial_review.md` | `:155` (`/tmp/opencode/*_fixed.py`) |
+| `docs/audit_register.md` | `:155` (`/tmp/opencode/*_fixed.py`) |
 | `docs/operator_runbook.md` | `:221` (`command.txt`) |
 | `implementation_plan.md` | `:459,480,495,496,579` |
-| `potential_configs.md` | `:2431,3301,3312,3349` |
-| `results.md` | `:22,92,99,106,123,147,269` (run ids) |
-| `tensile_tuning_context.md` | `:147` (run id) |
+| `docs/potential_configs.md` | `:2431,3301,3312,3349` |
+| `docs/results.md` | `:22,92,99,106,123,147,269` (run ids) |
+| `docs/search_philosophy.md` | `:147` (run id) |
 | `changelog.md` | `:25,38,90,243,334,1135,...` (33 hits) |
 | `claude.md` | `:175,483,487,491,492,495,533` (policy refs) |
-| `prior_RESEARCH_ARCHIVE.md` | `:...` (history refs) |
+| `archive/prior_research_archive.md` | `:...` (history refs) |
 
 The policy-only references (`claude.md`, `docs/operator_runbook.md`) are
 guardrails, not data citations; the rest are live ephemeral-state citations
@@ -691,15 +691,15 @@ only to genericize the machine-local portion (`/tmp/opencode/foo.py` →
 
 | action | files | rationale |
 |---|---|---|
-| **Merge** | `prior_INSIGHTS_CAVEMAN_ULTRA.md` + `prior_RESEARCH_ARCHIVE.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials; one is a redundant copy |
-| **Merge** | `tensile_tuning_context.md` + `complex_gemm_research_brief.md` into `kernel_tuning_research.md` | philosophy + complex-GEMM sections already overlap; `kernel_tuning_research.md` is the owner of both |
+| **Merge** | `archive/prior_insights.md` + `archive/prior_research_archive.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials; one is a redundant copy |
+| **Merge** | `docs/search_philosophy.md` + `docs/research/complex_gemm_brief.md` into `docs/research/kernel_tuning.md` | philosophy + complex-GEMM sections already overlap; `docs/research/kernel_tuning.md` is the owner of both |
 | **Absorb** | `incomplete_work.md` open items into `implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
-| **Split** | `potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration; the file is too big to navigate |
+| **Split** | `docs/potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration; the file is too big to navigate |
 | **Split** | `changelog.md` (4280 lines) → `changelog.md` (current year) + `archive/changelog_pre_2026-11.md` | keep the current-year log readable; keep the append-only chain intact |
 | **Archive** | `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/` | all three are `IMPLEMENTED`/`EXECUTED`; live pointer in `changelog.md` is enough |
 | **Bundle** | `archive/corpus.pass1_20261014.md`, `corpus2.pass2_20261014.md`, `corpus3.pass3_20261014.md`, `RESEARCH_PROMPT3.pass3_20261014.md`, `potential_configs.pre_rewrite_20261014.md` → `archive/research_corpus_20261014.md` | five frozen evidence snapshots; one bundle is easier to reference |
 | **Move** | `docs/design_language.md` → `docs/ui/design_language.md` (or drop from index) | unrelated to kernel-tuning content; lives in the docs ecosystem by accident |
-| **Rename** | `context.md` → `rocm_coupling_context.md`; `mapping.md` → `shipped_footprint.md` (optional); `incomplete_work.md` → `open_work.md` (if not merged); `potential_configs.md` → `candidate_deck.md` (if split) | generic names |
+| **Rename** | `context.md` → `rocm_coupling_context.md`; `docs/shipped_floor_contract.md` → `shipped_footprint.md` (optional); `incomplete_work.md` → `open_work.md` (if not merged); `docs/potential_configs.md` → `candidate_deck.md` (if split) | generic names |
 | **Scrub** | all live docs: `/tmp/opencode/*`, `/home/netherquark/*`, `/opt/rocm` (where not env documentation), `todo.txt`/`command.txt`, deleted-module shorthands | docs-ecosystem boundary rule |
 
 ### 7.4 Docs ecosystem — non-`.md` strays
@@ -725,12 +725,12 @@ only to genericize the machine-local portion (`/tmp/opencode/foo.py` →
 | `requirements.txt` | keep | Runtime + dev deps | `requirements.txt:1` |
 | `bin/oto` | keep | Canonical shell entry point; delegates to `python3 -m oto` | `bin/oto:1-12` |
 | `oto/oto_script` | delete | Unreferenced leftover from R2-cli Phase 2; no imports anywhere; broken `sys.path` target | `oto/oto_script:1`, `git log -- oto/oto_script` |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
-| `prior_RESEARCH_ARCHIVE.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
+| `archive/prior_insights.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
+| `archive/prior_research_archive.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
 | `gfx90c_vs_spoof.png` | delete (or move to `gfx90c_results/`) | Generated chart artifact (`oto chart`), not source; not a registered doc | `oto/tools/chart.py:101`, `docs/cli.md:154` |
-| `gfx90c_tuning_guide.md` | keep | Sanctioned root docs-ecosystem file | `docs/README.md` registry row |
-| `gfx90c_theoretical_limits.md` | keep | Sanctioned root docs-ecosystem file (acceptance authority) | `docs/README.md` registry row |
-| `archive/*` | keep (frozen) | Frozen evidence; `RESEARCH_PROMPT3.pass3_20261014.md` has no live prose refs (only docs index); the three `corpus*.md` are referenced by `kernel_tuning_research.md` / `knowledge_base.md` | `docs/docs_index.json:192` |
+| `docs/gfx90c_tuning_guide.md` | keep | Sanctioned root docs-ecosystem file | `docs/README.md` registry row |
+| `docs/gfx90c_theoretical_limits.md` | keep | Sanctioned root docs-ecosystem file (acceptance authority) | `docs/README.md` registry row |
+| `archive/*` | keep (frozen) | Frozen evidence; `RESEARCH_PROMPT3.pass3_20261014.md` has no live prose refs (only docs index); the three `corpus*.md` are referenced by `docs/research/kernel_tuning.md` / `docs/knowledge_base.md` | `docs/docs_index.json:192` |
 
 ### 8.2 Docs-ecosystem boundary violations (tracked files)
 
@@ -739,15 +739,15 @@ ids, `/tmp/` paths, "this session"):
 
 | File | Evidence |
 |---|---|
-| `adversarial_review.md` | `adversarial_review.md:155` (`/tmp/opencode/*_fixed.py`) |
+| `docs/audit_register.md` | `docs/audit_register.md:155` (`/tmp/opencode/*_fixed.py`) |
 | `changelog.md` | `changelog.md:25,38,90,243,334,1135,1336,1373,1395,1479,1538,1648,1830,2134,2351,2393,2400,2442,2448` |
 | `claude.md` | `claude.md:175,483,487,491,492,495,533` (policy refs to `todo.txt`/`command.txt`/`/tmp/opencode`) |
 | `docs/comparability.md` | `docs/comparability.md:57` (concrete run id `gfx900_ref_locked_52149f315d`) |
 | `docs/operator_runbook.md` | `docs/operator_runbook.md:221` (`command.txt`) |
 | `implementation_plan.md` | `implementation_plan.md:459,480,495,496,579` |
-| `potential_configs.md` | `potential_configs.md:2431,3301,3312,3349` |
-| `results.md` | `results.md:22,92,99,106,123,147,269` (concrete run ids) |
-| `tensile_tuning_context.md` | `tensile_tuning_context.md:147` (concrete run id) |
+| `docs/potential_configs.md` | `docs/potential_configs.md:2431,3301,3312,3349` |
+| `docs/results.md` | `docs/results.md:22,92,99,106,123,147,269` (concrete run ids) |
+| `docs/search_philosophy.md` | `docs/search_philosophy.md:147` (concrete run id) |
 
 Policy-only references (`claude.md`, `docs/operator_runbook.md`) are guardrails,
 not data citations; the rest are live ephemeral-state citations that violate the
@@ -761,7 +761,7 @@ not data citations; the rest are live ephemeral-state citations that violate the
 2. **`oto/oto_script` tracked intentionally?** No — it is an unreferenced leftover
    from the R2-cli Phase 2 commit (copied from the deleted root `oto.py`); nothing
    imports it. Verdict: delete.
-3. **`gfx90c_*` files:** `gfx90c_tuning_guide.md` and `gfx90c_theoretical_limits.md`
+3. **`gfx90c_*` files:** `docs/gfx90c_tuning_guide.md` and `docs/gfx90c_theoretical_limits.md`
    are sanctioned (registered in `docs/README.md`). `gfx90c_vs_spoof.png` is an
    unregistered generated artifact → delete or move to `gfx90c_results/`.
 4. **`.env.example` missing:** `OTO_API_KEY`, `OTO_API_ENDPOINT`, `OTO_API_MODEL`,
@@ -771,7 +771,7 @@ not data citations; the rest are live ephemeral-state citations that violate the
    not a log — but its `oto` link points at the package dir, not `bin/oto`.
 6. **`archive/*` with no live references:** `RESEARCH_PROMPT3.pass3_20261014.md`
    has no prose references (only the docs registry index). The three `corpus*.md`
-   files are referenced by `kernel_tuning_research.md` / `knowledge_base.md`.
+   files are referenced by `docs/research/kernel_tuning.md` / `docs/knowledge_base.md`.
    Untracked `archive/` contents are gitignored by design.
 
 ### 8.4 `.gitignore` note
@@ -883,16 +883,16 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 ### 10.3 Docs/root renames and moves
 
 - `context.md` → `rocm_coupling_context.md` (generic name)
-- `mapping.md` → `shipped_footprint.md` (optional)
+- `docs/shipped_floor_contract.md` → `shipped_footprint.md` (optional)
 - `incomplete_work.md` → `open_work.md` (or merge into `implementation_plan.md`)
-- `potential_configs.md` → split into `candidate_deck.md` + `candidate_research.md`
+- `docs/potential_configs.md` → split into `candidate_deck.md` + `candidate_research.md`
 - `changelog.md` → split into `changelog.md` (current year) + `archive/changelog_pre_2026-11.md`
 - `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/`
 - `docs/design_language.md` → `docs/ui/design_language.md` or drop from index
 - `oto/oto_script` → delete (move to `bin/oto` if needed)
 - `gfx90c_vs_spoof.png` → delete or move to `gfx90c_results/`
-- `prior_INSIGHTS_CAVEMAN_ULTRA.md` + `prior_RESEARCH_ARCHIVE.md` → `archive/prior_campaign_20260913.md`
-- `tensile_tuning_context.md` + `complex_gemm_research_brief.md` → merge into `kernel_tuning_research.md`
+- `archive/prior_insights.md` + `archive/prior_research_archive.md` → `archive/prior_campaign_20260913.md`
+- `docs/search_philosophy.md` + `docs/research/complex_gemm_brief.md` → merge into `docs/research/kernel_tuning.md`
 - `archive/corpus*.md` + `archive/RESEARCH_PROMPT3.pass3_20261014.md` + `archive/potential_configs.pre_rewrite_20261014.md` → `archive/research_corpus_20261014.md`
 
 ---
@@ -913,7 +913,7 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 7. Should the `verify_*` files be re-expressed as "REF vs tree property tests" once the
    split-era base is no longer reachable, or kept indefinitely?
 8. Does the `_rows_*` collapse happen in this rename PR, or as a separate refactor (§2.3)?
-9. Should `potential_configs.md` be split (3440 lines, deck + research) or kept as the
+9. Should `docs/potential_configs.md` be split (3440 lines, deck + research) or kept as the
    canonical single file?
 10. Should `changelog.md` be split (4280 lines) into current-year + archive?
 11. Does the docs ecosystem scrub of `/tmp` / `todo.txt` / `command.txt` / run-id references

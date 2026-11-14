@@ -9,7 +9,7 @@ vs the replayed gfx900 floor -- and surfaces the two work lists that come out of
 it:
 
 * **false rejections** -- the gate refused a phase Tensile built (gate too
-  strict; the decision rule in ``claude.md`` / potential_configs.md §R23 is
+  strict; the decision rule in ``claude.md`` / docs/potential_configs.md §R23 is
   that this count is ZERO on our corpus);
 * **misses** -- the gate allowed a phase that produced no measurement (gate too
   loose; the work list for a new gate rule).
@@ -21,7 +21,7 @@ the failure *reason* mining (``oto.harness.failure_triage``).
 
 Public API: main, audit, read_phase_config, measurement_produced.
 
-Why it exists (``claude.md`` §2.0.5, potential_configs.md §R23): the repo's rule
+Why it exists (``claude.md`` §2.0.5, docs/potential_configs.md §R23): the repo's rule
 for landing a gate change -- "only rules with 0 false rejections on the corpus
 get implemented" -- was re-derived by hand every time, and a prototype that
 measured something else is not a calibration. This is that rule as a tool: run it

@@ -4,7 +4,7 @@ test_knob_sweep.py — the knob-sweep deck.
 
 Regression guards for the deck that cross-joins each family's measured winner
 tile with one change to a knob the corpus never *explicitly* set
-(potential_configs.md §8, after `all_runs.py` reported `GlobalSplitU = ['1']` and
+(docs/potential_configs.md §8, after `all_runs.py` reported `GlobalSplitU = ['1']` and
 `StaggerU = ['32']` as the only values ever seen, and every complex winner
 leaving AggressivePerfMode/MaxOccupancy/GlobalLoadVectorWidth unset):
 
@@ -123,7 +123,7 @@ def test_every_sweep_row_offers_a_non_default_value():
 
     Tensile fills absent knobs from ``defaultBenchmarkCommonParameters``, so a
     winner that "never sets" a knob does not mean the knob is at zero -- see
-    ``TENSILE_KNOB_DEFAULTS`` and ``knowledge_base.md`` §7.1. This is what
+    ``TENSILE_KNOB_DEFAULTS`` and ``docs/knowledge_base.md`` §7.1. This is what
     removed the ``BufferLoad: True`` row (its default is already ``True``).
     """
     from oto.tensile.decks import TENSILE_KNOB_DEFAULTS
@@ -277,7 +277,7 @@ def test_no_live_phase_decks_the_dead_perf_mode():
     tile across two runs. The sweep row is gone from ``KNOB_SWEEPS`` and the
     emitted rows were pruned from ``phases.yaml``; this is the guard that keeps
     a hand-edit or a stale regeneration from putting them back
-    (potential_configs.md §R23).
+    (docs/potential_configs.md §R23).
     """
     import yaml
     deck = yaml.safe_load((BASE / "phases.yaml").read_text()) or []

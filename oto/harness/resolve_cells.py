@@ -10,7 +10,7 @@ native winner's config and the floor's (identical / near / retile / no-floor).
 Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
 report itself (oto.metrics.report), the kernel_db it falls back to
 (oto.harness.kernel_db), or the *reading* of ``cfg_gap`` as a tie taxonomy and
-the routes it implies (potential_configs.md §R17-§R18).
+the routes it implies (docs/potential_configs.md §R17-§R18).
 
 Public API: main, _table, _tsv.
 
@@ -271,7 +271,7 @@ _GAP_KEYS = ("MacroTile", "ThreadTile", "VectorWidth", "DepthU",
 def _cfg_gap(ncfg: dict[str, Any], scfg: dict[str, Any]) -> str | None:
     """How far the native winner's config sits from the floor's.
 
-    The per-cell half of the tie taxonomy (potential_configs.md §R17); the
+    The per-cell half of the tie taxonomy (docs/potential_configs.md §R17); the
     *reading* -- which gaps mean "nothing to chase" -- stays in that section.
 
     * ``no-floor`` — the family ships no floor arm (the HPA columns), so the

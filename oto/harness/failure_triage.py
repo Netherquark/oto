@@ -4,7 +4,7 @@
 Owns: the corpus-wide census of phases that produced no benchmark CSV, and the
 reason the run recorded for each -- Tensile's own ``reject:`` lines, a non-empty
 stderr, or an empty log -- bucketed per run. This is the "every failed candidate
-in every run directory" triage (potential_configs.md §R23), as a tool instead
+in every run directory" triage (docs/potential_configs.md §R23), as a tool instead
 of a one-off script.
 
 Does NOT own: whether the *gates* should have predicted the failure

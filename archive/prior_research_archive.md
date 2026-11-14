@@ -1,12 +1,12 @@
 > **Prior-knowledge layer — sanctioned copy.** Copied verbatim from the frozen prior
-> campaign (2026-09-04 → 2026-09-13). This and `prior_INSIGHTS_CAVEMAN_ULTRA.md` are
+> campaign (2026-09-04 → 2026-09-13). This and `archive/prior_insights.md` are
 > the ONLY prior-campaign materials the attempt2 ecosystem references. Nothing here
 > requires opening any other prior folder or file; results/learnings below are the
 > "previous results" information base, while machinery mentions describe what was
 > retired — not what attempt2 should build or read.
 
 # RESEARCH_ARCHIVE.md — prior-campaign supporting material
-### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=results.md, PC=potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
+### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=docs/results.md, PC=docs/potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
 
 ---
 
@@ -25,7 +25,7 @@
 - **0** sanity gates (10 `[OK]`); **1** baseline (removed at v5); **2** fp32; **3** fp16; **4** GEMV; **5–7** fp32/transpose variants; **9** bf16; **10** fp64; **11** int8; **12** aux; **13–15** (existed in 0–15 era, removed); **16** candA sgemm; **17** candA hgemm; **18** candB GEMV-deeper; **19** candD occupancy; **20** candC run; **21** candF batched/short-K; **22** candE bf16; **23** candE fp64; **24** candE int8; **25** candC re-run; **26** seed-repeat; **27** transpose-ext; **28** synthesis; **29** ceiling %-of-peak; **30** reserved; **31** prepend for synthesis harvest.
 
 ### A.3 Doc-ownership split (the CL scheme, baked into the suite's `changes_kb`/`incomplete_work`)
-KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/results.md=data, AL*=narrative. The three "thou-shalt" laws: never delete benchmark data (S:113-118); append-only registry+DB; phase-number reservation + order self-check at every suite start.
+KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/docs/results.md=data, AL*=narrative. The three "thou-shalt" laws: never delete benchmark data (S:113-118); append-only registry+DB; phase-number reservation + order self-check at every suite start.
 
 ---
 

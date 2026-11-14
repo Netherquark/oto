@@ -115,7 +115,7 @@ class TestPoolInvariants:
 class TestShapeOrderingHelpers:
     """The two call sites that build a row's ``shapes`` list must order it
     numerically. A bare ``sorted`` here re-breaks the deck order and poisons the
-    sweep (`results.md` 13.4)."""
+    sweep (`docs/results.md` 13.4)."""
 
     def test_shape_list_is_numeric(self):
         from oto.harness.candidate_pool import _shape_list
@@ -287,7 +287,7 @@ class TestRoundRobinPrune:
 
 class TestBeatTheSpoofInvariants:
     """2026-10-09 decided-config batch: banned rows stay out, decided rows
-    actually emit (see potential_configs.md §14.5 and the PLAN_BATCH comment)."""
+    actually emit (see docs/potential_configs.md §14.5 and the PLAN_BATCH comment)."""
 
     def test_banned_families_never_carry_gsu(self):
         gsu_rows = [r for r in _rows()

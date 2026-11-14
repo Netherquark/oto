@@ -2,8 +2,7 @@
 """
 test_proposals_ledger.py — the append-only `proposals` ledger.
 
-Covers the properties Option H Phase 1 depends on (proposal.md §H.3.1/§H.3.2,
-implementation_plan.md Hplan.3 steps 2-4):
+Covers the append-only ledger's contract:
 
   * the migration is additive and never rewrites an existing table or row
   * one INSERT per emitted candidate; re-emission is a no-op, not an error

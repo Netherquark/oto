@@ -1,11 +1,11 @@
-# AGENTIC_POTENTIAL_CONFIGS_PLAN — Automated consultation → final `potential_configs.md`
+# AGENTIC_POTENTIAL_CONFIGS_PLAN — Automated consultation → final `docs/potential_configs.md`
 
 **Status:** proposed; not implemented.
 **Owner:** the agent harness (`oto.agents.meta`), the gates (`oto/tensile/gates/*`),
 the harness toolkit (`oto/agents/harness_tools.py`) and the two doc agents
 (agent-1 `theoretical_limits.md`, agent-2 `tuning_context.md`).
 **Goal.** Given (a) a starter file for a GPU, (b) an API key, produce the
-`potential_configs.md` a senior tuning engineer would write for that device —
+`docs/potential_configs.md` a senior tuning engineer would write for that device —
 with the **fewest plausible GPU trial runs**, i.e. only the candidates the
 kernel-selection evidence says are worth one.
 
@@ -32,10 +32,10 @@ work to do *today*; it is the plan that the next implementation push follows.
 ### 1.1 What is missing
 
 There is no automated consult that consumes that apparatus and emits the
-**final** `potential_configs.md` for a new device, i.e. no phase-3 consult that
+**final** `docs/potential_configs.md` for a new device, i.e. no phase-3 consult that
 turns: corpus census + gate verdicts + starter-facts + prior runs into one doc.
-Today an operator writes it by hand from `results.md` +
-`potential_configs.md` + `gfx90c_tuning_guide.md` — hours of reading, and a
+Today an operator writes it by hand from `docs/results.md` +
+`docs/potential_configs.md` + `docs/gfx90c_tuning_guide.md` — hours of reading, and a
 known footgun: it is easy to copy conclusions across devices (e.g. assuming
 CC:256 needs AF4/4 because it helps gfx90c, when it may not on a different
 part).
@@ -50,7 +50,7 @@ carries:
    discrete memory model, DP4A/MFMA availability, the profiling/runner stack it
    will be tuned on.
 2. **The ceilings and the bars.** Practical ceilings per family (like
-   `gfx90c_theoretical_limits.md`'s §5), derived from measured arithmetic —not
+   `docs/gfx90c_theoretical_limits.md`'s §5), derived from measured arithmetic —not
    from marketing FP32 peak.
 3. **The rejection taxa.** Which geometry/axis/pair class is *structurally*
    forbidden on this device (e.g. GSU>1 for complex on no-MFMA parts), so a
@@ -78,7 +78,7 @@ document instead of five — but produced by the pipeline that already exists.
     [phase 3: CENSUS_CONSULT -- the new consult]
         |
         v
-    <potentially docs/<codename>_potential_configs.md>
+    <potentially docs/<codename>_docs/potential_configs.md>
 
 `CENSUS_CONSULT` is the heart of the proposal: it reads what the pipeline has
 **already measured** for a different device and projects what it is safe to
@@ -107,7 +107,7 @@ Actions:
 4. Gate-run each candidate through `validate_config` + `occupancy_feasible` +
    `ldspad_feasible` (CPU-only). The output of the consult is **not allowed
    to contain any gate-refused row**.
-5. Write the consult as `docs/<codename>_potential_configs.md` (overlay over
+5. Write the consult as `docs/<codename>_docs/potential_configs.md` (overlay over
    the template), leaving `[FIGURE-TODO]` markers where the result matrix
    should land after the TTY run.
 
@@ -202,7 +202,7 @@ No new dependency invented for this consult; the same ones the rest of
 2. Budget per consult (token cost)?
 3. Whether `oto agent consult` is the command name or folds into
    `oto agent generate`.
-4. Where the emitted doc lives: `docs/<codename>_potential_configs.md` (this
+4. Where the emitted doc lives: `docs/<codename>_docs/potential_configs.md` (this
    repo) or the target device's own repo?
 5. Whether the consult is allowed to pick GPU launches without explicit
    human approval per launch, or only emits a plan for the human to execute.

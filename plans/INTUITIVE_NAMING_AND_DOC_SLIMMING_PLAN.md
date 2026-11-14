@@ -432,21 +432,21 @@ move into `docs/` (one home, one registry); the session scratch deletes.
 | `claude.md` | KEEP | — | the Class-A entry contract; ref-fixups only |
 | `changelog.md` | KEEP | — | append-only evolution log; never rewritten |
 | `incomplete_work.md` | KEEP | — | the open-work register |
-| `mapping.md` | MOVE + RENAME | `docs/shipped_floor_contract.md` | it *is* the replication contract doc; root is the wrong shelf and the name says nothing |
-| `knowledge_base.md` | MOVE | `docs/knowledge_base.md` | the WHAT-layer architecture doc belongs with the other docs |
-| `results.md` | MOVE | `docs/results.md` | measured evidence belongs in docs/ |
-| `gfx90c_theoretical_limits.md` | MOVE | `docs/gfx90c_theoretical_limits.md` | device-limits authority |
-| `gfx90c_tuning_guide.md` | MOVE | `docs/gfx90c_tuning_guide.md` | tuning cookbook |
-| `kernel_tuning_research.md` | MOVE + RENAME | `docs/research/kernel_tuning.md` | research layer, different audience than the cookbooks |
-| `complex_gemm_research_brief.md` | MOVE + RENAME | `docs/research/complex_gemm_brief.md` | ditto |
-| `potential_configs.md` | MOVE | `docs/potential_configs.md` | name is accurate; belongs in docs/ |
-| `tensile_tuning_context.md` | MOVE + RENAME | `docs/search_philosophy.md` | "tensile tuning context" is opaque; it owns the objective/gates/search-order philosophy |
-| `adversarial_review.md` | MOVE | `docs/audit_register.md` | rename drops the agent-persona framing; it is the audit-findings register |
-| `implementation_plan.md` | DELETE | — | "APPROVED-IN-PRINCIPLE" session artifact; the stage detail lives in `changelog.md`, the durable cookbook content folds into `docs/gfx90c_tuning_guide.md` (the ceiling/floor gates and the acceptance bar) before deletion |
+| `docs/shipped_floor_contract.md` | MOVE + RENAME | `docs/shipped_floor_contract.md` | it *is* the replication contract doc; root is the wrong shelf and the name says nothing |
+| `docs/knowledge_base.md` | MOVE | `docs/docs/knowledge_base.md` | the WHAT-layer architecture doc belongs with the other docs |
+| `docs/results.md` | MOVE | `docs/docs/results.md` | measured evidence belongs in docs/ |
+| `docs/gfx90c_theoretical_limits.md` | MOVE | `docs/docs/gfx90c_theoretical_limits.md` | device-limits authority |
+| `docs/gfx90c_tuning_guide.md` | MOVE | `docs/docs/gfx90c_tuning_guide.md` | tuning cookbook |
+| `docs/research/kernel_tuning.md` | MOVE + RENAME | `docs/research/kernel_tuning.md` | research layer, different audience than the cookbooks |
+| `docs/research/complex_gemm_brief.md` | MOVE + RENAME | `docs/research/complex_gemm_brief.md` | ditto |
+| `docs/potential_configs.md` | MOVE | `docs/docs/potential_configs.md` | name is accurate; belongs in docs/ |
+| `docs/search_philosophy.md` | MOVE + RENAME | `docs/search_philosophy.md` | "tensile tuning context" is opaque; it owns the objective/gates/search-order philosophy |
+| `docs/audit_register.md` | MOVE | `docs/audit_register.md` | rename drops the agent-persona framing; it is the audit-findings register |
+| `implementation_plan.md` | DELETE | — | "APPROVED-IN-PRINCIPLE" session artifact; the stage detail lives in `changelog.md`, the durable cookbook content folds into `docs/docs/gfx90c_tuning_guide.md` (the ceiling/floor gates and the acceptance bar) before deletion |
 | `context.md` | DELETE | — | 2026-10-15 sandbox research copy; header says it was never verified against the local machine, cites `/mnt/user-data/outputs/` paths, and duplicates `plans/REFACTOR_2_UNIVERSAL_GPU.md` + `changelog.md` |
 | `context_raw.md` | DELETE | — | same artifact, more of it; explicitly marked UNVERIFIED and "not at this path" |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md` | MOVE | `archive/prior_insights.md` | frozen prior-campaign autopsy; it is evidence, not a living doc |
-| `prior_RESEARCH_ARCHIVE.md` | MOVE | `archive/prior_research_archive.md` | ditto |
+| `archive/prior_insights.md` | MOVE | `archive/prior_insights.md` | frozen prior-campaign autopsy; it is evidence, not a living doc |
+| `archive/prior_research_archive.md` | MOVE | `archive/prior_research_archive.md` | ditto |
 
 Moved files must be added to `docs/README.md` (registry) with a stable `Class`
 and the registry generator must still pass `test_docs_registry.py`. Every
@@ -480,7 +480,7 @@ it is append-only and its historical paths stay as they are.
 Docstring cleanup obligations (§9) sweep every doc above for: milestone
 vocabulary ("Stage N", "Phase N"), session hashes, dates-as-authority,
 references to deleted files (`implementation_plan.md`, `context*.md`,
-`plans/*.md` after §6, `mapping.md` old path), and odd self-references
+`plans/*.md` after §6, `docs/shipped_floor_contract.md` old path), and odd self-references
 (`oto/tools/verify_run.py` and friends).
 
 ## §6. `plans/` — all deleted after this plan lands
@@ -532,7 +532,7 @@ above stay — they are the cited prior evidence, not scratch.
 | `.env.example` | KEEP | |
 | `gfx90c_vs_spoof.png` | RENAME | `docs/assets/native_vs_floor.png` | referenced by nothing tracked; moving under `docs/assets/` puts it with the docs that could use it — or DELETE if no doc wants it (decide in execution) |
 | `docs/gfx902_starter.json`, `docs/starter_template.json` | KEEP | |
-| `mapping.md` (§4 moved) | n/a | see §4 |
+| `docs/shipped_floor_contract.md` (§4 moved) | n/a | see §4 |
 
 ## §9. The AI-slop / ephemera sweep (rewrites, not renames)
 
@@ -546,14 +546,14 @@ and docstring in the tree, plus the specific stale-reference classes below.
 |---|---|
 | `Hplan.5`, `Option H Phase N`, `AC 1b`, `AC 4a` | delete, or restate as the user-visible contract (e.g. "no function over 60 lines") without the milestone tag |
 | `Stage N` / `Phase N` in module docstrings | restate as the module's actual responsibility |
-| dates used as authority ("2026-10-14 like-for-like regrade") | cite the owning doc (`docs/comparability.md`, `docs/results.md`, `changelog.md`) or drop the date |
+| dates used as authority ("2026-10-14 like-for-like regrade") | cite the owning doc (`docs/comparability.md`, `docs/docs/results.md`, `changelog.md`) or drop the date |
 | commit hashes (e.g. `8438927`) in docstrings | drop; `git log` is the authority |
 | `REFACTOR_2_UNIVERSAL_GPU.md`, `MASTER_PLAN.md`, `plans/…` references | point at `changelog.md` / `incomplete_work.md` / the owning doc instead |
 | `verify_run.py`, `allruns.py`, `occupancy_audit.py`, `harness_tools.py`, `ldspad_gate.py`, `potential_configs_gen.py` | the prerenames; every occurrence means the author didn't grep after the Phase A renames — fix to current module names |
 | `analytics_loaders.py`, `runners/cli.py`, `runners/flags.py`, `metrics/policy.py`, `tensile/library.py` | ditto — Phase A/B renames |
 | `implementation_plan.md`, `context.md`, `context_raw.md` | deleted by §4; every reference must be removed or re-pointed |
 | `plans/RENAME_AND_DOC_CLEANUP_PLAN.md`, `MASTER_PLAN.md`, `CLI_UX_REWORK.md`, `REFACTOR_2_UNIVERSAL_GPU.md`, `AGENTIC_POTENTIAL_CONFIGS_PLAN.md`, `test_optimization.md` | deleted by §6; every reference must be removed or re-pointed |
-| `mapping.md`, root paths of moved docs | re-point to `docs/…` |
+| `docs/shipped_floor_contract.md`, root paths of moved docs | re-point to `docs/…` |
 
 ### §9.2 Docs ownership check
 
@@ -658,7 +658,7 @@ Final commit: `git rm plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md`, empty
 
 ## §12. Acceptance criteria (definition of done)
 
-1. `git ls-files | grep -cE '^(plans/|implementation_plan.md|context.*\.md|mapping.md)$'` → **0**.
+1. `git ls-files | grep -cE '^(plans/|implementation_plan.md|context.*\.md|docs/shipped_floor_contract.md)$'` → **0**.
 2. `find oto tests -name '*.py'` shows zero non-intuitive renames remaining: the rename table in §2/§3 is fully applied.
 3. `python3 -m pytest -q` → RC=0, 1077+ tests passing.
 4. `python3 -m oto verify all` → ALL EQUIVALENCE CHECKS PASSED.
@@ -672,9 +672,9 @@ Final commit: `git rm plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md`, empty
 ## §13. Open questions for the owner (blockers before execution)
 
 1. **`gfx90c_vs_spoof.png`** — delete, or move to `docs/assets/native_vs_floor.png`?
-2. **`mapping.md` rename** — proposed `docs/shipped_floor_contract.md`; owner may prefer `docs/floor_contract.md`.
-3. **`tensile_tuning_context.md` rename** — proposed `docs/search_philosophy.md`; owner may prefer keeping the name.
-4. **Root `results.md` / `knowledge_base.md`** — confirmed OK to move under `docs/`, or must they stay at root?
+2. **`docs/shipped_floor_contract.md` rename** — proposed `docs/shipped_floor_contract.md`; owner may prefer `docs/floor_contract.md`.
+3. **`docs/search_philosophy.md` rename** — proposed `docs/search_philosophy.md`; owner may prefer keeping the name.
+4. **Root `docs/results.md` / `docs/knowledge_base.md`** — confirmed OK to move under `docs/`, or must they stay at root?
 5. **`prior_*` files** — confirmed OK to move to `archive/`?
 6. **`plans/` total deletion** — confirm no plan file is to be retained in-tree.
 7. **Module rename budget (30)** — confirm, or the owner wants a smaller/larger set.

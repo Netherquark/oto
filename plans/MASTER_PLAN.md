@@ -10,7 +10,7 @@ a commit hash or a file path attached.
 **Companion slice plans** (in `plans/`):
 - `REFACTOR_2_UNIVERSAL_GPU.md` — the device-independence refactor (executed).
 - `CLI_UX_REWORK.md` — the `oto` front door (implemented).
-- `AGENTIC_POTENTIAL_CONFIGS_PLAN.md` — automated consult → `potential_configs.md`.
+- `AGENTIC_POTENTIAL_CONFIGS_PLAN.md` — automated consult → `docs/potential_configs.md`.
 - `RENAME_AND_DOC_CLEANUP_PLAN.md` — rename + doc cleanup proposal.
 - `test_optimization.md` — suite speed-up roadmap.
 
@@ -115,7 +115,7 @@ The operator agent does not know which model applies until it reads
 
 | class | entry | reads | writes |
 |---|---|---|---|
-| A — developer | `claude.md` | `docs/agent_reference.md`, `docs/docstrings.md`, `docs/harness_runbook.md`, `implementation_plan.md` | `oto/**`, `tests/**`, `docs/**`, `plans/**`, `changelog.md`, `incomplete_work.md`, `results.md`, `potential_configs.md` |
+| A — developer | `claude.md` | `docs/agent_reference.md`, `docs/docstrings.md`, `docs/harness_runbook.md`, `implementation_plan.md` | `oto/**`, `tests/**`, `docs/**`, `plans/**`, `changelog.md`, `incomplete_work.md`, `docs/results.md`, `docs/potential_configs.md` |
 | B — operator | `docs/operator_runbook.md` → `docs/operator_campaign.md` | starter pair, generated device docs, `docs/agent_reference.md`, `docs/comparability.md` | `profiles/<cn>.json`, `docs/<cn>_starter.{md,json}`, generated device docs, run artifacts under `<cn>_results/` and `<cn>_runs/` |
 
 ---
@@ -255,8 +255,8 @@ python3 -m oto device derive     # print derived limits (no room for error)
 - `phases.yaml` — the candidate deck (280 rows, 0 illegal)
 - `gfx90c_results/` — campaign artifacts (kernel_db, reports, libraries)
 - `incomplete_work.md` — open items only
-- `results.md` — measured evidence
-- `potential_configs.md` — candidate deck + research history
+- `docs/results.md` — measured evidence
+- `docs/potential_configs.md` — candidate deck + research history
 - `changelog.md` — append-only evolution log
 - `todo.txt` — user-only (agents MUST NOT read/touch)
 
@@ -341,9 +341,9 @@ answer it, it is not a consultation — that is the single most expensive
 failure mode of this loop.
 
 **Research beyond the docs**: never spawn it unasked. The research is in the
-docs already (`kernel_tuning_research.md`, `gfx90c_tuning_guide.md`,
-`tensile_tuning_context.md`, `complex_gemm_research_brief.md`,
-`results.md`/`potential_configs.md` history); an agentic web-research consult
+docs already (`docs/research/kernel_tuning.md`, `docs/gfx90c_tuning_guide.md`,
+`docs/search_philosophy.md`, `docs/research/complex_gemm_brief.md`,
+`docs/results.md`/`docs/potential_configs.md` history); an agentic web-research consult
 runs only with the user's explicit key + permission, and its output stays
 UNVERIFIED until a human checks it.
 
@@ -361,9 +361,9 @@ open — see §4.2 DOCS-SCAN) has three parts, each with evidence:
 | `docs/cli.md` | `port_tensile.py --auto` etc. (migration table) | exempt the migration table explicitly in `claude.md` §8.1, or delete the table |
 | `plans/REFACTOR_2_UNIVERSAL_GPU.md` | `gfx90c_common.py`, `peaks.py`, `resolvers.py` | frozen plan doc; leave or archive |
 | `plans/CLI_UX_REWORK.md` | `port_tensile.py` shorthand | archive (status: implemented) |
-| `kernel_tuning_research.md` | `gates/assembly.py`, `scheduler.py` (shorthand) | reword to full paths |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md` | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is |
-| `prior_RESEARCH_ARCHIVE.md` | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
+| `docs/research/kernel_tuning.md` | `gates/assembly.py`, `scheduler.py` (shorthand) | reword to full paths |
+| `archive/prior_insights.md` | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is |
+| `archive/prior_research_archive.md` | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
 | `implementation_plan.md` | `scheduler.py` shorthand | reword or archive |
 
 The MIGRATION-table case in `docs/cli.md` is the one that needs an explicit
@@ -372,9 +372,9 @@ policy decision (open question 5 in §11 of `RENAME_AND_DOC_CLEANUP_PLAN.md`).
 ### 17.2 Ephemeral-state citations in live docs (9 files)
 
 Files that cite `/tmp/`, `todo.txt`, `command.txt`, concrete run ids, or
-"this session": `adversarial_review.md`, `changelog.md`, `claude.md`,
+"this session": `docs/audit_register.md`, `changelog.md`, `claude.md`,
 `docs/comparability.md`, `docs/operator_runbook.md`, `implementation_plan.md`,
-`potential_configs.md`, `results.md`, `tensile_tuning_context.md`.
+`docs/potential_configs.md`, `docs/results.md`, `docs/search_philosophy.md`.
 
 The policy-only references (`claude.md`, `docs/operator_runbook.md`) are
 guardrails, not data citations; the rest are live ephemeral-state citations
@@ -386,10 +386,10 @@ placeholder) or drop.
 
 | action | files | rationale |
 |---|---|---|
-| Merge | `prior_INSIGHTS_CAVEMAN_ULTRA.md` + `prior_RESEARCH_ARCHIVE.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials |
-| Merge | `tensile_tuning_context.md` + `complex_gemm_research_brief.md` into `kernel_tuning_research.md` | philosophy + complex-GEMM sections already overlap |
+| Merge | `archive/prior_insights.md` + `archive/prior_research_archive.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials |
+| Merge | `docs/search_philosophy.md` + `docs/research/complex_gemm_brief.md` into `docs/research/kernel_tuning.md` | philosophy + complex-GEMM sections already overlap |
 | Absorb | `incomplete_work.md` open items into `implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
-| Split | `potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration |
+| Split | `docs/potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration |
 | Split | `changelog.md` (4280 lines) → `changelog.md` (current year) + `archive/changelog_pre_2026-11.md` | keep current-year log readable |
 | Archive | `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/` | all three are IMPLEMENTED/EXECUTED |
 | Bundle | `archive/corpus*.md` + `archive/RESEARCH_PROMPT3.pass3_20261014.md` + `archive/potential_configs.pre_rewrite_20261014.md` → `archive/research_corpus_20261014.md` | five frozen evidence snapshots |
@@ -510,8 +510,8 @@ See §4. The most consequential:
 - `phases.yaml` — the candidate deck (280 rows, 0 illegal)
 - `gfx90c_results/` — campaign artifacts (kernel_db, reports, libraries)
 - `incomplete_work.md` — open items only
-- `results.md` — measured evidence
-- `potential_configs.md` — candidate deck + research history
+- `docs/results.md` — measured evidence
+- `docs/potential_configs.md` — candidate deck + research history
 - `changelog.md` — append-only evolution log
 - `todo.txt` — user-only (agents MUST NOT read/touch)
 

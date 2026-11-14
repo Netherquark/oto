@@ -40,9 +40,9 @@ serves — `dev`, `operator`, or `shared`.
 | Agent role | Entry doc (read first) | Then | Never needs |
 |---|---|---|---|
 | Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
-| Class A — reviewer/auditor subagent | `adversarial_review.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
+| Class A — reviewer/auditor subagent | `docs/audit_register.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
 | Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) → `docs/operator_campaign.md` (the tuning campaign) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
-| Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md` and their siblings), `potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
+| Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`docs/gfx90c_theoretical_limits.md`, `docs/gfx90c_tuning_guide.md` and their siblings), `docs/potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
 | Any agent, any class | `docs/comparability.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
 
 Class rules that follow from the map: a Class A agent that starts from
@@ -79,23 +79,24 @@ Corollaries:
 | `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
 | `implementation_plan.md` | dev | Ecosystem | The current executable plan only |
-| `mapping.md` | shared | Ecosystem | The shipped-footprint replication contract |
-| `gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
-| `gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
-| `kernel_tuning_research.md` | shared | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
-| `complex_gemm_research_brief.md` | dev | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
-| `potential_configs.md` | dev | Ecosystem | The candidate deck, decisions, search rules |
-| `results.md` | dev | Ecosystem | Measured evidence |
-| `knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
+| `docs/shipped_floor_contract.md` | shared | Ecosystem | The shipped-footprint replication contract |
+| `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
+| `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
+| `docs/research/kernel_tuning.md` | shared | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
+| `docs/research/complex_gemm_brief.md` | dev | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
+| `docs/potential_configs.md` | dev | Ecosystem | The candidate deck, decisions, search rules |
+| `docs/results.md` | dev | Ecosystem | Measured evidence |
+| `docs/knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
 | `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | dev | Ecosystem | Open-work register |
-| `prior_*.md` | dev | Ecosystem (frozen) | Prior conclusions, results only |
-| `tensile_tuning_context.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
-| `adversarial_review.md` | dev | Ecosystem | Audit register |
+| `archive/prior_insights.md` | dev | Ecosystem (frozen) | Prior conclusions, results only |
+| `archive/prior_research_archive.md` | dev | Ecosystem (frozen) | Prior-campaign supporting material |
+| `docs/search_philosophy.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
+| `docs/audit_register.md` | dev | Ecosystem | Audit register |
 | `plans/REFACTOR_*.md` | dev | Ecosystem | The refactor plans this package was built against |
 | `plans/test_optimization.md` | dev | Ecosystem | Test-suite optimisation plan |
 | `plans/CLI_UX_REWORK.md` | dev | Ecosystem | CLI UX rework plan — one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev |
-| `plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md` | dev | Ecosystem | Automated agentic consult: API key → `potential_configs.md` with fewest GPU legs |
+| `plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md` | dev | Ecosystem | Automated agentic consult: API key → `docs/potential_configs.md` with fewest GPU legs |
 | `plans/RENAME_AND_DOC_CLEANUP_PLAN.md` | dev | Ecosystem | Detailed rename + doc cleanup plan: 40 module renames, 9 test renames, 5.1 device-fact violations, 3 support-module unifications, 4-phase migration order (read-only proposal) |
 | `plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md` | dev | Ecosystem | Proposal: intuitive rename + docs slimming pass — 34 module renames, 13 test renames, root/docs/plans ephemera deletion, AI-slop sweep |
 | `plans/MASTER_PLAN.md` | dev | Ecosystem | Master plan: full session ledger, open work register, two development models, convergence pipeline, guardrails, verification commands, file map |

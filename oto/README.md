@@ -138,7 +138,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tools/consolidate_targets.py`` — Which cells a consolidated deck must address.
 * ``tools/corpus_audit.py`` — Corpus snapshot / diff / telemetry verification.
 * ``tools/deck_review.py`` — The three questions to settle before decking a candidate or trusting a score.
-* ``tools/potential_configs.py`` — Automated potential_configs.md generator from run outputs.
+* ``tools/potential_configs.py`` — Automated docs/potential_configs.md generator from run outputs.
 
 ### ``tools/verifiers/``
 

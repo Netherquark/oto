@@ -10,7 +10,7 @@ Does NOT own: the registry's read side (oto.ledger.registry_queries), the Option
 (oto.ledger.registry_proposals), or the cell policy (oto.metrics.cell_policy).
 
 Code prohibitions the driver must not reintroduce (moved here from
-adversarial_review.md §2):
+docs/audit_register.md §2):
   * No hardcoded retirement lists -- the retirement model is evidence-only
     (registry rows); no PHASE_RETIRE-style reserved set compiled into code, and
     spoof/peak are never a retire signal (gfx900 = floor).
@@ -78,7 +78,7 @@ _SCHEMA_DDL = (
     """,
     # Proposals ledger (Option H Phase 1). Append-only: rows are never deleted
     # and never rewritten, and `outcome` only advances pending -> terminal. A
-    # monotonic status column is not a mutation of history (knowledge_base.md
+    # monotonic status column is not a mutation of history (docs/knowledge_base.md
     # §10), which is why the write-back is an UPDATE guarded on
     # outcome='pending' rather than a new row. Created here, alongside the other
     # tables, so a fresh registry has the ledger from birth; existing databases

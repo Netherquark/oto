@@ -4,7 +4,7 @@
 Owns: the invocation-form vocabulary and its classifier. A measurement's
 *protocol* is how wide the client invocation that produced it was: which
 problems the benchmark asked for in one go. The 2026-10-22 like-for-like
-regrade (potential_configs.md §R50) found the same kernel reading 2.1-4.2x
+regrade (docs/potential_configs.md §R50) found the same kernel reading 2.1-4.2x
 differently under a 1-problem invocation than under the family-wide one, so a
 verdict pairing across forms measures the protocol, not the kernel.
 

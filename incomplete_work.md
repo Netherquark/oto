@@ -2,8 +2,8 @@
 
 The 1,007-line archived register was consolidated and deleted; its
 contents were folded into the docs ecosystem the same day (GPU/LDS
-validation doc `gfx90c_theoretical_limits.md` §6.1, floor triage in
-`results.md` §8–§9, GSU/domain notes in `gfx90c_tuning_guide.md`, the
+validation doc `docs/gfx90c_theoretical_limits.md` §6.1, floor triage in
+`docs/results.md` §8–§9, GSU/domain notes in `docs/gfx90c_tuning_guide.md`, the
 verifier-bringup history in `changelog.md`). The git object holds the
 pre-fold snapshot; recovered in any case. Only the *open* items are kept
 live here; completed work lives in `changelog.md`, decisions in `docs/`.
@@ -31,7 +31,7 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 - **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
   Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
   six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;
-  `gfx90c_theoretical_limits.md` §6.1 records the outcome.
+  `docs/gfx90c_theoretical_limits.md` §6.1 records the outcome.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; the gfx902 starter pair (research output) is the missing piece;
   it depends on C4 above.

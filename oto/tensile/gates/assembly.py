@@ -17,7 +17,7 @@ escape; Tensile v4.44.0):
   SolutionStructs:3616  "Assembly GSU half requires AssertFree0ElementMultiple>=2"
   SolutionStructs:3342  "StaggerUStride < DepthU * BytesPerElement"
 
-Complex-MAC accounting (moved here from complex_gemm_research_brief.md):
+Complex-MAC accounting (moved here from docs/research/complex_gemm_brief.md):
 Tensile's complex MAC is exactly four real FMAs, so a complex GEMM is not
 ALU-walled at a quarter of the real pipe:
   * MAC_F32C emits four `_v_mac_f32` per complex MAC; MAC_F64C emits four

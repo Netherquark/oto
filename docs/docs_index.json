@@ -81,49 +81,49 @@
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "The shipped-footprint replication contract",
-      "path": "mapping.md"
+      "path": "docs/shipped_floor_contract.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Per-family ceilings, the acceptance authority",
-      "path": "gfx90c_theoretical_limits.md"
+      "path": "docs/gfx90c_theoretical_limits.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "The tuning cookbook: legal knob domains (\u00a71.1\u2013\u00a71.2), what wins, the virgin-axis census (\u00a79.1)",
-      "path": "gfx90c_tuning_guide.md"
+      "path": "docs/gfx90c_tuning_guide.md"
     },
     {
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "Research only: hardware model, Tensile source mechanics, unverified-claim register",
-      "path": "kernel_tuning_research.md"
+      "path": "docs/research/kernel_tuning.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Research only: complex (C/Z) GEMM on the pre-MFMA assembly path",
-      "path": "complex_gemm_research_brief.md"
+      "path": "docs/research/complex_gemm_brief.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "The candidate deck, decisions, search rules",
-      "path": "potential_configs.md"
+      "path": "docs/potential_configs.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Measured evidence",
-      "path": "results.md"
+      "path": "docs/results.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Architecture knowledge at the captured state",
-      "path": "knowledge_base.md"
+      "path": "docs/knowledge_base.md"
     },
     {
       "class": "shared",
@@ -141,25 +141,25 @@
       "class": "dev",
       "kind": "Ecosystem (frozen)",
       "owns": "Prior conclusions, results only",
-      "path": "prior_INSIGHTS_CAVEMAN_ULTRA.md"
+      "path": "archive/prior_insights.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem (frozen)",
-      "owns": "Prior conclusions, results only",
-      "path": "prior_RESEARCH_ARCHIVE.md"
+      "owns": "Prior-campaign supporting material",
+      "path": "archive/prior_research_archive.md"
     },
     {
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "Tuning/search philosophy (incl. \u00a7S the autotuning strategy cross-check)",
-      "path": "tensile_tuning_context.md"
+      "path": "docs/search_philosophy.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Audit register",
-      "path": "adversarial_review.md"
+      "path": "docs/audit_register.md"
     },
     {
       "class": "dev",
@@ -182,7 +182,7 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Automated agentic consult: API key \u2192 `potential_configs.md` with fewest GPU legs",
+      "owns": "Automated agentic consult: API key \u2192 `docs/potential_configs.md` with fewest GPU legs",
       "path": "plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md"
     },
     {

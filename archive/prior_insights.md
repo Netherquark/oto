@@ -1,5 +1,5 @@
 > **Prior-knowledge layer — sanctioned copy.** Copied verbatim from the frozen prior
-> campaign (2026-09-04 → 2026-09-13). This and `prior_RESEARCH_ARCHIVE.md` are the
+> campaign (2026-09-04 → 2026-09-13). This and `archive/prior_research_archive.md` are the
 > ONLY prior-campaign materials the attempt2 ecosystem references. Nothing here
 > requires opening any other prior folder or file; results/learnings below are the
 > "previous results" information base, while machinery mentions describe what was
@@ -9,11 +9,11 @@
 ### What actually happened across 9 days (2026-09-04 → 2026-09-13), what was really learned, and what attempt2 must know before it spends another GPU-minute.
 
 > Plain words, hard numbers. Everything here is traceable in the live repo before
-> archive: `run_gfx90c_suite.sh`, `results.md`, `potential_configs.md`,
+> archive: `run_gfx90c_suite.sh`, `docs/results.md`, `docs/potential_configs.md`,
 > `proposed_fixes.md`, `changes_kb.md`, `incomplete_work.md`, `gfx90c_common.py`,
 > `auto_retire.py`, `gfx90c_results/experiment_db.jsonl`,
 > `gfx90c_results/benchmark_registry.jsonl`, `gfx90c_runs/run_*`. Cite keys:
-> **R**=results.md, **PC**=potential_configs.md, **PF**=proposed_fixes.md,
+> **R**=docs/results.md, **PC**=docs/potential_configs.md, **PF**=proposed_fixes.md,
 > **CK**=changes_kb.md, **IW**=incomplete_work.md, **GC**=gfx90c_common.py,
 > **AR**=auto_retire.py, **S**=run_gfx90c_suite.sh.
 
@@ -208,7 +208,7 @@ Raw best-of-runs: 8 improved / 3 regressed / 38 noise — **wholly inside the th
 **Prior campaign's auto-retire output (must be revisited):** all three `action=retire` records came from one invocation `auto_retire:20260913_014131` — phase12 fp`387d25771a37e5de` dominated_by `132fa9a088a462df` (5 trusted cells), phase5 fp`286b940a045eee32` by `9673dab626748627` (4), phase6 fp`1570d91a6f069d11` by `d4a675effb0e31b7` (3). Given 77% winner instability and the ±23-31% envelope, a **one-campaign retirement is premature by construction**: require ≥2 *independent runs* per trusted shared cell + CV/quality gates, and treat "independent" as different-run-date evidence, not just different adjacent rows. (This was the plan; it did not yet land. **Attempt2 must.**)
 
 ### 6.5 Doc-grade discipline that made this analyzable
-- Ownership split (**CL**): KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/`results.md`=data, AL*=narrative. Cross-referenced; stale prose is marked SUPERSEDED where remembered.
+- Ownership split (**CL**): KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/`docs/results.md`=data, AL*=narrative. Cross-referenced; stale prose is marked SUPERSEDED where remembered.
 - **"Never delete benchmark data"** law (S:113-118): old data = the comparison baseline; registry+DB immutable append-only; a violating session is a project-blocking error.
 - Phase numbers are reserved (gaps 13-15, 30) and **block order == PHASE_MANIFEST is asserted at every start** (S phase-order self-check) so the file can't silently drift from the intended order.
 - flock on every shared jsonl/csv append (advisory pre-autonomy safety).

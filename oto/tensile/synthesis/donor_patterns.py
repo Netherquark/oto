@@ -16,7 +16,7 @@ toward the floor winner).
 Both ``_forward_draws`` and the family patterns draw through ``_joint_domain``,
 never through ``forward_domain`` directly: a forward knob's *legal* values depend
 on the rest of the tile, so treating the domains as independent axes generates
-configs the launch boundary then refuses (``potential_configs.md`` §R23).
+configs the launch boundary then refuses (``docs/potential_configs.md`` §R23).
 Does NOT own: the domains they draw from (oto.tensile.synthesis.donor_knobs) or the
 mutant synthesis that gates them (oto.tensile.synthesis.donor_mutator).
 Public API: DbPatternsMixin.
@@ -60,7 +60,7 @@ class DbPatternsMixin:
         then refused at the launch boundary, burning one of ``_FORWARD_DRAWS``.
 
         Why probe rather than restate: the measured refusal ledger
-        (``potential_configs.md`` §R23) contains no per-knob rejections at all --
+        (``docs/potential_configs.md`` §R23) contains no per-knob rejections at all --
         every one is one of the couplings above, and each already exists as a
         line in a gate. Probing ``self._gate`` -- the same two CPU-only gates the
         launch boundary runs -- keeps one home for them instead of a second,

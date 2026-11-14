@@ -20,7 +20,7 @@ shims**. Its only writes are:
 - `profiles/<codename>.json` (via the starter pair)
 - `docs/<codename>_starter.md` / `docs/<codename>_starter.json`
 - generated device docs (`<codename>_theoretical_limits.md`, `<codename>_tuning_context.md`,
-  `<codename>_harness_study.md`, `<codename>_potential_configs.md`)
+  `<codename>_harness_study.md`, `<codename>_docs/potential_configs.md`)
 - run artifacts under `<codename>_results/` and `<codename>_runs/`
 
 If a Class B agent encounters a bug in oto itself, it must **stop and report**
@@ -104,7 +104,7 @@ python3 -m oto agent generate docs/<codename>_starter.md
 The agent writes `docs/<codename>_theoretical_limits.md` and
 `docs/<codename>_tuning_context.md` with research sections marked
 **UNVERIFIED**, plus `docs/<codename>_harness_study.md` and
-`docs/<codename>_potential_configs.md` (both CPU-only; see §6). Without a
+`docs/<codename>_docs/potential_configs.md` (both CPU-only; see §6). Without a
 key, research is a clean no-op and the docs carry the starter text only.
 If the target already has `profiles/<codename>.json` and its docs exist, no
 agent run is needed; just run `oto doctor` to confirm the profile loads.
@@ -146,7 +146,7 @@ Best-effort still starts with measurement. In the user's TTY:
    whatever the runs on that device produced. 30 minutes to boot the corpus;
    days to converge.
 3. The convergence ledger is append-only; conflicts/verdicts follow the
-   acceptance framework in `gfx90c_theoretical_limits.md` — **for the
+   acceptance framework in `docs/gfx90c_theoretical_limits.md` — **for the
    reference target only**. On a new platform, like-for-like against a
    shipped floor may not exist (there may be no reference library to beat):
    then acceptance is functional correctness + gate compliance, and you
@@ -167,7 +167,7 @@ python3 -m oto.harness.generate_candidates --dry-run               # candidate p
 - `docs/<codename>_harness_study.md` — corpus census (runs, floor vs native
   rows), TARGET_CELLS coverage, native winners per cell, and 16 round-robin
   proposals annotated by the CPU gates. **CPU-checked ≠ benchmarked.**
-- `docs/<codename>_potential_configs.md` — ceilings + corpus + acceptance
+- `docs/<codename>_docs/potential_configs.md` — ceilings + corpus + acceptance
   summary synthesised from the same inputs.
 
 On a fresh device these degrade gracefully ("no kernel_db.json") and the
@@ -192,7 +192,7 @@ consultations at defined triggers.
 | Anti-alias scan | oto's built-in post-build check | no foreign-arch tokens found |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or failures triaged and recorded) |
 | Functional check **(TTY)** | PyTorch loads the library; GEMM vs reference on random inputs | outputs match reference within dtype tolerance |
-| Verification record | `incomplete_work.md` + `results.md` updated | gaps recorded, none hidden |
+| Verification record | `incomplete_work.md` + `docs/results.md` updated | gaps recorded, none hidden |
 
 Functional match is the acceptance bar that exists on every platform.
 Performance claims are reported as measured, never extrapolated.
@@ -216,7 +216,7 @@ Performance claims are reported as measured, never extrapolated.
   a doc read better.
 - Invent CU counts, clocks, peaks, or instruction support for any GPU.
 - Run benchmarks or builds outside the user's TTY.
-- Delete or truncate `incomplete_work.md`, `results.md`, or the append-only
+- Delete or truncate `incomplete_work.md`, `docs/results.md`, or the append-only
   ledger.
 - Commit `command.txt`, API keys, or session context files.
 

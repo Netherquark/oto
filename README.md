@@ -20,8 +20,8 @@ report is reconstructible from that ledger, which is append-only by contract.
 * **The contract:** [`claude.md`](claude.md) — entry contract, process
   guardrails, and file ownership.
 * **Hardware ceilings & acceptance bars:**
-  [`gfx90c_theoretical_limits.md`](gfx90c_theoretical_limits.md).
-* **Live results:** [`results.md`](results.md).
+  [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md).
+* **Live results:** [`docs/results.md`](docs/results.md).
 
 ---
 
@@ -414,7 +414,7 @@ python3 -m oto check tensile-build --jobs 8 --json > build.json
 python3 -m oto check tensile-build --family ZZ    # just the ZZ family
 python3 -m oto check tensile-build --compare      # cross-check our gate vs Tensile
 
-# Enforce the append-only data law (knowledge_base.md §10). Take a snapshot
+# Enforce the append-only data law (docs/knowledge_base.md §10). Take a snapshot
 # around any run, then diff: a new run dir and more registry rows is clean;
 # anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
 python3 -m oto verify run snapshot --out before.json
@@ -451,23 +451,23 @@ re-triaged).
 |---|---|
 | [`claude.md`](claude.md) | Entry contract, process guardrails, and file-ownership rules. |
 | [`implementation_plan.md`](implementation_plan.md) | The current executable implementation plan. |
-| [`mapping.md`](mapping.md) | The shipped `gfx900` footprint → native `gfx90c` replication contract. |
-| [`gfx90c_theoretical_limits.md`](gfx90c_theoretical_limits.md) | Hardware ceilings and the acceptance-criteria authority. |
-| [`gfx90c_tuning_guide.md`](gfx90c_tuning_guide.md) | The practical knob→effect tuning guide. |
-| [`kernel_tuning_research.md`](kernel_tuning_research.md) | GCN hardware model + open research directions. |
-| [`complex_gemm_research_brief.md`](complex_gemm_research_brief.md) | The complex/split (CC/ZZ) GEMM research brief. |
-| [`tensile_tuning_context.md`](tensile_tuning_context.md) | Objective, gates, and the AI guardrails (canonical philosophy). |
-| [`potential_configs.md`](potential_configs.md) | Per-cell candidate evidence and the mutation-strategy catalogue. |
-| [`knowledge_base.md`](knowledge_base.md) | Core architecture + the append-only data-preservation law (§10). |
-| [`results.md`](results.md) | The live benchmark ledger and frozen ceiling metrics. |
+| [`docs/shipped_floor_contract.md`](docs/shipped_floor_contract.md) | The shipped `gfx900` footprint → native `gfx90c` replication contract. |
+| [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md) | Hardware ceilings and the acceptance-criteria authority. |
+| [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) | The practical knob→effect tuning guide. |
+| [`docs/research/kernel_tuning.md`](docs/research/kernel_tuning.md) | GCN hardware model + open research directions. |
+| [`docs/research/complex_gemm_brief.md`](docs/research/complex_gemm_brief.md) | The complex/split (CC/ZZ) GEMM research brief. |
+| [`docs/search_philosophy.md`](docs/search_philosophy.md) | Objective, gates, and the AI guardrails (canonical philosophy). |
+| [`docs/potential_configs.md`](docs/potential_configs.md) | Per-cell candidate evidence and the mutation-strategy catalogue. |
+| [`docs/knowledge_base.md`](docs/knowledge_base.md) | Core architecture + the append-only data-preservation law (§10). |
+| [`docs/results.md`](docs/results.md) | The live benchmark ledger and frozen ceiling metrics. |
 | [`incomplete_work.md`](incomplete_work.md) | The open-work register. |
-| [`adversarial_review.md`](adversarial_review.md) | The expert-agent audit register and the frozen prior baseline. |
+| [`docs/audit_register.md`](docs/audit_register.md) | The expert-agent audit register and the frozen prior baseline. |
 | [`changelog.md`](changelog.md) | The append-only history home. |
 | [`docs/README.md`](docs/README.md) | The MD-docs-vs-docstrings boundary, the two agent classes, and the class-tagged registry of owner docs. |
 | [`docs/operator_runbook.md`](docs/operator_runbook.md) | **Class B entry** — best-effort Tensile library on an unsupported AMD platform, end to end. |
 | [`docs/harness_runbook.md`](docs/harness_runbook.md) | The harness runbook (candidate machinery workflows). |
 | [`docs/design_language.md`](docs/design_language.md) | The design-language spec for the HTML acceptance report. |
-| `prior_INSIGHTS_CAVEMAN_ULTRA.md`, `prior_RESEARCH_ARCHIVE.md` | Frozen prior-campaign records (read-only). |
+| `archive/prior_insights.md`, `archive/prior_research_archive.md` | Frozen prior-campaign records (read-only). |
 
 ---
 

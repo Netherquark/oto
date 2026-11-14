@@ -43,7 +43,7 @@ from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Emit each family's winner tile crossed with the knobs "
-                    "the corpus never explicitly set (potential_configs.md §8.1).",
+                    "the corpus never explicitly set (docs/potential_configs.md §8.1).",
         epilog="CPU only. Writes phases.yaml; never launches a kernel.")
     ap.add_argument("--families", nargs="+", default=None,
                     choices=sorted(KNOB_SWEEP_BASES),

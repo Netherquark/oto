@@ -26,7 +26,7 @@ What this pins:
 * the named near misses (192x192, 192x128, 160x256, ...) stay refused, so the
   "just try a bigger tile" idea cannot silently reappear as a wasted draw;
 * CC, DD and ZZ have *no* legal tile above 16384 at all, which is the structural
-  half of why their realistic ceilings are unreachable (potential_configs.md
+  half of why their realistic ceilings are unreachable (docs/potential_configs.md
   §R40);
 * the three retired illegal tiles that produced the 7 failed phases of
   run_20261018_004835 stay refused by the accumulator budget;

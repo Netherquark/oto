@@ -88,7 +88,7 @@ class PhaseMixin:
                     print(f"[overlay] merged {merged} candidate phase(s) from "
                           f"phases.{run_id}.overlay.yaml (phases.yaml untouched)")
 
-        # Persistent seed overlay (proposal D2, potential_configs.md §8): the
+        # Persistent seed overlay (proposal D2, docs/potential_configs.md §8): the
         # proven-winner rows and next-phase probes queued for every native run,
         # deliberately NOT in phases.yaml so the curated deck stays exactly as
         # shipped. Same semantics as a per-run overlay (pure measurement-first

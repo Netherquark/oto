@@ -199,7 +199,7 @@ your starter, per starter path):
 3. `<codename>_harness_study.md` — corpus census (what has been tried
    before, per-cell coverage, floor vs native on this part — if a floor is
    present; if not, this is simply small).
-4. `<codename>_potential_configs.md` — the synthesis of candidate seeds
+4. `<codename>_docs/potential_configs.md` — the synthesis of candidate seeds
    across the whole 38-cell matrix: families × shapes with initial tile
    proposals and a ranked list of first probes.
 
@@ -317,8 +317,8 @@ python3 -m oto check candidates                          # will the gates accept
 ```
 
 If the census says this axis is exhausted, skip it — the proof is usually in
-`potential_configs.md` in the §R-corpus history (per-axis findings) or
-`results.md` §9 (straggler classes). If you cannot locate a measurement, the
+`docs/potential_configs.md` in the §R-corpus history (per-axis findings) or
+`docs/results.md` §9 (straggler classes). If you cannot locate a measurement, the
 axis is probably still unprobed and a NARROW draw is honest evidence on its
 behalf.
 
@@ -420,7 +420,7 @@ to do about it. This catalogue is why campaigns converge, not why they fail.
 
 | class | detect | strategy | exit |
 |---|---|---|---|
-| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `results.md` line |
+| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `docs/results.md` line |
 | **R**—residency-starved | waves/SIMD ≤ 30 % | smaller tiles / `GlobalSplitU` (SS only) | within-run win |
 | **C**—complex accounting artefact | complex GEMM ~4× below derived roof | none — re-read in BLAS-8 units; verify via wall-clock vs roof time | doc cite |
 | **K**—clock confound | `clock_coverage < threshold` | re-run TTY; judge within-run only | stronger batch |
@@ -617,7 +617,7 @@ When a floor library is in hand:
    they stole the GPU.
 2. **You are not the developer.** You do not edit `oto/` or any `.md`; you do
    not touch profiles directly; developer docs and the developer's register
-   (`incomplete_work.md`, `changelog.md`, `results.md`) belong to the developer.
+   (`incomplete_work.md`, `changelog.md`, `docs/results.md`) belong to the developer.
    Find something relevant? Write it into `<codename>_results/bugs.md`; stop
    there. The developer (a human, or a different agent with explicit
    authority) handles it.
@@ -683,7 +683,7 @@ When a floor library is in hand:
 - `.env` and `.env.example`;
 - `phases.yaml` and every `o.yaml`, every `.yamlio`-authored file — you never edit
   the deck directly; the tool verbs emit rows onto the overlay safely;
-- `incomplete_work.md`, `changelog.md`, and `results.md` — the developer's
+- `incomplete_work.md`, `changelog.md`, and `docs/results.md` — the developer's
   register; if you found something truly relevant, write it in
   `<codename>_results/bugs.md` — the developer decides whether it lands.
 

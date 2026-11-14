@@ -55,7 +55,7 @@ for _fam, _tile, _tt, _vw, _du, _pat, _extra in _R48_SMALL_CELL_ROWS:
 # that family, so every one of them is real new work rather than a re-measure.
 #
 # The three cells are the only ones with headroom (SS:256 at 83 % of its own
-# fill-and-waste bound, HH:256 at 64 %, CC:192 at 53 % -- potential_configs.md
+# fill-and-waste bound, HH:256 at 64 %, CC:192 at 53 % -- docs/potential_configs.md
 # R48.2), and the ranking puts the plausible mechanisms first: the winner's own
 # tile with a different register blocking, then the smaller tiles that
 # multiply the workgroup count.
@@ -372,7 +372,7 @@ for _fam, _tile, _tt, _vw, _du in _R49_UNEXPLORED:
         "note": "R49: the ranked unexplored space of the ORANGE cell"})
 
 
-# --- 2026-10-23 R50 -- the like-for-like batch (potential_configs.md §R55) ---
+# --- 2026-10-23 R50 -- the like-for-like batch (docs/potential_configs.md §R55) ---
 # The 2026-10-22 like-for-like regrade (§R50) measured the four ORANGE
 # "winners" as protocol artefacts: the corpus bests of SS:256, CC:192, DD:192
 # and HH:256 are single-problem-phase readings, while the floor arm was only
@@ -537,7 +537,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_KNOBS:
         **_extra,
         "note": "R50c: micro-cube knob salvo on the like-for-like winner"})
 
-# R50d -- the coverage-graph hole-fill (potential_configs.md §R57).  The one
+# R50d -- the coverage-graph hole-fill (docs/potential_configs.md §R57).  The one
 # virgin geometry class the 2026-10-22 coverage maps and the kernel_db
 # census agree on: between the two measured-fast 128x128 accumulator classes
 # (acc/thread 16 and 64 -- the census reads 140-201 and 120-403 across the

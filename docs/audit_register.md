@@ -56,7 +56,7 @@ How to run an audit:
 
 ## 1. Sources
 
-Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `prior_RESEARCH_ARCHIVE.md`.
+Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `archive/prior_research_archive.md`.
 
 | Finding | Prior status | oto posture |
 |---|---|---|
@@ -78,7 +78,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   with `"`, `\`, or embedded newline corrupted live records; 2/1283 already
   broken).
 - **No fork-lock:** single-writer process; SQLite WAL mode; INSERT-only `records`
-  table with `json.dumps` payload (`knowledge_base.md` §10.2). No sibling `.lock`
+  table with `json.dumps` payload (`docs/knowledge_base.md` §10.2). No sibling `.lock`
   files, no fd-9 `flock(1)` dance, no retry state machines.
 - **No inferred missing controls:** missing (dt,cls) ruler or un-gated telemetry
   window → "not computable / unadjusted", never 1.0 fabrication and never a
@@ -131,7 +131,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   is visible, and the kill guards above.
 - **Occupancy cap (T9):** VGPR pressure + grid underfill limits achieved
   utilization to ~69–77% of pipe — the performance objective to raise, not a
-  hazard (gfx90c_theoretical_limits.md §7).
+  hazard (docs/gfx90c_theoretical_limits.md §7).
 
 ## 5. Acceptance criteria unchanged
 

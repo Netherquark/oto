@@ -4,7 +4,7 @@
 > baseline: parity at 0/11/0 same-run; the gap is coverage + beating
 > the spoof floor). oto contract: **beat the gfx900 spoof baseline across the
 > entire shipped kernel suite** AND approach the gfx90c theoretical limit as closely
-> as possible (limit authority = `gfx90c_theoretical_limits.md`, cross-checked
+> as possible (limit authority = `docs/gfx90c_theoretical_limits.md`, cross-checked
 > against rocminfo + first-party sources). Ruthless simplicity; deterministic; NO LLM
 > in the loop. Read it top-to-bottom before implementing; the stage/design detail
 > and the triaged-fix disposition are archived in `changelog.md` (2026-10-12).
@@ -13,8 +13,8 @@
 
 Beat the gfx900-spoof floor across the whole shipped gfx90c footprint and
 approach the per-family ceilings as closely as the machine allows. The goal and
-the standing success bar are stated in `tensile_tuning_context.md` (Scope); the
-footprint contract is `mapping.md`; the campaign is driven by
+the standing success bar are stated in `docs/search_philosophy.md` (Scope); the
+footprint contract is `docs/shipped_floor_contract.md`; the campaign is driven by
 `oto tune`.
 
 ## Core Strategy (one-shot deterministic convergence)
@@ -22,7 +22,7 @@ footprint contract is `mapping.md`; the campaign is driven by
 ```
 shipped gfx900 footprint (28 families, 4 patterns; the live phase list is
     generated and printed by `oto/tools/all_runs.py`, never transcribed here)
-    ↓ translate decks (mapping.md) — never copy ISA900 kernels
+    ↓ translate decks (docs/shipped_floor_contract.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
 HW benchmark (median-of-seeds, ruler-adjusted)
@@ -34,20 +34,20 @@ convergence (no RED cells) → synthesis → acceptance readout
 
 ## AI Must Not Decide
 
-See `tensile_tuning_context.md`. The model proposes parameter vectors only;
+See `docs/search_philosophy.md`. The model proposes parameter vectors only;
 Tensile generates, the compiler validates, the hardware decides.
 
 ## Correctness Gate
 
 Always generate → correctness → benchmark; never benchmark → fast →
 maybe correct. The rejected-config list and the routing rule are in
-`tensile_tuning_context.md`.
+`docs/search_philosophy.md`.
 
 ## Reward Hacking
 
 Independent benchmark + fresh inputs + correctness + repeats + guard checks;
 evaluator outside model control; median-of-seeds, never max-of-seeds. See
-`tensile_tuning_context.md`.
+`docs/search_philosophy.md`.
 
 ## Manual-LLM Contingency
 
@@ -62,13 +62,13 @@ Never an in-loop consultation.
   Phase-0 gates 10/10 [OK]; anti-alias 0 gfx900 leak; synthesis PASS.
 - Performance on the only frozen same-run pair = **parity, not wins** (0 / 11 / 0
   at ±5%); candidate suite A–G = **5W/10T/6L** over 21 shared cells. These are
-  the carried ceiling bars in `results.md`, not current verdicts.
+  the carried ceiling bars in `docs/results.md`, not current verdicts.
 
 ### B. The replicated footprint (mapping contract)
 **2,285 distinct shipped kernels.** The family matrix, the size-key count, and
-the "do not chase the defensive size mesh" rule are all owned by `mapping.md`.
+the "do not chase the defensive size mesh" rule are all owned by `docs/shipped_floor_contract.md`.
 
-### C. Theoretical limits (authority: `gfx90c_theoretical_limits.md`)
+### C. Theoretical limits (authority: `docs/gfx90c_theoretical_limits.md`)
 Per-family FMA roofs @1800 MHz: SS 1613, DD 101, ZZ 1613, CC 101, HH 3226,
 HH_HPA/HS_HPA 1613; BF16 single-rate 1613 (no `v_pk_fma_bf16`); INT8 1613 upper
 bound only (no dot → ~881 realistic). DDR roofline 42 GB/s (measured-achievable).
@@ -101,7 +101,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - **CU occupancy ≤3 is the performance target, not a hazard.** Low achieved occupancy
   = hardware under-utilization = the very headroom "approach the theoretical limit"
   exists to claim. Occupancy is capped by VGPR pressure + grid underfill on the 7-CU
-  part (see `gfx90c_theoretical_limits.md` §7); oto's knob budget treats
+  part (see `docs/gfx90c_theoretical_limits.md` §7); oto's knob budget treats
   right-sized `GSU`/`WGM`/`MT`/`TT` as a FIRST-CLASS objective with measured
   utilization as the score, not an accepted constraint.
 - Sustained 2048³-style benchmark marathons on this APU can wedge it (HW-exception
@@ -115,15 +115,15 @@ convergence verdict compares against these, throttled+median-of-seeds.
 #### GCN5 GEMM literature review folded into its owners (2026-10-19)
 - `gfx90c_gcn5_gemm_literature_caveman_full.md` (a `/caveman full` external
   literature pass) was integrated section-by-section and retired: mechanisms →
-  `kernel_tuning_research.md` (§1 no packed-FP32 FMA; §3.4 rasterisation vs wave
+  `docs/research/kernel_tuning.md` (§1 no packed-FP32 FMA; §3.4 rasterisation vs wave
   quantisation + the CPU predictor; §4 pipeline/cache knobs; §5 the Higham 3M
   caveat + non-atomic split-K; §8.7 split-K/Stream-K/persistent; §9 do-not-cite);
-  complex/FP64 → `complex_gemm_research_brief.md` (§5 Higham; §8 register blocking
+  complex/FP64 → `docs/research/complex_gemm_brief.md` (§5 Higham; §8 register blocking
   + the packed-FP32 correction; §9 non-atomic split-K; new §11 complex-double
-  occupancy/ILP); search design + measurement → `tensile_tuning_context.md` §S and
-  `knowledge_base.md` §8.3; tile-shape provenance → `gfx90c_tuning_guide.md` §1.2;
-  the roofline closed form → `gfx90c_theoretical_limits.md` §3; and the ranked
-  experiment order → `potential_configs.md` §R33 (mapped onto the existing routes;
+  occupancy/ILP); search design + measurement → `docs/search_philosophy.md` §S and
+  `docs/knowledge_base.md` §8.3; tile-shape provenance → `docs/gfx90c_tuning_guide.md` §1.2;
+  the roofline closed form → `docs/gfx90c_theoretical_limits.md` §3; and the ranked
+  experiment order → `docs/potential_configs.md` §R33 (mapped onto the existing routes;
   its steps 4 and 7 are *not* reachable as candidates on this port). No new routes;
   the review's `[CHECK]`/`[Transfer only]` labels are preserved.
 
@@ -131,12 +131,12 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - `gfx90c_gcn5_gemm_residual_14q_caveman_full.md` (the `/caveman full` answer pass
   over the questions the review left open) was integrated and retired. Each verdict
   is closest-evidence-found and none is gfx90c-specific: Origami + the predictor and
-  the 2025 irregular-batched-GEMM work in `kernel_tuning_research.md` §3.4; the MI250X
+  the 2025 irregular-batched-GEMM work in `docs/research/kernel_tuning.md` §3.4; the MI250X
   non-temporal experiment and the Tensile `StaggerU` scoping in §4; the
   `GlobalSplitUAtomicAdd`/`StreamK`/`StreamKAtomic` knob names in §8.7; the LLVM
   GFX6–GFX9 VGPR-allocation rule in §9.3; oneMKL's `gemm3m` error bounds in
-  `complex_gemm_research_brief.md` §5; AMD measurement methodology in
-  `knowledge_base.md` §8.3; and a closing note in `potential_configs.md` §R33. The
+  `docs/research/complex_gemm_brief.md` §5; AMD measurement methodology in
+  `docs/knowledge_base.md` §8.3; and a closing note in `docs/potential_configs.md` §R33. The
   pass **changes no route** and adds no module.
 
 #### Legality gate closed + tile ceilings (2026-10-18)
@@ -152,7 +152,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
 - The tile axes now have **provable ceilings**: area `< 65536/R` (SS/HH 65536,
   DD 32768, CC 16384, ZZ 8192). A brute force above CC 8192 / ZZ 4096 finds none
   legal, so the widest legal complex tiles are CC `128x64` and ZZ
-  `64x64`/`128x32`; `potential_configs.md` §8.2's "legal but never generated"
+  `64x64`/`128x32`; `docs/potential_configs.md` §8.2's "legal but never generated"
   headroom list is retired as wrong.
 - The same dead wide tiles lived in **three** homes and are all repaired
   (`phases.yaml` 4 rows, `decks.FAMILY_DECKS`, `candidate_rows.LADDER` +
@@ -163,7 +163,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
   12 ORANGE, **PROVISIONAL** floor): `CC:256` moved **TIE → WIN (+7.8 %)**, the
   R8 steal landing. (The 12 ORANGE were re-scored on 2026-10-21: ten of them
   were a 4x unit error in the complex bar, and the list is **three** cells --
-  `results.md` §16.) Evidence `results.md` §14; reading `potential_configs.md`
+  `docs/results.md` §16.) Evidence `docs/results.md` §14; reading `docs/potential_configs.md`
   §R24–§R32 (rewrite 6).
 - The rule-calibration machinery behind those three rules is now a repo tool,
   **`oto.harness.rule_calibration`**: it probes any candidate
@@ -189,7 +189,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
   `tests/test_shape_order.py`; the live seed overlay was regenerated numeric.
 - Live report `run_20261015_041159` reads **19 WIN / 19 TIE / 0 LOSS**;
   CC:256 **TIE**. No verdict band or gate logic changed. See `changelog.md`
-  2026-10-15 and `results.md` §13.4.
+  2026-10-15 and `docs/results.md` §13.4.
 
 #### Corpus consolidation + locked floor (2026-10-03)
 - Floor **locked, not re-measured**: `gfx900_ref_locked_52149f315d`, built by
@@ -246,9 +246,9 @@ convergence verdict compares against these, throttled+median-of-seeds.
   cell, which is exactly what the certainty tiers refuse to grade. A single
   cheap phase cannot answer it; it needs a deliberately paired run.
 
-### Ecosystem consolidated: single `changelog.md`, `gfx90c_theoretical_limits.md`
+### Ecosystem consolidated: single `changelog.md`, `docs/gfx90c_theoretical_limits.md`
   added, superseded MDs removed, prior conclusions held only in
-  `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
+  `archive/prior_insights.md` / `archive/prior_research_archive.md`.
 - Full driver + 7 module suite implemented, import-clean, `--help` passes.
 - Valid Tensile YAML generator (`_write_phase_config`) emits `GlobalParameters` +
   `BenchmarkProblems` schema; phase 20 benchmarked successfully producing
@@ -297,7 +297,7 @@ mirrors the predicate.
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      STAGE 2: Candidate Generation                   │
-│  From mapping.md family decks + harvested winners:                  │
+│  From docs/shipped_floor_contract.md family decks + harvested winners:                  │
 │    → Mutate by ≤2 knobs (neighbour search)                           │
 │    → Validate: LDS≤64KB/CU, occupancy≥floor, config-valid, fp-unique│
 │    → Emit candidate configs to phases.yaml                            │
@@ -491,7 +491,7 @@ they pin the plan's own claims rather than the design's:
   manifest.
 - **Do-not-reinvent + PoC gate**: argparse, stdlib `json`/`csv`/`statistics`/`sqlite3`,
   git for diffs, sysfs for monitoring, `peak_gflops` imported from the profile loader,
-  ceilings imported from `gfx90c_theoretical_limits.md`. **Every module is PoC'd and
+  ceilings imported from `docs/gfx90c_theoretical_limits.md`. **Every module is PoC'd and
   fully functional in `/tmp/opencode/` before it lands.** No change lands without a PoC
   + a scoped parity run. `/tmp/opencode` currently contains analysis scratch
   (`an*.py`, pickle datasets, `poc_cellkey`/`poc_resume`) plus a pre-resume A/B dump —
@@ -501,11 +501,11 @@ they pin the plan's own claims rather than the design's:
 - `python3 -m oto bench --refresh` launches the dedicated floor chain;
   `--gfx900-reference --resume` continues an interrupted chain (retries failed once).
 - `--auto` auto-resumes an incomplete floor and refuses any tuning until
-  `_reference_remaining() == 0`; verdicts then fold per-cell into `results.md`
-  (append-only, `knowledge_base.md` §10).
+  `_reference_remaining() == 0`; verdicts then fold per-cell into `docs/results.md`
+  (append-only, `docs/knowledge_base.md` §10).
 
 ### Step 3 — Native family-matrix phases (coverage-first, the two-measure acceptance)
-- From `mapping.md` decks: emit one phase per family×pattern combo actually in the
+- From `docs/shipped_floor_contract.md` decks: emit one phase per family×pattern combo actually in the
   workload (start with the SS/DD/HH families and the Emilio shapes 256³/512³/1024³/
   2048³ + suite shapes); each phase benchmarks the mapped tile deck (translated, not
   copied ISA900) natively.
@@ -534,7 +534,7 @@ they pin the plan's own claims rather than the design's:
 
 ### Step 6 — Synthesis + acceptance
 - `agent.converged()` → write tier-2 retirement records (≥2 independent runs/cell
-  gating) → master synthesis of the harvested winner set → `results.md` +
+  gating) → master synthesis of the harvested winner set → `docs/results.md` +
   `gfx90c_results/acceptance_report.json/.html` regenerated → final anti-alias
   re-assert (0 gfx900 leaks) and whole-library native-vs-spoof readout with per-family
   %-of-theoretical ceilings.
@@ -569,10 +569,10 @@ they pin the plan's own claims rather than the design's:
       go-ahead for the mutation arm were the same call this time.
 
 ## Relevant Files
-- `implementation_plan.md` (this plan), `gfx90c_theoretical_limits.md`
-  (ceiling authority), `mapping.md` (footprint contract), `potential_configs.md`
-  (candidate deck), `changelog.md` (evolution), `results.md` (data, append-only),
-  `claude.md` (entry contract), `knowledge_base.md` (data law §10), `proposal.md`
+- `implementation_plan.md` (this plan), `docs/gfx90c_theoretical_limits.md`
+  (ceiling authority), `docs/shipped_floor_contract.md` (footprint contract), `docs/potential_configs.md`
+  (candidate deck), `changelog.md` (evolution), `docs/results.md` (data, append-only),
+  `claude.md` (entry contract), `docs/knowledge_base.md` (data law §10), `proposal.md`
   (measurement-protocol history + the Option H mutator design; its §Option H addendum is
   the evidence and rationale behind the archived Option H plan, now in
   `changelog.md`).
@@ -583,5 +583,5 @@ they pin the plan's own claims rather than the design's:
   chain), `oto/metrics/report.py` (writes `gfx90c_results/acceptance_report.json/.html`), the
   native gfx90c patch (`Tensile/Common.py` + `Tensile/AsmCaps.py`, in the Tensile
   tree), `gfx90c_results/registry.db`, `gfx90c_runs/` (`gfx900_ref_*` + `run_*`).
-- Sanctioned prior conclusions: `prior_INSIGHTS_CAVEMAN_ULTRA.md`,
-  `prior_RESEARCH_ARCHIVE.md`.
+- Sanctioned prior conclusions: `archive/prior_insights.md`,
+  `archive/prior_research_archive.md`.

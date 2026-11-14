@@ -1,9 +1,9 @@
 # Benchmark Results: gfx90c (Cezanne-family APU iGPU)
 
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
-> `prior_INSIGHTS_CAVEMAN_ULTRA.md`, also absorbed in `prior_RESEARCH_ARCHIVE.md`).
+> `archive/prior_insights.md`, also absorbed in `archive/prior_research_archive.md`).
 > This file's hand prose is preserved append-only
-> (`knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/report.py`
+> (`docs/knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/report.py`
 > (`gfx90c_results/acceptance_report.json/.html`).
 
 ## 1. Run Summary
@@ -48,7 +48,7 @@ below is the current data.
 | INT8 | 1613 | 881.2 | 55% |
 | FP64 | 101 | 98.6 | 98% |
 
-Realistic GEMM caps (authority `gfx90c_theoretical_limits.md` §5): SS ~1119 (69%),
+Realistic GEMM caps (authority `docs/gfx90c_theoretical_limits.md` §5): SS ~1119 (69%),
 DD ~98.6 (98%), HH ~2461 (77%), BF16 ~1109 (69%), INT8 ~881 (55%); ZZ/CC/HH_HPA/
 HS_HPA derived ~1119/98/1119/1119. FP32/FP16/BF16 large-squares are near their
 measured bars; INT8 has the most headroom (candidate wins already +18.3% at
@@ -84,7 +84,7 @@ E bf16 @1024³, D 512/1024³. C crashed (fix pending scoped re-test). F = 3 new 
   suite is the entire footprint).
 - FP16/BF16-DDR rulers absent by design (no control cell exists yet).
 - oto acceptance: beat the gfx900-spoof floor across the whole shipped suite
-  AND approach the per-family ceilings of `gfx90c_theoretical_limits.md` §5
+  AND approach the per-family ceilings of `docs/gfx90c_theoretical_limits.md` §5
   (measured utilization is the score, logged per (family, bound_class)).
 
 ## 8. Reference floor (gfx900 spoof, live)
@@ -206,7 +206,7 @@ positives. All 9 observed pass/fail calibration cases reproduce. Regression-lock
 **Deck outcome.** 410 → 418: the 8 dead phases removed, 16 gate-legal ZZ phases added
 (`128x32x8/8x4`, `32x128x8/2x8` as same-aspect replacements; `64x64x8/4x2` and
 `128x32x16/8x4` as new axes) × 4 contraction patterns. Shipped manifest is now
-**418 phases**, all gate-clean. Full derivation: `potential_configs.md` §2 (triage outcome).
+**418 phases**, all gate-clean. Full derivation: `docs/potential_configs.md` §2 (triage outcome).
 
 **Honest limit — this is a legality result, not a performance result.** No GPU was
 run. ZZ is **legal but unbenchmarked**; whether any of the new tiles actually beats
@@ -357,7 +357,7 @@ the plumbing; it does not settle the mechanism.
 A whole-corpus pass over all 5757 emitted kernels (`python3 -m
 oto.harness.asm_occupancy`, GFLOP/s joined against every phase's `2_BenchmarkData`)
 plus the knob census (`python3 -m oto.tools.all_runs`). Analysis and the resulting deck are
-in `potential_configs.md`; this section is the measured evidence.
+in `docs/potential_configs.md`; this section is the measured evidence.
 
 ### 13.1 The knob census — two knobs have only ever held one value
 
@@ -492,7 +492,7 @@ The step from §13.4's 19/19 is `CC:256`: **TIE → WIN (+7.8 %)**, the R8 steal
 landing.
 
 The per-cell *reading* of these 18 ties (the mechanical `cfg_gap`, the class
-tracker, and why no steal is now justified) is `potential_configs.md` §R25/§R26;
+tracker, and why no steal is now justified) is `docs/potential_configs.md` §R25/§R26;
 this section is the measured evidence and the provenance.
 
 ### 14.1 The twelve ORANGE cells are the two issue-bound families
@@ -525,7 +525,7 @@ with a rank-1 tile. `DD` is 79–100 % (79.0 % at 192³, 87.1 % at 256³, then
 `python3 -m oto.harness.gate_calibration --population ours`, over every phase
 whose launch config is on disk: **3349 configs, 3217 built, 132 empty — 0 MISS /
 0 FALSE REJECTION** (before the 2026-10-18 rules: 79 refused + **53 MISS**). The
-three rules and their Tensile sources are `potential_configs.md` §R24. The
+three rules and their Tensile sources are `docs/potential_configs.md` §R24. The
 reference population keeps its pre-existing **43 false rejections**, *all* of
 them the LDS tile-footprint proxy (`LDS_BUDGET = 16384`) on large-DepthU gfx900
 kernels (SS 29, DD 12, HH 1, HS_HPA 1; DepthU 16/32/64) — a reference-only story,
@@ -539,7 +539,7 @@ not a regression from these rules.
 - **Coverage is per-cell, not per-kernel.** Every family's graded cells are
   measured, but the *search* behind them is uneven: the registry's generation log
   shows `SS`/`HS_HPA`/`HH_HPA` at 57–88 distinct geometries per cell against
-  `DD` 16, `CC` 13–16 and **`ZZ` 5** (`potential_configs.md` §R28). A WIN on
+  `DD` 16, `CC` 13–16 and **`ZZ` 5** (`docs/potential_configs.md` §R28). A WIN on
   `CC`/`DD`/`ZZ` therefore says "this deck beat the floor", not "the family is
   exhausted".
 
@@ -550,7 +550,7 @@ history rather than a scoreboard: per `family/typecode` it reports every
 structural axis value with its best seed-median, and every geometry with the
 rows behind it; `--cell FAM:side` does the same for one cell next to the floor's
 best. It is the CPU-only step before choosing a candidate, and the tool-side
-home of the closed axes in `potential_configs.md` §R41.
+home of the closed axes in `docs/potential_configs.md` §R41.
 
 Three readings from the current corpus:
 
@@ -618,7 +618,7 @@ issue-rate walls; the resolution path is pads/GSU/PGR") was a consequence of
 the mis-scaled bar, and the work it proposed (3M/Karatsuba, split-K, the
 complex knob sweep) is withdrawn: there is nothing to win at 97 % of the pipe.
 The headroom is in the two small cubes plus `CC:192`, and the arithmetic of
-*why* is in `potential_configs.md` §R48.2: the winners are at 53-83 % of their
+*why* is in `docs/potential_configs.md` §R48.2: the winners are at 53-83 % of their
 own fill-and-waste bound, so the cells are **starved, not badly tuned** -- the
 same kernel that scores 412 at SS:256 scores 981 at SS:4096.
 
@@ -627,4 +627,4 @@ floor's *own* config on both arms, and across those identical cells the delta
 spans **+1.1 % to +18.6 %** -- a 17.5-point environment band against a
 ±5 % verdict band, with no clock telemetry on the floor side. A verdict on an
 identical cell is a measurement of the machine, not of the kernel
-(`potential_configs.md` §R47.2, §R48.5).
+(`docs/potential_configs.md` §R47.2, §R48.5).

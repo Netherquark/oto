@@ -2,11 +2,11 @@
 """
 test_resolve_cells.py — harness.resolve_cells per-cell winner resolution.
 
-Regression guards for the 38-cell evidence generator (potential_configs.md
+Regression guards for the 38-cell evidence generator (docs/potential_configs.md
 §R25, the per-cell reading — §R26 is the class tracker):
 
   * exactly the shipped deck — (family, shape) equals shipped_cell_set()
-    (knowledge_base.md §6.1), no added/absent cells;
+    (docs/knowledge_base.md §6.1), no added/absent cells;
   * verdicts + native/floor values match acceptance_report.json field-for-field;
   * every cell that has a native winner phase resolves a FULL structural config
     (MacroTile present) from the winner run's configs/*.yaml or the registry —
@@ -14,7 +14,7 @@ Regression guards for the 38-cell evidence generator (potential_configs.md
   * HPA floor cells (whose shipped floor rows are unresolved, verdict '?')
     degrade to an empty spoof config instead of crashing;
   * ``cfg_gap`` classifies every cell (identical / near / retile / no-floor) --
-    the mechanical half of the tie taxonomy (potential_configs.md §R17);
+    the mechanical half of the tie taxonomy (docs/potential_configs.md §R17);
   * meta provenance counts are self-consistent (n_cells, resolver keys ≥ yamls).
 
 Run: python3 -m pytest -q tests/test_resolve_cells.py
@@ -98,7 +98,7 @@ def test_cfg_gap_classifies_every_cell(evidence):
     """``cfg_gap`` is the mechanical half of the tie taxonomy (§R17).
 
     It must be derived from the two resolved configs, never asserted: the code
-    reports the gap and potential_configs.md §R17 reads it. The classes are
+    reports the gap and docs/potential_configs.md §R17 reads it. The classes are
     pinned as a *self-consistency* invariant -- recomputing the gap from the
     cell's own configs must reproduce the reported one -- because pinning
     individual cells to a class rots the moment the corpus moves a winner

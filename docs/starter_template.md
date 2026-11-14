@@ -38,7 +38,7 @@ before touching anything:
 - `docs/gfx902_starter.md` — a filled-in example of THIS file, for a device
   that does not exist yet anywhere except in agent research. Copy its
   structure; fill in *your* device.
-- `gfx90c_theoretical_limits.md` + `gfx90c_tuning_guide.md` — the worked
+- `docs/gfx90c_theoretical_limits.md` + `docs/gfx90c_tuning_guide.md` — the worked
   example of a completed acceptance document and its cookbook sibling. Read
   the structure, not the numbers — your numbers come from the research
   hunt below.

@@ -186,7 +186,7 @@ class SynthesisMixin:
         tl_path = out_dir / f"{profile.codename}_theoretical_limits.md"
         tc_path = out_dir / f"{profile.codename}_tuning_context.md"
         hs_path = out_dir / f"{profile.codename}_harness_study.md"
-        pc_path = out_dir / f"{profile.codename}_potential_configs.md"
+        pc_path = out_dir / f"{profile.codename}_docs/potential_configs.md"
         tl_path.write_text(result["theoretical_limits"])
         tc_path.write_text(result["tuning_context"])
         tl_harness = result.get("harness") or {}
@@ -194,7 +194,7 @@ class SynthesisMixin:
         try:
             pc_path.write_text(potential_configs.generate(profile, self.base_dir))
         except Exception as exc:  # configs doc is additive; never fail the docs
-            pc_path.write_text(f"# potential_configs.md — {profile.codename}\n\n"
+            pc_path.write_text(f"# docs/potential_configs.md — {profile.codename}\n\n"
                                f"Synthesis failed: {exc}\n")
         docs = [tl_path, tc_path, hs_path, pc_path]
         print(f"Generated {', '.join(str(p) for p in docs)}")
