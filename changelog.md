@@ -4313,3 +4313,16 @@ the pre-built seed pool.
   `oto/{yamlio->yaml_cached, inventory->readme_gen, docs_index->docs_index_writer}`.
   Verifier RENAMES rebuilt (old->new only, no identity keys). `gfx90c_vs_spoof.png`
   (generated artifact) removed. Suite green, verifier green, ruff clean.
+
+- **2026-11-14 (42nd) — the CLI front is folded into the documentation ecosystem.**
+  `docs/cli.md` is pinned to the live parser (`tests/test_docs_cli.py`);
+  the migration table it carries maps the retired shims to the `oto <verb>`
+  spellings; `oto <verb>` is now the only invocation shape the Class B
+  operators see, and the Class A agents use the same. `PYTHONPATH=.`
+  prefixes dropped from the operator campaign (every `python3 -m oto`
+  invocation runs from the repo root, where the package is importable as-is);
+  `docs/README.md` registry updated; README's file map displays current
+  module names; the `oto` `--json` contract verified to emit JSON only on
+  stdout with narration on stderr or /dev/null. `oto stats` and
+  `oto check candidates --json` confirmed: one document on stdout, the
+  per-line scan log on stderr. Suite green; verifier PASSED.

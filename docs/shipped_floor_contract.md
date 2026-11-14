@@ -43,10 +43,10 @@ emit per-family tile decks from:
 2. the measured frozen prior winners (below) — the only datapoints
    already gfx90c-native (frozen prior conclusions, per `archive/prior_insights.md`).
 
-The spoof floor for A/B is the **shipped footprint itself**: `--gfx900-reference`
+The spoof floor for A/B is the **shipped footprint itself**: `oto bench`
 benchmarks every shipped kernel once (ScheduleName `vega10`, at the family deck shapes
 from `FAMILY_SHAPES`) into a permanent `gfx900_ref_*` **chain** — an interrupted floor
-is continued via `--gfx900-reference --resume` (retries failed phases once, reuses
+is continued via `oto bench --resume` (retries failed phases once, reuses
 decided base phases) — recalled — never re-run — by every later acceptance report.
 Expected coverage denominators now come from that pinned manifest, not this (historical) table.
 

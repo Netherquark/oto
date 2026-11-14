@@ -61,8 +61,8 @@ measured bars; INT8 has the most headroom (candidate wins already +18.3% at
 - Port mechanics: native build + Phase-0 10/10 + anti-alias 0 gfx900 leak + synthesis
   PASS. This is the baseline to beat.
 - Action: the dedicated floor chain (`gfx900_ref_*`) supersedes the frozen same-run
-  pair. Complete it via `--gfx900-reference --resume` (1,212 remaining phases), then
-  `--auto` re-derives per-cell verdicts by workload cell `(family, dtype, shape)`.
+  pair. Complete it via `oto bench --resume` (the flag was spelled `--gfx900-reference` then; 1,212 remaining phases), then
+  `oto tune` re-derives per-cell verdicts by workload cell `(family, dtype, shape)`.
 
 ## 5. Candidate suite A–G (carried verdicts)
 
@@ -92,7 +92,7 @@ E bf16 @1024³, D 512/1024³. C crashed (fix pending scoped re-test). F = 3 new 
 Dedicated `gfx900_ref_20260925_152942` (deck = the pinned 2,285 shipped kernels,
 ScheduleName `vega10`): **1,073 executed, 116 failed, 1,096 unattempted** (~25.6 h,
 2026-09-25 15:29 → 2026-09-26 17:05). Interrupted at 1,073/2,285; resumed via
-`--gfx900-reference --resume` (1,212 phases). `--auto` gates all tuning behind its
+`oto bench --resume` (the flag was spelled `--gfx900-reference` then; 1,212 phases). `oto tune` gates all tuning behind its
 completion. Both it and the draft deck run (`run_20260920_235815`) are registered
 in `gfx90c_results/registry.db`.
 
@@ -126,7 +126,7 @@ The 1,881 resume failure set was triaged into three action tiers:
 
 | tier | n | action | outcome |
 |---|---|---|---|
-| `T1_RERUN` | 127 | staged first, mandatory; `--auto` blocks until done | 0 remain |
+| `T1_RERUN` | 127 | staged first, mandatory; `oto tune` blocks until done | 0 remain |
 | `T2_RERUN_HELD` | 1,881 | opt-in only; the mechanism landed and is tested, the staging decision was withheld | deliberately NOT run (re-measuring correct kernels for no correctness gain); the floor keeps default-resolved measurements |
 | `T3_UNREPRODUCIBLE` | 277 | never staged, terminal | 154 half-input kernels pinned to VW1; 121 refused by `assembly_class_valid()`; 2 with no resolvable schedule — the vendored Tensile cannot reproduce these and benchmarking a different computation instead is worse than a documented gap |
 | `T0_KEEP` | 0 | reused | — |

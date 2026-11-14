@@ -2273,7 +2273,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    Emit with trials and controls:
    `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`
    (dry-run default; 246 sweep + 14 baselines + 8 trials = 268, 0 refusals).
-2. **Dry-run** — `python3 -m oto.tensile.candidate --dry-run` (or
+2. **Dry-run** — `oto tune --dry-run` (or
    `oto check candidates --deck <deck>.yaml`) to confirm the phase count and that
    no entry is silently dropped.
 3. **Legality PoC only** — verify the new ZZ deck is non-empty after D2 lands
@@ -2904,7 +2904,7 @@ Ordered by expected value, not by novelty:
 1. **WGM 2/3/-1/-4 on the 7-CU tile grid** (SS:512/1024/2048, HH:1024/2048,
    CC:512/1024, DD:1024/2048) -- the only axis where the gfx900 floor is
    *structurally* wrong for this part.
-2. **The floor re-measurement** (`--gfx900-reference`) so the verdicts can be
+2. **The floor re-measurement** (`oto bench --resume`) so the verdicts can be
    read at all.
 3. **`StaggerU=0`, `TransposeLDS=-1`, `NonTemporalC/D`, `MaxOccupancy`,
    `StaggerUMapping`** on the winner geometry of every family -- the axes that

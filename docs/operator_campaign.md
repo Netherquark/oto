@@ -68,12 +68,12 @@ Yes/No answer at the end.
 ```bash
 cat > <codename>_starter.md        # §4 — 10 minutes of typing, mostly fill-in
 cat > <codename>_starter.json      # §4
-PYTHONPATH=. python3 -m oto doctor                              # §5 — check environment
-PYTHONPATH=. python3 -m oto agent generate <codename>_starter.md  # §6 — limits + context docs
-PYTHONPATH=. python3 -m oto library best-effort                   # §7 — the skeleton library
-PYTHONPATH=. python3 -m oto check candidates                       # §8 — preflight
-PYTHONPATH=. python3 -m oto tune --budget 10 --mutations 3         # §9 — the campaign
-PYTHONPATH=. python3 -m oto report --json                          # §10 — the verdict
+python3 -m oto doctor                              # §5 — check environment
+python3 -m oto agent generate <codename>_starter.md  # §6 — limits + context docs
+python3 -m oto library best-effort                   # §7 — the skeleton library
+python3 -m oto check candidates                       # §8 — preflight
+python3 -m oto tune --budget 10 --mutations 3         # §9 — the campaign
+python3 -m oto report --json                          # §10 — the verdict
 ```
 
 Read on for what each of those invocations does and why; if you trust the
@@ -172,7 +172,7 @@ challenge it; then trust it with the rest of the sweep.
 ## §5. `oto doctor`
 
 ```
-PYTHONPATH=. python3 -m oto doctor
+python3 -m oto doctor
 ```
 
 ~13 seconds. Validates the environment: the toolchain resolves (uses
@@ -185,7 +185,7 @@ refuses to start badly.
 ## §6. `python3 -m oto agent generate`
 
 ```
-PYTHONPATH=. python3 -m oto agent generate <codename>_starter.md
+python3 -m oto agent generate <codename>_starter.md
 ```
 
 Artifact outputs land under `<codename>_*.md` in the repo root (or beside
@@ -212,7 +212,7 @@ stubs; but the campaign still runs because the *math* doesn't need a key.
 ## §7. `python3 -m oto library best-effort`
 
 ```
-PYTHONPATH=. python3 -m oto library best-effort [--protocol-basis any]
+python3 -m oto library best-effort [--protocol-basis any]
 ```
 
 What it does: from the global corpus of measured kernels on this part
@@ -263,7 +263,7 @@ Don't appeal any of them; rewrite the row.
 One end-to-end campaign:
 
 ```
-PYTHONPATH=. python3 -m oto tune --budget 10 --mutations 3 --yes
+python3 -m oto tune --budget 10 --mutations 3 --yes
 ```
 
 Preflight runs, `kernel_db.json` rebuilt, then the loop:
@@ -325,7 +325,7 @@ behalf.
 ## §10. Reading the report
 
 ```
-PYTHONPATH=. python3 -m oto report --json   # machine-readable
+python3 -m oto report --json   # machine-readable
 python3 -m oto report                       # shows the full HTML path
 ```
 
@@ -728,8 +728,8 @@ comfort.
 1. Write `<codename>_results/consult_<topic>.json`: the question, the
    verdicts (or block), the evidence files used, the constrained answers
    preferred (A/B/C or "define it myself"), and the budget cap.
-2. Fire `oto doctor --consult` (or invoke the owner if you are a human's
-   agent with no interactive channel).
+2. Invoke the owner if you are a human's agent with an interactive
+   channel; otherwise the consult file is the notification and you wait.
 3. Wait for the response. Do nothing in the interim.
 4. Record the answer in the same file; write the action-line in
    `<codename>_results/notes.md`.

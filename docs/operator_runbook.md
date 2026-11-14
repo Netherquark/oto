@@ -127,7 +127,7 @@ The agent's numbers may be wrong in ways tests cannot catch. Before any
 4. Sanity-load it:
 
    ```bash
-   PYTHONPATH=. python3 -c "from oto.device.loader import load_profile; print(load_profile('<codename>'))"
+   python3 -c "from oto.device.loader import load_profile; print(load_profile('<codename>'))"
    ```
 
    The loader refuses placeholders and zeroed silicon. A successful load is

@@ -728,7 +728,7 @@ bar, elapsed, ETA, tally) into the terminal while a run executes:
   the reason a run dies.
 
 Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
-`python3 -m oto.metrics.run_status --watch` remains the standalone full-panel view.
+`oto status --watch` remains the standalone full-panel view.
 
 This is the module docstring of `oto/metrics/render_status.py`.
 
@@ -792,7 +792,7 @@ overwrite, or rewrite **benchmark evidence**.
   `UPDATE` is allowed. This table is **not** benchmark evidence.
 - **`phases.yaml` is the manifest.** A SQLite `phases` table, if present, is at
   most an index/cache. It must not replace the YAML file, must not UNIQUE-drop
-  new attempts, and must not become the `--auto` feed target. Harvest still
+  new attempts, and must not become the `oto tune` feed target. Harvest still
   **appends rows to `phases.yaml`**.
 - **A changed fingerprint is a NEW attempt.** Old attempt + data stay untouched.
 - Retirement **appends** a `retire` record (or equivalent `record_type`) that
@@ -827,7 +827,7 @@ overwrite, or rewrite **benchmark evidence**.
 
 - **run** — one execution of the driver over a set of phases (`python3 -m oto tune`
   or `python3 -m oto bench` with semantic filters `--targets`/`--family`/`--pattern`/`--shape`
-  and stages via `--stage`, or `python3 -m oto bench --refresh` for the spoof floor);
+  and stages via `oto run --stage`, or `python3 -m oto bench --refresh` for the spoof floor);
   captured in an era-named
   `run_YYYYMMDD_HHMMSS/` directory.
 - **phase** — one manifest row of the driver (`phases.yaml`); the spoof/reference

@@ -337,7 +337,7 @@ orientation layer over it.
 | [`agent.py`](oto/ledger/convergence_agent.py) | The deterministic convergence agent: harvest cell winners, generate mutations, check the 4-condition convergence gate. |
 | [`harvest.py`](oto/ledger/harvest.py) | Parent selection: which candidate a cell's next mutation starts from. |
 | [`mutator.py`](oto/ledger/mutator.py) | The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay. |
-| [`proposals.py`](oto/ledger/proposals.py) | The Option-H proposal ledger: emitted candidates and their measured outcomes. |
+| [`registry_proposals.py`](oto/ledger/registry_proposals.py) | The Option-H proposal ledger: emitted candidates and their measured outcomes. |
 
 ### `oto/metrics/` — rows → verdicts, reports, status
 
@@ -358,13 +358,13 @@ orientation layer over it.
 |---|---|
 | [`cli.py`](oto/runners/stage_cli.py) | The driver's stage dispatch — the `--preflight`/`--bench`-style flag routing consumed by [`oto/cli/`](oto/cli/) (`oto <cmd>` itself lives there, in [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
 | [`driver.py`](oto/runners/driver.py) | The driver composition root: identity, toolchain, wiring. |
-| [`phases.py`](oto/runners/phase_runner.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
+| [`phase_runner.py`](oto/runners/phase_runner.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
 | [`benchmark.py`](oto/runners/benchmark.py) | The one place a Tensile subprocess is launched. |
 | [`reference.py`](oto/runners/reference_floor.py) | The gfx900 reference floor: build, resume, recall. |
-| [`auto.py`](oto/runners/convergence_loop.py), [`auto_prompt.py`](oto/runners/auto_prompt.py) | The `--auto` convergence loop and the five questions → `AutoPlan`. |
+| [`convergence_loop.py`](oto/runners/convergence_loop.py), [`auto_prompt.py`](oto/runners/auto_prompt.py) | The `--auto` convergence loop and the five questions → `AutoPlan`. |
 | [`synthesis.py`](oto/runners/library_build.py) | Stage 6: emit per-family library logic and build with `TensileCreateLibrary`. |
 | [`toolchain.py`](oto/runners/toolchain.py) | Toolchain discovery: the Tensile checkout and the ROCm toolchain. |
-| [`timing.py`](oto/runners/timing.py), [`clocks.py`](oto/runners/clock_telemetry.py) | The three numbers conflated as "runtime"; per-phase telemetry clocks and the thermal envelope. |
+| [`timing.py`](oto/runners/timing.py), [`clock_telemetry.py`](oto/runners/clock_telemetry.py) | The three numbers conflated as "runtime"; per-phase telemetry clocks and the thermal envelope. |
 
 ### `oto/harness/` — ground-truth candidate machinery
 
