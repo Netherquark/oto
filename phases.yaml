@@ -5492,3 +5492,30 @@
     ThreadTile: 4x4
     VectorWidth: 2
   fp: 0f03470817d762fd64cb0d083b6a65ee369ff20ebc6add20fae02e2cd76277e2
+- phase_id: phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_trialD5
+  label: CC_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_trialD5
+  dtype: C
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 2
+    GlobalLoadVectorWidthA: 2
+    GlobalLoadVectorWidthB: 2
+    WorkGroup:
+    - 16
+    - 16
+    - 1
+    WorkGroupMapping: 4
+    AssertFree0ElementMultiple: 4
+    AssertFree1ElementMultiple: 4
+  fp: ca20ec28c1f9b3b0a90668b4aee3a301ba4fa06ef261696bf731a34fd76a42d1

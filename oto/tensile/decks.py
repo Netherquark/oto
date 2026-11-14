@@ -376,6 +376,25 @@ KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
 #: 2026-11-14 changelog entry); neither is re-decked.
 DECISION_TRIAL_TILES: list[dict[str, Any]] = [
     {
+        "decision": "D5",
+        "family": "CC",
+        "knobs": {"MacroTile": "64x64x8", "ThreadTile": "4x4",
+                  "VectorWidth": 2,
+                  "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
+                  "WorkGroup": [16, 16, 1], "WorkGroupMapping": 4,
+                  "AssertFree0ElementMultiple": 4,
+                  "AssertFree1ElementMultiple": 4},
+        "shapes": ["256x256x256"],
+        "why": "CC:256's open correctness question, re-asked with Tensile's "
+               "own SGEMM recipe as the shape of the probe rather than a new "
+               "guess: the 4-assert pair (Tensile/Perf/sgemm_large_square_nt.yaml) "
+               "on the stolen CC geometry. The 256 cell is 4-divisible, so the "
+               "assert is satisfiable; correctness must be confirmed on "
+               "silicon (Tensile's own num-elements-to-validate reference) "
+               "before the flagship row graduates out of trial status. Owner "
+               "directed the check as legality-only, <=512^2 (2026-11-14).",
+    },
+    {
         "decision": "D1",
         "family": "CC",
         "knobs": {"MacroTile": "64x64x8", "ThreadTile": "4x4",

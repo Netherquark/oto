@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (23rd) — yolo26 acceptance re-verified on the nightly stack; CC D5 trial decked; Tensile-client SIGSEGV found.**
+  Ran yolo26 (`webcam.py`, person 0.87, frame written) against the new
+  TensileLibrary (`best_effort_library_rocmlibs`, built 2026-11-13 with the super-repo
+  Tensile `d950c74` + nightly `_rocm_sdk_core`) — it works. The old
+  `best_effort_library` (2026-10-29, system ROCm 6.4.4 + stale Tensile) deterministically
+  wedges the GPU runtime: `HW Exception by GPU node-1 … reason :GPU Hang` / core dump on
+  both runs attempted. The old library binary is therefore unusable on the nightly 7.15
+  stack; the Nov-13 acceptance holds only through the new TensileLibrary.
+  CC:256 4-assert (SGEMM ethos, `Tensile/Perf/sgemm_large_square_nt.yaml`): the D5
+  decision-trial row (`mt64x64x8/tt4x4/VW2/AF0EM=4/AF1EM=4`, 256³) is decked in
+  `phases.yaml` and in `DECISION_TRIAL_TILES`; `oto check candidates` green; knob-sweep
+  tests green; correctness vs Tensile's own `NumElementsToValidate` reference is
+  **blocked** by a host-side `tensile-client` SIGSEGV (exit 139,
+  `AllSolutionsIterator::AllSolutionsIterator`, before any kernel runs), reproduced on a
+  locally rebuilt client against the `dist-7.15.0a20260728` SDK. Hello-world HIP kernels
+  run fine; the crash is client-binary-specific, not config-specific. The client build is
+  not in the repo; no GPU-legality verdict for CC AF4/4 yet. LDS/ZZ retirement and the
+  toolchain mandate for ROCM_PATH landed earlier this session (21st–22nd).
 - **2026-11-14 (22nd) — Tensile validation turned on (`NumElementsToValidate = 128`).**
   `oto.tensile.config_writer` emitted `NumElementsToValidate: 0` — the owner rejected that as
   a must-not-stand copout: validation is the correctness gate for headless GPU runs. Every

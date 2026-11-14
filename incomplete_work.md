@@ -16,17 +16,17 @@ relevant ecosystem doc.
   a human must review the numbers and accept the profile; testing it blind
   would pretend gfx902 hardware exists, which it does not here. The gate
   tests already exercise a `dataclasses.replace`-derived synthetic device.
-- **CC:256 `AssertFree0/1ElementMultiple=4` — the empirical half is
-  unverified.** CPU-side gate (candidates.py / deck_review) landed and is
-  proven against every shape; the correctness comparison against a reference
-  CGEMM kernel on real silicon needs the owner's TTY (Phase 5).
-- **LDS gate calibration vs Tensile's `Z: reg=4`.** `oto/tensile/gates/vgpr_model.py`
-  `BYTES_PER_ELEMENT["Z"] = 8`; Tensile's `numBytes() = 4 * 4 = 16` and
-  `FAMILY_BYTES_PER_ELEMENT["ZZ"] = 16` already. *Owner decision required*
-  before changing either: the gate policy is calibrated, and the file used by
-  the occupancy gate (`LDS_BUDGET`) and the byte table must move together.
-  Estimated ~1 h on a quiet machine with a CPU-only build proof to measure
-  the false-rejection rate. Do not touch either constant until decided.
+- **CC:256 `AssertFree0/1ElementMultiple=4` — the empirical half is being
+  verified (2026-11-14).** Owner authorized ≤512² legality work on the GPU.
+  CPU-side gates green; the on-silicon check runs Tensile's own
+  `NumElementsToValidate` reference comparison (SGEMM-4-assert recipe,
+  `Tensile/Perf/sgemm_large_square_nt.yaml`); the trial row is being added as
+  `D5` to `DECISION_TRIAL_TILES` (option A) and as the CC:256/512 deck
+  emission (option B). GPU is legality-only here — no perf bars.
+- **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
+  Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
+  six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;
+  `gfx90c_theoretical_limits.md` §6.1 records the outcome.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; the gfx902 starter pair (research output) is the missing piece;
   it depends on C4 above.
