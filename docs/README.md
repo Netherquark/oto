@@ -79,6 +79,7 @@ Corollaries:
 | `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
 | `docs/implementation_plan.md` | dev | Ecosystem | The current executable plan only |
+| `docs/agentic_consult.md` | dev | Ecosystem | Automated agentic consult: API key → docs/potential_configs.md with the least GPU-trial budget (design plan, not implemented) |
 | `docs/shipped_floor_contract.md` | shared | Ecosystem | The shipped-footprint replication contract |
 | `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
 | `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
