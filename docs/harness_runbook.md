@@ -18,8 +18,8 @@ oto/harness/corpus_census.py      # corpus history: axis/geometry coverage + per
 oto/harness/regression_matrix.py  # regression_matrix.json builder (deck vs floor vs all-time)
 oto/harness/resolve_cells.py      # per-cell winner resolver + cfg_gap (full knob surface)
 oto/harness/coverage_map.py       # legal geometry space per cell + what the corpus measured in it
-oto/harness/tensile_oracle.py     # the legality oracle: Tensile's own verdict on a config
-oto/harness/deck_check.py          # the pre-run sweep: every unmeasured deck row through Tensile
+oto/harness/tensile_probe.py     # the legality oracle: Tensile's own verdict on a config
+oto/harness/deck_probe.py          # the pre-run sweep: every unmeasured deck row through Tensile
 oto/harness/coverage_graph.py      # the coverage graphs: the legal space, what is unexplored, the peaks and the traps
 oto/metrics/report_figures.py        # the report's problem-space coverage section (reads the figures' hand-off)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
@@ -219,12 +219,12 @@ legality question that the model cannot answer is settled by asking Tensile:
 
 ```bash
 # one config: does Tensile build it, and what did it derive?
-python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 \
+python3 -m oto.harness.tensile_probe --dtype S --macro 128x128x16 \
     --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value] [--pattern Alik_Bjlk]
 
 # every UNMEASURED deck row (the pre-run sweep; ~75 s/row, resumable, CPU-only)
-python3 -m oto.harness.deck_check --family CC --limit 10
-python3 -m oto.harness.deck_check --json gfx90c_results/analysis/deck_check.json
+python3 -m oto.harness.deck_probe --family CC --limit 10
+python3 -m oto.harness.deck_probe --json gfx90c_results/analysis/deck_probe.json
 ```
 
 The oracle prints **both** verdicts side by side -- the launch gate's and

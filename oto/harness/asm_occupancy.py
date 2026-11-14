@@ -8,13 +8,13 @@ plus the Tensile CSV column trap that joins it.
 Does NOT own: the *predicted* occupancy gate (oto.tensile.gates.occupancy), the
 VGPR/LDS calibration tables (oto.tensile.gates.vgpr_model), the device constants
 (`oto.device.loader`), or the predicted resident-workgroup audit
-(oto.harness.occupancy_audit). This module measures what was emitted; that
+(oto.harness.occupancy_bounds). This module measures what was emitted; that
 module predicts what a gate would allow.
 
 Public API: waves_per_simd, binding_resource, parse_asm_kernel,
 read_phase_gflops, measure_corpus, main.
 
-Why this exists alongside `occupancy_audit.py`: that module audits the *predicted*
+Why this exists alongside `occupancy_bounds.py`: that module audits the *predicted*
 bounds of a `kernel_db.json` row, so its "resident workgroups per CU" is a
 property of a candidate. This module audits the *emitted* code objects, so its
 "waves per SIMD" is a property of a kernel that actually built and ran. The two

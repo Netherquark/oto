@@ -482,7 +482,7 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   dual-issues independent `v_fma` on the same SIMD, the saturation point moves
   and the "target `V ≤ 64`" rule needs restating.
 - **What binds per cell — VGPR or LDS?** §3.3 gives both limiters but no per-cell
-  verdict. `python3 -m oto.harness.occupancy_audit` (see
+  verdict. `python3 -m oto.harness.occupancy_bounds` (see
   `potential_configs.md` §5) is the tool; the open question is which cells
   are LDS-bound at the current winner geometry (candidates for a smaller
   `DepthU`/`MacroTile`) versus VGPR-bound (candidates for `PGR=0`).

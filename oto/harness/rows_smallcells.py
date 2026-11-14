@@ -2,8 +2,8 @@
 
 Owns: ``_R47_WINNERS``, ``_R47_SMALL_CELLS``, ``_R48_SMALL_CELL_ROWS``,
 ``_R49_UNEXPLORED`` and the HPA blocks -- the evidence-derived small-cell
-rows appended to ``PLAN_BATCH`` after ``_rows_frontier``. Import only after
-``_rows_frontier``. See ``oto.harness.candidate_rows`` for the
+rows appended to ``PLAN_BATCH`` after ``rows_frontier``. Import only after
+``rows_frontier``. See ``oto.harness.candidate_rows`` for the
 consumer-facing re-exports.
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from oto.harness._rows_core import AUTO_EXPLICIT, PLAN_BATCH
+from oto.harness.rows_ladders import AUTO_EXPLICIT, PLAN_BATCH
 
 _R48_SMALL_CELL_ROWS: tuple[
         tuple[str, str, str, int, int, str, dict[str, Any]], ...] = (

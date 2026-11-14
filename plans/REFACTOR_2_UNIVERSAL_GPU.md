@@ -27,7 +27,7 @@ Order: gates first (most isolated), then analytics/report, then harness.
 - **C2.3** `oto/tensile/gates/loads.py`: load cap from `profile.global_load_byte_cap`. Gate: test_loads passes.
 - **C2.4** `oto/tensile/gates/occupancy.py`: `ldspad_feasible`, `occupancy_feasible` take profile. Gate: test_occupancy passes.
 - **C2.5** `oto/metrics/analytics.py`, `report.py`, `ab_delta.py`, `cell_status.py`, `family_attribution.py`: read ceilings/peaks from profile instead of peaks module globals. Gate: test_analytics, test_report, test_ab_audit pass.
-- **C2.6** `oto/harness/*.py` (kernel_db, generate_candidates, coverage_map, corpus_census, occupancy_audit, asm_occupancy, resolve_cells): take profile for family shapes/ceilings. Gate: harness tests pass.
+- **C2.6** `oto/harness/*.py` (kernel_db, generate_candidates, coverage_map, corpus_census, occupancy_bounds, asm_occupancy, resolve_cells): take profile for family shapes/ceilings. Gate: harness tests pass.
 - **C2.7** `oto/tensile/config_writer.py`, `candidate.py`, `candidate_emission.py`, `knob_sweep.py`, `legality.py`, `best_library.py`: route through profile. Gate: tensile tests pass.
 - **C2.8** `oto/runners/*.py` (driver, benchmark, reporting, synthesis, clocks): route through profile; remove `gfx90c_common` imports. Gate: runner tests pass.
 - **C2.9** `oto/checks/*.py`, `oto/tools/*.py`: route through profile. Gate: checks pass.

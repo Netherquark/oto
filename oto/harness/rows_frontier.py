@@ -2,8 +2,8 @@
 
 Owns: ``_TIE_ADAPT``, ``_PROBE_AXES``, ``_TIE_WINNERS``, ``_FRONTIER`` and
 the AF/WGM row generators -- the measured-winner blocks appended to
-``PLAN_BATCH`` after ``_rows_core`` builds it. Import only after
-``_rows_core`` (it mutates ``PLAN_BATCH``). See ``oto.harness.candidate_rows``
+``PLAN_BATCH`` after ``rows_ladders`` builds it. Import only after
+``rows_ladders`` (it mutates ``PLAN_BATCH``). See ``oto.harness.candidate_rows``
 for the consumer-facing re-exports.
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from oto.harness._rows_core import PATTERNS, PLAN_BATCH
+from oto.harness.rows_ladders import PATTERNS, PLAN_BATCH
 
 _TIE_ADAPT: list[tuple[str, str, str, str, int, int,
                        list[tuple[dict[str, Any], str]]]] = [

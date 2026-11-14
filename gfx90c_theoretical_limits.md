@@ -413,7 +413,7 @@ line matters — an earlier version of `asm_occupancy` resolved ties by dict ord
 toward VGPR, which understated LDS involvement by 16 points. It also refutes "occupancy always ≤3": as a *resident
 workgroup* count that holds for ~49% of kernels, as a *wave* count for 2.1% —
 two different questions, which is why `asm_occupancy` reports waves and
-`occupancy_audit` reports workgroups and they must not be substituted.
+`occupancy_bounds` reports workgroups and they must not be substituted.
 
 Per family (median waves/CU, max measured GFLOP/s):
 

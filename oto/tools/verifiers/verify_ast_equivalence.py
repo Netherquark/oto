@@ -97,7 +97,7 @@ MOVES = [
                                       "oto/harness/candidate_overlay.py"]),
     ("harness/kernel_db.py", ["oto/harness/kernel_db.py"]),
     ("harness/measure_vgprs.py", ["oto/harness/measure_vgprs.py"]),
-    ("harness/occupancy_audit.py", ["oto/harness/occupancy_audit.py"]),
+    ("harness/occupancy_bounds.py", ["oto/harness/occupancy_bounds.py"]),
     ("harness/regression_matrix.py", ["oto/harness/regression_matrix.py"]),
     ("harness/resolve_cells.py", ["oto/harness/resolve_cells.py"]),
 ]
@@ -455,6 +455,12 @@ RENAMES: dict[str, str] = {
     "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
     "oto/metrics/_status_common.py": "oto/metrics/status_common.py",
     "oto/tensile/library.py": "oto/tensile/shipped_manifest.py",
+    "oto/harness/_rows_core.py": "oto/harness/rows_ladders.py",
+    "oto/harness/_rows_frontier.py": "oto/harness/rows_frontier.py",
+    "oto/harness/_rows_smallcells.py": "oto/harness/rows_smallcells.py",
+    "oto/harness/deck_check.py": "oto/harness/deck_probe.py",
+    "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py",
+    "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py",
 }
 
 def _postsplit_check(ref: str) -> int:

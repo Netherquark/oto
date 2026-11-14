@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 
 from oto.device import loader
-from oto.harness import occupancy_audit, regression_matrix
+from oto.harness import occupancy_bounds, regression_matrix
 from oto.runners.paths import results_rel
 from oto.tools.potential_configs_gen import generate
 
@@ -31,20 +31,20 @@ def _row(protocol: str = "family", gflops: float = 100.0) -> dict:
 def test_floor_rows_prefers_locked() -> None:
     db = {"run_aaa": [1, 2], "gfx900_ref_1": [3],
           "gfx900_ref_locked_x": [4, 5]}
-    rows, chosen = occupancy_audit._floor_rows(db)
+    rows, chosen = occupancy_bounds._floor_rows(db)
     assert rows == [4, 5]
     assert chosen == ["gfx900_ref_locked_x"]
 
 
 def test_floor_rows_falls_back_to_any_ref() -> None:
     db = {"run_aaa": [1], "gfx900_ref_7": [9, 8]}
-    rows, chosen = occupancy_audit._floor_rows(db)
+    rows, chosen = occupancy_bounds._floor_rows(db)
     assert rows == [9, 8]
     assert chosen == ["gfx900_ref_7"]
 
 
 def test_floor_rows_empty_when_no_ref_keys() -> None:
-    rows, chosen = occupancy_audit._floor_rows({"run_aaa": [1]})
+    rows, chosen = occupancy_bounds._floor_rows({"run_aaa": [1]})
     assert rows == []
     assert chosen == []
 

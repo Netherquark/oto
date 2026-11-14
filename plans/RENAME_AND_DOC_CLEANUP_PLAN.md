@@ -75,10 +75,10 @@ Section 5 fixes the ephemeral-reference violations.
 ### 2.1 What the tree actually does
 
 Leading-underscore **module** names (privacy signal):
-- `oto/harness/_rows_core.py`, `_rows_frontier.py`, `_rows_smallcells.py`
+- `oto/harness/rows_ladders.py`, `rows_frontier.py`, `rows_smallcells.py`
   (imported by `oto/harness/candidate_rows.py:18-32`; their headers
   state the import order is "fixed and load-bearing" at
-  `_rows_frontier.py:5-6` and `_rows_smallcells.py:5-7`);
+  `rows_frontier.py:5-6` and `rows_smallcells.py:5-7`);
 - `oto/metrics/_status_common.py` (imported intra-package:
   `run_status.py:24`, `report_build.py:21`, `ledger_state.py:24`; its own
   header at line 10 says "module consumers only");
@@ -123,8 +123,8 @@ One rule, one mechanism:
 
 ### 2.3 The import-order fragility the `_rows_*` split encodes
 
-`_rows_frontier.py:5-6` and `_rows_smallcells.py:5-7` state "Import only after
-`_rows_core` (they mutate `PLAN_BATCH`)"; `candidate_rows.py:8-9` calls the
+`rows_frontier.py:5-6` and `rows_smallcells.py:5-7` state "Import only after
+`rows_ladders` (they mutate `PLAN_BATCH`)"; `candidate_rows.py:8-9` calls the
 order "fixed and load-bearing". That is a *module-design* smell (mutable
 shared global across three files) unrelated to naming, recorded here because
 any rename PR touching these three files should collapse them into
@@ -472,8 +472,8 @@ losing information).
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`,
    `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
-7. `oto/harness/_rows_core.py` / `_rows_frontier.py` / `_rows_smallcells.py` — split tables whose
-   meaning depends on import order (`_rows_frontier.py:5-6`) and a word ("core") that says nothing.
+7. `oto/harness/rows_ladders.py` / `rows_frontier.py` / `rows_smallcells.py` — split tables whose
+   meaning depends on import order (`rows_frontier.py:5-6`) and a word ("core") that says nothing.
 8. `oto/metrics/_status_common.py` — private-marked module imported as the public status helper
    (`run_status.py:24` re-exports it).
 9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a
@@ -483,9 +483,9 @@ losing information).
     two files indistinguishable without opening both; name the halves (`verify_symbols.py`,
     `verify_methods.py`).
 12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
-13. `oto/harness/tensile_oracle.py` — "oracle" is repo jargon for "ask Tensile itself"; every
+13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every
     sibling verb is "probe" (`checks/tensile_build_probe.py`).
-14. `oto/harness/occupancy_audit.py` — "audit" promises a judgment; the file computes three
+14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three
     physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the
     *status* report; `build_status.py` dissolves the ambiguity.
@@ -617,14 +617,14 @@ independently shippable.
 4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`.
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`, `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
-7. `oto/harness/_rows_core.py` / `_rows_frontier.py` / `_rows_smallcells.py` — split tables whose meaning depends on import order (`_rows_frontier.py:5-6`) and a word ("core") that says nothing.
+7. `oto/harness/rows_ladders.py` / `rows_frontier.py` / `rows_smallcells.py` — split tables whose meaning depends on import order (`rows_frontier.py:5-6`) and a word ("core") that says nothing.
 8. `oto/metrics/_status_common.py` — private-marked module imported as the public status helper (`run_status.py:24` re-exports it).
 9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a REF-worktree probe runner (`_evergreen.py:1-6`).
 10. `oto/tools/verifiers/_verdicts_worker.py` — "worker" with no subject; it emits the verdict corpus.
 11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` — two files indistinguishable without opening both; name the halves (`verify_symbols.py`, `verify_methods.py`).
 12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
-13. `oto/harness/tensile_oracle.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
-14. `oto/harness/occupancy_audit.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
+13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
+14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
 16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
 17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
@@ -847,12 +847,12 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 | `oto/tensile/synthesis/db.py` | `oto/tensile/synthesis/donor_mutator.py` | "db" is insider shorthand | low |
 | `oto/tensile/synthesis/db_knobs.py` | `oto/tensile/synthesis/donor_knobs.py` | same | low |
 | `oto/tensile/synthesis/db_patterns.py` | `oto/tensile/synthesis/donor_patterns.py` | same | low |
-| `oto/harness/_rows_core.py` | `oto/harness/rows_ladders.py` | underscore-private yet effectively public | medium (import-order fragility) |
-| `oto/harness/_rows_frontier.py` | `oto/harness/rows_frontier.py` | same | medium |
-| `oto/harness/_rows_smallcells.py` | `oto/harness/rows_smallcells.py` | same | medium |
-| `oto/harness/deck_check.py` | `oto/harness/deck_probe.py` | subject is the build probe, not "checking" | low |
-| `oto/harness/tensile_oracle.py` | `oto/harness/tensile_probe.py` | "oracle" is repo jargon; siblings are "probe" | low |
-| `oto/harness/occupancy_audit.py` | `oto/harness/occupancy_bounds.py` | "audit" promises a judgment; computes physical bounds | low |
+| `oto/harness/rows_ladders.py` | `oto/harness/rows_ladders.py` | underscore-private yet effectively public | medium (import-order fragility) |
+| `oto/harness/rows_frontier.py` | `oto/harness/rows_frontier.py` | same | medium |
+| `oto/harness/rows_smallcells.py` | `oto/harness/rows_smallcells.py` | same | medium |
+| `oto/harness/deck_probe.py` | `oto/harness/deck_probe.py` | subject is the build probe, not "checking" | low |
+| `oto/harness/tensile_probe.py` | `oto/harness/tensile_probe.py` | "oracle" is repo jargon; siblings are "probe" | low |
+| `oto/harness/occupancy_bounds.py` | `oto/harness/occupancy_bounds.py` | "audit" promises a judgment; computes physical bounds | low |
 | `oto/agents/harness_tools.py` | `oto/agents/agent_tools.py` | echoes `oto/harness/` package | low |
 | `oto/agents/meta.py` | `oto/agents/orchestrator.py` | "meta" is a non-name | low |
 | `oto/checks/candidates.py` | `oto/checks/deck_legality.py` | bare "candidates" indistinguishable from generation | low |
@@ -982,14 +982,14 @@ independently shippable.
 4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets are unrelated.
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`, `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
-7. `oto/harness/_rows_core.py` / `_rows_frontier.py` / `_rows_smallcells.py` — split tables whose meaning depends on import order (`_rows_frontier.py:5-6`) and a word ("core") that says nothing.
+7. `oto/harness/rows_ladders.py` / `rows_frontier.py` / `rows_smallcells.py` — split tables whose meaning depends on import order (`rows_frontier.py:5-6`) and a word ("core") that says nothing.
 8. `oto/metrics/_status_common.py` — private-marked module imported as the public status helper (`run_status.py:24` re-exports it).
 9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a REF-worktree probe runner (`_evergreen.py:1-6`).
 10. `oto/tools/verifiers/_verdicts_worker.py` — "worker" with no subject; it emits the verdict corpus.
 11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` — two files indistinguishable without opening both; name the halves (`verify_symbols.py`, `verify_methods.py`).
 12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
-13. `oto/harness/tensile_oracle.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
-14. `oto/harness/occupancy_audit.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
+13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
+14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
 16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
 17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).

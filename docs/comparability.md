@@ -54,7 +54,7 @@ by the kernel_db builder; the four forms:
 | # | where | bug | fix (f6aef2c) |
 |---|---|---|---|
 | 1 | `oto/harness/regression_matrix.py` | every DB row admitted — single-problem rows (inflated 2-4x) won all-time cells and fed vs-floor verdicts | default like-for-like filter; `--any-protocol` opts out; rows tagged with run id; `meta` gains `protocol` + `excluded_protocol_rows`; entries carry `deck`/`floor`/`all_time` run ids |
-| 2 | `oto/harness/occupancy_audit.py` | hardcoded floor run id `gfx900_ref_locked_52149f315d` — a rename/vanish silently produced empty floor results | locked reference preferred, falls back to any `gfx900_ref_*` present, prints chosen runs; nonexistent floor → exit 1 with message; cache read uses a `with` handle |
+| 2 | `oto/harness/occupancy_bounds.py` | hardcoded floor run id `gfx900_ref_locked_52149f315d` — a rename/vanish silently produced empty floor results | locked reference preferred, falls back to any `gfx900_ref_*` present, prints chosen runs; nonexistent floor → exit 1 with message; cache read uses a `with` handle |
 | 3 | `oto/tools/potential_configs_gen.py` | corpus counts mixed native and floor sides | corpus section splits native vs floor counts |
 | 4 | `oto/harness/candidate_pool.py` | mutable-fallback default argument | fallback normalised via `None` sentinel |
 | 5 | `oto/harness/candidate_pool.py` | unused imports (`FAMILY_SHAPES`, `_pad_rows`) | dropped |

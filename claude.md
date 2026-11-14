@@ -237,8 +237,8 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 |---|---|
 | Best config per cell across ALL runs, knob reach per family, never-exercised knobs | `python3 -m oto stats` (`--family ZZ`, `--json > post.json`) |
 | What has the corpus already measured on this family/cell, at which geometry or axis value, and how did it score? | `python3 -m oto.harness.corpus_census` (`--family SS`, `--typecode HHS`, `--cell SS:1024`, `--knob DepthU`, `--json out.json`) |
-| Does Tensile build every *unmeasured* deck row? (the pre-run sweep) | `python3 -m oto.harness.deck_check` (`--family CC --limit 10`, `--json out.json`; ~75 s/row, resumable, CPU-only) |
-| Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_oracle --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
+| Does Tensile build every *unmeasured* deck row? (the pre-run sweep) | `python3 -m oto.harness.deck_probe` (`--family CC --limit 10`, `--json out.json`; ~75 s/row, resumable, CPU-only) |
+| Does Tensile itself accept this config (builds it, and what did it derive)? | `python3 -m oto.harness.tensile_probe --dtype S --macro 128x128x16 --thread 8x8 --vw 4 --du 16 [--wgm -1] [--extra Knob=Value]` (the legality oracle: Tensile's own verdict + the LDS it allocated) |
 | Run the test suite (2m10s serial, 1m27s with `-n auto`, 37s for `-m preflight`) | `python3 -m pytest -q` (`-n auto` to distribute, `-m preflight` for the pre-run subset) |
 | Is the repo clean under the tree-walking guards? (pyflakes, ruff, py_compile, 60-line and 600-line rules) | `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q` (`OTO_GUARD_FILES=1` for changed files only) |
 | Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 -m oto library best-effort` (default `gfx90c_results/best_effort_library/`; `--dest DEST`, `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
@@ -246,7 +246,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 -m oto check candidates` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
 | Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
-| **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_audit` (`--side floor`, `--lds-factor 2`) |
+| **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_bounds` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
 | Which knobs has the corpus ever actually varied? | `python3 -m oto stats` (`--json > post.json`; the `never-exercised knobs` block) |
 | Is a cell *really* won, or only its best kernel? (A/B recomputed under every basis) | `python3 -m oto.tools.deck_review score` |
@@ -274,7 +274,7 @@ read-only; `docs/harness_runbook.md` explains what each one is for.
 The two occupancy tools answer different questions and are not interchangeable:
 `asm_occupancy` reads the emitted `.s` (`amdhsa_next_free_vgpr`,
 `group_segment_fixed_size`), so its "waves per CU" is a fact about a kernel that
-built and ran; `occupancy_audit` reads a `kernel_db` row, so its "resident
+built and ran; `occupancy_bounds` reads a `kernel_db` row, so its "resident
 workgroups per CU" is a prediction about a candidate. Corrections to the first
 are measurement-vs-model; corrections to the second are model-vs-model.
 `asm_occupancy --check-calibration` verifies the waves-per-SIMD model against

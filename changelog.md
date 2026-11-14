@@ -120,7 +120,7 @@ and NOT the experimental data (that is `results.md`).
   and Sphinx-role identifier and each dotted `oto.*` token against the present tree (module
   path resolution + top-level attr check; docstring-stripped source blob; Tensile-internal
   citations confirmed against `rocm-libraries`). What was dead, now fixed:
-  `oto/harness/_rows_core.py`'s Public API line named a nonexistent `_NARROW_KNOBS` (real
+  `oto/harness/rows_ladders.py`'s Public API line named a nonexistent `_NARROW_KNOBS` (real
   tables: `NARROW_NEIGHBOURS`, `PATTERNS`, `TARGET_CELLS`, …); `ConvergenceMixin` /
   `MutateLoopMixin` in the convergence-loop docstring never existed (real mixins:
   `HarvestMixin` / `CoverageMixin` / `MutateMixin`); `fallback_lattice` in
@@ -194,7 +194,7 @@ and NOT the experimental data (that is `results.md`).
   All three fail against the frozen `REFACTOR_BASE=2824c2f` pin; making them
   green needs a drift manifest or a re-pin — a decision for the owner, not a
   mechanical fix. Also swept the last machine-specific Tensile fallbacks
-  (`best_library.py`, `tensile_oracle.py`, `tests/occupancy_gate_common.py` —
+  (`best_library.py`, `tensile_probe.py`, `tests/occupancy_gate_common.py` —
   now env/.env only) and the PYTHONPATH of children in verify_all. Machine-
   literal grep (`/home/`, `/usr/lib64`, `/opt/rocm`) shows only conventional
   system-path heuristics and the verifier's frozen legacy references remain.
@@ -493,7 +493,7 @@ and NOT the experimental data (that is `results.md`).
 
   **The sweep was stopped after 75 of the 401 rows** (the operator ended it;
   74 accepted, 1 refused). Its partial result is kept in
-  `gfx90c_results/analysis/deck_check.json` in the tool's own format, so a
+  `gfx90c_results/analysis/deck_probe.json` in the tool's own format, so a
   later run **resumes** from row 76 rather than re-probing the first 75, and
   the refusals accumulate across a resumed sweep. The 75 rows covered the CC,
   DD, SS, HH, ZZ winner geometries and the HPA block -- every one Tensile
@@ -504,7 +504,7 @@ and NOT the experimental data (that is `results.md`).
 
 - **2026-10-22 (5th) — the doc sweep: every stale conclusion now points at
   its correction.** The /tmp probes are gone (their capabilities are
-  `oto.harness.tensile_oracle` and `oto.harness.deck_check`), and the docs
+  `oto.harness.tensile_probe` and `oto.harness.deck_probe`), and the docs
   ecosystem now carries the *reasons*, not just the numbers: the tuning
   guide's knob table says **which class** each axis with no variance is in
   (never drawn / never reached Tensile / refused by our own gate -- only the
@@ -519,9 +519,9 @@ and NOT the experimental data (that is `results.md`).
   the launch backstop lost a rule.** The four throwaway probes written in
   `/tmp` (the Tensile derived-LDS probe, the WGM legality probe, the
   config-writing probe and the build probe) are now two tools:
-  `oto.harness.tensile_oracle` (ask Tensile about one config: its verdict,
+  `oto.harness.tensile_probe` (ask Tensile about one config: its verdict,
   the LDS it derived, and our gate's verdict beside it) and
-  `oto.harness.deck_check` (the same, over every *unmeasured* deck row --
+  `oto.harness.deck_probe` (the same, over every *unmeasured* deck row --
   the pre-run sweep, resumable, CPU-only). The probes in `/tmp` are deleted;
   their capabilities have one home each. Building them surfaced **two
   defects**: the oracle's "our gate" line was reporting the *writer's* refusal
@@ -553,7 +553,7 @@ and NOT the experimental data (that is `results.md`).
   by how well their measured neighbours scored), gate-filtered (16 candidates
   dropped as load-divisibility-illegal). The deck now carries **401 new
   phases ≈ 9 h**, plus the mutator's contribution.
-  `oto.harness.deck_check` is the missing "no bugs" gate: it puts every
+  `oto.harness.deck_probe` is the missing "no bugs" gate: it puts every
   *unmeasured* deck row through Tensile's own kernel writer (the legality
   oracle) and reports the ones it refuses — the check that would have caught
   the 8 error-4 phases of the 2026-10-20 run before they cost a launch slot
@@ -603,7 +603,7 @@ and NOT the experimental data (that is `results.md`).
   Pinned by `tests/test_coverage_graph.py`.
 
 - **2026-10-21 (8th) — the legality oracle, and the three ORANGE cells
-  triaged.** `oto.harness.tensile_oracle` is the /tmp probing machinery
+  triaged.** `oto.harness.tensile_probe` is the /tmp probing machinery
   formalised: it asks **Tensile itself** whether a config builds, prints the
   LDS it allocated, and puts our gate's verdict beside Tensile's -- so a
   legality question the CPU gates cannot answer ("does Tensile accept a
@@ -1492,7 +1492,7 @@ and NOT the experimental data (that is `results.md`).
   byte-identical kernel both arms), one suboptimal VW2 pick (SS:512 vs floor VW4 on the same tile),
   and one real direction+residency deficit (CC:256 — the sanctioned steal). The old §13.6 "single
   outside-band LOSS" phrase gets a dated supersession marker. (2) **The "occupancy ≤3" investigation**
-  (**new `harness/occupancy_audit.py`**): 25/34 cells genuinely sit at ≤3 resident wg/CU (median 3,
+  (**new `harness/occupancy_bounds.py`**): 25/34 cells genuinely sit at ≤3 resident wg/CU (median 3,
   min 2, max 10; 8–24 of 40 wave slots) — physical, not a model bug; **VGPR file binds 21 cells**,
   LDS 13. The spoof floor is equally non-resident (26/30 ≤3), so occupancy is *not* where the floor
   wins; and a single-buffer LDS probe barely moves the count (VGPR becomes the wall for 33/34 cells)
@@ -3914,7 +3914,7 @@ pre-whittling content with the refactored structure:
 - Cross-references re-pointed to the current section numbering — the
   pre-2026-10-10 `potential_configs.md` `§13.x` / `§14.x` / `§8.6` citations no
   longer resolved.
-- `oto/harness/occupancy_audit.py` now imports `VGPR_PER_CU` from
+- `oto/harness/occupancy_bounds.py` now imports `VGPR_PER_CU` from
   `oto/tensile/gates/vgpr_model.py` instead of re-declaring it (Refactor-1
   acceptance criterion 6: no device-constant scatter).
 

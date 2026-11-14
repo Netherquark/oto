@@ -22,7 +22,7 @@ work to do *today*; it is the plan that the next implementation push follows.
 | Agent-1 (ceilings doc) | `oto/agents/theoretical_limits.py` | landed; used by `oto agent generate` |
 | Agent-2 (tuning context doc) | `oto/agents/tuning_context.py` | landed; gated on agent-1 output |
 | Harness tools (CPU census, gap analysis, candidate proposals, gate verification, harness study) | `oto/agents/harness_tools.py` | landed (`oto/library best-effort` uses the census path) |
-| Candidate enumeration | `oto/tensile/knob_sweep.py` + `oto/harness/_rows_core.py` | landed; emit and validate; GPU trial rows are scoped shapes |
+| Candidate enumeration | `oto/tensile/knob_sweep.py` + `oto/harness/rows_ladders.py` | landed; emit and validate; GPU trial rows are scoped shapes |
 | CPU gates | `oto/tensile/gates/assembly.py`, `ldspad_gate.py`, `occupancy.py`, `loads.py`, `vgpr_model.py` | landed; every gate is called at launch boundary and by the sweep tools |
 | Coverage census | `oto/harness/corpus_census.py` | landed |
 | Kernel database | `oto/harness/kernel_db.py` | landed; rebuilt from runs, carries per-row winners |

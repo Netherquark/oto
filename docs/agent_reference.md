@@ -62,8 +62,8 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/harness/failure_triage.py` | Empty-phase reason census: why a phase produced no measurement |
 | `oto/harness/resolve_cells.py` | Per-cell native+floor winner resolver + the `cfg_gap` tie class |
 | `oto/harness/coverage_map.py` | The legal geometry space per cell, what the corpus measured in it, and the unmeasured geometries ranked by their neighbours' score |
-| `oto/harness/tensile_oracle.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
-| `oto/harness/deck_check.py` | The pre-run sweep: every *unmeasured* deck row through Tensile's kernel writer, resumable, CPU-only |
+| `oto/harness/tensile_probe.py` | The legality oracle: Tensile's own verdict on a config, the LDS it allocated, and our gate's verdict beside it |
+| `oto/harness/deck_probe.py` | The pre-run sweep: every *unmeasured* deck row through Tensile's kernel writer, resumable, CPU-only |
 | `oto/harness/coverage_graph.py` | The coverage graphs: the legal geometry space per cell as a 2D picture, with the unexplored part hatched, the peaks ringed green and the traps ringed red |
 | `oto/metrics/report_figures.py` | The acceptance report's problem-space coverage section (the figures + their numbers) |
 | `oto/tensile/patterns.py` | The contraction-pattern vocabulary: one spelling, one meaning (the transpose flags and the TLU layout flags) |
@@ -143,7 +143,7 @@ measured** in every cell but ZZ, and the traps sit *inside* the measured strip
 -- the search keeps falling back on a configuration whose neighbours are
 3-8x faster.
 
-`python3 -m oto.harness.tensile_oracle --dtype Z --macro 64x64x8 --thread 2x2
+`python3 -m oto.harness.tensile_probe --dtype Z --macro 64x64x8 --thread 2x2
 --vw 1 --du 8` asks **Tensile itself** whether a config builds, what LDS it
 allocated and what our gate said -- the way to settle a legality question the
 CPU gates cannot answer (it is what found the load-divisibility bug: the gate

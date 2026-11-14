@@ -23,10 +23,10 @@ arm instead of the native winners.
 CPU only. Reads ``<codename>_results/analysis/kernel_db.json`` (typecode-corrected
 rebuild, the same provenance ``cell_knob_diff`` and the acceptance report cite).
 
-    python3 -m oto.harness.occupancy_audit                 # native winners
-    python3 -m oto.harness.occupancy_audit --side floor    # spoof-floor winners
-    python3 -m oto.harness.occupancy_audit --lds-factor 1  # single-buffered LDS
-    python3 -m oto.harness.occupancy_audit --at-most 3     # cells at <= N wg/CU
+    python3 -m oto.harness.occupancy_bounds                 # native winners
+    python3 -m oto.harness.occupancy_bounds --side floor    # spoof-floor winners
+    python3 -m oto.harness.occupancy_bounds --lds-factor 1  # single-buffered LDS
+    python3 -m oto.harness.occupancy_bounds --at-most 3     # cells at <= N wg/CU
 """
 
 

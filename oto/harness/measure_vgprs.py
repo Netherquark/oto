@@ -7,7 +7,7 @@ model's calibration headroom.
 
 Does NOT own: the model itself (oto.tensile.gates.vgpr_model), building the
 objects (the Tensile driver does that), or the audit that consumes the ratio
-(oto.harness.occupancy_audit).
+(oto.harness.occupancy_bounds).
 
 Public API: main.
 

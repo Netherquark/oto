@@ -5,7 +5,7 @@ Owns: the pre-run sweep that puts the deck through Tensile's own kernel writer
 and reports the rows it refuses.
 
 Does NOT own: the legality gates (oto.tensile.gates), the oracle's probe
-(oto.harness.tensile_oracle), the corpus (oto.harness.kernel_db) or the
+(oto.harness.tensile_probe), the corpus (oto.harness.kernel_db) or the
 registry (oto.ledger.registry).
 Public API: check, unmeasured_rows, measured_fingerprints, main.
 
@@ -19,9 +19,9 @@ The rows checked are the ones the corpus has NOT measured: everything already
 measured is known to build, and re-probing it would cost hours for no
 information.
 
-    python3 -m oto.harness.deck_check                    # every unmeasured row
-    python3 -m oto.harness.deck_check --family CC --limit 20
-    python3 -m oto.harness.deck_check --json out.json
+    python3 -m oto.harness.deck_probe                    # every unmeasured row
+    python3 -m oto.harness.deck_probe --family CC --limit 20
+    python3 -m oto.harness.deck_probe --json out.json
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.device import loader as _loader
-from oto.harness.tensile_oracle import probe_phase
+from oto.harness.tensile_probe import probe_phase
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
 

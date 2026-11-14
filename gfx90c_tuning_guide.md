@@ -83,7 +83,7 @@ separated them:
 
 Only an axis in class 1 that has been *measured* is closed. The rule for
 deciding which class an axis is in: ask Tensile
-(`python3 -m oto.harness.tensile_oracle`), not the census.
+(`python3 -m oto.harness.tensile_probe`), not the census.
 
 ### 1.1 Primary-source legal domains (Tensile's own `validParameters`)
 
@@ -388,7 +388,7 @@ false rejections to both populations.** Tests:
 > 2026-10-09: for the physical per-cell **resident-workgroup** audit (the
 > "occupancy ≤3 everywhere" question, incl. the VGPR-vs-LDS binder split and
 > the single-buffer probe), see `potential_configs.md` §5 +
-> `python3 -m oto.harness.occupancy_audit`. `occupancy_feasible` gates legality;
+> `python3 -m oto.harness.occupancy_bounds`. `occupancy_feasible` gates legality;
 > the audit answers residency.
 
 ## 7. Floor deck: gate-legality of the steal (todo 3 DONE)

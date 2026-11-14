@@ -375,7 +375,7 @@ orientation layer over it.
 | [`regression_matrix.py`](oto/harness/regression_matrix.py) | Deck-vs-floor-vs-all-time cell regression matrix (median basis, per-family shipped grid). |
 | [`resolve_cells.py`](oto/harness/resolve_cells.py) | Per-cell native-vs-floor winner resolution over the full knob surface. |
 | [`cell_knob_diff.py`](oto/harness/cell_knob_diff.py) | Per-cell winner knob-fingerprint diff (native vs floor). |
-| [`occupancy_audit.py`](oto/harness/occupancy_audit.py), [`measure_vgprs.py`](oto/harness/measure_vgprs.py) | Resident-workgroup audit per cell; measure real per-thread VGPRs from emitted code objects. |
+| [`occupancy_bounds.py`](oto/harness/occupancy_bounds.py), [`measure_vgprs.py`](oto/harness/measure_vgprs.py) | Resident-workgroup audit per cell; measure real per-thread VGPRs from emitted code objects. |
 | [`generate_candidates.py`](oto/harness/generate_candidates.py) | The candidate-generator CLI. |
 
 See [`docs/harness_runbook.md`](docs/harness_runbook.md) for the harness workflow,

@@ -3,9 +3,9 @@
 
 Owns: the public entry point to the candidate row data, re-exported from the
 three sibling modules so the historical import paths keep working:
-``_rows_core`` (ladders + the PLAN_BATCH literal + the pad encoder),
-``_rows_frontier`` (tie-adapt / frontier winner blocks) and
-``_rows_smallcells`` (small-cell evidence blocks). Import order is fixed and
+``rows_ladders`` (ladders + the PLAN_BATCH literal + the pad encoder),
+``rows_frontier`` (tie-adapt / frontier winner blocks) and
+``rows_smallcells`` (small-cell evidence blocks). Import order is fixed and
 load-bearing -- the sibling modules mutate ``PLAN_BATCH`` at import time.
 
 Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
@@ -15,8 +15,8 @@ the overlay read/write (``oto.harness.candidate_overlay``), or candidate
 
 from __future__ import annotations
 
-from oto.harness import _rows_smallcells as _rows_smallcells
-from oto.harness._rows_core import (
+from oto.harness import rows_smallcells as rows_smallcells
+from oto.harness.rows_ladders import (
                                      _NOT_FORWARDED_YET,
                                      AUTO_EXPLICIT,
                                      DU_VARIANTS,
@@ -29,7 +29,7 @@ from oto.harness._rows_core import (
                                      WGM_VARIANTS,
                                      _pad_rows,
 )
-from oto.harness._rows_frontier import _FRONTIER
+from oto.harness.rows_frontier import _FRONTIER
 
 __all__ = [
                                      "AUTO_EXPLICIT",
@@ -44,5 +44,5 @@ __all__ = [
                                      "_FRONTIER",
                                      "_NOT_FORWARDED_YET",
                                      "_pad_rows",
-                                     "_rows_smallcells",
+                                     "rows_smallcells",
 ]

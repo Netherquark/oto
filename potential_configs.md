@@ -2157,7 +2157,7 @@ sequence in the harness, F needs a kernel-writer change. They are recorded in
 All numbers in §1–§8 are reproduced by repo tooling, which is the citation:
 `allruns.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
 measured occupancy + GFLOP/s join), `oto.harness.resolve_cells` (per-cell
-winners), `oto.harness.occupancy_audit` (predicted residency), `validate_config`
+winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
 `run_20261013_214649`.
 Architecture/ridge facts: `knowledge_base.md`, `gfx90c_theoretical_limits.md`.
@@ -3255,8 +3255,8 @@ verdict.
 
 Preflight on the committed rows: `generate_candidates --dry-run` → pool 1141,
 52 would-append; `oto check candidates` → **284 checked (phases.yaml) + 1146
-checked (overlay), 0 illegal**; real-Tensile deck_check probe → **52/52
-built, 0 refusals** (`gfx90c_results/analysis/deck_check_r50.log`; includes
+checked (overlay), 0 illegal**; real-Tensile deck_probe probe → **52/52
+built, 0 refusals** (`gfx90c_results/analysis/deck_probe_r50.log`; includes
 the HPA VW8 tile). The unmeasured deck is exactly those 52 rows — everything
 older was measured by run_20261022.
 
