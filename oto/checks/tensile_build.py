@@ -20,7 +20,7 @@ accVGPR counts -- the measurement that would retire the calibrated model.
 
 No benchmark is ever run: ``BenchmarkProblems`` / ``BenchmarkStructs`` (the part
 that launches GEMMs on the device) is never invoked. The ROCm tools touched are
-the path-locating helpers real runs use (``hipconfig``,
+the path-locating helpers real runs use (``ROCM_PATH``-pinned tools,
 ``rocm_agent_enumerator``), which only print config.
 
     python3 -m oto check tensile-build             # all phases

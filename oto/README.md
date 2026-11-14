@@ -16,10 +16,10 @@ counts are never quoted here -- they go wrong the day a file moves.
 ## oto/device/ — hardware facts
 
 * ``device/detect.py`` — Device auto-detection: resolve the GPU codename from the system.
-* ``device/loader.py`` — Device profile loader.
-* ``device/profile.py`` — Device profile: the single source of truth for device facts.
+* ``device/loader.py`` — Device profile loader — the frozen, in-memory view of one GPU.
+* ``device/profile.py`` — Device profile: the frozen, in-memory view of one GPU.
 * ``device/tensile_isa.py`` — Tensile ``CurrentISA`` version triples for the gfx9 family.
-* ``device/vocabulary.py`` — The cell/kernel vocabulary and the coverage-grid derivation.
+* ``device/vocabulary.py`` — Coverage-grid vocabulary: cell identity and kernel-name parsing.
 
 ## oto/tensile/ — the Tensile-facing candidate pipeline
 

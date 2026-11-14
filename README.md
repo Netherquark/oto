@@ -474,20 +474,22 @@ re-triaged).
 ## 8. Configuration (`.env`)
 
 Machine-specific locations are read from a `.env` file in the repo root via
-`python-dotenv` (`load_dotenv` — precedence: live shell env → `.env`). ROCm
-toolchain locations are discovered by native tools only — `hipconfig` for the
-install root / HIP paths and `shutil.which` for binaries on `PATH` (this handles
-both the AMD-installer `/opt/rocm` and the Fedora/RHEL RPM `/usr` +
-`/usr/lib64/rocm` layouts without any hand-rolled candidate chains). Explicit
-overrides below win when they point at an existing path; stale values fall back
-to native discovery.
+`python-dotenv` (`load_dotenv` — precedence: live shell env → `.env`). The ROCm
+toolchain is resolved from the **user-provided `ROCM_PATH` only** — like
+`TENSILE_ROOT`, it is required and has no fallback; the driver never guesses a
+toolchain. `ROCM_BIN` and `ROCM_LLVM_BIN` are derived from `ROCM_PATH` by a
+layout-aware probe (`lib/llvm/bin` for TheRock tarballs and system ROCm, the
+`_rocm_sdk_core/lib/llvm/bin` wheel layout for TheRock python-sdk venvs,
+`lib64/rocm/llvm/bin` for some RPM layouts), and the assembler prefers the
+SDK's `amdclang++`. Explicit overrides below win when they point at an
+existing path.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `TENSILE_ROOT` | required (set in `.env`) | The Tensile checkout root; the driver shells out to `Tensile/bin/Tensile` here. The driver errors out at runtime if unset — there is **no built-in fallback path**. |
 
-Optional overrides (native discovery otherwise): `ROCM_PATH`, `ROCM_BIN`,
-`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `TENSILE_ASSEMBLER_FALLBACK`.
+Required: `TENSILE_ROOT`, `ROCM_PATH`. Optional overrides: `ROCM_BIN`,
+`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `ROCM_VERSION`, `HIP_PATH`.
 
 See the module docstring of [`oto/runners/toolchain.py`](oto/runners/toolchain.py)
 for the resolution order.

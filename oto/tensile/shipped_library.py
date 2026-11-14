@@ -38,7 +38,13 @@ CONTRACTION_PATTERNS = ["Ailk_Bjlk", "Ailk_Bljk", "Alik_Bjlk", "Alik_Bljk"]
 
 
 def _resolve_rocm() -> str:
-    """Resolve the active ROCm prefix (env -> hipconfig -> /opt/rocm)."""
+    """Resolve the ROCm prefix for the rocBLAS ``.dat`` search (env first).
+
+    The GPU compile machinery is ROCM_PATH-mandatory (oto.runners.toolchain);
+    this helper is only about locating pre-shipped library artifacts, so the
+    hipconfig/PATH probe stays as a best-effort fallback for distros that
+    install rocBLAS outside ROCM_PATH.
+    """
     prefix = os.environ.get("ROCM_PATH", "").strip()
     if prefix and Path(prefix).is_dir():
         return prefix

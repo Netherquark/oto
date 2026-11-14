@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Unit tests for the ROCm toolchain resolver (oto.runners.toolchain).
+
+The contract: ROCM_PATH is mandatory and user-provided, no fallback to
+/usr or hipconfig; bin/llvm/amdclang++ derive from it; explicit env wins.
+"""
+import pytest
+
+from oto.runners import toolchain
+
+
+def _sdk_tree(tmp_path):
+    prefix = tmp_path / "sdk"
+    (prefix / "bin").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "bin").mkdir(parents=True)
+    (prefix / "bin" / "amdclang++").write_text("# archclang shim\n")
+    (prefix / "lib" / "llvm" / "bin" / "amdclang++").write_text("# sdk amdclang++\n")
+    (prefix / "bin" / "hipcc").write_text("# hipcc shim\n")
+    return prefix
+
+
+def test_missing_rocm_path_raises_with_guidance(monkeypatch):
+    monkeypatch.delenv("ROCM_PATH", raising=False)
+    with pytest.raises(ValueError, match="ROCM_PATH is not set"):
+        toolchain.require_rocm_path()
+
+
+def test_bad_rocm_path_raises(monkeypatch, tmp_path):
+    missing = tmp_path / "nope"
+    monkeypatch.setenv("ROCM_PATH", str(missing))
+    with pytest.raises(ValueError, match="not a directory"):
+        toolchain.require_rocm_path()
+
+
+def test_resolution_derives_bin_llvm_assembler(monkeypatch, tmp_path):
+    prefix = _sdk_tree(tmp_path)
+    monkeypatch.delenv("ROCM_BIN", raising=False)
+    monkeypatch.delenv("ROCM_LLVM_BIN", raising=False)
+    monkeypatch.delenv("TENSILE_ASSEMBLER", raising=False)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["ROCM_PATH"] == str(prefix.resolve())
+    assert paths["ROCM_BIN"] == str(prefix / "bin")
+    assert paths["ROCM_LLVM_BIN"] == str(prefix / "lib" / "llvm" / "bin")
+    assert paths["TENSILE_ASSEMBLER"].endswith("llvm/bin/amdclang++")
+
+
+def test_wheel_layout_detects_site_packages_llvm(monkeypatch, tmp_path):
+    prefix = tmp_path / "venv"
+    (prefix / "bin").mkdir(parents=True)
+    sdk = prefix / "lib" / "python3.14" / "site-packages" / "_rocm_sdk_core"
+    (sdk / "bin").mkdir(parents=True)
+    (sdk / "lib" / "llvm" / "bin").mkdir(parents=True)
+    (sdk / "lib" / "llvm" / "bin" / "amdclang++").write_text("# sdk amdclang++\n")
+    monkeypatch.delenv("ROCM_LLVM_BIN", raising=False)
+    monkeypatch.delenv("ROCM_BIN", raising=False)
+    monkeypatch.delenv("TENSILE_ASSEMBLER", raising=False)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    paths = toolchain.resolve_rocm_paths()
+    assert "site-packages" in paths["ROCM_LLVM_BIN"]
+    assert paths["ROCM_LLVM_BIN"].endswith("_rocm_sdk_core/lib/llvm/bin")
+
+
+def test_explicit_env_wins_over_derivation(monkeypatch, tmp_path):
+    prefix = _sdk_tree(tmp_path)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    monkeypatch.setenv("ROCM_BIN", str(prefix / "bin"))
+    monkeypatch.setenv("ROCM_LLVM_BIN", str(prefix / "lib" / "llvm" / "bin"))
+    monkeypatch.setenv("TENSILE_ASSEMBLER", "/custom/amdclang++")
+    (prefix / "custom").mkdir()
+    (prefix / "custom" / "amdclang++").write_text("# custom\n")
+    monkeypatch.setenv("TENSILE_ASSEMBLER", str(prefix / "custom" / "amdclang++"))
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["TENSILE_ASSEMBLER"].endswith("custom/amdclang++")
+
+
+def test_no_system_fallback_anywhere(monkeypatch, tmp_path):
+    """A resolver with no ROCM_PATH can never answer /usr or /opt/rocm."""
+    _sdk_tree(tmp_path)
+    monkeypatch.delenv("ROCM_PATH", raising=False)
+    with pytest.raises(ValueError):
+        toolchain.resolve_rocm_paths()
+
+
+def test_rocversion_passes_through_when_set(monkeypatch, tmp_path):
+    prefix = _sdk_tree(tmp_path)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    monkeypatch.setenv("ROCM_VERSION", "7.15.0a20260728")
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["ROCM_VERSION"] == "7.15.0a20260728"

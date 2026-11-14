@@ -278,10 +278,15 @@ class TensileDriver(
         current_pp = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = f"{tensile_pkg}:{current_pp}".strip(":")
 
-        # Export exact ROCm toolchain variables
+        # Export the ROCm toolchain pinned by .env: ROCM_PATH (and ROCM_BIN /
+        # ROCM_LLVM_BIN / ROCM_VERSION) with the nightly dirs prepended to
+        # PATH, so subprocesses never silently pick up /usr's hipcc.
         rocm = resolve_rocm_paths()
         env["ROCM_PATH"] = rocm["ROCM_PATH"]
         env["HIP_PATH"] = rocm["HIP_PATH"]
+        for key in ("ROCM_BIN", "ROCM_LLVM_BIN", "ROCM_VERSION"):
+            if rocm.get(key):
+                env[key] = rocm[key]
 
         current_path = env.get("PATH", "")
         paths_to_add = [p for p in [rocm["ROCM_LLVM_BIN"], rocm["ROCM_BIN"]]

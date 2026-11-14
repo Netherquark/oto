@@ -2,14 +2,18 @@
 """Toolchain discovery: the Tensile checkout and the ROCm toolchain.
 
 Owns: resolving the Tensile root (explicit flag -> live env -> repo `.env`, with
-no fallback) and resolving every ROCm path from native discovery only (explicit env
-value that exists, then `hipconfig`, then `shutil.which`). No hardcoded candidate
-chains. Also owns reading the repo-root `.env` via `python-dotenv`, so no other
-module hand-parses it.
+no fallback) and resolving the ROCm toolchain from the user-provided `ROCM_PATH`
+(explicit flag/env/.env only, no fallback -- the same contract as TENSILE_ROOT):
+``ROCM_BIN`` and ``ROCM_LLVM_BIN`` derive from it when not set, the assembler is
+preferred as the SDK's ``amdclang++`` (system ROCm: ``lib/llvm/bin``; TheRock
+python-sdk: ``lib/python*/site-packages/_rocm_sdk_core/lib/llvm/bin``; TheRock
+tarball: ``llvm/bin``). ``hipconfig`` is kept for compatibility but is no longer
+consulted by the resolver. Also owns reading the repo-root `.env` via
+`python-dotenv`, so no other module hand-parses it.
 Does NOT own: the driver that uses these paths (oto.runners.driver) or the
 Tensile subprocess environment (also oto.runners.driver).
 Public API: REPO_ROOT, DOTENV_PATH, DEFAULT_TENSILE_ROOT, require_tensile_root,
-hipconfig, resolve_rocm_paths.
+require_rocm_path, hipconfig, resolve_rocm_paths.
 """
 
 from __future__ import annotations
@@ -88,8 +92,9 @@ def require_tensile_root(explicit: Path | None,
 def hipconfig() -> dict[str, str]:
     """Query the native ROCm discovery tool (`hipconfig`) for install paths.
 
-    `hipconfig` is the ROCm-shipped authority for toolchain locations
-    (ROCM_PATH, HIP_PATH, HIP_CLANG_PATH). Returns parsed KEY: value pairs.
+    Kept for compatibility. The resolver no longer consults it (the tooling
+    must not silently fall through to `/usr`/`hipconfig` when the user set
+    `ROCM_PATH`); use it only as an optional cross-check.
     """
     hipconfig = shutil.which("hipconfig")
     if not hipconfig:
@@ -106,44 +111,99 @@ def hipconfig() -> dict[str, str]:
     return info
 
 
-def resolve_rocm_paths() -> dict[str, str]:
-    """Resolve the ROCm toolchain using native discovery only.
+def require_rocm_path() -> Path:
+    """Resolve the user-provided ROCm root: explicit `ROCM_PATH`, or fail loudly.
 
-    Order per key: explicit env value (shell or .env) that exists, then native
-    discovery (`hipconfig` for roots, `shutil.which` for binaries on PATH).
-    No hand-rolled candidate chains.
+    Order: the live process environment first (a caller that exported a value
+    meant it), then the repo-root `.env`. There is deliberately no fallback:
+    a driver that guesses a ROCm shells hipcc at whatever `/usr` carries and
+    produces a corpus that measures the wrong toolchain.
     """
-    hc = hipconfig()
-
     prefix = os.environ.get("ROCM_PATH", "").strip()
-    if not prefix or not os.path.isdir(prefix):
-        prefix = hc.get("ROCM_PATH", "")
+    if not prefix:
+        raise ValueError(
+            "ROCM_PATH is not set. Point it at your ROCm install in the "
+            "repo-root `.env` (e.g. ROCM_PATH=/opt/rocm or "
+            ".../rocm-nightly-venv/lib/python3.14/site-packages/"
+            "_rocm_sdk_core), export it, or pass it inline. There is no "
+            "fallback."
+        )
+    cand = Path(prefix).resolve()
+    if not cand.is_dir():
+        raise ValueError(f"ROCM_PATH {prefix!r} (from env/.env) is not a directory.")
+    return cand
 
-    bin_dir = os.environ.get("ROCM_BIN", "").strip()
-    if not bin_dir or not os.path.isdir(bin_dir):
-        cand = str(Path(prefix) / "bin") if prefix else ""
-        hipcc = shutil.which("hipcc")
-        bin_dir = cand if os.path.isdir(cand) else (os.path.dirname(hipcc) if hipcc else "")
 
-    llvm_bin = os.environ.get("ROCM_LLVM_BIN", "").strip()
-    if not llvm_bin or not os.path.isdir(llvm_bin):
-        cand = hc.get("HIP_CLANG_PATH", "") or (str(Path(prefix) / "llvm" / "bin") if prefix else "")
-        llvm_bin = cand if os.path.isdir(cand) else ""
+def _wheel_layout_llvms(prefix: Path) -> list[Path]:
+    """`lib/llvm/bin` inside a python-sdk install: `_rocm_sdk_core/lib/llvm/bin`."""
+    bins: list[Path] = []
+    direct = prefix / "lib" / "llvm" / "bin"
+    if direct.is_dir():
+        bins.append(direct)
+    bins.extend(sdk for sdk in prefix.glob(
+        "lib/python*/site-packages/_rocm_sdk_core/lib/llvm/bin") if sdk.is_dir())
+    return bins
 
-    assembler = os.environ.get("TENSILE_ASSEMBLER", "").strip()
-    if not assembler or not os.path.isfile(assembler):
-        cand = str(Path(llvm_bin) / "clang++") if llvm_bin else ""
-        assembler = cand if os.path.isfile(cand) else (shutil.which("clang++") or "")
 
-    fallback = os.environ.get("TENSILE_ASSEMBLER_FALLBACK", "").strip()
-    if not fallback or not os.path.isfile(fallback):
-        fallback = shutil.which("clang++") or ""
+def _llvm_bin(prefix: Path) -> str:
+    """Derive ROCM_LLVM_BIN: explicit env, else the layout-aware probe order."""
+    explicit = os.environ.get("ROCM_LLVM_BIN", "").strip()
+    if explicit and Path(explicit).is_dir():
+        return explicit
+    for cand in (prefix / "lib" / "llvm" / "bin",
+                 prefix / "llvm" / "bin",
+                 prefix / "lib64" / "rocm" / "llvm" / "bin",
+                 *_wheel_layout_llvms(prefix)):
+        if cand.is_dir():
+            return str(cand)
+    return ""
 
-    return {
-        "ROCM_PATH": prefix,
-        "HIP_PATH": hc.get("HIP_PATH", prefix),
+
+def _assembler(prefix: Path, llvm_bin: str) -> str:
+    """Prefer the SDK's `amdclang++` (Tensile's native default), else `clang++`."""
+    explicit = os.environ.get("TENSILE_ASSEMBLER", "").strip()
+    if explicit and Path(explicit).is_file():
+        return explicit
+    candidates = []
+    if llvm_bin:
+        candidates += [Path(llvm_bin) / "amdclang++", Path(llvm_bin) / "clang++"]
+    candidates += [prefix / "bin" / "amdclang++", prefix / "bin" / "clang++"]
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+    raise ValueError(
+        f"No usable assembler under ROCM_PATH {prefix} or ROCM_LLVM_BIN "
+        f"{llvm_bin!r} (looked for amdclang++ then clang++). Set "
+        "TENSILE_ASSEMBLER in the repo-root `.env` or export it."
+    )
+
+
+def resolve_rocm_paths() -> dict[str, str]:
+    """Resolve the ROCm toolchain from the user-provided `ROCM_PATH` only.
+
+    Disposition per key: explicit env value wins; otherwise derived from
+    `ROCM_PATH` (see `require_rocm_path` / `_llvm_bin` / `_assembler`). No
+    `hipconfig` fallback, no `/usr` escape hatch -- a user who needs a
+    different toolchain points `ROCM_PATH` at it.
+    """
+    prefix = require_rocm_path()
+    bin_dir = os.environ.get("ROCM_BIN", "").strip() or str(prefix / "bin")
+    if not os.path.isdir(bin_dir):
+        raise ValueError(
+            f"ROCM_BIN {bin_dir!r} (from env/.env or derived from "
+            f"ROCM_PATH={prefix}) is not a directory."
+        )
+    llvm_bin = _llvm_bin(prefix)
+    assembler = _assembler(prefix, llvm_bin)
+    paths = {
+        "ROCM_PATH": str(prefix),
+        "HIP_PATH": os.environ.get("HIP_PATH", str(prefix)).strip() or str(prefix),
         "ROCM_BIN": bin_dir,
         "ROCM_LLVM_BIN": llvm_bin,
         "TENSILE_ASSEMBLER": assembler,
-        "TENSILE_ASSEMBLER_FALLBACK": fallback,
+        "TENSILE_ASSEMBLER_FALLBACK": assembler,
     }
+    version = os.environ.get("ROCM_VERSION", "").strip()
+    if version:
+        paths["ROCM_VERSION"] = version
+    return paths

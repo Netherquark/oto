@@ -373,7 +373,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
 - **No re-inventing known-solved problems.** If the OS, the Python stdlib, or an
   existing industry-standard library already solves it, use that. Never hand-roll
   a substitute for a standard solution: `.env` → `python-dotenv`
-  (`load_dotenv`), toolchain/bin discovery → `hipconfig` + `shutil.which`,
+  (`load_dotenv`), toolchain → mandatory `ROCM_PATH` (no fallback; layout-aware derivation of `ROCM_BIN`/`ROCM_LLVM_BIN`, `amdclang++` preferred),
   locking/persistence → stdlib `sqlite3`/`json`, CLI → `argparse`. Do the same for any other standard problem-solution set you come across.
 - **Tensile tree is one path** (location from the repo-root `.env` key
   `TENSILE_ROOT`, e.g. `${TENSILE_ROOT:-<checkout>}`). Driver shells out to
