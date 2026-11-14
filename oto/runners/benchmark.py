@@ -43,6 +43,22 @@ def _refuse_reuse_of(phase_out_dir: Path) -> None:
             f"them. Move the directory aside or use a fresh run id.")
 
 
+def _tensile_client(tensile_root: Path) -> Path | None:
+    """Locate the Tensile client binary, or return None with a hint.
+
+    Tensile v4.50.0 dropped ``--client-build-path``; it now resolves the
+    client from ``./build/client/tensile-client`` relative to its CWD
+    (here, the Tensile checkout) or from ``--prebuilt-client``. Override
+    with the ``OTO_TENSILE_CLIENT`` environment variable.
+    """
+    env = os.environ.get("OTO_TENSILE_CLIENT", "").strip()
+    if env:
+        cand = Path(env).resolve()
+        return cand if cand.is_file() else None
+    default = tensile_root / "build" / "client" / "tensile-client"
+    return default if default.is_file() else None
+
+
 def _tensile_command(
     driver,
     tensile_bin: Path,
@@ -55,18 +71,26 @@ def _tensile_command(
     if not os.path.isfile(assembler):
         assembler = rocm["TENSILE_ASSEMBLER_FALLBACK"]
 
+    codename = getattr(getattr(driver, "profile", None), "codename",
+                       _loader.current_profile().codename)
+    client = _tensile_client(driver.tensile_root)
+    if client is None:
+        client = driver.tensile_root / "build" / "client" / "tensile-client"
+
     cmd = [
         sys.executable,
         str(tensile_bin),
-        "--arch", getattr(getattr(driver, "profile", None), "codename", _loader.current_profile().codename),
+        "--arch", codename,
         "--cxx-compiler", "hipcc",
         "--c-compiler", "hipcc",
     ]
     if os.path.isfile(assembler):
         cmd += ["--assembler", assembler]
     cmd += [
-        "--client-build-path", str(driver.client_build_dir),
-        "--client-lock", str(driver.client_build_dir / "client.lock"),
+        "--prebuilt-client", str(client),
+        "--client-lock", str(driver.client_build_dir / "client.lock")
+        if driver.client_build_dir else
+        str(driver.tensile_root / "build" / "client" / "client.lock"),
         "-d", "0",
         str(config_path),
         str(phase_out_dir)
