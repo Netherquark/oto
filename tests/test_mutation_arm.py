@@ -28,7 +28,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.ledger.agent import ConvergenceAgent
+from oto.ledger.convergence_agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine

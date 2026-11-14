@@ -4,7 +4,7 @@
 Owns: ``ConvergenceAgent`` -- the composition root over the three mixins it
 combines: harvest (``oto.ledger.harvest.HarvestMixin``), coverage evidence
 (``oto.ledger.agent_coverage.CoverageMixin``) and the mutation loop
-(``oto.ledger.agent_mutate.MutateMixin``); the convergence verdict and the
+(``oto.ledger.agent_mutation.MutateMixin``); the convergence verdict and the
 band it grades against, plus the mutation-arm gate that decides whether
 novelty is verifiable.
 Does NOT own: the ledger-backed mutation (oto.ledger.mutator), the gates that
@@ -20,7 +20,7 @@ from typing import Any
 
 from oto.device.kernel_vocabulary import cell_key
 from oto.ledger.agent_coverage import CoverageMixin
-from oto.ledger.agent_mutate import MutateMixin
+from oto.ledger.agent_mutation import MutateMixin
 from oto.ledger.harvest import HarvestMixin
 from oto.metrics import coverage
 from oto.metrics.analytics import AnalyticsEngine, CellAnalytics

@@ -66,7 +66,7 @@ def __getattr__(name):
 
         return Mutator
     if name == "ConvergenceAgent":
-        from .ledger.agent import ConvergenceAgent
+        from .ledger.convergence_agent import ConvergenceAgent
 
         return ConvergenceAgent
     if name == "SQLiteRegistry":

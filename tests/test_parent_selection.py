@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from oto.ledger.agent import ConvergenceAgent
+from oto.ledger.convergence_agent import ConvergenceAgent
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine
 

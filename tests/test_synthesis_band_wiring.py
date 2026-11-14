@@ -58,7 +58,7 @@ class BandResolutionTests(unittest.TestCase):
     """
 
     def _agent(self, **kw):
-        import oto.ledger.agent as agent
+        import oto.ledger.convergence_agent as agent
         return agent.ConvergenceAgent(
             Path(kw.pop("base", REPO)), scheduler=None, analytics=None, **kw)
 
@@ -195,7 +195,7 @@ class AgentWiringTests(unittest.TestCase):
         self.mutator = Mutator(self.registry, self.tmp, self.analytics)
 
     def _agent(self):
-        import oto.ledger.agent as agent
+        import oto.ledger.convergence_agent as agent
         return agent.ConvergenceAgent(
             self.tmp, StubGenerator([]), self.analytics, mutator=self.mutator,
             band_pct=18.29)
@@ -336,7 +336,7 @@ class AgentWiringTests(unittest.TestCase):
     def test_an_unmeasurable_band_still_emits(self):
         # No band means no guidance, not a failure and not a guess: the sampler
         # is told None and excludes nothing.
-        import oto.ledger.agent as agent_mod
+        import oto.ledger.convergence_agent as agent_mod
         real = coverage.measured_band_pct
 
         def boom(base_dir):
@@ -356,7 +356,7 @@ class AgentWiringTests(unittest.TestCase):
 
     def test_the_band_is_resolved_lazily_and_passed(self):
         # Not supplied at construction, yet the sampler still receives it.
-        import oto.ledger.agent as agent_mod
+        import oto.ledger.convergence_agent as agent_mod
         a = agent_mod.ConvergenceAgent(
             self.tmp, StubGenerator([]), self.analytics, mutator=self.mutator)
         with mock.patch.object(Mutator, "sample_cell_synthesized",

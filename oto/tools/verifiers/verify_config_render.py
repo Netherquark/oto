@@ -147,7 +147,7 @@ def load_legacy(base: str):
                      ("scheduler", "oto.tensile.candidate"),
                      ("analytics", "oto.metrics.analytics"),
                      ("policy", "oto.metrics.cell_policy"),
-                     ("agent", "oto.ledger.agent"),
+                     ("agent", "oto.ledger.convergence_agent"),
                      ("mutator", "oto.ledger.mutator"),
                      ("report", "oto.metrics.report"),
                      ("telemetry", "oto.metrics.telemetry"),

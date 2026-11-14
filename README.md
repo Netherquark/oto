@@ -98,7 +98,7 @@ the flowchart and again in the [stage table](#stage--owning-package) below.
                        │
                        ▼
 ┌──────────────────────────────────────────────┐
-│ CONVERGENCE LOOP (oto/ledger/agent.py)       │
+│ CONVERGENCE LOOP (oto/ledger/convergence_agent.py)       │
 │ - Gate: >=3 configs, >=2 runs, >=6 seeds,    │
 │   CV<=15%, 0 RED cells                       │
 │ - If unconverged: harvest -> mutate <=2      │
@@ -127,7 +127,7 @@ the flowchart and again in the [stage table](#stage--owning-package) below.
 | Benchmark execution | Tensile subprocess, setsid, telemetry | [`oto/runners/benchmark.py`](oto/runners/benchmark.py) |
 | Adaptive repeat & policy | median-of-seeds, CV gate, retirement | [`oto/metrics/policy.py`](oto/metrics/policy.py) |
 | Analytics & ledger | aggregation, SQLite persistence | [`oto/metrics/analytics.py`](oto/metrics/analytics.py), [`oto/ledger/`](oto/ledger/) |
-| Convergence loop | harvest → mutate → decide | [`oto/ledger/agent.py`](oto/ledger/agent.py) |
+| Convergence loop | harvest → mutate → decide | [`oto/ledger/convergence_agent.py`](oto/ledger/convergence_agent.py) |
 | Synthesis / build | per-family logic + `TensileCreateLibrary` | [`oto/runners/library_build.py`](oto/runners/library_build.py) |
 | Acceptance A/B & report | native-vs-floor verdicts + dashboard | [`oto/metrics/ab_audit.py`](oto/metrics/ab_audit.py), [`oto/metrics/report.py`](oto/metrics/report.py) |
 
@@ -335,7 +335,7 @@ orientation layer over it.
 |---|---|
 | [`registry.py`](oto/ledger/registry.py) | Append-only SQLite ledger (`gfx90c_results/registry.db`, WAL mode): records, runs, phases, Option-H proposals. |
 | [`registry_core.py`](oto/ledger/registry_core.py) | The ledger engine: connection, schema, transactions, run writes. |
-| [`agent.py`](oto/ledger/agent.py) | The deterministic convergence agent: harvest cell winners, generate mutations, check the 4-condition convergence gate. |
+| [`agent.py`](oto/ledger/convergence_agent.py) | The deterministic convergence agent: harvest cell winners, generate mutations, check the 4-condition convergence gate. |
 | [`harvest.py`](oto/ledger/harvest.py) | Parent selection: which candidate a cell's next mutation starts from. |
 | [`mutator.py`](oto/ledger/mutator.py) | The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay. |
 | [`proposals.py`](oto/ledger/proposals.py) | The Option-H proposal ledger: emitted candidates and their measured outcomes. |

@@ -50,7 +50,7 @@ MOVES = [
     ("registry.py", ["oto/ledger/registry.py", "oto/ledger/registry_core.py",
                      "oto/ledger/queries.py", "oto/ledger/proposals.py"]),
     ("mutator.py", ["oto/ledger/mutator.py", "oto/ledger/mutator_outcomes.py"]),
-    ("agent.py", ["oto/ledger/agent.py", "oto/ledger/harvest.py",
+    ("agent.py", ["oto/ledger/convergence_agent.py", "oto/ledger/harvest.py",
                   "oto/ledger/agent_coverage.py"]),
     ("analytics.py", ["oto/metrics/analytics.py",
                       "oto/metrics/family_attribution.py",
@@ -465,6 +465,7 @@ RENAMES: dict[str, str] = {
     "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py",
     "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
     "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py", "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py",
+    "oto/ledger/agent.py": "oto/ledger/convergence_agent.py", "oto/ledger/agent_mutate.py": "oto/ledger/agent_mutation.py",
     "oto/inventory.py": "oto/readme_gen.py",
     "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py",
 }

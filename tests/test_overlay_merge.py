@@ -151,7 +151,7 @@ class ProposalRunIdTests(Harness):
         assert row["run_id"] == "run_7"
 
     def test_agent_run_id_is_stamped_on_emission(self):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         agent.run_id = "run_99"

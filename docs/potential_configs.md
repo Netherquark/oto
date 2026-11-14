@@ -166,7 +166,7 @@ The mechanism is one line. `_mutate_cell` returned early when
 floor are exactly the cells the arm refuses to touch, and the budget recirculates
 into the small cells forever.
 
-**Fixed** in `oto/ledger/agent.py` + `oto/metrics/ab_delta.py` (`c2ab21f`).
+**Fixed** in `oto/ledger/convergence_agent.py` + `oto/metrics/ab_delta.py` (`c2ab21f`).
 `ABDeltaMixin.cells_not_beating_floor` reduces the A/B pairing to the set of
 cells whose winner has not beaten the recalled floor (`agg="winner"`, so both
 arms are graded on their best per-kernel median); `ConvergenceAgent._floor_losers`

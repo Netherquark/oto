@@ -13,7 +13,7 @@ from oto.runners.driver import TensileDriver
 
 class SkipBypassTests(Harness):
     def _driver(self, run_id="run_skip"):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry
@@ -30,19 +30,19 @@ class SkipBypassTests(Harness):
         return driver
 
     def test_bypass_is_off_without_a_ledger(self):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=None)
         assert agent.skip_mutation_arm()
 
     def test_bypass_is_on_with_ledger_and_outcomes(self):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         assert not agent.skip_mutation_arm()
 
     def test_bypass_is_off_when_outcomes_cannot_be_written(self):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         agent = ConvergenceAgent(self.tmp, _StubScheduler(), self.analytics,
                                  mutator=self.mutator)
         agent.has_outcome_signal = False
@@ -196,7 +196,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
     """
 
     def _driver(self, run_id="run_loop"):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry

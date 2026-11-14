@@ -516,7 +516,7 @@ they pin the plan's own claims rather than the design's:
   RED = below both.
 
 ### Step 4 — Deterministic agent loop (`--auto`)
-- `oto/ledger/agent.py` harvests per-cell winners (median-of-seeds, ruler-adjusted) → for RED or
+- `oto/ledger/convergence_agent.py` harvests per-cell winners (median-of-seeds, ruler-adjusted) → for RED or
   non-converged cells, `candidates.spawn_neighbours(winner, ≤2 knobs,
   occupancy-aware)` → append rows to `phases.yaml` → re-run the subset. Budget:
   configurable wall-time/GPU-minutes + finite per-phase timeout default.

@@ -24,7 +24,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from oto.device.kernel_vocabulary import cell_key, kernel_key
-from oto.ledger.agent import ConvergenceAgent
+from oto.ledger.convergence_agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine

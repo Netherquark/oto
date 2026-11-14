@@ -117,7 +117,7 @@ class GpuLossAbortTests(Harness):
     """
 
     def _driver(self, run_id="run_gpu_loss"):
-        from oto.ledger.agent import ConvergenceAgent
+        from oto.ledger.convergence_agent import ConvergenceAgent
         driver = TensileDriver.__new__(TensileDriver)
         driver.base_dir = self.tmp
         driver.registry = self.registry

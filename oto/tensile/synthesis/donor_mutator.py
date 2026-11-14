@@ -24,7 +24,7 @@ history -- novelty is guaranteed by the ledger, not by pass/fail history:
     (structural knobs only; knobs the parent already matches are left alone).
 Budget: 5 forward draws per iteration; each mutant is gated through
 `validate_config` + `ldspad_feasible` before ledger emission. The campaign's
-convergence test lives in oto.ledger.agent.
+convergence test lives in oto.ledger.convergence_agent.
 
 The value sets are NOT restated here. A knob's per-family draw set is
 ``db_knobs.forward_domain``; the *jointly* legal subset of it -- GLVW against

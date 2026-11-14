@@ -5,8 +5,8 @@ Owns: ``harvest`` (one parent per cell, by lower confidence bound rather than by
 raw winner), ``_cell_samples`` (recover a cell's seeds when the CSV did not carry
 them) and ``_reconstruct_config`` (rebuild the Tensile config a parent was
 measured with).
-Does NOT own: the convergence verdict (oto.ledger.agent), the coverage evidence
-that guides synthesis (oto.ledger.agent), or the mutation itself
+Does NOT own: the convergence verdict (oto.ledger.convergence_agent), the coverage evidence
+that guides synthesis (oto.ledger.convergence_agent), or the mutation itself
 (oto.ledger.mutator).
 Public API: HarvestMixin.
 """

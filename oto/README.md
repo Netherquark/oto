@@ -60,9 +60,9 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/ledger/ — durable state + the mutation/convergence state machine
 
-* ``ledger/agent.py`` — The convergence loop: harvest, mutate, decide, repeat.
 * ``ledger/agent_coverage.py`` — Coverage guidance: what the ledger says about a cell, read once.
-* ``ledger/agent_mutate.py`` — The mutation arm of the convergence loop.
+* ``ledger/agent_mutation.py`` — The mutation arm of the convergence loop.
+* ``ledger/convergence_agent.py`` — The convergence loop: harvest, mutate, decide, repeat.
 * ``ledger/harvest.py`` — Parent selection: which candidate a cell's next mutation starts from.
 * ``ledger/mutator.py`` — The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay.
 * ``ledger/mutator_outcomes.py`` — Candidate classification: what a measured candidate turned out to be.

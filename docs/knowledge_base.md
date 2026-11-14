@@ -99,7 +99,7 @@ This project's driver source (outside that tree, still **calls into** it):
 
 - `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
   `docs/implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
-  `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/agent.py`,
+  `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/convergence_agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
   reference-floor chain).
 - `oto/device/loader.py` — device profile loader + canonical accessors (profile tables via `current_profile()`)
