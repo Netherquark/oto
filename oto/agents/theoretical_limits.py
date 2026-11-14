@@ -48,7 +48,7 @@ def generate(profile: DeviceProfile, starter_text: str = "",
         f"- has_dp4a: {profile.has_dp4a}",
         "",
         "## 1. ALU peaks",
-        _peak_table(profile),
+        _peak_table(profile=profile,),
         "",
         "## 2. Realistic ceilings",
     ]

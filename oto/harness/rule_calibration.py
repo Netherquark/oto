@@ -60,7 +60,7 @@ from oto.runners.paths import runs_dir as _runs_dir
 Rule = Callable[[dict[str, Any]], bool | None]
 
 
-def _iter_rows(base: str, families: Sequence[str] | None):
+def _iter_rows(base: str, families: Sequence[str] | None, profile=None):
     """Yield ``(population, run, family, phase, cfg, built)`` per phase.
 
     One row per ``phase*`` dir whose ``configs/phase_<name>.yaml`` reconstructs
@@ -70,7 +70,7 @@ def _iter_rows(base: str, families: Sequence[str] | None):
     censuses see exactly the same corpus.
     """
     want = {f.upper() for f in families} if families else None
-    runs_dir = _runs_dir(base, _loader.current_profile().codename)
+    runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     for run in sorted(d for d in runs_dir.iterdir() if d.is_dir()):
         cfg_dir = run / "configs"
         for phase_dir in sorted(d for d in run.iterdir()
@@ -79,7 +79,7 @@ def _iter_rows(base: str, families: Sequence[str] | None):
                                     phase_dir.name)
             if cfg is None:
                 continue
-            family = str(cfg.get("FamilyLabel", "")).upper()
+            family = str(cfg.get("FamilyLabel", "",)).upper()
             if want is not None and family not in want:
                 continue
             yield (population_of(run.name), run.name, family, phase_dir.name,

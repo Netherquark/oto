@@ -156,10 +156,10 @@ class RegistryCore:
 # -- engine: connection, schema, transaction guarding -----------------------
 
     def __init__(self, base_dir: Path, read_only: bool = False,
-                 auto_rebuild_kernel_db: bool = True):
+                 auto_rebuild_kernel_db: bool = True, profile=None):
         self.base_dir = Path(base_dir)
-        self.results_dir = _results_dir(self.base_dir, _loader.current_profile().codename)
-        self.runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
+        self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
+        self.runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         self.read_only = read_only
         # Refresh <codename>_results/analysis/kernel_db.json automatically when a
         # run reaches a terminal data-producing status, so any later mutation /

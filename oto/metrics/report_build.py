@@ -140,7 +140,7 @@ def _timing_inputs(state: dict[str, Any],
 
 def build_report(base: Path, run_id: str | None,
                  plan: RunPlan,
-                 now: datetime | None = None) -> dict[str, Any]:
+                 now: datetime | None = None, profile=None) -> dict[str, Any]:
     """Build the status report for a run.
 
     `now` overrides the wall clock used to age a still-running head run.
@@ -156,13 +156,13 @@ def build_report(base: Path, run_id: str | None,
                       ref_total + pin["tune_units"], pin["breakdown"],
                       pin["used"], ref_remaining, pin["tune_units"], ref_done)
 
-    thermals = read_thermals(_runs_dir(base, _loader.current_profile().codename) / (chain[-1] if chain else "")) if chain else None
-    started_live = state["status_by_run"].get(chain[-1] if chain else "") == "started"
+    thermals = read_thermals(_runs_dir(base, _loader.resolve_profile(profile,).codename) / (chain[-1] if chain else "")) if chain else None
+    started_live = state["status_by_run"].get(chain[-1] if chain else "",) == "started"
 
     return {
         "chain": chain,
         "head": chain[-1] if chain else "",
-        "head_status": state["status_by_run"].get(chain[-1] if chain else "", "unknown"),
+        "head_status": state["status_by_run"].get(chain[-1] if chain else "", "unknown",),
         "in_flight": started_live,
         "corpus": len(state["corpus"]),
         "tally": state["tally"],

@@ -427,6 +427,7 @@ def _pair_cells(
         sclk_by_phase: dict[tuple[str, str], float] | None,
         sclk_ref: float | None,
         protocol_basis: str = "family",
+    profile=None,
     ) -> dict[tuple[str, str, str], dict[str, Any]]:
     """Pair the two arms per cell and grade each pair.
 
@@ -456,7 +457,7 @@ def _pair_cells(
         delta_pct = (ratio - 1.0) * 100.0
         tie = abs(delta_pct) <= tie_band_pct
         verdict = "TIE" if tie else ("WIN" if ratio > 1.0 else "LOSS")
-        dtype = _loader.current_profile().family_dtype_char.get(fam, "")
+        dtype = _loader.resolve_profile(profile,).family_dtype_char.get(fam, "",)
         entry = _delta_entry(fam, side, dtype, nv, sv, native_val, spoof_val,
                              delta_pct, tie, verdict, agg, sclk_ref, clock_ok)
         entry["basis_protocol"] = basis

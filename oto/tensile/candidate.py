@@ -154,7 +154,7 @@ class CandidateGenerator(CandidateEmitMixin):
 
     # ------------------------------------------------------------------ gates
 
-    def validate_config(self, config: dict[str, Any]) -> tuple[bool, str]:
+    def validate_config(self, config: dict[str, Any], profile=None) -> tuple[bool, str]:
         """Is this candidate legal to launch on the device?
 
         Why an orchestrator and not a gate: the three gate families each answer
@@ -178,7 +178,7 @@ class CandidateGenerator(CandidateEmitMixin):
         """
         knob = _illegal_knob(config)
         if knob is not None:
-            return False, f"Illegal knob {knob} for {_loader.current_profile().codename}"
+            return False, f"Illegal knob {knob} for {_loader.resolve_profile(profile,).codename}"
         if _assert_size_multiple_disabled(config):
             return False, "AssertSizeMultiple: [1] causes crashes"
         crash = _non_generative_knob_rejection(config)
@@ -192,22 +192,22 @@ class CandidateGenerator(CandidateEmitMixin):
         # resource models. The order is the historical one and matters only for
         # which reason a multi-failure config reports; keep it stable so an
         # operator's grep keeps matching.
-        ok, why = assembly_class_valid(config)
+        ok, why = assembly_class_valid(config, profile=profile,)
         if not ok:
             return False, f"Assembly class: {why}"
 
-        ok, why = validate_tensile_loads(config)
+        ok, why = validate_tensile_loads(config, profile=profile,)
         if not ok:
             return False, f"Tensile load divisibility: {why}"
 
         lds_kb_est = estimate_lds_usage(config)
-        if lds_kb_est > _loader.current_profile().lds_per_cu_kb:
-            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {_loader.current_profile().lds_per_cu_kb}KB"
+        if lds_kb_est > _loader.resolve_profile(profile,).lds_per_cu_kb:
+            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {_loader.resolve_profile(profile,).lds_per_cu_kb}KB"
 
         # Register-file / occupancy feasibility. This is the gate that catches
         # Tensile's overflowedResources==4 ("Occupancy limit"), which the
         # previous _estimate_occupancy could never fire. See occupancy_feasible.
-        ok, why = occupancy_feasible(config)
+        ok, why = occupancy_feasible(config, profile=profile,)
         if not ok:
             return False, f"Occupancy limit: {why}"
 

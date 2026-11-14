@@ -63,10 +63,20 @@ def _tensile_candidates() -> list[str]:
 _TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
                        if os.path.isdir(os.path.join(c, "Tensile", "bin"))]
 
-# Shipped cells: (family, "SxSxS") for every family's shapes in the profile.
-SHIPPED_CELLS: set[tuple[str, str]] = {
-    (f, f"{s}x{s}x{s}") for f, ss in _loader.current_profile().family_shapes.items() for s in ss
-}
+def _shipped_cells(profile=None) -> set[tuple[str, str]]:
+    """Shipped cells: ``(family, "SxSxS")`` for every shape in the profile.
+
+    Derived at call time -- never frozen at import.
+    """
+    return {(f, f"{s}x{s}x{s}")
+            for f, ss in _loader.resolve_profile(profile,).family_shapes.items() for s in ss}
+
+
+def __getattr__(name: str):
+    """Lazy ``SHIPPED_CELLS`` for back-compat (ambient profile, call time)."""
+    if name == "SHIPPED_CELLS":
+        return _shipped_cells()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 #: Default output location, relative to the oto checkout.
 DEFAULT_BEST_LIBRARY_SUBDIR = Path(results_rel("best_effort_library"))
@@ -123,7 +133,7 @@ def _cell_rows_from_db(db: dict[str, Any], basis: str) -> dict[tuple[str, str], 
             if not fam or not shape:
                 continue
             cell = (fam, shape)
-            if cell not in SHIPPED_CELLS:
+            if cell not in _shipped_cells():
                 continue
             pool = pools.setdefault(cell, {"native_basis": [], "native_any": [], "floor": []})
             rr = dict(r)
@@ -196,12 +206,12 @@ def _provenance(cell, step, row, basis):
 
 
 def cell_solution_map(base_dir: Path, basis: str = "family",
-                      kernel_db_path: Path | None = None) -> tuple[
+                      kernel_db_path: Path | None = None, profile=None) -> tuple[
         dict[tuple[str, str], dict[str, Any]],
         list[dict[str, Any]], dict[str, Any]]:
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
-        _results_dir(base_dir, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
+        _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
     db = read_kernel_db(db_path)
     pools = _cell_rows_from_db(db, basis)
 
@@ -212,13 +222,13 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
     cell_map: dict[tuple[str, str], dict[str, Any]] = {}
     refused: list[dict[str, Any]] = []
     stats: dict[str, Any] = {
-        "basis": basis, "cells": len(SHIPPED_CELLS),
+        "basis": basis, "cells": len(_shipped_cells()),
         "native_basis_winners": 0, "native_any_winners": 0,
         "floor_winners": 0, "deck_fallbacks": 0, "refused": 0,
     }
 
-    for cell in sorted(SHIPPED_CELLS, key=lambda c: (c[0], c[1])):
-        pool = pools.get(cell, {"native_basis": [], "native_any": [], "floor": []})
+    for cell in sorted(_shipped_cells(), key=lambda c: (c[0], c[1])):
+        pool = pools.get(cell, {"native_basis": [], "native_any": [], "floor": []},)
         cand_cfg, step, row, refused_entry = _carve_one_cell(
             cell, pool, mut, sched, ldspad_feasible, basis)
         if refused_entry is not None:
@@ -259,11 +269,11 @@ def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
     return families, cells_by_key
 
 
-def _problem_type_state(fam: str, tensile_root: Path | None = None) -> dict[str, Any]:
+def _problem_type_state(fam: str, tensile_root: Path | None = None, profile=None) -> dict[str, Any]:
     _ensure_tensile_importable(tensile_root)
     from Tensile.LibraryIO import updateProblemDatatypes
     from Tensile.SolutionStructs import ProblemType
-    dtype_char = _loader.current_profile().family_dtype_char.get(fam, "S")
+    dtype_char = _loader.resolve_profile(profile,).family_dtype_char.get(fam, "S",)
     is_hpa = "HPA" in fam
     is_hs = fam == "HS_HPA"
     pt = ProblemType({
@@ -462,8 +472,8 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
     return env
 
 
-def _default_codename() -> str:
-    return _loader.current_profile().codename
+def _default_codename(profile=None) -> str:
+    return _loader.resolve_profile(profile,).codename
 
 
 def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):

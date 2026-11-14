@@ -79,31 +79,31 @@ def _winner_per_cell(rows: Iterable[dict]) -> dict[tuple[str, int], dict]:
     return best
 
 
-def _bounds(row: dict, lds_factor: int) -> tuple[int, int, int, int, str, dict] | None:
+def _bounds(row: dict, lds_factor: int, profile=None) -> tuple[int, int, int, int, str, dict] | None:
     """(lds_bound, vgpr_bound, wave_bound, resident, binder, info)."""
-    fam = row.get("family", "")
-    ch = FAMILY_CHAR.get(fam)
+    fam = row.get("family", "",)
+    ch = FAMILY_CHAR.get(fam,)
     if not ch:
         return None
-    mt = _ints(row.get("MacroTile"))
-    tt = _ints(row.get("ThreadTile"))
-    wg = _ints(row.get("WorkGroup"))
-    ku = _ints(row.get("DepthU"))
+    mt = _ints(row.get("MacroTile",))
+    tt = _ints(row.get("ThreadTile",))
+    wg = _ints(row.get("WorkGroup",))
+    ku = _ints(row.get("DepthU",))
     if len(mt) < 2 or len(tt) < 2:
         return None
     wg_threads = (wg[0] * wg[1]) if len(wg) >= 2 else (mt[0] * mt[1]) // (tt[0] * tt[1])
     if wg_threads <= 0:
         wg_threads = 256
     ku = ku[0] if ku else 8
-    bpe = _loader.current_profile().family_bytes_per_element.get(fam) or BYTES_PER_ELEMENT.get(ch, 1)
-    measured = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt[0], tt[1]))
+    bpe = _loader.resolve_profile(profile,).family_bytes_per_element.get(fam,) or BYTES_PER_ELEMENT.get(ch, 1,)
+    measured = (MEASURED_VGPR_BY_DTYPE.get(ch,) or {}).get((tt[0], tt[1]),)
     if measured is None:
         return None
     lds_base = (mt[0] + mt[1]) * bpe * ku
-    lds_bound = max(1, (_loader.current_profile().lds_per_cu_kb * 1024) // (max(1, lds_base) * lds_factor))
-    vgpr_bound = max(1, _loader.current_profile().vgpr_per_cu // (wg_threads * measured))
+    lds_bound = max(1, (_loader.resolve_profile(profile,).lds_per_cu_kb * 1024) // (max(1, lds_base) * lds_factor))
+    vgpr_bound = max(1, _loader.resolve_profile(profile,).vgpr_per_cu // (wg_threads * measured))
     waves_per_wg = max(1, wg_threads // 64)
-    wave_bound = max(1, _loader.current_profile().max_waves_per_cu // waves_per_wg)
+    wave_bound = max(1, _loader.resolve_profile(profile,).max_waves_per_cu // waves_per_wg)
     resident = min(lds_bound, vgpr_bound, wave_bound)
     binder = ("LDS" if lds_bound == resident else
               "VGPR" if vgpr_bound == resident else "waves")
@@ -128,27 +128,27 @@ def _floor_rows(db: dict[str, list[dict]]) -> tuple[list[dict], list[str]]:
     return [r for k in chosen for r in db[k]], chosen
 
 
-def _audit(rows_iter: Iterable[dict], lds_factor: int) -> list[dict]:
+def _audit(rows_iter: Iterable[dict], lds_factor: int, profile=None) -> list[dict]:
     winners = _winner_per_cell(rows_iter)
     out: list[dict] = []
     for (fam, side), row in sorted(winners.items()):
-        b = _bounds(row, lds_factor)
+        b = _bounds(row, lds_factor, profile=profile,)
         if b is None:
             continue
         lds, vgp, wav, res, binder, info = b
         waves_cu = res * info["waves_per_wg"]
         out.append({
-            "cell": f"{fam}:{side}", "kernel": row.get("kernel", ""),
+            "cell": f"{fam}:{side}", "kernel": row.get("kernel", "",),
             "lds_bound": lds, "vgpr_bound": vgp, "wave_bound": wav,
             "resident": res, "binder": binder,
             "waves_per_cu": waves_cu,
-            "pct_of_40": waves_cu / _loader.current_profile().max_waves_per_cu * 100,
-            "median_gflops": row.get("gflops_median") or 0,
+            "pct_of_40": waves_cu / _loader.resolve_profile(profile,).max_waves_per_cu * 100,
+            "median_gflops": row.get("gflops_median",) or 0,
         })
     return out
 
 
-def main() -> int:
+def main(profile=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side", choices=("native", "floor"), default="native",
@@ -162,7 +162,7 @@ def main() -> int:
     args = ap.parse_args()
 
     base = args.base_dir or Path(__file__).resolve().parents[2]
-    db_path = results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
+    db_path = results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     with open(db_path) as f:
         db = json.load(f)
     if args.side == "floor":
@@ -179,7 +179,7 @@ def main() -> int:
         print(f"no rows under side={args.side}", file=sys.stderr)
         return 1
 
-    cells = _audit(rows, args.lds_factor)
+    cells = _audit(rows, args.lds_factor, profile=profile,)
     if not cells:
         print("no auditable cells (measured-VGPR table missing their TT)", file=sys.stderr)
         return 1
@@ -204,7 +204,7 @@ def main() -> int:
     print(f"\nresident wg/CU: min={min(res)} median={median(res)} max={max(res)}")
     print(f"cells at <=3 resident wg/CU: {len(low)} / {len(cells)}")
     print(f"waves/CU: min={min(waves)} median={median(waves)} max={max(waves)}"
-          f" (budget {_loader.current_profile().max_waves_per_cu}/CU)")
+          f" (budget {_loader.resolve_profile(profile,).max_waves_per_cu}/CU)")
     print(f"binding resource tally: {dict(binders)}")
     return 0
 

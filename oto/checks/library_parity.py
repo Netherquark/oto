@@ -56,13 +56,13 @@ def _load_manifests(args) -> list:
     return merged
 
 
-def _fmt_cells(cells) -> str:
+def _fmt_cells(cells, profile=None) -> str:
     grid = shipped_cells()
     from oto.device import loader as _loader
     parts = []
     for family, shape in cells:
-        info = grid.get(f"{family}:{shape.split('x')[0]}")
-        dtype = (info or {}).get("dtype") or _loader.current_profile().family_dtype_char.get(family, "?")
+        info = grid.get(f"{family}:{shape.split('x')[0]}",)
+        dtype = (info or {}).get("dtype",) or _loader.resolve_profile(profile).family_dtype_char.get(family, "?",)
         parts.append(f"{family}:{shape.split('x')[0]} (dtype {dtype} {shape})")
     return "\n".join(f"    {p}" for p in parts)
 

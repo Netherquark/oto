@@ -139,7 +139,7 @@ class Mutator(MutatorOutcomesMixin):
                          family: str,
                          base_config: dict[str, Any] | None = None,
                          groups: int = 2,
-                         seed: str | None = None) -> dict[str, Any] | None:
+                         seed: str | None = None, profile=None) -> dict[str, Any] | None:
         """Return manifest-legal candidate knobs for ``family``.
 
         Phase 2 (Hplan.4): the knob values are drawn from what Tensile actually
@@ -151,7 +151,7 @@ class Mutator(MutatorOutcomesMixin):
         hard walls; the caller should skip the cell rather than fall back to the
         lattice, because a lattice draw is exactly what the prior replaces.
         """
-        if family not in _loader.current_profile().family_dtype_char:
+        if family not in _loader.resolve_profile(profile,).family_dtype_char:
             return None
         config = legality.sample_legal(
             self.base_dir,
@@ -427,7 +427,7 @@ class Mutator(MutatorOutcomesMixin):
     def overlay_name(self) -> str:
         return "phases.overlay.yaml"
 
-    def write_overlay(self, candidates: Sequence[dict[str, Any]], run_id: str | None = None) -> Path:
+    def write_overlay(self, candidates: Sequence[dict[str, Any]], run_id: str | None = None, profile=None) -> Path:
         """Write this run's candidates to a per-run overlay.
 
         `phases.yaml` is the curated deck and stays that way. An overlay is
@@ -438,7 +438,7 @@ class Mutator(MutatorOutcomesMixin):
 
         if run_id is None:
             run_id = self.registry.latest_run_id() or "unbound"
-        target_dir = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays"
+        target_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays"
         target_dir.mkdir(parents=True, exist_ok=True)
         path = target_dir / f"phases.{run_id}.overlay.yaml"
         payload = {
@@ -455,10 +455,10 @@ class Mutator(MutatorOutcomesMixin):
             yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
         return path
 
-    def load_overlay(self, run_id: str) -> list[dict[str, Any]]:
+    def load_overlay(self, run_id: str, profile=None) -> list[dict[str, Any]]:
         """Read back one run's overlay, or [] if there is none."""
 
-        path = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays" / f"phases.{run_id}.overlay.yaml"
+        path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():
             return []
         try:
@@ -466,4 +466,4 @@ class Mutator(MutatorOutcomesMixin):
                 payload = yamlio.load_yaml_text(f.read()) or {}
         except Exception:
             return []
-        return payload.get("phases", []) or []
+        return payload.get("phases", [],) or []

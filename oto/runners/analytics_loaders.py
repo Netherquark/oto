@@ -124,13 +124,13 @@ class CorpusMixin:
                     family=family, source_run=src_run))
 
         return all_analytics
-    def _native_run_dirs(self) -> list[Path]:
+    def _native_run_dirs(self, profile=None) -> list[Path]:
         """Every native run directory on disk.
 
         <runs>/gfx900_ref_* is the spoof floor (the shipped gfx900
         reference chain), never a native candidate, so it is excluded.
         """
-        runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
+        runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
     def _registry_phase_records(self) -> list[tuple[str, list[dict[str, Any]]]]:
         """Native registry rows grouped per (run, phase), invocation-stamped.
@@ -251,7 +251,7 @@ class CorpusMixin:
         all_analytics.extend(self._load_analytics_from_registry(
             protocol_basis=protocol_basis))
         return all_analytics
-    def _retire_stable_candidates(self) -> int:
+    def _retire_stable_candidates(self, profile=None) -> int:
         """
         Evaluate all benchmark cells for retirement eligibility.
         Criteria: ≥3 samples per (phase_id,fp), ≥2 independent runs/cell,
@@ -262,7 +262,7 @@ class CorpusMixin:
         """
         # Per (phase_id, fp): {run_dir_name: [gflops...]}
         by_cell: dict[tuple[str, str], dict[str, list[float]]] = {}
-        runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
+        runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         for run_dir in sorted(runs_dir.glob("run_*")):
             run_name = run_dir.name
             for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):

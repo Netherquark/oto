@@ -32,7 +32,7 @@ PREFERRED_FORMS = (8, 7, 5, 4, 2)   # sweep widths, widest first
 #: them (see explain_archive).
 SINGLE_FORM_ONLY_RUNS = ("run_20261002_021805",)
 
-def plan_floor(base: Path = BASE) -> dict[str, Any]:
+def plan_floor(base: Path = BASE, profile=None) -> dict[str, Any]:
     """One logical floor run, built from the completed resume chain.
 
     Per phase, the source run that measured the most distinct shapes wins. That
@@ -40,10 +40,10 @@ def plan_floor(base: Path = BASE) -> dict[str, Any]:
     across runs to decide, so the selection cannot be tuned by how fast a run
     happened to be.
     """
-    chain = source_chain(base)
+    chain = source_chain(base, profile=profile,)
     stats: dict[str, dict[str, Any]] = {}
     for run in chain:
-        rd = _runs_dir(base, _loader.current_profile().codename) / run
+        rd = _runs_dir(base, _loader.resolve_profile(profile,).codename) / run
         for csv in rd.glob("phase_*/2_BenchmarkData/*.csv"):
             pid = csv.parent.parent.name
             try:
@@ -73,7 +73,7 @@ def locked_run_id(chain: list[str]) -> str:
     return f"gfx900_ref_locked_{digest}"
 
 
-def build_floor(base: Path, dest: Path, stamp: str) -> dict[str, Any]:
+def build_floor(base: Path, dest: Path, stamp: str, profile=None) -> dict[str, Any]:
     """Materialise the locked floor as one logical run holding every floor sample.
 
     Every CSV from every run in the completed chain is copied, with the source run
@@ -92,13 +92,13 @@ def build_floor(base: Path, dest: Path, stamp: str) -> dict[str, Any]:
     so the cost is tens of MB rather than the ~4GB the chain occupies with
     telemetry. CSV contents are copied byte-for-byte; only the name is suffixed.
     """
-    plan = plan_floor(base)
+    plan = plan_floor(base, profile=profile,)
     run_id = locked_run_id(plan["chain"])
     dest.mkdir(parents=True, exist_ok=True)
     copied = 0
     phases: set = set()
     for run in plan["chain"]:
-        for csv in sorted((_runs_dir(base, _loader.current_profile().codename) / run).glob(
+        for csv in sorted((_runs_dir(base, _loader.resolve_profile(profile,).codename) / run).glob(
                 "phase_*/2_BenchmarkData/*.csv")):
             pid = csv.parent.parent.name
             out = dest / pid / "2_BenchmarkData"
@@ -128,7 +128,7 @@ def build_floor(base: Path, dest: Path, stamp: str) -> dict[str, Any]:
 # registry
 # --------------------------------------------------------------------------
 def build_db(base: Path, lock: dict[str, Any], out: Path,
-             stamp: str) -> dict[str, Any]:
+             stamp: str, profile=None) -> dict[str, Any]:
     """Clone the live registry, then add the locked floor run to the clone.
 
     Cloning rather than rebuilding keeps every historical row, so the consolidated
@@ -137,7 +137,7 @@ def build_db(base: Path, lock: dict[str, Any], out: Path,
     ``reference_chain`` selects it as the head with no resume_of to follow.
     """
     out.parent.mkdir(parents=True, exist_ok=True)
-    src = sqlite3.connect(f"file:{_results_dir(base, _loader.current_profile().codename) / 'registry.db'}?mode=ro",
+    src = sqlite3.connect(f"file:{_results_dir(base, _loader.resolve_profile(profile,).codename) / 'registry.db'}?mode=ro",
                           uri=True)
     dst = sqlite3.connect(out)
     src.backup(dst)

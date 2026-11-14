@@ -120,13 +120,13 @@ def _filter_resume_deck(
 class ReferenceMixin:
     """The spoof floor run chain, mixed into TensileDriver."""
 
-    def _resume_chain_ids(self, base: str) -> list[str]:
+    def _resume_chain_ids(self, base: str, profile=None) -> list[str]:
         """Chain ids for a resume, base first."""
         arch = _spoof_arch(self)
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
                                         arch=arch)
         chain_ids = [r for r in chain_ids
-                     if (_runs_dir(self.base_dir, _loader.current_profile().codename) / r).is_dir()]
+                     if (_runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / r).is_dir()]
         if base not in chain_ids:
             chain_ids = [base, *chain_ids]
         return chain_ids
@@ -289,7 +289,7 @@ class ReferenceMixin:
                                                limit, resume, resume_meta)
 
     def _get_resume_phases(self, manifest, resume_base: str | None,
-                           release_held: bool) -> tuple:
+                           release_held: bool, profile=None) -> tuple:
         """Get phases for resume mode. Returns (phases, resume_meta)."""
         arch = _spoof_arch(self)
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
@@ -299,7 +299,7 @@ class ReferenceMixin:
             return [], {"status": "failed",
                         "reason": "resume requires an existing completed "
                                   "gfx900 reference run"}
-        base_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / base
+        base_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / base
         base_yaml = base_dir / "phases_reference.yaml"
         if not base_yaml.is_file():
             return [], {"status": "failed", "reason": f"base run deck missing: {base_yaml}"}
@@ -406,14 +406,14 @@ class ReferenceMixin:
             return None
         return ref
 
-    def _reference_floor_runs(self, run_id: Any) -> list[str]:
+    def _reference_floor_runs(self, run_id: Any, profile=None) -> list[str]:
         """Full resume chain of the recalled reference floor, newest first,
         excluding the candidate run itself when it is a reference run."""
         arch = _spoof_arch(self)
         exclude = str(run_id) if str(run_id).startswith(f"{arch}_ref_") else None
         chain = tlib.reference_chain(self.registry, exclude=exclude, arch=arch)
         return [r for r in chain
-                if (_runs_dir(self.base_dir, _loader.current_profile().codename) / r).is_dir()]
+                if (_runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / r).is_dir()]
     def _reusable_phase_keys(self, run_ids: list[str],
                             current_fps: dict[str, str] | None = None
                             ) -> tuple[set[str], set[str]]:
@@ -490,7 +490,7 @@ class ReferenceMixin:
                 elif status in ("failed", "skipped_illegal"):
                     decided.add(str(rec["phase_id"]))
         return completed, decided
-    def _reference_remaining(self) -> int:
+    def _reference_remaining(self, profile=None) -> int:
         """Phases the reference floor still owes per audited triage.
 
         Only T1 blocks. T1 needs re-measurement; T2 held (opt-in, never
@@ -506,7 +506,7 @@ class ReferenceMixin:
         # covers only the last slice of kernels, but the floor spans all of them.
         universe: dict[str, dict[str, Any]] = {}
         for rid in chain:
-            deck_path = (_runs_dir(self.base_dir, _loader.current_profile().codename) / rid
+            deck_path = (_runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / rid
                          / "phases_reference.yaml")
             try:
                 for ph in yamlio.load_yaml(deck_path) or []:
@@ -527,11 +527,11 @@ class ReferenceMixin:
             except Exception:
                 continue
             for rec in records:
-                if not rec.get("phase_id"):
+                if not rec.get("phase_id",):
                     continue
-                key = rec.get("phase_key") or rec["phase_id"]
-                if str(rec.get("status", "")).lower() in ("completed", "success"):
-                    newest[key] = rec.get("config_fingerprint")
+                key = rec.get("phase_key",) or rec["phase_id"]
+                if str(rec.get("status", "",)).lower() in ("completed", "success"):
+                    newest[key] = rec.get("config_fingerprint",)
                 else:
                     newest.setdefault(key, None)
 

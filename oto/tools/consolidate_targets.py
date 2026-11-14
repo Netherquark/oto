@@ -42,10 +42,10 @@ def _fam(phase_id: str) -> str:
 # --------------------------------------------------------------------------
 # target matrix
 # --------------------------------------------------------------------------
-def target_cells() -> list[tuple[str, str, str]]:
+def target_cells(profile=None) -> list[tuple[str, str, str]]:
     """(family, shape, cell_key) for every cell the shipped floor covers."""
     out = []
-    for fam, sides in _loader.current_profile().family_shapes.items():
+    for fam, sides in _loader.resolve_profile(profile,).family_shapes.items():
         for side in sides:
             shape = f"{side}x{side}x{side}"
             key = cell_key(fam, shape)
@@ -54,16 +54,16 @@ def target_cells() -> list[tuple[str, str, str]]:
     return sorted(out, key=lambda t: (t[0], int(t[1].split("x")[0])))
 
 
-def manifest_cells() -> set:
+def manifest_cells(profile=None) -> set:
     """Cells the shipped gfx900 manifest actually names, as a cross-check.
 
     The deck is built from _loader.current_profile().family_shapes because that is what the report grades,
     but a family the manifest never shipped would be a silent over-reach, so it
     is worth being able to ask.
     """
-    path = _results_dir(BASE, _loader.current_profile().codename) / "gfx900_shipped_manifest.json"
+    path = _results_dir(BASE, _loader.resolve_profile(profile,).codename) / "gfx900_shipped_manifest.json"
     try:
-        fam = json.loads(path.read_text()).get("families", {})
+        fam = json.loads(path.read_text()).get("families", {},)
     except Exception:
         return set()
     return set(fam)
@@ -72,17 +72,17 @@ def manifest_cells() -> set:
 # --------------------------------------------------------------------------
 # measurement inventory
 # --------------------------------------------------------------------------
-def native_runs(base: Path = BASE) -> list[str]:
-    return sorted(d.name for d in (_runs_dir(base, _loader.current_profile().codename)).glob("run_*") if d.is_dir())
+def native_runs(base: Path = BASE, profile=None) -> list[str]:
+    return sorted(d.name for d in (_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*") if d.is_dir())
 
 
-def floor_chain(base: Path = BASE) -> list[str]:
+def floor_chain(base: Path = BASE, profile=None) -> list[str]:
     drv = _driver(base)
-    return [r for r in drv._reference_floor_runs(None)
-            if (_runs_dir(base, _loader.current_profile().codename) / r).is_dir()]
+    return [r for r in drv._reference_floor_runs(None,)
+            if (_runs_dir(base, _loader.resolve_profile(profile,).codename) / r).is_dir()]
 
 
-def source_chain(base: Path = BASE) -> list[str]:
+def source_chain(base: Path = BASE, profile=None) -> list[str]:
     """The original measured floor runs, even after locking.
 
     ``reference_chain`` resolves to the locked floor once one exists, so feeding
@@ -90,22 +90,22 @@ def source_chain(base: Path = BASE) -> list[str]:
     converge to a degenerate fixpoint. The locked run records where it came from,
     so the chain is recovered from there instead.
     """
-    chain = floor_chain(base)
+    chain = floor_chain(base, profile=profile,)
     if not chain or "_locked_" not in chain[0]:
         return chain
-    live_db = _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
+    live_db = _results_dir(BASE, _loader.resolve_profile(profile,).codename) / "registry.db"
     con = sqlite3.connect(f"file:{live_db}?mode=ro", uri=True)
     row = con.execute("SELECT metadata FROM runs WHERE run_id=?",
                       (chain[0],)).fetchone()
     con.close()
     try:
-        src = list(json.loads(row[0]).get("source_runs") or [])
+        src = list(json.loads(row[0]).get("source_runs",) or [])
     except Exception:
         src = []
     return src or chain
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == 'LIVE_DB':
-        return _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
+        return _results_dir(BASE, _loader.resolve_profile(profile,).codename) / "registry.db"
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

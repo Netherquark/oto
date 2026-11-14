@@ -134,24 +134,25 @@ def _emit_baselines(
     families: list[str],
     patterns: list[str],
     shapes: list[str],
+profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit baseline tiles for each family/shape."""
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     for family in families:
-        for base in KNOB_SWEEP_BASES.get(family, []):
+        for base in KNOB_SWEEP_BASES.get(family, [],):
             for pattern in patterns:
                 for shape in shapes:
                     template = {
-                        "Architecture": _loader.current_profile().codename,
-                        "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+                        "Architecture": _loader.resolve_profile(profile,).codename,
+                        "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
                         "FamilyLabel": family,
                     }
-                    ok, why = gen.validate_config({**template, **base})
+                    ok, why = gen.validate_config({**template, **base},)
                     if ok:
                         emitted.append(dict(base))
                     else:
@@ -164,34 +165,35 @@ def _emit_sweeps(
     families: list[str],
     patterns: list[str],
     shapes: list[str],
+profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit sweep tiles for each family/knob/shape."""
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     for family in families:
-        for base in KNOB_SWEEP_BASES.get(family, []):
+        for base in KNOB_SWEEP_BASES.get(family, [],):
             for pattern in patterns:
                 for sweep in KNOB_SWEEPS:
-                    if family not in sweep.get("families", []):
+                    if family not in sweep.get("families", [],):
                         continue
                     for value in sweep["values"]:
                         knobs = dict(base)
                         for over_fam, width in sweep.get(
-                                "width_override", {}).items():
+                                "width_override", {},).items():
                             if over_fam == family:
                                 knobs["VectorWidth"] = width
                         knobs.update(value)
                         for shape in shapes:
                             template = {
-                                "Architecture": _loader.current_profile().codename,
-                                "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+                                "Architecture": _loader.resolve_profile(profile,).codename,
+                                "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                                 "ContractionPattern": pattern,
                                 "ProblemType": shape,
                                 "ScheduleName": "isa",
                                 "FamilyLabel": family,
                             }
-                            ok, why = gen.validate_config({**template, **knobs})
+                            ok, why = gen.validate_config({**template, **knobs},)
                             if ok:
                                 emitted.append(knobs)
                             else:
@@ -205,6 +207,7 @@ def _emit_trials(
     families: list[str],
     patterns: list[str],
     shapes: list[str],
+profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit decision trial tiles."""
     from oto.tensile.decks import DECISION_TRIAL_TILES
@@ -215,17 +218,17 @@ def _emit_trials(
         if family not in families:
             continue
         for pattern in patterns:
-            for shape in trial.get("shapes", shapes):
+            for shape in trial.get("shapes", shapes,):
                 template = {
-                    "Architecture": _loader.current_profile().codename,
-                    "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+                    "Architecture": _loader.resolve_profile(profile,).codename,
+                    "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                     "ContractionPattern": pattern,
                     "ProblemType": shape,
                     "ScheduleName": "isa",
                     "FamilyLabel": family,
                 }
                 ok, why = gen.validate_config(
-                    {**template, **trial["knobs"]})
+                    {**template, **trial["knobs"]},)
                 if ok:
                     emitted.append(dict(trial["knobs"]))
                 else:

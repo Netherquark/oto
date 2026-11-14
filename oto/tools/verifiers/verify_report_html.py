@@ -42,15 +42,15 @@ print("ok")
 """
 
 
-def _payload_parts(run_id: str):
+def _payload_parts(run_id: str, profile=None):
     from oto.runners.driver import TensileDriver
 
     d = TensileDriver(base_dir=ROOT, create_run=False)
-    d.regenerate_report(run_id)
+    d.regenerate_report(run_id,)
     from oto.device import loader as _loader
     from oto.runners.paths import results_dir as _results_dir
 
-    payload_path = _results_dir(ROOT, _loader.current_profile().codename) / "acceptance_report.json"
+    payload_path = _results_dir(ROOT, _loader.resolve_profile(profile).codename) / "acceptance_report.json"
     return payload_path.read_bytes(), payload_path
 
 

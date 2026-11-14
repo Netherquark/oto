@@ -73,7 +73,7 @@ def _family_from_tokens(phase_id: str) -> str:
     return ""
 
 
-def phase_family(phase: dict[str, Any]) -> str:
+def phase_family(phase: dict[str, Any], profile=None) -> str:
     """Resolve a phase's canonical family name ('' when unresolvable).
 
     ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
@@ -81,15 +81,15 @@ def phase_family(phase: dict[str, Any]) -> str:
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
     """
-    cfg = phase.get("config")
+    cfg = phase.get("config",)
     if isinstance(cfg, dict):
-        label = cfg.get("FamilyLabel")
-        if label in _loader.current_profile().family_shapes:
+        label = cfg.get("FamilyLabel",)
+        if label in _loader.resolve_profile(profile,).family_shapes:
             return label
         up = str(label or "").upper()
-        if up in _loader.current_profile().family_shapes:
+        if up in _loader.resolve_profile(profile,).family_shapes:
             return up
-    return _family_from_tokens(str(phase.get("phase_id") or ""))
+    return _family_from_tokens(str(phase.get("phase_id",) or ""))
 
 
 def phase_cells(phase: dict[str, Any]) -> set[tuple[str, str]]:
@@ -157,7 +157,7 @@ def parity_report(phases: Sequence[dict[str, Any]],
 
 def load_pipeline_phases(base_dir: str | None = None,
                          run_id: str | None = None,
-                         include_seed: bool = True) -> list[dict[str, Any]]:
+                         include_seed: bool = True, profile=None) -> list[dict[str, Any]]:
     """Deck + current overlays, merged in the manifest order the run uses.
 
     Mirrors ``oto.runners.phases`` (``PhaseMixin.load_phases_manifest``)'s merge order (deck, then the
@@ -180,11 +180,11 @@ def load_pipeline_phases(base_dir: str | None = None,
     merged: list[dict[str, Any]] = list(deck)
 
     if run_id:
-        for ov_path in sorted((_results_dir(base, _loader.current_profile().codename) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
+        for ov_path in sorted((_results_dir(base, _loader.resolve_profile(profile,).codename) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
             _merge(merged, _yamlio.load_yaml_text(_read(ov_path)), f"run_overlay:{run_id}")
 
     if include_seed:
-        seed_path = _results_dir(base, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+        seed_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml"
         if seed_path.exists():
             doc = _yamlio.load_yaml(seed_path)
             _merge(merged, doc, "seed_overlay")

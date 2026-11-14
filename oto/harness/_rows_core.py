@@ -498,10 +498,10 @@ for fam, pattern, tile, tt, vw, du, rows in (
 # silently dropped.
 
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == "FAMILY_DTYPE":
-        return dict(_loader.current_profile().family_dtype_char)
+        return dict(_loader.resolve_profile(profile,).family_dtype_char)
     if name == "TARGET_CELLS":
-        return dict(_loader.current_profile().family_cells)
+        return dict(_loader.resolve_profile(profile,).family_cells)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

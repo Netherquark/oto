@@ -78,7 +78,7 @@ def legacy_results_dir(base_dir) -> Path:
     return Path(base_dir) / LEGACY_RESULTS_DIR_NAME
 
 
-def results_rel(*parts: str) -> str:
+def results_rel(*parts: str, profile=None) -> str:
     """Repo-relative results subpath for the current device.
 
     Import-time safe (peaks is a constants module): for the default
@@ -86,11 +86,11 @@ def results_rel(*parts: str) -> str:
     ``gfx90c_results/...`` exactly as before; for another profile it yields
     ``<codename>_results/...``. No literal appears in calling code.
     """
-    from oto.device.loader import current_profile
-    return str(Path(RESULTS_DIR_TEMPLATE.format(codename=current_profile().codename)).joinpath(*parts))
+    from oto.device.loader import resolve_profile
+    return str(Path(RESULTS_DIR_TEMPLATE.format(codename=resolve_profile(profile).codename)).joinpath(*parts))
 
 
-def runs_rel(*parts: str) -> str:
+def runs_rel(*parts: str, profile=None) -> str:
     """Repo-relative runs subpath for the current device (see results_rel)."""
-    from oto.device.loader import current_profile
-    return str(Path(RUNS_DIR_TEMPLATE.format(codename=current_profile().codename)).joinpath(*parts))
+    from oto.device.loader import resolve_profile
+    return str(Path(RUNS_DIR_TEMPLATE.format(codename=resolve_profile(profile).codename)).joinpath(*parts))

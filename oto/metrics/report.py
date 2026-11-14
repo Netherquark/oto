@@ -19,7 +19,8 @@ from typing import Any
 
 import oto.tensile.library as tlib
 from oto.device import loader as _loader
-from oto.metrics.analytics import FAMILY_TO_DTYPE, CellAnalytics
+from oto.metrics.analytics import CellAnalytics
+from oto.metrics.family_attribution import family_to_dtype
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
 from oto.metrics.report_sections import SectionMixin
@@ -73,6 +74,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         native_arm: dict[str, Any] | None = None,
         reference_floor_status: str = "not attempted",
         reference_floor_authoritative: bool = True,
+    profile=None,
     ) -> AcceptanceReport:
         """Generate final acceptance report."""
         orange_list = orange_list or []
@@ -101,7 +103,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             overall_pass=overall_pass,
             summary=summary,
             all_analytics=all_analytics,
-            run_dir=str(_runs_dir(self.base_dir, _loader.current_profile().codename) / run_id) if self.base_dir else None,
+            run_dir=str(_runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / run_id) if self.base_dir else None,
             family_timing=family_timing,
             execution_timing=execution_timing,
             orange_list=orange_list,
@@ -185,9 +187,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         family: str,
         all_analytics: list[CellAnalytics],
         expected_kernels: dict[str, int],
+    profile=None,
     ) -> dict[str, Any]:
         fam_lower = family.lower()
-        short = FAMILY_TO_DTYPE.get(fam_lower)
+        short = family_to_dtype().get(fam_lower,)
 
         # Match by explicit family prefix first (distinguishes HH / HH_HPA / HS_HPA),
         # fall back to single-letter dtype / family name for cells that carry
@@ -200,20 +203,20 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         # cell and reported 2749 GFLOPS as "170% of the HPA ceiling".
         family_cells = self._family_cells(all_analytics, family, fam_lower, short)
 
-        ceiling = _loader.current_profile().realistic_ceilings.get(family, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(family, "FP32"), 1613.0))
-        theoretical = _loader.current_profile().theoretical_peaks.get(family, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(family, "FP32"), 1613.0))
+        ceiling = _loader.resolve_profile(profile,).realistic_ceilings.get(family, _loader.resolve_profile(profile,).peak_gflops.get(_loader.resolve_profile(profile,).family_dtypes.get(family, "FP32",), 1613.0,),)
+        theoretical = _loader.resolve_profile(profile,).theoretical_peaks.get(family, _loader.resolve_profile(profile,).peak_gflops.get(_loader.resolve_profile(profile,).family_dtypes.get(family, "FP32",), 1613.0,),)
         best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
 
         # Contract deck: distinct family deck shapes measured (the cells the
         # acceptance grid classifies), distinct from the config-cell count.
-        deck_sizes = _loader.current_profile().family_shapes.get(family, [])
+        deck_sizes = _loader.resolve_profile(profile,).family_shapes.get(family, [],)
         deck_shapes = {f"{s}x{s}x{s}" for s in deck_sizes}
         measured_shapes = {a.shape for a in family_cells}
         deck_cells_measured = len(measured_shapes & deck_shapes)
 
         by_size = self._by_size_breakdown(family_cells, ceiling, theoretical)
 
-        exp = expected_kernels.get(family, 0)
+        exp = expected_kernels.get(family, 0,)
         return {
             "expected_kernels": exp,
             "deck_cells_measured": deck_cells_measured,
@@ -316,10 +319,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             f"{timing}"
         )
 
-    def write_report(self, report: AcceptanceReport, output_path: Path | None = None) -> None:
+    def write_report(self, report: AcceptanceReport, output_path: Path | None = None, profile=None) -> None:
         """Write acceptance report to JSON and HTML files."""
         if output_path is None:
-            output_path = _results_dir(self.base_dir, _loader.current_profile().codename) / "acceptance_report.json"
+            output_path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         report_dict = {
@@ -337,10 +340,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             "reference_run_id": report.reference_run_id,
             "native_arm": report.native_arm,
             "shipped_manifest": {
-                "total_shipped_kernels": (report.shipped_manifest or {}).get("total_shipped_kernels", 0),
-                "expected_kernels": (report.shipped_manifest or {}).get("expected_kernels", {}),
-                "rocm_prefixes": (report.shipped_manifest or {}).get("rocm_prefixes", []),
-                "generated_at": (report.shipped_manifest or {}).get("generated_at", ""),
+                "total_shipped_kernels": (report.shipped_manifest or {}).get("total_shipped_kernels", 0,),
+                "expected_kernels": (report.shipped_manifest or {}).get("expected_kernels", {},),
+                "rocm_prefixes": (report.shipped_manifest or {}).get("rocm_prefixes", [],),
+                "generated_at": (report.shipped_manifest or {}).get("generated_at", "",),
             },
             "overall_pass": report.overall_pass,
             "summary": report.summary

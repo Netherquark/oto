@@ -216,7 +216,7 @@ def _add_reference_run_flags(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_run_flags(parser: argparse.ArgumentParser) -> None:
+def _add_run_flags(parser: argparse.ArgumentParser, profile=None) -> None:
     """Per-run behaviour: force, the live status panel, and the dry run."""
     parser.add_argument(
         "--force",
@@ -250,9 +250,9 @@ def _add_run_flags(parser: argparse.ArgumentParser) -> None:
         const="",
         default=None,
         metavar="DEST",
-        help=f"Carve a best-effort {_loader.current_profile().codename} TensileLibrary.dat from the full "
+        help=f"Carve a best-effort {_loader.resolve_profile(profile,).codename} TensileLibrary.dat from the full "
              f"kernel database (CPU-only). Optional DEST (default "
-             f"{_loader.current_profile().codename}_results/best_effort_library). Defaults to the "
+             f"{_loader.resolve_profile(profile,).codename}_results/best_effort_library). Defaults to the "
              f"across-all-runs view (any protocol); override with "
              f"--protocol-basis."
     )
@@ -311,7 +311,7 @@ def _add_agg_flag(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(profile=None) -> argparse.ArgumentParser:
     """Build the driver's argument parser.
 
     Every flag lives in one of the group helpers above, so a flag's grouping and
@@ -322,19 +322,19 @@ def build_parser() -> argparse.ArgumentParser:
         An ``ArgumentParser`` with every flag the driver accepts.
     """
     parser = argparse.ArgumentParser(
-        description=f"oto — Tensile tuning driver for {_loader.current_profile().codename}"
+        description=f"oto — Tensile tuning driver for {_loader.resolve_profile(profile,).codename}"
     )
     _add_scope_flags(parser)
     _add_auto_flags(parser)
     _add_reference_flags(parser)
     _add_release_flags(parser)
     _add_reference_run_flags(parser)
-    _add_run_flags(parser)
+    _add_run_flags(parser, profile=profile,)
     _add_agg_flag(parser)
     parser.add_argument(
         "--codename",
         default=None,
-        metavar="_loader.current_profile().codename",
+        metavar="CODENAME",
         help="GPU codename (auto-detected from rocminfo when omitted). "
              "Loads profiles/<codename>.json. Refactor 2 device selector."
     )

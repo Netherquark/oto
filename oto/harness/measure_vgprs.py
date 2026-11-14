@@ -149,11 +149,11 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
               f"{_r['ratio']:>7.2f}")
 
 
-def main() -> int:
+def main(profile=None) -> int:
     args = _build_arg_parser().parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _loader.current_profile().codename)
+    runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _loader.resolve_profile(profile,).codename)
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
         print("no Tensile assembly objects found (run a phase first)")

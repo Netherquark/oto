@@ -90,7 +90,7 @@ def reason_for_phase(phase_dir: Path) -> str:
 
 
 def census(base: str = ".", run_filter: str | None = None,
-           sample_limit: int = 12) -> dict[str, Any]:
+           sample_limit: int = 12, profile=None) -> dict[str, Any]:
     """Walk the run corpus and classify every empty phase.
 
     Args:
@@ -102,7 +102,7 @@ def census(base: str = ".", run_filter: str | None = None,
         ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
         "samples": [(run, phase, reason)]}``.
     """
-    runs_dir = _runs_dir(base, _loader.current_profile().codename)
+    runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     run_dirs = sorted(d for d in runs_dir.iterdir() if d.is_dir())
     if run_filter is not None:
         run_dirs = [d for d in run_dirs if d.name == run_filter]

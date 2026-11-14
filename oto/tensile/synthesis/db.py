@@ -78,11 +78,11 @@ class DBMutator(DbPatternsMixin):
     """
 
     def __init__(self, base_dir: Path, mutator,
-                 kernel_db_path: Path | None = None):
+                 kernel_db_path: Path | None = None, profile=None):
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
-            _results_dir(self.base_dir, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
+            _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
         self._db: dict[str, Any] | None = None
         self._by_family: dict[str, list[dict[str, Any]]] = {}
         self._by_family_cell: dict[tuple[str, str], list[dict[str, Any]]] = {}
@@ -144,14 +144,14 @@ class DBMutator(DbPatternsMixin):
             self._sched = CandidateGenerator(self.base_dir, registry=None)
         return self._sched
 
-    def _template(self, family: str) -> dict[str, Any]:
+    def _template(self, family: str, profile=None) -> dict[str, Any]:
         return {
-            "Architecture": _loader.current_profile().codename,
-            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+            "Architecture": _loader.resolve_profile(profile,).codename,
+            "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
             "FamilyLabel": family,
             "ScheduleName": "isa",
             "ProblemType": "Contraction",
-            "ContractionPattern": _DEFAULT_PATTERN.get(family, "Ailk_Bjlk"),
+            "ContractionPattern": _DEFAULT_PATTERN.get(family, "Ailk_Bjlk",),
         }
 
     def _gate(self, config: dict[str, Any]) -> bool:

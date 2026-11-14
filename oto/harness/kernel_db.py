@@ -76,7 +76,7 @@ CONFIG_KEYS = [
 
 
 def discover_runs(base_dir: str,
-                  all_ref: bool = False) -> list[tuple[str, str]]:
+                  all_ref: bool = False, profile=None) -> list[tuple[str, str]]:
     """[(run_id, kind)] for native `run_*` + spoof floor runs.
 
     kind is 'native' for `run_*` and 'spoof' for `gfx900_ref_*`. With
@@ -84,7 +84,7 @@ def discover_runs(base_dir: str,
     matching the published regression matrix; all_ref=True includes every
     gfx900 reference directory.
     """
-    runs_dir = _runs_dir(base_dir, _loader.current_profile().codename)
+    runs_dir = _runs_dir(base_dir, _loader.resolve_profile(profile,).codename)
     out: list[tuple[str, str]] = []
     if not runs_dir.is_dir():
         return out
@@ -216,7 +216,7 @@ def _accumulate_rows(
 
 
 def _family_and_dtype(cfg: dict[str, Any], kc: str,
-                      phase_id: str) -> tuple[str, str, Any]:
+                      phase_id: str, profile=None) -> tuple[str, str, Any]:
     """(family, dtype, dtype_enum) for one kernel row.
 
     Family attribution: the kernel's own typecode is the ground truth
@@ -225,22 +225,22 @@ def _family_and_dtype(cfg: dict[str, Any], kc: str,
     through its 'auto' prefix (the §13.2 contamination). Never derive a
     cell family from text when the kernel name is available.
     """
-    dt_enum = cfg.get("DataTypeEnum")
+    dt_enum = cfg.get("DataTypeEnum",)
     tc_family = family_from_kernel_name(kc)
     if tc_family:
         family = tc_family
-        dt = _loader.current_profile().family_dtype_char.get(family, "?")
+        dt = _loader.resolve_profile(profile,).family_dtype_char.get(family, "?",)
     else:
         m = FAMILY_RE.match(phase_id)
-        family = _DEFAULT_DTYPE.get(m.group(1), "") if m else ""
+        family = _DEFAULT_DTYPE.get(m.group(1), "",) if m else ""
         if family:
-            family = _REVERSE_DEFAULT_DTYPE.get(family, "")
-        dt_enum = cfg.get("DataTypeEnum")
+            family = _REVERSE_DEFAULT_DTYPE.get(family, "",)
+        dt_enum = cfg.get("DataTypeEnum",)
         if dt_enum is None:
             dt = family or "?"
             dt_enum = -1
         else:
-            dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}")
+            dt = ENUM_TO_DTYPE.get(dt_enum, f"?{dt_enum}",)
     return family, dt, dt_enum
 
 
@@ -334,18 +334,18 @@ def phase_survey(phase_dir: str, phase_id: str,
 def build_kernel_db(base_dir: str,
                     run_ids: Sequence[str] | None = None,
                     all_ref: bool = False,
-                    quiet: bool = False) -> dict[str, list[dict[str, Any]]]:
+                    quiet: bool = False, profile=None) -> dict[str, list[dict[str, Any]]]:
     """Rebuild the full kernel DB from run directories (CPU-only).
 
     `quiet=True` suppresses the per-run progress lines (used by the automatic
     post-run refresh in registry.SQLiteRegistry).
     """
-    runs = discover_runs(base_dir, all_ref=all_ref)
+    runs = discover_runs(base_dir, all_ref=all_ref, profile=profile,)
     if run_ids:
         runs = [(rid, kind) for rid, kind in runs if rid in set(run_ids)]
     cache: dict[str, list[dict[str, Any]]] = {}
     for run_id, kind in runs:
-        run_dir = str(_runs_dir(base_dir, _loader.current_profile().codename) / run_id)
+        run_dir = str(_runs_dir(base_dir, _loader.resolve_profile(profile,).codename) / run_id)
         if not os.path.isdir(run_dir):
             cache[run_id] = []
             continue

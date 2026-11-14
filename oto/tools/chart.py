@@ -26,8 +26,8 @@ def _base(args: argparse.Namespace) -> Path:
     return Path(args.base or _results_dir())
 
 
-def make_report(base: Path) -> dict[str, Any]:
-    path = _results_dir(base, _loader.current_profile().codename) / "acceptance_report.json"
+def make_report(base: Path, profile=None) -> dict[str, Any]:
+    path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"
     return json.loads(path.read_text())
 
 

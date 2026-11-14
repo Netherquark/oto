@@ -3,11 +3,11 @@
 
 Owns: ``extract_family_from_phase_id`` (family from a phase id),
 ``resolve_cell_family`` (the anti-contamination resolver that prefers the kernel
-typecode over any phase-level stamp), ``_hpa_variant``, ``FAMILY_TO_DTYPE`` and
-the known-family constants.
+typecode over any phase-level stamp), ``_hpa_variant``, ``family_to_dtype`` and
+the known-family derivation.
 Does NOT own: the CSV load that produces the rows (oto.metrics.analytics) or the
 A/B comparison that consumes the attribution (oto.metrics.ab_audit).
-Public API: extract_family_from_phase_id, resolve_cell_family, FAMILY_TO_DTYPE.
+Public API: extract_family_from_phase_id, resolve_cell_family, family_to_dtype.
 """
 
 from __future__ import annotations
@@ -24,16 +24,29 @@ from oto.device.vocabulary import (
 CLOCK_MIN_COVERAGE = 0.5
 
 
-# Family prefix -> Tensile DataType char (lowercase keys for phase_id parsing).
-FAMILY_TO_DTYPE = {
-    k.lower(): v for k, v in _loader.current_profile().family_dtype_char.items()
-}
+def family_to_dtype(profile=None) -> dict[str, str]:
+    """Family prefix -> Tensile DataType char (lowercase keys, for phase_id parsing).
+
+    Derived from the device profile on every call -- never frozen at import.
+    """
+    return {k.lower(): v for k, v in _loader.resolve_profile(profile,).family_dtype_char.items()}
 
 
-# Known family prefixes (longest first for greedy matching).
-# Note: family tokens are matched against lowercase phase_id segments, so the
-# prefix set must be lowercase regardless of the profile's canonical family_dtype_char.
-_KNOWN_FAMILIES = sorted(FAMILY_TO_DTYPE.keys(), key=len, reverse=True)
+def _known_families(profile=None) -> list[str]:
+    """Known family prefixes, longest first for greedy matching.
+
+    Family tokens are matched against lowercase phase_id segments, so the
+    prefix set must be lowercase regardless of the profile's canonical
+    ``family_dtype_char``.
+    """
+    return sorted(family_to_dtype(profile=profile,), key=len, reverse=True)
+
+
+def __getattr__(name: str):
+    """Lazy ``FAMILY_TO_DTYPE`` for back-compat (ambient profile, call time)."""
+    if name == "FAMILY_TO_DTYPE":
+        return family_to_dtype()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def extract_family_from_phase_id(phase_id: str) -> str:
@@ -49,7 +62,7 @@ def extract_family_from_phase_id(phase_id: str) -> str:
     parts = [p for p in str(phase_id).replace('phase_', '').replace('phase', '').split('_') if p]
     best = ''
     best_len = 0
-    for fam in sorted(_KNOWN_FAMILIES, key=len, reverse=True):
+    for fam in _known_families():
         fam_tokens = fam.split('_')
         if len(fam_tokens) <= best_len:
             continue

@@ -82,16 +82,16 @@ def cmd_mine(args) -> int:
     return 0
 
 
-def cmd_all(args) -> int:
+def cmd_all(args, profile=None) -> int:
     base = args.base_dir
     stamp = _stamp()
     stage = base / "archive" / f"consolidate_{stamp}"
     stage.mkdir(parents=True, exist_ok=True)
 
     sel = select_deck(base)
-    lock = build_floor(base, _runs_dir(stage, _loader.current_profile().codename) / locked_run_id(
-        source_chain(base)), stamp)
-    dbres = build_db(base, lock, stage / "registry.db", stamp)
+    lock = build_floor(base, _runs_dir(stage, _loader.resolve_profile(profile,).codename) / locked_run_id(
+        source_chain(base, profile=profile,)), stamp, profile=profile,)
+    dbres = build_db(base, lock, stage / "registry.db", stamp, profile=profile,)
 
     staged_deck = write_deck(stage, sel, stamp)
     print(f"staged -> {stage}")
@@ -124,7 +124,7 @@ def cmd_all(args) -> int:
               "coverage parity vs the shipped gfx900 grid "
               "(knowledge_base.md §6.1). Fix the deck, then re-run --commit.")
         return 1
-    install(base, stage, sel, lock, dbres, stamp)
+    install(base, stage, sel, lock, dbres, stamp, profile=profile,)
     print(f"installed. live floor = {lock['run_id']}")
     return 0
 

@@ -63,7 +63,8 @@ def _tensile_command(
     driver,
     tensile_bin: Path,
     config_path: Path,
-    phase_out_dir: Path
+    phase_out_dir: Path,
+profile=None,
 ) -> tuple[list[str], dict[str, str]]:
     """The Tensile argv and environment for one phase config."""
     rocm = resolve_rocm_paths()
@@ -72,7 +73,7 @@ def _tensile_command(
         assembler = rocm["TENSILE_ASSEMBLER_FALLBACK"]
 
     codename = getattr(getattr(driver, "profile", None), "codename",
-                       _loader.current_profile().codename)
+                       _loader.resolve_profile(profile,).codename)
     client = _tensile_client(driver.tensile_root)
     if client is None:
         client = driver.tensile_root / "build" / "client" / "tensile-client"
@@ -95,7 +96,7 @@ def _tensile_command(
         str(config_path),
         str(phase_out_dir)
     ]
-    if os.environ.get("TENSILE_VERBOSE") in ("1", "true", "True"):
+    if os.environ.get("TENSILE_VERBOSE",) in ("1", "true", "True"):
         cmd.append("--verbose")
 
     return cmd, driver._get_tensile_env()

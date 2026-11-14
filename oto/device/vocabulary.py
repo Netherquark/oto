@@ -18,18 +18,18 @@ from __future__ import annotations
 
 import re
 
-from oto.device.loader import current_profile
+from oto.device.loader import resolve_profile
 
 
-def blas8_gflops(family: str, reported: float) -> float:
+def blas8_gflops(family: str, reported: float, profile=None) -> float:
     """A client-reported GFLOPS figure in BLAS-8 units (complex x4)."""
-    return reported * current_profile().reported_to_blas8.get(family.upper(), 1.0)
+    return reported * resolve_profile(profile).reported_to_blas8.get(family.upper(), 1.0,)
 
 
-def dtype_to_family() -> dict[str, str]:
+def dtype_to_family(profile=None) -> dict[str, str]:
     """DataType char -> canonical family (first-wins)."""
     out: dict[str, str] = {}
-    for fam, ch in current_profile().family_dtype_char.items():
+    for fam, ch in resolve_profile(profile).family_dtype_char.items():
         out.setdefault(ch, fam)
     return out
 
@@ -67,9 +67,9 @@ def family_from_kernel_name(kernel_name: object) -> str:
     return _TYPECODE_TO_FAMILY.get(code[0], "")
 
 
-def dtype_from_kernel_name(kernel_name: object) -> str:
+def dtype_from_kernel_name(kernel_name: object, profile=None) -> str:
     """Canonical DataType char of a kernel by its typecode ('' when unknown)."""
-    return current_profile().family_dtype_char.get(family_from_kernel_name(kernel_name), "")
+    return resolve_profile(profile).family_dtype_char.get(family_from_kernel_name(kernel_name), "",)
 
 
 def cube_side(shape: object) -> int | None:
@@ -92,10 +92,10 @@ def cell_key(family: object, shape: object) -> str | None:
     return f"{fam}:{side}"
 
 
-def shipped_cells() -> dict[str, dict[str, str]]:
+def shipped_cells(profile=None) -> dict[str, dict[str, str]]:
     """The device "shape x dtype" coverage grid (the coverage-parity rule)."""
-    fds = current_profile().family_dtype_char
-    shapes = current_profile().family_shapes
+    fds = resolve_profile(profile).family_dtype_char
+    shapes = resolve_profile(profile).family_shapes
     return {
         f"{fam}:{side}": {
             "family": fam,

@@ -125,7 +125,7 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
     """
-    prof = _loader.resolve_profile(profile)
+    prof = _loader.resolve_profile(profile,)
     is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
 
     if dtype_upper in ("Z", "C") and gsu > 1 and not prof.has_mfma:
@@ -139,7 +139,7 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
 
     if dtype_upper in ("H", "B") and gsu > 1:
         af0em = knob_int(config.get("AssertFree0ElementMultiple",
-                                     config.get("AssertFree0Multiple", 1)), 1)
+                                     config.get("AssertFree0Multiple", 1,),), 1)
         if af0em < 2:
             return (f"GlobalSplitU={gsu} on half Assembly requires "
                     "AssertFree0ElementMultiple>=2 (have "
@@ -186,13 +186,13 @@ def assembly_class_valid(config: dict[str, Any],
         ``(True, "")`` when legal, else ``(False, reason)`` citing the Tensile
         source line that refuses it.
     """
-    dtype_upper = str(config.get("DataType", "S")).upper()
-    gsu = knob_int(config.get("GlobalSplitU"), 1)
+    dtype_upper = str(config.get("DataType", "S",)).upper()
+    gsu = knob_int(config.get("GlobalSplitU",), 1)
     # Resolved before the GSU rules, exactly as before the split: a config whose
     # DepthU is named but unparsable raises here rather than falling through to
     # a "legal" verdict from a later rule.
     depth_u = assembly_depth_u(config)
-    reject = _gsu_rejection(config, dtype_upper, gsu, profile)
+    reject = _gsu_rejection(config, dtype_upper, gsu, profile=profile,)
     if reject is not None:
         return False, reject
     reject = _stagger_rejection(config, depth_u)

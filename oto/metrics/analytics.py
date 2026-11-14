@@ -30,8 +30,8 @@ from oto.device import loader as _loader
 from oto.metrics.ab_delta import ABDeltaMixin
 from oto.metrics.cell_status import CellStatusMixin
 from oto.metrics.family_attribution import (
-    FAMILY_TO_DTYPE,
     extract_family_from_phase_id,
+    family_to_dtype,
     resolve_cell_family,
 )
 from oto.metrics.policy import aggregate_cell
@@ -39,7 +39,6 @@ from oto.runners.paths import results_dir as _results_dir
 
 __all__ = [
     "CLOCK_MIN_COVERAGE",
-    "FAMILY_TO_DTYPE",
     "AnalyticsEngine",
     "CellAnalytics",
     "extract_family_from_phase_id",
@@ -54,10 +53,17 @@ CLOCK_MIN_COVERAGE = 0.5
 
 
 # `FAMILY_TO_DTYPE` (family prefix -> Tensile DataType char, lowercased keys for
-# phase_id parsing) is owned by `oto.metrics.family_attribution` and imported
-# above. It used to be rebuilt here from the profile's family_dtype_char, shadowing the import;
-# the two dicts compared equal, so the local copy was pure duplication that could
-# drift. Do not reintroduce it -- extend the owner.
+# phase_id parsing) is owned by `oto.metrics.family_attribution` and re-exported
+# lazily below via `__getattr__`. It used to be rebuilt here from the profile's
+# family_dtype_char at import time, freezing the device facts; do not
+# reintroduce it as an import-time value -- extend the owner.
+
+
+def __getattr__(name: str):
+    """Lazy ``FAMILY_TO_DTYPE`` re-export (ambient profile, call time)."""
+    if name == "FAMILY_TO_DTYPE":
+        return family_to_dtype()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class CellAnalytics:
@@ -101,10 +107,10 @@ class CellAnalytics:
 class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     """Stage 5 analytics engine."""
 
-    def __init__(self, registry, base_dir: Path):
+    def __init__(self, registry, base_dir: Path, profile=None):
         self.registry = registry
         self.base_dir = Path(base_dir)
-        self.results_dir = _results_dir(self.base_dir, _loader.current_profile().codename)
+        self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         self._phases_cache = None
 
     def _load_phases_manifest(self) -> list[dict[str, Any]]:
@@ -141,7 +147,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         # Fallback: parse from phase_id via family prefix. Token-based parse
         # (unlike a raw [a-z_]+ regex) survives digit-bearing phase ids.
         family = extract_family_from_phase_id(norm_id)
-        dtype = FAMILY_TO_DTYPE.get(family)
+        dtype = family_to_dtype().get(family)
         if dtype:
             return dtype
 
@@ -318,7 +324,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     def aggregate_by_cell_typecode(
         self,
         records: list[dict[str, Any]],
-        phase_family: str = ""
+        phase_family: str = "",
+    profile=None,
     ) -> dict[tuple[str, str, str, str], list[float]]:
         """Aggregate benchmark records by (dtype, shape, fp, family) with the
         typecode-first family filter.
@@ -332,17 +339,17 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         """
         cell_map = defaultdict(list)
         for rec in records:
-            if not rec.get("family"):
+            if not rec.get("family",):
                 rec = dict(rec)
                 rec["family"] = phase_family
             fam = resolve_cell_family(rec)
             if not fam:
                 continue
-            shape = rec.get("ProblemType", rec.get("shape", "Unknown"))
-            fp = rec.get("fingerprint", rec.get("fp", "unknown"))
-            gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
+            shape = rec.get("ProblemType", rec.get("shape", "Unknown",),)
+            fp = rec.get("fingerprint", rec.get("fp", "unknown",),)
+            gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0,),)
             if gflops > 0:
-                dtype = _loader.current_profile().family_dtype_char.get(fam, rec.get("DataType", ""))
+                dtype = _loader.resolve_profile(profile,).family_dtype_char.get(fam, rec.get("DataType", "",),)
                 cell_map[(dtype, shape, fp, fam)].append(gflops)
         return cell_map
 
@@ -355,7 +362,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         ceiling_gflops: float | None = None,
         red_threshold_pct: float = 50.0,
         family: str = "",
-        source_run: str = ""
+        source_run: str = "",
+    profile=None,
     ) -> CellAnalytics:
         """
         Compute analytics for a single cell vs realistic ceiling.
@@ -376,10 +384,10 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
 
         # Lookup realistic ceiling first, then peak
         if ceiling_gflops is None:
-            ceiling_gflops = _loader.current_profile().realistic_ceilings.get(
+            ceiling_gflops = _loader.resolve_profile(profile,).realistic_ceilings.get(
                 family.upper() if family else dtype,
-                _loader.current_profile().realistic_ceilings.get(dtype, _loader.current_profile().peak_gflops.get(dtype, 1613.0))
-            )
+                _loader.resolve_profile(profile,).realistic_ceilings.get(dtype, _loader.resolve_profile(profile,).peak_gflops.get(dtype, 1613.0,),)
+            ,)
 
         pct_of_ceiling = (agg.median / ceiling_gflops) * 100.0 if ceiling_gflops > 0 else 0.0
 

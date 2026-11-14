@@ -135,44 +135,44 @@ class PhaseMixin:
             merged += 1
         return merged
 
-    def _load_seed_overlay(self) -> list[dict[str, Any]]:
+    def _load_seed_overlay(self, profile=None) -> list[dict[str, Any]]:
         """This project's persistent seed overlay, or [] when there is none.
 
         `<codename>_results/overlays/phases.seed.overlay.yaml` is curated by hand /
         by the D2 tooling and applied to every native run. The per-run overlay
         path is not used because the seed is not tied to a single run_id.
         """
-        path = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+        path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml"
         if not path.exists():
             return []
         try:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
-            return payload.get("phases", []) or []
+            return payload.get("phases", [],) or []
         except Exception as e:
             print(f"[overlay] seed overlay unreadable, ignoring: {e}")
             return []
 
-    def _load_run_overlay(self, run_id: str) -> list[dict[str, Any]]:
+    def _load_run_overlay(self, run_id: str, profile=None) -> list[dict[str, Any]]:
         """This run's overlay phases, or [] when there is none.
 
         Read through the mutator when one exists so overlay parsing has a single
         owner; falls back to the file directly so the overlay is still honoured
         with no ledger-backed mutator.
         """
-        path = (_results_dir(self.base_dir, _loader.current_profile().codename) / "overlays"
+        path = (_results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays"
                 / f"phases.{run_id}.overlay.yaml")
         if not path.exists():
             return []
         if self.mutator is not None:
             try:
-                return self.mutator.load_overlay(run_id) or []
+                return self.mutator.load_overlay(run_id,) or []
             except Exception:
                 pass
         try:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
-            return payload.get("phases", []) or []
+            return payload.get("phases", [],) or []
         except Exception as e:
             print(f"[overlay] unreadable, ignoring: {e}")
             return []

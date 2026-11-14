@@ -162,8 +162,8 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
     enforced by ``assembly_class_valid``; enforcing a *second* copy here would
     be two homes for one fact.
     """
-    profile = _loader.resolve_profile(profile)
-    af0em = config.get("AssertFree0ElementMultiple")
+    profile = _loader.resolve_profile(profile,)
+    af0em = config.get("AssertFree0ElementMultiple",)
     if af0em is not None:
         av, err = _int_or_reject(af0em, "AssertFree0ElementMultiple")
         if err:
@@ -171,7 +171,7 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
         if av < 1:
             return False, f"AssertFree0ElementMultiple must be >= 1 (have {av})"
 
-    sci = config.get("StoreCInUnroll")
+    sci = config.get("StoreCInUnroll",)
     if sci is not None and not (isinstance(sci, bool) or int(str(sci)) in (0, 1)):
         return False, f"StoreCInUnroll must be a bool (have {sci!r})"
 
@@ -188,7 +188,7 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
     # (2026-10-22). The same reject applies to UnrollMajorLDSA/B and
     # LdsBlockSizePerPadA/B (":2890-2892"), which is why those two are
     # *unreachable* rather than "virgin" in the tuning guide's §9.1.
-    tlds = config.get("TransposeLDS")
+    tlds = config.get("TransposeLDS",)
     if tlds is not None:
         tv, err = _int_or_reject(tlds, "TransposeLDS")
         if err:
@@ -226,14 +226,14 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
 
 def _ldspad_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Body of :func:`ldspad_feasible`; ``profile`` defaults to the ambient one."""
-    profile = _loader.resolve_profile(profile)
+    profile = _loader.resolve_profile(profile,)
     ku = depth_u(config)
     ch = dtype_char(config)
-    bpe = BYTES_PER_ELEMENT.get(ch)
+    bpe = BYTES_PER_ELEMENT.get(ch,)
 
     # PrefetchGlobalRead=2 doubles the LDS prefetch buffer; gate it against
     # the same budget so a 2-deep prefetch cannot silently overflow LDS.
-    pgr = config.get("PrefetchGlobalRead")
+    pgr = config.get("PrefetchGlobalRead",)
     if pgr is not None:
         try:
             pgr_i = int(pgr)

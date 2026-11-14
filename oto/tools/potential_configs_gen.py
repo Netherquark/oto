@@ -56,7 +56,7 @@ def _corpus_section(profile: DeviceProfile, base_dir: Path) -> list[str]:
     db = _load_json(kb)
     if not isinstance(db, dict):
         return ["## Corpus: (no kernel_db.json found)", ""]
-    prefix = _floor_prefix(profile)
+    prefix = _floor_prefix(profile=profile,)
     total_rows = sum(len(v) for v in db.values())
     floor_rows = sum(len(v) for k, v in db.items() if k.startswith(prefix))
     lines = ["## Corpus",
@@ -76,31 +76,31 @@ def _acceptance_section(profile: DeviceProfile, base_dir: Path) -> list[str]:
     ar = _load_json(_results_dir(base_dir, profile.codename) / "acceptance_report.json")
     if not isinstance(ar, dict):
         return []
-    verdicts = ar.get("per_cell_verdicts", [])
+    verdicts = ar.get("per_cell_verdicts", [],)
     tally = {"WIN": 0, "TIE": 0, "LOSS": 0}
     for v in verdicts:
-        tally[v.get("verdict", "")] = tally.get(v.get("verdict", ""), 0) + 1
-    overall = ar.get("overall_pass")
+        tally[v.get("verdict", "",)] = tally.get(v.get("verdict", "",), 0,) + 1
+    overall = ar.get("overall_pass",)
     lines = ["## Acceptance (like-for-like)",
              f"- cells: {len(verdicts)}  (WIN {tally['WIN']} / TIE {tally['TIE']} / LOSS {tally['LOSS']})",
              f"- overall_pass: {overall}",
-             f"- reference run: {ar.get('reference_run_id', '?')}",
+             f"- reference run: {ar.get('reference_run_id', '?',)}",
              "- admission rule: protocol='family' like-for-like (see docs/comparability.md)",
              "",
              "## Verdict anatomy"]
     lines.extend(_anatomy_lines(verdicts))
     lines.extend(_attack_plan(verdicts))
-    orange = ar.get("orange_list") or []
+    orange = ar.get("orange_list",) or []
     if orange:
         lines.append("## Orange list (attention, not failures)")
         for item in orange:
             if isinstance(item, dict):
                 lines.append(
                     "- {fam} {shape}: {g} GFlops ({pct}% of ceiling)".format(
-                        fam=item.get("family", "?"),
-                        shape=item.get("shape", "?"),
-                        g=item.get("median_gflops", "?"),
-                        pct=item.get("pct_of_ceiling", "?")))
+                        fam=item.get("family", "?",),
+                        shape=item.get("shape", "?",),
+                        g=item.get("median_gflops", "?",),
+                        pct=item.get("pct_of_ceiling", "?",)))
             else:
                 lines.append(f"- {item}")
         lines.append("")

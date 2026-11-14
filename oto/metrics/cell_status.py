@@ -39,7 +39,7 @@ class CellStatusMixin:
     def classify_cell_status(
         self,
         all_analytics: list[CellAnalytics],
-        red_threshold_pct: float = 50.0
+        red_threshold_pct: float = 50.0, profile=None,
     ) -> dict[str, list[dict[str, Any]]]:
         """Classify gfx900 contract cells (family x deck shape) for report.
 
@@ -50,24 +50,24 @@ class CellStatusMixin:
         best_per_cell: dict[tuple[str, str], float] = {}
         # dtype char -> family fallback; ambiguous 'H' resolves to HH
         dtype_to_family = {}
-        for family, ch in _loader.current_profile().family_dtype_char.items():
+        for family, ch in _loader.resolve_profile(profile,).family_dtype_char.items():
             dtype_to_family.setdefault(ch, family)
 
         for a in all_analytics:
             fam = str(a.family or "").upper()
-            if fam not in _loader.current_profile().family_shapes:
-                fam = dtype_to_family.get(str(a.dtype).upper(), "")
-            if not fam or fam not in _loader.current_profile().family_shapes:
+            if fam not in _loader.resolve_profile(profile,).family_shapes:
+                fam = dtype_to_family.get(str(a.dtype).upper(), "",)
+            if not fam or fam not in _loader.resolve_profile(profile,).family_shapes:
                 continue
             measured[fam].add(a.shape)
             key = (fam, a.shape)
-            if a.median_gflops > best_per_cell.get(key, 0.0):
+            if a.median_gflops > best_per_cell.get(key, 0.0,):
                 best_per_cell[key] = a.median_gflops
 
         def _entry(fam: str, shape: str, status: str, best: float) -> dict[str, Any]:
-            ceiling = _loader.current_profile().realistic_ceilings.get(
-                fam, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
-            )
+            ceiling = _loader.resolve_profile(profile).realistic_ceilings.get(
+                fam, _loader.resolve_profile(profile).peak_gflops.get(_loader.resolve_profile(profile).family_dtypes.get(fam, "FP32",), 1613.0,)
+            ,)
             pct = (best / ceiling * 100.0) if ceiling > 0 else 0.0
             return {
                 "family": fam,
@@ -81,11 +81,11 @@ class CellStatusMixin:
         orange: list[dict[str, Any]] = []
         green: list[dict[str, Any]] = []
 
-        for fam, sizes in _loader.current_profile().family_shapes.items():
+        for fam, sizes in _loader.resolve_profile(profile,).family_shapes.items():
             for s in sizes:
                 shape = f"{s}x{s}x{s}"
-                best = best_per_cell.get((fam, shape), 0.0)
-                if shape not in measured.get(fam, set()):
+                best = best_per_cell.get((fam, shape), 0.0,)
+                if shape not in measured.get(fam, set(),):
                     red.append(_entry(fam, shape, "MISSING", best))
                     continue
                 entry = _entry(fam, shape, "GREEN", best)

@@ -155,7 +155,7 @@ def _stage_retirement(driver, args, stage) -> int | None:
     return 0
 
 
-def _stage_analytics(driver, args, stage) -> int | None:
+def _stage_analytics(driver, args, stage, profile=None) -> int | None:
     """Stage 5: per-dtype analytics summary for the latest run (registry-only)."""
     if not ("5" in stage or "analytics" in stage):
         return None
@@ -163,7 +163,7 @@ def _stage_analytics(driver, args, stage) -> int | None:
     if run_dir is None:
         latest = driver.registry.latest_run_id()
         if latest:
-            run_dir = _runs_dir(driver.base_dir, _loader.current_profile().codename) / latest
+            run_dir = _runs_dir(driver.base_dir, _loader.resolve_profile(profile,).codename) / latest
     analytics = driver._load_analytics_from_run(
         run_dir if run_dir is not None and run_dir.exists() else None)
     if not analytics:

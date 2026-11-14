@@ -146,6 +146,7 @@ class TensileDriver(
         cooldown_s: int = 30,
         create_run: bool = True,
         codename: str | None = None,
+    profile=None,
     ):
         self.base_dir = Path(base_dir).resolve()
         self.phase_timeout_s = phase_timeout_s
@@ -158,8 +159,8 @@ class TensileDriver(
                 from oto.device.detect import detect_codename
                 codename = detect_codename()
             except Exception:
-                from oto.device.loader import current_profile
-                codename = current_profile().codename
+                from oto.device.loader import resolve_profile
+                codename = resolve_profile(profile).codename
         self.codename = codename
         from oto.device.loader import load_profile, rebind_profile
         self.profile = load_profile(codename)

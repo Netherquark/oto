@@ -76,12 +76,12 @@ def _attest(name: str, base: str) -> bool:
     return gate_attested("gate_differential", base, name)
 
 
-def _compress_shim() -> tuple[str, str]:
+def _compress_shim(profile=None) -> tuple[str, str]:
     import json as _json
 
-    from oto.device.loader import current_profile
+    from oto.device.loader import resolve_profile
 
-    prof = current_profile()
+    prof = resolve_profile(profile)
     shim = _json.dumps({
         "NUM_CUS": prof.num_cus,
         "LDS_PER_CU_KB": prof.lds_per_cu_kb,

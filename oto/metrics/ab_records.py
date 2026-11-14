@@ -174,11 +174,11 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> list[dict[str, Any]]
 
 
 def arm_records(driver, runs: Iterable[str], arm: str,
-                base: Path = BASE) -> list[dict[str, Any]]:
+                base: Path = BASE, profile=None) -> list[dict[str, Any]]:
     """Records for a set of runs, classified wholly as one arm."""
     recs: list[dict[str, Any]] = []
     for run in runs:
-        recs.extend(phase_records(driver, _runs_dir(base, _loader.current_profile().codename) / run, arm))
+        recs.extend(phase_records(driver, _runs_dir(base, _loader.resolve_profile(profile,).codename) / run, arm))
     return recs
 
 #: The last computed record sets, keyed by the corpus stamp. The corpus walk
@@ -191,20 +191,20 @@ _RECORD_SETS_CACHE: dict[tuple[Any, ...], tuple[list[dict[str, Any]],
                                                list[str]]] = {}
 
 
-def _corpus_stamp(base: Path) -> tuple[Any, ...]:
+def _corpus_stamp(base: Path, profile=None) -> tuple[Any, ...]:
     """A cheap key that changes whenever the corpus changes.
 
     Returns:
         (base, run count, newest run mtime, registry size and mtime).
     """
-    runs = [d for d in (_runs_dir(base, _loader.current_profile().codename)).glob("run_*") if d.is_dir()]
+    runs = [d for d in (_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*") if d.is_dir()]
     newest = 0.0
     for run in runs:
         try:
             newest = max(newest, run.stat().st_mtime)
         except OSError:
             continue
-    db = _results_dir(base, _loader.current_profile().codename) / "registry.db"
+    db = _results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db"
     try:
         stat = db.stat()
         db_stamp: tuple[Any, ...] = (stat.st_size, stat.st_mtime)
@@ -213,7 +213,7 @@ def _corpus_stamp(base: Path) -> tuple[Any, ...]:
     return (str(base), len(runs), newest, db_stamp)
 
 
-def arm_record_sets(base: Path = BASE) -> tuple[list[dict[str, Any]],
+def arm_record_sets(base: Path = BASE, profile=None) -> tuple[list[dict[str, Any]],
                                                 list[dict[str, Any]],
                                                 list[str]]:
     """The canonical ``(native, floor, chain)`` inputs, for every caller.
@@ -230,19 +230,19 @@ def arm_record_sets(base: Path = BASE) -> tuple[list[dict[str, Any]],
     the walk costs ~76 s and every caller wants the same records. The returned
     lists are shared, so a caller must treat them as read-only.
     """
-    key = _corpus_stamp(base)
-    cached = _RECORD_SETS_CACHE.get(key)
+    key = _corpus_stamp(base, profile=profile,)
+    cached = _RECORD_SETS_CACHE.get(key,)
     if cached is not None:
         return cached
     driver = _driver(base)
     native = arm_records(
         driver,
-        [d.name for d in sorted((_runs_dir(base, _loader.current_profile().codename)).glob("run_*")) if d.is_dir()],
-        "native", base)
+        [d.name for d in sorted((_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*")) if d.is_dir()],
+        "native", base, profile=profile,)
     native += _registry_records(driver, base, want_arm="native")
-    chain = [r for r in driver._reference_floor_runs(None)
-             if (_runs_dir(base, _loader.current_profile().codename) / r).is_dir()]
-    floor = arm_records(driver, chain, "spoof", base)
+    chain = [r for r in driver._reference_floor_runs(None,)
+             if (_runs_dir(base, _loader.resolve_profile(profile,).codename) / r).is_dir()]
+    floor = arm_records(driver, chain, "spoof", base, profile=profile,)
     floor += _registry_records(driver, base, want_arm="spoof")
     if len(_RECORD_SETS_CACHE) > 4:
         _RECORD_SETS_CACHE.clear()

@@ -170,22 +170,23 @@ class CandidateEmitMixin:
         self,
         family: str,
         patterns: list[str],
-        base_shapes: list[str]
+        base_shapes: list[str],
+    profile=None,
     ) -> list[CandidateConfig]:
         """Generate native family phases for a dtype/op family."""
         candidates = []
-        family_deck = self.family_decks.get(family, [])
+        family_deck = self.family_decks.get(family, [],)
 
         for pattern in patterns:
             for tile_config in family_deck:
                 tile_tag = self._build_tile_tag(tile_config)
-                tile_key = (tile_config.get("MacroTile"),
-                            tile_config.get("ThreadTile"),
-                            tile_config.get("VectorWidth"))
+                tile_key = (tile_config.get("MacroTile",),
+                            tile_config.get("ThreadTile",),
+                            tile_config.get("VectorWidth",))
                 tile_uses = self._count_tile_uses(family_deck, tile_key)
 
                 for shape in base_shapes:
-                    template = self._build_family_template(family, pattern, shape)
+                    template = self._build_family_template(family, pattern, shape, profile=profile,)
                     rel = self._validate_tile_config(template, tile_config, family)
                     if rel is None:
                         continue
@@ -195,7 +196,7 @@ class CandidateEmitMixin:
 
                     candidate = self.emit_candidate(
                         phase_id=phase_id, label=label,
-                        dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
+                        dtype=_loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                         shapes=[shape], template=template, knobs=rel
                     )
                     candidates.append(candidate)
@@ -215,11 +216,11 @@ class CandidateEmitMixin:
         return sum(1 for e in family_deck if (e.get("MacroTile"),
                 e.get("ThreadTile"), e.get("VectorWidth")) == tile_key)
 
-    def _build_family_template(self, family: str, pattern: str, shape: str) -> dict:
+    def _build_family_template(self, family: str, pattern: str, shape: str, profile=None) -> dict:
         """Build candidate template for family phases."""
         return {
-            "Architecture": _loader.current_profile().codename,
-            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+            "Architecture": _loader.resolve_profile(profile,).codename,
+            "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
             "ContractionPattern": pattern,
             "ProblemType": shape,
             "ScheduleName": "isa",
@@ -326,24 +327,24 @@ class CandidateEmitMixin:
         return candidates
 
     def _emit_baselines(self, candidates, refused, family, pattern, bases,
-                         shapes, include_baseline):
+                         shapes, include_baseline, profile=None):
         """Emit baseline (unchanged base tile) candidates if requested."""
         if not include_baseline:
             return candidates, refused
         for base in bases:
             for shape in shapes:
-                template = self._build_template(family, pattern, shape)
-                ok, why = self.validate_config({**template, **base})
+                template = self._build_template(family, pattern, shape, profile=profile,)
+                ok, why = self.validate_config({**template, **base},)
                 if not ok:
                     refused.append(f"{family}/baseline/{shape}: {why}")
                     continue
-                tag = (f"_mt{base.get('MacroTile', '')}"
-                       f"_tt{base.get('ThreadTile', '')}_base")
+                tag = (f"_mt{base.get('MacroTile', '',)}"
+                       f"_tt{base.get('ThreadTile', '',)}_base")
                 label = f"{family}_{pattern}_{shape}{tag}"
                 phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
                 candidates.append(self.emit_candidate(
                     phase_id=phase_id, label=label,
-                    dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
+                    dtype=_loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                     shapes=[shape], template=template, knobs=dict(base)
                 ))
         return candidates, refused
@@ -360,38 +361,38 @@ class CandidateEmitMixin:
         return candidates, refused
 
     def _emit_sweep_values(self, candidates, refused, family, pattern, base,
-                            sweep, shapes):
+                            sweep, shapes, profile=None):
         """Emit candidates for one sweep's values."""
         for value in sweep["values"]:
             knobs = dict(base)
-            for over_fam, width in sweep.get("width_override", {}).items():
+            for over_fam, width in sweep.get("width_override", {},).items():
                 if over_fam == family:
                     knobs["VectorWidth"] = width
             knobs.update(value)
             for shape in shapes:
-                template = self._build_template(family, pattern, shape)
-                ok, why = self.validate_config({**template, **knobs})
+                template = self._build_template(family, pattern, shape, profile=profile,)
+                ok, why = self.validate_config({**template, **knobs},)
                 if not ok:
                     refused.append(
                         f"{family}/{sweep['knob']}/{shape}: {why}")
                     continue
-                tag = (f"_mt{base.get('MacroTile', '')}"
-                       f"_tt{base.get('ThreadTile', '')}"
+                tag = (f"_mt{base.get('MacroTile', '',)}"
+                       f"_tt{base.get('ThreadTile', '',)}"
                        f"_sw{self._sweep_value_tag(value)}")
                 label = f"{family}_{pattern}_{shape}{tag}"
                 phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
                 candidates.append(self.emit_candidate(
                     phase_id=phase_id, label=label,
-                    dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
+                    dtype=_loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                     shapes=[shape], template=template, knobs=knobs
                 ))
         return candidates, refused
 
-    def _build_template(self, family: str, pattern: str, shape: str) -> dict[str, Any]:
+    def _build_template(self, family: str, pattern: str, shape: str, profile=None) -> dict[str, Any]:
         """Build candidate template."""
         return {
-            "Architecture": _loader.current_profile().codename,
-            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+            "Architecture": _loader.resolve_profile(profile,).codename,
+            "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
             "ContractionPattern": pattern,
             "ProblemType": shape,
             "ScheduleName": "isa",
@@ -403,7 +404,8 @@ class CandidateEmitMixin:
         families: list[str] | None = None,
         patterns: list[str] | None = None,
         base_shapes: list[str] | None = None,
-        phases_file: Path | None = None
+        phases_file: Path | None = None,
+    profile=None,
     ) -> list[CandidateConfig]:
         """Emit decision-labelled trial tiles (full tiles, not knob deltas).
 
@@ -424,21 +426,21 @@ class CandidateEmitMixin:
             knobs = trial["knobs"]
             for pattern in pats:
                 for shape in trial.get("shapes", base_shapes or
-                                       ["1024x1024x1024"]):
+                                       ["1024x1024x1024"],):
                     template = {
-                        "Architecture": _loader.current_profile().codename,
-                        "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
+                        "Architecture": _loader.resolve_profile(profile,).codename,
+                        "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
                         "FamilyLabel": family,
                     }
-                    ok, why = self.validate_config({**template, **knobs})
+                    ok, why = self.validate_config({**template, **knobs},)
                     if not ok:
                         refused.append(f"{family}/trial{dec}/{shape}: {why}")
                         continue
-                    tag = (f"_mt{knobs.get('MacroTile', '')}"
-                           f"_tt{knobs.get('ThreadTile', '')}"
+                    tag = (f"_mt{knobs.get('MacroTile', '',)}"
+                           f"_tt{knobs.get('ThreadTile', '',)}"
                            f"_trial{dec}")
                     label = f"{family}_{pattern}_{shape}{tag}"
                     phase_id = (f"phase_{family.lower()}_{pattern}"
@@ -446,7 +448,7 @@ class CandidateEmitMixin:
                     candidates.append(self.emit_candidate(
                         phase_id=phase_id,
                         label=label,
-                        dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
+                        dtype=_loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
                         shapes=[shape],
                         template=template,
                         knobs=dict(knobs),

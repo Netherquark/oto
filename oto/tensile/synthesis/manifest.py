@@ -275,6 +275,7 @@ def _draw_with_groups(
         rng: random.Random,
         base_config: dict[str, Any] | None,
         groups: Sequence[str],
+profile=None,
 ) -> tuple[dict[str, Any] | None, str]:
     """One draw with a *specific* set of groups, hard-walled before return.
 
@@ -294,7 +295,7 @@ def _draw_with_groups(
         return None, f"not manifest-coherent: {reason}"
     config.setdefault("Architecture", "gfx900")
     config.setdefault("ProblemType", "Contraction")
-    config.setdefault("DataType", _loader.current_profile().family_dtype_char[family])
+    config.setdefault("DataType", _loader.resolve_profile(profile,).family_dtype_char[family])
 
     ok, reason = legality.check_hard_walls(config)
     if not ok:

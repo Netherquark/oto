@@ -187,18 +187,18 @@ class ClockMixin:
         """
         return {pid: d["sclk_hz"]
                 for pid, d in self._load_telemetry_by_phase(run_dir).items()}
-    def _sclk_map(self, run_ids: list[str]) -> dict[tuple[str, str], float]:
+    def _sclk_map(self, run_ids: list[str], profile=None) -> dict[tuple[str, str], float]:
         """(source_run, phase_id) -> sustained sclk across the given runs."""
         if self._sclk_cache is None:
             self._sclk_cache: dict[tuple[str, str], float] = {}
         for rid in run_ids:
             if any(k[0] == rid for k in self._sclk_cache):
                 continue
-            run_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / rid
+            run_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / rid
             for pid, hz in self._load_sclk_by_phase(run_dir).items():
                 self._sclk_cache[(rid, pid)] = hz
         return self._sclk_cache
-    def _thermal_map(self, run_ids: list[str]) -> dict[tuple[str, str], dict[str, Any]]:
+    def _thermal_map(self, run_ids: list[str], profile=None) -> dict[tuple[str, str], dict[str, Any]]:
         """(source_run, phase_id) -> thermal context for the same busy samples.
 
         Shares the parse with _load_sclk_by_phase via _load_telemetry_by_phase, so
@@ -211,7 +211,7 @@ class ClockMixin:
         for rid in run_ids:
             if any(k[0] == rid for k in self._thermal_cache):
                 continue
-            run_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / rid
+            run_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / rid
             for pid, d in self._load_telemetry_by_phase(run_dir).items():
                 self._thermal_cache[(rid, pid)] = d
         return self._thermal_cache

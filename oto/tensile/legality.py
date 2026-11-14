@@ -490,7 +490,7 @@ def _draw_legal(base_dir: Path,
                 family: str,
                 rng: random.Random,
                 base_config: dict[str, Any] | None = None,
-                groups: int = 2) -> tuple[dict[str, Any] | None, str]:
+                groups: int = 2, profile=None) -> tuple[dict[str, Any] | None, str]:
     """As :func:`sample_legal`, but also return why a draw was discarded."""
     support = shipped_support(base_dir, family)
     if not support:
@@ -512,7 +512,7 @@ def _draw_legal(base_dir: Path,
 
     config.setdefault("Architecture", "gfx900")
     config.setdefault("ProblemType", "Contraction")
-    config.setdefault("DataType", _loader.current_profile().family_dtype_char[family])
+    config.setdefault("DataType", _loader.resolve_profile(profile,).family_dtype_char[family])
 
     ok, reason = check_hard_walls(config)
     if not ok:
@@ -526,7 +526,7 @@ def _draw_legal(base_dir: Path,
 def sampler_sweep(base_dir: Path,
                   families: Sequence[str] | None = None,
                   draws: int = 400,
-                  seed: int = 0) -> dict[str, Any]:
+                  seed: int = 0, profile=None) -> dict[str, Any]:
     """Measure the sampler's own wall/schedule hit rate, CPU-only.
 
     Reports how often a raw draw was discarded, and why -- read live from this
@@ -535,7 +535,7 @@ def sampler_sweep(base_dir: Path,
     wall-violating config), and re-running the full assertion over it would
     measure the assertion, not the prior.
     """
-    families = list(families or _loader.current_profile().family_dtypes)
+    families = list(families or _loader.resolve_profile(profile,).family_dtypes)
     rng = random.Random(seed)
     per_family: dict[str, Any] = {}
     for family in families:
@@ -543,11 +543,11 @@ def sampler_sweep(base_dir: Path,
         accepted = 0
         reasons: dict[str, int] = {}
         for _ in range(draws):
-            config, reason = _draw_legal(base_dir, family, rng)
+            config, reason = _draw_legal(base_dir, family, rng, profile=profile,)
             if config is not None:
                 accepted += 1
             else:
-                reasons[reason] = reasons.get(reason, 0) + 1
+                reasons[reason] = reasons.get(reason, 0,) + 1
         per_family[family] = {
             "support_vectors": len(support),
             "draws": draws,

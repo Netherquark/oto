@@ -196,14 +196,14 @@ def shipped_kernel_knobs(name: str) -> dict[str, Any]:
 
 
 def shipped_kernel_config(name: str, family: str,
-                          arch: str = "gfx900") -> dict[str, Any]:
+                          arch: str = "gfx900", profile=None) -> dict[str, Any]:
     """Public canonical read: phase `config` for one shipped kernel of `family`.
 
     Resolves `family` to its Tensile DataType char via the shared
     _loader.current_profile().family_dtype_char map rather than each caller re-deriving it. ``arch``
     sets the config's Architecture (the reference floor's ISA).
     """
-    return _config_from_kernel(name, _loader.current_profile().family_dtype_char[family], arch)
+    return _config_from_kernel(name, _loader.resolve_profile(profile,).family_dtype_char[family], arch)
 
 
 def _reconcile_knobs(k: dict[str, Any]) -> None:
@@ -300,7 +300,7 @@ def _short_tag(name: str, k: dict[str, Any]) -> str:
 
 def emit_spoof_phases(manifest: dict[str, Any],
                       arch: str = "gfx900",
-                      schedule: str = "vega10") -> list[dict[str, Any]]:
+                      schedule: str = "vega10", profile=None) -> list[dict[str, Any]]:
     """Build the one-time spoof reference phase list from the manifest.
 
     One phase per shipped kernel, per family/pattern, benchmarked at the
@@ -311,17 +311,17 @@ def emit_spoof_phases(manifest: dict[str, Any],
     this device that is gfx900.
     """
     phases: list[dict[str, Any]] = []
-    by_family = manifest.get("families", {})
-    for fam in list(_loader.current_profile().family_dtypes.keys()):
-        fam_info = by_family.get(fam)
+    by_family = manifest.get("families", {},)
+    for fam in list(_loader.resolve_profile(profile,).family_dtypes.keys()):
+        fam_info = by_family.get(fam,)
         if not fam_info:
             continue
-        dtype_char = _loader.current_profile().family_dtype_char[fam]
-        shapes = [f"{s}x{s}x{s}" for s in _loader.current_profile().family_shapes.get(fam, [])]
+        dtype_char = _loader.resolve_profile(profile,).family_dtype_char[fam]
+        shapes = [f"{s}x{s}x{s}" for s in _loader.resolve_profile(profile,).family_shapes.get(fam, [],)]
         for pattern in CONTRACTION_PATTERNS:
             fam_pattern = f"{fam}_{pattern}"
-            entry = fam_info.get(pattern) or fam_info.get(fam_pattern)
-            kernels = (entry or {}).get("kernels", [])
+            entry = fam_info.get(pattern,) or fam_info.get(fam_pattern,)
+            kernels = (entry or {}).get("kernels", [],)
             for name in kernels:
                 k = _parse_kernel_knobs(name)
                 _reconcile_knobs(k)
@@ -338,12 +338,12 @@ def emit_spoof_phases(manifest: dict[str, Any],
                     "NumBenchmarks": 8,
                     "config": config,
                     "kernel": name,  # provenance: shipped solution name
-                    f"{arch}_reference_source": "+".join(manifest.get("rocm_prefixes", []) or []),
+                    f"{arch}_reference_source": "+".join(manifest.get("rocm_prefixes", [],) or []),
                 })
     return phases
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == 'SHIPPED_FAMILIES':
-        return list(_loader.current_profile().family_dtypes.keys())
+        return list(_loader.resolve_profile(profile,).family_dtypes.keys())
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

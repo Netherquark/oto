@@ -47,10 +47,10 @@ _PROFILE_FINGERPRINT_FIELDS = (
 )
 
 
-def _profile_fingerprint() -> str:
+def _profile_fingerprint(profile=None) -> str:
     try:
         from oto.device import loader as _loader
-        p = _loader.current_profile()
+        p = _loader.resolve_profile(profile)
         return "|".join(str(getattr(p, f, "")) for f in _PROFILE_FINGERPRINT_FIELDS)
     except Exception:
         return "unknown"

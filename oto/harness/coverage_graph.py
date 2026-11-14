@@ -60,7 +60,7 @@ import itertools
 
 from oto.device import loader as _loader
 from oto.harness.coverage_map import (
-    _DEFAULT_CELLS,
+    _default_cells,
     coverage_row,
     legal_geometries,
     measured_geometries,
@@ -108,10 +108,10 @@ def _bucket(value: int, buckets: Sequence[int]) -> int | None:
     return chosen
 
 
-def _weight(family: str) -> int:
+def _weight(family: str, profile=None) -> int:
     """The accumulator VGPRs per element for a family (1 S, 2 D, 4 C, 8 Z)."""
-    char = _loader.current_profile().family_dtype_char.get(family, "S")
-    return {"S": 1, "H": 1, "D": 2, "C": 4, "Z": 8}.get(char, 1)
+    char = _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",)
+    return {"S": 1, "H": 1, "D": 2, "C": 4, "Z": 8}.get(char, 1,)
 
 
 def _grid(family: str, legal: Iterable[Sequence[Any]],
@@ -451,7 +451,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     help="print the numbers only")
     args = ap.parse_args(argv)
 
-    fams = list(args.family) if args.family else sorted(_DEFAULT_CELLS)
+    fams = list(args.family) if args.family else sorted(_default_cells())
     only: list[tuple[str, int]] = []
     for spec in args.cell or []:
         fam, _, side = spec.partition(":")
@@ -465,7 +465,7 @@ def main(argv: Sequence[str] | None = None) -> int:
           f"{'%unexp':>7} {'best':>8} {'peaks':>5} {'traps':>5}")
     for family in fams:
         legal = legal_geometries(family)
-        for shape in _DEFAULT_CELLS.get(family, []):
+        for shape in _default_cells().get(family, []):
             if only and (family, int(shape.split("x")[0])) not in only:
                 continue
             cell_measured = measured.get((family, shape), {})

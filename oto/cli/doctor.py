@@ -166,9 +166,9 @@ def subprocess_probe(argv: list[str], needle: str) -> bool:
     return needle in (proc.stdout or "")
 
 
-def _profile(base: Path) -> Check:
-    from oto.device.loader import current_profile
-    codename = current_profile().codename
+def _profile(base: Path, profile=None) -> Check:
+    from oto.device.loader import resolve_profile
+    codename = resolve_profile(profile).codename
     path = base / "profiles" / f"{codename}.json"
     if path.is_file():
         return _ok("toolchain", "Device profile", str(path))
@@ -176,10 +176,10 @@ def _profile(base: Path) -> Check:
                  f"Add profiles/{codename}.json (see profiles/gfx90c.json).")
 
 
-def _registry(base: Path) -> list[Check]:
-    from oto.device.loader import current_profile
+def _registry(base: Path, profile=None) -> list[Check]:
+    from oto.device.loader import resolve_profile
     from oto.runners.paths import results_dir
-    results = results_dir(base, current_profile().codename)
+    results = results_dir(base, resolve_profile(profile).codename)
     db = results / "registry.db"
     out = [_ok("registry", "Results directory", str(results))
            if results.is_dir() else

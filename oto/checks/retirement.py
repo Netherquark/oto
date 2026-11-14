@@ -22,14 +22,14 @@ from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 
 
-def main() -> int:
+def main(profile=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
 
-    db = _results_dir(args.base_dir, _loader.current_profile().codename) / "registry.db"
+    db = _results_dir(args.base_dir, _loader.resolve_profile(profile,).codename) / "registry.db"
     retirements: list[str] = []
     samples: dict[str, int] = {}
     if db.is_file():
@@ -45,9 +45,9 @@ def main() -> int:
                     d = json.loads(data)
                 except Exception:
                     continue
-                key = f"{d.get('dtype', d.get('DataType', 'unknown'))}_" \
-                      f"{d.get('shapes', d.get('ProblemType', 'unknown'))}_{d.get('fp', 'unknown')}"
-                samples[key] = samples.get(key, 0) + 1
+                key = f"{d.get('dtype', d.get('DataType', 'unknown',),)}_" \
+                      f"{d.get('shapes', d.get('ProblemType', 'unknown',),)}_{d.get('fp', 'unknown',)}"
+                samples[key] = samples.get(key, 0,) + 1
         finally:
             conn.close()
 

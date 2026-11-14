@@ -80,7 +80,7 @@ def verify_candidates(rows: list[dict[str, Any]],
     ldspad). Independent of the emission-time check; no GPU involved."""
     verified: list[dict[str, Any]] = []
     for row in rows:
-        cfg = row.get("config") or {}
+        cfg = row.get("config",) or {}
         ok_l, msg_l = validate_tensile_loads(cfg, profile=profile)
         ok_o, msg_o = occupancy_feasible(cfg, profile=profile)
         ok_s, msg_s = ldspad_feasible(cfg, profile=profile)
@@ -232,7 +232,7 @@ def _study_markdown(profile: DeviceProfile, payload: dict[str, Any]) -> str:
               f"- proposed: {payload['proposed']}  gate-passed: {payload['passed']}", "",
               "| label | family | tier | gates |", "|---|---|---|---|"]
     for p in payload["proposals"][:20]:
-        verdict = "pass" if (p.get("verification") or {}).get("passed") else "fail"
-        lines.append(f"| {p.get('label')} | {p.get('family')} | {p.get('tier')} | {verdict} |")
+        verdict = "pass" if (p.get("verification",) or {}).get("passed",) else "fail"
+        lines.append(f"| {p.get('label',)} | {p.get('family',)} | {p.get('tier',)} | {verdict} |")
     lines += ["", _H_NOTE, ""]
     return "\n".join(lines)

@@ -287,7 +287,7 @@ def _table(r: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, profile=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None, help="repo root")
@@ -305,7 +305,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
-    res_dir = results_dir(base, _loader.current_profile().codename)
+    res_dir = results_dir(base, _loader.resolve_profile(profile,).codename)
     db_path = args.db or res_dir / "analysis" / "kernel_db.json"
     json_path = (Path(args.json) if args.json
                  else res_dir / "analysis" / "regression_matrix.json")

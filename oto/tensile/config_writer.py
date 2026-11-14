@@ -340,7 +340,7 @@ def _drop_unsupported(fork_params: dict[str, Any],
 
 
 def _global_parameters(schedule_name: str,
-                       num_benchmarks: int) -> dict[str, Any]:
+                       num_benchmarks: int, profile=None) -> dict[str, Any]:
     """The fixed ``GlobalParameters`` block. Hints only: CpuThreads is the
     only variable.
 
@@ -357,7 +357,7 @@ def _global_parameters(schedule_name: str,
     seen, and wastes build time on archs this GPU is not.
     """
     return {
-        "Architecture": _loader.current_profile().codename,
+        "Architecture": _loader.resolve_profile(profile,).codename,
         "MinimumRequiredVersion": "4.4.0",
         "PrintLevel": 1,
         "ForceRedoBenchmarkProblems": True,

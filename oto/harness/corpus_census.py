@@ -137,10 +137,10 @@ def _group_label(row: dict[str, Any]) -> str:
     return f"{family}/{typecode}"
 
 
-def _group_sort(label: str) -> tuple[int, str]:
+def _group_sort(label: str, profile=None) -> tuple[int, str]:
     family, _, typecode = label.partition("/")
-    order = {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
-    return (order.get(family, len(order)), typecode)
+    order = {f: i for i, f in enumerate(_loader.resolve_profile(profile,).family_shapes)}
+    return (order.get(family, len(order),), typecode)
 
 
 def load_rows(db_path: str | None = None, side: str = "native",
@@ -452,8 +452,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == '_FAMILY_ORDER':
-        return {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
+        return {f: i for i, f in enumerate(_loader.resolve_profile(profile,).family_shapes)}
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -137,7 +137,7 @@ def _as_tile_list(value: Any) -> list[int] | None:
     return [int(p) for p in parts]
 
 
-def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any]]]:
+def _measured_tiles(base: Path, per_family: int, profile=None) -> dict[str, list[dict[str, Any]]]:
     """The distinct MacroTile/ThreadTile/VectorWidth/DepthU combos per family.
 
     Read from `kernel_db.json` — i.e. the tiles that *actually ran*, not an
@@ -151,7 +151,7 @@ def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any
     is how a default value like `StaggerU=0` ends up looking broken on an
     LDS-full `256x256` tile.
     """
-    db_path = _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     if not db_path.is_file():
         return {}
     try:
@@ -168,12 +168,12 @@ def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            fam = str(row.get("family") or "")
-            macro = _as_tile_str(row.get("MacroTile"))
+            fam = str(row.get("family",) or "")
+            macro = _as_tile_str(row.get("MacroTile",))
             if not fam or not macro:
                 continue
-            thread = _as_tile_list(row.get("ThreadTile"))
-            vw, du = row.get("VectorWidth"), row.get("DepthU")
+            thread = _as_tile_list(row.get("ThreadTile",))
+            vw, du = row.get("VectorWidth",), row.get("DepthU",)
             key = (macro, str(thread), str(vw), str(du))
             seen.setdefault(fam, {})[key] = {
                 "MacroTile": macro,
@@ -192,16 +192,16 @@ def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any
             for fam, tiles in seen.items()}
 
 
-def _family_template(fam: str) -> dict[str, Any]:
+def _family_template(fam: str, profile=None) -> dict[str, Any]:
     """The minimal contract template a draw is applied on top of."""
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
-        "Architecture": _loader.current_profile().codename,
-        "DataType": _loader.current_profile().family_dtype_char.get(fam, "S"),
+        "Architecture": _loader.resolve_profile(profile,).codename,
+        "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(fam, "S",),
         "FamilyLabel": fam,
         "ScheduleName": "isa",
         "ProblemType": "Contraction",
-        "ContractionPattern": _DEFAULT_PATTERN.get(fam, "Ailk_Bjlk"),
+        "ContractionPattern": _DEFAULT_PATTERN.get(fam, "Ailk_Bjlk",),
     }
 
 
@@ -235,7 +235,7 @@ def _classify_draw(template: dict[str, Any], tiles: list[dict[str, Any]],
 
 def _report_legality(n_fams: int, legal: int, coupled: Counter,
                      refused: list[tuple[str, str, Any, str]],
-                     skipped: Counter) -> None:
+                     skipped: Counter, profile=None) -> None:
     """Print the census. Split out so `_legality` stays inside the line budget."""
     total = legal + sum(coupled.values()) + len(refused)
     print(f"{n_fams} families x up to {TILES_PER_FAMILY} measured tiles; "
@@ -256,7 +256,7 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
           f"responsible,\nand most of these resolve when a companion knob is "
           f"drawn with them.\nA value that is genuinely dead for this device "
           f"is one whose reason is a\nstructural class rule ('illegal on "
-          f"{_loader.current_profile().codename}', 'no MatrixInstruction'):")
+          f"{_loader.resolve_profile(profile,).codename}', 'no MatrixInstruction'):")
     for fam, knob, value, why in refused:
         print(f"  {fam:8}{knob:30}{value!s:6} {why}")
 
@@ -318,9 +318,9 @@ def _legality(base: Path, families: list[str] | None) -> int:
 
 # ----------------------------------------------------------------- flood
 
-def _flood(base: Path, cap: int | None) -> int:
+def _flood(base: Path, cap: int | None, profile=None) -> int:
     """Per-cell distinct-config census, and what a top-K cap would cost."""
-    db_path = _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
     except Exception as exc:
@@ -339,11 +339,11 @@ def _flood(base: Path, cap: int | None) -> int:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            med = row.get("gflops_median")
+            med = row.get("gflops_median",)
             if med is None:
                 continue
-            fp = row.get("fp") or row.get("kernel") or ""
-            cells[(str(row.get("family")), str(row.get("shape")))][fp].append(med)
+            fp = row.get("fp",) or row.get("kernel",) or ""
+            cells[(str(row.get("family",)), str(row.get("shape",)))][fp].append(med)
 
     if not cells:
         print("no cells in kernel_db.json")

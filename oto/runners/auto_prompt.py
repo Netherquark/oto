@@ -89,7 +89,7 @@ class AutoPlan:
                 or self.rerun_unreproducible)
 
 
-def _read_counts(base_dir: Any = None) -> dict[str, int]:
+def _read_counts(base_dir: Any = None, profile=None) -> dict[str, int]:
     """Live counts of each reference tier, best effort.
 
     Nothing here is cached or transcribed: the universe is the union of every
@@ -110,7 +110,7 @@ def _read_counts(base_dir: Any = None) -> dict[str, int]:
     counts = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
     try:
         import sqlite3
-        db = sqlite3.connect(_results_dir(base, _loader.current_profile().codename) / "registry.db")
+        db = sqlite3.connect(_results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db")
         chain = [r[0] for r in db.execute(
             "select run_id from runs where run_id like 'gfx900_ref%' order by run_id")]
     except Exception:
@@ -118,7 +118,7 @@ def _read_counts(base_dir: Any = None) -> dict[str, int]:
 
     universe: dict[str, Any] = {}
     for rid in chain:
-        p = _runs_dir(base, _loader.current_profile().codename) / rid / "phases_reference.yaml"
+        p = _runs_dir(base, _loader.resolve_profile(profile,).codename) / rid / "phases_reference.yaml"
         try:
             for ph in yamlio.load_yaml(p) or []:
                 universe.setdefault(tlib.phase_key(ph), ph)
@@ -132,9 +132,9 @@ def _read_counts(base_dir: Any = None) -> dict[str, int]:
     except Exception:
         manifest = None
     seen = Counter(tlib.tier_for(ph, manifest) for ph in universe.values())
-    counts["illegal"] = seen.get(tlib.TIER_FIRST, 0)
-    counts["underspecified"] = seen.get(tlib.TIER_HELD, 0) + seen.get(tlib.TIER_LAST, 0)
-    counts["unreproducible"] = seen.get(tlib.TIER_DROP, 0)
+    counts["illegal"] = seen.get(tlib.TIER_FIRST, 0,)
+    counts["underspecified"] = seen.get(tlib.TIER_HELD, 0,) + seen.get(tlib.TIER_LAST, 0,)
+    counts["unreproducible"] = seen.get(tlib.TIER_DROP, 0,)
     counts["total"] = len(universe)
     return counts
 

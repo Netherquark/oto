@@ -75,9 +75,9 @@ def label(protocol: str | None) -> str:
     return LABEL.get(protocol or UNKNOWN, LABEL[UNKNOWN])
 
 
-def gradeable(fam: str):
+def gradeable(fam: str, profile=None):
     """The graded-cell side set of a family ('NxNxN' strings; may be empty)."""
-    cells = _loader.current_profile().family_cells.get(str(fam or "").upper())
+    cells = _loader.resolve_profile(profile,).family_cells.get(str(fam or "").upper(),)
     if not cells:
         return set()
     return {f"{int(s)}x{int(s)}x{int(s)}" for s in cells}

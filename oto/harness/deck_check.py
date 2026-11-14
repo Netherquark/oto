@@ -48,7 +48,7 @@ from oto.runners.paths import results_rel
 OVERLAY = Path(results_rel("overlays", "phases.seed.overlay.yaml"))
 
 
-def measured_fingerprints(base_dir: Path) -> set:
+def measured_fingerprints(base_dir: Path, profile=None) -> set:
     """The config fingerprints the registry already holds a measurement for.
 
     Args:
@@ -57,7 +57,7 @@ def measured_fingerprints(base_dir: Path) -> set:
     Returns:
         The set of measured fingerprints.
     """
-    db = _results_dir(base_dir, _loader.current_profile().codename) / "registry.db"
+    db = _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "registry.db"
     if not db.is_file():
         return set()
     con = sqlite3.connect(db)
@@ -72,10 +72,10 @@ def measured_fingerprints(base_dir: Path) -> set:
             record = json.loads(raw)
         except (TypeError, ValueError):
             continue
-        fp = record.get("fp")
+        fp = record.get("fp",)
         if not fp:
             continue
-        status = record.get("status")
+        status = record.get("status",)
         if status in ("completed", "success"):
             done[fp] = True
     return set(done)

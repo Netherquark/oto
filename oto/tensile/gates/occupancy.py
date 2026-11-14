@@ -105,7 +105,7 @@ from .vgpr_model import (
 
 def _profile(profile) -> DeviceProfile:
     """The DeviceProfile to use: the passed-in one, or the ambient profile."""
-    return _loader.resolve_profile(profile)
+    return _loader.resolve_profile(profile,)
 
 
 # ---------------------------------------------------------------- rejections
@@ -141,11 +141,11 @@ def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
     return (
         f"MacroTile {mt0}x{mt1} (LocalSplitU {lsu}, NumThreads {nt}) needs "
         f"{r*mt0*mt1*lsu} accumulator VGPRs across the workgroup ({ch} weight "
-        f"{r}); the file holds {_profile(profile).vgpr_per_cu}. The accumulators alone fill it, so "
+        f"{r}); the file holds {_profile(profile=profile,).vgpr_per_cu}. The accumulators alone fill it, so "
         f"Tensile raises 'Generating kernel source resulted in error 4' "
         f"(overflowedResources / the 'Occupancy limit' in KernelWriterAssembly "
         f"functionSuffix) with no room left for operands. Reduce MacroTile area "
-        f"(<= {_profile(profile).vgpr_per_cu // r} elements per workgroup) or drop LocalSplitU."
+        f"(<= {_profile(profile=profile,).vgpr_per_cu // r} elements per workgroup) or drop LocalSplitU."
     )
 
 
@@ -155,8 +155,8 @@ def _occupancy_limit_rejection(ch: str, tt0: int, tt1: int, vgpr: int,
     return (
         f"ThreadTile {tt0}x{tt1} emits {vgpr} VGPRs/thread and the workgroup "
         f"has {nt} threads: Tensile's occupancy limit is "
-        f"65536 // {nt} = {_profile(profile).vgpr_per_cu // nt} VGPRs/thread, so the workgroup "
-        f"needs {vgpr * nt} VGPRs against the file's {_profile(profile).vgpr_per_cu}. Tensile "
+        f"65536 // {nt} = {_profile(profile=profile,).vgpr_per_cu // nt} VGPRs/thread, so the workgroup "
+        f"needs {vgpr * nt} VGPRs against the file's {_profile(profile=profile,).vgpr_per_cu}. Tensile "
         f"raises 'Generating kernel source resulted in error 4' "
         f"(KernelWriterAssembly.functionSuffix: "
         f"numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1). "
@@ -220,14 +220,14 @@ def occupancy_workgroups_per_cu(config: dict[str, Any], profile=None) -> int:
         return 0
     mt0, mt1, tt0, tt1 = dims
     ch = dtype_char(config)
-    r = VGPR_PER_ELEMENT.get(ch)
+    r = VGPR_PER_ELEMENT.get(ch,)
     if r is None:
         return 0
     lsu = local_split_u(config)
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
         return 0
-    if r * mt0 * mt1 * lsu >= _profile(profile).vgpr_per_cu:
+    if r * mt0 * mt1 * lsu >= _profile(profile=profile,).vgpr_per_cu:
         return 0
     compute = compute_bytes(config, ch)
     if lsu > 1 and compute and lsu * mt0 * mt1 * compute > MAX_LDS_BYTES:
@@ -237,7 +237,7 @@ def occupancy_workgroups_per_cu(config: dict[str, Any], profile=None) -> int:
         return 0
     if lds_base_bytes(mt0, mt1, dtype_char(config)) * ku > LDS_BUDGET:
         return 0
-    return _profile(profile).vgpr_per_cu // acc
+    return _profile(profile=profile,).vgpr_per_cu // acc
 
 
 def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
@@ -304,7 +304,7 @@ def _occupancy_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool
         return True, ""                      # nothing to model; other gates own it
     mt0, mt1, tt0, tt1 = dims
     ch = dtype_char(config)
-    r = VGPR_PER_ELEMENT.get(ch)
+    r = VGPR_PER_ELEMENT.get(ch,)
     if r is None:
         # Fail closed: an unmodelled dtype could be a complex one (Z weights 8),
         # and guessing low would let a config through that then dies as error 4.
@@ -361,7 +361,7 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch, profile=None) -> str 
     bound on the workgroup total and ``>= 65536`` is exactly "no room for one
     workgroup". ThreadTile cancels, so this bounds MacroTile *area*.
     """
-    if weight * mt0 * mt1 * lsu >= _profile(profile).vgpr_per_cu:
+    if weight * mt0 * mt1 * lsu >= _profile(profile=profile,).vgpr_per_cu:
         return _workgroup_vgpr_rejection(
             ch, weight, mt0, mt1, lsu, num_threads(dims, lsu), profile=profile)
     return None
@@ -390,7 +390,7 @@ def _occupancy_limit_check(dims, ch, tt0, tt1, lsu, profile=None) -> str | None:
     vgpr = per_thread_vgpr(ch, tt0, tt1)
     if not vgpr:
         return None
-    if _profile(profile).vgpr_per_cu // nt < vgpr:
+    if _profile(profile=profile,).vgpr_per_cu // nt < vgpr:
         return _occupancy_limit_rejection(ch, tt0, tt1, vgpr, nt, profile=profile)
     return None
 
@@ -428,7 +428,7 @@ def refuses_workgroup_register_file(config: dict[str, Any], profile=None) -> boo
         return None
     mt0, mt1, _tt0, _tt1 = dims
     ch = dtype_char(config)
-    weight = VGPR_PER_ELEMENT.get(ch)
+    weight = VGPR_PER_ELEMENT.get(ch,)
     if weight is None:
         return None
     return _workgroup_file_check(
@@ -460,7 +460,7 @@ def refuses_per_thread_occupancy_limit(config: dict[str, Any], profile=None) -> 
     vgpr = per_thread_vgpr(dtype_char(config), tt0, tt1)
     if not vgpr:
         return None
-    return _profile(profile).vgpr_per_cu // nt < vgpr
+    return _profile(profile=profile,).vgpr_per_cu // nt < vgpr
 
 
 def refuses_lds_reduction_buffer(config: dict[str, Any], profile=None) -> bool | None:

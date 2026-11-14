@@ -70,7 +70,7 @@ GATES = (
 )
 
 
-def _occupancy_margin(cfg) -> str:
+def _occupancy_margin(cfg, profile=None) -> str:
     """Human-readable register-file margin for a legal config.
 
     occupancy_workgroups_per_cu returns the modelled number of workgroups that
@@ -79,20 +79,20 @@ def _occupancy_margin(cfg) -> str:
     the ones that PASS today and die tomorrow when Tensile grows one
     instruction — show up here as high pressure %, not just pass/fail.
     """
-    wg = occupancy_workgroups_per_cu(cfg)
+    wg = occupancy_workgroups_per_cu(cfg, profile=profile,)
     if wg <= 0:
         return "wg/cu=0"
     dims = tile_dims(cfg)
     if not dims:
         return f"wg/cu={wg}"
     mt0, mt1, tt0, tt1 = dims
-    ch = str(cfg.get("DataType") or cfg.get("dtype") or "").upper()
-    r = VGPR_PER_ELEMENT.get(ch)
+    ch = str(cfg.get("DataType",) or cfg.get("dtype",) or "").upper()
+    r = VGPR_PER_ELEMENT.get(ch,)
     if not r or not tt0 or not tt1:
         return f"wg/cu={wg}"
     acc = measured_accvgpr(tt0, tt1, r)
     threads = (mt0 // tt0) * (mt1 // tt1)
-    pct = 100.0 * threads * acc / _loader.current_profile().vgpr_per_cu if threads else 0.0
+    pct = 100.0 * threads * acc / _loader.resolve_profile(profile,).vgpr_per_cu if threads else 0.0
     return f"wg/cu={wg} acc={acc}vgpr {pct:.0f}% of 64K file"
 
 
@@ -227,7 +227,7 @@ def main() -> int:
     return 1 if fails else 0
 
 
-def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
+def _floor_deck(base_dir: Path, profile=None) -> tuple[list[dict], Path]:
     """Rebuild phase-shaped configs for every shipped gfx900 floor kernel.
 
     The floor's winning configs must be natively gate-legal — both arms emit
@@ -236,14 +236,14 @@ def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
     gate. Sweeping the pinned manifest through the same GATES makes that
     explicit instead of assumed.
     """
-    manifest_path = _results_dir(base_dir, _loader.current_profile().codename) / "gfx900_shipped_manifest.json"
+    manifest_path = _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "gfx900_shipped_manifest.json"
     manifest = json.loads(manifest_path.read_text())
     deck: list[dict] = []
-    for entry in manifest.get("dat_files", []):
-        family = str(entry.get("family", "")).upper()
-        for name in entry.get("kernels", []):
+    for entry in manifest.get("dat_files", [],):
+        family = str(entry.get("family", "",)).upper()
+        for name in entry.get("kernels", [],):
             try:
-                cfg = shipped_kernel_config(name, family)
+                cfg = shipped_kernel_config(name, family, profile=profile,)
             except Exception as exc:  # pragma: no cover — defensive
                 deck.append({"phase_id": f"floor-{name[:40]}", "kernel": name,
                              "family": family, "config": {}, "parse_error": str(exc)})

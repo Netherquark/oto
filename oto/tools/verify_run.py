@@ -71,7 +71,7 @@ def _dir_size(p: Path) -> tuple[int, int]:
     return files, size
 
 
-def snapshot(base: Path = BASE) -> dict[str, Any]:
+def snapshot(base: Path = BASE, profile=None) -> dict[str, Any]:
     """Corpus state: per-run-directory file counts/sizes plus registry rows.
 
     Cheap enough to take around any run. Counts and bytes, not content hashes:
@@ -79,14 +79,14 @@ def snapshot(base: Path = BASE) -> dict[str, Any]:
     byte length) and to catch deletion, not to attest to contents. Hashing every
     CSV in the corpus would cost more than the runs being verified.
     """
-    runs_dir = _runs_dir(base, _loader.current_profile().codename)
+    runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     dirs: dict[str, list[int]] = {}
     if runs_dir.is_dir():
         for d in sorted(runs_dir.iterdir()):
             if d.is_dir():
                 dirs[d.name] = list(_dir_size(d))
 
-    db_path = _results_dir(base, _loader.current_profile().codename) / "registry.db"
+    db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db"
     tables: dict[str, int | None] = {}
     if db_path.is_file():
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -170,7 +170,7 @@ def _driver():
     return d
 
 
-def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
+def telemetry(run_id: str, base: Path = BASE, profile=None) -> dict[str, Any]:
     """Per-phase telemetry funnel: how many rows survive each filter, and why.
 
     Filters are reported cumulatively in the order `_telemetry_rows` applies
@@ -178,7 +178,7 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
     """
     from oto.runners.driver import TensileDriver
 
-    path = _runs_dir(base, _loader.current_profile().codename) / run_id / "logs" / "telemetry.csv"
+    path = _runs_dir(base, _loader.resolve_profile(profile,).codename) / run_id / "logs" / "telemetry.csv"
     if not path.is_file():
         return {"run_id": run_id, "ok": False,
                 "error": f"no telemetry at {path.relative_to(base)}"}
@@ -186,7 +186,7 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
         rd = csv.DictReader(fh)
         fieldnames = rd.fieldnames or []
         rows = list(rd)
-    tagged = [r for r in rows if (r.get("phase_id") or "").strip()]
+    tagged = [r for r in rows if (r.get("phase_id",) or "").strip()]
     schema_ok = "phase_id" in fieldnames
     per_phase: dict[str, dict[str, Any]] = {}
     for r in tagged:
@@ -194,9 +194,9 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
         e = per_phase.setdefault(pid, {"rows": 0, "busy": 0, "sclk": 0, "clock": 0,
                                        "hot": 0, "sclk_values": []})
         e["rows"] += 1
-        busy = _int(r.get("gpu_busy_percent"))
-        hz = _int(r.get("sclk_hz"))
-        temp_c = None if r.get("temp_mc") in (None, "") else _int(r.get("temp_mc")) / 1000.0
+        busy = _int(r.get("gpu_busy_percent",))
+        hz = _int(r.get("sclk_hz",))
+        temp_c = None if r.get("temp_mc",) in (None, "") else _int(r.get("temp_mc",)) / 1000.0
         if busy > TensileDriver.TELEMETRY_BUSY_PCT:
             e["busy"] += 1
         if TensileDriver.SCLK_MIN_HZ <= hz <= TensileDriver.SCLK_MAX_HZ:
@@ -207,11 +207,11 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
             else:
                 e["hot"] += 1
     d = _driver()
-    bases = d._load_telemetry_by_phase(_runs_dir(base, _loader.current_profile().codename) / run_id)
+    bases = d._load_telemetry_by_phase(_runs_dir(base, _loader.resolve_profile(profile,).codename) / run_id)
     for pid, e in per_phase.items():
         v = sorted(e.pop("sclk_values"))
         e["clock_median_hz"] = v[len(v) // 2] if v else 0
-        e["clock_base_hz"] = bases.get(pid, {}).get("sclk_hz", 0)
+        e["clock_base_hz"] = bases.get(pid, {},).get("sclk_hz", 0,)
         e["has_base"] = e["clock_base_hz"] > 0
         e["ok"] = e["rows"] > 0 and e["has_base"]
 
@@ -239,7 +239,7 @@ def _int(v: Any) -> int:
 # cheapest legal phase
 # --------------------------------------------------------------------------
 def cheapest(family: str | None = None, n: int = 5,
-             base: Path = BASE) -> list[dict[str, Any]]:
+             base: Path = BASE, profile=None) -> list[dict[str, Any]]:
     """The n cheapest LEGAL phases *in the live deck*, for a cheap smoke run.
 
     "Legal" is the whole point: sorting by problem volume alone hands back
@@ -260,10 +260,10 @@ def cheapest(family: str | None = None, n: int = 5,
 
     # Families are labelled "ZZ" but Tensile's DataType is "Z"; the mapping
     # belongs to oto.device.vocabulary, so accept either and let it resolve.
-    want = _loader.current_profile().family_dtype_char.get(family, family) if family else None
+    want = _loader.resolve_profile(profile,).family_dtype_char.get(family, family,) if family else None
 
     def volume(phase: dict[str, Any]) -> float:
-        pt = (phase.get("config") or {}).get("ProblemType", "")
+        pt = (phase.get("config",) or {}).get("ProblemType", "",)
         try:
             i, j, k = (int(x) for x in pt.split("x"))
             return float(i) * j * k
@@ -272,19 +272,19 @@ def cheapest(family: str | None = None, n: int = 5,
 
     out = []
     for phase in phases:
-        fam = (phase.get("config") or {}).get("DataType", "")
+        fam = (phase.get("config",) or {}).get("DataType", "",)
         if want and fam != want:
             continue
-        ok, _why = _is_legal(phase)
+        ok, _why = _is_legal(phase,)
         if not ok:
             continue
-        cfg = phase.get("config") or {}
+        cfg = phase.get("config",) or {}
         out.append({"volume": volume(phase), "dtype": fam,
-                    "problem_type": cfg.get("ProblemType", ""),
-                    "contraction": cfg.get("ContractionPattern", ""),
-                    "vector_width": cfg.get("VectorWidth", ""),
-                    "shapes": phase.get("shapes", []),
-                    "phase_id": phase.get("phase_id", ""), "label": phase.get("label", "")})
+                    "problem_type": cfg.get("ProblemType", "",),
+                    "contraction": cfg.get("ContractionPattern", "",),
+                    "vector_width": cfg.get("VectorWidth", "",),
+                    "shapes": phase.get("shapes", [],),
+                    "phase_id": phase.get("phase_id", "",), "label": phase.get("label", "",)})
     out.sort(key=lambda r: (r["volume"], r["phase_id"]))
     return out[:n]
 

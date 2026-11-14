@@ -119,7 +119,7 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[s
         })
     return rows_out
 
-def main() -> int:
+def main(profile=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=None,
@@ -133,7 +133,7 @@ def main() -> int:
     args = ap.parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    db_path = Path(args.db) if args.db else _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
+    db_path = Path(args.db) if args.db else _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     db = json.loads(db_path.read_text())
     native_rows: list[dict[str, Any]] = []
     floor_rows: list[dict[str, Any]] = []

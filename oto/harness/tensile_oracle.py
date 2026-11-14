@@ -232,10 +232,10 @@ def _lds_bytes(state: dict[str, Any]) -> int:
     return elements * per_element
 
 
-def _config_from_args(args: argparse.Namespace) -> dict[str, Any]:
+def _config_from_args(args: argparse.Namespace, profile=None) -> dict[str, Any]:
     """The config dict the CLI describes."""
     config: dict[str, Any] = {
-        "Architecture": _loader.current_profile().codename,
+        "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": args.dtype,
         "FamilyLabel": args.family or args.dtype,
         "ScheduleName": "isa",

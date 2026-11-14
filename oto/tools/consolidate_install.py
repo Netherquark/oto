@@ -44,11 +44,11 @@ def write_deck(stage: Path, sel: dict[str, Any], stamp: str) -> Path:
 
 
 def install(base: Path, stage: Path, sel: dict[str, Any],
-            lock: dict[str, Any], dbres: dict[str, Any], stamp: str) -> None:
+            lock: dict[str, Any], dbres: dict[str, Any], stamp: str, profile=None) -> None:
     deck_path = base / "phases.yaml"
     staged = write_deck(stage, sel, stamp)
 
-    live_lock = _runs_dir(base, _loader.current_profile().codename) / lock["run_id"]
+    live_lock = _runs_dir(base, _loader.resolve_profile(profile,).codename) / lock["run_id"]
     if live_lock.exists():
         # Never delete in place. A previous build of the same lock id is moved
         # aside under archive/ so the swap is reversible; the staged copy is the
@@ -69,13 +69,13 @@ def install(base: Path, stage: Path, sel: dict[str, Any],
 
     arch = _legacy_runs_dir(base / 'archive')
     arch.mkdir(parents=True, exist_ok=True)
-    for run in list(SINGLE_FORM_ONLY_RUNS) + phantom_runs(base):
-        src = _runs_dir(base, _loader.current_profile().codename) / run
+    for run in list(SINGLE_FORM_ONLY_RUNS) + phantom_runs(base, profile=profile,):
+        src = _runs_dir(base, _loader.resolve_profile(profile,).codename) / run
         if src.is_dir():
             shutil.move(str(src), str(arch / run))
 
 
-def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> list[str]:
+def phantom_runs(base: Path = BASE, db: Path = LIVE_DB, profile=None) -> list[str]:
     """Runs that registered a row but produced nothing at all.
 
     These are bookkeeping accidents, not measurements: a run directory with no
@@ -94,7 +94,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> list[str]:
     con.close()
     out = []
     for (run_id,) in rows:
-        d = _runs_dir(base, _loader.current_profile().codename) / run_id
+        d = _runs_dir(base, _loader.resolve_profile(profile,).codename) / run_id
         if not d.is_dir():
             continue
         if any(d.rglob("*.csv")):

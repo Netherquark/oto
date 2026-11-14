@@ -44,14 +44,14 @@ def _load_labels(db: Path) -> tuple[list[str], int]:
     return bad, total
 
 
-def main() -> int:
+def main(profile=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
 
-    db = _results_dir(args.base_dir, _loader.current_profile().codename) / "registry.db"
+    db = _results_dir(args.base_dir, _loader.resolve_profile(profile,).codename) / "registry.db"
     bad, total = ([], 0)
     db_ok = db.is_file()
     integrity_ok = False

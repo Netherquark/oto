@@ -38,7 +38,7 @@ def _median(vals: list[float]) -> float:
     return statistics.median(vals) if vals else 0.0
 
 
-def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
+def measured_index(base: Path = BASE, profile=None) -> dict[tuple[str, str], dict[str, Any]]:
     """Every (phase_id, cell_key) native measurement, with stability counts.
 
     GFLOPS for one phase/cell is the median across every run that measured it, so
@@ -46,9 +46,9 @@ def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
     """
     drv = _driver(base)
     per: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-    for run in native_runs(base):
-        for rec in phase_records(drv, _runs_dir(base, _loader.current_profile().codename) / run, "native"):
-            key = rec.get("cell_key") or cell_key(
+    for run in native_runs(base, profile=profile,):
+        for rec in phase_records(drv, _runs_dir(base, _loader.resolve_profile(profile,).codename) / run, "native"):
+            key = rec.get("cell_key",) or cell_key(
                 extract_family_from_phase_id(rec["phase_id"]), rec["ProblemType"])
             if not key:
                 continue
@@ -58,7 +58,7 @@ def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
     # draft-imported solution is not invisible, but they can never win a cell
     # that a real measured phase covers.
     for rec in _registry_records(drv, base, want_arm="native"):
-        key = rec.get("cell_key") or ""
+        key = rec.get("cell_key",) or ""
         if key:
             per[(rec["phase_id"], key)].append(rec)
 
@@ -74,7 +74,7 @@ def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
             "runs": sorted({r["source_run"] for r in recs if r["source_run"]}),
             "n_obs": len(recs),
             "forms": forms,
-            "from_registry": all(r.get("from_registry") for r in recs),
+            "from_registry": all(r.get("from_registry",) for r in recs),
             "family": _fam(phase_id),
         }
     return out
@@ -143,7 +143,7 @@ def dtype_bytes(char: str) -> int | None:
     return None
 
 
-def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
+def _is_legal(phase: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Full pre-run legality gate for a deck phase.
 
     All three seams the candidate generator enforces, because each has caught a real
@@ -158,30 +158,30 @@ def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     which Tensile rejects at assembly time with 20 empty phases and a wasted
     overnight run. ``python3 -m oto check candidates`` still misses it for the same reason.
     """
-    cfg = phase.get("config") or {}
+    cfg = phase.get("config",) or {}
     try:
         from oto.tensile.gates.assembly import assembly_class_valid
         from oto.tensile.gates.occupancy import occupancy_feasible
     except Exception as exc:                       # pragma: no cover
         return True, f"gate unavailable ({exc})"
     try:
-        ok, why = occupancy_feasible(cfg)
+        ok, why = occupancy_feasible(cfg,)
         if not ok:
             return False, f"occupancy: {why}"
-        ok, why = assembly_class_valid(cfg)
+        ok, why = assembly_class_valid(cfg,)
         if not ok:
             return False, f"assembly: {why}"
     except Exception as exc:
         return False, f"gate error: {exc}"
 
-    vw = cfg.get("VectorWidth")
-    dt = cfg.get("DataType") or phase.get("dtype")
+    vw = cfg.get("VectorWidth",)
+    dt = cfg.get("DataType",) or phase.get("dtype",)
     if vw is not None and dt:
         b = dtype_bytes(str(dt))
-        if b is not None and int(vw) * b > _loader.current_profile().global_load_byte_cap:
+        if b is not None and int(vw) * b > _loader.resolve_profile(profile,).global_load_byte_cap:
             return False, (
                 f"reject: GlobalLoadVectorWidthA * DataType.numBytes() > 16 "
-                f"(VectorWidth={vw} x {b}B for {dt} > {_loader.current_profile().global_load_byte_cap})")
+                f"(VectorWidth={vw} x {b}B for {dt} > {_loader.resolve_profile(profile,).global_load_byte_cap})")
     return True, ""
 
 

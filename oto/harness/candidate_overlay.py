@@ -220,8 +220,8 @@ def _summarise(rows: list[dict[str, Any]]) -> None:
         total[0] += sum(counts.values())
     print(f"  TOTAL  candidates={total[0]}")
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == 'OVERLAY_PATH':
-        return _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+        return _results_dir(REPO_ROOT, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml"
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

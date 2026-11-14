@@ -69,9 +69,17 @@ DEPTHS = (8, 16)
 #: The assertion levels that open the load-divisibility frontier.
 ASSERTIONS = (0, 2)
 
-#: The cell shapes the coverage map reports per family (the contract grid).
-_DEFAULT_CELLS = {fam: [f"{s}x{s}x{s}" for s in sides]
-                  for fam, sides in _loader.current_profile().family_shapes.items()}
+def _default_cells(profile=None) -> dict[str, list[str]]:
+    """The contract grid per family, derived from the profile at call time."""
+    return {fam: [f"{s}x{s}x{s}" for s in sides]
+            for fam, sides in _loader.resolve_profile(profile,).family_shapes.items()}
+
+
+def __getattr__(name: str):
+    """Lazy ``_DEFAULT_CELLS`` for back-compat (ambient profile, call time)."""
+    if name == "_DEFAULT_CELLS":
+        return _default_cells()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 #: A geometry key: (macro tile, thread tile, vector width, depth).
 Geometry = tuple[str, str, int, int]
@@ -163,6 +171,7 @@ def _cell_family(row: dict[str, Any]) -> str:
 def measured_geometries(db_path: Path | None = None,
                         protocol: str = "family",
                         base_dir: Path | None = None,
+                        profile=None,
                         ) -> dict[tuple[str, str], dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
 
@@ -180,29 +189,29 @@ def measured_geometries(db_path: Path | None = None,
         The measured geometry map, empty when the cache does not exist.
     """
     base = Path(base_dir) if base_dir else _HERE
-    path = db_path or (_results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
+    path = db_path or (_results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
     if not path.exists():
         return {}
     db = json.loads(path.read_text())
     out: dict[tuple[str, str], dict[Geometry, float]] = {}
     for rows in db.values():
         for r in rows:
-            if protocol != "any" and r.get("protocol", "unknown") != protocol:
+            if protocol != "any" and r.get("protocol", "unknown",) != protocol:
                 continue
             fam = _cell_family(r)
-            shape = r.get("shape")
-            mt = _dims(r.get("MacroTile"))
-            tt = _dims(r.get("ThreadTile"))
-            vw, du = r.get("VectorWidth"), r.get("DepthU")
+            shape = r.get("shape",)
+            mt = _dims(r.get("MacroTile",))
+            tt = _dims(r.get("ThreadTile",))
+            vw, du = r.get("VectorWidth",), r.get("DepthU",)
             if not (fam and shape and mt and tt):
                 continue
             try:
                 geom = (mt, tt, int(vw), int(du))
             except (TypeError, ValueError):
                 continue
-            value = r.get("gflops_median") or 0.0
+            value = r.get("gflops_median",) or 0.0
             cell = out.setdefault((fam, shape), {})
-            if value > cell.get(geom, 0.0):
+            if value > cell.get(geom, 0.0,):
                 cell[geom] = value
     return out
 
@@ -305,7 +314,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--json", type=Path, help="write the map here")
     args = ap.parse_args(argv)
 
-    fams = list(args.family) if args.family else sorted(_DEFAULT_CELLS)
+    fams = list(args.family) if args.family else sorted(_default_cells())
     only_cell = args.cell
     if only_cell:
         fam, _, side = only_cell.partition(":")
@@ -317,7 +326,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     rows: list[dict[str, Any]] = []
     for fam in fams:
         legal = legal_geometries(fam)
-        shapes = _DEFAULT_CELLS.get(fam, [])
+        shapes = _default_cells().get(fam, [])
         if only_cell:
             shapes = [f"{side}x{side}x{side}"]
         for shape in shapes:

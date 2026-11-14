@@ -27,16 +27,17 @@ class MutateMixin:
         mutation_budget: int,
         retired_cells: list[str],
         lattice_fallbacks: list[str],
+    profile=None,
     ) -> tuple[list[CandidateConfig], list[dict[str, Any]], int, list[str]]:
         """Mutate one cell's winner.
 
         Returns (new_candidates, replayed, rejected_count, ungraded_cells).
         """
-        family = str(winner_info.get("family") or "").upper()
-        data_type = _loader.current_profile().family_dtype_char.get(
-            family, str(winner_info.get("dtype", "S")).upper())
+        family = str(winner_info.get("family",) or "").upper()
+        data_type = _loader.resolve_profile(profile,).family_dtype_char.get(
+            family, str(winner_info.get("dtype", "S",)).upper(),)
         shape = winner_info["shape"]
-        winner_config = winner_info.get("config", {})
+        winner_config = winner_info.get("config", {},)
 
         if self._cell_settled(winner_info):
             return [], [], 0, []
@@ -154,10 +155,10 @@ class MutateMixin:
             mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
         return mutants, sweep_shapes, cell_state
 
-    def _build_template(self, family: str, data_type: str) -> dict[str, Any]:
+    def _build_template(self, family: str, data_type: str, profile=None) -> dict[str, Any]:
         """Build the candidate template."""
         return {
-            "Architecture": _loader.current_profile().codename,
+            "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": data_type,
             "ProblemType": "Contraction",
             "ScheduleName": "isa",

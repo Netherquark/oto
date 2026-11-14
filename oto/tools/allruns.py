@@ -89,12 +89,12 @@ class _Knobs:
         self.base = base
         self._cache: dict[tuple[str, str], dict] = {}
 
-    def get(self, run, phase_id) -> dict:
+    def get(self, run, phase_id, profile=None) -> dict:
         key = (str(run), str(phase_id))
         if key in self._cache:
             return self._cache[key]
         self._cache[key] = {}
-        d = _runs_dir(self.base, _loader.current_profile().codename) / str(run) / str(phase_id) / "2_BenchmarkData"
+        d = _runs_dir(self.base, _loader.resolve_profile(profile,).codename) / str(run) / str(phase_id) / "2_BenchmarkData"
         if d.is_dir():
             for f in sorted(os.listdir(d)):
                 if not f.endswith(".yaml"):
@@ -128,13 +128,13 @@ def _fam(rec, knobs: _Knobs) -> str:
     return f
 
 
-def _load_arms(base: Path):
+def _load_arms(base: Path, profile=None):
     drv = TensileDriver(base, create_run=False)
     native = drv._native_records_all_runs()
     floor: list[dict] = []
-    ref_ids = drv._reference_floor_runs(None)
+    ref_ids = drv._reference_floor_runs(None,)
     for ref in ref_ids:
-        d = _runs_dir(base, _loader.current_profile().codename) / ref
+        d = _runs_dir(base, _loader.resolve_profile(profile,).codename) / ref
         if d.is_dir():
             _n, recs = drv._ab_records_from_csv(d, force_arm="spoof")
             for r in recs:

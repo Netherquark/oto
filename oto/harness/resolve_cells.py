@@ -301,16 +301,17 @@ def _cell_row(
     run_global: dict[str, Any],
     native_kb_cfg: dict[str, dict[str, Any]],
     floor_best: dict[tuple[str, str], dict[str, Any]],
+profile=None,
 ) -> dict[str, Any]:
     """One resolved cell: values, delta and both winner configs."""
     fam = v["family"]
     shp = v["shape"]
     key = (fam, shp)
-    nv = v.get("native_value") or 0.0
-    sv = v.get("spoof_value") or 0.0
+    nv = v.get("native_value",) or 0.0
+    sv = v.get("spoof_value",) or 0.0
     delta = ((nv - sv) / sv * 100.0) if sv else None
-    nwp = v.get("native_winner_phase") or ""
-    nrun = v.get("native_winner_run") or ""
+    nwp = v.get("native_winner_phase",) or ""
+    nrun = v.get("native_winner_run",) or ""
     ncfg = _native_config(nwp, nrun, run_scoped, registry, run_global,
                           native_kb_cfg)
     scfg = _spoof_config(key, floor_best, registry, run_global)
@@ -319,20 +320,20 @@ def _cell_row(
     # complex-family percentages were computed against a 4x-too-large bar until
     # 2026-10-21 (<codename>_theoretical_limits.md 5.2). The tables are in
     # client-reported units, which is the unit the measurement arrives in.
-    ceiling = _loader.current_profile().realistic_ceilings.get(fam) or _loader.current_profile().peak_gflops.get(
-        _loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
-    peak = _loader.current_profile().theoretical_peaks.get(fam) or _loader.current_profile().peak_gflops.get(
-        _loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
+    ceiling = _loader.resolve_profile(profile,).realistic_ceilings.get(fam,) or _loader.resolve_profile(profile,).peak_gflops.get(
+        _loader.resolve_profile(profile,).family_dtypes.get(fam, "FP32",), 1613.0,)
+    peak = _loader.resolve_profile(profile,).theoretical_peaks.get(fam,) or _loader.resolve_profile(profile,).peak_gflops.get(
+        _loader.resolve_profile(profile,).family_dtypes.get(fam, "FP32",), 1613.0,)
     return {
         "family": fam,
         "shape": shp,
-        "dtype": v.get("dtype", ""),
-        "verdict": v.get("verdict", "?"),
+        "dtype": v.get("dtype", "",),
+        "verdict": v.get("verdict", "?",),
         "cfg_gap": _cfg_gap(ncfg, scfg),
         "delta_pct": delta,
-        "native_median": v.get("native_median"),
+        "native_median": v.get("native_median",),
         "native_value": nv,
-        "spoof_median": v.get("spoof_median"),
+        "spoof_median": v.get("spoof_median",),
         "spoof_value": sv,
         "pct_ceiling": _clamp_pct(nv / ceiling * 100.0) if ceiling else None,
         "pct_theoretical": _clamp_pct(nv / peak * 100.0) if peak else None,
@@ -346,23 +347,23 @@ def _cell_row(
 def build(base_dir: str = ".",
           acceptance_path: str | None = None,
           registry_path: str | None = None,
-          db_path: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+          db_path: str | None = None, profile=None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Resolve every cell of the acceptance report -> (cells, meta).
 
     CPU-only. All inputs are canonical repo caches / registries.
     """
     base = Path(base_dir)
-    acceptance_path = acceptance_path or str(_results_dir(base, _loader.current_profile().codename) / "acceptance_report.json")
-    registry_path = registry_path or str(_results_dir(base, _loader.current_profile().codename) / "registry.db")
-    db_path = db_path or str(_results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
-    runs_dir = _runs_dir(base, _loader.current_profile().codename)
+    acceptance_path = acceptance_path or str(_results_dir(base, _loader.resolve_profile(profile,).codename) / "acceptance_report.json")
+    registry_path = registry_path or str(_results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db")
+    db_path = db_path or str(_results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
+    runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
 
     with open(acceptance_path) as f:
         report = json.load(f)
     pv = report["per_cell_verdicts"]
     cov = report["per_family_coverage"]
-    run_id = report.get("run_id", "?")
-    ref_run = report.get("reference_run_id", "?")
+    run_id = report.get("run_id", "?",)
+    ref_run = report.get("reference_run_id", "?",)
 
     floor_rows, native_kb_cfg = _load_kernel_db(db_path)
 
@@ -374,7 +375,7 @@ def build(base_dir: str = ".",
 
     cells: list[dict[str, Any]] = [
         _cell_row(v, cov, run_scoped, registry, run_global,
-                  native_kb_cfg, floor_best)
+                  native_kb_cfg, floor_best, profile=profile,)
         for v in sorted(pv, key=lambda v: (v["family"],
                                            shape_order_key(v["shape"])))
     ]

@@ -223,13 +223,13 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
     return _json.loads(report.read_text())
 
 
-def corpus(root: Path) -> list[dict]:
+def corpus(root: Path, profile=None) -> list[dict]:
     from oto.device import loader as _loader
     from oto.runners.paths import results_dir, runs_dir
 
     phases = list(yamlio.load_yaml(root / "phases.yaml") or [])
-    for base in (runs_dir(root, _loader.current_profile().codename),
-                 results_dir(root, _loader.current_profile().codename) / "gfx900_ref_locked_52149f315d"):
+    for base in (runs_dir(root, _loader.resolve_profile(profile).codename),
+                 results_dir(root, _loader.resolve_profile(profile).codename) / "gfx900_ref_locked_52149f315d"):
         phases.extend(phases_from(base))
     return phases
 

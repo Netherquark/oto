@@ -266,7 +266,7 @@ def audit(base: Path = BASE, band_pct: float | None = None,
         "cells": [cells[k] for k in sorted(cells)],
     }
 
-def _proposal_coverage(base: Path, band_pct: float | None = None) -> dict[str, Any]:
+def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) -> dict[str, Any]:
     """Option H Phase 3 coverage: `n`, spread, and the novel/replicate split.
 
     Read from the ledger rather than recomputed from the run directories, because
@@ -284,7 +284,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None) -> dict[str, A
     try:
         from oto.ledger.registry import SQLiteRegistry
         from oto.metrics.coverage import coverage_from_registry
-        db = _results_dir(base, _loader.current_profile().codename) / "registry.db"
+        db = _results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db"
         if not db.exists():
             return {"available": False, "reason": "no registry.db"}
         reg = SQLiteRegistry(base, read_only=True)
@@ -292,8 +292,8 @@ def _proposal_coverage(base: Path, band_pct: float | None = None) -> dict[str, A
             reg, band_pct=band_pct, base_dir=base)
         origins: dict[str, int] = {}
         for row in reg.all_proposals():
-            key = str(row.get("origin") or "?")
-            origins[key] = origins.get(key, 0) + 1
+            key = str(row.get("origin",) or "?")
+            origins[key] = origins.get(key, 0,) + 1
         return {
             "available": True,
             "band_pct": summary["band_pct"],

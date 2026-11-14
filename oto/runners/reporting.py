@@ -230,12 +230,12 @@ class ReportingMixin:
             native_records, _ = self._ab_records_from_registry(run_id, force_arm="native")
         return native_records
 
-    def _load_spoof_records(self, run_id: str) -> tuple:
+    def _load_spoof_records(self, run_id: str, profile=None) -> tuple:
         """Load spoof records from reference floor runs."""
-        ref_run_ids = self._reference_floor_runs(run_id)
+        ref_run_ids = self._reference_floor_runs(run_id,)
         spoof_records: list[dict[str, Any]] = []
         for ref in ref_run_ids:
-            ref_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / ref
+            ref_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / ref
             if ref_dir.is_dir():
                 _, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
                 for rec in ref_records:
@@ -392,17 +392,17 @@ class ReportingMixin:
         return native_arm
 
     def _emit_report(self, run_id: str, run_dir: Path | None, report,
-                     ab_verdicts, native_arm, all_analytics, red_list):
+                     ab_verdicts, native_arm, all_analytics, red_list, profile=None):
         """Write the JSON report(s) and return the result summary."""
         if run_dir is not None:
             report_out = run_dir / "acceptance_report.json"
-            self.reporter.write_report(report, report_out)
+            self.reporter.write_report(report, report_out,)
             print(f"Report emitted to: {report_out}")
         if self.reporter.base_dir:
             with contextlib.suppress(Exception):
                 self.reporter.write_report(
                     report,
-                    _results_dir(self.reporter.base_dir, _loader.current_profile().codename) / "acceptance_report.json")
+                    _results_dir(self.reporter.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json",)
         return {"cells": len(all_analytics), "red": len(red_list),
                 "ab": len(ab_verdicts), "run_id": run_id,
                 "native_runs": native_arm["runs"],
@@ -494,7 +494,7 @@ class ReportingMixin:
             return None
     def regenerate_report(self, run_id: str | None = None,
                           native_agg: str = "winner",
-                          protocol_basis: str = "family") -> dict[str, Any] | None:
+                          protocol_basis: str = "family", profile=None) -> dict[str, Any] | None:
         """Regenerate the acceptance report for a run from the registry.
 
         With no run_id, uses the most recently registered run. Reports land in
@@ -508,10 +508,10 @@ class ReportingMixin:
             print("No run id available to regenerate a report")
             return None
 
-        run_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / run_id
+        run_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / run_id
         if not run_dir.exists():
             run_dir = None
         print(f"Regenerating acceptance report for run {run_id}")
         return self.generate_acceptance_report(run_dir=run_dir, run_id=run_id,
                                               native_agg=native_agg,
-                                              protocol_basis=protocol_basis)
+                                              protocol_basis=protocol_basis,)

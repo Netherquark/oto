@@ -184,7 +184,7 @@ def population_of(run_name: str) -> str:
     return "reference" if run_name.startswith("gfx900_ref") else "ours"
 
 
-def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, Any]:
+def audit(base: str = ".", families: Sequence[str] | None = None, profile=None) -> dict[str, Any]:
     """Classify every phase with a launch config against the gates.
 
     Args:
@@ -198,7 +198,7 @@ def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, A
     from oto.tensile.candidate import CandidateGenerator
     from oto.tensile.gates.occupancy import ldspad_feasible
 
-    runs_dir = _runs_dir(base, _loader.current_profile().codename)
+    runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     gen = CandidateGenerator(Path(base))
     want = {f.upper() for f in families} if families else None
 
@@ -220,20 +220,20 @@ def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, A
             if cfg is None:
                 meta["no_config"] += 1
                 continue
-            if want is not None and str(cfg.get("FamilyLabel", "")).upper() not in want:
+            if want is not None and str(cfg.get("FamilyLabel", "",)).upper() not in want:
                 meta["filtered_out"] += 1
                 continue
             meta["with_config"] += 1
 
             built = measurement_produced(phase_dir)
-            ok, why = gen.validate_config(cfg)
+            ok, why = gen.validate_config(cfg,)
             if ok:
-                ok, why = ldspad_feasible(cfg)
+                ok, why = ldspad_feasible(cfg,)
 
             pop["phases"] += 1
             pop["built"] += int(built)
             key = f"built={built} gate={bool(ok)}"
-            pop["confusion"][key] = pop["confusion"].get(key, 0) + 1
+            pop["confusion"][key] = pop["confusion"].get(key, 0,) + 1
             if built and not ok:
                 pop["false_rejections"].append(
                     {"phase": phase_dir.name, "run": run.name, "reason": why})

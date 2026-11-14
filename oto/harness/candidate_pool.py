@@ -80,9 +80,9 @@ def _label_for(fam: str, pattern: str, knobs: dict[str, Any]) -> str:
             f"_du{knobs.get('DepthU', 16)}_alu")
 
 
-def _base_config(fam: str) -> dict[str, Any]:
+def _base_config(fam: str, profile=None) -> dict[str, Any]:
     return {
-        "Architecture": _loader.current_profile().codename,
+        "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": FAMILY_DTYPE[fam],
         "FamilyLabel": fam,
         "ScheduleName": "isa",
@@ -114,18 +114,18 @@ def __yaml_load(path: Path, fallback: Any = None) -> Any:
         return fallback
 
 
-def _load_seed_fps() -> set[str]:
+def _load_seed_fps(profile=None) -> set[str]:
     """fps already scheduled by the *curated* seed rows (never the generator's
     own previous appends: those are exactly what a re-run must skip deduping
     against, or wide rows colliding with the last append silently vanish)."""
     fps: set[str] = set()
     payload = __yaml_load(
-        _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml",
+        _results_dir(REPO_ROOT, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml",
         fallback={})
-    for row in (payload.get("phases", []) or []):
-        if not isinstance(row, dict) or not row.get("fp"):
+    for row in (payload.get("phases", [],) or []):
+        if not isinstance(row, dict) or not row.get("fp",):
             continue
-        if str(row.get("origin", "")).startswith("generated_"):
+        if str(row.get("origin", "",)).startswith("generated_"):
             continue
         fps.add(row["fp"])
     return fps
@@ -458,18 +458,18 @@ def _narrow_row_gen(sched, fam: str, sides: tuple[int, ...],
                     yield row
 
 
-def _deck_rows_by_family() -> dict[str, list[dict[str, Any]]]:
+def _deck_rows_by_family(profile=None) -> dict[str, list[dict[str, Any]]]:
     rows: dict[str, list[dict[str, Any]]] = {}
     for row in __yaml_load(REPO_ROOT / "phases.yaml", fallback=[]):
         if not isinstance(row, dict):
             continue
-        cfg = row.get("config") or {}
-        fam = str(cfg.get("FamilyLabel") or row.get("label") or "").upper()
-        for f in _loader.current_profile().family_dtype_char:
+        cfg = row.get("config",) or {}
+        fam = str(cfg.get("FamilyLabel",) or row.get("label",) or "").upper()
+        for f in _loader.resolve_profile(profile,).family_dtype_char:
             if fam.startswith(f):
                 fam = f
                 break
-        if fam in _loader.current_profile().family_dtype_char:
+        if fam in _loader.resolve_profile(profile,).family_dtype_char:
             rows.setdefault(fam, []).append({**row, "config": cfg})
     return rows
 
@@ -493,8 +493,8 @@ def _deck_winner_for(deck: dict[str, list[dict[str, Any]]], fam: str,
 def _pattern_for(fam: str, mt: str) -> str:
     return PATTERNS.get(fam, ("Ailk_Bjlk",))[0]
 
-def __getattr__(name: str):
+def __getattr__(name: str, profile=None):
     """Resolve device-profile-derived names per attribute access (call time)."""
     if name == 'OVERLAY_PATH':
-        return _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+        return _results_dir(REPO_ROOT, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml"
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
