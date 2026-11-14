@@ -61,6 +61,11 @@ CHECKS = [
 #: run directly -- which is exactly the kind of difference that gets a guard
 #: ignored. Inject nothing; let each check resolve it the way the driver does.
 ENV = dict(os.environ)
+# The children are spawned as scripts, so oto/tools/verifiers/ lands on their
+# sys.path instead of the repo root (unlike ``python3 -m oto ...``). Put the
+# repo root on PYTHONPATH so the checks import the package the same way the
+# driver does. Nothing else is injected.
+ENV["PYTHONPATH"] = str(ROOT) + os.pathsep + ENV.get("PYTHONPATH", "")
 
 
 def main(argv: list[str] | None = None) -> int:
