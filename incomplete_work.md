@@ -16,8 +16,11 @@ machine-specific Tensile path fallbacks in tracked source (env/.env only);
 suite re-verified RC=0 (zz_suite26, 1047 passed). Open: same as before — C4
 (API key), verifier bringup decision (above), C2.5–C2.9 (deferred by
 design), Class B end-to-end (needs gfx902 TTY + key + human gate),
-gfx906 real-hardware validation, and the 2 `oto doctor` warnings
-(venv-not-active; unfinished run_20261029_152402).
+the 2 `oto doctor` warnings (venv-not-active; unfinished run_20261029_152402).
+Note: `profiles/gfx906.json` was deleted 2026-11-14 — it was never a target
+(gfx90c and gfx902 are the project's device set); the second-profile gate
+tests now derive their synthetic device from `gfx90c.json` via
+`dataclasses.replace`.
 
 **2026-11-13 (night) — CLI front door landed; suite green again.**
 The 2026-11-13 (evening) caveat above is RESOLVED by this session's Phase-1..4
@@ -80,8 +83,9 @@ Open items, tracked:
   `oto/device/` + `profiles/` remain (docstrings/comments in
   `oto/tensile/shipped_library.py`, `oto/tensile/gates/vgpr_model.py`,
   `oto/runners/paths.py` — deliberate, documented back-compat notes).
-- C7.1 (gfx906/gfx902 starter profiles) — blocked on C4 for gfx902; the
-  synthetic gfx906 profile is in place for gate testing.
+- C7.1 (gfx902 starter profile) — blocked on C4; the gfx906 synthetic
+  profile was deleted 2026-11-14 (never a target); gate tests use a
+  `dataclasses.replace`-derived synthetic device from gfx90c.json.
 - C5.4 docstring cleanup (~60 files, tell-what-it-owns style rewrite) —
   explicitly out of scope this session; the quality gates (function ≤ 60,
   file ≤ 600, ruff/pyflakes zero findings) are the enforceable parts and are
@@ -989,11 +993,11 @@ Note: this register's 2026-10 snapshots above predate Refactor 2 landing —
 4. Starter-driven: SATISFIED (load_profile_from_starter handles fenced JSON + pair + bare codename)
 5. Two-agent docs: SATISFIED (agent-1/agent-2 generate from profile, research callable wired)
 6. Automated potential_configs: SATISFIED (potential_configs_gen generates full doc, wired in synthesis.py)
-7. Tests generalised: SATISFIED (test_profile, test_profile_gates, test_profile_second_device all pass with gfx906 synthetic)
+7. Tests generalised: SATISFIED (test_profile, test_profile_gates, test_profile_second_device all pass with a replace-derived synthetic profile)
 
 **Still blocked (external input required):**
 - C4 (gfx902 starter research) — needs API key.
-- gfx906 real-hardware validation — no hardware.
+- gfx906 validation — dropped: never a target (gfx90c and gfx902 are the device set).
 - ~~CLI UX implementation — needs answers to §7 of plans/CLI_UX_REWORK.md.~~
   RESOLVED 2026-11-13: the whole `plans/CLI_UX_REWORK.md` ("oneshot evergreen")
   landed in this session — Phase 1 (front + doctor + checks + docs + dispatch)

@@ -2,8 +2,8 @@
 
 Proves the ``DeviceProfile`` seam is load-bearing, not decorative: binding a
 *different* profile flips gate inputs and verdicts, and restoring returns
-gfx90c's exact constants. The synthetic profile is derived from the gfx906
-JSON in ``profiles/`` with two fields overridden (halved VGPR file, 8-byte
+gfx90c's exact constants. The synthetic profile is derived from
+``gfx90c.json`` with two fields overridden (halved VGPR file, 8-byte
 load cap) so at least one gate flips a verdict while everything else stays
 identical to a genuinely different device.
 
@@ -24,10 +24,22 @@ from oto.tensile.gates import loads, occupancy, vgpr_model
 SYNTH_FIELDS = {"vgpr_per_cu": 32768, "global_load_byte_cap": 8}
 
 
+def _synthetic_device():
+    base = load_profile("gfx90c")
+    return dataclasses.replace(
+        base,
+        codename="synthetictest",
+        isa=(9, 9, 99),
+        num_cus=64,
+        max_clock_mhz=1500,
+        peak_gflops={**base.peak_gflops, "FP32": base.peak_gflops["FP32"] * 7},
+        realistic_ceilings={k: v + 1 for k, v in base.realistic_ceilings.items()},
+    )
+
+
 @pytest.fixture(scope="module")
 def synthetic_profile():
-    base = load_profile("gfx906")
-    return dataclasses.replace(base, **SYNTH_FIELDS)
+    return dataclasses.replace(_synthetic_device(), **SYNTH_FIELDS)
 
 
 @pytest.fixture(scope="module")
@@ -35,17 +47,17 @@ def default_profile():
     return load_profile("gfx90c")
 
 
-def test_second_profile_is_a_real_device():
-    p = load_profile("gfx906")
-    assert p.codename == "gfx906"
-    assert p.isa == (9, 0, 6)
+def test_synthetic_profile_differs_from_gfx90c():
+    p = _synthetic_device()
+    assert p.codename == "synthetictest"
+    assert p.isa == (9, 9, 99)
     assert p.num_cus == 64
     assert p.num_cus != load_profile("gfx90c").num_cus
     assert p.family_shapes and p.peak_gflops
 
 
 def test_profiles_round_trip_peaks():
-    a, b = load_profile("gfx90c"), load_profile("gfx906")
+    a, b = load_profile("gfx90c"), _synthetic_device()
     assert a.peak_gflops["FP32"] != b.peak_gflops["FP32"]
     assert a.realistic_ceilings != b.realistic_ceilings
 

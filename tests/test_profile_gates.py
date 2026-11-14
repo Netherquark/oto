@@ -5,15 +5,23 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import dataclasses
+
 from oto.device.loader import load_profile
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
 from oto.tensile.gates.vgpr_model import set_profile
 
 
+def _synthetic():
+    base = load_profile("gfx90c")
+    return dataclasses.replace(base, codename="synthetictest", isa=(9, 9, 99),
+                               num_cus=64, max_clock_mhz=1500)
+
+
 def test_second_profile_gates_run():
     """The gates must not crash on a non-gfx90c profile."""
-    prof = load_profile("gfx906")
+    prof = _synthetic()
     set_profile(prof)
     # A simple config should be evaluated (pass or fail, not crash)
     cfg = {"DataType": "S", "MacroTile": "64x64x8", "ThreadTile": "4x4",
@@ -32,7 +40,9 @@ def test_second_profile_gates_run():
 def test_profile_switching_restores_gfx90c():
     """Switching profiles must not leak state."""
     p1 = load_profile("gfx90c")
-    p2 = load_profile("gfx906")
+    p2 = dataclasses.replace(load_profile("gfx90c"),
+                             codename="synthetictest", isa=(9, 9, 99),
+                             num_cus=64, max_clock_mhz=1500)
     set_profile(p2)
     assert load_profile("gfx90c").num_cus == 7
     set_profile(p1)
@@ -40,11 +50,13 @@ def test_profile_switching_restores_gfx90c():
 
 
 def test_gfx90c_profile_restored_after_second():
-    """After testing with gfx906, restoring gfx90c profile keeps gates working."""
+    """After testing with a second profile, restoring gfx90c keeps gates working."""
     from oto.device.loader import load_profile
     from oto.tensile.gates.vgpr_model import set_profile
     p1 = load_profile("gfx90c")
-    p2 = load_profile("gfx906")
+    p2 = dataclasses.replace(load_profile("gfx90c"),
+                             codename="synthetictest", isa=(9, 9, 99),
+                             num_cus=64, max_clock_mhz=1500)
     set_profile(p2)
     assert p2.num_cus == 64
     set_profile(p1)
@@ -66,14 +78,17 @@ def test_gfx90c_profile_restored_after_second():
 import pytest
 
 
-@pytest.mark.parametrize("codename", ["gfx90c", "gfx906"])
-def test_gates_dont_crash_on_profile(codename):
+@pytest.mark.parametrize("synthetic", [False, True])
+def test_gates_dont_crash_on_profile(synthetic):
     """Gates evaluate without crashing on any registered profile."""
     from oto.device.loader import load_profile
     from oto.tensile.gates.assembly import assembly_class_valid
     from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
     from oto.tensile.gates.vgpr_model import set_profile
-    prof = load_profile(codename)
+    prof = load_profile("gfx90c")
+    if synthetic:
+        prof = dataclasses.replace(prof, codename="synthetictest", isa=(9, 9, 99),
+                                   num_cus=64, max_clock_mhz=1500)
     set_profile(prof)
     cfg = {"DataType": "S", "MacroTile": "64x64x8", "ThreadTile": "4x4",
            "VectorWidth": 2, "DepthU": 8, "GlobalSplitU": 1,

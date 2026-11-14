@@ -152,15 +152,3 @@ def changed_python_files() -> list[str]:
     return files
 
 
-@pytest.fixture(scope="session")
-def second_profile():
-    """The synthetic gfx906 profile (Refactor 2), loaded once per session.
-
-    A genuinely different device (64 CUs instead of gfx90c's 7) used to prove
-    the profile seam works: gate values must follow the bound profile, not a
-    hardcoded gfx90c. Identical LDS/VGPR/byte-cap figures by design -- the
-    pairwise-distinct fields live in `dataclasses.replace` in the tests.
-    """
-    from oto.device.loader import load_profile
-
-    return load_profile("gfx906")
