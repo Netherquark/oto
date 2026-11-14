@@ -173,16 +173,17 @@ def test_ldspad_feasible_passes_without_pads():
 
 def test_ldspad_feasible_padded_ok_and_rejects_blowout():
     from oto.tensile.candidate import ldspad_feasible
-    # 64x64x8 Z at DepthU 8: base footprint (64+64)*8*8 = 8192; pads 2+2 ->
-    # (64+2+64+2)*8*8 = 8448 <= 16384 -> ok
+    # 64x64x8 Z at DepthU 4: padded footprint (64+2+64+2)*4*16 = 8448 <= 16384
+    # -> ok (DU8 at Tensile's 16 B Z is at/over the budget; the padded
+    # at-budget rung is DU4 now).
     ok, reason = ldspad_feasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
-                                  "DataType": "Z", "DepthU": 8,
+                                  "DataType": "Z", "DepthU": 4,
                                   "LdsPadA": 2, "LdsPadB": 2})
     assert ok, reason
     # Same tile with absurd pads blows the 16384 budget:
-    # (64+128+64+128)*8*8 = 24576 > 16384
+    # (64+128+64+128)*4*16 = 24576 > 16384
     ok, reason = ldspad_feasible({"MacroTile": "64x64x8", "ThreadTile": "4x4",
-                                  "DataType": "Z", "DepthU": 8,
+                                  "DataType": "Z", "DepthU": 4,
                                   "LdsPadA": 128, "LdsPadB": 128})
     assert not ok
     assert "footprint" in reason

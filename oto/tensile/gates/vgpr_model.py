@@ -51,26 +51,30 @@ ACCVGPR_BUDGET = 128
 #: allocator result inflated by prefetch double-buffering, power-of-two offset
 #: alignment and LdsPad, so the base is not the number Tensile compares -- but it
 #: is a sound *upper-bound* proxy in the only direction that matters here.
-#: Measured complex (Z, 8 B) boundary on the device: 16384 legal, 20480 dead
-#: (128x32x16 needs 106496 B and is rejected). Deliberately conservative: it may
-#: refuse a config Tensile would accept, never admits one Tensile refuses.
+#: Calibrated boundary, kept verbatim by the owner's 2026-11-14 call even though
+#: Tensile's own LDS check is not 16 KiB: SolutionStructs:4334 compares against
+#: the per-CU ``MaxLDS`` (65536 B -- see MAX_LDS_BYTES), so this budget is a
+#: deliberately conservative per-workgroup proxy. It is expressly *allowed* to
+#: refuse ZZ configs Tensile builds and runs; the shipped contract is "never
+#: admit what Tensile rejects", never "admit everything Tensile accepts".
+#: Measured context: with the old 8-byte Z the boundary tiles were decked as
+#: decision evidence (64x64x16 / 128x32x8 / 32x128x8 at fp footprint 20480) and
+#: Tensile's solution-construction verdict for them is recorded in the
+#: 2026-11-14 changelog entry. The budget does not move.
 LDS_BUDGET = 16384
 #: Bytes per element for the LDS footprint, by dtype char. This is Tensile's
-#: own ``DataType.numBytes()`` (= ``properties['reg'] * 4``) -- EXCEPT "Z", which
-#: is deliberately left at half that value. See DECISION REQUIRED in
-#: <codename>_theoretical_limits.md §6: complex double is 4 registers = 16 bytes in
-#: Tensile/DataType.py:82 (and FAMILY_BYTES_PER_ELEMENT agrees, "ZZ": 16), but
-#: LDS_BUDGET below was calibrated against the 8-byte value, so correcting this
-#: entry alone would reject ZZ configs Tensile builds and runs. The two must be
-#: decided together. A f64 element is 8 bytes but 2 accumulator VGPRs (per
-#: element); a complex f64 element is 8 accumulator VGPRs and 16 LDS bytes.
-#:
-#: The *global-load* half of that decision is now settled and does NOT live here:
-#: the classic-load gate has its own table, ``gates.loads.LOAD_DTYPE_INFO``, whose
-#: ``Z`` row reads ComplexDouble's 4 registers / 16 bytes, so the 16 B load cap
-#: refuses ZZ VectorWidth 2 (see potential_configs.md §R23). This LDS table stays
-#: at 8 because LDS_BUDGET was calibrated against it.
-BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
+#: own ``DataType.numBytes()`` (= ``properties['reg'] * 4``) -- now including
+#: "Z" = complex double = 4 registers = 16 bytes (DataType.py:82), agreeing
+#: with FAMILY_BYTES_PER_ELEMENT ("ZZ": 16) and with COMPUTE_BYTES_PER_ELEMENT.
+#: DECIDED 2026-11-14 (owner call): the table is Tensile's table, unmodified.
+#: Consequence: for ZZ the budget now binds at (MT0+MT1)*DepthU <= 1024, and the
+#: six decision-trial rows (D2: 64x64x16; D3: 128x32x8, 32x128x8) plus every
+#: tile with (MT0+MT1)*DepthU > 1024 are rejected by design -- exactly the
+#: policy recorded above, not a Tensile verdict. The global-load half of the
+#: same fact already lived elsewhere and is unchanged: the classic-load gate's
+#: ``gates.loads.LOAD_DTYPE_INFO`` ``Z`` row reads ComplexDouble's 4 registers /
+#: 16 bytes, refusing ZZ VectorWidth 2 (see potential_configs.md §R23).
+BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 16}
 #: Tensile's ``globalParameters["MaxLDS"]`` -- the *per-CU* LDS allocator ceiling,
 #: 64 KiB. Distinct from :data:`LDS_BUDGET`, which is the conservative
 #: per-workgroup tile proxy of 16 KiB. The two must not be conflated: the tile

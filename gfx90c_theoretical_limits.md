@@ -282,16 +282,25 @@ Consequences, all of which the code now carries:
 
 ## 6. Open verification gaps and decisions
 
-### 6.1 DECISION REQUIRED — the ZZ LDS byte count, and what it is and is not
+### 6.1 DECIDED 2026-11-14 — the ZZ LDS byte count, and what it is and is not
 
-**Owner: user. Do not change `BYTES_PER_ELEMENT["Z"]` or `LDS_BUDGET` until this
-is decided.**
+**Owner decision (2026-11-14): `BYTES_PER_ELEMENT["Z"] = 16` (Tensile's own
+`DataType.numBytes()`), `LDS_BUDGET` kept at 16384.** The gate now refuses every
+ZZ tile with (MT0+MT1)*DepthU > 1024 — including 64x64x16, 128x32x8 and
+32x128x8 (the D2/D3 decision-trial rows, removed from `phases.yaml` and
+`DECISION_TRIAL_TILES`; Tensile's own solution-construction verdict for them was
+re-verified first). The gate's contract is "never admit what Tensile rejects",
+not "admit all Tensile accepts" — some refused tiles are Tensile-legal; that is
+the accepted cost, recorded below. `tests/test_occupancy_model_lds.py` pins the
+new identity (budget does not move; Z is Tensile's 16 B).
+
+**What the discrepancy actually cost.** Historical measurement, unchanged:
 
 `oto/tensile/gates/vgpr_model.py` gates an LDS proxy as
 `(MacroTile0 + MacroTile1) * DepthU * bytesPerElement` against `LDS_BUDGET =
 16384`. Two facts, both measured:
 
-**F1 — `BYTES_PER_ELEMENT["Z"] = 8` is half of Tensile's element width.**
+**F1 — the old `BYTES_PER_ELEMENT["Z"] = 8` was half of Tensile's element width.**
 Tensile/DataType.py:82 gives complexDouble `'reg': 4`, and
 `numBytes() = int(numRegisters * 4)` = **16**. The same module already carries
 `FAMILY_BYTES_PER_ELEMENT["ZZ"] = 16`, and
@@ -324,15 +333,19 @@ the family where LDS capacity binds hardest (61.7% of the whole corpus), and why
 a ZZ deck entry can look legal to the gate while Tensile allocates the entire LDS
 pool to it.
 
-**Why it is coupled and cannot be fixed alone.** `LDS_BUDGET = 16384` was chosen
-so `(64+64)*16*8 == 16384` puts the measured complex boundary at the wall —
-`tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_measured_boundary`
-asserts exactly that identity, so it fails at bpe=16. Corrected baseline that
-preserves today's accept/reject boundary: `"Z": 16` with `LDS_BUDGET = 32768`.
-Note the consequence the user is choosing between: keeping 8/16384 refuses
-nothing but under-describes ZZ's real LDS pressure; moving to 16/32768 describes
-it correctly and refuses the 67 single-workgroup kernels above.
+**Why it was coupled.** `LDS_BUDGET = 16384` was chosen so
+`(64+64)*16*8 == 16384` put the measured complex boundary at the wall. The
+8/16384 pair described nothing correctly and refused nothing; the decided
+16/16384 pair describes the element exactly and refuses the 67 single-workgroup
+kernels above. Tensile's own LDS check (SolutionStructs:4334) compares against
+`MaxLDS = 65536`, so some CPU-gate refusals remain Tensile-legal — an accepted,
+documented cost, identical in kind to the pre-decision state (the gate was
+always conservative; it is now conservative in the measured-element direction).
 
+*Status:* the 2026-11-14 "re-measure the false-rejection rate" note in
+incomplete_work.md is closed by this decision: the gate refuses ~67/229
+corpus ZZ kernels at the chosen reading — accepted deterministically. The D2/D3
+boundary evidence was gathered Tensile-verbatim on 2026-11-14 (see changelog).
 *Scope:* this is the **LDS-tile** width only. `knowledge_base.md` §8.1's "complex
 types are 8 B" is the **global-load** element width under the `GLVW x bytes <= 16`
 cap — a different quantity on a different path. Both can be true at once.

@@ -139,13 +139,12 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   deliberately distinct byte tables**, and conflating them is the trap:
   - `FAMILY_BYTES_PER_ELEMENT` (`oto/tensile/gates/vgpr_model.py`) — the
     **element / global-load width** used for the 16-B cap. `ZZ = 16`. Test-locked.
-  - `BYTES_PER_ELEMENT` (same module) — the **LDS footprint** table. Here
-    `Z = 8` is deliberate and distinct from the 16-B element width, and it is
-    calibrated: the footprint wall is `(MT0+MT1)·DepthU·bpe`, so
-    `(64+64)·16·8 == 16384 == LDS_BUDGET` sits exactly on the measured complex
-    boundary (16384 B/WG legal; 20480 B/WG dead; `128x32x16` needs 106496 B and
-    Tensile rejects it). The lock is
-    `tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_measured_boundary`.
+  - `BYTES_PER_ELEMENT` (same module) — the **LDS footprint** table. Since
+    2026-11-14 it is Tensile's table unmodified (`Z = 16`); `LDS_BUDGET`
+    stands (16384). For ZZ the footprint wall binds at `(MT0+MT1)·DepthU ≤ 1024`
+    and the at-boundary tiles (64x64x4/DepthU 4, 32x32x16/DepthU 16, 64x64x8/DepthU 8)
+    are at exactly 16384. The lock is
+    `tests/test_occupancy_model_lds.py::TestLdsGate::test_budget_sits_at_16384_bytes`.
   - `ASSEMBLY_DTYPE_ELEM_BYTES` (`oto/tensile/gates/assembly.py`) — the
     **assembly class** rule, which counts the *element*: `Z = 16`.
   - The older note here — "suspected 2× LDS under-count of ZZ, `scheduler.py`
@@ -436,7 +435,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 ## 7. Concrete experiments mapped to M1–M4
 
 - All runs below are **already-owned cells** in potential_configs.md §8 (Groups A–D); this section only supplies the mechanistic hypothesis and the prediction to record *before* measuring (M1 vocabulary, M2 gate names throughout).
-- **H1 — `LdsPad ∈ {0,1,2,4}` × NT/T (Group B)**: §2 predicts **pad 1 conflict-free, pad 4 regression, non-monotonic ordering**. Pre-registered prediction: `LdsPad=1` ≥ `2` > `4` ≥ `0` on transpose-heavy (T) cells; near-no-effect on NT cells where Tensile's auto rule picks 0 (`SolutionStructs.py:2812-2815`). Mechanism column: M3-LDS. Gates: `ldspad_feasible` (`oto/tensile/gates/occupancy.py`) — mind the padded-footprint bound and the intentional `BYTES_PER_ELEMENT["Z"]=8` LDS table (§3.3).
+- **H1 — `LdsPad ∈ {0,1,2,4}` × NT/T (Group B)**: §2 predicts **pad 1 conflict-free, pad 4 regression, non-monotonic ordering**. Pre-registered prediction: `LdsPad=1` ≥ `2` > `4` ≥ `0` on transpose-heavy (T) cells; near-no-effect on NT cells where Tensile's auto rule picks 0 (`SolutionStructs.py:2812-2815`). Mechanism column: M3-LDS. Gates: `ldspad_feasible` (`oto/tensile/gates/occupancy.py`) — mind the padded-footprint bound and the decided `BYTES_PER_ELEMENT["Z"]=16` LDS table (§3.3).
 - **H2 — `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` (Group C)**: mechanism = K-split changes per-wave register/tile shape → moves `V` across a §3 quantization boundary *and* adds a 2-kernel + workspace penalty (§4). Prediction: wins only where current `V` sits just above a cliff (e.g. 3-wave kernels); loses on already-4-wave cells. `GSU=1` has been in every winner so far (see potential_configs.md §6) — expect this group to be narrow, not a breakthrough.
 - **H3 — `PrefetchGlobalRead=0` (Group C)**: frees the double-buffer VGPRs **and** halves LDS footprint (`Common.py:511-513`). Prediction: occupancy step 3→4 waves (`V` 79→≤64 territory, §3.1) at the cost of lost global-read overlap — net win only on memory-latency-insensitive (compute-bound) cells. Mechanism: M3-register.
 - **H4 — `NLCA=3` (Group C)**: fuses LDS-load instructions (potential_configs.md §7). Mechanism: fewer LDS instructions + reduced LDS port pressure; interacts with H1 (a fused load pattern changes which pad matters — run H4 on top of the H1 winner, not independently).

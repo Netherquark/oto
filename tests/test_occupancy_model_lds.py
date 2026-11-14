@@ -43,22 +43,30 @@ class TestLdsGate(unittest.TestCase):
             ok, _ = occupancy_feasible(cfg("Z", "128x32x16", tt))
             assert not ok, f"TT {tt} cannot rescue 128x32x16 (LDS bound)"
 
-    def test_budget_sits_at_measured_boundary(self):
+    def test_budget_sits_at_16384_bytes(self):
+        """The budget does not move with the Z table: 16384, locked. For ZZ it
+        binds at (MT0+MT1)*DepthU <= 1024 at Tensile's 16-byte element."""
         bpe = BYTES_PER_ELEMENT["Z"]
         assert LDS_BUDGET == 16384
-        legal = (64 + 64) * 16 * bpe
-        dead = (128 + 32) * 16 * bpe
-        assert legal == LDS_BUDGET
-        assert dead > LDS_BUDGET
+        assert bpe == 16
+        # Au niveau des tables: DD (8 B) tile at budget, and Z at DepthU 8:
+        boundary8 = (64 + 64) * 8 * bpe   # Z at DepthU 8, exactly at budget
+        beyond16 = (128 + 32) * 8 * bpe   # refused at DepthU 8 under the policy
+        assert boundary8 == LDS_BUDGET
+        assert beyond16 > LDS_BUDGET
 
     def test_measured_z_tiles_all_classified_correctly(self):
+        """Post-2026-11-14 (Z == Tensile's 16 B, budget stays 16384): the
+        policy refuses every ZZ tile with (MT0+MT1)*DepthU > 1024, including
+        the tiles Tensile accepts. The curated deck obeys the refusal."""
         for mt, tt, legal in (
             ("32x32x8", "2x2", True), ("32x64x8", "2x4", True),
             ("64x32x8", "4x2", True), ("32x32x16", "2x2", True),
             ("32x32x16", "4x4", True), ("64x64x8", "4x2", True),
-            ("64x64x8", "4x4", True), ("128x32x8", "2x8", True),
-            ("32x128x8", "2x8", True), ("64x64x16", "2x2", True),
-            ("64x64x16", "4x4", True), ("128x32x16", "2x8", False),
+            ("64x64x8", "4x4", True), ("128x32x8", "2x8", False),
+            ("32x128x8", "2x8", False), ("64x64x16", "2x2", False),
+            ("64x64x16", "4x4", False), ("64x64x4", "4x4", True),
+            ("128x32x16", "2x8", False),
         ):
             assert occupancy_feasible(cfg("Z", mt, tt))[0] == legal, f"{mt}/{tt}"
 
@@ -73,9 +81,14 @@ class TestMacroTileIsNotTheConstraint(unittest.TestCase):
     """The regression that motivated this rewrite."""
 
     def test_wide_macro_tile_with_small_thread_tile_is_legal(self):
-        """128x32 with TT 8x4 died 116 times; TT 2x8 on the same MT is fine."""
-        assert not occupancy_feasible(cfg("Z", "128x32x8", "8x4"))[0]
-        assert occupancy_feasible(cfg("Z", "128x32x8", "2x8"))[0]
+        """64x64 with TT 8x4 needs 256 accVGPRs per thread; TT 2x8 on the same
+        MacroTile is fine. At Tensile's 16 B, 128x32x8-class ZZ tiles are
+        policy-refused on LDS before the thread tile gets a say."""
+        assert not occupancy_feasible(cfg("Z", "64x64x8", "8x4"))[0]
+        assert occupancy_feasible(cfg("Z", "64x64x8", "2x8"))[0]
+        # the wide ZZ area ladder died with the 2026-11-14 decision
+        assert not occupancy_feasible(cfg("Z", "128x32x8", "2x8"))[0]
+        assert not occupancy_feasible(cfg("Z", "32x128x8", "2x8"))[0]
 
     def test_narrow_macro_tile_with_big_thread_tile_is_illegal(self):
         """The old area-based model could not express this at all."""
@@ -108,8 +121,10 @@ class TestWorkgroupRegisterFile(unittest.TestCase):
 
     def test_one_step_down_the_area_ladder_is_legal(self):
         assert occupancy_feasible(cfg("C", "128x64x8", "8x4"))[0]
-        assert occupancy_feasible(cfg("Z", "128x32x8", "4x4"))[0]
-        assert occupancy_feasible(cfg("Z", "32x128x8", "4x4"))[0]
+        assert occupancy_feasible(cfg("Z", "64x64x4", "4x4"))[0]
+        # ZZ one area step below 128x64 died with the 2026-11-14 decision
+        assert not occupancy_feasible(cfg("Z", "128x32x8", "4x4"))[0]
+        assert not occupancy_feasible(cfg("Z", "32x128x8", "4x4"))[0]
 
     def test_threadtile_cancels_out_of_the_workgroup_rule(self):
         """Verdict follows MacroTile, not ThreadTile, once per-thread passes."""
@@ -197,7 +212,7 @@ class TestRealDtypesUnaffected(unittest.TestCase):
             ("Z", "32x32x8", "2x2"),      # ZZ:128/192/512 winner
             ("Z", "32x32x16", "2x2"),
             ("Z", "64x64x8", "4x4"),
-            ("Z", "32x128x8", "2x8"),
+            ("Z", "64x64x4", "4x4"),   # ZZ: at-budget rung (64x64x16 family ladder retired)
         ]
         for dtype, mt, tt in winners:
             ok, why = occupancy_feasible(cfg(dtype, mt, tt))

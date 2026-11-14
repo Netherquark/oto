@@ -140,30 +140,22 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
             # and was never generated natively.
             {"MacroTile": "32x32x8", "ThreadTile": "4x4", "NLCA": 1},
             # LADDER: exercise DepthU, which no ZZ entry has varied. Complex
-            # double is 16 B/elem in Tensile (DataType reg=4, numBytes = 16)
-            # -- see the DECISION REQUIRED in <codename>_theoretical_limits.md
-            # §6: BYTES_PER_ELEMENT["Z"] still reads 8 here, so this comment
-            # is the only place the 16 B figure is stated until that is decided.
+            # double is 16 B/elem (Tensile DataType reg=4) since the 2026-11-14
+            # DECIDED §6 call: BYTES_PER_ELEMENT["Z"] is 16 B, LDS_BUDGET stays
+            # 16384. Consequence: bare 64x64x16 (fp 32768 B) is refused by policy,
+            # so the DepthU ladder here carries only the at-budget rungs
+            # (64x64x4, 32x32x16) plus the measured winner 64x64x8/LdsPadB=1 at
+            # exactly 16384. The 64x64x16 floor winner and its LdsPadB sibling are
+            # TENSILE-LEGAL but policy-refused; they are not decked since 2026-11-14.
             {"MacroTile": "64x64x4", "ThreadTile": "4x4", "NLCA": 1},
-            {"MacroTile": "64x64x16", "ThreadTile": "4x4", "NLCA": 1},
-            # MEASURED floor winner at ZZ:128 is 64x64x16/4x4/VW1, and
-            # ZZ:512 is the same tile at DepthU 8 plus LdsPadB 1. Pad B is
-            # the only ZZ knob with measured support; include it.
-            {"MacroTile": "64x64x16", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4", "LdsPadB": 1, "NLCA": 1},
-            # ---- 2026-10-18 (potential_configs.md §R24): the widest LEGAL ZZ
-            # tile. The 2026-10-14 rows here (128x128x8/tt4x4 and 128x64x8/tt4x4)
-            # were wrong: 128x128 and 128x64 make R*MTarea = 8*16384 / 8*8192 --
-            # 131072 / 65536 accumulator VGPRs across the workgroup, so the
-            # accumulators alone fill the 64K file and Tensile raises error 4
-            # ("Occupancy limit") before a kernel exists. The per-thread budget
-            # (TT4x4*8 = 128) is what the old comment read; the *workgroup*
-            # budget is the binding one. Brute force over every tile with area
-            # > 4096 (the widest emitted) confirms NO legal ZZ tile is wider --
-            # so 128x32 and 32x128 at DepthU 8 are the widest legal, and the
-            # asymmetric aspect is itself unexercised.
-            {"MacroTile": "128x32x8", "ThreadTile": "4x4", "NLCA": 1},
-            {"MacroTile": "32x128x8", "ThreadTile": "4x4", "NLCA": 1},
+            # ---- 2026-11-14 (owner decision, §6): the widest policy-admitted ZZ.
+            # The 2026-10-14 rows (128x128x8/tt4x4 and 128x64x8/tt4x4) were wrong
+            # on the workgroup register-file rule (error 4). The 2026-10-18 answer
+            # (128x32x8/32x128x8 at DepthU 8) passed the gate only under the old
+            # 8 B LDS reading; at Tensile's 16 B element it is 20480 B, so it was
+            # retired with the 2026-11-14 decision. Asymmetric aspects that
+            # remain at the budget: 64x64x8/LdsPadB=1 (16384 B) and 32x32x16.
         ],
         # ---- CC: 2.5-19.7% of the FP32 roof on every cell, and the only
         # family where the floor's winning config was already run natively
@@ -361,20 +353,27 @@ KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
 #     re-measured at the *shallow cells* it owns -- a shape question, not a
 #     knob. The trial names its shapes explicitly so it does not depend on the
 #     sweep's default shapes.
-#   * D2 (`BYTES_PER_ELEMENT["Z"]` 8 vs 16) changes behaviour in exactly one
-#     place: ZZ's load-width cap (`16 // bpe` = 2 vs 1). A ZZ VW2 tile is legal
-#     at the 8-byte reading and refused at 16, so it is the differentiator:
-#     if it builds and runs, 8 is behaviourally sound.
-#   * D3 (the ZZ deck "can empty if D2 lands") needs the boundary/headroom
-#     tiles present under either reading -- the §8.2 tiles that were legal but
-#     never generated.
+#   * D2 (`BYTES_PER_ELEMENT["Z"]` 8 vs 16) is RETIRED, 2026-11-14 (owner
+#     decision, §6): the Tensile-verbatim 16 B table plus the unchanged
+#     16384 B budget retired the boundary tile by policy; the ZZ VW2
+#     differentiator was already settled against Tensile (``numBytes() * 2 > 16``).
+#   * D3 is RETIRED, 2026-11-14 (owner decision, §6): the boundary/headroom
+#     tiles are refused by the gate by design, so they are not decked.
 #
 # Each entry is emitted unchanged (no knob delta), once per (pattern, shape),
 # tagged `_trialD<n>` by the generator. Seen by
 # `test_every_decision_trial_is_gate_legal` and
-# `test_decision_trials_cover_d1_d2_d3`.
+# `test_decision_trials_cover_d1`.
 #: Decision-labelled trial tiles. `shapes`, when present, overrides the sweep's
 #: shape list; otherwise the generator's shapes apply.
+#:
+#: D2 (LDS bytes-per-element: 8 vs 16) and D3 (the wide ZZ aspect pair) are
+#: RETIRED, 2026-11-14 (owner decision, <codename>_theoretical_limits.md §6):
+#: BYTES_PER_ELEMENT["Z"] is Tensile's 16 B and LDS_BUDGET stays 16384, so the
+#: D2 boundary tile (64x64x16, gate footprint 32768) and the D3 pair
+#: (128x32x8 / 32x128x8; 20480) are refused by design. Both were re-checked
+#: against Tensile's solution-construction verdict before retirement (see the
+#: 2026-11-14 changelog entry); neither is re-decked.
 DECISION_TRIAL_TILES: list[dict[str, Any]] = [
     {
         "decision": "D1",
@@ -387,52 +386,6 @@ DECISION_TRIAL_TILES: list[dict[str, Any]] = [
                "re-measures the CC winner geometry (the steal tile, VW2) at "
                "the shallow cells, so a same-run floor re-arm can close D1. "
                "Measurement fix, not a kernel deficit.",
-    },
-    # D2's differentiator was a ZZ VectorWidth=2 tile, decked here on
-    # 2026-10-14 and then withdrawn the same day: Tensile's own DataType gives
-    # complexDouble numBytes() = 16, so a VW2 ZZ phase loads 32 B and Tensile
-    # refuses it at solution construction. `oto/tools/consolidate_deck.py`
-    # `dtype_bytes` already reads that value from Tensile (its docstring names
-    # the 8-byte table as the bug that let VW2 through and produced the
-    # `GlobalLoadVectorWidthA * DataType.numBytes() > 16` rejects), and
-    # `tests/test_consolidate.py::TestLegalityGate::
-    # test_gate_catches_a_real_archived_zz_phase` locks the refusal against the
-    # archived deck. So the load-width half of D2 is settled by measurement and
-    # admits no new trial; what remains is the LDS-budget half, which the
-    # boundary tile below covers. Do not re-add a ZZ VW2 row.
-    {
-        "decision": "D2",
-        "family": "ZZ",
-        "knobs": {"MacroTile": "64x64x16", "ThreadTile": "4x4",
-                  "VectorWidth": 1},
-        "why": "The LDS-boundary tile: gate footprint 16384 (= budget at "
-               "bpe=8), true single-buffered 32768 at Tensile's 16 B/element. "
-               "The corpus's own ZZ winner geometry. If it builds, runs and "
-               "wins, the current budget sits at the right wall and D3's "
-               "insurance follows.",
-    },
-    {
-        "decision": "D3",
-        "family": "ZZ",
-        "knobs": {"MacroTile": "128x32x8", "ThreadTile": "4x4",
-                  "VectorWidth": 1},
-        "why": "The widest LEGAL ZZ tile after the workgroup register-file rule "
-               "(potential_configs.md §R24). 128x128x8 and 128x64x8 -- the "
-               "2026-10-14 'headroom' rows -- make R*MTarea = 8*16384 / 8*8192 "
-               "accumulator VGPRs across the workgroup, so the accumulators "
-               "alone fill the 64K file and Tensile dies with error 4 before a "
-               "kernel exists. Brute force over every ZZ tile with area > 4096 "
-               "finds none legal, so 128x32x8 is the wide end and the aspect "
-               "ratio is the only unexercised axis.",
-    },
-    {
-        "decision": "D3",
-        "family": "ZZ",
-        "knobs": {"MacroTile": "32x128x8", "ThreadTile": "4x4",
-                  "VectorWidth": 1},
-        "why": "The transposed partner of the widest legal ZZ tile (never "
-               "generated). Same area, opposite aspect, so the pair decides "
-               "whether ZZ prefers an M-major or N-major wide tile.",
     },
 ]
 

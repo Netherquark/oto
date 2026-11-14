@@ -9,6 +9,24 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (21st) — LDS gate option A adopted; ZZ boundary evidence gathered.**
+  Owner decision on the §6.1 DECISION REQUIRED: `BYTES_PER_ELEMENT["Z"]` is now Tensile's
+  own `DataType.numBytes()` (= 16), and `LDS_BUDGET` stays at 16384. The table is no longer a
+  calibrated proxy but a measured fact; §6.1 records the outcome and the cost (67/229 corpus
+  ZZ kernels refused at the decided reading — accepted). Six `phases.yaml` rows flip to
+  illegal and were retired together with the `DECISION_TRIAL_TILES` D2/D3 entries
+  (retired 2026-11-14) and the C/ZZ ladder's above-budget rows (LADDER keeps the at-budget
+  rungs: 64x64x4, 64x64x8, 32x32x16). `oto check candidates` on the trimmed deck: 278 checked,
+  0 illegal. Tensile's own solution-construction verdict for those tiles (asked directly,
+  bypassing the gate): the two at-budget controls PASS; the four above-budget tiles
+  (64x64x16 at 256³ and 512³; 128x32x8 and 32x128x8 at 256³/512³) are refused pre-build by
+  the driver; direct Tensile top-level configs with `NumElementsToValidate: 128` are pending
+  the Tensile-client build (`invoke`/`next-cmake` path — blocked on missing `amd_smi` C
+  headers in the nightly venv; addressed by fetching the matching prebuilt nightly tarball
+  `therock-dist-linux-gfx90c-7.15.0a20260728.tar.gz`, extracted under
+  `rocm-nightly-venv/dist-7.15.0a20260728/`). `test_occupancy_model_lds.py` pins
+  `BYTES_PER_ELEMENT["Z"] == 16` and the unchanged budget identity; sweep/ladder tests and
+  `test_cell_attribution.py` updated to the decided policy.
 - **2026-11-14 (20th) — Dead-reference sweep across docstrings; preflight marker restored.**
   Three full passes over every docstring (`oto/` + `tests/`), verifying each backtick-quoted
   and Sphinx-role identifier and each dotted `oto.*` token against the present tree (module

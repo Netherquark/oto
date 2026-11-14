@@ -525,11 +525,11 @@ kernel-generation time. The four gates, all CPU-side and orchestrated by
 single (`'reg': 2`) is 8, `f64` 8, `f32` 4, `f16` 2. Two consequences that are
 easy to get wrong:
 
-- **The repo's LDS gate carries `BYTES_PER_ELEMENT["Z"] = 8`**, which understates
-  the ZZ tile footprint by 2x. It is left at 8 deliberately, because
-  `LDS_BUDGET = 16384` was calibrated against that reading and the two must be
-  decided together. **See `gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ
-  LDS byte count.**
+- **Since 2026-11-14 the LDS gate carries `BYTES_PER_ELEMENT["Z"] = 16`** —
+  the Tensile Table verbatim — with `LDS_BUDGET` unchanged (16384). For ZZ the
+  wall is `(MT0+MT1)*DepthU <= 1024`; the D2/D3 decision trials (64x64x16,
+  128x32x8, 32x128x8) are refused by the gate by design. **See
+  `gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ LDS byte count.**
 - §8.1's "complex types are 8 B" refers to the **global-load** element width
   under the `GLVW x bytes <= 16` cap — a different quantity on a different path.
   Both can be true at once; they are not a contradiction.

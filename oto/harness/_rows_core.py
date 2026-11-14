@@ -98,14 +98,12 @@ LADDER: dict[str, list[dict[str, Any]]] = {
     ],
     "ZZ": [
         {"MacroTile": "64x64x8", "ThreadTile": "4x4", "VectorWidth": 1},
-        {"MacroTile": "64x64x16", "ThreadTile": "4x4", "VectorWidth": 1},
         {"MacroTile": "64x64x4", "ThreadTile": "4x4", "VectorWidth": 1},
         {"MacroTile": "32x32x8", "ThreadTile": "4x4", "VectorWidth": 1},
         {"MacroTile": "32x32x8", "ThreadTile": "2x2", "VectorWidth": 1},
         {"MacroTile": "32x64x8", "ThreadTile": "2x4", "VectorWidth": 1},
         {"MacroTile": "64x32x8", "ThreadTile": "4x2", "VectorWidth": 1},
-        {"MacroTile": "128x32x8", "ThreadTile": "4x4", "VectorWidth": 1},
-        {"MacroTile": "32x128x8", "ThreadTile": "4x4", "VectorWidth": 1},
+        {"MacroTile": "32x32x16", "ThreadTile": "2x2", "VectorWidth": 1},
     ],
     "HH_HPA": [
         {"MacroTile": "128x64x8", "ThreadTile": "8x4", "VectorWidth": 2},

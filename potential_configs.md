@@ -2191,11 +2191,26 @@ base footprint (the gate says 16384 where Tensile allocates 65536 for a 64x64x16
 tile). Correcting the bytes alone refuses **67 of those 229** kernels, so the
 baseline `"Z": 16` with budget 32768 must be decided as a pair.
 
+**Resolved 2026-11-14 (owner decision):** `"Z": 16` with `LDS_BUDGET` kept at
+16384. The six D2/D3 trial rows in `phases.yaml` (64x64x16, 128x32x8, 32x128x8 at
+512/1024), the `DECISION_TRIAL_TILES` D2/D3 entries and the bare `64x64x16` ZZ
+deck rows were retired/cleaned the same day, Tensile's solution-construction
+verdict for those tiles was re-checked first (see changelog). The gate now
+refuses every ZZ tile with (MT0+MT1)*DepthU > 1024 by design; the contract
+"never admit Tensile's refuses" is the invariant preserved, not permissiveness.
+
 **D3 — should the ZZ deck's 24.9 KB LDS winners be re-checked against the
 `LDS_BUDGET` gate after D2?** If D2 lands, ZZ's own winners (24960 B base,
 65536 B emitted) move above the budget. The deck generator refuses candidates the
 append boundary judges illegal, so this can silently empty the ZZ deck. Resolve
 with D2.
+
+**Resolved 2026-11-14 with D2:** the shipped ZZ deck was emptied of the
+above-budget tiles (64x64x16 rows retired; 128x32x8/32x128x8 retired). What
+remains is the at-budget ladder (64x64x8/LdsPadB=1, 64x64x4, 32x32x16/DU16,
+32x32x8). Whether Tensile itself accepts the retired tiles is recorded next to
+the changelog entry; the gate policy stands regardless — the contract is
+refusal, which the owner chose over permissiveness on 2026-11-14.
 
 **D4 — the sweep deck's baseline and the paired widen (resolved 2026-10-14; D1–D3
 trial tiles added the same day).**

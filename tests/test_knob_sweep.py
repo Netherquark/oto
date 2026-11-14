@@ -460,21 +460,24 @@ def test_every_decision_trial_is_gate_legal(gen):
                         f"it at {shape}: {why2}"
 
 
-def test_decision_trials_cover_d1_d2_d3():
-    """Every open decision that a knob row cannot express owns a trial tile."""
+def test_decision_trials_cover_d1():
+    """Every still-open decision owns a trial tile. D2/D3 retired 2026-11-14.
+
+    The LDS decision is closed: ``BYTES_PER_ELEMENT["Z"]`` is Tensile's 16 B
+    and ``LDS_BUDGET`` stands, so the D2 boundary tile and the D3 "widest
+    legal ZZ" pair are refused by the gate by design and are no longer
+    decked. D1 remains the only open owner-decision and keeps its trial."""
     from oto.tensile.decks import DECISION_TRIAL_TILES
 
     covered = {t["decision"] for t in DECISION_TRIAL_TILES}
-    assert {"D1", "D2", "D3"} <= covered, \
-        f"a decision has no trial: {covered}"
+    assert {"D1"} <= covered, f"D1 has no trial: {covered}"
+    assert not ({"D2", "D3"} & covered), \
+        f"retired decisions must not be decked: {covered}"
     # D2 carries the LDS-boundary tile only. A ZZ VectorWidth=2 row is NOT a
     # trial: Tensile refuses it (numBytes 16 x 2 > 16), the archived deck
     # already measured that refusal, and
     # tests/test_consolidate.py::TestLegalityGate::
     # test_gate_catches_a_real_archived_zz_phase locks it.
-    d2 = [t for t in DECISION_TRIAL_TILES if t["decision"] == "D2"]
-    assert all(t["knobs"].get("VectorWidth") != 2 for t in d2), \
-        "D2 must not carry a ZZ VW2 tile -- that refusal is already measured"
     # D1 names the shallow cells, so it never depends on sweep shapes.
     d1 = [t for t in DECISION_TRIAL_TILES if t["decision"] == "D1"]
     assert d1 and all("shapes" in t for t in d1), "D1 must name its cells"
