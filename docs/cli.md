@@ -171,7 +171,7 @@ Generate the native-vs-floor comparison figure
 
 ```bash
 oto chart
-oto chart --out gfx90c_vs_spoof.png
+oto chart --out my_chart.png
 ```
 
 Flags:
@@ -589,6 +589,7 @@ Run all refactor verifiers
 
 ```bash
 oto verify all
+oto verify all --base-ref 2824c2f
 oto verify all --json
 ```
 
@@ -599,6 +600,7 @@ Flags:
 - `-v`, `--verbose` — Show the command being run and full tracebacks on failure
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--base-ref` — Ref to compare against (default: HEAD~1, the evergreen per-commit base; pass 2824c2f for the split-era comparison)
 - `--json` — Emit one JSON document on stdout; silence narration
 
 #### `oto verify run`

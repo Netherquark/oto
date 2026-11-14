@@ -13,11 +13,11 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from oto.cli import _adapter, verify_cmds
 from oto.cli.errors import EXIT_FAIL
 
 #: Stage names that are read-only enough to answer ``--json`` at the stage level.
@@ -26,59 +26,8 @@ from oto.cli.errors import EXIT_FAIL
 _STRUCTURED_STAGE_JSON = frozenset({"candidate", "2"})
 
 
-def base_dir(args: Any) -> Path:
-    return Path(getattr(args, "base_dir", None) or Path.cwd()).resolve()
-
-
-def _with_argv(argv: list[str], func: Callable[..., Any]) -> Any:
-    old = sys.argv
-    sys.argv = ["oto", *argv]
-    try:
-        return func()
-    finally:
-        sys.argv = old
-
-
-def _call(argv: list[str], func: Callable[..., Any]) -> int:
-    result = _with_argv(argv, func)
-    return int(result or 0)
-
-
-def _call_muted(argv: list[str], func: Callable[..., Any]) -> int:
-    """Run a backend whose narration is not the command's data contract."""
-    old = sys.stdout
-    sys.stdout = sys.stderr
-    try:
-        return int(_with_argv(argv, func) or 0)
-    finally:
-        sys.stdout = old
-
-
-def _json_file(argv: list[str], func: Callable[..., Any]) -> int:
-    """Run ``func`` with ``--json <tmp>`` and print the file to stdout.
-
-    The backends already own their JSON schema (candidates, parity, build
-    proof, all_runs). We only change the destination: temp file -> stdout, so
-    callers see one document and no progress text.
-    """
-    fd, name = tempfile.mkstemp(prefix="oto-", suffix=".json")
-    os.close(fd)
-    path = Path(name)
-    try:
-        code = _call_muted([*argv, "--json", str(path)], func)
-        if path.exists() and path.stat().st_size:
-            print(path.read_text().rstrip())
-        elif code:
-            return code
-        else:
-            print(json.dumps({"ok": code == 0, "output": ""}))
-        return code
-    finally:
-        path.unlink(missing_ok=True)
-
-
 def _common_run_argv(args: Any) -> list[str]:
-    argv = ["--base-dir", str(base_dir(args))]
+    argv = ["--base-dir", str(_adapter.base_dir(args))]
     for key, flag in (("targets", "--targets"), ("family", "--family"),
                       ("pattern", "--pattern"), ("shape", "--shape")):
         values = getattr(args, key, None)
@@ -118,7 +67,7 @@ def run_tune(args: Any) -> int:
     if args.yes or args.no_input or os.environ.get("OTO_YES"):
         argv += ["--yes"]
     argv += ["--auto"]
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_stages(args: Any) -> int:
@@ -127,7 +76,7 @@ def run_stages(args: Any) -> int:
     argv = _common_run_argv(args)
     if args.stage:
         argv += ["--stage", *args.stage]
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_bench(args: Any) -> int:
@@ -149,41 +98,43 @@ def run_bench(args: Any) -> int:
             argv += ["--resume"]
         if args.refresh:
             argv += ["--refresh"]
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_preflight(args: Any) -> int:
     from oto.runners.stage_cli import main as cli_main
 
-    argv = ["--base-dir", str(base_dir(args)), "--stage", "preflight"]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "--stage", "preflight"]
     if getattr(args, "tensile_root", None):
         argv += ["--tensile-root", str(args.tensile_root)]
     if args.json:
         old = sys.stdout
         sys.stdout = sys.stderr
         try:
-            code = _call(argv, cli_main)
+            code = _adapter._call(argv, cli_main)
         finally:
             sys.stdout = old
         print(json.dumps({"ok": code == 0, "command": "preflight"}))
         return code
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_stage(name: str, args: Any) -> int:
     from oto.runners.stage_cli import main as cli_main
     from oto.tensile.library_parity import load_pipeline_phases
 
-    argv = ["--base-dir", str(base_dir(args)), "--stage", name]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "--stage", name]
     if getattr(args, "tensile_root", None):
         argv += ["--tensile-root", str(args.tensile_root)]
     if getattr(args, "dry_run", False):
         argv += ["--dry-run"]
     if getattr(args, "json", False):
         if name in _STRUCTURED_STAGE_JSON:
-            phases = load_pipeline_phases(str(base_dir(args)))
+            phases = load_pipeline_phases(str(_adapter.base_dir(args)))
+            deck = [p for p in phases or [] if not p.get("_origin")]
+            seed = [p for p in phases or [] if p.get("_origin") == "seed_overlay"]
             fams: dict[str, int] = {}
-            for p in phases or []:
+            for p in deck:  # the text view counts the deck, so the JSON does too
                 lbl = str(p.get("label") or "")
                 fam = "?"
                 for f in ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ"):
@@ -193,7 +144,10 @@ def run_stage(name: str, args: Any) -> int:
                 fams[fam] = fams.get(fam, 0) + 1
             print(json.dumps({
                 "ok": True, "stage": name,
-                "phases": len(phases or []), "families": fams,
+                "phases": len(deck),
+                "seed_overlay": len(seed),
+                "manifest": len(phases or []),
+                "families": fams,
             }, indent=2, default=str))
             return 0
         # Read-only stages with no backend JSON schema: capture the stage's
@@ -203,12 +157,12 @@ def run_stage(name: str, args: Any) -> int:
 
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc = _call(argv, cli_main)
+            rc = _adapter._call(argv, cli_main)
         print(json.dumps({
             "ok": rc == 0, "stage": name, "output": buf.getvalue(),
         }, indent=2, default=str))
         return rc
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 # ---------------------------------------------------------------- read side
@@ -216,7 +170,7 @@ def run_stage(name: str, args: Any) -> int:
 def run_status(args: Any) -> int:
     from oto.metrics.render_status import main as rs_main
 
-    argv = ["--base", str(base_dir(args))]
+    argv = ["--base", str(_adapter.base_dir(args))]
     if args.run:
         argv += ["--run", args.run]
     if args.plan:
@@ -236,13 +190,13 @@ def run_report(args: Any, profile=None) -> int:
     from oto.runners.result_paths import results_dir as _results_dir
     from oto.runners.stage_cli import main as cli_main
 
-    argv = ["--base-dir", str(base_dir(args)), "--report"]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "--report"]
     if args.run:
         argv += [args.run]
-    code = _call_muted(argv, cli_main)
+    code = _adapter._call_muted(argv, cli_main)
     if not args.json:
         return code
-    report = _results_dir(base_dir(args), _loader.resolve_profile(profile).codename) / "acceptance_report.json"
+    report = _results_dir(_adapter.base_dir(args), _loader.resolve_profile(profile).codename) / "acceptance_report.json"
     if report.exists():
         print(report.read_text().rstrip())
         return code
@@ -254,38 +208,12 @@ def run_report(args: Any, profile=None) -> int:
 def run_doctor(args: Any) -> int:
     from oto.cli.doctor import run as _run
 
-    return _run(base_dir(args), json_mode=args.json, quiet=args.quiet)
-
-
-def run_verify_all(args: Any) -> int:
-    from oto.tools.verifiers.verify_all import main as va_main
-
-    argv = ["--json"] if args.json else []
-    return _call(argv, va_main)
-
-
-def run_verify_run(args: Any) -> int:
-    from oto.tools.corpus_audit import main as vr_main
-
-    argv = ["--base-dir", str(base_dir(args)), args.verify_cmd]
-    if args.verify_cmd == "snapshot" and args.out:
-        argv += ["--out", args.out]
-    elif args.verify_cmd == "diff":
-        argv += [args.before, args.after]
-    elif args.verify_cmd == "telemetry":
-        argv += [args.run_id]
-    elif args.verify_cmd == "cheapest":
-        if args.family:
-            argv += ["--family", args.family]
-        argv += ["--n", str(args.n)]
-    if args.json:
-        argv += ["--json"]
-    return _call(argv, vr_main)
+    return _run(_adapter.base_dir(args), json_mode=args.json, quiet=args.quiet)
 
 
 def run_check(args: Any) -> int:
     name = args.check_cmd
-    base = str(base_dir(args))
+    base = str(_adapter.base_dir(args))
     if name == "candidates":
         from oto.checks.deck_legality import main as m
         argv = ["--base-dir", base]
@@ -297,15 +225,15 @@ def run_check(args: Any) -> int:
             argv += ["--floor"]
         if args.quiet:
             argv += ["--quiet"]
-        return _json_file(argv, m) if args.json else _call(argv, m)
+        return _adapter._json_file(argv, m) if args.json else _adapter._call(argv, m)
     if name == "db":
         from oto.checks.registry_audit import main as m
         argv = ["--base-dir", base] + (["--json"] if args.json else [])
-        return _call(argv, m)
+        return _adapter._call(argv, m)
     if name == "retirement":
         from oto.checks.stability_retirement import main as m
         argv = ["--base-dir", base] + (["--json"] if args.json else [])
-        return _call(argv, m)
+        return _adapter._call(argv, m)
     if name == "library-parity":
         from oto.checks.library_parity import main as m
         argv = ["--base-dir", base]
@@ -319,7 +247,7 @@ def run_check(args: Any) -> int:
             argv += ["--no-seed"]
         if args.quiet:
             argv += ["--quiet"]
-        return _json_file(argv, m) if args.json else _call(argv, m)
+        return _adapter._json_file(argv, m) if args.json else _adapter._call(argv, m)
     if name == "tensile-build":
         from oto.checks.tensile_build import main as m
         argv = ["--base-dir", str(base)]
@@ -333,59 +261,59 @@ def run_check(args: Any) -> int:
             argv += ["--jobs", str(args.jobs)]
         if args.compare:
             argv += ["--compare"]
-        return _json_file(argv, m) if args.json else _call(argv, m)
+        return _adapter._json_file(argv, m) if args.json else _adapter._call(argv, m)
     return EXIT_FAIL
 
 
 def run_library_best_effort(args: Any) -> int:
     from oto.runners.stage_cli import main as cli_main
 
-    argv = ["--base-dir", str(base_dir(args)), "--best-library"]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "--best-library"]
     if args.dest:
         argv += [args.dest]
     argv += ["--protocol-basis", args.protocol_basis]
     if args.dry_run:
         argv += ["--dry-run"]
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_consolidate(args: Any) -> int:
     from oto.tools.consolidate import main as m
 
-    argv = ["--base-dir", str(base_dir(args)), "all"]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "all"]
     argv += ["--commit"] if args.commit else ["--dry-run"]
     if args.explain_archive:
         argv += ["--explain-archive"]
-    return _call(argv, m)
+    return _adapter._call(argv, m)
 
 
 def run_stats(args: Any) -> int:
     from oto.tools.run_census import main as m
 
-    argv = ["--base-dir", str(base_dir(args))]
+    argv = ["--base-dir", str(_adapter.base_dir(args))]
     if args.family:
         argv += ["--family", args.family]
-    return _json_file(argv, m) if args.json else _call(argv, m)
+    return _adapter._json_file(argv, m) if args.json else _adapter._call(argv, m)
 
 
 def run_chart(args: Any) -> int:
     from oto.tools.benchmark_chart import main as chart_main
 
-    argv = ["--base", str(base_dir(args))]
+    argv = ["--base", str(_adapter.base_dir(args))]
     if args.out:
         argv += ["--out", args.out]
-    return _call(argv, chart_main)
+    return _adapter._call(argv, chart_main)
 
 
 def run_agent_generate(args: Any) -> int:
     from oto.runners.stage_cli import main as cli_main
 
-    argv = ["--base-dir", str(base_dir(args)), "--generate-device-docs"]
+    argv = ["--base-dir", str(_adapter.base_dir(args)), "--generate-device-docs"]
     if args.starter:
         argv += [args.starter]
     if args.dry_run:
         argv += ["--dry-run"]
-    return _call(argv, cli_main)
+    return _adapter._call(argv, cli_main)
 
 
 def run_agent_consult(args: Any) -> int:
@@ -395,14 +323,14 @@ def run_agent_consult(args: Any) -> int:
 
     if getattr(args, "with_docs", False):
         from oto.runners.stage_cli import main as cli_main
-        with_args = ["--base-dir", str(base_dir(args)), "--generate-device-docs"]
+        with_args = ["--base-dir", str(_adapter.base_dir(args)), "--generate-device-docs"]
         if args.starter:
             with_args.append(args.starter)
-        rc = _with_argv(with_args, cli_main)
+        rc = _adapter._with_argv(with_args, cli_main)
         if rc:
             return int(rc)
     profile = load_profile_from_starter(Path(args.starter)) if args.starter else None
-    result = consult(profile, base_dir=base_dir(args),
+    result = consult(profile, base_dir=_adapter.base_dir(args),
                      out=Path(args.out) if args.out else None,
                      force=getattr(args, "force", False))
     if result.get("status") == "refused":
@@ -556,7 +484,7 @@ def dispatch(args: Any, parser: Any) -> int:
         "retirement": lambda a: run_stage("retirement", a),
         "analytics": lambda a: run_stage("analytics", a),
         "synthesis": lambda a: run_stage("synthesis", a),
-        "verify all": run_verify_all, "verify run": run_verify_run,
+        "verify all": verify_cmds.run_verify_all, "verify run": verify_cmds.run_verify_run,
         "check candidates": run_check, "check db": run_check,
         "check retirement": run_check, "check library-parity": run_check,
         "check tensile-build": run_check,

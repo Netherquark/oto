@@ -217,7 +217,11 @@ def _add_verify(sub: Any) -> None:
     vsub = p.add_subparsers(dest="verify_group", help="Verification group")
 
     a = _add(vsub, "all", "Run all refactor verifiers",
-             "  oto verify all\n  oto verify all --json", read=True)
+             "  oto verify all\n  oto verify all --base-ref 2824c2f\n  oto verify all --json", read=True)
+    a.add_argument("--base-ref", default=None,
+                   help="Ref to compare against (default: HEAD~1, the evergreen "
+                        "per-commit base; pass 2824c2f for the split-era "
+                        "comparison)")
     add_json_flag(a)
 
     r = _add(vsub, "run", "Corpus snapshot/diff/telemetry",
@@ -357,7 +361,7 @@ def _add_utility(sub: Any) -> None:
     add_json_flag(p)
 
     p = _add(sub, "chart", "Generate the native-vs-floor comparison figure",
-             "  oto chart\n  oto chart --out gfx90c_vs_spoof.png",
+             "  oto chart\n  oto chart --out my_chart.png",
              mutating=True)
     p.add_argument("--out", help="Output PNG path")
 
