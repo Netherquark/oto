@@ -442,9 +442,9 @@ move into `docs/` (one home, one registry); the session scratch deletes.
 | `docs/potential_configs.md` | MOVE | `docs/docs/potential_configs.md` | name is accurate; belongs in docs/ |
 | `docs/search_philosophy.md` | MOVE + RENAME | `docs/search_philosophy.md` | "tensile tuning context" is opaque; it owns the objective/gates/search-order philosophy |
 | `docs/audit_register.md` | MOVE | `docs/audit_register.md` | rename drops the agent-persona framing; it is the audit-findings register |
-| `implementation_plan.md` | DELETE | — | "APPROVED-IN-PRINCIPLE" session artifact; the stage detail lives in `changelog.md`, the durable cookbook content folds into `docs/docs/gfx90c_tuning_guide.md` (the ceiling/floor gates and the acceptance bar) before deletion |
-| `context.md` | DELETE | — | 2026-10-15 sandbox research copy; header says it was never verified against the local machine, cites `/mnt/user-data/outputs/` paths, and duplicates `plans/REFACTOR_2_UNIVERSAL_GPU.md` + `changelog.md` |
-| `context_raw.md` | DELETE | — | same artifact, more of it; explicitly marked UNVERIFIED and "not at this path" |
+| `implementation_plan.md` | MOVE | `docs/implementation_plan.md` | Kept, not deleted (decision during execution 2026-11-14): the driver architecture, acceptance criteria and triaged-fix dispositions are unique and would be orphaned by deletion. Lives with the owner docs. |
+| `context.md` | OUT OF SCOPE | — | Not tracked in git (explicitly `.gitignore`d, 2026-10-15 sandbox research copy with machine-local paths). Owner's scratch; not touched by this plan. |
+| `context_raw.md` | OUT OF SCOPE | — | Same: untracked `.gitignore`d owner scratch. |
 | `archive/prior_insights.md` | MOVE | `archive/prior_insights.md` | frozen prior-campaign autopsy; it is evidence, not a living doc |
 | `archive/prior_research_archive.md` | MOVE | `archive/prior_research_archive.md` | ditto |
 
@@ -551,7 +551,7 @@ and docstring in the tree, plus the specific stale-reference classes below.
 | `REFACTOR_2_UNIVERSAL_GPU.md`, `MASTER_PLAN.md`, `plans/…` references | point at `changelog.md` / `incomplete_work.md` / the owning doc instead |
 | `verify_run.py`, `allruns.py`, `occupancy_audit.py`, `harness_tools.py`, `ldspad_gate.py`, `potential_configs_gen.py` | the prerenames; every occurrence means the author didn't grep after the Phase A renames — fix to current module names |
 | `analytics_loaders.py`, `runners/cli.py`, `runners/flags.py`, `metrics/policy.py`, `tensile/library.py` | ditto — Phase A/B renames |
-| `implementation_plan.md`, `context.md`, `context_raw.md` | deleted by §4; every reference must be removed or re-pointed |
+| `implementation_plan.md`, `context*.md`, `plans/*.md` | moved or deleted by §4/§6; every reference must be removed or re-pointed |
 | `plans/RENAME_AND_DOC_CLEANUP_PLAN.md`, `MASTER_PLAN.md`, `CLI_UX_REWORK.md`, `REFACTOR_2_UNIVERSAL_GPU.md`, `AGENTIC_POTENTIAL_CONFIGS_PLAN.md`, `test_optimization.md` | deleted by §6; every reference must be removed or re-pointed |
 | `docs/shipped_floor_contract.md`, root paths of moved docs | re-point to `docs/…` |
 
@@ -658,7 +658,7 @@ Final commit: `git rm plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md`, empty
 
 ## §12. Acceptance criteria (definition of done)
 
-1. `git ls-files | grep -cE '^(plans/|implementation_plan.md|context.*\.md|docs/shipped_floor_contract.md)$'` → **0**.
+1. `git ls-files | grep -cE '^plans/'` → **0**.
 2. `find oto tests -name '*.py'` shows zero non-intuitive renames remaining: the rename table in §2/§3 is fully applied.
 3. `python3 -m pytest -q` → RC=0, 1077+ tests passing.
 4. `python3 -m oto verify all` → ALL EQUIVALENCE CHECKS PASSED.

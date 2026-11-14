@@ -154,7 +154,7 @@ Five files carry "Phase 1" in their name and content:
 - `tests/test_phase1_writeback.py:2` — "skip/bypass, outcome write-back" (`:9`).
 
 "Phase 1" here means **Option H Phase 1** — the proposals-ledger/mutator-
-integration milestone from `implementation_plan.md` (Hplan.3). It does **not**
+integration milestone from `docs/implementation_plan.md` (Hplan.3). It does **not**
 mean a benchmark phase. And the workspace has since moved on: nothing in
 `oto/` is named or framed as "Phase 1" except in comments
 (`oto/ledger/proposals.py:29`, `registry_core.py:79,102`, `agent.py:61,79`,
@@ -375,7 +375,7 @@ worth flagging to the main agent (out of scope for a naming audit, but it surviv
     machinery**, i.e. literally what claude.md §8.1 forbids ("must never reappear in code,
     configs, or docs"). Either amend §8.1 to exempt migration tables explicitly, or delete the
     table and its generated twin in `docs/cli.md`. Currently contradicted by policy.
-  - `implementation_plan.md:415` — historical plan text; borderline (plan docs are narrative).
+  - `docs/implementation_plan.md:415` — historical plan text; borderline (plan docs are narrative).
   - `oto/tools/verifiers/*` — pervasive but intentional (§4.4). Keep.
   - `oto/tools/verifiers/verify_config_writer.py:159` — `sys.modules["port_tensile"] = ...` —
     execution shim, intentional.
@@ -656,7 +656,7 @@ but the phrasing should be reworded to point at the replacement:
 | `archive/prior_insights.md` (3) | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is; the cites are the *point* of the file |
 | `docs/research/kernel_tuning.md` (2) | `gates/assembly.py`, `scheduler.py` (as shorthand) | reword to `oto/tensile/gates/assembly.py` + full path |
 | `archive/prior_research_archive.md` (1) | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
-| `implementation_plan.md` (1) | `scheduler.py` shorthand | reword or archive |
+| `docs/implementation_plan.md` (1) | `scheduler.py` shorthand | reword or archive |
 | `changelog.md` (65) | all of the above | append-only history; keep verbatim |
 
 The MIGRATION-table case in `docs/cli.md` is the one that needs an explicit
@@ -671,7 +671,7 @@ Files that cite `/tmp/`, `todo.txt`, `command.txt`, concrete run ids, or
 |---|---|
 | `docs/audit_register.md` | `:155` (`/tmp/opencode/*_fixed.py`) |
 | `docs/operator_runbook.md` | `:221` (`command.txt`) |
-| `implementation_plan.md` | `:459,480,495,496,579` |
+| `docs/implementation_plan.md` | `:459,480,495,496,579` |
 | `docs/potential_configs.md` | `:2431,3301,3312,3349` |
 | `docs/results.md` | `:22,92,99,106,123,147,269` (run ids) |
 | `docs/search_philosophy.md` | `:147` (run id) |
@@ -693,7 +693,7 @@ only to genericize the machine-local portion (`/tmp/opencode/foo.py` →
 |---|---|---|
 | **Merge** | `archive/prior_insights.md` + `archive/prior_research_archive.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials; one is a redundant copy |
 | **Merge** | `docs/search_philosophy.md` + `docs/research/complex_gemm_brief.md` into `docs/research/kernel_tuning.md` | philosophy + complex-GEMM sections already overlap; `docs/research/kernel_tuning.md` is the owner of both |
-| **Absorb** | `incomplete_work.md` open items into `implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
+| **Absorb** | `incomplete_work.md` open items into `docs/implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
 | **Split** | `docs/potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration; the file is too big to navigate |
 | **Split** | `changelog.md` (4280 lines) → `changelog.md` (current year) + `archive/changelog_pre_2026-11.md` | keep the current-year log readable; keep the append-only chain intact |
 | **Archive** | `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/` | all three are `IMPLEMENTED`/`EXECUTED`; live pointer in `changelog.md` is enough |
@@ -744,7 +744,7 @@ ids, `/tmp/` paths, "this session"):
 | `claude.md` | `claude.md:175,483,487,491,492,495,533` (policy refs to `todo.txt`/`command.txt`/`/tmp/opencode`) |
 | `docs/comparability.md` | `docs/comparability.md:57` (concrete run id `gfx900_ref_locked_52149f315d`) |
 | `docs/operator_runbook.md` | `docs/operator_runbook.md:221` (`command.txt`) |
-| `implementation_plan.md` | `implementation_plan.md:459,480,495,496,579` |
+| `docs/implementation_plan.md` | `docs/implementation_plan.md:459,480,495,496,579` |
 | `docs/potential_configs.md` | `docs/potential_configs.md:2431,3301,3312,3349` |
 | `docs/results.md` | `docs/results.md:22,92,99,106,123,147,269` (concrete run ids) |
 | `docs/search_philosophy.md` | `docs/search_philosophy.md:147` (concrete run id) |
@@ -884,7 +884,7 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 
 - `context.md` → `rocm_coupling_context.md` (generic name)
 - `docs/shipped_floor_contract.md` → `shipped_footprint.md` (optional)
-- `incomplete_work.md` → `open_work.md` (or merge into `implementation_plan.md`)
+- `incomplete_work.md` → `open_work.md` (or merge into `docs/implementation_plan.md`)
 - `docs/potential_configs.md` → split into `candidate_deck.md` + `candidate_research.md`
 - `changelog.md` → split into `changelog.md` (current year) + `archive/changelog_pre_2026-11.md`
 - `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/`

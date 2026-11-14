@@ -19,7 +19,7 @@
 
 ## What you never need
 - Anything about developing oto (routers, gate internals, test suite semantics)
-- `implementation_plan.md` (dev loop, not your own)
+- `docs/implementation_plan.md` (dev loop, not your own)
 
 ## Tools you use
 - `oto doctor` (diagnostics)

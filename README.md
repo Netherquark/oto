@@ -450,7 +450,7 @@ re-triaged).
 | Document | Role |
 |---|---|
 | [`claude.md`](claude.md) | Entry contract, process guardrails, and file-ownership rules. |
-| [`implementation_plan.md`](implementation_plan.md) | The current executable implementation plan. |
+| [`docs/implementation_plan.md`](docs/implementation_plan.md) | The current executable implementation plan. |
 | [`docs/shipped_floor_contract.md`](docs/shipped_floor_contract.md) | The shipped `gfx900` footprint → native `gfx90c` replication contract. |
 | [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md) | Hardware ceilings and the acceptance-criteria authority. |
 | [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) | The practical knob→effect tuning guide. |

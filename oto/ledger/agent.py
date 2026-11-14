@@ -58,7 +58,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         self.analytics = analytics
         self.iteration = 0
         self.harvested_winners: dict[str, dict[str, Any]] = {}
-        # Option H Phase 1 (implementation_plan.md Hplan.3 step 8). The ledger
+        # Option H Phase 1 (docs/implementation_plan.md Hplan.3 step 8). The ledger
         # is what makes bypassing the identical-fp skip correct, so its absence
         # is not a soft degradation -- it flips `skip_mutation_arm` back on.
         self.mutator = mutator

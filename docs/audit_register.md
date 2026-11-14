@@ -7,7 +7,7 @@ outside the deterministic convergence loop) to review the repo and records the
 findings here. The review targets **memory leaks, race conditions, logical bugs,
 data-integrity errors, deadlocks, resource leaks, error-path bugs, and other
 correctness defects** in the codebase. Findings are recorded back into this file
-(§0), triaged, and feed fixes in `implementation_plan.md` (Triaged fixes) and
+(§0), triaged, and feed fixes in `docs/implementation_plan.md` (Triaged fixes) and
 `changelog.md`.
 
 Hard lines (mirror `claude.md` guardrails):
@@ -50,7 +50,7 @@ How to run an audit:
 3. Agent reports each finding as an exact `file:line` with repro/evidence; new
    entries are appended to the register. Existing entries are never edited in
    place — only their status cell is annotated.
-4. User triages: **Accepted** → fix specified in `implementation_plan.md`
+4. User triages: **Accepted** → fix specified in `docs/implementation_plan.md`
    Triaged fixes; **Rejected** → rationale recorded; **Pending** → left for the
    next audit pass.
 

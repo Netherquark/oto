@@ -85,7 +85,7 @@ FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
   never on a single N=1 run.
 - No re-sweep of already-failed cells (potential_configs verdicts carried).
 
-## 5. Concrete next actions (registered in implementation_plan.md Steps 3-6)
+## 5. Concrete next actions (registered in docs/implementation_plan.md Steps 3-6)
 
 1. Emit native family decks in `phases.yaml` (Step 3).
 2. Deterministic `--auto` loop drives coverage + convergence (Step 4).

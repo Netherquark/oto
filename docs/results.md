@@ -181,7 +181,7 @@ median over a smaller, less-tuned deck. Part of the 28 losses is that asymmetry,
 kernel quality. This also means cell-level rollups can only approximate the real
 question, which is **per-config**: replacing shipped kernel X with native X'. The
 decisive artifact is a per-fingerprint pairing (native X' vs shipped X), which the
-current per-cell aggregation cannot express — see `implementation_plan.md`.
+current per-cell aggregation cannot express — see `docs/implementation_plan.md`.
 
 ## 11. ZZ dead tiles replaced — why and what it proves (2026-09-27)
 

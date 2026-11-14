@@ -39,7 +39,7 @@ serves — `dev`, `operator`, or `shared`.
 
 | Agent role | Entry doc (read first) | Then | Never needs |
 |---|---|---|---|
-| Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
+| Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `docs/implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
 | Class A — reviewer/auditor subagent | `docs/audit_register.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
 | Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) → `docs/operator_campaign.md` (the tuning campaign) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
 | Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`docs/gfx90c_theoretical_limits.md`, `docs/gfx90c_tuning_guide.md` and their siblings), `docs/potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
@@ -47,7 +47,7 @@ serves — `dev`, `operator`, or `shared`.
 
 Class rules that follow from the map: a Class A agent that starts from
 `docs/operator_runbook.md` has picked the wrong entry; a Class B agent that
-opens `implementation_plan.md` is reading the dev loop, not its own. Both
+opens `docs/implementation_plan.md` is reading the dev loop, not its own. Both
 classes register every doc they add here, with the right `Class` value.
 
 ## The boundary, stated as a test
@@ -78,7 +78,7 @@ Corollaries:
 | `docs/README.md` | shared | **This file** — the boundary and the registry itself |
 | `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
-| `implementation_plan.md` | dev | Ecosystem | The current executable plan only |
+| `docs/implementation_plan.md` | dev | Ecosystem | The current executable plan only |
 | `docs/shipped_floor_contract.md` | shared | Ecosystem | The shipped-footprint replication contract |
 | `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
 | `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |

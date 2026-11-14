@@ -211,7 +211,7 @@ For every substantive task:
 
 1. Read `README.md` for repository-level orientation.
 2. Read `claude.md` (this file) for the operating contract.
-3. Read `implementation_plan.md` for the **current executable plan**.
+3. Read `docs/implementation_plan.md` for the **current executable plan**.
 4. Read `docs/shipped_floor_contract.md` for the shipped-footprint → native-gfx90c replication contract.
 5. Read `docs/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
 6. Read `docs/knowledge_base.md` for the baseline repo/code architecture.
@@ -297,7 +297,7 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 |---|---|
 | `claude.md` | Entry contract, routing, authority rules, safety/process guardrails |
 | `docs/knowledge_base.md` | Baseline repository/codebase knowledge at the captured state |
-| `implementation_plan.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
+| `docs/implementation_plan.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
 | `docs/shipped_floor_contract.md` | Shipped gfx900 footprint → native gfx90c replication contract |
 | `docs/gfx90c_theoretical_limits.md` | Per-family theoretical & realistic ceilings — the acceptance authority |
 | `docs/potential_configs.md` | Candidate deck, hypotheses, decisions, convergent-candidate rules |
@@ -358,7 +358,7 @@ factual state**:
 → historical agent logs
 → old summaries/assumptions.
 
-- `implementation_plan.md` = authoritative for **what is planned next**.
+- `docs/implementation_plan.md` = authoritative for **what is planned next**.
 - `docs/results.md` = authoritative for **what experiments showed**.
 - `docs/potential_configs.md` = authoritative for **candidate deck/decisions**.
 - `docs/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
@@ -506,10 +506,10 @@ change is explicitly intended; record rationale in the owning document.
 After changing code: run the narrowest useful validation first, and keep the
 tree-walking guards green (`test_pyflakes` / `test_ruff` / `test_py_compile` /
 `test_function_length` / `test_file_length` — `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q`); then required
-acceptance checks from `implementation_plan.md`; update `docs/results.md` from actual
+acceptance checks from `docs/implementation_plan.md`; update `docs/results.md` from actual
 generated data, not hand-edited conclusions; update `changelog.md` only for durable
 state changes; update `docs/potential_configs.md` for candidate outcomes; bug disposition
-lives in `implementation_plan.md` (Triaged fixes section).
+lives in `docs/implementation_plan.md` (Triaged fixes section).
 
 ## 7. Experiment loop
 
@@ -526,7 +526,7 @@ checks are demonstrated and remaining gaps are stated.
   codebase — by any name or description — must never reappear in code, configs,
   or docs. Zero occurrences, always.
 - **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
-  the frozen `prior_*` files. Live docs (this file, `implementation_plan.md`,
+  the frozen `prior_*` files. Live docs (this file, `docs/implementation_plan.md`,
   `docs/potential_configs.md`, `knowledge_base*`, `docs/results.md`, `docs/shipped_floor_contract.md`,
   `README.md`, `oto/device/loader.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
@@ -547,13 +547,13 @@ checks are demonstrated and remaining gaps are stated.
 
 - "What is this repo?" → `docs/knowledge_base.md`
 - "What changed / why?" → `changelog.md`
-- "What's next?" → `implementation_plan.md`
+- "What's next?" → `docs/implementation_plan.md`
 - "What footprint do we replicate?" → `docs/shipped_floor_contract.md`
 - "What are the ceilings / acceptance bars?" → `docs/gfx90c_theoretical_limits.md`
 - "What candidates?" → `docs/potential_configs.md`
-- "What bug / fix status?" → `implementation_plan.md` (Triaged fixes section)
+- "What bug / fix status?" → `docs/implementation_plan.md` (Triaged fixes section)
 - "What did runs prove?" → `docs/results.md`
-- "How does the driver work?" → `implementation_plan.md` (The Driver Architecture)
+- "How does the driver work?" → `docs/implementation_plan.md` (The Driver Architecture)
 - "What is the search strategy?" → AI tuning context MD
 - "What are the frozen prior conclusions?" → `archive/prior_insights.md` /
   `archive/prior_research_archive.md` (measured results only), then verify against current sources.

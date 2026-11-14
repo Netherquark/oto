@@ -115,7 +115,7 @@ The operator agent does not know which model applies until it reads
 
 | class | entry | reads | writes |
 |---|---|---|---|
-| A — developer | `claude.md` | `docs/agent_reference.md`, `docs/docstrings.md`, `docs/harness_runbook.md`, `implementation_plan.md` | `oto/**`, `tests/**`, `docs/**`, `plans/**`, `changelog.md`, `incomplete_work.md`, `docs/results.md`, `docs/potential_configs.md` |
+| A — developer | `claude.md` | `docs/agent_reference.md`, `docs/docstrings.md`, `docs/harness_runbook.md`, `docs/implementation_plan.md` | `oto/**`, `tests/**`, `docs/**`, `plans/**`, `changelog.md`, `incomplete_work.md`, `docs/results.md`, `docs/potential_configs.md` |
 | B — operator | `docs/operator_runbook.md` → `docs/operator_campaign.md` | starter pair, generated device docs, `docs/agent_reference.md`, `docs/comparability.md` | `profiles/<cn>.json`, `docs/<cn>_starter.{md,json}`, generated device docs, run artifacts under `<cn>_results/` and `<cn>_runs/` |
 
 ---
@@ -364,7 +364,7 @@ open — see §4.2 DOCS-SCAN) has three parts, each with evidence:
 | `docs/research/kernel_tuning.md` | `gates/assembly.py`, `scheduler.py` (shorthand) | reword to full paths |
 | `archive/prior_insights.md` | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is |
 | `archive/prior_research_archive.md` | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
-| `implementation_plan.md` | `scheduler.py` shorthand | reword or archive |
+| `docs/implementation_plan.md` | `scheduler.py` shorthand | reword or archive |
 
 The MIGRATION-table case in `docs/cli.md` is the one that needs an explicit
 policy decision (open question 5 in §11 of `RENAME_AND_DOC_CLEANUP_PLAN.md`).
@@ -373,7 +373,7 @@ policy decision (open question 5 in §11 of `RENAME_AND_DOC_CLEANUP_PLAN.md`).
 
 Files that cite `/tmp/`, `todo.txt`, `command.txt`, concrete run ids, or
 "this session": `docs/audit_register.md`, `changelog.md`, `claude.md`,
-`docs/comparability.md`, `docs/operator_runbook.md`, `implementation_plan.md`,
+`docs/comparability.md`, `docs/operator_runbook.md`, `docs/implementation_plan.md`,
 `docs/potential_configs.md`, `docs/results.md`, `docs/search_philosophy.md`.
 
 The policy-only references (`claude.md`, `docs/operator_runbook.md`) are
@@ -388,7 +388,7 @@ placeholder) or drop.
 |---|---|---|
 | Merge | `archive/prior_insights.md` + `archive/prior_research_archive.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials |
 | Merge | `docs/search_philosophy.md` + `docs/research/complex_gemm_brief.md` into `docs/research/kernel_tuning.md` | philosophy + complex-GEMM sections already overlap |
-| Absorb | `incomplete_work.md` open items into `implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
+| Absorb | `incomplete_work.md` open items into `docs/implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
 | Split | `docs/potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration |
 | Split | `changelog.md` (4280 lines) → `changelog.md` (current year) + `archive/changelog_pre_2026-11.md` | keep current-year log readable |
 | Archive | `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/` | all three are IMPLEMENTED/EXECUTED |

@@ -13,7 +13,7 @@
 ## 0. How this file is used
 
 - **Acceptance sourcing:** every oto family ceiling in `docs/potential_configs.md` /
-  `implementation_plan.md` / `docs/shipped_floor_contract.md` derives from the per-family ceilings in §5 —
+  `docs/implementation_plan.md` / `docs/shipped_floor_contract.md` derives from the per-family ceilings in §5 —
   the same way `oto.device.loader.current_profile().peak_gflops` is the single peak authority. Squaring a
   family's best median against its §5 ceiling is how "approach the theoretical limit"
   is scored, per (datatype, bound_class).
@@ -389,7 +389,7 @@ capping occupancy to ~2 waves/SIMD. **This occupancy cap — NOT the raw pipe �
 measured source of the 69–77% ceilings.** L2 (1 MB) holds a 128×128×128-K fp32 tile's
 working set, so large squares are unambiguously ALU-side. Therefore "go as close to
 the theoretical limit as possible" = **raise achieved CU occupancy with right-sized
-GSU/WGM/MT/TT** (see `implementation_plan.md` and `docs/potential_configs.md`),
+GSU/WGM/MT/TT** (see `docs/implementation_plan.md` and `docs/potential_configs.md`),
 and 3-KD this file with measured oto cells.
 
 ### 7.1 Measured, not inferred — and LDS binds more often than VGPR

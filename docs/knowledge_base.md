@@ -98,7 +98,7 @@ python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
 This project's driver source (outside that tree, still **calls into** it):
 
 - `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
-  `implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
+  `docs/implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
   `oto/metrics/report.py`, `oto/metrics/analytics.py`, `oto/metrics/policy.py`, `oto/tensile/candidate.py`, `oto/ledger/agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/library.py` (gfx900 dat parser +
   reference-floor chain).

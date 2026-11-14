@@ -12,7 +12,7 @@
 - `docs/agent_reference.md` (harness quick reference)
 - `docs/docstrings.md` (docstring convention)
 - `docs/harness_runbook.md` (harness guardrails)
-- `implementation_plan.md` (live plan)
+- `docs/implementation_plan.md` (live plan)
 - `changelog.md` (what landed)
 - `incomplete_work.md` (open register)
 

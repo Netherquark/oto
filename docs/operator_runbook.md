@@ -9,7 +9,7 @@ This runbook is the contract for the *best-effort* deliverable: a native
 Tensile library for a target AMD GPU that AMD does not ship one for, produced
 with oto, verified as far as honestly possible **without** inventing hardware
 facts and **without** running the GPU in a display session. It is not a
-recipe for the full convergence campaign (that is `implementation_plan.md`'s
+recipe for the full convergence campaign (that is `docs/implementation_plan.md`'s
 job on the reference target), and it never overrides `claude.md`.
 
 ## 0.1 Hard rule — Class B agents are READ-ONLY on the oto codebase
