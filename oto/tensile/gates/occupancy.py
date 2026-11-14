@@ -103,7 +103,7 @@ from .vgpr_model import (
 )
 
 
-def _profile(profile) -> "DeviceProfile":
+def _profile(profile) -> DeviceProfile:
     """The DeviceProfile to use: the passed-in one, or the ambient profile."""
     return profile if profile is not None else _loader.current_profile()
 

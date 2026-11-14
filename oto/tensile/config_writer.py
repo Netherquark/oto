@@ -57,10 +57,10 @@ from typing import Any
 
 import yaml
 
+from oto.device import loader as _loader
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
-from oto.device import loader as _loader
 from oto.tensile.knob_surface import DEPRECATED_KEYS as _DEPRECATED_KEYS
 from oto.tensile.knob_surface import FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_C_KNOBS
 from oto.tensile.knob_surface import FORWARDED_KNOBS as FORWARDED_KNOBS
