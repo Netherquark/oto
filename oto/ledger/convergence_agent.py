@@ -14,6 +14,7 @@ Public API: ConvergenceAgent, ConvergenceVerdict.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -54,7 +55,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         band_pct: float | None = None
     ):
         self.base_dir = Path(base_dir)
-        self.scheduler = scheduler
+        self.generator = scheduler
         self.analytics = analytics
         self.iteration = 0
         self.harvested_winners: dict[str, dict[str, Any]] = {}
@@ -71,9 +72,11 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         self.db_mutator = None
         if mutator is not None:
             try:
-                from db_mutator import DBMutator
+                from oto.tensile.synthesis.donor_mutator import DBMutator
                 self.db_mutator = DBMutator(self.base_dir, mutator)
-            except Exception:
+            except Exception as e:  # synthesis is a capability, not a requirement
+                print(f"[synthesis] DB mutator unavailable, skipping the synthesis "
+                      f"arm: {e}", file=sys.stderr)
                 self.db_mutator = None
         # Outcome feedback is a capability separate from novelty. Kept as its own
         # flag so a skip-bypass correction is a one-line change, not an audit.

@@ -145,11 +145,25 @@ class QueryMixin:
         itself minus its own head, which halves the spoof kernel count and
         silently moves verdicts -- CC:1024 LOSS->TIE, HH_HPA:4096 LOSS->WIN,
         HS_HPA:4096 TIE->WIN on the current corpus.
+        The reference prefix is taken from the *current profile's*
+        spoof_reference (the spoof family prefix, not this device's codename)
+        with LIKE wildcards escaped, so a profile with a different floor still
+        matches its own reference runs.
         """
         query = "SELECT run_id FROM runs"
         params: tuple = ()
         if arm == "native":
-            query += " WHERE run_id NOT LIKE 'gfx900_ref_%'"
+            try:
+                from oto.device import loader as _loader
+                spoof = getattr(_loader.current_profile(),
+                                "spoof_reference", "") or "gfx900"
+            except Exception:
+                spoof = "gfx900"
+            # LIKE wildcards in the prefix ('_', '%') must stay literal.
+            esc = (spoof.replace("\\", "\\\\")
+                   .replace("%", "\\%").replace("_", "\\_"))
+            query += " WHERE run_id NOT LIKE ? ESCAPE '\\'"
+            params = (esc + r"\_ref\_%",)
         query += " ORDER BY id DESC LIMIT 1"
         with self._get_conn() as conn:
             cursor = conn.execute(query, params)

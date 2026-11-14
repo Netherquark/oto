@@ -211,19 +211,31 @@ def load_shipped_manifest(base_dir: Path, refresh: bool = False,
 
 
 def latest_reference_run_id(registry, arch: str = "gfx900") -> str | None:
-    """Return the most recently *completed* `arch` reference run id, if any."""
+    """Return the most recently *completed, non-smoke* `arch` reference run id.
+
+    Smoke floors are bring-up runs (`--limit`), never a floor: a smoke run
+    force-completed must not be recalled as the A/B reference."""
     import sqlite3
     try:
         conn = sqlite3.connect(registry.db_path, timeout=30.0)
         try:
+            esc = (arch.replace("\\", "\\\\")
+                   .replace("%", "\\%").replace("_", "\\_"))
             rows = conn.execute(
-                f"SELECT run_id, status FROM runs WHERE run_id LIKE '{arch}_ref_%' "
-                "ORDER BY id DESC"
+                "SELECT run_id, status, metadata FROM runs "
+                "WHERE run_id LIKE ? ESCAPE '\\' ORDER BY id DESC",
+                (esc + r"\_ref\_%",)
             ).fetchall()
         finally:
             conn.close()
-        for run_id, status in rows:
-            if status == "completed":
+        for run_id, status, metadata in rows:
+            if status != "completed":
+                continue
+            try:
+                smoke = bool(json.loads(metadata or "{}").get("smoke"))
+            except Exception:
+                smoke = False
+            if not smoke:
                 return run_id
     except Exception:
         return None
@@ -409,9 +421,12 @@ def reference_chain(registry, exclude: str | None = None,
     try:
         conn = sqlite3.connect(registry.db_path, timeout=30.0)
         try:
+            esc = (arch.replace("\\", "\\\\")
+                   .replace("%", "\\%").replace("_", "\\_"))
             rows = conn.execute(
                 "SELECT run_id, status, metadata FROM runs "
-                f"WHERE run_id LIKE '{arch}_ref_%' ORDER BY id DESC"
+                "WHERE run_id LIKE ? ESCAPE '\\' ORDER BY id DESC",
+                (esc + r"\_ref\_%",)
             ).fetchall()
         finally:
             conn.close()

@@ -469,6 +469,10 @@ class Mutator(MutatorOutcomesMixin):
         try:
             with open(path) as f:
                 payload = yamlio.load_yaml_text(f.read()) or {}
-        except Exception:
+        except Exception as e:
+            # A corrupt overlay drops the run's candidates silently; the runner
+            # proceeds with an empty arm and no hint why. Keep the [] return
+            # contract (merge must not crash) but say so.
+            print(f"[overlay] unreadable, no candidates merged: {path}: {e}")
             return []
         return payload.get("phases", [],) or []

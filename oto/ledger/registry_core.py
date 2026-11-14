@@ -136,16 +136,18 @@ _INDEX_DDL = (
     "CREATE INDEX IF NOT EXISTS idx_obs_fp ON proposal_observations(fp)",
 )
 
-#: Expression index on the fingerprint inside records.data JSON. has_fp_passed()
+#: Expression indexes on values buried inside records.data JSON. has_fp_passed()
 #: has always scanned every record because fp is buried in a JSON blob; this makes
-#: that lookup an index seek without changing its semantics. Built incrementally,
-#: so it is correct on creation and maintained from then on -- it deliberately
+#: those lookups index seeks without changing semantics. Built incrementally,
+#: so each is correct on creation and maintained from then on -- it deliberately
 #: does NOT rewrite existing rows to 'backfill' anything. Optional: a SQLite
 #: built without JSON1 raises OperationalError, which the caller swallows
 #: (novelty still works, it just scans).
 _EXPRESSION_INDEX_DDL = (
     "CREATE INDEX IF NOT EXISTS idx_records_fp "
     "ON records(json_extract(data, '$.fp'))",
+    "CREATE INDEX IF NOT EXISTS idx_cell_key "
+    "ON records(json_extract(data, '$.cell_key'))",
 )
 
 
