@@ -23,6 +23,20 @@ report is reconstructible from that ledger, which is append-only by contract.
   [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md).
 * **Live results:** [`docs/results.md`](docs/results.md).
 
+## Quick start
+
+```bash
+git clone <this repo> && cd oto
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt    # pinned, known-good set
+python3 -m oto help                # or: PYTHONPATH=. python3 -m oto help
+python3 -m pytest -q               # dev suite; needs requirements-dev.txt
+```
+
+The GPU stages are gated on the owner's whitelist (see `claude.md`); every
+CPU-only command works out of the box. License: GPL-3.0-or-later — see
+[LICENSE](LICENSE) and [NOTICE](NOTICE).
+
 ---
 
 ## Table of contents
@@ -35,6 +49,7 @@ report is reconstructible from that ledger, which is append-only by contract.
 6. [Validation & Analysis Tools (CPU-only)](#6-validation--analysis-tools-cpu-only)
 7. [Key Documentation & System Authority](#7-key-documentation--system-authority)
 8. [Configuration (`.env`)](#8-configuration-env)
+9. [License](#9-license)
 
 ---
 
@@ -488,7 +503,23 @@ existing path.
 | `TENSILE_ROOT` | required (set in `.env`) | The Tensile checkout root; the driver shells out to `Tensile/bin/Tensile` here. The driver errors out at runtime if unset — there is **no built-in fallback path**. |
 
 Required: `TENSILE_ROOT`, `ROCM_PATH`. Optional overrides: `ROCM_BIN`,
-`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `ROCM_VERSION`, `HIP_PATH`.
+`ROCM_LLVM_BIN`, `TENSILE_ASSEMBLER`, `TENSILE_CXX_COMPILER`,
+`TENSILE_C_COMPILER`, `ROCM_VERSION`, `HIP_PATH`.
+
+The client-build compilers default to the SDK's `amdclang++`/`amdclang`
+(probed from `ROCM_LLVM_BIN`, then `ROCM_BIN`); `hipcc` is used only when the
+resolved tree ships no clang. Explicit env overrides win; a bare name is
+passed to Tensile verbatim.
 
 See the module docstring of [`oto/runners/toolchain.py`](oto/runners/toolchain.py)
 for the resolution order.
+
+---
+
+## 9. License
+
+oto is free software, licensed under the GNU General Public License version 3
+or (at your option) any later version. Copyright (C) 2026 Netherquark. The
+full license text is in [LICENSE](LICENSE); ownership assertion in
+[NOTICE](NOTICE). Contributions are welcome under the same license — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
