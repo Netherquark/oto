@@ -93,7 +93,8 @@ def source_chain(base: Path = BASE) -> list[str]:
     chain = floor_chain(base)
     if not chain or "_locked_" not in chain[0]:
         return chain
-    con = sqlite3.connect(f"file:{LIVE_DB}?mode=ro", uri=True)
+    live_db = _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
+    con = sqlite3.connect(f"file:{live_db}?mode=ro", uri=True)
     row = con.execute("SELECT metadata FROM runs WHERE run_id=?",
                       (chain[0],)).fetchone()
     con.close()

@@ -139,7 +139,8 @@ def _group_label(row: dict[str, Any]) -> str:
 
 def _group_sort(label: str) -> tuple[int, str]:
     family, _, typecode = label.partition("/")
-    return (_FAMILY_ORDER.get(family, len(_FAMILY_ORDER)), typecode)
+    order = {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
+    return (order.get(family, len(order)), typecode)
 
 
 def load_rows(db_path: str | None = None, side: str = "native",

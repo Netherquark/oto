@@ -312,7 +312,7 @@ def emit_spoof_phases(manifest: dict[str, Any],
     """
     phases: list[dict[str, Any]] = []
     by_family = manifest.get("families", {})
-    for fam in SHIPPED_FAMILIES:
+    for fam in list(_loader.current_profile().family_dtypes.keys()):
         fam_info = by_family.get(fam)
         if not fam_info:
             continue
