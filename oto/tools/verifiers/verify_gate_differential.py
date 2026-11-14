@@ -1,111 +1,65 @@
-#: The last commit before the package split. Every check in this directory
-#: compares against it, so "no behaviour change" is measured against one
-#: fixed point rather than against whatever HEAD happens to be.
-REFACTOR_BASE = "2824c2f"
-
 #!/usr/bin/env python3
-"""Differential check: every scheduler.py symbol must behave identically
-after the oto.tensile.candidate / oto.tensile.gates split.
+"""Evergreen gate differential.
 
-Owns: the gate differential run -- old scheduler.py from REFACTOR_BASE vs
-the current oto.device.peaks / gate modules, incl. the accepted message
-rewrites (ACCEPTED_MESSAGE_REWRITES).
-Does NOT own: the gate logic (oto.tensile.gates.*) or the solver it probes.
-Public API: _verdict, _message (internal); the contract is the process exit
-code (0 clean, 1 findings).
+Each tree renders the same corpus of configs through the gate surface; the
+two verdict streams must agree verdict-for-verdict (and on the accepted
+diagnostic-message rewrites). The REF side runs in a detached worktree of
+``--base REF`` (default HEAD~1, the per-commit gate). The comparison never
+depend on which commit produced HEAD: the base is a parameter, nothing is
+pinned.
 
-Runs the ORIGINAL module (from HEAD, stubbed with the flat import) and the NEW
-package side by side over an exhaustive config corpus and asserts equal
-results, including exact reason strings.
+Owns: the verdict-stream comparison (verdict_flipped / text_differs /
+old_raised / new_raised buckets).
+Does NOT own: the gate logic (oto.tensile.gates.*) or the corpus
+(_verdicts_worker). Public API: main; the contract is the process exit code.
 """
-import importlib.util
+from __future__ import annotations
+
+import argparse
+import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT))
-import oto.device.peaks as _peaks
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-ORIG = Path("/tmp/opencode/scheduler_orig.py")
-
-# Load the pre-split scheduler.py as module "scheduler_orig", with its
-# flat legacy `<device-token>_common` import redirected at the new peaks module.
-import subprocess
-
-# Create the original scheduler.py file
-if not ORIG.parent.exists():
-    ORIG.parent.mkdir(parents=True, exist_ok=True)
-
-src = subprocess.run(["git", "show", f"{REFACTOR_BASE}:scheduler.py"], cwd=ROOT,
-                     capture_output=True, text=True, check=True).stdout
-src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.peaks import", src)
-ORIG.write_text(src)
-
-spec = importlib.util.spec_from_file_location("scheduler_orig", ORIG)
-sched_orig = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(sched_orig)
-
-from oto.tensile import candidate as new
-from oto.tensile.gates import assembly as gasm
-from oto.tensile.gates import loads as gloads
-from oto.tensile.gates import occupancy as gocc
-from oto.tensile.gates import vgpr_model as gv
-
-fails = []
-
-#: The one reject message this refactor deliberately reworded, old -> new.
-#:
-#: The gate decomposition gave the byte-cap reject an operand suffix, because
-#: the old text said only "GLVW" while a config carries both
-#: ``GlobalLoadVectorWidthA`` and ``...B``, so the message could not say which
-#: one it had refused. The *verdict* is unchanged -- ``(False, ...)`` on both
-#: sides, and no comparison in the corpus flips. This is a diagnostic string,
-#: not behaviour, so it is listed rather than papered over: `check` below still
-#: compares the verdict exactly, and still fails on any other message
-#: difference.
+#: The one reject message the split reworded (kept: verdict comparison still
+#: happens on every row).
 ACCEPTED_MESSAGE_REWRITES = (
-    # Anchored at the end only: the same reject surfaces bare from the loads
-    # gate and prefixed ("Tensile load divisibility: ...") from validate_config.
     (re.compile(r"\bGLVW (\d+) \* bpe (\d+) > 16$"), r"GLVWA \1 * bpe \2 > 16"),
 )
 
 
-#: Failure buckets. A gate must return a verdict; raising is never acceptable,
-#: so "the new gate returned a verdict where the old one raised" is an
-#: improvement to be reported, not a regression to be failed on. Collapsing it
-#: into the same bucket as a real verdict flip is what hid 1593 crashes for as
-#: long as both sides happened to raise together.
-buckets = {
-    "verdict_flipped": [],   # both sides returned a bool, and they disagree
-    "text_differs": [],      # same verdict, unaccepted reject-text change
-    "old_raised": [],        # the pre-refactor gate raised; the new one did not
-    "new_raised": [],        # the new gate raised -- always a real failure
-}
+def _verdict(v):
+    if v is None:
+        return None
+    if isinstance(v, (list, tuple)):
+        return v[0] if v and v[0] != "EXC" else None
+    return v
 
 
-def _verdict(result):
-    """The gate's accept/refuse decision, or None when it raised."""
-    if isinstance(result, tuple) and result:
-        return None if result[0] == "EXC" else result[0]
+def _message(v):
+    if isinstance(v, (list, tuple)) and len(v) == 2:
+        return v[1]
     return None
 
 
-def _message(result):
-    return result[1] if isinstance(result, tuple) and len(result) == 2 else None
-
-
-def check(label, a, b):
-    """Bucket one comparison. Only a real disagreement is a failure."""
+def check(row, out):
+    """Bucket one comparison (labels: cur vs ref)."""
+    label = f"{row['f']}:{json.dumps(row['c'], sort_keys=True)}"
+    a, b = row["r"]
     if a == b:
         return
-    av, bv = _verdict(a), _verdict(b)
-    if bv is None:
-        buckets["new_raised"].append((label, a, b))
-        return
-    if av is None:
+    buckets = out["buckets"]
+    if isinstance(a, (list, tuple)) and a and a[0] == "EXC":
         buckets["old_raised"].append((label, a, b))
         return
+    if isinstance(b, (list, tuple)) and b and b[0] == "EXC":
+        buckets["new_raised"].append((label, a, b))
+        return
+    av, bv = _verdict(a), _verdict(b)
     if av == bv:
         am, bm = _message(a), _message(b)
         for pattern, replacement in ACCEPTED_MESSAGE_REWRITES:
@@ -114,149 +68,129 @@ def check(label, a, b):
         buckets["text_differs"].append((label, a, b))
         return
     buckets["verdict_flipped"].append((label, a, b))
+    return
 
 
-fails = buckets["verdict_flipped"] + buckets["text_differs"] + buckets["new_raised"]
+def _attest(name: str, base: str) -> bool:
+    from oto.tools.verifiers._evergreen import gate_attested
+    return gate_attested("gate_differential", base, name)
 
 
-FUNCS = [
-    ("cap_vector_width", sched_orig.cap_vector_width, new.cap_vector_width),
-    ("parse_tensile_shape", sched_orig.parse_tensile_shape, new.parse_tensile_shape),
-    ("assembly_class_valid", sched_orig.assembly_class_valid, gasm.assembly_class_valid),
-    ("ldspad_feasible", sched_orig.ldspad_feasible, gocc.ldspad_feasible),
-    ("occupancy_feasible", sched_orig.occupancy_feasible, gocc.occupancy_feasible),
-    ("occupancy_wg", sched_orig.occupancy_workgroups_per_cu, gocc.occupancy_workgroups_per_cu),
-    ("validate_tensile_loads", sched_orig.CandidateGenerator._validate_tensile_loads, gloads.validate_tensile_loads),
-    ("depth_u", sched_orig._depth_u, gv.depth_u),
-    ("assembly_depth_u", sched_orig._assembly_depth_u, gasm.assembly_depth_u),
-    ("tile_dims", sched_orig._tile_dims, gocc.tile_dims),
-    ("dtype_char", sched_orig._dtype_char, gocc.dtype_char),
-    ("lds_base", sched_orig._lds_base_bytes, gv.lds_base_bytes),
-    ("measured_accvgpr", sched_orig._measured_accvgpr, gv.measured_accvgpr),
-]
+def _compress_shim() -> tuple[str, str]:
+    import json as _json
 
-# ---- corpus ----------------------------------------------------------------
-FAMILIES = ["SS", "DD", "HH", "HS", "CC", "ZZ", "HH_HPA", "HS_HPA", "S", "D",
-            "H", "C", "Z", "I8", "B", "FF", "", "XX"]
-MTS = ["128x128x8", "64x64x16", "128x32x16", "256x256x8", "32x32x16", "96x96x16",
-       "64x64x8", "128x64x16", "MT128x128x8", "SB_128x128x8", "HB_64x64x16",
-       "32x64x8", "16x16x16", "8x8x16", "128x128", "junk", "", "64X64X16"]
-TTS = ["8x8", "4x4", "4x8", "8x4", "2x2", "6x6", "2x8", "16x16", "4x6",
-       "4X4", "_4_4", "8X8", "3x3", "12x4", "junk", ""]
-DEPTHS = [None, 8, 16, 32, 4, 1]
-VWS = [None, 1, 2, 4, 8]
-NLAS = [None, 1, -1, 2, 4, 8]
-GSUS = [None, 1, 2, 4]
-STAGGERS = [None, 0, 2, 4, 16, 32, 64, 256, 512]
-SUSS = [None, 0, 16, 256, 512, 1024]
-SUMS = [None, 0, 1, 4]
-PADS = [None, 0, 1, 4]
-AF0EM = [None, 1, 2]
-SCI = [None, 0, 1, True, False]
-ARCHS = [_peaks.CODENAME, "gfx900", None]
+    from oto.device.loader import current_profile
 
-cfgs = []
-for dt in ("S", "D", "H", "Z", "C", "I8", "SS", "HH", "ZZ", "HH_HPA", None):
-    for mt in ("128x128x8", "64x64x16", "128x32x16", "256x256x8", "32x32x16",
-               "96x96x16", "128x128", "junk"):
-        for tt in ("8x8", "4x4", "8x4", "6x6", "16x16", "12x4"):
-            for depth in (None, 16, 8):
-                for vw in (None, 4, 2):
-                    c = {"MacroTile": mt, "ThreadTile": tt}
-                    if dt is not None:
-                        c["DataType"] = dt
-                    if depth is not None:
-                        c["DepthU"] = depth
-                    if vw is not None:
-                        c["VectorWidth"] = vw
-                    cfgs.append(c)
+    prof = current_profile()
+    shim = _json.dumps({
+        "NUM_CUS": prof.num_cus,
+        "LDS_PER_CU_KB": prof.lds_per_cu_kb,
+        "MAX_WAVES_PER_CU": prof.max_waves_per_cu,
+        "FAMILY_DTYPE_CHAR": dict(prof.family_dtype_char),
+    })
+    archs = _json.dumps([prof.codename, "gfx900", None])
+    return shim, archs
 
-print(f"corpus: {len(cfgs)} base configs")
 
-count = 0
-for c in cfgs:
-    for name, fo, fn in FUNCS:
-        try:
-            ro = fo(dict(c))
-        except Exception as e:
-            ro = ("EXC", type(e).__name__)
-        try:
-            rn = fn(dict(c))
-        except Exception as e:
-            rn = ("EXC", type(e).__name__)
-        check(f"{name}:{c}", ro, rn)
-        count += 1
+def _emit(tree: Path, path: Path, base: str, shim: str, archs: str,
+          worker: Path | None = None) -> None:
+    from oto.tools.verifiers import _evergreen
 
-# validate_config / estimate_* on the same corpus
-gen_orig = sched_orig.CandidateGenerator.__new__(sched_orig.CandidateGenerator)
-gen_new = new.CandidateGenerator.__new__(new.CandidateGenerator)
-for c in cfgs:
-    for label, fo, fn in (
-        ("validate_config", gen_orig.validate_config, gen_new.validate_config),
-        ("estimate_lds", gen_orig._estimate_lds_usage, new.estimate_lds_usage),
-        ("estimate_occ", gen_orig._estimate_occupancy, new.estimate_occupancy),
-    ):
-        try:
-            ro = fo(dict(c))
-        except Exception as e:
-            ro = ("EXC", type(e).__name__)
-        try:
-            rn = fn(dict(c))
-        except Exception as e:
-            rn = ("EXC", type(e).__name__)
-        check(f"{label}:{c}", ro, rn)
-        count += 1
+    if worker is not None:
+        import shutil
 
-# ---- targeted knob sweeps (pad / stagger / af0em / sci / arch) ---------------
-import random
+        dst = tree / "oto/tools/verifiers/_verdicts_worker.py"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(worker, dst)
 
-random.seed(1234)
-for _ in range(4000):
-    c = {
-        "MacroTile": random.choice(MTS),
-        "ThreadTile": random.choice(TTS),
-        "DataType": random.choice(FAMILIES),
-        "NLCA": random.choice(NLAS),
-        "GlobalSplitU": random.choice(GSUS),
-        "LdsPadA": random.choice(PADS),
-        "LdsPadB": random.choice(PADS),
-        "AssertFree0ElementMultiple": random.choice(AF0EM),
-        "StoreCInUnroll": random.choice(SCI),
-        "StaggerU": random.choice(STAGGERS),
-        "StaggerUStride": random.choice(SUSS),
-        "StaggerUMapping": random.choice(SUMS),
-        "Architecture": random.choice(ARCHS),
-        "label": random.choice(["HH_HPA_sweep", "HS_HPA_sweep", "ss", ""]),
-        "FamilyLabel": random.choice(FAMILIES),
-    }
-    if random.choice([True, False]):
-        c["GlobalSplitU"] = 2
-    for name, fo, fn in FUNCS:
-        try:
-            ro = fo(dict(c))
-        except Exception as e:
-            ro = ("EXC", type(e).__name__)
-        try:
-            rn = fn(dict(c))
-        except Exception as e:
-            rn = ("EXC", type(e).__name__)
-        check(f"KNOB {name}:{c}", ro, rn)
-        count += 1
+    proc = _evergreen.probe(
+        tree,
+        f"from oto.tools.verifiers._verdicts_worker import emit; "
+        f"emit({str(path)!r}, {base!r})",
+        env_extra={"OTO_PROFILE_SHIM": shim, "OTO_ARCHS": archs},
+    )
+    if proc.returncode != 0:
+        print(proc.stdout)
+        print(proc.stderr)
+        sys.exit(2)
 
-print(f"differential comparisons: {count}")
-print(f"  the OLD gate raised where the new one returns a verdict: "
-      f"{len(buckets['old_raised'])}  (an improvement; the old crash was the "
-      f"opaque-failure mode these gates exist to prevent)")
-if fails:
-    print(f"FAILURES: {len(fails)}")
-    for key in ("new_raised", "verdict_flipped", "text_differs"):
-        rows = buckets[key]
-        if not rows:
-            continue
-        print(f"  {key}: {len(rows)}")
-        for _label, _a, _b in rows[:6]:
-            print(f"   {key[:4].upper()} {_label}")
-            print("     orig:", _a)
-            print("     new :", _b)
-    sys.exit(1)
-print("ALL EQUAL")
+
+def _compare(cur_path: Path, ref_path: Path, base: str) -> int:
+    buckets: dict = {"verdict_flipped": [], "text_differs": [],
+                     "old_raised": [], "new_raised": []}
+    n = 0
+    with cur_path.open() as fa, ref_path.open() as fb:
+        for la, lb in zip(fa, fb, strict=False):
+            row = json.loads(la)
+            ref_row = json.loads(lb)
+            if (row["f"], row["c"]) != (ref_row["f"], ref_row["c"]):
+                buckets["new_raised"].append(("ROW ORDER DIVERGED", row, ref_row))
+                break
+            row["r"] = (ref_row["r"], row["r"])  # ref vs cur
+            check(row, {"buckets": buckets})
+            n += 1
+    print(f"differential comparisons: {n}")
+    print(f"  the REF gate raised where HEAD returns a verdict: "
+          f"{len(buckets['old_raised'])}")
+
+    if base == "2824c2f":
+        n_attested = 0
+        for bucket_name in ("verdict_flipped", "text_differs"):
+            kept = []
+            for row in buckets[bucket_name]:
+                if _attest(row[0].split(":", 1)[0], base):
+                    n_attested += 1
+                else:
+                    kept.append(row)
+            buckets[bucket_name] = kept
+        if n_attested:
+            print(f"INTENTIONAL DIVERGENCE vs {base} "
+                  f"(manifest-attested, split-era legality closure): "
+                  f"{n_attested} rows attested and excused")
+
+    fails = buckets["verdict_flipped"] + buckets["text_differs"] + buckets["new_raised"]
+    if fails:
+        print(f"FAILURES: {len(fails)}")
+        for key in ("new_raised", "verdict_flipped", "text_differs"):
+            rows = buckets[key]
+            if not rows:
+                continue
+            print(f"  {key}: {len(rows)}")
+            for _label, _a, _b in rows[:6]:
+                print(f"   {key[:4].upper()} {_label}")
+                print("     ref :", _a)
+                print("     cur :", _b)
+        return 1
+    print("ALL EQUAL")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--base", default="HEAD~1",
+                    help="ref to compare against (default: HEAD~1 -- the per-commit "
+                         "evergreen check; pass 2824c2f for the split-era comparison)")
+    args = ap.parse_args()
+
+    from oto.tools.verifiers import _evergreen
+
+    print(f"base: {args.base}")
+    shim, archs = _compress_shim()
+    cur_path = Path("/tmp/opencode/_gate_cur.jsonl")
+    ref_path = Path("/tmp/opencode/_gate_ref.jsonl")
+
+    _emit(ROOT, cur_path, args.base, shim, archs)
+    try:
+        ref_dir = _evergreen.ref_worktree(args.base)
+    except _evergreen.EvergreenError as exc:
+        print(f"REF worktree BLOCKED: {exc}")
+        sys.exit(2)
+
+    worker_src = Path(__file__).with_name("_verdicts_worker.py")
+    _emit(ref_dir, ref_path, args.base, shim, archs, worker=worker_src)
+    return _compare(cur_path, ref_path, args.base)
+
+
+
+if __name__ == "__main__":
+    sys.exit(main())

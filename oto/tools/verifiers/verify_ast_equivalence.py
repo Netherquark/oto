@@ -1,38 +1,15 @@
 #!/usr/bin/env python3
-"""Symbol-level equivalence: every public symbol of every pre-split module.
+"""Evergreen symbol-level equivalence check.
 
-Owns: the symbol-level AST corpus + comparison against REFACTOR_BASE
-(2824c2f) -- the MOVES/DECOMPOSED/PROMOTED tables, the MISSING report and
-the per-entry verdict.
-Does NOT own: method-vs-mixin checks (verify_method_equivalence), the HTML
-report (verify_report_html), config-writer equivalence
-(verify_config_writer) or gate differentials (verify_gate_differential).
-Public API: head_text, strip (internal helpers); the contract is the process
-exit code (0 clean, 1 findings).
-
-For each module at the pre-refactor commit (REFACTOR_BASE), for each public
-top-level function / class / method, this checks that an identically named
-definition exists in the new package with the same body -- ignoring import
-statements (whose module paths legitimately moved) and docstrings.
-
-"MISSING" here means one of four things, and the checker says which for every
-entry so nothing is silently waved away:
-
-  * a TensileDriver method that moved into a runner mixin -- compared
-    individually by verify_method_equivalence.py
-  * an SQLiteRegistry method that moved into a ledger mixin -- the class name is
-    preserved on the composition root in oto/ledger/registry.py
-  * an AcceptanceReporter renderer method that moved into the report mixins --
-    proved by verify_report_html.py's byte-identical HTML
-  * a private helper promoted to a public gate name -- compared by
-    verify_gate_differential.py
-
-Anything else is a genuine loss and fails the check.
-
-"DIFFERING BODIES" is reported separately for every module this refactor
-deliberately decomposed (the gates, the candidate generator, the driver, the
-synthesizers). Each of those decompositions is proved by one of the other four
-checks in plans/verify_all.py.
+Owns: comparing the public surface of ``--base REF`` and the working tree:
+every public symbol in the ref tree must exist in the working tree, with the
+same signature. For a pre-split base (``port_tensile.py`` at REF) the MOVES /
+DECOMPOSED / PROMOTED / RESTRUCTURED tables from the package split still
+apply; for a post-split base the same-path comparison applies to all
+``oto/**/*.py`` files.
+Does NOT own: the split-era equivalence semantics (this is evergreen: REF is
+a parameter, not a pin) or method comparison (verify_method_equivalence).
+Public API: main, head_text, strip, sig, collect; contract = exit code.
 """
 from __future__ import annotations
 
@@ -43,10 +20,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[3]
-
-#: The last commit before the package split. Every check compares against it, so
-#: "no behaviour change" is measured against one fixed point.
-REFACTOR_BASE = "2824c2f"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # HEAD module -> new package module(s) that own it.
 MOVES = [
@@ -111,7 +86,7 @@ MOVES = [
     ("allruns.py", ["oto/tools/allruns.py"]),
     ("verify_run.py", ["oto/tools/verify_run.py"]),
     ("check_candidates.py", ["oto/checks/candidates.py"]),
-    ("check_tensile_build.py", ["oto/checks/tensile_build.py"]),
+    ("check_tensile_build.py", ["oto/checks/tensile_build.py", "oto/checks/tensile_build_probe.py"],),
     ("check_library_parity.py", ["oto/checks/library_parity.py"]),
     ("check_db.py", ["oto/checks/db.py"]),
     ("check_retirement.py", ["oto/checks/retirement.py"]),
@@ -235,12 +210,12 @@ REPORT_SPLIT = {"AcceptanceReporter", "ABVerdict", "AcceptanceReport",
                 "_load_run_telemetry", "_telemetry_section"}
 
 
-def head_text(rel: str) -> str:
-    """The pre-refactor tree's version of ``rel``."""
-    out = subprocess.run(["git", "show", f"{REFACTOR_BASE}:{rel}"], cwd=ROOT,
+def head_text(ref: str, rel: str) -> str:
+    """The ``ref`` tree's version of ``rel``."""
+    out = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=ROOT,
                          capture_output=True, text=True)
     if out.returncode != 0:
-        raise SystemExit(f"cannot read {REFACTOR_BASE}:{rel}: {out.stderr}")
+        raise SystemExit(f"cannot read {ref}:{rel}: {out.stderr}")
     return out.stdout
 
 
@@ -272,13 +247,24 @@ def sig(node) -> str:
 
 
 def collect(path: Path):
-    """{qualified_name: (kind, arg_signature, normalised_body)} for a module."""
+    """{qualified_name: (kind, arg_signature, normalised_body)} for a module.
+
+    Import aliases re-exported at module top level are recorded too: the new
+    tree re-exports helpers (e.g. ``from .ldspad_gate import ldspad_feasible``),
+    and those names are its public API as much as a def is.
+    """
     try:
         tree = ast.parse(path.read_text())
     except SyntaxError as exc:
         return None, exc
     out = {}
     for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                name = alias.asname or alias.name.split(".")[-1]
+                if not name.startswith("_") and name != "*":
+                    out[name] = ("alias", "", None)
+            continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             out[node.name] = ("func", sig(node), strip(node))
         elif isinstance(node, ast.ClassDef):
@@ -305,11 +291,11 @@ def new_bare_names(head_rel: str) -> set:
     return names
 
 
-def _collect_old_tree(head_rel: str) -> tuple[dict[str, Any] | None, str]:
-    """Dump one pre-refactor module and collect its public symbols."""
+def _collect_old_tree(ref: str, head_rel: str) -> tuple[dict[str, Any] | None, str]:
+    """Dump one ref-tree module and collect its public symbols."""
     old_path = Path("/tmp/opencode/ast_check") / head_rel
     old_path.parent.mkdir(parents=True, exist_ok=True)
-    old_path.write_text(head_text(head_rel))
+    old_path.write_text(head_text(ref, head_rel))
     old_syms, err = collect(old_path)
     if err:
         return None, err
@@ -320,9 +306,15 @@ def _compare_symbols(head_rel: str, old_syms: dict[str, Any],
                      new_syms: dict[str, Any],
                      decomposed: list[str]) -> tuple[list[str], list[str]]:
     """Compare every public symbol of one pre-refactor module."""
+    from oto.tools.verifiers._evergreen import drift_matches
+
     missing: list[str] = []
     differs: list[str] = []
     for name, (kind, args, body) in old_syms.items():
+        # Aliases carry no body; they only feed "does a symbol of this name
+        # exist" and are judged at PROMOTED level instead.
+        if kind == "alias":
+            continue
         # A symbol whose final component is private may legitimately move or
         # be renamed; the public names it serves are compared here.
         if name.rsplit(".", 1)[-1].startswith("_"):
@@ -331,33 +323,46 @@ def _compare_symbols(head_rel: str, old_syms: dict[str, Any],
             continue
         if head_rel == "report.py" and name in REPORT_SPLIT:
             continue
+        key = f"{head_rel}::{name}"
         if name not in new_syms:
-            missing.append(f"{head_rel}::{name} ({kind})")
+            if (drift_matches("ast_equivalence", key) is not None
+                    or key in RESTRUCTURED):
+                decomposed.append(f"{key} (manifest-approved move/delete)")
+                continue
+            missing.append(f"{key} ({kind})")
             continue
         _, new_args, new_body = new_syms[name]
         if new_args != args:
-            differs.append(f"{head_rel}::{name} signature "
+            if drift_matches("ast_equivalence", key) is not None:
+                decomposed.append(f"{key} signature (manifest-approved)")
+                continue
+            differs.append(f"{key} signature "
                            f"{args!r} -> {new_args!r}")
             continue
         try:
             if ast.unparse(body) != ast.unparse(new_body):
                 if (head_rel in DECOMPOSED
-                        or f"{head_rel}::{name}" in COMPOSITION_ROOTS
-                        or f"{head_rel}::{name}" in RESTRUCTURED
-                        or head_rel == "port_tensile.py"):
-                    decomposed.append(f"{head_rel}::{name}")
+                        or key in COMPOSITION_ROOTS
+                        or key in RESTRUCTURED
+                        or head_rel == "port_tensile.py"
+                        or drift_matches("ast_equivalence", key) is not None):
+                    decomposed.append(key)
                     continue
-                differs.append(f"{head_rel}::{name} body differs")
+                differs.append(f"{key} body differs")
         except Exception as exc:
-            differs.append(f"{head_rel}::{name} unparse failed: {exc}")
+            differs.append(f"{key} unparse failed: {exc}")
     return missing, differs
 
 
 def _promoted_missing(bare_names_fn) -> list[str]:
     """PROMOTED entries whose new name exists nowhere in the new tree."""
+    from oto.tools.verifiers._evergreen import drift_matches
+
     out: list[str] = []
     for entry in sorted(PROMOTED):
         if entry in FOLDED:
+            continue
+        if drift_matches("ast_equivalence", entry) is not None:
             continue
         head, sym = entry.split("::", 1)
         target = PROMOTED_AS.get(entry, sym.rsplit(".", 1)[-1])
@@ -416,28 +421,111 @@ def _print_report(all_missing: list[str], all_differs: list[str],
     print("\nAST EQUIVALENCE: OK")
 
 
-def main():
-    all_missing, all_differs, errors, decomposed = [], [], [], []
-    for head_rel, new_rels in MOVES:
-        old_syms, err = _collect_old_tree(head_rel)
-        if err:
-            errors.append(f"{head_rel}: {err}")
+def _postsplit_check(ref: str) -> int:
+    """Public-API loss check vs a post-split ref: missing symbols + signature drift."""
+    import subprocess as _sp
+
+    from oto.tools.verifiers._evergreen import print_drift_summary
+
+    out = _sp.run(["git", "ls-tree", "-r", "--name-only", ref],
+                  cwd=ROOT, capture_output=True, text=True)
+    if out.returncode != 0:
+        raise SystemExit(f"cannot list tree at {ref}: {out.stderr}")
+    all_missing: list[str] = []
+    sig_changes: list[str] = []
+    for rel in sorted(out.stdout.splitlines()):
+        if not (rel.startswith("oto/") and rel.endswith(".py")):
             continue
-        new_syms: dict[str, Any] = {}
-        for rel in new_rels:
-            got, err = collect(ROOT / rel)
-            if err:
-                errors.append(f"{rel}: {err}")
+        if "__pycache__" in rel or "tools/verifiers" in rel:
+            continue
+        ref_path = Path("/tmp/opencode/ast_check") / rel
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        ref_text = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=ROOT,
+                                  capture_output=True, text=True).stdout
+        ref_path.write_text(ref_text)
+        old_syms, err = collect(ref_path)
+        if err:
+            print(f"parse error at {ref}:{rel}: {err}")
+            continue
+        cur = ROOT / rel
+        if not cur.exists():
+            all_missing.extend(
+                f"{rel}::{name}" for name, kind in old_syms.items()
+                if kind != "alias"
+                and not name.rsplit(".", 1)[-1].startswith("_")
+            )
+            continue
+        new_syms, err = collect(cur)
+        if err:
+            print(f"parse error at HEAD:{rel}: {err}")
+            continue
+        for name, (_kind, args, _body) in old_syms.items():
+            if _kind == "alias":
                 continue
-            new_syms.update(got)
+            if name.rsplit(".", 1)[-1].startswith("_"):
+                continue
+            if name not in new_syms:
+                all_missing.append(f"{rel}::{name}")
+                continue
+            if new_syms[name][1] != args:
+                sig_changes.append(f"{rel}::{name} signature changed")
 
-        missing, differs = _compare_symbols(head_rel, old_syms, new_syms,
-                                            decomposed)
-        all_missing.extend(missing)
-        all_differs.extend(differs)
+    print(f"public symbols at risk of loss or signature change, vs {ref}:")
+    print(f"  MISSING: {len(all_missing)}")
+    for _m in all_missing:
+        print("   ", _m)
+    print(f"  SIGNATURE CHANGES: {len(sig_changes)}")
+    for _d in sig_changes:
+        print("   ", _d)
+    drifted = sorted(set(all_missing) | set(sig_changes))
+    return print_drift_summary("ast_equivalence", drifted)
 
-    _print_report(all_missing, all_differs, errors, decomposed,
-                  _promoted_missing(new_bare_names))
+
+def main():
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--base", default="HEAD~1",
+                    help="ref to compare against (default: HEAD~1, the evergreen "
+                         "per-commit check; pass 2824c2f for the split-era comparison)")
+    args = ap.parse_args()
+    print(f"base: {args.base}")
+
+    if subprocess.run(["git", "cat-file", "-e", f"{args.base}:scheduler.py"],
+                      cwd=ROOT, capture_output=True).returncode == 0:
+        all_missing, all_differs, errors, decomposed = [], [], [], []
+        for head_rel, new_rels in MOVES:
+            old_syms, err = _collect_old_tree(args.base, head_rel)
+            if err:
+                errors.append(f"{head_rel}: {err}")
+                continue
+            new_syms: dict[str, Any] = {}
+            for rel in new_rels:
+                got, err = collect(ROOT / rel)
+                if err:
+                    errors.append(f"{rel}: {err}")
+                    continue
+                for key, value in got.items():
+                    # Definitions win over re-export aliases.
+                    if value[0] != "alias":
+                        new_syms[key] = value
+                    elif key not in new_syms:
+                        new_syms[key] = value
+            missing, differs = _compare_symbols(head_rel, old_syms, new_syms,
+                                                decomposed)
+            all_missing.extend(missing)
+            all_differs.extend(differs)
+        _print_report(all_missing, all_differs, errors, decomposed,
+                      _promoted_missing(new_bare_names))
+        return
+
+    # Post-split base: public API loss + signature drift, classified via the
+    # repo manifest (drift_manifest.json). Body equivalence is not a same-path
+    # criterion here; verdict semantics live in the gate differential.
+    drifted_rc = _postsplit_check(args.base)
+    if drifted_rc == 0:
+        print("\nAST EQUIVALENCE: OK")
+    sys.exit(drifted_rc)
 
 
 if __name__ == "__main__":

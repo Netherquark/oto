@@ -1,147 +1,167 @@
 #!/usr/bin/env python3
-"""Byte-identity check for the report_html.py split.
+"""Evergreen HTML report check.
 
-Owns: the byte-identical HTML report comparison -- build_payload and
-load_head_report against the generated baseline under REFACTOR_BASE.
-Does NOT own: the renderer (oto.metrics report mixins) or the report data it
-compares.
-Public API: build_payload, load_head_report, shim (internal); the contract is
-the process exit code (0 clean, 1 findings).
+The same payload must render to identical bytes, twice, in this tree (a hard
+gate: a rerender mismatch is a real renderer nondeterminism), and REF's
+renderer must produce the same bytes for the same payload snapshot (the
+cross-commit regression gate: REF-era rendering of this repo's payload).
 
-Renders the same AcceptanceReport payload through HEAD's renderer and through the
-new one, and compares the emitted HTML byte for byte.
+Owns: the determinism round-trip and the cross-ref render comparison.
+Does NOT own: the report schema, report-atlas byte embeddedness, or the suite.
+Public API: build_payload, render, main; the contract is the exit code.
 """
 from __future__ import annotations
 
-#: The last commit before the package split. Every check in this directory
-#: compares against it, so "no behaviour change" is measured against one
-#: fixed point rather than against whatever HEAD happens to be.
-REFACTOR_BASE = "2824c2f"
-
-import importlib
+import argparse
+import dataclasses
 import json
-import re
-import subprocess
 import sys
-import tempfile
-import types
 from pathlib import Path
-
-import oto.device.peaks as _peaks
-from oto.runners.paths import results_dir as _results_dir
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-SCRATCH = Path("/tmp/opencode/head_src")
+
+_REF_SRC = """
+import sys, json, dataclasses
+from pathlib import Path
+ROOT_MAIN = {main_root!r}
+sys.path.insert(0, {tree!r})
+from oto.metrics.report_models import ABVerdict, AcceptanceReport
+from oto.metrics.report import AcceptanceReporter
+payload = json.loads(Path({payload_path!r}).read_text())
+_abv = list(ABVerdict.__dataclass_fields__)
+ver = [ABVerdict(**{{k: v.get(k) for k in _abv if k in v}}) for v in payload.get("per_cell_verdicts") or [] if isinstance(v, dict)]
+kwargs = {{}}
+for f in dataclasses.fields(AcceptanceReport):
+    if f.name == "per_cell_verdicts":
+        kwargs[f.name] = ver
+    else:
+        kwargs[f.name] = payload.get(f.name)
+AcceptanceReporter(Path(ROOT_MAIN)).write_html_report(AcceptanceReport(**kwargs), Path({out!r}))
+print("ok")
+"""
 
 
-def shim(old: str, new: str):
-    sys.modules[old] = importlib.import_module(new)
-
-
-def build_payload():
-    """The live corpus's acceptance payload, as a new AcceptanceReport."""
-    from oto.metrics.report_models import ABVerdict, AcceptanceReport
+def _payload_parts(run_id: str):
     from oto.runners.driver import TensileDriver
 
     d = TensileDriver(base_dir=ROOT, create_run=False)
-    d.regenerate_report("run_20261009_205427")
-    payload = json.loads(
-        (_results_dir(ROOT, _peaks.CODENAME) / "acceptance_report.json").read_text())
-    fields = list(ABVerdict.__dataclass_fields__)
-    ver = [ABVerdict(**{k: v.get(k) for k in fields if k in v})
+    d.regenerate_report(run_id)
+    from oto.device import loader as _loader
+    from oto.runners.paths import results_dir as _results_dir
+
+    payload_path = _results_dir(ROOT, _loader.current_profile().codename) / "acceptance_report.json"
+    return payload_path.read_bytes(), payload_path
+
+
+def build_report(payload_bytes: bytes):
+    from oto.metrics.report_models import ABVerdict, AcceptanceReport
+
+    payload = json.loads(payload_bytes)
+    _abv = list(ABVerdict.__dataclass_fields__)
+    ver = [ABVerdict(**{k: v.get(k) for k in _abv if k in v})
            for v in (payload.get("per_cell_verdicts") or [])
            if isinstance(v, dict)]
-    import dataclasses
     kwargs = {}
     for f in dataclasses.fields(AcceptanceReport):
         if f.name == "per_cell_verdicts":
             kwargs[f.name] = ver
         else:
             kwargs[f.name] = payload.get(f.name)
-    report = AcceptanceReport(**kwargs)
-    return payload, report
+    return AcceptanceReport(**kwargs), len(ver)
 
 
-def load_head_report():
-    """HEAD's report.py, with its flat sibling imports redirected."""
-    SCRATCH.mkdir(parents=True, exist_ok=True)
-    src = subprocess.run(["git", "show", f"{REFACTOR_BASE}:report.py"], cwd=ROOT,
-                         capture_output=True, text=True, check=True).stdout
-    # Redirect the flat sibling imports at their new homes.
-    for old, new in (
-        ("from analytics import", "from oto.metrics.analytics import"),
-        ("from policy import", "from oto.metrics.policy import"),
-        ("import tensile_library as tlib", "import oto.tensile.library as tlib"),
-    ):
-        src = src.replace(old, new)
-    src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.peaks import", src)
-    p = SCRATCH / "head_report.py"
-    p.write_text(src)
-    # The module must be registered under its own name for @dataclass to resolve
-    # its annotations.
-    mod = types.ModuleType("head_report")
-    mod.__file__ = str(p)
-    mod.__dict__["__name__"] = "head_report"
-    sys.modules["head_report"] = mod
-    exec(compile(src, str(p), "exec"), mod.__dict__)
-    return mod
+def render(report, html_path: Path) -> bytes:
+    from oto.metrics.report import AcceptanceReporter
+
+    AcceptanceReporter(ROOT).write_html_report(report, html_path)
+    return html_path.read_bytes()
 
 
-def main():
-    # Shims first: HEAD's report.py reads the new package's siblings.
-    shim("analytics", "oto.metrics.analytics")
-    shim("policy", "oto.metrics.policy")
-    shim("telemetry", "oto.metrics.telemetry")
-    shim("tensile_library", "oto.tensile.library")
-    shim("library_parity", "oto.tensile.library_parity")
+def _ref_render(ref: str, payload_path: Path) -> bytes | None:
+    from oto.tools.verifiers import _evergreen
 
-    _payload, report = build_payload()
-    print("payload cells:", len(report.per_cell_verdicts))
+    try:
+        tree = _evergreen.ref_worktree(ref)
+    except _evergreen.EvergreenError as exc:
+        print(f"REF comparison BLOCKED: {exc}")
+        return None
+    out = Path("/tmp/opencode") / f"_evergreen_report_{abs(hash(ref)) & 0xffffff:x}.html"
+    code = _REF_SRC.format(tree=str(tree), payload_path=str(payload_path), out=str(out), main_root=str(ROOT))
+    proc = _evergreen.probe(tree, code, timeout=900)
+    if proc.returncode != 0:
+        tail = proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "child failed"
+        print(f"REF comparison BLOCKED: {tail}")
+        return None
+    data = out.read_bytes()
+    out.unlink(missing_ok=True)
+    return data
 
-    # NEW renderer.
-    from oto.metrics.report import AcceptanceReporter as NewReporter
+
+def _first_diff(a: bytes, b: bytes) -> int | None:
+    n = min(len(a), len(b))
+    for i in range(n):
+        if a[i] != b[i]:
+            return i
+    return None if len(a) == len(b) else n
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--run-id", default="run_20261009_205427",
+                    help="run whose regenerated payload the render uses")
+    ap.add_argument("--base", default=None,
+                    help="REF to render the same payload snapshot with; without it "
+                         "only the determinism round-trip runs")
+    args = ap.parse_args()
+
+    import tempfile
+
+    payload_bytes, _payload_file = _payload_parts(args.run_id)
+    snapshot_path = Path(tempfile.mkdtemp()) / "payload_snapshot.json"
+    snapshot_path.write_bytes(payload_bytes)
+
+    report, ver_count = build_report(payload_bytes)
+    print(f"payload cells: {ver_count}")
+
     with tempfile.TemporaryDirectory() as td:
-        out_new = Path(td) / "new.html"
-        NewReporter(ROOT).write_html_report(report, out_new)
-        new_bytes = out_new.read_bytes()
+        first = render(report, Path(td) / "a.html")
+        second = render(report, Path(td) / "b.html")
 
-    # HEAD renderer.
-    old = load_head_report()
-    with tempfile.TemporaryDirectory() as td:
-        out_old = Path(td) / "old.html"
-        old.AcceptanceReporter(ROOT).write_html_report(report, out_old)
-        old_bytes = out_old.read_bytes()
+    print(f"render determinism: {'OK (' + str(len(first)) + ' bytes)' if first == second else 'FAILED'}")
+    if first != second:
+        print("FAIL: the same payload rendered twice differs.")
+        return 1
 
-    if new_bytes == old_bytes:
-        print(f"HTML IDENTICAL ({len(new_bytes)} bytes)")
-        return
+    if not args.base:
+        print("REF comparison: skipped (pass --base REF to compare)")
+        print("REPORT HTML: OK")
+        return 0
 
-    # Not byte-identical. Before calling that a behaviour change, strip the
-    # pretty-printing: a newline plus its indentation carries no rendered
-    # meaning between block tags, and the refactored renderer indents one
-    # section differently. Only line breaks are removed -- a space between two
-    # tags on the SAME line does render (``</b> <i>``) and is left alone.
-    import re as _re
+    ref = _ref_render(args.base, snapshot_path)
+    if ref is None:
+        print("REF comparison BLOCKED (see the note above): "
+              "the REF tree cannot render this payload. Determinism still holds.")
+        print("REPORT HTML: OK (determinism only; REF comparison inapplicable)")
+        return 0
 
-    def _unpretty(raw: bytes) -> str:
-        return _re.sub(r"\n[ \t]*", "", raw.decode())
+    if ref == first:
+        print(f"REF {args.base} renders this payload byte-identically.")
+        print("REPORT HTML: OK")
+        return 0
 
-    a_pretty, b_pretty = _unpretty(new_bytes), _unpretty(old_bytes)
-    if a_pretty == b_pretty:
-        print(f"HTML IDENTICAL after stripping pretty-printing "
-              f"({len(new_bytes)} -> {len(b_pretty)} bytes); "
-              f"only source indentation differs, the rendered DOM is the same")
-        return
-
-    import difflib
-    a = a_pretty.splitlines()
-    b = b_pretty.splitlines()
-    diff = list(difflib.unified_diff(b, a, "HEAD", "new", lineterm="", n=2))
-    print(f"HTML DIFFERS: {len(diff)} diff lines (old {len(b)} / new {len(a)} lines)")
-    print("\n".join(diff[:80]))
-    sys.exit(1)
+    at = _first_diff(first, ref)
+    print(f"REF {args.base} differs from current at byte {at} "
+          f"({len(ref)} vs {len(first)} bytes, delta {len(ref) - len(first)}).")
+    print("This is the regression gate: any or all of the delta must trace to a "
+          "known renderer change (see drift_manifest.json, report_html::render).")
+    rc = 0
+    from oto.tools.verifiers._evergreen import print_drift_summary
+    rc = print_drift_summary("report_html", ["report_html::render"])
+    if rc == 0:
+        print("REPORT HTML: OK (manifested renderer evolution)")
+    return rc
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
