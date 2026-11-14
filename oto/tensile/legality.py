@@ -46,7 +46,7 @@ from oto.runners.result_paths import results_rel
 TENSILE_COMMIT = "e8a8999e"
 
 #: Source citations, re-verified in the pinned checkout. Kept as data so
-#: ``tests/test_legality_prior.py`` can assert the module never cites a
+#: ``tests/test_legality.py`` can assert the module never cites a
 #: different commit than the one it was verified at.
 CITATIONS = {
     "is_half": "Tensile/DataType.py:311 isHalf() -> value == DataType.half",

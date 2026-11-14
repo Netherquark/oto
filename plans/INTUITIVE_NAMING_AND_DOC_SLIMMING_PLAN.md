@@ -341,8 +341,8 @@ Phase C cleanup.
 | `test_agents.py` | KEEP | — | |
 | `test_asm_occupancy.py` | KEEP | — | |
 | `test_auto_prompt.py` | KEEP | — | |
-| `test_auto_reference_floor.py` | RENAME | `test_reference_floor.py` | `auto_reference_floor` no longer describes the subject; it pins the reference floor |
-| `test_best_library.py` | RENAME | `test_best_effort_library.py` | module renamed to `best_effort_library.py` (§2.10) |
+| `test_reference_floor.py` | RENAME | `test_reference_floor.py` | `auto_reference_floor` no longer describes the subject; it pins the reference floor |
+| `test_best_effort_library.py` | RENAME | `test_best_effort_library.py` | module renamed to `best_effort_library.py` (§2.10) |
 | `test_cell_attribution.py` | KEEP | — | |
 | `test_cli_smoke.py` | KEEP | — | |
 | `test_comparability.py` | KEEP | — | |
@@ -351,9 +351,9 @@ Phase C cleanup.
 | `test_corpus_census.py` | KEEP | — | |
 | `test_coverage_cells.py` | KEEP | — | |
 | `test_coverage_graph.py` | KEEP | — | |
-| `test_db_mutator.py` | RENAME | `test_donor_mutator.py` | module renamed in Phase A; test docstring still says DBMutator (kept as class name) |
+| `test_donor_mutator.py` | RENAME | `test_donor_mutator.py` | module renamed in Phase A; test docstring still says DBMutator (kept as class name) |
 | `test_deck_review.py` | KEEP | — | |
-| `test_derive.py` | RENAME | `test_derive_limits.py` | module renamed to `derive_limits.py` (§2.5) |
+| `test_derive_limits.py` | RENAME | `test_derive_limits.py` | module renamed to `derive_limits.py` (§2.5) |
 | `test_docs_cli.py` | KEEP | — | |
 | `test_docs_index.py` | KEEP | — | |
 | `test_docs_registry.py` | KEEP | — | |
@@ -363,13 +363,13 @@ Phase C cleanup.
 | `test_file_length.py` | KEEP | — | |
 | `test_function_length.py` | KEEP | — | |
 | `test_gate_calibration.py` | KEEP | — | |
-| `test_generate_candidates.py` | RENAME | `test_candidate_generator.py` | module renamed to `candidate_generator.py` (§2.6) |
-| `test_harness_tools.py` | RENAME | `test_agent_tools.py` | module renamed to `agent_tools.py` (Phase A); test name still echoes the old one |
+| `test_candidate_generator.py` | RENAME | `test_candidate_generator.py` | module renamed to `candidate_generator.py` (§2.6) |
+| `test_agent_tools.py` | RENAME | `test_agent_tools.py` | module renamed to `agent_tools.py` (Phase A); test name still echoes the old one |
 | `test_interactive_keys.py` | KEEP | — | |
 | `test_knob_sweep.py` | KEEP | — | |
 | `test_ledger_durability.py` | KEEP | — | |
-| `test_legality_prior.py` | RENAME | `test_legality.py` | `_prior` is leftover from an abandoned "legality prior" framing |
-| `test_legal_slow.py` | RENAME | `test_legal_slow_paths.py` | `legal_slow` reads like a property; the suite covers the deliberately-illegal slow paths |
+| `test_legality.py` | RENAME | `test_legality.py` | `_prior` is leftover from an abandoned "legality prior" framing |
+| `test_legal_slow_paths.py` | RENAME | `test_legal_slow_paths_paths.py` | `legal_slow` reads like a property; the suite covers the deliberately-illegal slow paths |
 | `test_library_parity.py` | KEEP | — | |
 | `test_measurement_integrity.py` | KEEP | — | |
 | `test_mutation_arm.py` | KEEP | — | |
@@ -380,22 +380,22 @@ Phase C cleanup.
 | `test_outcome_writeback.py` | KEEP | — | recently renamed |
 | `test_overlay_merge.py` | KEEP | — | recently renamed |
 | `test_parent_selection.py` | KEEP | — | |
-| `test_paths.py` | RENAME | `test_result_paths.py` | module renamed to `result_paths.py` (§2.9) |
+| `test_result_paths.py` | RENAME | `test_result_paths.py` | module renamed to `result_paths.py` (§2.9) |
 | `test_profile.py` | KEEP | — | |
 | `test_profile_gates.py` | KEEP | — | |
 | `test_profile_second_device.py` | KEEP | — | |
 | `test_proposal_durability.py` | KEEP | — | |
 | `test_proposals_ledger.py` | KEEP | — | |
-| `test_protocol.py` | RENAME | `test_measurement_protocol.py` | module renamed to `measurement_protocol.py` (§2.8) |
+| `test_measurement_protocol.py` | RENAME | `test_measurement_protocol.py` | module renamed to `measurement_protocol.py` (§2.8) |
 | `test_py_compile.py` | KEEP | — | |
 | `test_pyflakes.py` | KEEP | — | |
 | `test_readonly_reporting.py` | KEEP | — | recently renamed |
 | `test_reference_tiers.py` | KEEP | — | |
-| `test_registry_kernel_db_auto.py` | RENAME | `test_auto_reference_registry.py` | `registry_kernel_db_auto` is three jargon words; it pins the reference-registry path for the `--auto` loop |
+| `test_auto_reference_registry.py` | RENAME | `test_auto_reference_registry.py` | `registry_kernel_db_auto` is three jargon words; it pins the reference-registry path for the `--auto` loop |
 | `test_report_coverage.py` | KEEP | — | |
 | `test_report_family_case.py` | KEEP | — | |
 | `test_report_probe_glob.py` | KEEP | — | |
-| `test_resolve_cells.py` | RENAME | `test_cell_resolver.py` | module renamed to `cell_resolver.py` (§2.6) |
+| `test_cell_resolver.py` | RENAME | `test_cell_resolver.py` | module renamed to `cell_resolver.py` (§2.6) |
 | `test_ruff.py` | KEEP | — | |
 | `test_rule_calibration.py` | KEEP | — | |
 | `test_run_status_live.py` | KEEP | — | |
@@ -410,7 +410,7 @@ Phase C cleanup.
 | `test_tile_frontier.py` | KEEP | — | |
 | `test_toolchain.py` | KEEP | — | |
 | `test_toolchain_layout.py` | KEEP | — | |
-| `test_verify_run.py` | RENAME | `test_corpus_audit.py` | module renamed to `corpus_audit.py` (Phase A); test name still references the old module |
+| `test_corpus_audit.py` | RENAME | `test_corpus_audit.py` | module renamed to `corpus_audit.py` (Phase A); test name still references the old module |
 | `test_visual_check.py` | KEEP | — | |
 | `test_writer_forwards_sweep_knobs.py` | KEEP | — | |
 

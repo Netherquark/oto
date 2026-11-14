@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_db_mutator.py — the DB-hooked mutator synthesises novel, wide+narrow.
+"""test_donor_mutator.py — the DB-hooked mutator synthesises novel, wide+narrow.
 
 Option H overhaul (2026-10-09). The manifest sampler decays and starves the
 wall families; these tests pin the replacement's guarantees:

@@ -67,7 +67,7 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                 "validate_config": "verified differentially (128k cases)",
                 "main": "decomposed into the stage handlers in cli.py",
                 "run_gfx900_reference": "_resume_deck + _fresh_deck; proved by "
-                                     "test_reference_tiers/test_auto_reference_floor",
+                                     "test_reference_tiers/test_reference_floor",
                 "execute_phase": "decomposed into _refuse_phase/_start_record/"
                                  "_benchmark_phase and the _*_record builders; "
                                  "proved by the test_phase1_* suite "

@@ -176,7 +176,7 @@ class ClassifyOutcomeTests(unittest.TestCase):
         assert outcome == OUTCOME_FUNCTIONAL
         assert not detail["winner_freq_positive"]
 
-    def test_legal_slow_impossible_without_a_threshold(self):
+    def test_legal_slow_paths_impossible_without_a_threshold(self):
         p = self.phase / "2_BenchmarkData" / "Cijk_a_00.csv"
         write_csv(p, [row(0, kernel=1.5)])
         outcome, _ = classify_outcome(self.phase, self.eng)

@@ -283,7 +283,7 @@ divisible by `numLoads // NLCA`. On the winner tiles GLVW saturates the 16-byte
 cap, so `numLoads = 1` and NLCA>1 fails `NLCA > NumLoads` outright — on exactly
 the geometries a 7-CU part would want re-tuned. The deck asked for it (25 rows
 were gate-refused by
-`test_generate_candidates.py::test_plan_batch_is_gate_clean`) and the gate said
+`test_candidate_generator.py::test_plan_batch_is_gate_clean`) and the gate said
 no, which is the gate working. The axis reopens only if GLVW is ever lowered.
 
 Bases are the per-cell measured winners, so each row lands on the geometry that
@@ -697,7 +697,7 @@ vendor's.
   `test_generator_refuses_the_dead_perf_mode` and
   `test_no_legal_complex_tile_is_wider_than_the_measured_max`
   (`tests/test_knob_sweep.py`); `TestEveryDeckRowIsGenerative`
-  (`tests/test_generate_candidates.py`), which pins that no deck, ladder or
+  (`tests/test_candidate_generator.py`), which pins that no deck, ladder or
   batch row is gate-refused under any contraction pattern.
 * **Preflight is the authority, not a number written here.** `python3
   `oto check candidates --quiet` → `0 illegal`;

@@ -460,7 +460,7 @@ order is now defined once in `oto.tensile.shape_order` and applied at all three
 producer sites (wide-row build, existing-row merge, and `_narrow_row_gen`'s
 in-place merge — a third site the first pass missed), with a last-mile guard in
 `config_writer.write_phase_config` that re-imposes it regardless of producer
-input. Pinned by `tests/test_generate_candidates.py` and
+input. Pinned by `tests/test_candidate_generator.py` and
 `tests/test_shape_order.py`; the live seed overlay was regenerated in numeric
 order and its generated rows reproduce `iter_candidates()` exactly.
 

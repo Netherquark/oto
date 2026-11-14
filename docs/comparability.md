@@ -82,7 +82,7 @@ rule, floor discovery, run tagging, per-side counts).
 ## How to re-check after touching any of this
 
 ```bash
-python3 -m pytest tests/test_comparability.py tests/test_ab_audit.py tests/test_protocol.py -q
+python3 -m pytest tests/test_comparability.py tests/test_ab_audit.py tests/test_measurement_protocol.py -q
 python3 -m oto.harness.regression_matrix --help           # must show --any-protocol
 python3 -m oto.harness.regression_matrix [--any-protocol]   # admit non-family protocols only for deck generation
 ```

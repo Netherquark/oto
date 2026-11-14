@@ -11,7 +11,7 @@ orchestrator (oto.tensile.candidate), or the corpus (oto.harness.kernel_db).
 
 Why: the gates are pure functions of their config, and the *test suite* asks
 the same question thousands of times -- the deck's rows, the frontier sweep
-and the coverage map all re-validate the same geometries. `test_generate_candidates`
+and the coverage map all re-validate the same geometries. `test_candidate_generator`
 spent 60 s and `test_tile_frontier` spends most of its time re-deriving
 verdicts that were already derived. The memo is keyed by content, so a config
 that changes gets a new verdict and a config that does not gets the old one.

@@ -185,7 +185,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
   all three producer sites (wide-row build, existing-row merge, and
   `_narrow_row_gen`'s in-place merge), with a last-mile guard in
   `config_writer.write_phase_config` that re-imposes it regardless of producer
-  input. Pinned by `tests/test_generate_candidates.py` and the new
+  input. Pinned by `tests/test_candidate_generator.py` and the new
   `tests/test_shape_order.py`; the live seed overlay was regenerated numeric.
 - Live report `run_20261015_041159` reads **19 WIN / 19 TIE / 0 LOSS**;
   CC:256 **TIE**. No verdict band or gate logic changed. See `changelog.md`

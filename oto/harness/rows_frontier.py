@@ -333,7 +333,7 @@ for _fam, _tile, _tt, _vw, _du, _extra in _FRONTIER_THREAD_CONTROLS:
 # 2026-10-21 R44/R45 — virgin-knob probes on the winner geometries.
 # Each knob below has zero variance in the gfx900 floor (tuning guide §9.1) and is
 # now in FORWARD_KNOB_DOMAINS; the rows are gate-verified by
-# tests/test_generate_candidates.py::TestEveryDeckRowIsGenerative.
+# tests/test_candidate_generator.py::TestEveryDeckRowIsGenerative.
 # LdsPad=1 (the value the floor never uses), NLCA=-1 (least-coalesced regime),
 # StaggerUMapping=1/2 (vendor-recommended, never measured), MaxOccupancy=16/32
 # (cap LDS to buy occupancy), NonTemporal=1/2/3 (cache hints on 1 MiB L2),
@@ -429,7 +429,7 @@ for _fam, _tile, _tt, _vw, _du in (
 #
 # Every row below is a CONFIG on a geometry the corpus already reaches, so the
 # only new machinery is the launch itself. The batch is gate-clean by
-# construction: `tests/test_generate_candidates.py` pins it.
+# construction: `tests/test_candidate_generator.py` pins it.
 
 #: The winner geometry per family, as the corpus has measured it (the cell's
 #: best seed-median geometry; `kernel_db.json`). These are the geometries the
@@ -538,6 +538,6 @@ for _fam, _tile, _tt, _vw, _du in _R47_SMALL_CELLS:
 #          The lever is a tile with MORE workgroups (32x64, 64x32 -> 18 and
 #          24) and the other thread tiles of 64x64.
 #
-# Every row is legal by the real gate (tests/test_generate_candidates.py
+# Every row is legal by the real gate (tests/test_candidate_generator.py
 # pins the batch gate-clean) and every one is a *geometry* the corpus has
 # never measured on that cell.

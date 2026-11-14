@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_registry_kernel_db_auto.py — automatic kernel_db refresh on run completion.
+test_auto_reference_registry.py — automatic kernel_db refresh on run completion.
 
 The analysis cache (`kernel_db.json`) must be fresh for the next
 mutation whenever a run finishes. `SQLiteRegistry.update_run_status` is the
@@ -13,7 +13,7 @@ gfx900-reference, --auto driver), so the rebuild hooks there:
   * opt-out: constructor flag and OTO_NO_AUTO_KERNEL_DB_REBUILD=1;
   * a failing rebuild is logged and swallowed — it must never fail a run.
 
-Run: python3 -m pytest -q tests/test_registry_kernel_db_auto.py
+Run: python3 -m pytest -q tests/test_auto_reference_registry.py
 """
 from __future__ import annotations
 

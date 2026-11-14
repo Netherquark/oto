@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_legal_slow.py — `legal_slow` is measured against the gfx900 reference.
+test_legal_slow_paths.py — `legal_slow` is measured against the gfx900 reference.
 
 `legal_slow` is the bucket that separates "Tensile built it and it ran" from "it
 ran usefully". Without it, a candidate that is legal but materially worse than

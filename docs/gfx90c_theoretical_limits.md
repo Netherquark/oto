@@ -67,7 +67,7 @@
 ## 2. Per-family theoretical ALU peaks (FMA-pipe ceilings)
 
 > These numbers are derivable on demand — `python3 -m oto.device.derive_limits` and
-> `tests/test_derive.py` re-compute them from `profiles/gfx90c.json`. Identical
+> `tests/test_derive_limits.py` re-compute them from `profiles/gfx90c.json`. Identical
 > formula: `lanes = num_cus * simds_per_cu * lanes_per_simd`, choose the lane
 > class per family (FP32 / FP64+8:16 / FP16 fast-F16 = 2× FP32), multiply by
 > `2 * fGHz`. Any edit to this table without a corresponding edit in

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_auto_reference_floor.py -- --auto must always reach native tuning.
+test_reference_floor.py -- --auto must always reach native tuning.
 
 Regression for a policy bug that made overnight runs produce nothing. Three
 consecutive runs (gfx900_ref_20260928_023401_resume / _023858_resume /
@@ -9,7 +9,7 @@ and completed 0 of 127 phases, because run_auto() returned early on any
 incomplete or failed reference result. The floor is worth attempting, but it
 must never be able to consume a whole budget with zero native measurements.
 
-Run: python3 test_auto_reference_floor.py
+Run: python3 test_reference_floor.py
 """
 from __future__ import annotations
 

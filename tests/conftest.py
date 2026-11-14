@@ -57,13 +57,13 @@ def pytest_configure(config: pytest.Config) -> None:
 #: the three in step: `pytest -m preflight` is the subset, and the checklist
 #: can name the marker instead of a file list that drifts.
 PREFLIGHT_FILES = (
-    "test_generate_candidates.py",
+    "test_candidate_generator.py",
     "test_occupancy_model_vgpr.py",
     "test_occupancy_model_lds.py",
     "test_occupancy_live_deck.py",
     "test_cell_attribution.py",
     "test_writer_forwards_sweep_knobs.py",
-    "test_resolve_cells.py",
+    "test_cell_resolver.py",
     "test_complex_flop_accounting.py",
     "test_tile_frontier.py",
     "test_corpus_census.py",

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_resolve_cells.py — harness.cell_resolver per-cell winner resolution.
+test_cell_resolver.py — harness.cell_resolver per-cell winner resolution.
 
 Regression guards for the 38-cell evidence generator (docs/potential_configs.md
 §R25, the per-cell reading — §R26 is the class tracker):
@@ -17,7 +17,7 @@ Regression guards for the 38-cell evidence generator (docs/potential_configs.md
     the mechanical half of the tie taxonomy (docs/potential_configs.md §R17);
   * meta provenance counts are self-consistent (n_cells, resolver keys ≥ yamls).
 
-Run: python3 -m pytest -q tests/test_resolve_cells.py
+Run: python3 -m pytest -q tests/test_cell_resolver.py
 """
 from __future__ import annotations
 

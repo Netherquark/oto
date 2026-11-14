@@ -77,7 +77,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `tests/test_element_assertions.py` | AssertFree* dimension guard |
 | `tests/test_tile_frontier.py` | The legal MacroTile frontier above 16384 elements |
 | `tests/test_corpus_census.py` | Corpus-history census: median basis, geometry collapse, per-cell history |
-| `tests/test_db_mutator.py` | GlobalSplitU ban guard |
+| `tests/test_donor_mutator.py` | GlobalSplitU ban guard |
 | `tests/test_deck_review.py` | Deck-review scores counter guard |
 | `tests/test_function_length.py` | AC 1b (functions ≤ 60 lines) |
 

@@ -132,7 +132,7 @@ COMPOSITION_ROOTS = {
 #: in DECOMPOSED -- its other symbols are still compared strictly.
 RESTRUCTURED = {
     # classify_outcome was a module-level function at the base commit, so the
-    # PROMOTED key above never matched; proved by test_legal_slow/test_mutator.
+    # PROMOTED key above never matched; proved by test_legal_slow_paths/test_mutator.
     "mutator.py::classify_outcome",
     # pure extraction of the CLI drivers; proved by their own tests.
     "allruns.py::main",
