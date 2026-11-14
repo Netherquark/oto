@@ -388,6 +388,31 @@ def run_agent_generate(args: Any) -> int:
     return _call(argv, cli_main)
 
 
+def run_agent_consult(args: Any) -> int:
+    """Draft potential_configs.md for a device from the corpus census (CPU-only)."""
+    from oto.agents.census_consult import consult
+    from oto.device.loader import load_profile_from_starter
+
+    if getattr(args, "with_docs", False):
+        from oto.runners.stage_cli import main as cli_main
+        with_args = ["--base-dir", str(base_dir(args)), "--generate-device-docs"]
+        if args.starter:
+            with_args.append(args.starter)
+        rc = _with_argv(with_args, cli_main)
+        if rc:
+            return int(rc)
+    profile = load_profile_from_starter(Path(args.starter)) if args.starter else None
+    result = consult(profile, base_dir=base_dir(args),
+                     out=Path(args.out) if args.out else None,
+                     force=getattr(args, "force", False))
+    if result.get("status") == "refused":
+        print(f"refusing to overwrite {result['out']}: {result['reason']}", file=sys.stderr)
+        return 1
+    print(f"wrote {result['out']} — {result.get('priors', 0)} priors, "
+          f"{result.get('legal_rows', 0)} legal / {result.get('illegal_rows', 0)} illegal ladder rows")
+    return 0
+
+
 def run_agent_index(args: Any) -> int:
     from oto.docs_index_writer import write_index
 
@@ -537,6 +562,7 @@ def dispatch(args: Any, parser: Any) -> int:
         "check tensile-build": run_check,
         "library best-effort": run_library_best_effort,
         "agent generate": run_agent_generate, "agent index": run_agent_index,
+        "agent consult": run_agent_consult,
         "consolidate": run_consolidate, "stats": run_stats,
         "chart": run_chart, "version": lambda a: print_version(),
         "completion": run_completion, "help": lambda a: show_help(a, parser),

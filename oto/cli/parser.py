@@ -328,6 +328,16 @@ def _add_agent(sub: Any) -> None:
     add_dry_run_flag(g)
     _add(asub, "index", "Regenerate docs/docs_index.json",
          "  oto agent index", mutating=True)
+    c = _add(asub, "consult", "Draft <codename>_potential_configs.md (CPU-only census consult)",
+             "  oto agent consult docs/gfx902_starter.md\n"
+             "  oto agent consult --out my_device.md",
+             mutating=True)
+    c.add_argument("starter", nargs="?", help="Starter Markdown file (default: ambient profile)")
+    c.add_argument("--out", help="Output path (default: <codename>_potential_configs.md in base dir)")
+    c.add_argument("--force", action="store_true",
+                   help="Overwrite an existing output file")
+    c.add_argument("--with-docs", action="store_true",
+                   help="Also generate the agent-1/agent-2 device docs beside the consult output")
 
 
 def _add_utility(sub: Any) -> None:

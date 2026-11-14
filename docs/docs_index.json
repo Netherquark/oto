@@ -78,6 +78,12 @@
       "path": "docs/implementation_plan.md"
     },
     {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Automated agentic consult: API key \u2192 docs/potential_configs.md with the least GPU-trial budget (design plan, not implemented)",
+      "path": "docs/agentic_consult.md"
+    },
+    {
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "The shipped-footprint replication contract",
@@ -265,6 +271,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 35,
+  "total": 36,
   "version": 1
 }

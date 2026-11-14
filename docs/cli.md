@@ -41,6 +41,26 @@ oto agent generate docs/starter.md
 oto agent index
 ```
 
+#### `oto agent consult`
+
+Draft <codename>_potential_configs.md (CPU-only census consult)
+
+```bash
+oto agent consult docs/gfx902_starter.md
+oto agent consult --out my_device.md
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--out` — Output path (default: <codename>_potential_configs.md in base dir)
+- `--force` — Overwrite an existing output file
+- `--with-docs` — Also generate the agent-1/agent-2 device docs beside the consult output
+
 #### `oto agent generate`
 
 Generate device docs (agent-1 + agent-2)

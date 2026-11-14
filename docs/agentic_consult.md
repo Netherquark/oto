@@ -2,13 +2,18 @@
 
 Class A (developer) — the design for automating `potential_configs.md` generation
 for a new device, from a starter file + an API key, with the least possible GPU
-work. This document is the implementation plan. It is not implemented yet; it is
-the specification that turns the gfx90c campaign's hard-won method into a
-procedure the tool can follow end to end.
+work. Phases 0–2 are implemented (`oto agent consult`); phases 3–4 are the GPU proof
+and the gfx902 first-light run, both blocked on budget/key. The spec below is the
+full flow; the gfx90c campaign's method, encoded.
 
 ## §0. The goal, in one sentence
 
 Given a starter file for a GPU that oto has never seen, plus an LLM API key,
+**STATUS: implemented — `oto agent consult`.** CPU-only consult per this spec runs today:
+it ingests a starter/profile and emits `<codename>_potential_configs.md` with gate-legal rows,
+corpus priors from the local `kernel_db.json`, rejection taxa, and a TTY to-do list. The GPU
+proof (Phase C) is blocked on GPU budget; the gfx902 run (Phase D) is blocked on the API key.
+
 oto ingests both and emits a finished `potential_configs.md` — a candidate
 deck, ranked, with evidence, and a `phases.yaml` continuation — without a human
 in the loop and without benchmarks it does not need.
@@ -78,7 +83,7 @@ not speculative; it is a codification.
 
 ## §3. What the plan requires of the codebase
 
-### §3.1 `oto/agents/potential_configs.py` (new)
+### §3.1 `oto/agents/census_consult.py` (implemented)
 
 The orchestration entry: `generate(profile, base_dir, research=None,
 harness=None)` returning a dict of synthesised artifacts (which docs and
@@ -140,8 +145,8 @@ so until a measurement lands the loop plans no further cells in that family.
 
 ### §3.4 Stage: potential_configs synthesis
 
-`oto/agents/potential_configs_export.py` builds the markdown from the DB and
-the report:
+`oto/agents/census_consult.py` builds the markdown (CPU-only) from the corpus
+and the gate verdicts (implemented):
 
 - §A. Bounds: per-family paragraphs mirroring the gfx90c structure,
   with per-family tile counts, unsupported-vs-accepted verdict, and the
@@ -249,10 +254,9 @@ campaign.
 
 | Path | Role |
 |---|---|
-| `oto/agents/potential_configs.py` | the orchestrator (new) |
-| `oto/agents/potential_configs_export.py` | the export renderer (new) |
-| `oto/cli/commands.py`, `oto/cli/parser.py` | `--full` flag on `oto agent generate` |
-| `oto/tools/probe_builds.py` | the probe stage (new; CPU-only; writes the registry) |
-| `oto/metrics/potential_configs.py` | the export helpers (new) |
-| `tests/test_agent_generate_full.py` | the acceptance test (new) |
-| `docs/operator_runbook.md` | a pointer to this file as the Class B entry for new-device docks |
+| `oto/agents/census_consult.py` | implemented — the consult engine (CPU-only) |
+| `oto/cli/commands.py`, `oto/cli/parser.py` | `oto agent consult` verb (with `--with-docs`) |
+| `oto/harness/deck_probe.py` | optional probe stage (not yet wired to the consult) |
+| `oto/runners/library_build.py` | `--with-docs` path also emits agent-1/agent-2 docs beside the consult |
+| `tests/test_census_consult.py` | the acceptance test (synthetic profile, zero GPU) |
+| `docs/operator_runbook.md` | a pointer to this file as the Class B entry for new-device docs |

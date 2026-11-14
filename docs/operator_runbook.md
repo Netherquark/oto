@@ -109,6 +109,10 @@ key, research is a clean no-op and the docs carry the starter text only.
 If the target already has `profiles/<codename>.json` and its docs exist, no
 agent run is needed; just run `oto doctor` to confirm the profile loads.
 
+For the automated consult — one command from starter to a gate-checked
+`potential_configs.md` draft (no key required; CPU-only) — see
+[`docs/agentic_consult.md`](agentic_consult.md) and run `oto agent consult`.
+
 **Agent research is advisory. It is never the source of record for silicon
 facts.** See §4.
 

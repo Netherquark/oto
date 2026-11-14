@@ -186,7 +186,9 @@ class SynthesisMixin:
         tl_path = out_dir / f"{profile.codename}_theoretical_limits.md"
         tc_path = out_dir / f"{profile.codename}_tuning_context.md"
         hs_path = out_dir / f"{profile.codename}_harness_study.md"
-        pc_path = out_dir / f"{profile.codename}_docs/potential_configs.md"
+        pc_dir = out_dir / f"{profile.codename}_docs"
+        pc_dir.mkdir(parents=True, exist_ok=True)
+        pc_path = pc_dir / "potential_configs.md"
         tl_path.write_text(result["theoretical_limits"])
         tc_path.write_text(result["tuning_context"])
         tl_harness = result.get("harness") or {}
