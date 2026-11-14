@@ -15,8 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dataclasses import replace
 
-import pytest
-
 from oto.device import loader as _loader
 from oto.device.derive import (
     derive_lane_classes,
