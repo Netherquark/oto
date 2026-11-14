@@ -92,7 +92,7 @@ class TestLoadedPhaseSourcesAreOrdered:
                 assert is_numerically_ordered(shapes), (p.get("phase_id"), shapes)
 
     def test_synthesis_family_sweeps_are_numeric(self):
-        from oto.tensile.synthesis.manifest import family_shape_sweeps
+        from oto.tensile.synthesis.pipeline_manifest import family_shape_sweeps
         phases = yaml.safe_load((REPO / "phases.yaml").read_text())
         sweeps = family_shape_sweeps(phases)
         assert sweeps, "no family sweeps derived from the deck"

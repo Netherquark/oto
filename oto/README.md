@@ -55,7 +55,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tensile/synthesis/donor_knobs.py`` — The forward-knob domains the DB-hooked mutator draws from.
 * ``tensile/synthesis/donor_mutator.py`` — DB-hooked candidate synthesis: wide + narrow + direction mutants.
 * ``tensile/synthesis/donor_patterns.py`` — The per-family mutation patterns for the DB-hooked mutator.
-* ``tensile/synthesis/manifest.py`` — Coverage-guided candidate synthesis for one cell.
+* ``tensile/synthesis/pipeline_manifest.py`` — Coverage-guided candidate synthesis for one cell.
 * ``tensile/synthesis/tile_space.py`` — The one home for the tile and knob-group vocabulary the synthesisers share.
 
 ## oto/ledger/ — durable state + the mutation/convergence state machine

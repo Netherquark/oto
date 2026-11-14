@@ -8,7 +8,7 @@ mutation patterns (``_ss_``, ``_dd_``, ``_cc_``, ``_zz_``) plus the
 floor-direction walk that moves a parent toward the shipped winner.
 Does NOT own: the forward-knob domains it draws from
 (oto.tensile.synthesis.donor_knobs), the manifest-driven synthesis
-(oto.tensile.synthesis.manifest), or the ledger that records what it emits
+(oto.tensile.synthesis.pipeline_manifest), or the ledger that records what it emits
 (oto.ledger.mutator).
 
 Mutation strategies (moved here from docs/potential_configs.md). Every sore loser

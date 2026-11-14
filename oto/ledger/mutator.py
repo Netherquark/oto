@@ -213,7 +213,7 @@ class Mutator(MutatorOutcomesMixin):
         `synthesis.synthesize_or_lattice`; `sample_cell` above is retained for
         callers that only want knobs.
         """
-        import oto.tensile.synthesis.manifest as synthesis
+        import oto.tensile.synthesis.pipeline_manifest as synthesis
 
         return synthesis.synthesize_cell(
             self.base_dir, family, base_config=base_config, cell=cell,

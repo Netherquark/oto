@@ -2,8 +2,8 @@
 
 Two synthesizers share one tile vocabulary:
 
-  manifest.py   coverage-guided manifest draws (sample_legal / synthesize_cell)
-  db.py         DB-hooked wide+narrow+direction mutants (DBMutator)
+  pipeline_manifest.py   coverage-guided manifest draws (sample_legal / synthesize_cell)
+  donor_mutator.py       DB-hooked wide+narrow+direction mutants (DBMutator)
   tile_space.py the shared tile/group vocabulary + tile reconciliation, imported
                 by both so neither can drift from the other's notion of a tile.
 

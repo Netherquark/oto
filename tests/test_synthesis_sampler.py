@@ -14,7 +14,7 @@ from pathlib import Path
 
 import oto.metrics.cell_coverage as coverage
 import oto.tensile.legality as legality
-import oto.tensile.synthesis.manifest as synthesis
+import oto.tensile.synthesis.pipeline_manifest as synthesis
 from oto.device import loader as _loader
 
 REPO = Path(__file__).resolve().parent.parent

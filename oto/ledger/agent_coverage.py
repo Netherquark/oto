@@ -30,7 +30,7 @@ class CoverageMixin:
         does not change within a run and this sits on the per-cell path.
         """
         if self._shape_sweeps_cache is None:
-            import oto.tensile.synthesis.manifest as synthesis
+            import oto.tensile.synthesis.pipeline_manifest as synthesis
             path = self.base_dir / "phases.yaml"
             phases = []
             if path.exists():

@@ -14,7 +14,7 @@ See ``tests/test_synthesis_sampler.py`` for the coverage sampler, and
 import unittest
 from pathlib import Path
 
-import oto.tensile.synthesis.manifest as synthesis
+import oto.tensile.synthesis.pipeline_manifest as synthesis
 
 REPO = Path(__file__).resolve().parent.parent
 
