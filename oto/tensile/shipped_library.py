@@ -14,7 +14,7 @@ Does NOT own: the manifest cache and its refresh policy
 (oto.tensile.library), the rerun triage and tier ordering
 (oto.tensile.library), or the fingerprint/phase-key identity (also
 oto.tensile.library).
-Public API: shipped_kernel_config, shipped_kernel_knobs, shipped_kernel_knobs,
+Public API: shipped_kernel_config, shipped_kernel_knobs,
 emit_spoof_phases, SHIPPED_FAMILIES, CONTRACTION_PATTERNS, find_gfx900_dat_files,
 parse_shipped_kernels.
 """
@@ -150,7 +150,7 @@ def parse_shipped_kernels(dat_file: Path) -> set[str]:
 def _parse_kernel_knobs(name: str) -> dict[str, Any]:
     """Parse structural Tensile knobs out of a canonical solution name.
 
-    Sets the knobs `_write_phase_config` understands so the spoofed phase
+    Sets the knobs `write_phase_config` understands so the spoofed phase
     rebuilds the shipped kernel rather than a generic default. Knobs Tensile
     does not name (NLCA, LDS padding, SWV...) fall back to their defaults —
     the reproduction is structural, faithful in MT/TT/WG/VW/DepthU/GSU.

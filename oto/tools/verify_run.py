@@ -161,7 +161,7 @@ def _driver():
     """A TensileDriver with only the telemetry loaders, no run context.
 
     Same trick tests/test_thermal_gate.py uses: the loaders are taken unbound
-    from the real class so they cannot drift from what oto.metrics.report.py consumes.
+    from the real class so they cannot drift from what oto.metrics.report consumes.
     """
     from oto.runners.driver import TensileDriver
     d = TensileDriver.__new__(TensileDriver)

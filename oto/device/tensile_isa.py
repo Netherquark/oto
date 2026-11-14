@@ -2,16 +2,12 @@
 """Tensile ``CurrentISA`` version triples for the gfx9 family.
 
 Owns: the codename -> Tensile ``CurrentISA`` triple table (``ISA_TRIPLES``)
-and the ``isa_triple`` lookup used by the build proof. The only oto module
-allowed to hold these triples.
+and the ``isa_triple`` lookup used by the CPU-only build proof. The only oto
+module allowed to hold these triples.
 Does NOT own: any other hardware fact (``oto.device.loader``), device detection
 (``oto.device.detect``), or Tensile's own ISA semantics (the triple is opaque
 to us).
 Public API: ``ISA_TRIPLES``, ``isa_triple``.
-
-Tensile's toolchain wants ``(major, minor, stepping)`` to pin the ISA when no
-GPU is present. This module is the one place in oto allowed to hold those
-triples, together with the codename -> triple lookup used by the build proof.
 """
 from __future__ import annotations
 

@@ -170,7 +170,7 @@ class TestNarrowRowMerge:
 class TestStripNotForwarded:
     def test_group_c_knobs_are_kept(self):
         # Group C (2026-10-09): LdsPadA/B, AF0EM, StaggerUStride and
-        # StoreCInUnroll are forwarded by _write_phase_config behind the
+        # StoreCInUnroll are forwarded by write_phase_config behind the
         # ldspad_feasible gate, so the generator keeps them on the candidate.
         cfg, dropped = _strip_not_forwarded(
             {"MacroTile": "128x128x8", "LdsPadA": 1, "LdsPadB": 2,

@@ -27,7 +27,7 @@ CPU only, read-only. Writes nothing into the repo.
 
     python3 -m oto.harness.asm_occupancy                       # whole corpus
     python3 -m oto.harness.asm_occupancy --dtype CC            # one family
-    python3 -m oto.harness.asm_occupity --top 20 --by gflops   # best first
+    python3 -m oto.harness.asm_occupancy --top 20 --by gflops   # best first
     python3 -m oto.harness.asm_occupancy --binder              # resource tally
 """
 

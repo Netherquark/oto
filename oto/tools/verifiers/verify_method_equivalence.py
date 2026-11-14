@@ -70,7 +70,9 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                                      "test_reference_tiers/test_auto_reference_floor",
                 "execute_phase": "decomposed into _refuse_phase/_start_record/"
                                  "_benchmark_phase and the _*_record builders; "
-                                 "proved by test_phase1_integration",
+                                 "proved by the test_phase1_* suite "
+                                 "(split of test_phase1_integration.py, "
+                                 "4b9fcb4)",
                 "_run_tensile_benchmark": "decomposed into _refuse_reuse_of/"
                                           "_tensile_command/_spawn_tensile/"
                                           "_supervise_tensile; proved by "
@@ -98,7 +100,9 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                             "and the driver tests that construct the loop",
                 "run_phases": "decomposed into the phase handlers in "
                               "oto/runners/phases.py; proved by "
-                              "test_phase1_integration",
+                              "the test_phase1_* suite "
+                              "(split of test_phase1_integration.py, "
+                              "4b9fcb4)",
                 }
 
 # Modules to normalise: replace these substrings before comparing so the moved

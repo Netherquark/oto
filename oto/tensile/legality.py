@@ -73,8 +73,8 @@ def thread_tile_dimensions(config: dict[str, Any]) -> list[int]:
     """Normalise ``ThreadTile`` to its dimensions.
 
     Phase configs carry ThreadTile as the string ``"8x4"`` (the form
-    ``oto.tensile.library._config_from_kernel`` emits and
-    ``oto.tensile.candidate.validate_config`` accepts), while Tensile's own state holds a two-element list. The
+    ``oto.tensile.shipped_library._config_from_kernel`` emits and
+    ``CandidateGenerator.validate_config`` (oto.tensile.candidate) accepts), while Tensile's own state holds a two-element list. The
     EnableMatrixInstruction derivation tests ``len(ThreadTile) == 2``, so the
     string form has to be normalised first or every candidate reads as
     undetermined -- which silently disarmed the half VectorWidth wall.
@@ -249,7 +249,7 @@ KNOB_TO_GROUP = {knob: group for group, knobs in KNOB_GROUPS.items()
 #: the split group because it is the donor's real beta-on-edge setting. The one
 #: remaining parsed knob, `grvw`, is deliberately *not* here -- it is not a
 #: Tensile parameter, and BenchmarkStructs printExit()s on unrecognised names
-#: (see `tensile_library._config_from_kernel`). So Phase 4's "extend beyond the
+#: (see ``oto.tensile.shipped_library._config_from_kernel``). So Phase 4's "extend beyond the
 #: lattice" is satisfied by covering all eight legal knobs, not by inventing
 #: parameters that would abort parameter filling.
 TEMPLATE_KEYS = frozenset({

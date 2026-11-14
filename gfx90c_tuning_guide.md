@@ -27,13 +27,13 @@ retired**: the complex families are at 80-97 % of the FMA roof, and their
 
 ## 1. Knob surface — what the deck actually controls
 
-The knob → Tensile forwarding map (which key `_write_phase_config` emits
+The knob → Tensile forwarding map (which key `write_phase_config` emits
 verbatim, and which CPU gate governs it) is a fact about the writer and lives in
 the module docstring of `oto/tensile/config_writer.py`. For the *tuning* read —
 which knob actually matters and in which regime — see §4 and §5 below. The
 table itself, restated so this file stands alone:
 
-| knob | what it does | legality gate | forwarded by `_write_phase_config` |
+| knob | what it does | legality gate | forwarded by `write_phase_config` |
 |---|---|---|---|
 | MacroTile | tile dims M×N (+DepthU in the string) | occupancy (LDS) + assembly | yes |
 | ThreadTile | accumulators per thread = TT0·TT1·weight VGPRs | occupancy (VGPR) | yes |
@@ -471,7 +471,7 @@ tracked in D). Tie band ±2 %; median-of-seeds ≥ 3.
 | **B** CC:256 steal (NT direction + WGM8/WGM4 + LdsPadA=2 + PGR=0) | TTY | **DECKED** — pads A/B {1,2,4} + WGM8 + PGR=0 + GLVW=1 variants emit on the §9 S3 steal tile (generator `PLAN_BATCH`); ~~GSU2+workspace~~ **withdrawn 2026-10-09** (gate-refused on this port, §10.1) |
 | **C** LdsPadA/B + AF0EM + StaggerUStride + StoreCInUnroll forwarding | **DONE** (writer + `ldspad_feasible` + generator `_FORWARDED` + 4 tests); CC/ZZ pad probes next | **DECKED** — CC/ZZ pad rows (A/B {1,2,4}) on the winner geometries in the seed; ZZ pads on the du8 tile only (32x32x16 winner is budget-full at 16 B/element); TTY benchmark next |
 | **D** measurement hygiene (fold 005217/030033, typecode filter, VGPR measurement) | **DONE** (rebuild; 0 contamination; M tool + invariant test) | done |
-| **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `_write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
+| **Group C swizzle** (StaggerU/StaggerUMapping/StaggerUStride) | forwarded as a coupled trio + probed | **DECKED 2026-10-09** — the backwards `StaggerUStride` gate fixed (it refused the legal values, which is why forwarding was "blocked"); the trio is forwarded in `write_phase_config`; swizzle probes on CC/ZZ/SS winners emit |
 | **Mutator overhaul (Option H2)** | DB-hooked synthesis, wide+narrow+direction, no auto-skip, active-cell filter | **DECKED 2026-10-09** — `oto/tensile/synthesis/db.py` hooks the mutator to `kernel_db.json`; mutants bypass the identical-skip per-phase; only below-ceiling cells are mutated; the arm no longer decays or starves CC/ZZ |
 
 ### 9.1 The virgin axes — where the floor has zero variance

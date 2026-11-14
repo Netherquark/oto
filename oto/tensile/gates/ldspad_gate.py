@@ -7,6 +7,7 @@ from the measured evidence: a LdsPad/AssertFree/StaggerUStride value the
 gate cannot prove legal is refused at the launch boundary, never forwarded
 to a mid-run error 4.
 
+Public API: ldspad_feasible.
 Imports the shared tile/dtype helpers from ``oto.tensile.gates.occupancy_common``.
 """
 

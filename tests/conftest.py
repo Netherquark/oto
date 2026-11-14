@@ -56,7 +56,9 @@ def pytest_configure(config: pytest.Config) -> None:
 #: can name the marker instead of a file list that drifts.
 PREFLIGHT_FILES = (
     "test_generate_candidates.py",
-    "test_occupancy_gate.py",
+    "test_occupancy_model_vgpr.py",
+    "test_occupancy_model_lds.py",
+    "test_occupancy_live_deck.py",
     "test_cell_attribution.py",
     "test_writer_forwards_sweep_knobs.py",
     "test_resolve_cells.py",

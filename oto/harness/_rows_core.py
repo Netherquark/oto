@@ -6,9 +6,11 @@ beat-the-spoof batch literal -- plus ``_pad_rows`` (the label/phase_id
 encoder) and the small post-batch pad loops. This module also defines
 ``PLAN_BATCH`` *before* the sibling modules hang their generated rows off it.
 
-Does NOT own: the tie-adapt / frontier blocks (`_rows_frontier`) or the
-small-cell blocks (`_rows_smallcells`); the deck/seed fingerprint sets
-(candidate_decks); the overlay read/write (candidate_overlay).
+Does NOT own: the tie-adapt / frontier blocks (``oto.harness._rows_frontier``)
+or the small-cell blocks (``oto.harness._rows_smallcells``); the deck/seed
+fingerprint sets (``oto.harness.candidate_pool``); the overlay read/write
+(``oto.harness.candidate_overlay``).
+Public API: FAMILY_DTYPE, LADDER, DU_VARIANTS, WGM_VARIANTS, PATTERNS, TARGET_CELLS, NARROW_NEIGHBOURS, AUTO_EXPLICIT, PLAN_BATCH, _pad_rows.
 
 Import order matters: ``_rows_frontier`` then ``_rows_smallcells``; they
 mutate ``PLAN_BATCH`` and ``AUTO_EXPLICIT`` defined here. Consumers import

@@ -57,7 +57,7 @@ from oto.device.loader import default_profile as _asm_dp
 from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
 
-#: Refactor 2: device feature flags come from the profile (default: the device).
+#: Device feature flags come from `oto.device.loader.current_profile()` at call time.
 _ASM_PROFILE = _asm_dp()
 
 #: Bytes per element for the assembly-class dtype check. Distinct from

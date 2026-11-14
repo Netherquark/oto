@@ -3,7 +3,11 @@
 Owns: ``tile_dims`` (MacroTile/ThreadTile parse) and ``dtype_char``
 (dtype resolution, failing closed with "") -- the two helpers the occupancy
 gate, the LdsPad gate and their callers all read. Separated so neither gate
-module imports the other.
+module imports the other. Read-only helpers; the gate logic lives with the
+gates.
+Does NOT own: the gate verdicts (``oto.tensile.gates.occupancy`` /
+``ldspad_gate``) or the profile (``oto.device.loader``).
+Public API: tile_dims, dtype_char.
 """
 
 from __future__ import annotations

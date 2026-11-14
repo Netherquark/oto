@@ -9,6 +9,34 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (20th) — Dead-reference sweep across docstrings; preflight marker restored.**
+  Three full passes over every docstring (`oto/` + `tests/`), verifying each backtick-quoted
+  and Sphinx-role identifier and each dotted `oto.*` token against the present tree (module
+  path resolution + top-level attr check; docstring-stripped source blob; Tensile-internal
+  citations confirmed against `rocm-libraries`). What was dead, now fixed:
+  `oto/harness/_rows_core.py`'s Public API line named a nonexistent `_NARROW_KNOBS` (real
+  tables: `NARROW_NEIGHBOURS`, `PATTERNS`, `TARGET_CELLS`, …); `ConvergenceMixin` /
+  `MutateLoopMixin` in the convergence-loop docstring never existed (real mixins:
+  `HarvestMixin` / `CoverageMixin` / `MutateMixin`); `fallback_lattice` in
+  `synthesis/manifest.py` was a pseudo-name — the contract lives on
+  `sweep_for_family(..., fallback=[shape])`; `asm_occupity` typo in an example invocation;
+  `oto.tensile.library._config_from_kernel` never lived at that path
+  (`oto.tensile.shipped_library._config_from_kernel`); the launch boundary claimed
+  "Three gates" while actually running four (`ldspad_feasible` included);
+  `consolidate_deck.py` cited `vgpr_model._loader` (the module has no `_loader`);
+  `runners/clocks.py` mis-module-qualified the spoof-arm delta; `report_models.py` pointed
+  at class constant `ClockMixin.THERMAL_MAX_C` as a module attr; `oto.metrics.report.py`
+  written with a `.py` suffix; `_write_phase_config` (pre-split name) replaced by
+  `write_phase_config` wherever it named the module-level emitter (call-sites and the kept
+  `driver._write_phase_config` method are unchanged; historical/frozen docs and changelog
+  entries untouched). Live defect: `tests/conftest.py`'s `PREFLIGHT_FILES` still named
+  `tests/test_occupancy_gate.py`, deleted in the R2 rule-class split (9c4ed22) — the
+  preflight marker silently covered no occupancy-gate tests. Replaced with the three
+  successors (`test_occupancy_model_vgpr.py`, `test_occupancy_model_lds.py`,
+  `test_occupancy_live_deck.py`); `--collect-only -m preflight` shows 178 tagged tests.
+  `verify_method_equivalence.py` evidence pointers updated to the `test_phase1_*` successors
+  (split 4b9fcb4). No semantic/gates/runner changes; all edits are docstring/citation text
+  plus the conftest marker list.
 - **2026-11-13 (15th) — Repo scour: build-proof restored end-to-end; docs/tests
   migrated off the deleted root shim.** A repo-wide pending-work audit found the
   CPU-only Tensile build proof fully broken since the CLI rework's Phase 2 deleted

@@ -1,12 +1,12 @@
 """Register-file and LDS occupancy gates.
 
-Owns: the CPU-only model that reproduces every observed device occupancy
-outcome -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget); the
+Owns: the CPU-only model that reproduces every observed occupancy
+outcome on the reference device -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget); the
 LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad_gate`` and is
 re-exported here for the historical import path.
 Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
 *measurement* tables (oto.tensile.gates.vgpr_model), the legality class rules
-(oto.tensile.gates.assembly), or any device constant (oto.device.loader).
+(oto.tensile.gates.assembly), or any device fact (`profiles/`, read through `oto.device.loader.current_profile()`).
 
 Why this is CPU-only: error 4 (``overflowedResources``) is raised while Tensile
 generates the kernel, so without a model every rejected config costs a full

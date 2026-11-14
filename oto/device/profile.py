@@ -1,12 +1,14 @@
-"""Device profile: the single source of truth for device facts.
+"""Device profile: the frozen, in-memory view of one GPU.
 
-Owns: the frozen ``DeviceProfile`` dataclass and its nested policy/limits
-sub-structures. Every gate, ceiling, shape list and doc generator reads from
-this. No device literal may live outside this module and ``profiles/``.
-
-Does NOT own: loading (oto.device.loader), the device constants (profiles/),
-or any legality rule (oto.tensile.gates).
-
+Owns: the ``DeviceProfile`` dataclass and its nested policy/limits
+sub-structures (``AssemblyGatePolicy``, ``TheoreticalLimits``). Every gate,
+ceiling, shape list and doc generator reads from this shape; the literals it
+carries are those in ``profiles/<codename>.json`` -- no device fact may be
+invented anywhere else. Reading is loader's job
+(``oto.device.loader.load_profile``); this module is plumbing.
+Does NOT own: loading (``oto.device.loader``), the profile JSON files
+(profiles/), auto-detection (``oto.device.detect``), or any legality rule
+(``oto.tensile.gates``).
 Public API: DeviceProfile, AssemblyGatePolicy, TheoreticalLimits.
 """
 

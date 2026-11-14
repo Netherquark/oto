@@ -28,7 +28,7 @@ measured something else is not a calibration. This is that rule as a tool: run i
 after any gate edit and read the ``false-rej`` line.
 
 The config is reconstructed from the phase's own ``configs/phase_*.yaml`` (the
-``_write_phase_config`` output Tensile received), never the registry intent,
+``write_phase_config`` output Tensile received), never the registry intent,
 because the gate's whole job is to predict what Tensile is handed. The two maps
 the reconstruction needs already have canonical homes and are imported, not
 copied: the contraction pattern (``config_writer.TRANSPOSE_MAP``) and the family

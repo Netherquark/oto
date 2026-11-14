@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""The cell/kernel vocabulary and the coverage-grid derivation.
+"""Coverage-grid vocabulary: cell identity and kernel-name parsing.
 
-Owns: kernel-name typecode parsing, cell identity (``cell_key`` /
-``kernel_key`` / ``shipped_cells`` / ``shipped_cell_set`` / ``cube_side``),
-and the typecode-to-family resolution. Profile-aware: the dtype-char tables
-are read from :func:`oto.device.loader.current_profile` at call time.
-Does NOT own: any calibrated constant (see ``oto.tensile.gates``) or the
-profile itself (``oto.device.loader``).
+Owns: the typecode->family resolver (kernel-name parsing), and the canonical
+cell identity helpers (``cell_key``, ``kernel_key``, ``cube_side``,
+``shipped_cells``, ``shipped_cell_set``) used by every consumer that pairs a
+native candidate with its reference-floor kernel. Profile-aware: the dtype-
+char tables come from :func:`oto.device.loader.current_profile` at call
+time, never from module globals.
+Does NOT own: any calibrated constant (see ``oto.tensile.gates``), the
+profile dataclass (``oto.device.profile``), or loader/detection.
 Public API: blas8_gflops, dtype_to_family, kernel_typecode,
 family_from_kernel_name, dtype_from_kernel_name, cube_side, cell_key,
 shipped_cells, shipped_cell_set, kernel_key.

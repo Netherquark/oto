@@ -8,8 +8,9 @@ three sibling modules so the historical import paths keep working:
 ``_rows_smallcells`` (small-cell evidence blocks). Import order is fixed and
 load-bearing -- the sibling modules mutate ``PLAN_BATCH`` at import time.
 
-Does NOT own: the deck/seed fingerprint sets (candidate_decks), the overlay
-read/write (candidate_overlay), or the pruning helpers (candidate_prune).
+Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
+the overlay read/write (``oto.harness.candidate_overlay``), or candidate
+ generation (``oto.harness.generate_candidates``).
 """
 
 from __future__ import annotations

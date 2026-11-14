@@ -12,11 +12,12 @@ uses (oto.tensile.candidate.parse_tensile_shape), the driver that calls it
 or the contraction-pattern vocabulary (oto.tensile.patterns).
 Public API: write_phase_config, parse_tensile_shape, TRANSPOSE_MAP,
 GLOBAL_LOAD_WIDTH_KEYS, FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS,
-NOT_FORWARDED_KNOBS. (The forwarding-surface tuples live in
-oto.tensile.knob_surface and the pattern vocabulary in oto.tensile.patterns;
-they are re-exported here for the tests and gate_calibration.) (The driver's
-private `_TENSILE_VALID_PARAMS` is consulted at the launch boundary but is not
-re-exported here.)
+NOT_FORWARDED_KNOBS.
+
+The forwarding-surface tuples live in ``oto.tensile.knob_surface`` and the
+pattern vocabulary in ``oto.tensile.patterns``; both are re-exported here for
+the tests and gate_calibration. The driver's private ``_TENSILE_VALID_PARAMS``
+is consulted at the launch boundary but is not re-exported here.
 
 Forwarding surface -- the knobs the deck controls, the CPU gate that governs
 each, and that this writer emits them verbatim ("forwarded" means the key
@@ -386,7 +387,7 @@ def _launch_gate_refusal(driver, phase: dict[str, Any]
                          ) -> str | None:
     """CPU legality refusal text, or None when the phase may launch.
 
-    Three gates, all CPU-only, all refusing before a config file is written.
+    Four gates, all CPU-only, all refusing before a config file is written.
     Why here and not by convention: Tensile's own rejection surfaces as an opaque
     "Generating kernel source resulted in error 4" that looks like the kernel
     rather than the parameterisation. The occupancy gate is the one that caught

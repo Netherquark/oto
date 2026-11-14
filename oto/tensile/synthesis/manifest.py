@@ -232,7 +232,7 @@ def synthesize_cell(
     retired (and so should be skipped), and which shapes the candidate will be
     benchmarked over. Both are reported here instead of being inferred.
 
-    `fallback_lattice` is the escape hatch `Hplan.6` step 1 requires: when the
+    The ``sweep_for_family(..., fallback=[shape])`` escape hatch `Hplan.6` step 1 requires: when the
     manifest has no support for a family the sampler returns None, and the caller
     falls back to the ≤2-knob lattice. That is a *degradation* in search quality
     and is reported as such (`source: "lattice"`), never silently.

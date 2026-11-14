@@ -7,10 +7,11 @@ that refuses an illegal candidate before it becomes a launchable phase, and
 ``validate_config``, the single orchestrator over the three gate families.
 Does NOT own: the gates themselves (oto.tensile.gates), the launch-boundary
 config writer (oto.tensile.config_writer), or the run loop (oto.runners).
-Public API: CandidateConfig, CandidateGenerator, cap_vector_width,
-validate_tensile_loads. The three gates are re-exported here so the historical
-flat import surface (``from oto.tensile.candidate import occupancy_feasible``)
-keeps working; oto.tensile.gates is their only home.
+Public API: CandidateConfig, CandidateGenerator, assembly_class_valid,
+cap_vector_width, ldspad_feasible, occupancy_feasible, occupancy_workgroups_per_cu,
+validate_tensile_loads. The gates are re-exported here for the historical flat
+import surface (``from oto.tensile.candidate import occupancy_feasible``);
+``oto.tensile.gates`` is their canonical home.
 """
 
 from __future__ import annotations

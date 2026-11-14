@@ -15,7 +15,7 @@ the routes it implies (potential_configs.md §R17-§R18).
 Public API: main, _table, _tsv.
 
 The resolution order exists because the compiled emission is the truth: a phase's
-``_write_phase_config`` output for the winning run is authoritative, the registry
+``write_phase_config`` output for the winning run is authoritative, the registry
 row is what the driver intended, and the kernel_db row is the structural fallback
 when neither is on disk. On a tie between runs the newest run wins.
 
@@ -61,7 +61,7 @@ from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import shape_order_key
 
 # The full structural knob surface — MUST match the yaml emission surface of
-# oto.tensile.config_writer._write_phase_config so docs citing a knob can find it here.
+# oto/tensile/config_writer.py's write_phase_config so docs citing a knob can find it here.
 CFG_KEYS = [
     "MacroTile", "ThreadTile", "VectorWidth", "GlobalSplitU", "DepthU",
     "WorkGroupMapping", "WorkGroup", "GlobalLoadVectorWidthA",
