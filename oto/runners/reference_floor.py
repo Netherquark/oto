@@ -282,7 +282,11 @@ class ReferenceMixin:
         if not phases:
             return {"status": "failed", "reason": "no eligible shipped phases emitted"}
 
-        run_id = self._create_reference_run_dir(resume, resume_meta)
+        run_id, prev_run_dir, prev_configs, prev_client = \
+            self._create_reference_run_dir(resume)
+        self._run_dir_backup = prev_run_dir
+        self._configs_dir_backup = prev_configs
+        self._client_build_dir_backup = prev_client
 
         phases_path = self.run_dir / "phases_reference.yaml"
         with open(phases_path, "w") as f:
@@ -342,8 +346,13 @@ class ReferenceMixin:
                   + ")")
         return phases
 
-    def _create_reference_run_dir(self, resume: bool, resume_meta: dict) -> str:
-        """Create reference run directory and sync agent."""
+    def _create_reference_run_dir(self, resume: bool) -> tuple[str, Path, Path, Path]:
+        """Create the reference run directory and return
+        ``(run_id, prev_run_dir, prev_configs, prev_client)``.
+
+        The caller restores the three ``prev_*`` paths on completion via its
+        own ``_run_dir_backup`` hook; the return value is NOT the run_id alone.
+        """
         arch = _spoof_arch(self)
         run_id = f"{arch}_ref_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if resume:

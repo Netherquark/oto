@@ -1,5 +1,6 @@
 """Smoke tests for the oto CLI dispatcher."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -40,9 +41,41 @@ def test_bare_invocation_lists_quick_start():
     assert "oto tune --dry-run" in r.stdout
 
 
-def test_doctor():
-    r = _run("doctor")
-    assert r.returncode == 0
+def _fake_tensile_root(tmp_path: Path) -> Path:
+    tensile = tmp_path / "tensile"
+    (tensile / "Tensile" / "bin").mkdir(parents=True)
+    tb = tensile / "Tensile" / "bin" / "Tensile"
+    tb.write_text("#!/bin/sh\necho fake-tensile 0.0.0\n")
+    tb.chmod(0o755)
+    return tensile
+
+
+def test_doctor_missing_tensile_client_is_red(tmp_path):
+    # A box without a prebuilt Tensile client cannot run a single phase; the
+    # doctor must say so instead of letting the campaign die inside every
+    # Tensile subprocess.
+    env = {**os.environ,
+           "TENSILE_ROOT": str(_fake_tensile_root(tmp_path))}
+    env.pop("OTO_TENSILE_CLIENT", None)
+    r = subprocess.run(
+        [*BASE_CMD, "doctor"], capture_output=True, text=True,
+        cwd=str(ROOT), env=env, timeout=120)
+    assert r.returncode == 1
+    assert "Tensile client" in r.stdout
+    assert "tensile-client" in r.stdout
+
+
+def test_doctor_bad_client_override_is_red(tmp_path):
+    # Explicit env pointing nowhere is a hard error, never silently replaced.
+    root = _fake_tensile_root(tmp_path)
+    env = {**os.environ,
+           "TENSILE_ROOT": str(root),
+           "OTO_TENSILE_CLIENT": str(tmp_path / "wrong-path")}
+    r = subprocess.run(
+        [*BASE_CMD, "doctor"], capture_output=True, text=True,
+        cwd=str(ROOT), env=env, timeout=120)
+    assert r.returncode == 1
+    assert "OTO_TENSILE_CLIENT" in r.stdout
 
 
 def test_status():
