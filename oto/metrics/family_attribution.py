@@ -5,7 +5,7 @@ Owns: ``extract_family_from_phase_id`` (family from a phase id),
 ``resolve_cell_family`` (the anti-contamination resolver that prefers the kernel
 typecode over any phase-level stamp), ``_hpa_variant``, ``family_to_dtype`` and
 the known-family derivation.
-Does NOT own: the CSV load that produces the rows (oto.metrics.analytics) or the
+Does NOT own: the CSV load that produces the rows (oto.metrics.benchmark_analytics) or the
 A/B comparison that consumes the attribution (oto.metrics.ab_audit).
 Public API: extract_family_from_phase_id, resolve_cell_family, family_to_dtype.
 """

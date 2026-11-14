@@ -18,7 +18,7 @@ from collections import defaultdict
 from typing import Any
 
 from oto.metrics.ab_identity import _pair_key
-from oto.metrics.protocol import SINGLE, UNKNOWN
+from oto.metrics.measurement_protocol import SINGLE, UNKNOWN
 
 
 def _form_key(rec: dict[str, Any]) -> Any:

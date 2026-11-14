@@ -78,17 +78,16 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``metrics/ab_delta.py`` — The native-vs-spoof A/B delta: the arithmetic every acceptance number rests on.
 * ``metrics/ab_identity.py`` — A/B record identity: how the two arms are made comparable.
 * ``metrics/ab_records.py`` — A/B record loading: the canonical (native, floor) inputs.
-* ``metrics/analytics.py`` — Stage 5 analytics: CSV loading and per-cell aggregation.
+* ``metrics/acceptance_report.py`` — Stage 7 acceptance report: the verdict compute and the JSON writer.
+* ``metrics/benchmark_analytics.py`` — Stage 5 analytics: CSV loading and per-cell aggregation.
 * ``metrics/build_status.py`` — The status report builder: state assembly, ETA pricing and the report dict.
+* ``metrics/cell_coverage.py`` — Coverage: cell evidence, cell states, and fitness for parent selection.
 * ``metrics/cell_policy.py`` — Cell policy: aggregation, the should_run gate, and retirement eligibility.
 * ``metrics/cell_status.py`` — Cell status: the RED / ORANGE / graded coverage classification.
-* ``metrics/coverage.py`` — Coverage: cell evidence, cell states, and fitness for parent selection.
 * ``metrics/family_attribution.py`` — Cell/family attribution: which family a measurement row belongs to.
 * ``metrics/ledger_state.py`` — Ledger/corpus state for the status report: one read of the registry plus the reference corpus tally.
-* ``metrics/protocol.py`` — Measurement-protocol classification: the like-for-like rule, in one place.
-* ``metrics/read_thermals.py`` — The thermal envelope of one run, read from its telemetry CSV.
+* ``metrics/measurement_protocol.py`` — Measurement-protocol classification: the like-for-like rule, in one place.
 * ``metrics/render_status.py`` — The run-status text renderings and the live TTY panel.
-* ``metrics/report.py`` — Stage 7 acceptance report: the verdict compute and the JSON writer.
 * ``metrics/report_coverage.py`` — The acceptance report's problem-space coverage section.
 * ``metrics/report_css.py`` — The dashboard's static assets: CSS and the two inline scripts.
 * ``metrics/report_html.py`` — The acceptance dashboard renderer (JSON payload -> one HTML file).
@@ -97,8 +96,9 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``metrics/report_sections.py`` — The dashboard's HTML section builders.
 * ``metrics/run_plan.py`` — The run plan and the cost model that prices it.
 * ``metrics/run_status.py`` — Run status: the report builder, the renderers and the live panel.
-* ``metrics/status_common.py`` — Shared run-status helpers: timestamp parsing, duration formatting and the status/result -> display bucket mapping.
+* ``metrics/status_helpers.py`` — Shared run-status helpers: timestamp parsing, duration formatting and the status/result -> display bucket mapping.
 * ``metrics/telemetry.py`` — Telemetry: per-run CSV sampling of the GPU's clocks and power.
+* ``metrics/thermal_telemetry.py`` — The thermal envelope of one run, read from its telemetry CSV.
 
 ## oto/runners/ — execution
 

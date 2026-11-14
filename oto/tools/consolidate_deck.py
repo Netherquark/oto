@@ -24,7 +24,7 @@ from oto.metrics.ab_records import (
     _registry_records,
     phase_records,
 )
-from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tools.consolidate_floor import PREFERRED_FORMS
 from oto.tools.consolidate_targets import _fam, native_runs, target_cells

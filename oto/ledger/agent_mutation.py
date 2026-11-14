@@ -15,7 +15,7 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.ledger.mutator import Proposal
-from oto.metrics import coverage
+from oto.metrics import cell_coverage as coverage
 from oto.tensile.candidate import CandidateConfig
 
 

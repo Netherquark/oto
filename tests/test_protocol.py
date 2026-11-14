@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The invocation-form classifier tests (oto.metrics.protocol, §R56.3).
+"""The invocation-form classifier tests (oto.metrics.measurement_protocol, §R56.3).
 
 Every case below is corpus-derived: the forms the classifier must separate are
 the ones the deck actually emits (family-wide spans, the §R50 iso AUTO_EXPLICIT
@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from oto.metrics.protocol import (
+from oto.metrics.measurement_protocol import (
     FAMILY,
     PARTIAL,
     SINGLE,

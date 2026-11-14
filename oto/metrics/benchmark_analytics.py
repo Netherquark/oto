@@ -8,7 +8,7 @@ classification (cell_status), plus the CSV seam itself: reading a benchmark CSV
 complex-is-8-bytes trap per docs/knowledge_base.md §8.1) and aggregating rows into
 per-cell seed lists.
 Does NOT own: the verdict threshold (oto.metrics.ab_audit), the report layout
-(oto.metrics.report), or the ceiling tables (`oto.device.loader.current_profile()`).
+(oto.metrics.acceptance_report), or the ceiling tables (`oto.device.loader.current_profile()`).
 Public API: AnalyticsEngine, CellAnalytics, extract_family_from_phase_id,
 resolve_cell_family, FAMILY_TO_DTYPE (re-exported), CLOCK_MIN_COVERAGE.
 """

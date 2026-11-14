@@ -10,7 +10,7 @@ import statistics
 import unittest
 
 import oto.metrics.ab_audit as ab_audit
-import oto.metrics.coverage as coverage
+import oto.metrics.cell_coverage as coverage
 
 
 def _proposal(family, shape, fp, outcome="functional", **kw):

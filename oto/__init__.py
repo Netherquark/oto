@@ -74,11 +74,11 @@ def __getattr__(name):
 
         return SQLiteRegistry
     if name == "AnalyticsEngine":
-        from .metrics.analytics import AnalyticsEngine
+        from .metrics.benchmark_analytics import AnalyticsEngine
 
         return AnalyticsEngine
     if name == "AcceptanceReporter":
-        from .metrics.report import AcceptanceReporter
+        from .metrics.acceptance_report import AcceptanceReporter
 
         return AcceptanceReporter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

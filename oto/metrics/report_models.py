@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from oto.metrics.analytics import CellAnalytics
+    from oto.metrics.benchmark_analytics import CellAnalytics
 
 
 @dataclass

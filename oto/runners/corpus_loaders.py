@@ -7,7 +7,7 @@ Owns: the three ways the corpus is read -- per-run CSV analytics
 (``_native_run_dirs`` / ``_native_analytics_all_runs`` / ``_native_records_all_runs``
 / ``_native_arm_provenance``). Also the retirement sweep that walks every run's
 CSVs and appends ``record_type="retire"`` rows (``_retire_stable_candidates``).
-Does NOT own: the aggregation itself (oto.metrics.analytics) or the report these
+Does NOT own: the aggregation itself (oto.metrics.benchmark_analytics) or the report these
 feed (reporting.py).
 Public API: CorpusMixin.
 """
@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
+from oto.metrics.benchmark_analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.cell_policy import check_retirement_eligibility
-from oto.metrics.protocol import classify
+from oto.metrics.measurement_protocol import classify
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes
 

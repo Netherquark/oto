@@ -34,7 +34,7 @@ from oto.ledger.mutator_outcomes import (
     MutatorOutcomesMixin,
     classify_outcome,
 )
-from oto.metrics.analytics import AnalyticsEngine
+from oto.metrics.benchmark_analytics import AnalyticsEngine
 from oto.tensile.legality import TEMPLATE_KEYS
 
 __all__ = [
@@ -313,7 +313,7 @@ class Mutator(MutatorOutcomesMixin):
             self._slow_bars = {}
             return self._slow_bars
         try:
-            from oto.metrics import coverage
+            from oto.metrics import cell_coverage as coverage
             resolved = coverage.reference_thresholds(self.base_dir)
             self._slow_bars = dict(resolved.get("bars") or {})
             self._slow_bands = {k: resolved.get(k) for k in

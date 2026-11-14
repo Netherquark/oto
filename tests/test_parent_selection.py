@@ -16,7 +16,7 @@ import pytest
 
 from oto.ledger.convergence_agent import ConvergenceAgent
 from oto.ledger.registry import SQLiteRegistry
-from oto.metrics.analytics import AnalyticsEngine
+from oto.metrics.benchmark_analytics import AnalyticsEngine
 
 # A steady cell: median ~13.1, tiny spread.
 STEADY = [13.2, 12.9, 13.1, 13.4, 13.0, 13.3, 13.1, 12.7]

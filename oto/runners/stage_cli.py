@@ -19,7 +19,7 @@ import sys
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.metrics.analytics import CellAnalytics
+from oto.metrics.benchmark_analytics import CellAnalytics
 from oto.runners import stage_flags as flags
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import runs_dir as _runs_dir

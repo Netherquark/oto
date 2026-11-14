@@ -7,7 +7,7 @@ Owns: per-family phase timing from registry started->ended pairs
 clock, reference-chain wall clock and busy minutes explicitly separate
 (``_compute_execution_timing``).
 Does NOT own: the registry rows it reads (oto.ledger.registry) or the report it
-is formatted for (oto.metrics.report).
+is formatted for (oto.metrics.acceptance_report).
 Public API: TimingMixin.
 """
 
@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 
 
 class TimingMixin:

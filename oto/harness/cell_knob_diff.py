@@ -6,7 +6,7 @@ knob delta -- read from the same kernel_db rows the acceptance report grades on,
 never from a benchmark run here.
 
 Does NOT own: producing kernel_db.json (oto.harness.kernel_db), the winner rule
-(oto.harness.regression_matrix), or the acceptance report (oto.metrics.report).
+(oto.harness.regression_matrix), or the acceptance report (oto.metrics.acceptance_report).
 
 Public API: main.
 

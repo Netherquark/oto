@@ -19,7 +19,7 @@ from typing import Any
 
 import oto.tensile.shipped_manifest as tlib
 from oto.device import loader as _loader
-from oto.metrics.analytics import CellAnalytics
+from oto.metrics.benchmark_analytics import CellAnalytics
 from oto.metrics.family_attribution import family_to_dtype
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport

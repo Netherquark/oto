@@ -4,9 +4,9 @@
 Owns: ``classify_cell_status`` -- which contractual cells are missing, which sit
 below half their realistic ceiling, and which are graded. A pure function of the
 analytics list.
-Does NOT own: the analytics themselves (oto.metrics.analytics), the ceilings they
+Does NOT own: the analytics themselves (oto.metrics.benchmark_analytics), the ceilings they
 are graded against (`oto.device.loader`), or the report layout
-(oto.metrics.report).
+(oto.metrics.acceptance_report).
 
 Acceptance-report colour mapping (moved here from design_language.md; the report
 renders each status with a Carbon support token, the status itself is decided
@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any
 from oto.device import loader as _loader
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from oto.metrics.analytics import CellAnalytics
+    from oto.metrics.benchmark_analytics import CellAnalytics
 
 
 class CellStatusMixin:

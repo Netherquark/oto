@@ -148,7 +148,7 @@ class TestExecutionTiming(StatusFixture):
         assert t["native_run"]["elapsed_human"] == "unknown"
 
     def test_summary_includes_execution_time(self):
-        from oto.metrics.report import ABVerdict, AcceptanceReporter
+        from oto.metrics.acceptance_report import ABVerdict, AcceptanceReporter
         r = AcceptanceReporter(self.base)
         v = [ABVerdict(dtype="S", shape="1024x1024x1024", fp="f",
                        native_median=1.0, spoof_median=1.0, delta_pct=0.0,
@@ -164,7 +164,7 @@ class TestExecutionTiming(StatusFixture):
 
     def test_timing_is_serialised_into_the_report_json(self):
         """family_timing used to be computed and then dropped on the floor."""
-        from oto.metrics.report import AcceptanceReporter
+        from oto.metrics.acceptance_report import AcceptanceReporter
         r = AcceptanceReporter(self.base)
         timing = {"native_run": {"elapsed_human": "3h", "elapsed_minutes": 180.0,
                                  "in_flight": False}}

@@ -5,7 +5,7 @@ Owns: the cross-run view -- winners across every run directory (not just the
 latest), the load width each arm actually reached, and the never-exercised
 knobs, because those are the three questions that decide what to run next.
 
-Does NOT own: the winners of one run's own phases (oto.metrics.analytics), the
+Does NOT own: the winners of one run's own phases (oto.metrics.benchmark_analytics), the
 acceptance verdicts (oto.metrics.ab_audit), or the registry it reads
 (oto.ledger.registry).
 
@@ -45,7 +45,7 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
 
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cube_side, dtype_to_family
-from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import runs_dir as _runs_dir
 

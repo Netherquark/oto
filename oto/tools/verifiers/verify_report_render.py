@@ -27,7 +27,7 @@ from pathlib import Path
 ROOT_MAIN = {main_root!r}
 sys.path.insert(0, {tree!r})
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
-from oto.metrics.report import AcceptanceReporter
+from oto.metrics.acceptance_report import AcceptanceReporter
 payload = json.loads(Path({payload_path!r}).read_text())
 _abv = list(ABVerdict.__dataclass_fields__)
 ver = [ABVerdict(**{{k: v.get(k) for k in _abv if k in v}}) for v in payload.get("per_cell_verdicts") or [] if isinstance(v, dict)]
@@ -73,7 +73,7 @@ def build_report(payload_bytes: bytes):
 
 
 def render(report, html_path: Path) -> bytes:
-    from oto.metrics.report import AcceptanceReporter
+    from oto.metrics.acceptance_report import AcceptanceReporter
 
     AcceptanceReporter(ROOT).write_html_report(report, html_path)
     return html_path.read_bytes()

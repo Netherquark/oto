@@ -12,7 +12,7 @@ from unittest import mock
 
 import yaml
 
-import oto.metrics.coverage as coverage
+import oto.metrics.cell_coverage as coverage
 from oto.ledger.mutator import Mutator
 from oto.runners.paths import results_rel
 from oto.tensile.candidate import CandidateConfig
@@ -185,7 +185,7 @@ class AgentWiringTests(unittest.TestCase):
 
         from oto.ledger.mutator import Mutator
         from oto.ledger.registry import SQLiteRegistry
-        from oto.metrics.analytics import AnalyticsEngine
+        from oto.metrics.benchmark_analytics import AnalyticsEngine
 
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_p4_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)

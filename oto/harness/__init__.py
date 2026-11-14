@@ -15,7 +15,7 @@ Owns: nothing at import time — this package holds no logic, only the docstring
 of the modules underneath it.
 Does NOT own: the modules themselves (each carries its own), the run corpus
 they read (<codename>_runs/), or the acceptance report they cite
-(oto.metrics.report).
+(oto.metrics.acceptance_report).
 Public API: none at import time; the module names live in ``__all__``, and the
 public names each one exposes are in its own docstring.
 

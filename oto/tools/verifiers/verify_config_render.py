@@ -119,11 +119,11 @@ LIFT = {
     "from library_parity import load_pipeline_phases, parity_report":
         "from oto.tensile.library_parity import load_pipeline_phases, parity_report",
     "from analytics import extract_family_from_phase_id":
-        "from oto.metrics.analytics import extract_family_from_phase_id",
+        "from oto.metrics.benchmark_analytics import extract_family_from_phase_id",
     "from policy import check_retirement_eligibility":
         "from oto.metrics.cell_policy import check_retirement_eligibility",
     "from report import ABVerdict":
-        "from oto.metrics.report import ABVerdict",
+        "from oto.metrics.acceptance_report import ABVerdict",
 }
 
 
@@ -145,11 +145,11 @@ def load_legacy(base: str):
         sys.modules.pop(name, None)
     for old, new in (("registry", "oto.ledger.registry"),
                      ("scheduler", "oto.tensile.candidate"),
-                     ("analytics", "oto.metrics.analytics"),
+                     ("analytics", "oto.metrics.benchmark_analytics"),
                      ("policy", "oto.metrics.cell_policy"),
                      ("agent", "oto.ledger.convergence_agent"),
                      ("mutator", "oto.ledger.mutator"),
-                     ("report", "oto.metrics.report"),
+                     ("report", "oto.metrics.acceptance_report"),
                      ("telemetry", "oto.metrics.telemetry"),
                      ("library_parity", "oto.tensile.library_parity")):
         sys.modules[old] = __import__(new, fromlist=["*"])

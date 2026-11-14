@@ -6,7 +6,7 @@ Owns: ``aggregate_cell`` (the one median/spread definition every consumer shares
 and its `force` override), and ``check_retirement_eligibility``.
 
 Does NOT own: the run loop (oto.runners.phases), the ledger it reads
-(oto.ledger.registry), or the report it feeds (oto.metrics.report).
+(oto.ledger.registry), or the report it feeds (oto.metrics.acceptance_report).
 
 Public API: aggregate_cell, should_run, check_retirement_eligibility.
 """

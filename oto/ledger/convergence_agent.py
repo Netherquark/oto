@@ -22,8 +22,8 @@ from oto.device.kernel_vocabulary import cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.agent_mutation import MutateMixin
 from oto.ledger.harvest import HarvestMixin
-from oto.metrics import coverage
-from oto.metrics.analytics import AnalyticsEngine, CellAnalytics
+from oto.metrics import cell_coverage as coverage
+from oto.metrics.benchmark_analytics import AnalyticsEngine, CellAnalytics
 from oto.tensile.candidate import CandidateGenerator
 
 

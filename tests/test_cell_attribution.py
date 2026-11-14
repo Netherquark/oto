@@ -25,7 +25,7 @@ from oto.device.kernel_vocabulary import (
     family_from_kernel_name,
     kernel_typecode,
 )
-from oto.metrics.analytics import (
+from oto.metrics.benchmark_analytics import (
     extract_family_from_phase_id,
     resolve_cell_family,
 )
@@ -144,7 +144,7 @@ def test_unattributable_returns_empty() -> None:
 def test_aggregate_by_cell_typecode_partitions_by_kernel() -> None:
     from pathlib import Path
 
-    from oto.metrics.analytics import AnalyticsEngine
+    from oto.metrics.benchmark_analytics import AnalyticsEngine
 
     engine = AnalyticsEngine(registry=None, base_dir=Path("."))
     records = [

@@ -8,7 +8,7 @@ differences is signal.
 
 Does NOT own: the winner rule it shares with resolve_cells
 (oto.harness.cell_resolver), the shipped grid itself (oto.tensile.library_parity),
-or the acceptance report (oto.metrics.report).
+or the acceptance report (oto.metrics.acceptance_report).
 
 Public API: main, build_matrix.
 

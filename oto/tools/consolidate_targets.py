@@ -16,7 +16,7 @@ from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cell_key
 from oto.metrics.ab_audit import BASE as _AB_BASE
 from oto.metrics.ab_identity import _driver
-from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 

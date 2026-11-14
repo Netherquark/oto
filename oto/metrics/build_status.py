@@ -26,7 +26,6 @@ from oto.metrics.ledger_state import (
     _tally_chain,
     _tier_rows,
 )
-from oto.metrics.read_thermals import read_thermals
 from oto.metrics.run_plan import (
     Estimate,
     PhaseCost,
@@ -34,7 +33,8 @@ from oto.metrics.run_plan import (
     _reference_unit_count,
     _tuning_unit_count,
 )
-from oto.metrics.status_common import _jittery
+from oto.metrics.status_helpers import _jittery
+from oto.metrics.thermal_telemetry import read_thermals
 from oto.runners.paths import runs_dir as _runs_dir
 
 

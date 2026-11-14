@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from oto.metrics.analytics import AnalyticsEngine
+from oto.metrics.benchmark_analytics import AnalyticsEngine
 
 #: Outcome vocabulary. Terminal values may only be written to a pending row, and
 #: the set of them is the classifier's contract with the mutator.

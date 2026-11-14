@@ -283,7 +283,7 @@ class TestNoDoubleCounting(unittest.TestCase):
     def _delta(self, native, spoof, sclk_by_gkey, sclk_ref):
         import tempfile
 
-        from oto.metrics.analytics import AnalyticsEngine
+        from oto.metrics.benchmark_analytics import AnalyticsEngine
         # registry/base_dir are only used by the analysis passes above this one;
         # the delta comparison reads nothing from either.
         with tempfile.TemporaryDirectory() as tmp:
@@ -355,7 +355,7 @@ class TestNoDoubleCounting(unittest.TestCase):
         """
         import inspect
 
-        from oto.metrics.analytics import AnalyticsEngine
+        from oto.metrics.benchmark_analytics import AnalyticsEngine
         params = inspect.signature(
             AnalyticsEngine.compute_native_vs_spoof_delta).parameters
         assert "sclk_by_phase" in params

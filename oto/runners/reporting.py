@@ -6,7 +6,7 @@ analytics + family/execution timing + A/B verdicts + provenance -> the reporter'
 payload, written into the run dir and the canonical base-dir location), and the
 two record builders that make the arms comparable (``_ab_records_from_csv`` /
 ``_ab_records_from_registry``) plus ``_compute_ab_verdicts``, which pairs them.
-Does NOT own: the verdict model (oto.metrics.report / oto.metrics.ab_audit), the
+Does NOT own: the verdict model (oto.metrics.acceptance_report / oto.metrics.ab_audit), the
 clocks verdicts are scaled by (clocks.py), or the corpus readers
 (analytics_loaders.py).
 Public API: ReportingMixin.
@@ -20,10 +20,10 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cell_key, kernel_key
-from oto.metrics.analytics import extract_family_from_phase_id
+from oto.metrics.acceptance_report import ABVerdict
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 from oto.metrics.cell_policy import aggregate_cell
-from oto.metrics.protocol import UNKNOWN, classify
-from oto.metrics.report import ABVerdict
+from oto.metrics.measurement_protocol import UNKNOWN, classify
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes

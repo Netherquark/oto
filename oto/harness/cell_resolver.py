@@ -8,7 +8,7 @@ then the kernel_db structural row); and the mechanical ``cfg_gap`` between the
 native winner's config and the floor's (identical / near / retile / no-floor).
 
 Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
-report itself (oto.metrics.report), the kernel_db it falls back to
+report itself (oto.metrics.acceptance_report), the kernel_db it falls back to
 (oto.harness.kernel_db), or the *reading* of ``cfg_gap`` as a tie taxonomy and
 the routes it implies (docs/potential_configs.md §R17-§R18).
 

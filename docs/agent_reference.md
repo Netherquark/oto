@@ -261,7 +261,7 @@ import json, sys
 from pathlib import Path
 sys.path.insert(0, '.')
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
-from oto.metrics.report import AcceptanceReporter
+from oto.metrics.acceptance_report import AcceptanceReporter
 run = Path('gfx90c_runs/run_...')  # the run ID
 payload = json.loads((run / 'acceptance_report.json').read_text())
 payload['per_cell_verdicts'] = [ABVerdict(**v) for v in payload.get('per_cell_verdicts', [])]

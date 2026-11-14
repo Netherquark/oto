@@ -10,7 +10,7 @@ destination. Also owns the per-cell provenance manifest and the parity /
 anti-alias gates.
 
 Does NOT own: the kernel database (oto.harness.kernel_db), the protocol stamp
-(oto.metrics.protocol), the launch gates (oto.tensile.gates), or the Tensile
+(oto.metrics.measurement_protocol), the launch gates (oto.tensile.gates), or the Tensile
 environment (oto.runners.toolchain).
 
 Public API: ``cell_solution_map``, ``dedupe_configs``, ``emit_logic_yaml``,
@@ -31,7 +31,7 @@ import yaml
 from oto.device import loader as _loader
 from oto.harness.coverage_map import _cell_family
 from oto.harness.kernel_db import read_kernel_db
-from oto.metrics.protocol import UNKNOWN, protocol_of
+from oto.metrics.measurement_protocol import UNKNOWN, protocol_of
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
 from oto.tensile.library_parity import parity_report

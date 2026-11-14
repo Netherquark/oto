@@ -8,7 +8,7 @@ reference clock -- and ``cells_not_beating_floor`` (the same pairing, reduced to
 the set of cells the port has not yet won). Both grade like-for-like (§R56.3):
 ``protocol_basis="family"`` admits only records whose invocation form matches
 across arms; cross-form evidence is carried as provenance fields, never graded.
-Does NOT own: the records it is fed (oto.metrics.analytics), the clocks (oto.runners.clocks), or the verdict threshold (oto.metrics.ab_audit).
+Does NOT own: the records it is fed (oto.metrics.benchmark_analytics), the clocks (oto.runners.clocks), or the verdict threshold (oto.metrics.ab_audit).
 Public API: ABDeltaMixin."""
 
 from __future__ import annotations
@@ -20,17 +20,17 @@ from typing import Any
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import cube_side
 from oto.metrics.family_attribution import resolve_cell_family
-from oto.metrics.protocol import SINGLE, protocol_of
+from oto.metrics.measurement_protocol import SINGLE, protocol_of
 
 #: The coverage floor lives with the engine that aggregates coverage
-#: (oto.metrics.analytics); imported at call time to keep this module free of a
+#: (oto.metrics.benchmark_analytics); imported at call time to keep this module free of a
 #: circular import with it.
 CLOCK_MIN_COVERAGE = None
 
 
 def _coverage_floor() -> float:
     """The minimum clock coverage a cell needs before it may be clock-adjusted."""
-    from oto.metrics.analytics import CLOCK_MIN_COVERAGE
+    from oto.metrics.benchmark_analytics import CLOCK_MIN_COVERAGE
     return CLOCK_MIN_COVERAGE
 
 

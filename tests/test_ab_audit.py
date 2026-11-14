@@ -175,7 +175,7 @@ class TestCellsNotBeatingFloor(unittest.TestCase):
         import tempfile
 
         from oto.ledger.registry import SQLiteRegistry
-        from oto.metrics.analytics import AnalyticsEngine
+        from oto.metrics.benchmark_analytics import AnalyticsEngine
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_abdelta_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.engine = AnalyticsEngine(SQLiteRegistry(self.tmp), self.tmp)
@@ -217,7 +217,7 @@ class TestLikeForLikeBasis(unittest.TestCase):
         import tempfile
 
         from oto.ledger.registry import SQLiteRegistry
-        from oto.metrics.analytics import AnalyticsEngine
+        from oto.metrics.benchmark_analytics import AnalyticsEngine
         self.tmp = Path(tempfile.mkdtemp(prefix="oto_l4l_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.engine = AnalyticsEngine(SQLiteRegistry(self.tmp), self.tmp)

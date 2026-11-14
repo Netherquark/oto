@@ -57,7 +57,7 @@ for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):
 from oto.device import loader as _loader
 from oto.device.kernel_vocabulary import family_from_kernel_name, kernel_typecode
 from oto.metrics.family_attribution import extract_family_from_phase_id
-from oto.metrics.protocol import classify_count, problem_count_text
+from oto.metrics.measurement_protocol import classify_count, problem_count_text
 from oto.runners.paths import results_rel
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -109,7 +109,7 @@ def parse_config(yaml_path: str) -> dict[str, Any]:
     Also reads the INTENDED PROBLEM COUNT (the number of ``- Exact:`` rows,
     i.e. how large an invocation the phase declared) as ``ProblemSizesCount``:
     that count plus the CSV's measured sides is what the invocation-form
-    classifier (oto.metrics.protocol) stamps per row (§R56.3).
+    classifier (oto.metrics.measurement_protocol) stamps per row (§R56.3).
     Returns {} on any read failure; callers fall back to their run-level
     default config.
     """

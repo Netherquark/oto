@@ -12,7 +12,7 @@ import random
 import unittest
 from pathlib import Path
 
-import oto.metrics.coverage as coverage
+import oto.metrics.cell_coverage as coverage
 import oto.tensile.legality as legality
 import oto.tensile.synthesis.manifest as synthesis
 from oto.device import loader as _loader

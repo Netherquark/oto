@@ -46,7 +46,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.metrics.coverage import decide_state
+from oto.metrics.cell_coverage import decide_state
 from oto.tensile import legality
 
 # ALL_GROUPS / TEMPLATE_KEYS / reconcile_tile / tile_product_holds are imported

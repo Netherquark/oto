@@ -6,7 +6,7 @@ Owns: ``audit`` (classify every cell in both arms with a certainty grade),
 (Option-H Phase-3 coverage from the ledger), ``print_report`` and ``main``.
 Does NOT own: the record loading (oto.metrics.ab_records), the identity
 (oto.metrics.ab_identity), the band (oto.metrics.ab_band), or the report layout
-(oto.metrics.report).
+(oto.metrics.acceptance_report).
 Public API: BASE, TIE_BAND_PCT, BAND_LO, BAND_HI, audit, cell_deltas,
 measured_band, verdict, arm_record_sets, reproducible_band, repeat_dispersion,
 phase_records, arm_records, phase_family, norm_config, main (re-exports).
@@ -38,8 +38,8 @@ from oto.metrics.ab_records import (
     phase_family,
     phase_records,
 )
-from oto.metrics.analytics import extract_family_from_phase_id
-from oto.metrics.protocol import UNKNOWN, like_for_like, protocol_of
+from oto.metrics.benchmark_analytics import extract_family_from_phase_id
+from oto.metrics.measurement_protocol import UNKNOWN, like_for_like, protocol_of
 from oto.runners.paths import results_dir as _results_dir
 
 BASE = Path(__file__).resolve().parents[2]
@@ -284,7 +284,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) 
     """
     try:
         from oto.ledger.registry import SQLiteRegistry
-        from oto.metrics.coverage import coverage_from_registry
+        from oto.metrics.cell_coverage import coverage_from_registry
         db = _results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db"
         if not db.exists():
             return {"available": False, "reason": "no registry.db"}

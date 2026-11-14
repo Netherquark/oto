@@ -195,7 +195,7 @@ class TestProvisionalFloorIsLabelled:
     """An unfinished floor must not produce a report that reads as final."""
 
     def test_summary_is_marked_provisional(self, tmp_path):
-        from oto.metrics.report import AcceptanceReporter
+        from oto.metrics.acceptance_report import AcceptanceReporter
         rep = AcceptanceReporter(tmp_path)
         report = rep.generate_acceptance_report(
             run_id="r1", ab_verdicts=[], all_analytics=[], red_list=[],
@@ -208,7 +208,7 @@ class TestProvisionalFloorIsLabelled:
         assert not report.reference_floor_authoritative
 
     def test_complete_floor_summary_is_unchanged(self, tmp_path):
-        from oto.metrics.report import AcceptanceReporter
+        from oto.metrics.acceptance_report import AcceptanceReporter
         rep = AcceptanceReporter(tmp_path)
         report = rep.generate_acceptance_report(
             run_id="r1", ab_verdicts=[], all_analytics=[], red_list=[],

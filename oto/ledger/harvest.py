@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, Any
 from oto import yaml_cached as yamlio
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from oto.metrics.analytics import CellAnalytics
+    from oto.metrics.benchmark_analytics import CellAnalytics
 
 
-from oto.metrics import coverage
+from oto.metrics import cell_coverage as coverage
 
 
 class HarvestMixin:

@@ -27,8 +27,8 @@ from oto.device.kernel_vocabulary import cell_key, kernel_key
 from oto.ledger.convergence_agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
-from oto.metrics.analytics import AnalyticsEngine
-from oto.metrics.report import AcceptanceReporter
+from oto.metrics.acceptance_report import AcceptanceReporter
+from oto.metrics.benchmark_analytics import AnalyticsEngine
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
 from oto.runners import auto as _auto
 from oto.runners import benchmark as _benchmark

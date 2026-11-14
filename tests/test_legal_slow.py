@@ -33,7 +33,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import oto.metrics.coverage as coverage
+import oto.metrics.cell_coverage as coverage
 from oto.ledger.mutator import (
     OUTCOME_FUNCTIONAL,
     OUTCOME_LEGAL_SLOW,
@@ -41,7 +41,7 @@ from oto.ledger.mutator import (
     classify_outcome,
 )
 from oto.ledger.registry import SQLiteRegistry
-from oto.metrics.analytics import AnalyticsEngine
+from oto.metrics.benchmark_analytics import AnalyticsEngine
 
 REPO = Path(__file__).resolve().parent.parent
 
