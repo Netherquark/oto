@@ -27,6 +27,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.device import loader as _loader
+
 _profile = _loader.current_profile()
 from oto.harness import asm_occupancy as ao
 

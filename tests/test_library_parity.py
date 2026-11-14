@@ -23,7 +23,8 @@ sys.path.insert(0, str(REPO))
 
 import yaml
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES, cube_side
+from oto.device import loader as _loader
+from oto.device.vocabulary import cube_side
 from oto.tensile.library_parity import (
     load_pipeline_phases,
     parity_report,
@@ -38,13 +39,13 @@ SEED_DOC = yaml.safe_load(
 SEED = list(SEED_DOC["phases"].values()) if isinstance(
     SEED_DOC.get("phases"), dict) else SEED_DOC["phases"]
 
-GRID_TOTAL = sum(len(v) for v in FAMILY_SHAPES.values())
+GRID_TOTAL = sum(len(v) for v in _loader.current_profile().family_shapes.values())
 
 
 def _phase(phase_id, family, shapes, config=None):
     return {
         "phase_id": phase_id,
-        "config": config or {"FamilyLabel": family, "DataType": FAMILY_DTYPE_CHAR[family]},
+        "config": config or {"FamilyLabel": family, "DataType": _loader.current_profile().family_dtype_char[family]},
         "shapes": shapes,
     }
 
@@ -54,10 +55,10 @@ class TestShippedGrid:
         assert GRID_TOTAL == 38
 
     def test_grid_uses_cube_shapes(self):
-        from oto.device.peaks import shipped_cell_set
+        from oto.device.vocabulary import shipped_cell_set
         for family, shape in shipped_cell_set():
             assert cube_side(shape) is not None
-            assert int(shape.split("x")[0]) in FAMILY_SHAPES[family]
+            assert int(shape.split("x")[0]) in _loader.current_profile().family_shapes[family]
 
 
 class TestDeckParity:
@@ -76,7 +77,7 @@ class TestDeckParity:
         assert len(phases_cells(DECK)) == GRID_TOTAL
 
     def test_families_carry_correct_dtype_char(self):
-        from oto.device.peaks import shipped_cell_set
+        from oto.device.vocabulary import shipped_cell_set
         grid = shipped_cell_set()
         for family, shape in phases_cells(DECK):
             assert (family, shape) in grid
@@ -86,7 +87,7 @@ class TestSeedOverlayParity:
     def test_seed_only_extends_within_grid(self):
         for family, shape in phases_cells(SEED):
             assert (family, shape) in {
-                (f, s) for f, ss in FAMILY_SHAPES.items() for s in
+                (f, s) for f, ss in _loader.current_profile().family_shapes.items() for s in
                 (f"{side}x{side}x{side}" for side in ss)}
 
     def test_seed_does_not_shrink_deck(self):

@@ -35,8 +35,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -110,7 +110,7 @@ def _read_counts(base_dir: Any = None) -> dict[str, int]:
     counts = {"illegal": 0, "underspecified": 0, "unreproducible": 0}
     try:
         import sqlite3
-        db = sqlite3.connect(_results_dir(base, _peaks.CODENAME) / "registry.db")
+        db = sqlite3.connect(_results_dir(base, _loader.current_profile().codename) / "registry.db")
         chain = [r[0] for r in db.execute(
             "select run_id from runs where run_id like 'gfx900_ref%' order by run_id")]
     except Exception:
@@ -118,7 +118,7 @@ def _read_counts(base_dir: Any = None) -> dict[str, int]:
 
     universe: dict[str, Any] = {}
     for rid in chain:
-        p = _runs_dir(base, _peaks.CODENAME) / rid / "phases_reference.yaml"
+        p = _runs_dir(base, _loader.current_profile().codename) / rid / "phases_reference.yaml"
         try:
             for ph in yamlio.load_yaml(p) or []:
                 universe.setdefault(tlib.phase_key(ph), ph)

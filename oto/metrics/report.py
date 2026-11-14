@@ -17,15 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 import oto.tensile.library as tlib
-from oto.device.peaks import (
-    FAMILY_DTYPES,
-    FAMILY_SHAPES,
-    PEAK_GFLOPS,
-    REALISTIC_CEILINGS,
-    THEORETICAL_PEAKS,
-)
+from oto.device import loader as _loader
 from oto.metrics.analytics import FAMILY_TO_DTYPE, CellAnalytics
 from oto.metrics.report_html import HtmlMixin
 from oto.metrics.report_models import ABVerdict, AcceptanceReport
@@ -108,7 +101,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             overall_pass=overall_pass,
             summary=summary,
             all_analytics=all_analytics,
-            run_dir=str(_runs_dir(self.base_dir, _peaks.CODENAME) / run_id) if self.base_dir else None,
+            run_dir=str(_runs_dir(self.base_dir, _loader.current_profile().codename) / run_id) if self.base_dir else None,
             family_timing=family_timing,
             execution_timing=execution_timing,
             orange_list=orange_list,
@@ -170,7 +163,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         """
         Compute per-family coverage of the gfx900 contract deck.
 
-        The contract deck is each family's canonical FAMILY_SHAPES cube grid
+        The contract deck is each family's canonical _loader.current_profile().family_shapes cube grid
         (the cells the acceptance report classifies RED/ORANGE/GREEN).
         Numerator = distinct *deck cells* measured; denominator = len(deck).
         The shipped gfx900 footprint (expected_kernels from the pinned dat
@@ -207,13 +200,13 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         # cell and reported 2749 GFLOPS as "170% of the HPA ceiling".
         family_cells = self._family_cells(all_analytics, family, fam_lower, short)
 
-        ceiling = REALISTIC_CEILINGS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
-        theoretical = THEORETICAL_PEAKS.get(family, PEAK_GFLOPS.get(FAMILY_DTYPES.get(family, "FP32"), 1613.0))
+        ceiling = _loader.current_profile().realistic_ceilings.get(family, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(family, "FP32"), 1613.0))
+        theoretical = _loader.current_profile().theoretical_peaks.get(family, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(family, "FP32"), 1613.0))
         best_median = max([a.median_gflops for a in family_cells]) if family_cells else 0.0
 
         # Contract deck: distinct family deck shapes measured (the cells the
         # acceptance grid classifies), distinct from the config-cell count.
-        deck_sizes = FAMILY_SHAPES.get(family, [])
+        deck_sizes = _loader.current_profile().family_shapes.get(family, [])
         deck_shapes = {f"{s}x{s}x{s}" for s in deck_sizes}
         measured_shapes = {a.shape for a in family_cells}
         deck_cells_measured = len(measured_shapes & deck_shapes)
@@ -326,7 +319,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     def write_report(self, report: AcceptanceReport, output_path: Path | None = None) -> None:
         """Write acceptance report to JSON and HTML files."""
         if output_path is None:
-            output_path = _results_dir(self.base_dir, _peaks.CODENAME) / "acceptance_report.json"
+            output_path = _results_dir(self.base_dir, _loader.current_profile().codename) / "acceptance_report.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         report_dict = {

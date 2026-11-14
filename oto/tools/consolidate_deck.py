@@ -13,9 +13,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
-from oto.device.peaks import cell_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key
 from oto.metrics.ab_audit import (
     BASE as _AB_BASE,
 )
@@ -47,7 +47,7 @@ def measured_index(base: Path = BASE) -> dict[tuple[str, str], dict[str, Any]]:
     drv = _driver(base)
     per: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for run in native_runs(base):
-        for rec in phase_records(drv, _runs_dir(base, _peaks.CODENAME) / run, "native"):
+        for rec in phase_records(drv, _runs_dir(base, _loader.current_profile().codename) / run, "native"):
             key = rec.get("cell_key") or cell_key(
                 extract_family_from_phase_id(rec["phase_id"]), rec["ProblemType"])
             if not key:
@@ -119,7 +119,7 @@ def dtype_bytes(char: str) -> int | None:
 
     ``Tensile.DataType.DataType.properties`` is the authority: numBytes() is
     reg * 4. It is read here rather than from the modelled tables
-    (``oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT`` and
+    (``oto.tensile.gates.vgpr_model._loader.current_profile().family_bytes_per_element`` and
     ``oto.tensile.gates.loads.LOAD_DTYPE_INFO``) because this gate exists to
     cross-check those models rather than to copy them. The load gate's ``Z`` row
     once carried ComplexFloat's 8 bytes for complex double, which let VectorWidth
@@ -160,7 +160,6 @@ def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     """
     cfg = phase.get("config") or {}
     try:
-        from oto.device import loader as _loader
         from oto.tensile.gates.assembly import assembly_class_valid
         from oto.tensile.gates.occupancy import occupancy_feasible
     except Exception as exc:                       # pragma: no cover

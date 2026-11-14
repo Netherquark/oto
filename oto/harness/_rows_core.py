@@ -19,13 +19,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from oto.device.peaks import FAMILY_CELLS, FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.tensile.config_writer import NOT_FORWARDED_KNOBS
 
 #: Family label -> the Tensile dtype char, for the generated config's
-#: ``DataType``. An alias of ``FAMILY_DTYPE_CHAR`` kept because the
+#: ``DataType``. An alias of ``oto.device.loader.current_profile().family_dtype_char``
 #: generated rows are read alongside that name.
-FAMILY_DTYPE = FAMILY_DTYPE_CHAR
+FAMILY_DTYPE = _loader.current_profile().family_dtype_char
 
 # --- per-family tile ladders ------------------------------------------------
 # (MacroTile, ThreadTile) pairs are validated by the occupancy gate below; the
@@ -161,9 +161,9 @@ PATTERNS = {
 # candidate for that cell is never measured. DD's 768/1024/1365 and HH's 4096
 # tie the floor but were absent, so no DD/HH row emitted here reached them.
 # 2026-10-23 (§R56.3-A): the list itself moved to the device contract
-# vocabulary (oto.device.peaks FAMILY_CELLS) so the deck and the like-for-like
+# vocabulary (``family_cells`` from the profile) so the deck and the like-for-like
 # protocol classifier share one definition; the export name stays TARGET_CELLS.
-TARGET_CELLS = dict(FAMILY_CELLS)
+TARGET_CELLS = dict(_loader.current_profile().family_cells)
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
 NARROW_NEIGHBOURS: dict[str, dict[str, list[Any]]] = {
@@ -215,7 +215,7 @@ AUTO_EXPLICIT: dict[str, list[dict[str, Any]]] = {
 #     K-slice (128x128x8/VW4 has NumLoads=1, so NLCA>1 is refused there).
 # ZZ pads sit on the du8 winner geometry only: the ZZ:128/256/512 winner tile
 # 32x32x16 is LDS-budget-full at the truthful 16 B/element (ZZ:16 per
-# FAMILY_BYTES_PER_ELEMENT), so even pad 1 would overflow the 16 KB/WG budget.
+# ``family_bytes_per_element``), so even pad 1 would overflow the 16 KB/WG budget.
 # HH GSU2 stays banned here as everywhere (§13.4); HH wave-fill runs through
 # the 64x64 alternates that TARGET_CELLS now includes for HH:256.
 PLAN_BATCH: list[dict[str, Any]] = [

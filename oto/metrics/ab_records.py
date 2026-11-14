@@ -18,8 +18,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import kernel_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import kernel_key
 from oto.metrics.ab_identity import _driver, _resolved_config, norm_config
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.metrics.policy import aggregate_cell
@@ -178,7 +178,7 @@ def arm_records(driver, runs: Iterable[str], arm: str,
     """Records for a set of runs, classified wholly as one arm."""
     recs: list[dict[str, Any]] = []
     for run in runs:
-        recs.extend(phase_records(driver, _runs_dir(base, _peaks.CODENAME) / run, arm))
+        recs.extend(phase_records(driver, _runs_dir(base, _loader.current_profile().codename) / run, arm))
     return recs
 
 #: The last computed record sets, keyed by the corpus stamp. The corpus walk
@@ -197,14 +197,14 @@ def _corpus_stamp(base: Path) -> tuple[Any, ...]:
     Returns:
         (base, run count, newest run mtime, registry size and mtime).
     """
-    runs = [d for d in (_runs_dir(base, _peaks.CODENAME)).glob("run_*") if d.is_dir()]
+    runs = [d for d in (_runs_dir(base, _loader.current_profile().codename)).glob("run_*") if d.is_dir()]
     newest = 0.0
     for run in runs:
         try:
             newest = max(newest, run.stat().st_mtime)
         except OSError:
             continue
-    db = _results_dir(base, _peaks.CODENAME) / "registry.db"
+    db = _results_dir(base, _loader.current_profile().codename) / "registry.db"
     try:
         stat = db.stat()
         db_stamp: tuple[Any, ...] = (stat.st_size, stat.st_mtime)
@@ -237,11 +237,11 @@ def arm_record_sets(base: Path = BASE) -> tuple[list[dict[str, Any]],
     driver = _driver(base)
     native = arm_records(
         driver,
-        [d.name for d in sorted((_runs_dir(base, _peaks.CODENAME)).glob("run_*")) if d.is_dir()],
+        [d.name for d in sorted((_runs_dir(base, _loader.current_profile().codename)).glob("run_*")) if d.is_dir()],
         "native", base)
     native += _registry_records(driver, base, want_arm="native")
     chain = [r for r in driver._reference_floor_runs(None)
-             if (_runs_dir(base, _peaks.CODENAME) / r).is_dir()]
+             if (_runs_dir(base, _loader.current_profile().codename) / r).is_dir()]
     floor = arm_records(driver, chain, "spoof", base)
     floor += _registry_records(driver, base, want_arm="spoof")
     if len(_RECORD_SETS_CACHE) > 4:

@@ -41,11 +41,10 @@ from collections.abc import Iterable
 from pathlib import Path
 from statistics import median
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir
 from oto.tensile.gates.vgpr_model import (
     BYTES_PER_ELEMENT,
-    FAMILY_BYTES_PER_ELEMENT,
     MEASURED_VGPR_BY_DTYPE,
 )
 
@@ -96,15 +95,15 @@ def _bounds(row: dict, lds_factor: int) -> tuple[int, int, int, int, str, dict] 
     if wg_threads <= 0:
         wg_threads = 256
     ku = ku[0] if ku else 8
-    bpe = FAMILY_BYTES_PER_ELEMENT.get(fam) or BYTES_PER_ELEMENT.get(ch, 1)
+    bpe = _loader.current_profile().family_bytes_per_element.get(fam) or BYTES_PER_ELEMENT.get(ch, 1)
     measured = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt[0], tt[1]))
     if measured is None:
         return None
     lds_base = (mt[0] + mt[1]) * bpe * ku
-    lds_bound = max(1, (_peaks.LDS_PER_CU_KB * 1024) // (max(1, lds_base) * lds_factor))
-    vgpr_bound = max(1, _peaks.VGPR_PER_CU // (wg_threads * measured))
+    lds_bound = max(1, (_loader.current_profile().lds_per_cu_kb * 1024) // (max(1, lds_base) * lds_factor))
+    vgpr_bound = max(1, _loader.current_profile().vgpr_per_cu // (wg_threads * measured))
     waves_per_wg = max(1, wg_threads // 64)
-    wave_bound = max(1, _peaks.MAX_WAVES_PER_CU // waves_per_wg)
+    wave_bound = max(1, _loader.current_profile().max_waves_per_cu // waves_per_wg)
     resident = min(lds_bound, vgpr_bound, wave_bound)
     binder = ("LDS" if lds_bound == resident else
               "VGPR" if vgpr_bound == resident else "waves")
@@ -143,7 +142,7 @@ def _audit(rows_iter: Iterable[dict], lds_factor: int) -> list[dict]:
             "lds_bound": lds, "vgpr_bound": vgp, "wave_bound": wav,
             "resident": res, "binder": binder,
             "waves_per_cu": waves_cu,
-            "pct_of_40": waves_cu / _peaks.MAX_WAVES_PER_CU * 100,
+            "pct_of_40": waves_cu / _loader.current_profile().max_waves_per_cu * 100,
             "median_gflops": row.get("gflops_median") or 0,
         })
     return out
@@ -163,7 +162,7 @@ def main() -> int:
     args = ap.parse_args()
 
     base = args.base_dir or Path(__file__).resolve().parents[2]
-    db_path = results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
+    db_path = results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
     with open(db_path) as f:
         db = json.load(f)
     if args.side == "floor":
@@ -205,7 +204,7 @@ def main() -> int:
     print(f"\nresident wg/CU: min={min(res)} median={median(res)} max={max(res)}")
     print(f"cells at <=3 resident wg/CU: {len(low)} / {len(cells)}")
     print(f"waves/CU: min={min(waves)} median={median(waves)} max={max(waves)}"
-          f" (budget {_peaks.MAX_WAVES_PER_CU}/CU)")
+          f" (budget {_loader.current_profile().max_waves_per_cu}/CU)")
     print(f"binding resource tally: {dict(binders)}")
     return 0
 

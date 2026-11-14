@@ -43,8 +43,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir
 
 CONFIG_KEYS = ("MacroTile", "ThreadTile", "WorkGroup", "GlobalSplitU",
@@ -220,7 +220,7 @@ def build_matrix(db_path: str, base_dir: str,
     construction. Rows are admitted under the like-for-like rule
     (`protocol='family'`) unless ``any_protocol=True``.
     """
-    from oto.device.peaks import shipped_cell_set
+    from oto.device.vocabulary import shipped_cell_set
     from oto.harness.kernel_db import load_kernel_db
     from oto.tensile.library_parity import phase_family
 
@@ -305,7 +305,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     base = args.base_dir or str(Path(__file__).resolve().parents[2])
-    res_dir = results_dir(base, _peaks.CODENAME)
+    res_dir = results_dir(base, _loader.current_profile().codename)
     db_path = args.db or res_dir / "analysis" / "kernel_db.json"
     json_path = (Path(args.json) if args.json
                  else res_dir / "analysis" / "regression_matrix.json")

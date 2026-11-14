@@ -35,7 +35,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
@@ -136,7 +136,6 @@ def _emit_baselines(
     shapes: list[str],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit baseline tiles for each family/shape."""
-    from oto.device.peaks import FAMILY_DTYPE_CHAR
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
@@ -145,8 +144,8 @@ def _emit_baselines(
             for pattern in patterns:
                 for shape in shapes:
                     template = {
-                        "Architecture": _peaks.CODENAME,
-                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                        "Architecture": _loader.current_profile().codename,
+                        "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
@@ -167,7 +166,6 @@ def _emit_sweeps(
     shapes: list[str],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit sweep tiles for each family/knob/shape."""
-    from oto.device.peaks import FAMILY_DTYPE_CHAR
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
@@ -186,8 +184,8 @@ def _emit_sweeps(
                         knobs.update(value)
                         for shape in shapes:
                             template = {
-                                "Architecture": _peaks.CODENAME,
-                                "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                                "Architecture": _loader.current_profile().codename,
+                                "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
                                 "ContractionPattern": pattern,
                                 "ProblemType": shape,
                                 "ScheduleName": "isa",
@@ -209,7 +207,6 @@ def _emit_trials(
     shapes: list[str],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit decision trial tiles."""
-    from oto.device.peaks import FAMILY_DTYPE_CHAR
     from oto.tensile.decks import DECISION_TRIAL_TILES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
@@ -220,8 +217,8 @@ def _emit_trials(
         for pattern in patterns:
             for shape in trial.get("shapes", shapes):
                 template = {
-                    "Architecture": _peaks.CODENAME,
-                    "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                    "Architecture": _loader.current_profile().codename,
+                    "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
                     "ContractionPattern": pattern,
                     "ProblemType": shape,
                     "ScheduleName": "isa",

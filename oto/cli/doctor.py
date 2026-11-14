@@ -167,18 +167,19 @@ def subprocess_probe(argv: list[str], needle: str) -> bool:
 
 
 def _profile(base: Path) -> Check:
-    import oto.device.peaks as peaks
-    path = base / "profiles" / f"{peaks.CODENAME}.json"
+    from oto.device.loader import current_profile
+    codename = current_profile().codename
+    path = base / "profiles" / f"{codename}.json"
     if path.is_file():
         return _ok("toolchain", "Device profile", str(path))
     return _fail("toolchain", "Device profile", f"missing {path}",
-                 f"Add profiles/{peaks.CODENAME}.json (see profiles/gfx90c.json).")
+                 f"Add profiles/{codename}.json (see profiles/gfx90c.json).")
 
 
 def _registry(base: Path) -> list[Check]:
-    import oto.device.peaks as peaks
+    from oto.device.loader import current_profile
     from oto.runners.paths import results_dir
-    results = results_dir(base, peaks.CODENAME)
+    results = results_dir(base, current_profile().codename)
     db = results / "registry.db"
     out = [_ok("registry", "Results directory", str(results))
            if results.is_dir() else

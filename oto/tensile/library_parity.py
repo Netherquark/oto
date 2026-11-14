@@ -40,12 +40,8 @@ import re
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import (
-    FAMILY_SHAPES,
-    cube_side,
-    shipped_cell_set,
-)
+from oto.device import loader as _loader
+from oto.device.vocabulary import cube_side, shipped_cell_set
 from oto.runners.paths import results_dir as _results_dir
 
 #: Family-name normalisation for the `phase_id` fallback path.
@@ -66,7 +62,7 @@ def _family_from_tokens(phase_id: str) -> str:
     Not delegated to `analytics.extract_family_from_phase_id` because that
     resolver is token-case-sensitive ('SS' != 'ss'), so overlay probes named
     `probe_N1_SS_...` resolve to '' there. Both hooks converge on the same
-    FAMILY_SHAPES keys; the config `FamilyLabel` (canonical) needs neither.
+    _loader.current_profile().family_shapes keys; the config `FamilyLabel` (canonical) needs neither.
     """
     parts = [p for p in re.split(r"[^A-Za-z0-9]+", str(phase_id)) if p]
     for fam, canonical in sorted(_FAMILY_ALIASES.items(), key=lambda kv: -len(kv[0])):
@@ -88,10 +84,10 @@ def phase_family(phase: dict[str, Any]) -> str:
     cfg = phase.get("config")
     if isinstance(cfg, dict):
         label = cfg.get("FamilyLabel")
-        if label in FAMILY_SHAPES:
+        if label in _loader.current_profile().family_shapes:
             return label
         up = str(label or "").upper()
-        if up in FAMILY_SHAPES:
+        if up in _loader.current_profile().family_shapes:
             return up
     return _family_from_tokens(str(phase.get("phase_id") or ""))
 
@@ -184,11 +180,11 @@ def load_pipeline_phases(base_dir: str | None = None,
     merged: list[dict[str, Any]] = list(deck)
 
     if run_id:
-        for ov_path in sorted((_results_dir(base, _peaks.CODENAME) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
+        for ov_path in sorted((_results_dir(base, _loader.current_profile().codename) / "overlays").glob(f"phases.{run_id}.overlay.yaml")):
             _merge(merged, _yamlio.load_yaml_text(_read(ov_path)), f"run_overlay:{run_id}")
 
     if include_seed:
-        seed_path = _results_dir(base, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
+        seed_path = _results_dir(base, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
         if seed_path.exists():
             doc = _yamlio.load_yaml(seed_path)
             _merge(merged, doc, "seed_overlay")

@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 import oto.tensile.legality as legality
-from oto.device.peaks import FAMILY_DTYPES
+from oto.device import loader as _loader
 
 BASE = Path(__file__).resolve().parent.parent
 HALF_FAMILIES = ("HH", "HH_HPA", "HS_HPA")
@@ -140,7 +140,7 @@ class TestCheckHardWalls(unittest.TestCase):
 
 class TestShippedSupport(unittest.TestCase):
     def test_every_family_has_support(self):
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             assert legality.shipped_support(BASE, family), family
 
     def test_support_entries_are_traceable_to_a_kernel_name(self):
@@ -155,8 +155,7 @@ class TestShippedSupport(unittest.TestCase):
         assert len(signatures) == len(support)
 
     def test_datatype_matches_family_char(self):
-        from oto.device.peaks import FAMILY_DTYPE_CHAR
-        for family, char in FAMILY_DTYPE_CHAR.items():
+        for family, char in _loader.current_profile().family_dtype_char.items():
             for entry in legality.shipped_support(BASE, family):
                 assert entry["config"]["DataType"] == char
 
@@ -188,7 +187,7 @@ class TestSampleLegalIsLegalByConstruction(unittest.TestCase):
     """Structural legality, asserted without scheduler.validate_config."""
 
     def test_sampled_configs_pass_every_hard_wall(self):
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             rng = random.Random(11)
             for _ in range(60):
                 config = legality.sample_legal(BASE, family, rng)
@@ -206,7 +205,7 @@ class TestSampleLegalIsLegalByConstruction(unittest.TestCase):
                 assert int(config["VectorWidth"]) >= 2, family
 
     def test_never_emits_an_unshipped_macrotile(self):
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             rng = random.Random(13)
             for _ in range(40):
                 config = legality.sample_legal(BASE, family, rng)
@@ -217,7 +216,7 @@ class TestSampleLegalIsLegalByConstruction(unittest.TestCase):
     def test_every_knob_value_is_observed_in_the_manifest(self):
         # The prior's central claim: nothing is invented. Each emitted value
         # must occur in some shipped vector of that family.
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             observed = set()
             for entry in legality.shipped_support(BASE, family):
                 observed |= {str(v) for v in entry["config"].values()}
@@ -234,7 +233,7 @@ class TestSampleLegalIsLegalByConstruction(unittest.TestCase):
 
     def test_threadtile_shape_is_always_two_dimensions(self):
         # Keeps EnableMatrixInstruction resolvable, which keeps the VW wall armed.
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             rng = random.Random(15)
             for _ in range(60):
                 config = legality.sample_legal(BASE, family, rng)

@@ -15,7 +15,7 @@ from pathlib import Path
 import oto.metrics.coverage as coverage
 import oto.tensile.legality as legality
 import oto.tensile.synthesis.manifest as synthesis
-from oto.device.peaks import FAMILY_DTYPES
+from oto.device import loader as _loader
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -262,7 +262,7 @@ class KnobSpaceTests(unittest.TestCase):
 
     def test_every_family_with_support_yields_a_candidate(self):
         swept = 0
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             if not legality.shipped_support(REPO, family):
                 continue
             res = synthesis.synthesize_cell(REPO, family, draws=3, seed=12,
@@ -274,7 +274,7 @@ class KnobSpaceTests(unittest.TestCase):
 
 class SweepAcrossFamiliesTests(unittest.TestCase):
     def test_sampling_does_not_raise_for_any_supported_family(self):
-        for family in FAMILY_DTYPES:
+        for family in _loader.current_profile().family_dtypes:
             if not legality.shipped_support(REPO, family):
                 continue
             synthesis.synthesize_cell(REPO, family, draws=1, seed=13,

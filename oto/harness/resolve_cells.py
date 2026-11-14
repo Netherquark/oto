@@ -53,13 +53,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import (
-    FAMILY_DTYPES,
-    PEAK_GFLOPS,
-    REALISTIC_CEILINGS,
-    THEORETICAL_PEAKS,
-)
+from oto.device import loader as _loader
 from oto.harness.kernel_db import read_kernel_db
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
@@ -325,10 +319,10 @@ def _cell_row(
     # complex-family percentages were computed against a 4x-too-large bar until
     # 2026-10-21 (<codename>_theoretical_limits.md 5.2). The tables are in
     # client-reported units, which is the unit the measurement arrives in.
-    ceiling = REALISTIC_CEILINGS.get(fam) or PEAK_GFLOPS.get(
-        FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
-    peak = THEORETICAL_PEAKS.get(fam) or PEAK_GFLOPS.get(
-        FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
+    ceiling = _loader.current_profile().realistic_ceilings.get(fam) or _loader.current_profile().peak_gflops.get(
+        _loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
+    peak = _loader.current_profile().theoretical_peaks.get(fam) or _loader.current_profile().peak_gflops.get(
+        _loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
     return {
         "family": fam,
         "shape": shp,
@@ -358,10 +352,10 @@ def build(base_dir: str = ".",
     CPU-only. All inputs are canonical repo caches / registries.
     """
     base = Path(base_dir)
-    acceptance_path = acceptance_path or str(_results_dir(base, _peaks.CODENAME) / "acceptance_report.json")
-    registry_path = registry_path or str(_results_dir(base, _peaks.CODENAME) / "registry.db")
-    db_path = db_path or str(_results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json")
-    runs_dir = _runs_dir(base, _peaks.CODENAME)
+    acceptance_path = acceptance_path or str(_results_dir(base, _loader.current_profile().codename) / "acceptance_report.json")
+    registry_path = registry_path or str(_results_dir(base, _loader.current_profile().codename) / "registry.db")
+    db_path = db_path or str(_results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
+    runs_dir = _runs_dir(base, _loader.current_profile().codename)
 
     with open(acceptance_path) as f:
         report = json.load(f)

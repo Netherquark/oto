@@ -18,12 +18,12 @@ from typing import Any
 
 import yaml
 
-import oto.device.peaks as _peaks
 import oto.tensile.best_library as bestlib
 import oto.tensile.library as tlib
 from oto.agents import harness_tools
 from oto.agents import meta as agent_meta
 from oto.agents.research import make_researcher
+from oto.device import loader as _loader
 from oto.tools import potential_configs_gen
 
 
@@ -33,15 +33,15 @@ class SynthesisMixin:
     def _emit_family_logic(self, logic_dir: Path) -> None:
         """Placeholder logic definitions for the 7 dtype families."""
         hint = bestlib.logic_filename_hint(getattr(self, "tensile_root", None),
-                                           _peaks.CODENAME)
+                                           _loader.current_profile().codename)
         for fam in ["SS", "DD", "HH", "ZZ", "CC", "HH_HPA", "HS_HPA"]:
             logic_file = logic_dir / f"{hint}_{fam}.yaml"
             logic_content = {
                 "MinimumRequiredVersion": "4.44.0",
-                "CustomKernelName": f"{_peaks.CODENAME}_{fam}_lib",
+                "CustomKernelName": f"{_loader.current_profile().codename}_{fam}_lib",
                 "ScheduleName": "isa",
-                "Architecture": _peaks.CODENAME,
-                "DeviceNames": [_peaks.CODENAME],
+                "Architecture": _loader.current_profile().codename,
+                "DeviceNames": [_loader.current_profile().codename],
                 "Solutions": self.scheduler.family_decks.get(fam, [])
             }
             with open(logic_file, "w") as f:
@@ -50,7 +50,7 @@ class SynthesisMixin:
     def _run_tensile_create_library(self, tcl_bin: Path, logic_dir: Path,
                                     final_lib_dir: Path) -> dict[str, Any] | None:
         """Invoke TensileCreateLibrary; the error dict on failure, else None."""
-        arch = getattr(getattr(self, 'profile', None), 'codename', _peaks.CODENAME)
+        arch = getattr(getattr(self, 'profile', None), 'codename', _loader.current_profile().codename)
         cmd = [
             sys.executable,
             str(tcl_bin),
@@ -151,7 +151,7 @@ class SynthesisMixin:
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,
             tensile_root=getattr(self, "tensile_root", None),
-            codename=getattr(self, "codename", _peaks.CODENAME))
+            codename=getattr(self, "codename", _loader.current_profile().codename))
         print(f"Best-effort library: {result}")
         return result
 
@@ -165,7 +165,7 @@ class SynthesisMixin:
             profile = load_profile_from_starter(starter)
             text = starter.read_text()
         else:
-            profile = load_profile(_peaks.CODENAME)
+            profile = load_profile(_loader.current_profile().codename)
             text = ""
         researcher = make_researcher(starter_text=text)
         def harness_fn():

@@ -18,7 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.candidate_emission import CandidateEmitMixin
 from oto.tensile.gates.assembly import assembly_class_valid
@@ -177,7 +177,7 @@ class CandidateGenerator(CandidateEmitMixin):
         """
         knob = _illegal_knob(config)
         if knob is not None:
-            return False, f"Illegal knob {knob} for {_peaks.CODENAME}"
+            return False, f"Illegal knob {knob} for {_loader.current_profile().codename}"
         if _assert_size_multiple_disabled(config):
             return False, "AssertSizeMultiple: [1] causes crashes"
         crash = _non_generative_knob_rejection(config)
@@ -200,8 +200,8 @@ class CandidateGenerator(CandidateEmitMixin):
             return False, f"Tensile load divisibility: {why}"
 
         lds_kb_est = estimate_lds_usage(config)
-        if lds_kb_est > _peaks.LDS_PER_CU_KB:
-            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {_peaks.LDS_PER_CU_KB}KB"
+        if lds_kb_est > _loader.current_profile().lds_per_cu_kb:
+            return False, f"LDS overflow: {lds_kb_est:.1f}KB > {_loader.current_profile().lds_per_cu_kb}KB"
 
         # Register-file / occupancy feasibility. This is the gate that catches
         # Tensile's overflowedResources==4 ("Occupancy limit"), which the
@@ -324,7 +324,7 @@ def estimate_lds_usage(config: dict[str, Any]) -> float:
     """Estimate LDS usage in KB for a GEMM tile.
 
     Why a separate estimate from the occupancy gate's budget: this is the
-    per-CU LDS ceiling (:data:`LDS_PER_CU_KB`), while the gate models the
+    per-CU LDS ceiling (:data:`_loader.current_profile().lds_per_cu_kb`), while the gate models the
     per-workgroup footprint against Tensile's allocator. Two different budgets,
     both enforced.
 

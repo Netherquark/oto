@@ -7,10 +7,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import dataclasses
 
+from oto.device import loader as _loader
 from oto.device.loader import load_profile
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
-from oto.device import loader as _loader
 
 
 def _synthetic():

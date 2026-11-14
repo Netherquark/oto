@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Any
 
 import oto.tensile.library as tlib
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_DTYPES
+from oto.device import loader as _loader
 from oto.runners.paths import results_rel
 
 #: Tensile checkout the citations below were verified against.
@@ -512,7 +512,7 @@ def _draw_legal(base_dir: Path,
 
     config.setdefault("Architecture", "gfx900")
     config.setdefault("ProblemType", "Contraction")
-    config.setdefault("DataType", FAMILY_DTYPE_CHAR[family])
+    config.setdefault("DataType", _loader.current_profile().family_dtype_char[family])
 
     ok, reason = check_hard_walls(config)
     if not ok:
@@ -535,7 +535,7 @@ def sampler_sweep(base_dir: Path,
     wall-violating config), and re-running the full assertion over it would
     measure the assertion, not the prior.
     """
-    families = list(families or FAMILY_DTYPES)
+    families = list(families or _loader.current_profile().family_dtypes)
     rng = random.Random(seed)
     per_family: dict[str, Any] = {}
     for family in families:

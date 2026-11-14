@@ -47,7 +47,7 @@ _HERE = Path(__file__).resolve().parents[2]
 # Device constants have one home. Read them off the profile at call time
 # (attribute reads re-bind on oto.device.peaks.set_profile); nothing in this
 # module may import-bind a scalar.
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import runs_dir as _runs_dir
 
 #: Wave size on gfx9. Fixed at 64; there is no wave32 mode on this target.
@@ -61,13 +61,13 @@ VGPR_GRANULE = 4
 #: Register-file size of one SIMD = the CU file divided by the SIMD count.
 #: With 65536 per CU and 4 SIMDs this is 16384, i.e. 64 KiB per SIMD.
 def _simd_vgpr() -> int:
-    return _peaks.VGPR_PER_CU // _peaks.NUM_SIMDS_PER_CU
+    return _loader.current_profile().vgpr_per_cu // _loader.current_profile().simds_per_cu
 
 
 #: Max resident waves per SIMD. The hardware allows 10 (40/CU), which is what
 #: rocminfo reports and what Tensile's own occupancy calculator assumes.
 def _waves_per_simd_max() -> int:
-    return _peaks.MAX_WAVES_PER_CU // _peaks.NUM_SIMDS_PER_CU
+    return _loader.current_profile().max_waves_per_cu // _loader.current_profile().simds_per_cu
 
 #: The AMD/ORNL GFX9 VGPR-per-thread -> waves-per-SIMD table, the calibration this
 #: model is built against. If `waves_per_simd` stops reproducing this column, the
@@ -94,7 +94,7 @@ _DTYPE_FACTS = {
 
 #: LDS in bytes per CU, one home in peaks.py.
 def _lds_per_cu() -> int:
-    return _peaks.LDS_PER_CU_KB * 1024
+    return _loader.current_profile().lds_per_cu_kb * 1024
 
 _KERNEL_MT = re.compile(r"_MT(\d+)x(\d+)x(\d+)_")
 _TT_COMMENT = re.compile(r"/\*\s*ThreadTile=\s*(\d+)\s*x\s*(\d+)\s*\*/")
@@ -146,12 +146,12 @@ def binding_resource(vgprs: int, lds: int, threads: int) -> tuple[str, int]:
         exceeds the 1024-thread maximum, in which case the LDS half is unmeasured
         and VGPR is reported.
     """
-    by_vgpr = waves_per_simd(vgprs) * _peaks.NUM_SIMDS_PER_CU
+    by_vgpr = waves_per_simd(vgprs) * _loader.current_profile().simds_per_cu
     if lds > 0 and threads > 0:
         by_lds = (_lds_per_cu() // lds) * (threads // WAVE)
     else:
-        by_lds = _peaks.MAX_WAVES_PER_CU
-    by_waves = _peaks.MAX_WAVES_PER_CU
+        by_lds = _loader.current_profile().max_waves_per_cu
+    by_waves = _loader.current_profile().max_waves_per_cu
     if by_vgpr == by_lds:
         return "LDS+VGPR", by_vgpr
     cands = {"VGPR": by_vgpr, "LDS": by_lds, "waveslots": by_waves}
@@ -424,7 +424,7 @@ def main() -> int:
         return _cmd_calibration()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    root = Path(args.runs) if args.runs else (_runs_dir(base, _peaks.CODENAME))
+    root = Path(args.runs) if args.runs else (_runs_dir(base, _loader.current_profile().codename))
     rows = measure_corpus(root, args.dtype)
     if not rows:
         print(f"no emitted kernels with an amdhsa directive under {root}")

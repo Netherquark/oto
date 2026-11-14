@@ -35,7 +35,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -158,8 +158,8 @@ class RegistryCore:
     def __init__(self, base_dir: Path, read_only: bool = False,
                  auto_rebuild_kernel_db: bool = True):
         self.base_dir = Path(base_dir)
-        self.results_dir = _results_dir(self.base_dir, _peaks.CODENAME)
-        self.runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
+        self.results_dir = _results_dir(self.base_dir, _loader.current_profile().codename)
+        self.runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
         self.read_only = read_only
         # Refresh <codename>_results/analysis/kernel_db.json automatically when a
         # run reaches a terminal data-producing status, so any later mutation /

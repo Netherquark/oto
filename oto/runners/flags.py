@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 
 
 def _add_scope_flags(parser: argparse.ArgumentParser) -> None:
@@ -250,9 +250,9 @@ def _add_run_flags(parser: argparse.ArgumentParser) -> None:
         const="",
         default=None,
         metavar="DEST",
-        help=f"Carve a best-effort {_peaks.CODENAME} TensileLibrary.dat from the full "
+        help=f"Carve a best-effort {_loader.current_profile().codename} TensileLibrary.dat from the full "
              f"kernel database (CPU-only). Optional DEST (default "
-             f"{_peaks.CODENAME}_results/best_effort_library). Defaults to the "
+             f"{_loader.current_profile().codename}_results/best_effort_library). Defaults to the "
              f"across-all-runs view (any protocol); override with "
              f"--protocol-basis."
     )
@@ -322,7 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
         An ``ArgumentParser`` with every flag the driver accepts.
     """
     parser = argparse.ArgumentParser(
-        description=f"oto — Tensile tuning driver for {_peaks.CODENAME}"
+        description=f"oto — Tensile tuning driver for {_loader.current_profile().codename}"
     )
     _add_scope_flags(parser)
     _add_auto_flags(parser)
@@ -334,7 +334,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--codename",
         default=None,
-        metavar="CODENAME",
+        metavar="_loader.current_profile().codename",
         help="GPU codename (auto-detected from rocminfo when omitted). "
              "Loads profiles/<codename>.json. Refactor 2 device selector."
     )

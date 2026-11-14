@@ -17,7 +17,8 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR, cube_side
+from oto.device import loader as _loader
+from oto.device.vocabulary import cube_side
 from oto.metrics.family_attribution import resolve_cell_family
 from oto.metrics.protocol import SINGLE, protocol_of
 
@@ -455,7 +456,7 @@ def _pair_cells(
         delta_pct = (ratio - 1.0) * 100.0
         tie = abs(delta_pct) <= tie_band_pct
         verdict = "TIE" if tie else ("WIN" if ratio > 1.0 else "LOSS")
-        dtype = FAMILY_DTYPE_CHAR.get(fam, "")
+        dtype = _loader.current_profile().family_dtype_char.get(fam, "")
         entry = _delta_entry(fam, side, dtype, nv, sv, native_val, spoof_val,
                              delta_pct, tie, verdict, agg, sclk_ref, clock_ok)
         entry["basis_protocol"] = basis

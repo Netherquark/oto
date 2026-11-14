@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from oto.device import peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 
 
@@ -27,7 +27,7 @@ def _base(args: argparse.Namespace) -> Path:
 
 
 def make_report(base: Path) -> dict[str, Any]:
-    path = _results_dir(base, _peaks.CODENAME) / "acceptance_report.json"
+    path = _results_dir(base, _loader.current_profile().codename) / "acceptance_report.json"
     return json.loads(path.read_text())
 
 

@@ -53,7 +53,8 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key
 from oto.harness.kernel_db import read_kernel_db
 from oto.runners.paths import results_rel
 
@@ -87,7 +88,7 @@ FAMILY_ALIASES = {
     "HHS": ("HH", "HHS"), "HSS": ("HH", "HSS"),
 }
 
-_FAMILY_ORDER = {f: i for i, f in enumerate(FAMILY_SHAPES)}
+_FAMILY_ORDER = {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
 
 
 def _ints(value: Any) -> tuple[int, ...]:

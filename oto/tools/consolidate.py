@@ -17,7 +17,7 @@ import argparse
 import json
 from pathlib import Path
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.metrics.ab_audit import BASE
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.library_parity import parity_report
@@ -89,7 +89,7 @@ def cmd_all(args) -> int:
     stage.mkdir(parents=True, exist_ok=True)
 
     sel = select_deck(base)
-    lock = build_floor(base, _runs_dir(stage, _peaks.CODENAME) / locked_run_id(
+    lock = build_floor(base, _runs_dir(stage, _loader.current_profile().codename) / locked_run_id(
         source_chain(base)), stamp)
     dbres = build_db(base, lock, stage / "registry.db", stamp)
 

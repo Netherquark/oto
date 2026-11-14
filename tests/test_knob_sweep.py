@@ -32,7 +32,7 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.decks import (
     DECISION_TRIAL_TILES,
@@ -62,7 +62,7 @@ def sandbox(tmp_path_factory):
 
 def _template(family: str, shape: str = SHAPE) -> dict:
     return {"Architecture": "gfx90c",
-            "DataType": FAMILY_DTYPE_CHAR[family],
+            "DataType": _loader.current_profile().family_dtype_char[family],
             "ContractionPattern": "Ailk_Bljk",
             "ProblemType": shape, "ScheduleName": "isa",
             "FamilyLabel": family}

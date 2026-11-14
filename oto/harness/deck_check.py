@@ -39,7 +39,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.harness.tensile_oracle import probe_phase
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import results_rel
@@ -57,7 +57,7 @@ def measured_fingerprints(base_dir: Path) -> set:
     Returns:
         The set of measured fingerprints.
     """
-    db = _results_dir(base_dir, _peaks.CODENAME) / "registry.db"
+    db = _results_dir(base_dir, _loader.current_profile().codename) / "registry.db"
     if not db.is_file():
         return set()
     con = sqlite3.connect(db)

@@ -42,8 +42,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_SHAPES
+from oto.device import loader as _loader
 from oto.harness.candidate_pool import _base_config, _strip_not_forwarded
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
@@ -72,7 +71,7 @@ ASSERTIONS = (0, 2)
 
 #: The cell shapes the coverage map reports per family (the contract grid).
 _DEFAULT_CELLS = {fam: [f"{s}x{s}x{s}" for s in sides]
-                  for fam, sides in FAMILY_SHAPES.items()}
+                  for fam, sides in _loader.current_profile().family_shapes.items()}
 
 #: A geometry key: (macro tile, thread tile, vector width, depth).
 Geometry = tuple[str, str, int, int]
@@ -181,7 +180,7 @@ def measured_geometries(db_path: Path | None = None,
         The measured geometry map, empty when the cache does not exist.
     """
     base = Path(base_dir) if base_dir else _HERE
-    path = db_path or (_results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json")
+    path = db_path or (_results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
     if not path.exists():
         return {}
     db = json.loads(path.read_text())

@@ -25,8 +25,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 import oto.tensile.library as tlib
+from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
 from oto.runners.toolchain import resolve_rocm_paths
@@ -58,7 +58,7 @@ def _tensile_command(
     cmd = [
         sys.executable,
         str(tensile_bin),
-        "--arch", getattr(getattr(driver, "profile", None), "codename", _peaks.CODENAME),
+        "--arch", getattr(getattr(driver, "profile", None), "codename", _loader.current_profile().codename),
         "--cxx-compiler", "hipcc",
         "--c-compiler", "hipcc",
     ]

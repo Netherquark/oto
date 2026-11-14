@@ -51,8 +51,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.synthesis.db_knobs import (
     _DEFAULT_PATTERN,
@@ -83,7 +82,7 @@ class DBMutator(DbPatternsMixin):
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
-            _results_dir(self.base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
+            _results_dir(self.base_dir, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
         self._db: dict[str, Any] | None = None
         self._by_family: dict[str, list[dict[str, Any]]] = {}
         self._by_family_cell: dict[tuple[str, str], list[dict[str, Any]]] = {}
@@ -147,8 +146,8 @@ class DBMutator(DbPatternsMixin):
 
     def _template(self, family: str) -> dict[str, Any]:
         return {
-            "Architecture": _peaks.CODENAME,
-            "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+            "Architecture": _loader.current_profile().codename,
+            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
             "FamilyLabel": family,
             "ScheduleName": "isa",
             "ProblemType": "Contraction",

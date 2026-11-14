@@ -13,8 +13,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.ledger.mutator import Proposal
 from oto.metrics import coverage
 from oto.tensile.candidate import CandidateConfig
@@ -34,7 +33,7 @@ class MutateMixin:
         Returns (new_candidates, replayed, rejected_count, ungraded_cells).
         """
         family = str(winner_info.get("family") or "").upper()
-        data_type = FAMILY_DTYPE_CHAR.get(
+        data_type = _loader.current_profile().family_dtype_char.get(
             family, str(winner_info.get("dtype", "S")).upper())
         shape = winner_info["shape"]
         winner_config = winner_info.get("config", {})
@@ -158,7 +157,7 @@ class MutateMixin:
     def _build_template(self, family: str, data_type: str) -> dict[str, Any]:
         """Build the candidate template."""
         return {
-            "Architecture": _peaks.CODENAME,
+            "Architecture": _loader.current_profile().codename,
             "DataType": data_type,
             "ProblemType": "Contraction",
             "ScheduleName": "isa",

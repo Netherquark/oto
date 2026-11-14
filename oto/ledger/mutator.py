@@ -23,7 +23,7 @@ from oto import yamlio
 
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.ledger.mutator_outcomes import (
     OUTCOME_FUNCTIONAL,
     OUTCOME_LEGAL_REJECTED,
@@ -58,7 +58,6 @@ __all__ = [
 #: built. The import used to appear twice -- once here and once in the header --
 #: and the duplicate carried a `noqa: F401` that is no longer needed, because the
 #: name is genuinely used.
-import oto.device.peaks as _peaks
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile import legality
 
@@ -152,7 +151,7 @@ class Mutator(MutatorOutcomesMixin):
         hard walls; the caller should skip the cell rather than fall back to the
         lattice, because a lattice draw is exactly what the prior replaces.
         """
-        if family not in FAMILY_DTYPE_CHAR:
+        if family not in _loader.current_profile().family_dtype_char:
             return None
         config = legality.sample_legal(
             self.base_dir,
@@ -439,7 +438,7 @@ class Mutator(MutatorOutcomesMixin):
 
         if run_id is None:
             run_id = self.registry.latest_run_id() or "unbound"
-        target_dir = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays"
+        target_dir = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays"
         target_dir.mkdir(parents=True, exist_ok=True)
         path = target_dir / f"phases.{run_id}.overlay.yaml"
         payload = {
@@ -459,7 +458,7 @@ class Mutator(MutatorOutcomesMixin):
     def load_overlay(self, run_id: str) -> list[dict[str, Any]]:
         """Read back one run's overlay, or [] if there is none."""
 
-        path = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays" / f"phases.{run_id}.overlay.yaml"
+        path = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():
             return []
         try:

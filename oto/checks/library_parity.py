@@ -30,7 +30,7 @@ import json
 from pathlib import Path
 
 from oto import yamlio
-from oto.device.peaks import shipped_cells
+from oto.device.vocabulary import shipped_cells
 from oto.tensile.library_parity import load_pipeline_phases, parity_report, phases_cells
 
 DEFAULT_BASE = Path(__file__).resolve().parents[2]
@@ -58,11 +58,11 @@ def _load_manifests(args) -> list:
 
 def _fmt_cells(cells) -> str:
     grid = shipped_cells()
-    from oto.device.peaks import FAMILY_DTYPE_CHAR
+    from oto.device import loader as _loader
     parts = []
     for family, shape in cells:
         info = grid.get(f"{family}:{shape.split('x')[0]}")
-        dtype = (info or {}).get("dtype") or FAMILY_DTYPE_CHAR.get(family, "?")
+        dtype = (info or {}).get("dtype") or _loader.current_profile().family_dtype_char.get(family, "?")
         parts.append(f"{family}:{shape.split('x')[0]} (dtype {dtype} {shape})")
     return "\n".join(f"    {p}" for p in parts)
 

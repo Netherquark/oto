@@ -18,7 +18,7 @@ import statistics
 import sys
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.metrics.analytics import CellAnalytics
 from oto.runners import flags
 from oto.runners.driver import TensileDriver
@@ -163,7 +163,7 @@ def _stage_analytics(driver, args, stage) -> int | None:
     if run_dir is None:
         latest = driver.registry.latest_run_id()
         if latest:
-            run_dir = _runs_dir(driver.base_dir, _peaks.CODENAME) / latest
+            run_dir = _runs_dir(driver.base_dir, _loader.current_profile().codename) / latest
     analytics = driver._load_analytics_from_run(
         run_dir if run_dir is not None and run_dir.exists() else None)
     if not analytics:

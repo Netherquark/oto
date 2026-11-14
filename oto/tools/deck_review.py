@@ -46,8 +46,7 @@ from typing import Any
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.gates.occupancy import ldspad_feasible
 from oto.tensile.synthesis.db_knobs import FORWARD_KNOB_DOMAINS
@@ -152,7 +151,7 @@ def _measured_tiles(base: Path, per_family: int) -> dict[str, list[dict[str, Any
     is how a default value like `StaggerU=0` ends up looking broken on an
     LDS-full `256x256` tile.
     """
-    db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
     if not db_path.is_file():
         return {}
     try:
@@ -197,8 +196,8 @@ def _family_template(fam: str) -> dict[str, Any]:
     """The minimal contract template a draw is applied on top of."""
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
-        "Architecture": _peaks.CODENAME,
-        "DataType": FAMILY_DTYPE_CHAR.get(fam, "S"),
+        "Architecture": _loader.current_profile().codename,
+        "DataType": _loader.current_profile().family_dtype_char.get(fam, "S"),
         "FamilyLabel": fam,
         "ScheduleName": "isa",
         "ProblemType": "Contraction",
@@ -257,7 +256,7 @@ def _report_legality(n_fams: int, legal: int, coupled: Counter,
           f"responsible,\nand most of these resolve when a companion knob is "
           f"drawn with them.\nA value that is genuinely dead for this device "
           f"is one whose reason is a\nstructural class rule ('illegal on "
-          f"{_peaks.CODENAME}', 'no MatrixInstruction'):")
+          f"{_loader.current_profile().codename}', 'no MatrixInstruction'):")
     for fam, knob, value, why in refused:
         print(f"  {fam:8}{knob:30}{value!s:6} {why}")
 
@@ -321,7 +320,7 @@ def _legality(base: Path, families: list[str] | None) -> int:
 
 def _flood(base: Path, cap: int | None) -> int:
     """Per-cell distinct-config census, and what a top-K cap would cost."""
-    db_path = _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
+    db_path = _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
     except Exception as exc:

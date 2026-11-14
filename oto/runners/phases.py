@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
+from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.policy import should_run
 from oto.runners.paths import results_dir as _results_dir
@@ -142,7 +142,7 @@ class PhaseMixin:
         by the D2 tooling and applied to every native run. The per-run overlay
         path is not used because the seed is not tied to a single run_id.
         """
-        path = _results_dir(self.base_dir, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
+        path = _results_dir(self.base_dir, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
         if not path.exists():
             return []
         try:
@@ -160,7 +160,7 @@ class PhaseMixin:
         owner; falls back to the file directly so the overlay is still honoured
         with no ledger-backed mutator.
         """
-        path = (_results_dir(self.base_dir, _peaks.CODENAME) / "overlays"
+        path = (_results_dir(self.base_dir, _loader.current_profile().codename) / "overlays"
                 / f"phases.{run_id}.overlay.yaml")
         if not path.exists():
             return []

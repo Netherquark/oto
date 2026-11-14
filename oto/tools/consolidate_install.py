@@ -12,7 +12,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import legacy_runs_dir as _legacy_runs_dir
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tools.consolidate_floor import SINGLE_FORM_ONLY_RUNS
@@ -48,7 +48,7 @@ def install(base: Path, stage: Path, sel: dict[str, Any],
     deck_path = base / "phases.yaml"
     staged = write_deck(stage, sel, stamp)
 
-    live_lock = _runs_dir(base, _peaks.CODENAME) / lock["run_id"]
+    live_lock = _runs_dir(base, _loader.current_profile().codename) / lock["run_id"]
     if live_lock.exists():
         # Never delete in place. A previous build of the same lock id is moved
         # aside under archive/ so the swap is reversible; the staged copy is the
@@ -70,7 +70,7 @@ def install(base: Path, stage: Path, sel: dict[str, Any],
     arch = _legacy_runs_dir(base / 'archive')
     arch.mkdir(parents=True, exist_ok=True)
     for run in list(SINGLE_FORM_ONLY_RUNS) + phantom_runs(base):
-        src = _runs_dir(base, _peaks.CODENAME) / run
+        src = _runs_dir(base, _loader.current_profile().codename) / run
         if src.is_dir():
             shutil.move(str(src), str(arch / run))
 
@@ -94,7 +94,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB) -> list[str]:
     con.close()
     out = []
     for (run_id,) in rows:
-        d = _runs_dir(base, _peaks.CODENAME) / run_id
+        d = _runs_dir(base, _loader.current_profile().codename) / run_id
         if not d.is_dir():
             continue
         if any(d.rglob("*.csv")):

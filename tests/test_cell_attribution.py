@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import pytest
 
-from oto.device.peaks import (
-    FAMILY_DTYPE_CHAR,
+from oto.device import loader as _loader
+from oto.device.vocabulary import (
     dtype_from_kernel_name,
     family_from_kernel_name,
     kernel_typecode,
@@ -75,7 +75,7 @@ def test_extract_family_auto_prefix(phase_id: str, expected: str) -> None:
 def test_kernel_typecode_family(kernel: str, fam: str, code: str) -> None:
     assert kernel_typecode(kernel) == code
     assert family_from_kernel_name(kernel) == fam
-    assert dtype_from_kernel_name(kernel) == FAMILY_DTYPE_CHAR.get(fam, "")
+    assert dtype_from_kernel_name(kernel) == _loader.current_profile().family_dtype_char.get(fam, "")
 
 
 def test_hhs_never_counts_toward_ss() -> None:

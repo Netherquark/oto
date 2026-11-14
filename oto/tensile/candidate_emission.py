@@ -23,9 +23,8 @@ from typing import Any
 
 import yaml
 
-import oto.device.peaks as _peaks
 from oto import yamlio
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.gates.occupancy import occupancy_feasible, occupancy_workgroups_per_cu
 
@@ -196,7 +195,7 @@ class CandidateEmitMixin:
 
                     candidate = self.emit_candidate(
                         phase_id=phase_id, label=label,
-                        dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                        dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
                         shapes=[shape], template=template, knobs=rel
                     )
                     candidates.append(candidate)
@@ -219,8 +218,8 @@ class CandidateEmitMixin:
     def _build_family_template(self, family: str, pattern: str, shape: str) -> dict:
         """Build candidate template for family phases."""
         return {
-            "Architecture": _peaks.CODENAME,
-            "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+            "Architecture": _loader.current_profile().codename,
+            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
             "ScheduleName": "isa",
@@ -344,7 +343,7 @@ class CandidateEmitMixin:
                 phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
                 candidates.append(self.emit_candidate(
                     phase_id=phase_id, label=label,
-                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                    dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
                     shapes=[shape], template=template, knobs=dict(base)
                 ))
         return candidates, refused
@@ -383,7 +382,7 @@ class CandidateEmitMixin:
                 phase_id = f"phase_{family.lower()}_{pattern}_{shape}{tag}"
                 candidates.append(self.emit_candidate(
                     phase_id=phase_id, label=label,
-                    dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                    dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
                     shapes=[shape], template=template, knobs=knobs
                 ))
         return candidates, refused
@@ -391,8 +390,8 @@ class CandidateEmitMixin:
     def _build_template(self, family: str, pattern: str, shape: str) -> dict[str, Any]:
         """Build candidate template."""
         return {
-            "Architecture": _peaks.CODENAME,
-            "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+            "Architecture": _loader.current_profile().codename,
+            "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
             "ContractionPattern": pattern,
             "ProblemType": shape,
             "ScheduleName": "isa",
@@ -427,8 +426,8 @@ class CandidateEmitMixin:
                 for shape in trial.get("shapes", base_shapes or
                                        ["1024x1024x1024"]):
                     template = {
-                        "Architecture": _peaks.CODENAME,
-                        "DataType": FAMILY_DTYPE_CHAR.get(family, "S"),
+                        "Architecture": _loader.current_profile().codename,
+                        "DataType": _loader.current_profile().family_dtype_char.get(family, "S"),
                         "ContractionPattern": pattern,
                         "ProblemType": shape,
                         "ScheduleName": "isa",
@@ -447,7 +446,7 @@ class CandidateEmitMixin:
                     candidates.append(self.emit_candidate(
                         phase_id=phase_id,
                         label=label,
-                        dtype=FAMILY_DTYPE_CHAR.get(family, "S"),
+                        dtype=_loader.current_profile().family_dtype_char.get(family, "S"),
                         shapes=[shape],
                         template=template,
                         knobs=dict(knobs),
@@ -528,7 +527,7 @@ def estimate_lds_usage(config: dict[str, Any]) -> float:
     """Estimate LDS usage in KB for a GEMM tile.
 
     Why a separate estimate from the occupancy gate's budget: this is the
-    per-CU LDS ceiling (:data:`LDS_PER_CU_KB`), while the gate models the
+    per-CU LDS ceiling (:data:`_loader.current_profile().lds_per_cu_kb`), while the gate models the
     per-workgroup footprint against Tensile's allocator. Two different budgets,
     both enforced.
 

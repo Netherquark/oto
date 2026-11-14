@@ -22,12 +22,11 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
+from oto.device import loader as _loader
 
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
-from oto.device.peaks import FAMILY_DTYPE_CHAR, PEAK_GFLOPS, REALISTIC_CEILINGS
 from oto.metrics.ab_delta import ABDeltaMixin
 from oto.metrics.cell_status import CellStatusMixin
 from oto.metrics.family_attribution import (
@@ -56,7 +55,7 @@ CLOCK_MIN_COVERAGE = 0.5
 
 # `FAMILY_TO_DTYPE` (family prefix -> Tensile DataType char, lowercased keys for
 # phase_id parsing) is owned by `oto.metrics.family_attribution` and imported
-# above. It used to be rebuilt here from FAMILY_DTYPE_CHAR, shadowing the import;
+# above. It used to be rebuilt here from the profile's family_dtype_char, shadowing the import;
 # the two dicts compared equal, so the local copy was pure duplication that could
 # drift. Do not reintroduce it -- extend the owner.
 
@@ -105,7 +104,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     def __init__(self, registry, base_dir: Path):
         self.registry = registry
         self.base_dir = Path(base_dir)
-        self.results_dir = _results_dir(self.base_dir, _peaks.CODENAME)
+        self.results_dir = _results_dir(self.base_dir, _loader.current_profile().codename)
         self._phases_cache = None
 
     def _load_phases_manifest(self) -> list[dict[str, Any]]:
@@ -343,7 +342,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
             fp = rec.get("fingerprint", rec.get("fp", "unknown"))
             gflops = rec.get("GFLOPS", rec.get("median_gflops", 0.0))
             if gflops > 0:
-                dtype = FAMILY_DTYPE_CHAR.get(fam, rec.get("DataType", ""))
+                dtype = _loader.current_profile().family_dtype_char.get(fam, rec.get("DataType", ""))
                 cell_map[(dtype, shape, fp, fam)].append(gflops)
         return cell_map
 
@@ -377,9 +376,9 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
 
         # Lookup realistic ceiling first, then peak
         if ceiling_gflops is None:
-            ceiling_gflops = REALISTIC_CEILINGS.get(
+            ceiling_gflops = _loader.current_profile().realistic_ceilings.get(
                 family.upper() if family else dtype,
-                REALISTIC_CEILINGS.get(dtype, PEAK_GFLOPS.get(dtype, 1613.0))
+                _loader.current_profile().realistic_ceilings.get(dtype, _loader.current_profile().peak_gflops.get(dtype, 1613.0))
             )
 
         pct_of_ceiling = (agg.median / ceiling_gflops) * 100.0 if ceiling_gflops > 0 else 0.0

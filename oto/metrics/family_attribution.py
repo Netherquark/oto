@@ -14,9 +14,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from oto.device.peaks import (
-    DTYPE_TO_FAMILY,
-    FAMILY_DTYPE_CHAR,
+from oto.device import loader as _loader
+from oto.device.vocabulary import (
+    dtype_to_family,
     family_from_kernel_name,
     kernel_typecode,
 )
@@ -26,13 +26,13 @@ CLOCK_MIN_COVERAGE = 0.5
 
 # Family prefix -> Tensile DataType char (lowercase keys for phase_id parsing).
 FAMILY_TO_DTYPE = {
-    k.lower(): v for k, v in FAMILY_DTYPE_CHAR.items()
+    k.lower(): v for k, v in _loader.current_profile().family_dtype_char.items()
 }
 
 
 # Known family prefixes (longest first for greedy matching).
 # Note: family tokens are matched against lowercase phase_id segments, so the
-# prefix set must be lowercase regardless of the canonical FAMILY_DTYPE_CHAR.
+# prefix set must be lowercase regardless of the profile's canonical family_dtype_char.
 _KNOWN_FAMILIES = sorted(FAMILY_TO_DTYPE.keys(), key=len, reverse=True)
 
 
@@ -43,7 +43,7 @@ def extract_family_from_phase_id(phase_id: str) -> str:
     so prefix tokens (e.g. 'draft_SS_...', 'draft_HH_HPA_...') still resolve.
 
     Last resort: a bare single-letter dtype token ('phase_auto_0_S_256...'),
-    mapped through FAMILY_DTYPE_CHAR ('S' -> 'ss'). 'auto'/'phase' namespace
+    mapped through _loader.current_profile().family_dtype_char ('S' -> 'ss'). 'auto'/'phase' namespace
     tokens never count as families.
     """
     parts = [p for p in str(phase_id).replace('phase_', '').replace('phase', '').split('_') if p]
@@ -60,7 +60,7 @@ def extract_family_from_phase_id(phase_id: str) -> str:
                 break
     if not best:
         for tok in parts:
-            fam = DTYPE_TO_FAMILY.get(tok.upper(), "")
+            fam = dtype_to_family().get(tok.upper(), "")
             if fam:
                 return fam.lower()
     return best
@@ -112,7 +112,7 @@ def resolve_cell_family(rec: dict[str, Any]) -> str:
       2. the record's explicit ``family`` stamp, UNLESS it contradicts (1);
          HPA stamps are always kept (see _hpa_variant).
       3. family parsed from ``phase_id``.
-      4. DataType char via DTYPE_TO_FAMILY.
+      4. DataType char via dtype_to_family().
       5. '' (record is unattributable; callers skip it).
     """
     kernel_name = str(rec.get("kernel") or rec.get("kernel_name")
@@ -137,6 +137,6 @@ def resolve_cell_family(rec: dict[str, Any]) -> str:
     if fam in _KNOWN_CELL_FAMILIES:
         return fam
 
-    fam = DTYPE_TO_FAMILY.get(str(rec.get("DataType") or rec.get("dtype") or "").upper(), "")
+    fam = dtype_to_family().get(str(rec.get("DataType") or rec.get("dtype") or "").upper(), "")
     return fam if fam in _KNOWN_CELL_FAMILIES else ""
 

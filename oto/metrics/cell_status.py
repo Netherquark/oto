@@ -26,13 +26,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from oto.device.peaks import (
-    FAMILY_DTYPE_CHAR,
-    FAMILY_DTYPES,
-    FAMILY_SHAPES,
-    PEAK_GFLOPS,
-    REALISTIC_CEILINGS,
-)
+from oto.device import loader as _loader
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from oto.metrics.analytics import CellAnalytics
@@ -56,14 +50,14 @@ class CellStatusMixin:
         best_per_cell: dict[tuple[str, str], float] = {}
         # dtype char -> family fallback; ambiguous 'H' resolves to HH
         dtype_to_family = {}
-        for family, ch in FAMILY_DTYPE_CHAR.items():
+        for family, ch in _loader.current_profile().family_dtype_char.items():
             dtype_to_family.setdefault(ch, family)
 
         for a in all_analytics:
             fam = str(a.family or "").upper()
-            if fam not in FAMILY_SHAPES:
+            if fam not in _loader.current_profile().family_shapes:
                 fam = dtype_to_family.get(str(a.dtype).upper(), "")
-            if not fam or fam not in FAMILY_SHAPES:
+            if not fam or fam not in _loader.current_profile().family_shapes:
                 continue
             measured[fam].add(a.shape)
             key = (fam, a.shape)
@@ -71,8 +65,8 @@ class CellStatusMixin:
                 best_per_cell[key] = a.median_gflops
 
         def _entry(fam: str, shape: str, status: str, best: float) -> dict[str, Any]:
-            ceiling = REALISTIC_CEILINGS.get(
-                fam, PEAK_GFLOPS.get(FAMILY_DTYPES.get(fam, "FP32"), 1613.0)
+            ceiling = _loader.current_profile().realistic_ceilings.get(
+                fam, _loader.current_profile().peak_gflops.get(_loader.current_profile().family_dtypes.get(fam, "FP32"), 1613.0)
             )
             pct = (best / ceiling * 100.0) if ceiling > 0 else 0.0
             return {
@@ -87,7 +81,7 @@ class CellStatusMixin:
         orange: list[dict[str, Any]] = []
         green: list[dict[str, Any]] = []
 
-        for fam, sizes in FAMILY_SHAPES.items():
+        for fam, sizes in _loader.current_profile().family_shapes.items():
             for s in sizes:
                 shape = f"{s}x{s}x{s}"
                 best = best_per_cell.get((fam, shape), 0.0)

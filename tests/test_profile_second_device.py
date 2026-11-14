@@ -9,8 +9,8 @@ identical to a genuinely different device.
 
 Calibrated constants (``LDS_BUDGET``, ``MAX_LDS_BYTES``, ``ACCVGPR_BUDGET``)
 are deliberately NOT profile-rebound: they are calibration results of this
-repo, not device facts. Only ``VGPR_PER_CU`` / ``GLOBAL_LOAD_BYTE_CAP`` /
-``LDS_PER_CU_KB`` are.
+repo, not device facts. Only ``_loader.current_profile().vgpr_per_cu`` / ``_loader.current_profile().global_load_byte_cap`` /
+``_loader.current_profile().lds_per_cu_kb`` are.
 """
 from __future__ import annotations
 

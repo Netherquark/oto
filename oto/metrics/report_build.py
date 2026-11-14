@@ -15,9 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 import oto.tensile.library as tlib
 from oto import yamlio
+from oto.device import loader as _loader
 from oto.metrics._status_common import _jittery
 from oto.metrics.ledger_state import (
     DB_REL,
@@ -156,7 +156,7 @@ def build_report(base: Path, run_id: str | None,
                       ref_total + pin["tune_units"], pin["breakdown"],
                       pin["used"], ref_remaining, pin["tune_units"], ref_done)
 
-    thermals = read_thermals(_runs_dir(base, _peaks.CODENAME) / (chain[-1] if chain else "")) if chain else None
+    thermals = read_thermals(_runs_dir(base, _loader.current_profile().codename) / (chain[-1] if chain else "")) if chain else None
     started_live = state["status_by_run"].get(chain[-1] if chain else "") == "started"
 
     return {

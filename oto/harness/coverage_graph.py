@@ -58,7 +58,7 @@ if str(_HERE) not in sys.path:
 
 import itertools
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.harness.coverage_map import (
     _DEFAULT_CELLS,
     coverage_row,
@@ -110,7 +110,7 @@ def _bucket(value: int, buckets: Sequence[int]) -> int | None:
 
 def _weight(family: str) -> int:
     """The accumulator VGPRs per element for a family (1 S, 2 D, 4 C, 8 Z)."""
-    char = FAMILY_DTYPE_CHAR.get(family, "S")
+    char = _loader.current_profile().family_dtype_char.get(family, "S")
     return {"S": 1, "H": 1, "D": 2, "C": 4, "Z": 8}.get(char, 1)
 
 

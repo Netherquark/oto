@@ -45,6 +45,7 @@ import random
 from collections.abc import Sequence
 from typing import Any
 
+from oto.device import loader as _loader
 from oto.metrics.coverage import decide_state
 from oto.tensile import legality
 
@@ -293,7 +294,7 @@ def _draw_with_groups(
         return None, f"not manifest-coherent: {reason}"
     config.setdefault("Architecture", "gfx900")
     config.setdefault("ProblemType", "Contraction")
-    config.setdefault("DataType", legality.FAMILY_DTYPE_CHAR[family])
+    config.setdefault("DataType", _loader.current_profile().family_dtype_char[family])
 
     ok, reason = legality.check_hard_walls(config)
     if not ok:

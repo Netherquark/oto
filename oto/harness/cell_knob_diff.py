@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 
 _HERE = Path(__file__).resolve().parents[2]
@@ -133,7 +133,7 @@ def main() -> int:
     args = ap.parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    db_path = Path(args.db) if args.db else _results_dir(base, _peaks.CODENAME) / "analysis" / "kernel_db.json"
+    db_path = Path(args.db) if args.db else _results_dir(base, _loader.current_profile().codename) / "analysis" / "kernel_db.json"
     db = json.loads(db_path.read_text())
     native_rows: list[dict[str, Any]] = []
     floor_rows: list[dict[str, Any]] = []

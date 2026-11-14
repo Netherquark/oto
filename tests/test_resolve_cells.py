@@ -30,7 +30,7 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import shipped_cell_set
+from oto.device.vocabulary import shipped_cell_set
 from oto.harness import resolve_cells
 
 

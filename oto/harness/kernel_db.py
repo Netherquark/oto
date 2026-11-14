@@ -54,12 +54,8 @@ for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import (
-    FAMILY_DTYPE_CHAR,
-    family_from_kernel_name,
-    kernel_typecode,
-)
+from oto.device import loader as _loader
+from oto.device.vocabulary import family_from_kernel_name, kernel_typecode
 from oto.metrics.family_attribution import extract_family_from_phase_id
 from oto.metrics.protocol import classify_count, problem_count_text
 from oto.runners.paths import results_rel
@@ -88,7 +84,7 @@ def discover_runs(base_dir: str,
     matching the published regression matrix; all_ref=True includes every
     gfx900 reference directory.
     """
-    runs_dir = _runs_dir(base_dir, _peaks.CODENAME)
+    runs_dir = _runs_dir(base_dir, _loader.current_profile().codename)
     out: list[tuple[str, str]] = []
     if not runs_dir.is_dir():
         return out
@@ -233,7 +229,7 @@ def _family_and_dtype(cfg: dict[str, Any], kc: str,
     tc_family = family_from_kernel_name(kc)
     if tc_family:
         family = tc_family
-        dt = FAMILY_DTYPE_CHAR.get(family, "?")
+        dt = _loader.current_profile().family_dtype_char.get(family, "?")
     else:
         m = FAMILY_RE.match(phase_id)
         family = _DEFAULT_DTYPE.get(m.group(1), "") if m else ""
@@ -349,7 +345,7 @@ def build_kernel_db(base_dir: str,
         runs = [(rid, kind) for rid, kind in runs if rid in set(run_ids)]
     cache: dict[str, list[dict[str, Any]]] = {}
     for run_id, kind in runs:
-        run_dir = str(_runs_dir(base_dir, _peaks.CODENAME) / run_id)
+        run_dir = str(_runs_dir(base_dir, _loader.current_profile().codename) / run_id)
         if not os.path.isdir(run_dir):
             cache[run_id] = []
             continue

@@ -12,8 +12,8 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key
 from oto.metrics.ab_audit import BASE as _AB_BASE
 from oto.metrics.ab_identity import _driver
 from oto.metrics.analytics import extract_family_from_phase_id
@@ -23,7 +23,7 @@ from oto.runners.paths import runs_dir as _runs_dir
 BASE = _AB_BASE
 
 #: The locked floor, expressed in one registry db.
-LIVE_DB = _results_dir(BASE, _peaks.CODENAME) / "registry.db"
+LIVE_DB = _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
 
 
 def _stamp() -> str:
@@ -34,7 +34,7 @@ def _fam(phase_id: str) -> str:
     """Family label uppercased.
 
     `extract_family_from_phase_id` returns the phase_id's own spelling ('ss',
-    'zz') while FAMILY_SHAPES and cell_key() are upper-case, so comparing them
+    'zz') while _loader.current_profile().family_shapes and cell_key() are upper-case, so comparing them
     raw matches nothing at all.
     """
     return str(extract_family_from_phase_id(phase_id) or "").upper()
@@ -46,7 +46,7 @@ def _fam(phase_id: str) -> str:
 def target_cells() -> list[tuple[str, str, str]]:
     """(family, shape, cell_key) for every cell the shipped floor covers."""
     out = []
-    for fam, sides in FAMILY_SHAPES.items():
+    for fam, sides in _loader.current_profile().family_shapes.items():
         for side in sides:
             shape = f"{side}x{side}x{side}"
             key = cell_key(fam, shape)
@@ -58,11 +58,11 @@ def target_cells() -> list[tuple[str, str, str]]:
 def manifest_cells() -> set:
     """Cells the shipped gfx900 manifest actually names, as a cross-check.
 
-    The deck is built from FAMILY_SHAPES because that is what the report grades,
+    The deck is built from _loader.current_profile().family_shapes because that is what the report grades,
     but a family the manifest never shipped would be a silent over-reach, so it
     is worth being able to ask.
     """
-    path = _results_dir(BASE, _peaks.CODENAME) / "gfx900_shipped_manifest.json"
+    path = _results_dir(BASE, _loader.current_profile().codename) / "gfx900_shipped_manifest.json"
     try:
         fam = json.loads(path.read_text()).get("families", {})
     except Exception:
@@ -74,13 +74,13 @@ def manifest_cells() -> set:
 # measurement inventory
 # --------------------------------------------------------------------------
 def native_runs(base: Path = BASE) -> list[str]:
-    return sorted(d.name for d in (_runs_dir(base, _peaks.CODENAME)).glob("run_*") if d.is_dir())
+    return sorted(d.name for d in (_runs_dir(base, _loader.current_profile().codename)).glob("run_*") if d.is_dir())
 
 
 def floor_chain(base: Path = BASE) -> list[str]:
     drv = _driver(base)
     return [r for r in drv._reference_floor_runs(None)
-            if (_runs_dir(base, _peaks.CODENAME) / r).is_dir()]
+            if (_runs_dir(base, _loader.current_profile().codename) / r).is_dir()]
 
 
 def source_chain(base: Path = BASE) -> list[str]:

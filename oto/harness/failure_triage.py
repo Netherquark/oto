@@ -32,7 +32,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import runs_dir as _runs_dir
 
 _HERE = Path(__file__).resolve().parents[2]
@@ -102,7 +102,7 @@ def census(base: str = ".", run_filter: str | None = None,
         ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
         "samples": [(run, phase, reason)]}``.
     """
-    runs_dir = _runs_dir(base, _peaks.CODENAME)
+    runs_dir = _runs_dir(base, _loader.current_profile().codename)
     run_dirs = sorted(d for d in runs_dir.iterdir() if d.is_dir())
     if run_filter is not None:
         run_dirs = [d for d in run_dirs if d.name == run_filter]

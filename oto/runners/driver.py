@@ -23,7 +23,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from oto.device.peaks import cell_key, kernel_key
+from oto.device.vocabulary import cell_key, kernel_key
 from oto.ledger.agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry

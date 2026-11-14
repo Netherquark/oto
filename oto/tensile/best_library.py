@@ -28,8 +28,7 @@ from typing import Any
 
 import yaml
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_SHAPES
+from oto.device import loader as _loader
 from oto.harness.coverage_map import _cell_family
 from oto.harness.kernel_db import read_kernel_db
 from oto.metrics.protocol import UNKNOWN, protocol_of
@@ -64,9 +63,9 @@ def _tensile_candidates() -> list[str]:
 _TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
                        if os.path.isdir(os.path.join(c, "Tensile", "bin"))]
 
-# Shipped cells: (family, "SxSxS") for every family's FAMILY_SHAPES.
+# Shipped cells: (family, "SxSxS") for every family's shapes in the profile.
 SHIPPED_CELLS: set[tuple[str, str]] = {
-    (f, f"{s}x{s}x{s}") for f, ss in FAMILY_SHAPES.items() for s in ss
+    (f, f"{s}x{s}x{s}") for f, ss in _loader.current_profile().family_shapes.items() for s in ss
 }
 
 #: Default output location, relative to the oto checkout.
@@ -202,7 +201,7 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
         list[dict[str, Any]], dict[str, Any]]:
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
-        _results_dir(base_dir, _peaks.CODENAME) / "analysis" / "kernel_db.json")
+        _results_dir(base_dir, _loader.current_profile().codename) / "analysis" / "kernel_db.json")
     db = read_kernel_db(db_path)
     pools = _cell_rows_from_db(db, basis)
 
@@ -264,7 +263,7 @@ def _problem_type_state(fam: str, tensile_root: Path | None = None) -> dict[str,
     _ensure_tensile_importable(tensile_root)
     from Tensile.LibraryIO import updateProblemDatatypes
     from Tensile.SolutionStructs import ProblemType
-    dtype_char = FAMILY_DTYPE_CHAR.get(fam, "S")
+    dtype_char = _loader.current_profile().family_dtype_char.get(fam, "S")
     is_hpa = "HPA" in fam
     is_hs = fam == "HS_HPA"
     pt = ProblemType({
@@ -464,7 +463,7 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
 
 
 def _default_codename() -> str:
-    return _peaks.CODENAME
+    return _loader.current_profile().codename
 
 
 def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):

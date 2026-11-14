@@ -45,7 +45,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 
 #: The derived fields worth showing: the LDS allocation Tensile computed and
 #: the register pools it allocated.
@@ -235,7 +235,7 @@ def _lds_bytes(state: dict[str, Any]) -> int:
 def _config_from_args(args: argparse.Namespace) -> dict[str, Any]:
     """The config dict the CLI describes."""
     config: dict[str, Any] = {
-        "Architecture": _peaks.CODENAME,
+        "Architecture": _loader.current_profile().codename,
         "DataType": args.dtype,
         "FamilyLabel": args.family or args.dtype,
         "ScheduleName": "isa",

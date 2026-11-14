@@ -41,7 +41,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.gates.vgpr_model import measured_accvgpr
 
@@ -153,7 +153,7 @@ def main() -> int:
     args = _build_arg_parser().parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE
-    runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _peaks.CODENAME)
+    runs_dir = Path(args.runs) if args.runs else _runs_dir(base, _loader.current_profile().codename)
     objs = _collect_objects(runs_dir, args.run)
     if not objs:
         print("no Tensile assembly objects found (run a phase first)")

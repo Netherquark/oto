@@ -46,7 +46,6 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-import oto.device.peaks as _peaks
 from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
@@ -237,7 +236,7 @@ def _floor_deck(base_dir: Path) -> tuple[list[dict], Path]:
     gate. Sweeping the pinned manifest through the same GATES makes that
     explicit instead of assumed.
     """
-    manifest_path = _results_dir(base_dir, _peaks.CODENAME) / "gfx900_shipped_manifest.json"
+    manifest_path = _results_dir(base_dir, _loader.current_profile().codename) / "gfx900_shipped_manifest.json"
     manifest = json.loads(manifest_path.read_text())
     deck: list[dict] = []
     for entry in manifest.get("dat_files", []):

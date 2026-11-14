@@ -18,8 +18,8 @@ import contextlib
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import cell_key, kernel_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key, kernel_key
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.metrics.policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
@@ -235,7 +235,7 @@ class ReportingMixin:
         ref_run_ids = self._reference_floor_runs(run_id)
         spoof_records: list[dict[str, Any]] = []
         for ref in ref_run_ids:
-            ref_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / ref
+            ref_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / ref
             if ref_dir.is_dir():
                 _, ref_records = self._ab_records_from_csv(ref_dir, force_arm="spoof")
                 for rec in ref_records:
@@ -402,7 +402,7 @@ class ReportingMixin:
             with contextlib.suppress(Exception):
                 self.reporter.write_report(
                     report,
-                    _results_dir(self.reporter.base_dir, _peaks.CODENAME) / "acceptance_report.json")
+                    _results_dir(self.reporter.base_dir, _loader.current_profile().codename) / "acceptance_report.json")
         return {"cells": len(all_analytics), "red": len(red_list),
                 "ab": len(ab_verdicts), "run_id": run_id,
                 "native_runs": native_arm["runs"],
@@ -508,7 +508,7 @@ class ReportingMixin:
             print("No run id available to regenerate a report")
             return None
 
-        run_dir = _runs_dir(self.base_dir, _peaks.CODENAME) / run_id
+        run_dir = _runs_dir(self.base_dir, _loader.current_profile().codename) / run_id
         if not run_dir.exists():
             run_dir = None
         print(f"Regenerating acceptance report for run {run_id}")

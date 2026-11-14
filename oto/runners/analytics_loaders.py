@@ -18,7 +18,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.policy import check_retirement_eligibility
 from oto.metrics.protocol import classify
@@ -130,7 +130,7 @@ class CorpusMixin:
         <runs>/gfx900_ref_* is the spoof floor (the shipped gfx900
         reference chain), never a native candidate, so it is excluded.
         """
-        runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
+        runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
     def _registry_phase_records(self) -> list[tuple[str, list[dict[str, Any]]]]:
         """Native registry rows grouped per (run, phase), invocation-stamped.
@@ -262,7 +262,7 @@ class CorpusMixin:
         """
         # Per (phase_id, fp): {run_dir_name: [gflops...]}
         by_cell: dict[tuple[str, str], dict[str, list[float]]] = {}
-        runs_dir = _runs_dir(self.base_dir, _peaks.CODENAME)
+        runs_dir = _runs_dir(self.base_dir, _loader.current_profile().codename)
         for run_dir in sorted(runs_dir.glob("run_*")):
             run_name = run_dir.name
             for csv_file in sorted(run_dir.glob("phase_*/2_BenchmarkData/*.csv")):

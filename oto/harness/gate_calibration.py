@@ -59,7 +59,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.config_writer import TRANSPOSE_MAP
 from oto.tensile.library_parity import phase_family
@@ -198,7 +198,7 @@ def audit(base: str = ".", families: Sequence[str] | None = None) -> dict[str, A
     from oto.tensile.candidate import CandidateGenerator
     from oto.tensile.gates.occupancy import ldspad_feasible
 
-    runs_dir = _runs_dir(base, _peaks.CODENAME)
+    runs_dir = _runs_dir(base, _loader.current_profile().codename)
     gen = CandidateGenerator(Path(base))
     want = {f.upper() for f in families} if families else None
 

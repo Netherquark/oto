@@ -18,7 +18,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 
 
@@ -29,7 +29,7 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
 
-    db = _results_dir(args.base_dir, _peaks.CODENAME) / "registry.db"
+    db = _results_dir(args.base_dir, _loader.current_profile().codename) / "registry.db"
     retirements: list[str] = []
     samples: dict[str, int] = {}
     if db.is_file():

@@ -231,7 +231,7 @@ def run_status(args: Any) -> int:
 
 
 def run_report(args: Any) -> int:
-    from oto.device import peaks as _peaks
+    from oto.device import loader as _loader
     from oto.runners.cli import main as cli_main
     from oto.runners.paths import results_dir as _results_dir
 
@@ -241,7 +241,7 @@ def run_report(args: Any) -> int:
     code = _call_muted(argv, cli_main)
     if not args.json:
         return code
-    report = _results_dir(base_dir(args), _peaks.CODENAME) / "acceptance_report.json"
+    report = _results_dir(base_dir(args), _loader.current_profile().codename) / "acceptance_report.json"
     if report.exists():
         print(report.read_text().rstrip())
         return code

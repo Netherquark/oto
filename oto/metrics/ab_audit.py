@@ -20,8 +20,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import cell_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key
 from oto.metrics.ab_band import (
     BAND_HI,
     BAND_LO,
@@ -284,7 +284,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None) -> dict[str, A
     try:
         from oto.ledger.registry import SQLiteRegistry
         from oto.metrics.coverage import coverage_from_registry
-        db = _results_dir(base, _peaks.CODENAME) / "registry.db"
+        db = _results_dir(base, _loader.current_profile().codename) / "registry.db"
         if not db.exists():
             return {"available": False, "reason": "no registry.db"}
         reg = SQLiteRegistry(base, read_only=True)

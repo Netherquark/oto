@@ -44,8 +44,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
 from oto import yamlio
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -79,14 +79,14 @@ def snapshot(base: Path = BASE) -> dict[str, Any]:
     byte length) and to catch deletion, not to attest to contents. Hashing every
     CSV in the corpus would cost more than the runs being verified.
     """
-    runs_dir = _runs_dir(base, _peaks.CODENAME)
+    runs_dir = _runs_dir(base, _loader.current_profile().codename)
     dirs: dict[str, list[int]] = {}
     if runs_dir.is_dir():
         for d in sorted(runs_dir.iterdir()):
             if d.is_dir():
                 dirs[d.name] = list(_dir_size(d))
 
-    db_path = _results_dir(base, _peaks.CODENAME) / "registry.db"
+    db_path = _results_dir(base, _loader.current_profile().codename) / "registry.db"
     tables: dict[str, int | None] = {}
     if db_path.is_file():
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -178,7 +178,7 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
     """
     from oto.runners.driver import TensileDriver
 
-    path = _runs_dir(base, _peaks.CODENAME) / run_id / "logs" / "telemetry.csv"
+    path = _runs_dir(base, _loader.current_profile().codename) / run_id / "logs" / "telemetry.csv"
     if not path.is_file():
         return {"run_id": run_id, "ok": False,
                 "error": f"no telemetry at {path.relative_to(base)}"}
@@ -207,7 +207,7 @@ def telemetry(run_id: str, base: Path = BASE) -> dict[str, Any]:
             else:
                 e["hot"] += 1
     d = _driver()
-    bases = d._load_telemetry_by_phase(_runs_dir(base, _peaks.CODENAME) / run_id)
+    bases = d._load_telemetry_by_phase(_runs_dir(base, _loader.current_profile().codename) / run_id)
     for pid, e in per_phase.items():
         v = sorted(e.pop("sclk_values"))
         e["clock_median_hz"] = v[len(v) // 2] if v else 0
@@ -251,7 +251,6 @@ def cheapest(family: str | None = None, n: int = 5,
     universe used for deck *selection*. Recommending from the union produces
     `--targets` the driver cannot resolve, which is worse than no answer.
     """
-    from oto.device.peaks import FAMILY_DTYPE_CHAR
     from oto.tools.consolidate import _is_legal
 
     deck_path = base / "phases.yaml"
@@ -261,7 +260,7 @@ def cheapest(family: str | None = None, n: int = 5,
 
     # Families are labelled "ZZ" but Tensile's DataType is "Z"; the mapping
     # belongs to oto.device.peaks, so accept either and let it resolve.
-    want = FAMILY_DTYPE_CHAR.get(family, family) if family else None
+    want = _loader.current_profile().family_dtype_char.get(family, family) if family else None
 
     def volume(phase: dict[str, Any]) -> float:
         pt = (phase.get("config") or {}).get("ProblemType", "")

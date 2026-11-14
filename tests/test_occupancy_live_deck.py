@@ -18,6 +18,7 @@ from pathlib import Path
 import yaml
 from occupancy_gate_common import BASE
 
+from oto.device import loader as _loader
 from oto.tensile.gates.occupancy import occupancy_feasible
 
 
@@ -141,8 +142,8 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
             return cands
 
     def test_every_family_emits_a_resolvable_cell_key(self):
-        from oto.device.peaks import FAMILY_SHAPES, cell_key
-        for family, sides in FAMILY_SHAPES.items():
+        from oto.device.vocabulary import cell_key
+        for family, sides in _loader.current_profile().family_shapes.items():
             with self.subTest(family=family):
                 shape = f"{sides[0]}x{sides[0]}x{sides[0]}"
                 for cand in self._generated(family, shape=shape):
@@ -152,12 +153,11 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
 
     def test_family_label_is_not_derivable_from_dtype(self):
         """'H' covers three families, so DataType cannot stand in for it."""
-        from oto.device.peaks import FAMILY_DTYPE_CHAR
         by_dtype = {}
-        for fam, dt in FAMILY_DTYPE_CHAR.items():
+        for fam, dt in _loader.current_profile().family_dtype_char.items():
             by_dtype.setdefault(dt, set()).add(fam)
         ambiguous = {dt: f for dt, f in by_dtype.items() if len(f) > 1}
         assert "H" in ambiguous, "expected the H dtype to be family-ambiguous"
-        # DTYPE_TO_FAMILY resolves 'H' to HH alone, so anything relying on the
+        # dtype_to_family() resolves 'H' to HH alone, so anything relying on the
         # dtype fallback would fold HH_HPA and HS_HPA into HH.
         assert ambiguous["H"] == {"HH", "HH_HPA", "HS_HPA"}

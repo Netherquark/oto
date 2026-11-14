@@ -1,13 +1,14 @@
-"""Refactor 2 Phase 1: DeviceProfile reproduces gfx90c constants exactly."""
+"""DeviceProfile loads and decides device identity; canonical accessor."""
 
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.device import peaks as p
+import pytest
+
+from oto.device import loader as _loader
 from oto.device.loader import load_profile
-from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT
 
 
 def test_gfx90c_profile_loads():
@@ -24,23 +25,21 @@ def test_gfx90c_profile_loads():
     assert prof.spoof_reference == "gfx900"
 
 
-def test_profile_reproduces_peaks():
+def test_current_profile_defaults_to_the_committed_device():
+    assert _loader.current_profile().codename == "gfx90c"
+
+
+def test_profile_tables_consistent():
     prof = load_profile("gfx90c")
-    assert dict(prof.peak_gflops) == dict(p.PEAK_GFLOPS)
-    assert {k: list(v) for k, v in prof.family_shapes.items()} == {k: list(v) for k, v in p.FAMILY_SHAPES.items()}
-    assert {k: list(v) for k, v in prof.family_cells.items()} == {k: list(v) for k, v in p.FAMILY_CELLS.items()}
-    assert dict(prof.family_dtype_char) == dict(p.FAMILY_DTYPE_CHAR)
-    assert dict(prof.family_dtypes) == dict(p.FAMILY_DTYPES)
-    assert dict(prof.realistic_ceilings) == dict(p.REALISTIC_CEILINGS)
-    assert dict(prof.realistic_ceilings_blas8) == dict(p.REALISTIC_CEILINGS_BLAS8)
-    assert dict(prof.reported_to_blas8) == dict(p.REPORTED_TO_BLAS8)
-    assert dict(prof.theoretical_peaks) == dict(p.THEORETICAL_PEAKS)
-    assert dict(prof.theoretical_peaks_blas8) == dict(p.THEORETICAL_PEAKS_BLAS8)
-    assert dict(prof.family_bytes_per_element) == dict(FAMILY_BYTES_PER_ELEMENT)
+    for fam in prof.family_shapes:
+        assert fam in prof.family_dtype_char
+        assert fam in prof.family_dtypes
+        assert fam in prof.realistic_ceilings
+        assert fam in prof.family_bytes_per_element
+    assert prof.isa == (9, 0, 12)
 
 
 def test_profile_loader_missing_raises():
-    import pytest
     with pytest.raises(FileNotFoundError):
         load_profile("gfx9999")
 
@@ -53,3 +52,12 @@ def test_synthetic_profile_differs():
     assert p2.num_cus == 64
     assert p2.max_clock_mhz == 1500
     assert p1.num_cus != p2.num_cus
+
+
+def test_bound_profile_restores():
+    p1 = load_profile("gfx90c")
+    synthetic = __import__("dataclasses").replace(
+        p1, codename="synthetictest", isa=(9, 9, 99), num_cus=64)
+    with _loader.bound_profile(synthetic):
+        assert _loader.current_profile().codename == "synthetictest"
+    assert _loader.current_profile().codename == "gfx90c"

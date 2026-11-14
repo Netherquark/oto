@@ -28,11 +28,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from oto.device.peaks import FAMILY_DTYPE_CHAR, FAMILY_DTYPES, FAMILY_SHAPES
+from oto.device import loader as _loader
 
 #: Dat TYPE token (from the shipped filename `TensileLibrary_Type_<TYPE>_...`)
 #: maps 1:1 to our family keys for the 7 analysed families.
-SHIPPED_FAMILIES = list(FAMILY_DTYPES.keys())
+SHIPPED_FAMILIES = list(_loader.current_profile().family_dtypes.keys())
 
 CONTRACTION_PATTERNS = ["Ailk_Bjlk", "Ailk_Bljk", "Alik_Bjlk", "Alik_Bljk"]
 
@@ -195,10 +195,10 @@ def shipped_kernel_config(name: str, family: str,
     """Public canonical read: phase `config` for one shipped kernel of `family`.
 
     Resolves `family` to its Tensile DataType char via the shared
-    FAMILY_DTYPE_CHAR map rather than each caller re-deriving it. ``arch``
+    _loader.current_profile().family_dtype_char map rather than each caller re-deriving it. ``arch``
     sets the config's Architecture (the reference floor's ISA).
     """
-    return _config_from_kernel(name, FAMILY_DTYPE_CHAR[family], arch)
+    return _config_from_kernel(name, _loader.current_profile().family_dtype_char[family], arch)
 
 
 def _reconcile_knobs(k: dict[str, Any]) -> None:
@@ -311,8 +311,8 @@ def emit_spoof_phases(manifest: dict[str, Any],
         fam_info = by_family.get(fam)
         if not fam_info:
             continue
-        dtype_char = FAMILY_DTYPE_CHAR[fam]
-        shapes = [f"{s}x{s}x{s}" for s in FAMILY_SHAPES.get(fam, [])]
+        dtype_char = _loader.current_profile().family_dtype_char[fam]
+        shapes = [f"{s}x{s}x{s}" for s in _loader.current_profile().family_shapes.get(fam, [])]
         for pattern in CONTRACTION_PATTERNS:
             fam_pattern = f"{fam}_{pattern}"
             entry = fam_info.get(pattern) or fam_info.get(fam_pattern)

@@ -43,15 +43,15 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-import oto.device.peaks as _peaks
-from oto.device.peaks import DTYPE_TO_FAMILY, cube_side
+from oto.device import loader as _loader
+from oto.device.vocabulary import cube_side, dtype_to_family
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import runs_dir as _runs_dir
 
 # bytes per element for the GLOBAL LOAD. Read from Tensile via
 # consolidate.dtype_bytes rather than hardcoded: this table used to be a second
-# copy of oto.tensile.gates.vgpr_model.FAMILY_BYTES_PER_ELEMENT and had already
+# copy of the profile's family_bytes_per_element and had already
 # drifted, carrying
 # the same wrong "Z": 8 (complex double is 16) that let VectorWidth 2 through
 # the cap. tests.test_measurement_integrity asserts the two agree.
@@ -94,7 +94,7 @@ class _Knobs:
         if key in self._cache:
             return self._cache[key]
         self._cache[key] = {}
-        d = _runs_dir(self.base, _peaks.CODENAME) / str(run) / str(phase_id) / "2_BenchmarkData"
+        d = _runs_dir(self.base, _loader.current_profile().codename) / str(run) / str(phase_id) / "2_BenchmarkData"
         if d.is_dir():
             for f in sorted(os.listdir(d)):
                 if not f.endswith(".yaml"):
@@ -124,7 +124,7 @@ def _fam(rec, knobs: _Knobs) -> str:
     if not f or f == "?":
         f = extract_family_from_phase_id(str(rec.get("phase_id", ""))).upper()
     if not f:
-        f = DTYPE_TO_FAMILY.get(str(rec.get("DataType") or rec.get("dtype") or "").upper(), "?")
+        f = dtype_to_family().get(str(rec.get("DataType") or rec.get("dtype") or "").upper(), "?")
     return f
 
 
@@ -134,7 +134,7 @@ def _load_arms(base: Path):
     floor: list[dict] = []
     ref_ids = drv._reference_floor_runs(None)
     for ref in ref_ids:
-        d = _runs_dir(base, _peaks.CODENAME) / ref
+        d = _runs_dir(base, _loader.current_profile().codename) / ref
         if d.is_dir():
             _n, recs = drv._ab_records_from_csv(d, force_arm="spoof")
             for r in recs:

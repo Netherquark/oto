@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO / "harness"))
 
 import yaml
 
-from oto.device.peaks import FAMILY_SHAPES
+from oto.device import loader as _loader
 from oto.harness.generate_candidates import (
     _round_robin_prune,
     _strip_not_forwarded,
@@ -36,7 +36,7 @@ def _rows():
 
 
 def _grid_cells():
-    return {f: {f"{s}x{s}x{s}" for s in ss} for f, ss in FAMILY_SHAPES.items()}
+    return {f: {f"{s}x{s}x{s}" for s in ss} for f, ss in _loader.current_profile().family_shapes.items()}
 
 
 class TestPoolInvariants:
@@ -62,7 +62,7 @@ class TestPoolInvariants:
         the shape *strings* produced ``1024, 192, 2048, 256, 512`` — 256^3 right
         after the slowest 2048^3 kernel, measured at ~1/3 clock (~55 vs ~210
         GFLOPS) and never eligible as its cell's winner. The deck and
-        FAMILY_SHAPES are numerically ascending; a candidate must match.
+        _loader.current_profile().family_shapes are numerically ascending; a candidate must match.
         """
         for r in _rows():
             sides = [int(s.split("x")[0]) for s in r["shapes"]]
@@ -72,7 +72,7 @@ class TestPoolInvariants:
         for r in _rows():
             fam = str(r["config"].get("FamilyLabel", "")).upper()
             sides = [int(s.split("x")[0]) for s in r["shapes"]]
-            expected = [s for s in FAMILY_SHAPES[fam] if s in set(sides)]
+            expected = [s for s in _loader.current_profile().family_shapes[fam] if s in set(sides)]
             assert sides == expected, (r["phase_id"], sides, expected)
 
     def test_every_row_only_addresses_in_grid_cells(self):
@@ -371,9 +371,8 @@ class TestEveryDeckRowIsGenerative:
 
     @staticmethod
     def _template(family: str, pattern: str) -> dict:
-        from oto.device.peaks import FAMILY_DTYPE_CHAR
         return {"Architecture": "gfx90c",
-                "DataType": FAMILY_DTYPE_CHAR[family],
+                "DataType": _loader.current_profile().family_dtype_char[family],
                 "ContractionPattern": pattern,
                 "ScheduleName": "isa", "FamilyLabel": family}
 

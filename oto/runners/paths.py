@@ -86,11 +86,11 @@ def results_rel(*parts: str) -> str:
     ``gfx90c_results/...`` exactly as before; for another profile it yields
     ``<codename>_results/...``. No literal appears in calling code.
     """
-    import oto.device.peaks as _peaks
-    return str(Path(RESULTS_DIR_TEMPLATE.format(codename=_peaks.CODENAME)).joinpath(*parts))
+    from oto.device.loader import current_profile
+    return str(Path(RESULTS_DIR_TEMPLATE.format(codename=current_profile().codename)).joinpath(*parts))
 
 
 def runs_rel(*parts: str) -> str:
     """Repo-relative runs subpath for the current device (see results_rel)."""
-    import oto.device.peaks as _peaks
-    return str(Path(RUNS_DIR_TEMPLATE.format(codename=_peaks.CODENAME)).joinpath(*parts))
+    from oto.device.loader import current_profile
+    return str(Path(RUNS_DIR_TEMPLATE.format(codename=current_profile().codename)).joinpath(*parts))

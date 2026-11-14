@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.metrics.ab_audit import BASE as _AB_BASE
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir
@@ -43,7 +43,7 @@ def plan_floor(base: Path = BASE) -> dict[str, Any]:
     chain = source_chain(base)
     stats: dict[str, dict[str, Any]] = {}
     for run in chain:
-        rd = _runs_dir(base, _peaks.CODENAME) / run
+        rd = _runs_dir(base, _loader.current_profile().codename) / run
         for csv in rd.glob("phase_*/2_BenchmarkData/*.csv"):
             pid = csv.parent.parent.name
             try:
@@ -98,7 +98,7 @@ def build_floor(base: Path, dest: Path, stamp: str) -> dict[str, Any]:
     copied = 0
     phases: set = set()
     for run in plan["chain"]:
-        for csv in sorted((_runs_dir(base, _peaks.CODENAME) / run).glob(
+        for csv in sorted((_runs_dir(base, _loader.current_profile().codename) / run).glob(
                 "phase_*/2_BenchmarkData/*.csv")):
             pid = csv.parent.parent.name
             out = dest / pid / "2_BenchmarkData"
@@ -137,7 +137,7 @@ def build_db(base: Path, lock: dict[str, Any], out: Path,
     ``reference_chain`` selects it as the head with no resume_of to follow.
     """
     out.parent.mkdir(parents=True, exist_ok=True)
-    src = sqlite3.connect(f"file:{_results_dir(base, _peaks.CODENAME) / 'registry.db'}?mode=ro",
+    src = sqlite3.connect(f"file:{_results_dir(base, _loader.current_profile().codename) / 'registry.db'}?mode=ro",
                           uri=True)
     dst = sqlite3.connect(out)
     src.backup(dst)

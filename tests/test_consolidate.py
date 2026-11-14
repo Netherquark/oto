@@ -16,7 +16,7 @@ Three things are pinned because each one produced a wrong answer at least once:
   * The deck has to be verbatim copies. A generated or re-keyed entry is an
     invented solution, which is the one thing this pipeline must never do.
   * Family matching has to be case-insensitive. extract_family_from_phase_id
-    returns 'ss' and 'zz' while FAMILY_SHAPES is upper-case; comparing them raw
+    returns 'ss' and 'zz' while _loader.current_profile().family_shapes is upper-case; comparing them raw
     matches nothing and silently produces an empty deck.
 """
 import sys
@@ -28,7 +28,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from oto.device.peaks import FAMILY_SHAPES, cell_key
+from oto.device import loader as _loader
+from oto.device.vocabulary import cell_key
 from oto.tools.consolidate import (
     _fam,
     _is_legal,
@@ -52,7 +53,7 @@ class TestFamilyCase(unittest.TestCase):
 
 class TestTargetMatrix(unittest.TestCase):
     def test_every_family_shape_pair_is_covered(self):
-        want = {f"{f}:{s}" for f, sides in FAMILY_SHAPES.items() for s in sides}
+        want = {f"{f}:{s}" for f, sides in _loader.current_profile().family_shapes.items() for s in sides}
         assert {c[2] for c in target_cells()} == want
 
     def test_no_duplicate_cells(self):

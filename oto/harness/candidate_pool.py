@@ -19,9 +19,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-import oto.device.peaks as _peaks
 from oto import yamlio
-from oto.device.peaks import FAMILY_DTYPE_CHAR
+from oto.device import loader as _loader
 from oto.harness.candidate_rows import (
     _NOT_FORWARDED_YET,
     AUTO_EXPLICIT,
@@ -41,7 +40,7 @@ from oto.tensile.shape_order import ordered_shapes
 from oto.tensile.synthesis.db_knobs import forward_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OVERLAY_PATH = _results_dir(REPO_ROOT, _peaks.CODENAME) / "overlays" / "phases.seed.overlay.yaml"
+OVERLAY_PATH = _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
 
 #: Notes for rows dropped because no target shape satisfied their element-
 #: multiple assertions. Appended to by ``_offer_row``; drained by
@@ -59,7 +58,7 @@ def _shape_list(sides: tuple[int, ...]) -> list[str]:
 
     A candidate phase carries its ``TARGET_CELLS`` as one ProblemSizes sweep, and
     Tensile runs that sweep in list order, each size's median absorbing the clock
-    state the previous size left (``claude.md`` 2.0.3). The deck, ``FAMILY_SHAPES``
+    state the previous size left (``claude.md`` 2.0.3). The deck, ``_loader.current_profile().family_shapes``
     and ``TARGET_CELLS`` are numerically ascending, so a candidate must match --
     a string sort would emit ``1024, 192, 2048, 256, 512`` and poison 256^3
     (`results.md` 13.4).
@@ -84,7 +83,7 @@ def _label_for(fam: str, pattern: str, knobs: dict[str, Any]) -> str:
 
 def _base_config(fam: str) -> dict[str, Any]:
     return {
-        "Architecture": _peaks.CODENAME,
+        "Architecture": _loader.current_profile().codename,
         "DataType": FAMILY_DTYPE[fam],
         "FamilyLabel": fam,
         "ScheduleName": "isa",
@@ -465,11 +464,11 @@ def _deck_rows_by_family() -> dict[str, list[dict[str, Any]]]:
             continue
         cfg = row.get("config") or {}
         fam = str(cfg.get("FamilyLabel") or row.get("label") or "").upper()
-        for f in FAMILY_DTYPE_CHAR:
+        for f in _loader.current_profile().family_dtype_char:
             if fam.startswith(f):
                 fam = f
                 break
-        if fam in FAMILY_DTYPE_CHAR:
+        if fam in _loader.current_profile().family_dtype_char:
             rows.setdefault(fam, []).append({**row, "config": cfg})
     return rows
 

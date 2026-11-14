@@ -47,7 +47,7 @@ _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.harness.gate_calibration import (
     measurement_produced,
     population_of,
@@ -70,7 +70,7 @@ def _iter_rows(base: str, families: Sequence[str] | None):
     censuses see exactly the same corpus.
     """
     want = {f.upper() for f in families} if families else None
-    runs_dir = _runs_dir(base, _peaks.CODENAME)
+    runs_dir = _runs_dir(base, _loader.current_profile().codename)
     for run in sorted(d for d in runs_dir.iterdir() if d.is_dir()):
         cfg_dir = run / "configs"
         for phase_dir in sorted(d for d in run.iterdir()

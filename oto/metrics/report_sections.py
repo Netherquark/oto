@@ -17,7 +17,7 @@ import statistics
 from pathlib import Path
 from typing import ClassVar
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.tensile.shape_order import ordered_shapes
 
 
@@ -338,7 +338,7 @@ class SectionMixin:
         stats = self._load_run_telemetry(report.run_dir)
 
         empty = ("<section class=\"section collapsible\" data-collapsed=\"true\"><h2 class=\"section-title\" tabindex=\"0\" role=\"button\" aria-expanded=\"false\">Telemetry "
-                 f"insights ({_peaks.CODENAME})</h2><div class=\"section-body\"><div class=\"table-wrap\"><table><tbody>"
+                 f"insights ({_loader.current_profile().codename})</h2><div class=\"section-body\"><div class=\"table-wrap\"><table><tbody>"
                  "<tr><td class=\"empty\">No telemetry CSV recorded for this run.</td>"
                  "</tr></tbody></table></div></div></section>")
         if not stats:

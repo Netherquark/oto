@@ -11,7 +11,7 @@ verdict pairing across forms measures the protocol, not the kernel.
 The four forms, stamped into records, kernel_db rows and the report payload:
 
 * ``FAMILY``  -- the invocation covers every graded cell of the record's
-  family (``FAMILY_CELLS``, the deck's own cell list; declared shapes win over
+  family (``_loader.current_profile().family_cells``, the deck's own cell list; declared shapes win over
   measured so a family phase that lost one shape to a Tensile rejection still
   classifies by what it was ASKED to run). This is what every gf900 floor
   phase measures (verified 2026-10-23 corpus-wide: all 3802 floor CSVs are
@@ -43,7 +43,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from oto.device.peaks import FAMILY_CELLS
+from oto.device import loader as _loader
 
 #: Invocation forms. Values are stamped into artifacts — treat as format.
 SINGLE = "single"
@@ -77,7 +77,7 @@ def label(protocol: str | None) -> str:
 
 def gradeable(fam: str):
     """The graded-cell side set of a family ('NxNxN' strings; may be empty)."""
-    cells = FAMILY_CELLS.get(str(fam or "").upper())
+    cells = _loader.current_profile().family_cells.get(str(fam or "").upper())
     if not cells:
         return set()
     return {f"{int(s)}x{int(s)}x{int(s)}" for s in cells}

@@ -12,9 +12,9 @@ import unittest
 
 from occupancy_gate_common import OBSERVED, cfg
 
+from oto.device import loader as _loader
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import occupancy_feasible
-from oto.device import loader as _loader
 from oto.tensile.gates.vgpr_model import (
     ACCVGPR_BUDGET,
     MAX_VGPR_PER_THREAD,
@@ -107,10 +107,8 @@ class TestVectorWidthCap(unittest.TestCase):
             assert cap_vector_width(fam, mt, tt) == want, fam
 
     def test_cap_vector_width_never_exceeds_the_hardware_cap(self):
-        from oto.device import loader as _loader
         from oto.tensile.gates.loads import cap_vector_width
-        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT
-        for fam, bpe in FAMILY_BYTES_PER_ELEMENT.items():
+        for fam, bpe in _loader.current_profile().family_bytes_per_element.items():
             for _vw in (1, 2, 4, 8):
                 v = cap_vector_width(fam, "128x128x16", "8x8")
                 assert v * bpe <= _loader.current_profile().global_load_byte_cap, fam
@@ -122,9 +120,8 @@ class TestVectorWidthCap(unittest.TestCase):
         assert cap_vector_width("SS", "16x16x16", "8x8") <= 2
 
     def test_every_wide_family_deck_reaches_the_cap(self):
-        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT
         for fam in ("SS", "DD", "HH"):
-            bpe = FAMILY_BYTES_PER_ELEMENT[fam]
+            bpe = _loader.current_profile().family_bytes_per_element[fam]
             best = 0
             for c in self.decks[fam]:
                 vw = c.get("VectorWidth")
@@ -133,7 +130,6 @@ class TestVectorWidthCap(unittest.TestCase):
             assert best == 16, f"{fam} deck tops out at {best} B; the 16 B cap is unreachable " f"and this family cannot win a large cell"
 
     def test_added_candidates_pass_the_dual_resource_gate(self):
-        from oto.device.peaks import FAMILY_DTYPE_CHAR
         from oto.tensile.gates.occupancy import occupancy_feasible
         checked = 0
         for fam, cfgs in self.decks.items():
@@ -144,7 +140,7 @@ class TestVectorWidthCap(unittest.TestCase):
                 # DataType must be the real dtype char, not the family label: a
                 # phase's DataType is what the gate weights, and the label is
                 # only a fallback for label-only auto phases.
-                config = {"DataType": FAMILY_DTYPE_CHAR[fam], "FamilyLabel": fam,
+                config = {"DataType": _loader.current_profile().family_dtype_char[fam], "FamilyLabel": fam,
                           "NLCA": 1, "WorkGroupMapping": 4, "GlobalSplitU": 1,
                           "ContractionPattern": "Ailk_Bjlk", "VectorWidth": vw}
                 config.update({k: v for k, v in c.items() if k != "NLCA"})

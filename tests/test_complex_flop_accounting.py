@@ -25,15 +25,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import (
-    PEAK_GFLOPS,
-    REALISTIC_CEILINGS,
-    REALISTIC_CEILINGS_BLAS8,
-    REPORTED_TO_BLAS8,
-    THEORETICAL_PEAKS,
-    THEORETICAL_PEAKS_BLAS8,
-    blas8_gflops,
-)
+from oto.device import loader as _loader
+from oto.device.vocabulary import blas8_gflops
 
 RUNS = BASE / "gfx90c_runs"
 
@@ -42,12 +35,12 @@ class TestFlopFactor(unittest.TestCase):
     """The factor itself: 4x for the two complex families, 1x for the rest."""
 
     def test_complex_families_carry_the_four_x_factor(self):
-        assert REPORTED_TO_BLAS8["CC"] == 4.0
-        assert REPORTED_TO_BLAS8["ZZ"] == 4.0
+        assert _loader.current_profile().reported_to_blas8["CC"] == 4.0
+        assert _loader.current_profile().reported_to_blas8["ZZ"] == 4.0
 
     def test_real_families_are_one_to_one(self):
         for fam in ("SS", "DD", "HH", "HH_HPA", "HS_HPA"):
-            assert REPORTED_TO_BLAS8[fam] == 1.0, fam
+            assert _loader.current_profile().reported_to_blas8[fam] == 1.0, fam
 
     def test_helper_converts_only_the_complex_families(self):
         assert blas8_gflops("CC", 322.0) == 1288.0
@@ -60,33 +53,33 @@ class TestCeilings(unittest.TestCase):
     """The acceptance ceilings are in the unit the measurement arrives in."""
 
     def test_complex_ceilings_are_the_blas8_values_over_four(self):
-        self.assertAlmostEqual(REALISTIC_CEILINGS["CC"],
-                               REALISTIC_CEILINGS_BLAS8["CC"] / 4.0, places=9)
-        self.assertAlmostEqual(REALISTIC_CEILINGS["ZZ"],
-                               REALISTIC_CEILINGS_BLAS8["ZZ"] / 4.0, places=9)
-        self.assertAlmostEqual(THEORETICAL_PEAKS["CC"],
-                               THEORETICAL_PEAKS_BLAS8["CC"] / 4.0, places=9)
-        self.assertAlmostEqual(THEORETICAL_PEAKS["ZZ"],
-                               THEORETICAL_PEAKS_BLAS8["ZZ"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().realistic_ceilings["CC"],
+                               _loader.current_profile().realistic_ceilings_blas8["CC"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().realistic_ceilings["ZZ"],
+                               _loader.current_profile().realistic_ceilings_blas8["ZZ"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().theoretical_peaks["CC"],
+                               _loader.current_profile().theoretical_peaks_blas8["CC"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().theoretical_peaks["ZZ"],
+                               _loader.current_profile().theoretical_peaks_blas8["ZZ"] / 4.0, places=9)
 
     def test_real_ceilings_are_untouched(self):
-        assert REALISTIC_CEILINGS["SS"] == 1118.7
-        assert REALISTIC_CEILINGS["DD"] == 98.6
-        assert REALISTIC_CEILINGS["HH"] == 2461.0
-        assert THEORETICAL_PEAKS["SS"] == 1613
-        assert THEORETICAL_PEAKS["HH"] == 3226
+        assert _loader.current_profile().realistic_ceilings["SS"] == 1118.7
+        assert _loader.current_profile().realistic_ceilings["DD"] == 98.6
+        assert _loader.current_profile().realistic_ceilings["HH"] == 2461.0
+        assert _loader.current_profile().theoretical_peaks["SS"] == 1613
+        assert _loader.current_profile().theoretical_peaks["HH"] == 3226
 
     def test_the_complex_roof_is_the_real_roof_over_four(self):
         """CC's roof is the FP32 pipe, ZZ's the FP64 pipe -- both /4."""
-        self.assertAlmostEqual(THEORETICAL_PEAKS["CC"], PEAK_GFLOPS["FP32"] / 4.0, places=9)
-        self.assertAlmostEqual(THEORETICAL_PEAKS["ZZ"], PEAK_GFLOPS["FP64"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().theoretical_peaks["CC"], _loader.current_profile().peak_gflops["FP32"] / 4.0, places=9)
+        self.assertAlmostEqual(_loader.current_profile().theoretical_peaks["ZZ"], _loader.current_profile().peak_gflops["FP64"] / 4.0, places=9)
 
     def test_complex_cells_score_against_the_corrected_bar(self):
         """The measured bests, re-scored: CC/ZZ are at the roof, not at 20%."""
         cases = [("CC", 512, 322.0), ("CC", 2048, 346.7),
                  ("ZZ", 512, 24.3), ("ZZ", 1024, 24.5)]
         for fam, _side, reported in cases:
-            pct = reported / THEORETICAL_PEAKS[fam] * 100.0
+            pct = reported / _loader.current_profile().theoretical_peaks[fam] * 100.0
             assert pct > 75.0, f"{fam}:{reported} should be near its roof"
 
 
@@ -125,7 +118,7 @@ class TestCorpusEvidence(unittest.TestCase):
         reported = 322.0
         blas8 = blas8_gflops("CC", reported)
         self.assertAlmostEqual(blas8, 1288.0, places=6)
-        pct = blas8 / PEAK_GFLOPS["FP32"] * 100.0
+        pct = blas8 / _loader.current_profile().peak_gflops["FP32"] * 100.0
         assert pct > 75.0
         assert pct < 90.0
 
