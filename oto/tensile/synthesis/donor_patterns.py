@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """The per-family mutation patterns for the DB-hooked mutator.
 
-Owns: ``DbPatternsMixin`` -- one ``_<family>_mutation_pattern`` per family, each
-documented with the failure mode it is designed to attack:
+Owns: ``DbPatternsMixin`` -- the family-generic mutant generator:
+``_forward_draws`` (small random combinations of forward knobs from the
+NARROW/WIDE surface), ``_floor_direction`` (the deltas that move a parent
+toward the floor winner) and ``_normalize_parent_config``.
 
-  * ``SS`` wave coverage / occupancy
-  * ``DD`` register pressure / VGPR
-  * ``CC`` total-elements divisibility / LDS pad
-  * ``ZZ`` low ceilings / vector width / thread tile
+The per-family ``_<family>_mutation_pattern`` passes were removed as dead code:
+they were never wired into ``synthesize_mutants`` and read a domain shape that
+does not exist. ``_joint_domain`` remains the single legality-narrowing seam.
 
-plus ``_forward_draws`` (small random combinations of forward knobs from the
-NARROW/WIDE surface) and ``_floor_direction`` (the deltas that move a parent
-toward the floor winner).
-
-Both ``_forward_draws`` and the family patterns draw through ``_joint_domain``,
-never through ``forward_domain`` directly: a forward knob's *legal* values depend
-on the rest of the tile, so treating the domains as independent axes generates
-configs the launch boundary then refuses (``docs/potential_configs.md`` §R23).
+Both draws go through ``_joint_domain``, never through ``forward_domain``
+directly: a forward knob's *legal* values depend on the rest of the tile, so
+treating the domains as independent axes generates configs the launch boundary
+then refuses (``docs/potential_configs.md`` §R23).
 Does NOT own: the domains they draw from (oto.tensile.synthesis.donor_knobs) or the
 mutant synthesis that gates them (oto.tensile.synthesis.donor_mutator).
 Public API: DbPatternsMixin.
@@ -37,8 +34,7 @@ from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
 class DbPatternsMixin:
-    """Per-family mutation patterns, mixed into DBMutator."""
-
+    """Family-generic mutant patterns, mixed into DBMutator."""
 
     def _joint_domain(self, family: str | None, knob: str,
                       parent_config: dict[str, Any]) -> tuple[Any, ...]:
@@ -101,212 +97,6 @@ class DbPatternsMixin:
             if draw:
                 out.append(draw)
         return out
-
-    # -- family-specific mutation patterns -------------------------------
-
-    def _ss_mutation_pattern(self, parent_config: dict[str, Any],
-                             rng: random.Random) -> list[dict[str, Any]]:
-        """SS-family-specific mutations targeting sore losers.
-
-        SS family suffers from wave-quantization and occupancy starvation.
-        These patterns target the exact knobs that improve wave coverage:
-        NLCA, WGM, GSU, StaggerU, LdsPad, GLVW.
-        """
-        patterns: list[dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: NLCA toggle (1→3 or 3→1) + LdsPad increase
-        for nlca_val in self._joint_domain("SS", "NLCA", parent_config):
-            for lspad_val in self._joint_domain("SS", "LdsPadA", parent_config):
-                d = {}
-                for k in rng.sample(knobs, rng.randint(1, 2)):
-                    if k == "NLCA":
-                        d["NLCA"] = nlca_val
-                    elif k == "LdsPadA":
-                        d["LdsPadA"] = lspad_val
-                    elif k == "LdsPadB":
-                        d["LdsPadB"] = lspad_val
-                    elif k == "GlobalLoadVectorWidthA":
-                        d["GlobalLoadVectorWidthA"] = rng.choice(
-                            self._joint_domain("SS", "GlobalLoadVectorWidthA",
-                                               parent_config))
-                if d:
-                    patterns.append(d)
-
-        # Pattern 2: WGM change + StaggerU
-        for _ in range(2):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "WorkGroupMapping":
-                    d["WorkGroupMapping"] = rng.choice(
-                        self._joint_domain("SS", "WorkGroupMapping",
-                                           parent_config))
-                elif k == "StaggerU":
-                    d["StaggerU"] = rng.choice(
-                        self._joint_domain("SS", "StaggerU", parent_config))
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: GLVW change + StaggerU stride
-        for glvw_val in self._joint_domain("SS", "GlobalLoadVectorWidthA",
-                                           parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = glvw_val
-                elif k == "StaggerUStride":
-                    d["StaggerUStride"] = rng.choice(
-                        self._joint_domain("SS", "StaggerUStride",
-                                           parent_config))
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _dd_mutation_pattern(self, parent_config: dict[str, Any],
-                             rng: random.Random) -> list[dict[str, Any]]:
-        """DD-family-specific mutations targeting sore losers.
-
-        DD family suffers from register pressure and VGPR bottlenecks.
-        These patterns target DepthU, GLVW, and GSU to improve occupancy.
-        """
-        patterns: list[dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: DepthU increase + GLVW change
-        for depthu_val in self._joint_domain("DD", "DepthU", parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "DepthU":
-                    d["DepthU"] = depthu_val
-                elif k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = rng.choice(
-                        self._joint_domain("DD", "GlobalLoadVectorWidthA",
-                                           parent_config))
-                elif k == "GlobalLoadVectorWidthB":
-                    d["GlobalLoadVectorWidthB"] = rng.choice(
-                        self._joint_domain("DD", "GlobalLoadVectorWidthB",
-                                           parent_config))
-            if d:
-                patterns.append(d)
-
-        # Pattern 2: GSU change + NLCA change
-        for gsu_val in self._joint_domain("DD", "GlobalSplitU", parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GlobalSplitU":
-                    d["GlobalSplitU"] = gsu_val
-                elif k == "NLCA":
-                    d["NLCA"] = rng.choice(
-                        self._joint_domain("DD", "NLCA", parent_config))
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: GLVW change alone
-        for glvw_val in self._joint_domain("DD", "GlobalLoadVectorWidthA",
-                                           parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "GlobalLoadVectorWidthA":
-                    d["GlobalLoadVectorWidthA"] = glvw_val
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _cc_mutation_pattern(self, parent_config: dict[str, Any],
-                             rng: random.Random) -> list[dict[str, Any]]:
-        """CC-family-specific mutations targeting sore losers.
-
-        CC family suffers from total-elements divisibility and LDS padding.
-        These patterns target LdsPad, MacroTile, and NLCA to fix the
-        totalElements 768 % (NumThreads*grvw) ≠ 0 issue.
-        """
-        patterns: list[dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: LdsPad combination + NLCA change
-        for lspad_a_val in self._joint_domain("CC", "LdsPadA", parent_config):
-            for lspad_b_val in self._joint_domain("CC", "LdsPadB", parent_config):
-                for nlca_val in self._joint_domain("CC", "NLCA", parent_config):
-                    d = {}
-                    for k in rng.sample(knobs, rng.randint(1, 3)):
-                        if k == "LdsPadA":
-                            d["LdsPadA"] = lspad_a_val
-                        elif k == "LdsPadB":
-                            d["LdsPadB"] = lspad_b_val
-                        elif k == "NLCA":
-                            d["NLCA"] = nlca_val
-                    if d:
-                        patterns.append(d)
-
-        # Pattern 2: GlobalSplitU. MacroTile is a tile knob and moves through
-        # the donor pass, not the forward surface, so only GSU is drawn here.
-        for _ in range(3):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "GlobalSplitU":
-                    d["GlobalSplitU"] = rng.choice(
-                        self._joint_domain("CC", "GlobalSplitU", parent_config))
-            if d:
-                patterns.append(d)
-
-        # Pattern 3: NLCA triple toggle
-        for nlca_val in self._joint_domain("CC", "NLCA", parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "NLCA":
-                    d["NLCA"] = nlca_val
-            if d:
-                patterns.append(d)
-
-        return patterns
-
-    def _zz_mutation_pattern(self, parent_config: dict[str, Any],
-                             rng: random.Random) -> list[dict[str, Any]]:
-        """ZZ-family-specific mutations targeting sore losers.
-
-        ZZ family (complex double) has the lowest ceilings and requires
-        different VW/ThreadTile/MacroTile combinations.
-        """
-        patterns: list[dict[str, Any]] = []
-        knobs = list(FORWARD_KNOB_DOMAINS)
-
-        # Pattern 1: DepthU change. VectorWidth is not a forward knob (it is a
-        # tile property, drawn by the donor pass), so only DepthU moves here.
-        for depthu_val in self._joint_domain("ZZ", "DepthU", parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 2)):
-                if k == "DepthU":
-                    d["DepthU"] = depthu_val
-            if d:
-                patterns.append(d)
-
-        # Pattern 2: GlobalLoadVectorWidthA/B change
-        for glvwa_val in self._joint_domain("ZZ", "GlobalLoadVectorWidthA",
-                                            parent_config):
-            for glvwb_val in self._joint_domain("ZZ", "GlobalLoadVectorWidthB",
-                                                parent_config):
-                d = {}
-                for k in rng.sample(knobs, rng.randint(1, 2)):
-                    if k == "GlobalLoadVectorWidthA":
-                        d["GlobalLoadVectorWidthA"] = glvwa_val
-                    elif k == "GlobalLoadVectorWidthB":
-                        d["GlobalLoadVectorWidthB"] = glvwb_val
-                if d:
-                    patterns.append(d)
-
-        # Pattern 3: StaggerU stride change
-        for stride_val in self._joint_domain("ZZ", "StaggerUStride",
-                                             parent_config):
-            d = {}
-            for k in rng.sample(knobs, rng.randint(1, 1)):
-                if k == "StaggerUStride":
-                    d["StaggerUStride"] = stride_val
-            if d:
-                patterns.append(d)
-
-        return patterns
 
     def _floor_direction(self, parent_config: dict[str, Any],
                          floor: dict[str, Any]) -> dict[str, Any]:

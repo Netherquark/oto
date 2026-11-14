@@ -252,21 +252,6 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
                             random.Random(seed), parent, family):
                         self._assert_legal(family, parent, draw)
 
-    def test_family_patterns_are_jointly_legal(self):
-        """Same for the four per-family passes (db.synthesis.donor_patterns)."""
-        emitted = {}
-        for family in ("SS", "DD", "CC", "ZZ"):
-            pattern = getattr(self.db, f"_{family.lower()}_mutation_pattern")
-            parent = PARENTS[family]
-            n = 0
-            for seed in range(40):
-                for draw in pattern(parent, random.Random(seed)):
-                    n += 1
-                    self._assert_legal(family, parent, draw)
-            emitted[family] = n
-        # Guard the guard: an empty pattern list would pass vacuously.
-        assert all(emitted.values()), emitted
-
     def test_joint_domain_is_a_subset_of_the_forward_domain(self):
         """The filter narrows; it never invents a value the family may not draw."""
         from oto.tensile.synthesis.donor_knobs import (
