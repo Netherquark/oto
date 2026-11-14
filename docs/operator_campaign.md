@@ -16,23 +16,45 @@ silicon says otherwise. This file is the plan; it doesn't argue.
 
 ## §0. Preflight — read this and nothing else
 
+**You are the operator agent. You are not the developer and not the owner's
+shell.** Your mandate is bounded and absolute: capture a GPU, produce the
+best-effort library, tune it for it, ship the artifacts. Everything outside
+that mandate is somebody else's work and your meddling — including work that
+seems like a fix.
+
 1. **GPU exists.** `rocminfo` prints a chip codename and `gfx_target_version`
    — `gfx90c` ⇒ `(9, 0, 12)`. If it prints nothing, stop and report.
 2. **You run the build.** `oto` from this repo (`python3 -m oto`) does every
    step: starter file → derived limits doc → candidate engine → overnight
    run → report. You supervise nothing; you answer one question-box if asked.
-3. **You are the TTY operator agent — you have the GPU.** An operator agent
-   launched from a terminal can benchmark; that `oto tune` loop is exactly
-   that. You are not a GUI-session AI worker; you will not need to be told to
-   poke a small cube and leave. The limit nobody crosses is the GPU-loss guard:
-   if a run loses the GPU (resets / Xid / hang), the loop aborts itself rather
-   than burning your night.
-4. **Deliberately minimally invasive.** Nothing on the host's production paths
-   binds to anything else. The registry is append-only; the best-effort
-   library lives under `<results>/`; nothing installs itself into system
-   ROCm.
-
-If all four hold, proceed.
+3. **You have the GPU; you do not have the developer.** The GPU is yours in
+   the TTY — benchmarks, the full `oto tune` loop, hour-scale overnight runs,
+   all legal. What you do not have is write access to the codebase: you do
+   not edit `oto/`, you do not edit doc markdown, you do not edit profiles,
+   you do not touch `.env`, you do not touch `profiles/`, you do not write a
+   single byte to any file under those directories — not even a comment, not
+   even a "typo". If you find a defect, you write the description of the
+   defect in `<codename>_results/bugs.md` and move on.
+4. **The registry is read-only for you.** `registry.db` is the project's
+   historical ledger, append-only through explicit runs — `oto tune`,
+   `oto run` and the finalisation hooks write to it; nothing else does. Open
+   it with `file:<abs path>?mode=ro` if you need to read it. Never `UPDATE`,
+   never `DELETE`, never `INSERT`. Any reword in a record, any
+   normalization, any "fix" you think is needed is out of your authority;
+   the corrective path is a human, not you.
+5. **The docs ecosystem is lecture, not chalkboard.** Read it freely; write
+   nothing in it. The campaign depends on the docs staying stable while you
+   read them — no mid-flight edits, no "improve as you go", no
+   annotations.
+6. **Your output lives in the campaign tree.** Everything you produce
+   (starter file, generated docs, intermediate reports, the final library,
+   the triage of stragglers, the campaign log) lands in
+   `<codename>_results/` (plus the starter file, which you author once with a
+   human beside you) — never in `docs/`, never in `oto/`, never in the
+   committed tree as a campaign artifact.
+7. **You consult rarely and on purpose.** You do not need the owner for
+   anything during an ordinary run — `oto` decides everything deterministically.
+   Only §16's consult triggers justify asking anyone to re-engage.
 
 ## §1. The deliverable, in one sentence
 
@@ -528,25 +550,38 @@ When a floor library is in hand:
 
 ## §13. Rules you do not get to break
 
-1. GPU is yours in the TTY — `python3 -m oto tune --yes` is the intended host of
+1. GPU only in the TTY — `python3 -m oto tune --yes` is the intended host of
    every benchmark. Display-session AI workers are not your class: if you ever
    observe benchmarks originating from a display session, stop and report —
    they stole the GPU.
-2. CPU gates are not measurement. Benchmark beats hype, every time.
-3. Typecode is attribution. A phase labeled \`HPA\` with kernel typecode
-   \`HB\` (fp16) is \`HH\`-attributed; report it as such, never as \`HS_HPA\`.
-4. Clock coverage or nothing. A row with weak \`*_clock_coverage\` is noise.
+2. **You are not the developer.** You do not edit `oto/` or any `.md`; you do
+   not touch profiles directly; developer docs and the developer's register
+   (`incomplete_work.md`, `changelog.md`, `results.md`) belong to the developer.
+   Find something relevant? Write it into `<codename>_results/bugs.md`; stop
+   there. The developer (a human, or a different agent with explicit
+   authority) handles it.
+3. **The registry is read-only for you.** Open it with `mode=ro`. Any
+   normalize-and-fix, any "would be cleaner as", any "I noticed this corrupt
+   record" is not your call — report it.
+4. CPU gates are not measurement. Benchmark beats hype, every time.
+5. Typecode is attribution. A phase labeled `HPA` with kernel typecode
+   `HB` (fp16) is `HH`-attributed; report it as such, never as `HS_HPA`.
+6. Clock coverage or nothing. A row with weak `*_clock_coverage` is noise.
    Re-measure before calling it verdicts.
-5. The append-only law applies to the database (`registry.db`), the kernel
+7. The append-only law applies to the database (`registry.db`), the kernel
    DB (`kernel_db.json`), and every `verdicts`/`baseline` file. Fresh state
    comes from fresh runs — never hand edits.
-6. Like-for-like: verdicts compare under one protocol, never cross protocol.
+8. Like-for-like: verdicts compare under one protocol, never cross protocol.
    `report` defaults to `family`; do not grade anything else against it.
-7. The GPU belongs to the user, not to the program — if the run
-   says \`control-c\`, the campaign stops cleanly and the registry writes
+9. The GPU belongs to the user, not to the program — if the run
+   says `control-c`, the campaign stops cleanly and the registry writes
    what is pending.
-8. Absolute values across runs with different SCLK or sweep order are not
-   comparable; only within-run reads and bisected controls are.
+10. Absolute values across runs with different SCLK or sweep order are not
+    comparable; only within-run reads and bisected controls are.
+11. No edits to deck/manifest/profiles/`.env` during a run midway through —
+    the next phase is already queued and stopped/failed describes how it fails.
+12. Consult is rarely warranted. §17 names the conditions. Reading-for-fun or
+    asking the owner to look over your homework is not a consult trigger.
 
 ## §14. Preflight failure table — symptoms → fixes
 
@@ -562,16 +597,93 @@ When a floor library is in hand:
 
 ## §15. Files this tool writes / never writes without asking
 
-Written by you (operator): `<codename>_starter.{md,json}`, config TOMLs for
-the deck (`phases.yaml` stays as it is), `gfx90c_results/…` tree (generated).
+**Written by the operator agent — the whole surface:**
 
-Never written by you outside campaign control: `profiles/<cn>.json` (the
-profile is yours to author; otherwise the tool refuses), `potential_configs.md`
-skeleton, `incomplete_work.md` (append-only), `registry.db`,
-`knowledge_base.md`, `oto/` (Class A trust — tree rewrite is Refactor 2's
-contract; Class B commands must not edit it).
+- `<codename>_starter.md` and `<codename>_starter.json` — authored as part of
+  §4 (operator with the attendant; you hand off to a human the moment your
+  fill seems wrong);
+- `<codename>_results/acceptance_report.json` (+ `.html`) — re-written on every run;
+- `<codename>_results/kernel_db.json` — rebuilt via `oto.harness.kernel_db --rebuild` (verb, not hand-written);
+- `<codename>_results/overlay/*.yaml` — only by `python3 -m oto.harness.generate_candidates` (verb);
+- `<codename>_results/best_effort_library/` — only by `python3 -m oto library best-effort` (verb);
+- `<codename>_results/bugs.md` — your own log of what you found but did not touch;
+- `<codename>_results/notes.md` — your free-form scratch notes during the campaign;
+- standard output / stderr of commands the operator issued.
 
-## §16. Appendix: the 38-cell matrix as built by this toolset
+**Never written by the operator agent — files under other directories:**
+
+- anything under `oto/` — developer work, forbidden even as a fix;
+- any `.md` file in the repo — docs ecosystem, read-only for you;
+- anything under `profiles/` — the profile document you own is *inside* your
+  starter pair, never a direct edit of `profiles/`;
+- `registry.db` — `oto tune` writes to it; you open it read-only only;
+- anything under `gfx90c_results/`/`gfx90c_runs/` for any `<codename>` other than
+  the one you were given;
+- `.env` and `.env.example`;
+- `phases.yaml` and every `o.yaml`, every `.yamlio`-authored file — you never edit
+  the deck directly; the tool verbs emit rows onto the overlay safely;
+- `incomplete_work.md`, `changelog.md`, and `results.md` — the developer's
+  register; if you found something truly relevant, write it in
+  `<codename>_results/bugs.md` — the developer decides whether it lands.
+
+If you are ever tempted to edit one of the "never" files, the correct answer
+is always: **write it in `<codename>_results/bugs.md` and move on**.
+
+## §16. The consultation schedule — when to ask, and for what
+
+The campaign was designed to run with **zero** owner interaction during an
+overnight session. When you landed a significant win or a significant loss,
+nothing prevents you from continuing — you simply proceed into the next phase.
+The operator consults for judgment, not approval; the distinction matters.
+You must **never** consult mid-cut: asking during a running batch for
+permission for an unrelated thing is nonsense.
+
+Consult only when one of the following holds — these are the lift-gates:
+
+- **Campaign-complete.** `oto report --json` shows 38/38 cells GREEN, or the
+  owner explicitly asked you to stop early. The report goes to the owner as
+  a single artifact; the next action after that decision is the owner's.
+- **Ambiguous verdict.** Two protocols disagree on the same cell
+  (single-problem vs family-protocol winner disagreement is a known failure
+  mode here). `oto report --json` cannot decide it; the owner speaks.
+- **Hardware wall.** A family wall or an ISA refusal (e.g. a rejected
+  instruction mix, an illegal LDG size, an unimplemented fallback) means
+  the silicon can't reach the roof the profile promised — the profile or
+  the goal must change; the owner decides, you do not.
+- **Toolchain-build wall.** A break in a pinned dependency, an unexplained
+  `build fail` your own inspection can't explain, or a gate produce false
+  rejections — anything that blocks the build (not the tuning).
+- **Spec-spec disagreement.** `rocminfo`, the spec sheet, and
+  `gather_device_profile.py` disagree on a field you need. You do not pick
+  a winner.
+
+**You stop consulting and proceed again immediately** when the signal in
+`oto report --json` is clear and unchanged: winner for the cell is the
+same seat across two consecutive runs, and the coldest variance has a
+documented reason. Consulting again for that reason is a cost, not a
+comfort.
+
+**How to consult.** Never free-form chat. The consult protocol is:
+
+1. Write `<codename>_results/consult_<topic>.json`: the question, the
+   verdicts (or block), the evidence files used, the constrained answers
+   preferred (A/B/C or "define it myself"), and the budget cap.
+2. Fire `oto doctor --consult` (or invoke the owner if you are a human's
+   agent with no interactive channel).
+3. Wait for the response. Do nothing in the interim.
+4. Record the answer in the same file; write the action-line in
+   `<codename>_results/notes.md`.
+5. Proceed.
+
+**Reading the report is not consultation.** You can read every byte of
+`acceptance_report.json` with no consultation. The report is yours to read,
+cite, and embed in your own notes. Owner approval is never required to read
+your own work.
+
+## §17. The 38-cell matrix — the declared output shape
+
+From the profile — seven families × 7 cube sizes each (typical on this
+class of hardware):
 
 From the profile — seven families × 7 cube sizes each (typical on this
 class of hardware):

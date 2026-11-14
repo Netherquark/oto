@@ -4264,3 +4264,17 @@ the pre-built seed pool.
   illustrative numbers retained with explicit "device this methodology was
   built on" framing. Device invariants explicitly stay in profiles/*.json
   where they belong.
+
+- **2026-11-14 (40th) — operator_campaign.md locks the boundary: read-only by contract.**
+  The original convergence prompt is now anchored to a self-contained class-B
+  protocol with sharper territory lines than any prior pass: §0 now spells
+  "You are not the developer" — no edits to `oto/`, any `.md`, profiles/,
+  `phases.yaml`, `.env` or the registry (read-only via `mode=ro`); §15 is the
+  absolute list of writable paths (campaign artifacts in `<codename>_results/`,
+  report JSON, kernel_db via the `oto.harness.kernel_db` verb, overlay only via
+  `oto.harness.generate_candidates`, bugs.md for any defect, never anything
+  developer-owned); §13 gains rules binding the agent to §16 consultation
+  doctrine (consult only when one of five lift gates fires; never freestyle chat;
+  never consult mid-cut; answer-artifact-tagged stops); §16 is the full
+  consultation schedule. §17 carries the 38-cell matrix verbatim. Two sloppy
+  constructions from the earlier §13 rewrite fixed.
