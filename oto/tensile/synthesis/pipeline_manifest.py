@@ -293,7 +293,7 @@ profile=None,
     ok, reason = legality.cooccurrence_check(base_dir, family, config)
     if not ok:
         return None, f"not manifest-coherent: {reason}"
-    config.setdefault("Architecture", "gfx900")
+    config.setdefault("Architecture", _loader.resolve_profile(profile).spoof_reference or "gfx900")
     config.setdefault("ProblemType", "Contraction")
     config.setdefault("DataType", _loader.resolve_profile(profile,).family_dtype_char[family])
 

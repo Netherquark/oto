@@ -111,7 +111,7 @@ def _split_native_spoof(db: dict[str, Any]) -> tuple[list[dict[str, Any]],
     native: list[dict[str, Any]] = []
     spoof: list[dict[str, Any]] = []
     for run_id, rows in db.items():
-        if run_id.startswith("gfx900_ref_"):
+        if run_id.startswith(f"{_loader.spoof_prefix()}_ref_"):
             spoof.extend(dict(r, run=run_id) for r in rows)
         else:
             native.extend(dict(r, run=run_id) for r in rows)

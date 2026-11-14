@@ -4366,8 +4366,13 @@ the pre-built seed pool.
   - **`idx_cell_key`** is created by the schema (`_EXPRESSION_INDEX_DDL`), so a fresh DB has it.
   - **Native-subject selection is profile-aware**: `latest_run_id(arm="native")` excludes the *current
     profile's* spoof prefix (LIKE-escaped, parameter-bound), not only `gfx900_ref_%`; smoke floors are
-    never recalled for promotion (`latest_reference_run_id` filters `meta.smoke`); the two remaining
-    `LIKE '{arch}_ref_%'` interpolations are parameter-bound.
+    never recalled for promotion (`latest_reference_run_id` filters `meta.smoke`); the remaining
+    `LIKE` interpolations across registry_queries / shipped_floor_manifest / run_plan / auto_prompt are
+    parameter-bound (`like_escape`, shared). **Every** `startswith("gfx900_ref")` / `"gfx900_ref_locked_"`
+    site across the harness/agents/metrics (kernel_db, occupancy_bounds, corpus_census, cell_knob_diff,
+    cell_resolver, regression_matrix, gate_calibration, driver._current_arm, consolidate_floor.locked_run_id)
+    now resolves the profile's spoof_reference through `oto.device.loader.spoof_prefix` — a gfx906-floor
+    profile no longer misclassifies the floor as native anywhere in the pipeline.
   - **The driver honours OTO_PROFILE**: an explicit OTO_PROFILE binding wins over rocminfo detection
     (documented resolution order), so a gfx902 session is not silently run as gfx90c; the process-wide
     rebind failure prints to stderr instead of vanishing.

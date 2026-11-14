@@ -40,8 +40,9 @@ def _corpus_priors(base_dir: Path) -> dict[tuple[str, int], dict[str, Any]]:
         return {}
     from oto.harness.cell_knob_diff import _winner_per_cell
     rows: list[dict[str, Any]] = []
+    _floor_prefix = _loader.spoof_prefix()
     for run_id, run_rows in db.items():
-        if str(run_id).startswith("gfx900_ref"):
+        if str(run_id).startswith(f"{_floor_prefix}_ref"):
             continue
         rows.extend(run_rows)
     winners = _winner_per_cell(rows)

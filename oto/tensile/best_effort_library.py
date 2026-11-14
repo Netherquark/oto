@@ -122,10 +122,11 @@ def _best_row(rows: list[dict[str, Any]], basis: str) -> dict[str, Any] | None:
     return max(eligible, key=lambda r: float(r.get("gflops_median") or 0.0))
 
 
-def _cell_rows_from_db(db: dict[str, Any], basis: str) -> dict[tuple[str, str], dict[str, list[dict[str, Any]]]]:
+def _cell_rows_from_db(db: dict[str, Any], basis: str,
+                        spoof_prefix: str = "gfx900") -> dict[tuple[str, str], dict[str, list[dict[str, Any]]]]:
     pools: dict[tuple[str, str], dict[str, list[dict[str, Any]]]] = {}
     for run_id, rlist in db.items():
-        is_floor = str(run_id).startswith("gfx900_ref")
+        is_floor = str(run_id).startswith(f"{spoof_prefix}_ref")
         for r in rlist:
             fam = _cell_family(r)
             shape = r.get("shape")
@@ -194,7 +195,7 @@ def _provenance(cell, step, row, basis):
         })
     elif step == "floor":
         prov.update({
-            "run": "gfx900_ref (floor)",
+            "run": row.get("_run") if isinstance(row, dict) else "floor",
             "protocol": row.get("protocol"),
             "gflops_median": row.get("gflops_median"),
             "phase": row.get("phase"),
@@ -213,7 +214,9 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
     db_path = Path(kernel_db_path) if kernel_db_path else (
         _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
     db = read_kernel_db(db_path)
-    pools = _cell_rows_from_db(db, basis)
+    spoof_prefix = (getattr(_loader.resolve_profile(profile), "spoof_reference", "")
+                    or "gfx900")
+    pools = _cell_rows_from_db(db, basis, spoof_prefix)
 
     mut = DBMutator(base_dir, None)
     sched = mut._scheduler()

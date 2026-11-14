@@ -189,11 +189,14 @@ class PhaseCost:
                                    timeout=30.0)
             conn.row_factory = sqlite3.Row
             try:
+                from oto.device import loader as _loader
+                from oto.ledger.registry_queries import like_escape
+                _prefix = like_escape(_loader.spoof_prefix())
                 rows = conn.execute(
                     "SELECT run_id, started_at, completed_at, status, metadata "
-                    "FROM runs WHERE run_id LIKE 'gfx900_ref%' "
+                    "FROM runs WHERE run_id LIKE ? ESCAPE '\\' "
                     "AND completed_at IS NOT NULL AND status = 'completed' "
-                    "ORDER BY id DESC").fetchall()
+                    "ORDER BY id DESC", (_prefix + r"\_ref\_%",)).fetchall()
                 for row in rows:
                     rid = str(row["run_id"])
                     decided = 0

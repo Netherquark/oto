@@ -30,6 +30,10 @@
       "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
+      "key": "_current_arm",
+      "reason": "Device-independence arc: the run arm is classified from the CURRENT profile's spoof_reference instead of the literal 'gfx900_ref' substring, so a profile with another spoof floor classifies correctly; byte-identical behaviour on gfx90c/gfx900. Attested 2026-11-15."
+    },
+    {
       "key": "_ensure_telemetry",
       "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
@@ -614,6 +618,10 @@
     {
       "key": "oto/device/resolvers.py::shipped_cells",
       "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/tools/consolidate_floor.py::locked_run_id signature changed",
+      "reason": "Device-independence arc: defaulted ``spoof_prefix=\"gfx900\"`` appended to the locked-floor id builder so the locked floor is named for the *active profile's* spoof floor instead of the literal gfx900. Default keeps byte-identical output; callers pass the resolved prefix; suite green. Attested 2026-11-15."
     },
     {
       "key": "policy.py::aggregate_cell",

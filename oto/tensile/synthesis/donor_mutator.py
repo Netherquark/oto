@@ -88,6 +88,8 @@ class DBMutator(DbPatternsMixin):
         self._by_family: dict[str, list[dict[str, Any]]] = {}
         self._by_family_cell: dict[tuple[str, str], list[dict[str, Any]]] = {}
         self._floor_run: str | None = None
+        self._spoof_prefix = (getattr(_loader.resolve_profile(profile), "spoof_reference", "")
+                              or "gfx900")
         self._sched = None
 
     # -- DB loading -------------------------------------------------------
@@ -111,7 +113,7 @@ class DBMutator(DbPatternsMixin):
         for run_id, rows in self._db.items():
             if not isinstance(rows, list):
                 continue
-            is_floor = str(run_id).startswith("gfx900_ref")
+            is_floor = str(run_id).startswith(f"{self._spoof_prefix}_ref")
             if is_floor and floor_run is None:
                 floor_run = run_id
             for r in rows:

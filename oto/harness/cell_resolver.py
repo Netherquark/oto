@@ -195,7 +195,7 @@ def _load_kernel_db(
     floor_rows: list[dict[str, Any]] = []
     native_kb_cfg: dict[str, dict[str, Any]] = {}
     for rid, rows in kdb.items():
-        if "gfx900_ref" in rid:
+        if f"{_loader.spoof_prefix()}_ref" in rid:
             floor_rows.extend(rows)
         else:
             for r in rows:

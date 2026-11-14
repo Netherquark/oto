@@ -139,7 +139,7 @@ def main(profile=None) -> int:
     native_rows: list[dict[str, Any]] = []
     floor_rows: list[dict[str, Any]] = []
     for run_id, rows in db.items():
-        if run_id.startswith("gfx900_ref"):
+        if run_id.startswith(f"{_loader.spoof_prefix(profile)}_ref"):
             floor_rows += rows
         else:
             native_rows += rows

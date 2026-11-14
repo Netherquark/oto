@@ -91,7 +91,7 @@ def cmd_all(args, profile=None) -> int:
 
     sel = select_deck(base)
     lock = build_floor(base, _runs_dir(stage, _loader.resolve_profile(profile,).codename) / locked_run_id(
-        source_chain(base, profile=profile,)), stamp, profile=profile,)
+        source_chain(base, profile=profile,), _loader.spoof_prefix(profile)), stamp, profile=profile,)
     dbres = build_db(base, lock, stage / "registry.db", stamp, profile=profile,)
 
     staged_deck = write_deck(stage, sel, stamp)

@@ -95,8 +95,8 @@ def discover_runs(base_dir: str,
             continue
         if name.startswith("run_"):
             out.append((name, "native"))
-        elif name.startswith("gfx900_ref_"):
-            if all_ref or name.startswith("gfx900_ref_locked_"):
+        elif name.startswith(f"{_loader.spoof_prefix(profile)}_ref_"):
+            if all_ref or name.startswith(f"{_loader.spoof_prefix(profile)}_ref_locked_"):
                 out.append((name, "spoof"))
     return out
 

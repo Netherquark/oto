@@ -219,8 +219,8 @@ def latest_reference_run_id(registry, arch: str = "gfx900") -> str | None:
     try:
         conn = sqlite3.connect(registry.db_path, timeout=30.0)
         try:
-            esc = (arch.replace("\\", "\\\\")
-                   .replace("%", "\\%").replace("_", "\\_"))
+            from oto.ledger.registry_queries import like_escape
+            esc = like_escape(arch)
             rows = conn.execute(
                 "SELECT run_id, status, metadata FROM runs "
                 "WHERE run_id LIKE ? ESCAPE '\\' ORDER BY id DESC",
@@ -421,8 +421,8 @@ def reference_chain(registry, exclude: str | None = None,
     try:
         conn = sqlite3.connect(registry.db_path, timeout=30.0)
         try:
-            esc = (arch.replace("\\", "\\\\")
-                   .replace("%", "\\%").replace("_", "\\_"))
+            from oto.ledger.registry_queries import like_escape
+            esc = like_escape(arch)
             rows = conn.execute(
                 "SELECT run_id, status, metadata FROM runs "
                 "WHERE run_id LIKE ? ESCAPE '\\' ORDER BY id DESC",

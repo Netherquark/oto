@@ -16,6 +16,11 @@ from datetime import datetime
 from typing import Any
 
 
+def like_escape(text: str) -> str:
+    r"""Escape ``\\``, ``%`` and ``_`` in a LIKE pattern (returns the literal)."""
+    return (text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"))
+
+
 class QueryMixin:
     """The registry's read side: records, phases and run lookups, mixed into SQLiteRegistry."""
 
@@ -160,8 +165,7 @@ class QueryMixin:
             except Exception:
                 spoof = "gfx900"
             # LIKE wildcards in the prefix ('_', '%') must stay literal.
-            esc = (spoof.replace("\\", "\\\\")
-                   .replace("%", "\\%").replace("_", "\\_"))
+            esc = like_escape(spoof)
             query += " WHERE run_id NOT LIKE ? ESCAPE '\\'"
             params = (esc + r"\_ref\_%",)
         query += " ORDER BY id DESC LIMIT 1"

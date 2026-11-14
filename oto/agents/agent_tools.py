@@ -16,6 +16,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from oto.device import loader as _loader
 from oto.device.profile import DeviceProfile
 from oto.harness.candidate_overlay import _round_robin_prune
 from oto.harness.candidate_pool import iter_candidates
@@ -47,8 +48,9 @@ def study_kernel_db(base_dir) -> dict[str, Any]:
     target = _target_cells()
     native: list[dict[str, Any]] = []
     floor = 0
+    _floor_prefix = _loader.spoof_prefix()
     for run_id, rows in db.items():
-        if str(run_id).startswith("gfx900_ref"):
+        if str(run_id).startswith(f"{_floor_prefix}_ref"):
             floor += len(rows)
         else:
             native.extend(rows)

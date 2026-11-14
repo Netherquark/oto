@@ -189,6 +189,17 @@ def resolve_profile(profile: DeviceProfile | None = None) -> DeviceProfile:
     return profile if profile is not None else current_profile()
 
 
+def spoof_prefix(profile=None) -> str:
+    """The reference-floor run-id prefix for the profile's spoof arch.
+
+    Reference runs are named ``<spoof_reference>_ref_...`` (the spoof library's
+    arch, not this device's codename). Historically sites hardwired the
+    ``gfx900_ref`` literal; on any other floor that split native/floor wrongly.
+    Ambient profile by default.
+    """
+    return (getattr(resolve_profile(profile), "spoof_reference", "") or "gfx900")
+
+
 def rebind_profile(profile: DeviceProfile) -> None:
     """Make ``profile`` this process's current profile."""
     global _CURRENT_PROFILE

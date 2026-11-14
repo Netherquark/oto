@@ -353,7 +353,9 @@ class TensileDriver(
     def _current_arm(self) -> str:
         """Arm of the run whose phases execute_phase is running: spoof for the
         gfx900 reference floor runs, native otherwise."""
-        return "spoof" if "gfx900_ref" in str(self.run_dir.name) else "native"
+        prefix = (getattr(self.profile, "spoof_reference", "")
+                  if getattr(self, "profile", None) else "") or "gfx900"
+        return "spoof" if f"{prefix}_ref" in str(self.run_dir.name) else "native"
     def _named_cell_stamps(self, phase: dict[str, Any], arm: str | None = None) -> dict[str, Any]:
         """cell-key stamps for a phase's registry records.
 

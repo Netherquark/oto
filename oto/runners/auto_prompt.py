@@ -112,8 +112,11 @@ def _read_counts(base_dir: Any = None, profile=None) -> dict[str, int]:
     try:
         import sqlite3
         db = sqlite3.connect(_results_dir(base, _loader.resolve_profile(profile,).codename) / "registry.db")
+        from oto.ledger.registry_queries import like_escape
+        _prefix = like_escape(_loader.spoof_prefix(profile))
         chain = [r[0] for r in db.execute(
-            "select run_id from runs where run_id like 'gfx900_ref%' order by run_id")]
+            "select run_id from runs where run_id like ? escape '\\' order by run_id",
+            (_prefix + r"\_ref\_%",))]
     except Exception:
         return counts
 

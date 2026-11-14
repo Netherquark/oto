@@ -125,9 +125,11 @@ def _floor_rows(db: dict[str, list[dict]]) -> tuple[list[dict], list[str]]:
     cache carries no locked run this falls back to every ``gfx900_ref_*``
     run present, never to a hardcoded run id. Returns ``(rows, chosen)``.
     """
-    chosen = sorted(k for k in db if k.startswith("gfx900_ref_locked_"))
+    _locked = f"{_loader.spoof_prefix()}_ref_locked_"
+    _floor = f"{_loader.spoof_prefix()}_ref_"
+    chosen = sorted(k for k in db if k.startswith(_locked))
     if not chosen:
-        chosen = sorted(k for k in db if k.startswith("gfx900_ref_"))
+        chosen = sorted(k for k in db if k.startswith(_floor))
     return [r for k in chosen for r in db[k]], chosen
 
 
@@ -152,12 +154,31 @@ def _audit(rows_iter: Iterable[dict], lds_factor: int, profile=None) -> list[dic
     return out
 
 
+def _select_rows(db: dict, args, profile) -> list[dict] | None:
+    """Rows for ``args.side``, or None with the reason printed to stderr."""
+    if args.side == "floor":
+        rows, chosen = _floor_rows(db)
+        if not rows:
+            print(f"no floor rows found (no {_loader.spoof_prefix(profile)}_ref_* keys in kernel_db.json)",
+                  file=sys.stderr)
+            return None
+        print(f"floor runs: {', '.join(chosen)}", file=sys.stderr)
+        return rows
+    floor = f"{_loader.spoof_prefix(profile)}_ref_"
+    rows = [r for run, rs in db.items()
+            for r in rs if not run.startswith(floor)]
+    if not rows:
+        print(f"no rows under side={args.side}", file=sys.stderr)
+        return None
+    return rows
+
+
 def main(profile=None) -> int:
     """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side", choices=("native", "floor"), default="native",
-                    help="audit native winners (default) or the gfx900_ref_locked floor")
+                    help="audit native winners (default) or the locked reference floor")
     ap.add_argument("--lds-factor", type=int, default=2,
                     help="LDS double-buffer factor (1 = single-buffer probe)")
     ap.add_argument("--at-most", type=int, default=None,
@@ -170,18 +191,8 @@ def main(profile=None) -> int:
     db_path = results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     with open(db_path) as f:
         db = json.load(f)
-    if args.side == "floor":
-        rows, _chosen = _floor_rows(db)
-        if not rows:
-            print("no floor rows found (no gfx900_ref_* keys in kernel_db.json)",
-                  file=sys.stderr)
-            return 1
-        print(f"floor runs: {', '.join(_chosen)}", file=sys.stderr)
-    else:
-        rows = [r for run, rs in db.items()
-                for r in rs if not run.startswith("gfx900_ref_")]
-    if not rows:
-        print(f"no rows under side={args.side}", file=sys.stderr)
+    rows = _select_rows(db, args, profile)
+    if rows is None:
         return 1
 
     cells = _audit(rows, args.lds_factor, profile=profile,)

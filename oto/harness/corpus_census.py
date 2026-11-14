@@ -150,7 +150,7 @@ def load_rows(db_path: str | None = None, side: str = "native",
     """Flatten ``kernel_db.json`` into rows tagged ``side`` (native / floor).
 
     ``side`` is ``native`` (default: every ``run_*`` key), ``floor`` (every
-    ``gfx900_ref_*`` key) or ``all``. A row is a dict from the database plus
+    reference-tier key) or ``all``. A row is a dict from the database plus
     ``side`` and ``run``.
     """
     fallback = Path(base_dir) if base_dir else _HERE
@@ -160,7 +160,7 @@ def load_rows(db_path: str | None = None, side: str = "native",
     database = read_kernel_db(str(path))
     rows: list[dict[str, Any]] = []
     for run_id, run_rows in database.items():
-        run_side = "floor" if run_id.startswith("gfx900_ref") else "native"
+        run_side = "floor" if run_id.startswith(f"{_loader.spoof_prefix()}_ref") else "native"
         if side not in ("all", run_side):
             continue
         rows.extend({**row, "side": run_side, "run": run_id}

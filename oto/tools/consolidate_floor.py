@@ -62,7 +62,7 @@ def plan_floor(base: Path = BASE, profile=None) -> dict[str, Any]:
             "n_phases": len(chosen)}
 
 
-def locked_run_id(chain: list[str]) -> str:
+def locked_run_id(chain: list[str], spoof_prefix: str = "gfx900") -> str:
     """Deterministic id for the locked floor, derived from the chain it locks.
 
     Timestamping this made the pipeline non-idempotent: every re-run minted a new
@@ -71,7 +71,7 @@ def locked_run_id(chain: list[str]) -> str:
     The content is a pure function of the chain, so the id should be too.
     """
     digest = hashlib.sha256("|".join(chain).encode()).hexdigest()[:10]
-    return f"gfx900_ref_locked_{digest}"
+    return f"{spoof_prefix}_ref_locked_{digest}"
 
 
 def build_floor(base: Path, dest: Path, stamp: str, profile=None) -> dict[str, Any]:
@@ -95,7 +95,7 @@ def build_floor(base: Path, dest: Path, stamp: str, profile=None) -> dict[str, A
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     plan = plan_floor(base, profile=profile,)
-    run_id = locked_run_id(plan["chain"])
+    run_id = locked_run_id(plan["chain"], _loader.spoof_prefix(profile))
     dest.mkdir(parents=True, exist_ok=True)
     copied = 0
     phases: set = set()

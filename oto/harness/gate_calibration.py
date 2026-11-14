@@ -181,7 +181,7 @@ def population_of(run_name: str) -> str:
     Public because the corpus censuses (``gate_calibration``,
     ``rule_calibration``) must split the same way.
     """
-    return "reference" if run_name.startswith("gfx900_ref") else "ours"
+    return "reference" if run_name.startswith(f"{_loader.spoof_prefix()}_ref") else "ours"
 
 
 def audit(base: str = ".", families: Sequence[str] | None = None, profile=None) -> dict[str, Any]:
