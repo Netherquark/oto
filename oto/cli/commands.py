@@ -475,12 +475,12 @@ def show_help(args: Any, parser: Any) -> int:
     from oto.cli.parser import subparser_for
 
     if args.write:
-        from oto.cli.docs import write_reference
+        from oto.cli.help_command import write_reference
         path = write_reference(parser, Path(args.write))
         print(f"wrote {path}")
         return 0
     if args.json:
-        from oto.cli.docs import command_document
+        from oto.cli.help_command import command_document
         print(json.dumps(command_document(parser), indent=2))
         return 0
     target = parser

@@ -17,7 +17,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from oto.cli.docs import write_reference
+from oto.cli.help_command import write_reference
 from oto.cli.parser import build_parser, subparser_for
 
 REPO = Path(__file__).resolve().parents[1]
