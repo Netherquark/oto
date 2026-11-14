@@ -60,7 +60,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          "(family, shape) as the same-run control (D4)")
     ap.add_argument("--trials", action="store_true",
                     help="also emit the decision-labelled trial tiles "
-                         "(DECISION_TRIAL_TILES: D1/D2/D3)")
+                         "(DECISION_TRIAL_TILES: D1; D5 adopted 2026-11-14)")
     ap.add_argument("--phases", default="phases.yaml",
                     help="candidate manifest to write (default: ./phases.yaml)")
     return ap

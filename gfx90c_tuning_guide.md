@@ -550,7 +550,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
 
 1. Real benchmarks run in the USER's TTY — never from a GUI session
    (GNOME constraint; CPU-only PoCs are safe).
-2. Generator deck: `phases.yaml` ships **279 rows**; the seed overlay adds
+2. Generator deck: `phases.yaml` ships **280 rows**; the seed overlay adds
    **1101** (of which **401 are unmeasured** — the R47 axes that were never
    varied, the R48 geometries for the three ORANGE cells, and the R49 ranked
    unexplored space of those cells: ~9 h of new work at the measured 83 s per
@@ -581,7 +581,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    before any verdict quote.
 6. New numbers must be kernel-typecode-attributable (ground-truth §3) and
    clock-flagged (M4).
-7. **Sizing (10+ h, packed):** the deck (`phases.yaml`, 279 rows) plus the
+7. **Sizing (10+ h, packed):** the deck (`phases.yaml`, 280 rows) plus the
    seed overlay (`gfx90c_results/overlays/phases.seed.overlay.yaml`, 1101 rows
    of which **401 are unmeasured**) = **401 new phases ≈ 9 h** at the measured
    83 s per phase, and the DB mutator adds ~10 per iteration on top. The
@@ -707,16 +707,21 @@ reference validation on silicon**.
 Tensile now runs its own CI-equivalent validation on every phase. Regression
 sweep clean (13/13 best-library tests), suite green at every step.
 
-### 12.4 CC:256 / CC:512 AF0EM=4/AF1EM=4 — GPU legality (not perf)
+### 12.4 CC:256 / CC:512 AF0EM=4/AF1EM=4 — ADOPTED 2026-11-14 (owner decision, Option B)
 
-Deck row D5 (`mt64x64x8 / tt4x4 / VW2 / AF0EM=4 / AF1EM=4`), in `phases.yaml`;
-`oto check candidates`: **279 checked, 0 illegal**. Tensile reference validation
-(M=`NumElementsToValidate=128`) on gfx90c: **PASSED at 256³ and 512³**. Controls:
-base AF1 row (256 + 512), paired-widen AF22 row, ZZ control pair — **all PASSED**.
-No perf claim attaches: both are legal, which one the deck adopts is an option-A
-vs option-B decision (SGEMM-style 4-assert) that belongs to the TTY comparison.
-See `changelog.md` (2026-11-14 GPU verdicts), `incomplete_work.md` (CC adoption
-item), `potential_configs.md` (option-B analysis).
+First-class CC rows in `phases.yaml`:
+`phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_af4em4` and
+`phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_af4em4` (same geometry as the
+retired D5 pilot row; Tensile's own SGEMM recipe —
+`sgemm_large_square_nt.yaml` `AssertFree0/1ElementMultiple: [4]`).
+`oto check candidates`: **280 checked, 0 illegal** (CC=48).
+GPU legality on gfx90c (M=`NumElementsToValidate=128`): **PASSED at 256³ and 512³**.
+Controls (AF1 base rows at both shapes, paired-widen AF22, ZZ pair) also **PASSED**.
+What adoption means: future CC:256/512 runs benchmark the AF4/4 rows as the
+reference default; the AF2/2 paired-widen rows remain in the sweep for A/B;
+nobody has claimed they are faster — that is the TTY audit's job. The R8
+emission path stays for future CC cells. See the 2026-11-14 changelog (28th
+entry), `incomplete_work.md` (CC follow-up item).
 
 ### 12.5 Explicit DeviceProfile threading (C2.5–C2.9) — done
 

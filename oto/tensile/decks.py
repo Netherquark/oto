@@ -359,6 +359,9 @@ KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
 #     differentiator was already settled against Tensile (``numBytes() * 2 > 16``).
 #   * D3 is RETIRED, 2026-11-14 (owner decision, §6): the boundary/headroom
 #     tiles are refused by the gate by design, so they are not decked.
+#   * D5 (CC:256's 4-assert tensile SGEMM recipe) is ADOPTED, 2026-11-14
+#     (owner decision, Option B: vendor-recipe adoption). The rows now ship
+#     as first-class deck rows; only D1 remains a trial.
 #
 # Each entry is emitted unchanged (no knob delta), once per (pattern, shape),
 # tagged `_trialD<n>` by the generator. Seen by
@@ -367,33 +370,17 @@ KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
 #: Decision-labelled trial tiles. `shapes`, when present, overrides the sweep's
 #: shape list; otherwise the generator's shapes apply.
 #:
-#: D2 (LDS bytes-per-element: 8 vs 16) and D3 (the wide ZZ aspect pair) are
-#: RETIRED, 2026-11-14 (owner decision, <codename>_theoretical_limits.md §6):
-#: BYTES_PER_ELEMENT["Z"] is Tensile's 16 B and LDS_BUDGET stays 16384, so the
-#: D2 boundary tile (64x64x16, gate footprint 32768) and the D3 pair
-#: (128x32x8 / 32x128x8; 20480) are refused by design. Both were re-checked
-#: against Tensile's solution-construction verdict before retirement (see the
-#: 2026-11-14 changelog entry); neither is re-decked.
+#: D1 is the only open decision. D2/D3 are RETIRED, 2026-11-14 (owner decision,
+#: <codename>_theoretical_limits.md §6): BYTES_PER_ELEMENT["Z"] is Tensile's 16 B
+#: and LDS_BUDGET stays 16384, so the D2 boundary tile (64x64x16, gate footprint
+#: 32768) and the D3 pair (128x32x8 / 32x128x8; 20480) are refused by design.
+#: D5 (CC:256 the 4-assert Tensile SGEMM recipe) is ADOPTED, 2026-11-14 (owner
+#: decision, Option B: vendor-recipe adoption): the 4-assert rows for CC:256 and
+#: CC:512 ship as first-class deck rows
+#: (`phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_af4em4` / `_512x512x512_...`),
+#: gate-legal and GPU-validated on gfx90c at both shapes with NumElementsToValidate=128
+#: in the client config. It is no longer a trial; DECISION_TRIAL_TILES keeps D1.
 DECISION_TRIAL_TILES: list[dict[str, Any]] = [
-    {
-        "decision": "D5",
-        "family": "CC",
-        "knobs": {"MacroTile": "64x64x8", "ThreadTile": "4x4",
-                  "VectorWidth": 2,
-                  "GlobalLoadVectorWidthA": 2, "GlobalLoadVectorWidthB": 2,
-                  "WorkGroup": [16, 16, 1], "WorkGroupMapping": 4,
-                  "AssertFree0ElementMultiple": 4,
-                  "AssertFree1ElementMultiple": 4},
-        "shapes": ["256x256x256"],
-        "why": "CC:256's open correctness question, re-asked with Tensile's "
-               "own SGEMM recipe as the shape of the probe rather than a new "
-               "guess: the 4-assert pair (Tensile/Perf/sgemm_large_square_nt.yaml) "
-               "on the stolen CC geometry. The 256 cell is 4-divisible, so the "
-               "assert is satisfiable; correctness must be confirmed on "
-               "silicon (Tensile's own num-elements-to-validate reference) "
-               "before the flagship row graduates out of trial status. Owner "
-               "directed the check as legality-only, <=512^2 (2026-11-14).",
-    },
     {
         "decision": "D1",
         "family": "CC",

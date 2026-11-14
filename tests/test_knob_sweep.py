@@ -461,18 +461,21 @@ def test_every_decision_trial_is_gate_legal(gen):
 
 
 def test_decision_trials_cover_d1():
-    """Every still-open decision owns a trial tile. D2/D3 retired 2026-11-14.
+    """Every still-open decision owns a trial tile. D2/D3 retired, D5 adopted 2026-11-14.
 
-    The LDS decision is closed: ``BYTES_PER_ELEMENT["Z"]`` is Tensile's 16 B
-    and ``LDS_BUDGET`` stands, so the D2 boundary tile and the D3 "widest
-    legal ZZ" pair are refused by the gate by design and are no longer
-    decked. D1 remains the only open owner-decision and keeps its trial."""
+    The LDS decision is closed (`BYTES_PER_ELEMENT["Z"]=16`, `LDS_BUDGET` stands),
+    so the D2 boundary tile and the D3 "widest legal ZZ" pair are refused by the
+    gate by design and are no longer decked. D5 (CC:256's 4-assert Tensile
+    SGEMM recipe) is ADOPTED 2026-11-14 (owner decision, Option B): the rows
+    for CC:256 and CC:512 ship as first-class deck rows (`_af4em4`), validated
+    on silicon at both shapes, and D5 must not reappear as a trial. D1 remains
+    the only open owner-decision and keeps its trial."""
     from oto.tensile.decks import DECISION_TRIAL_TILES
 
     covered = {t["decision"] for t in DECISION_TRIAL_TILES}
     assert {"D1"} <= covered, f"D1 has no trial: {covered}"
-    assert not ({"D2", "D3"} & covered), \
-        f"retired decisions must not be decked: {covered}"
+    assert not ({"D2", "D3", "D5"} & covered), \
+        f"retired/adopted decisions must not be decked: {covered}"
     # D2 carries the LDS-boundary tile only. A ZZ VectorWidth=2 row is NOT a
     # trial: Tensile refuses it (numBytes 16 x 2 > 16), the archived deck
     # already measured that refusal, and

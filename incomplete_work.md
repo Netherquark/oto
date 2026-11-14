@@ -18,17 +18,16 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   a human must review the numbers and accept the profile; testing it blind
   would pretend gfx902 hardware exists, which it does not here. The gate
   tests already exercise a `dataclasses.replace`-derived synthetic device.
-- **CC:256 `AssertFree0/1ElementMultiple=4` — legality verified 2026-11-14
-  on silicon; perf run not done (TTY-only).** All 11 probes (the CC 256/512
-  AF0/1EM=4 config, its AF0/1EM=2 and AF0/1EM=1 controls, the two CC:256 D5
-  trial rows, the four retired-budget ZZ tiles, and the two at-budget ZZ
-  controls) pass Tensile's own `NumElementsToValidate=128` reference
-  validation on gfx90c — same pipeline Tensile uses for its own CI.
-  The D5 trial row is decked and cited; the R8 1/2/4-assert rows are already
-  the emission path; the decision between "SGEMM-style AF4/4 everywhere at
-  CC:256/512" and "keep AF2/2" belongs to the owner's TTY perf run. GPU leg
-  is legality only — no perf bars claimed anywhere; no adoption until TTY
-  comparison lands.
+- **CC:256/512 `AssertFree0/1ElementMultiple=4` — ADOPTED 2026-11-14 (owner
+  decision, Option B: the vendor's SGEMM recipe).** GPU legality was verified
+  first (all 11 probes pass Tensile's `NumElementsToValidate=128` reference on
+  gfx90c). The two AF4/4 rows (`_af4em4`, CC:256/CC:512 `mt64x64x8/tt4x4/VW2/AF0/1EM=4`)
+  now ship in `phases.yaml` as first-class CC rows (`oto check candidates`:
+  280 checked, 0 illegal); the D5 pilot row graduated; `DECISION_TRIAL_TILES`
+  keeps only D1. What remains open: TTY A/B against the AF2/2 paired-widen and
+  the AF1 baseline rows — adoption makes AF4/4 the reference deck, but no
+  perf bars are claimed anywhere; the winner is measured in the overnight run,
+  not asserted here.
 - **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
   Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
   six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;

@@ -4060,3 +4060,22 @@ the pre-built seed pool.
   Phase 6 the 10+ h overnight run. Registered in `docs/README.md` (Class B);
   `operator_runbook.md` and `skills/class_b_operator.md` now route the campaign
   there; `docs_index.json` regenerated; registry + index tests green.
+
+- **2026-11-14 (28th) — CC:256/512 AF0EM=4/AF1EM=4 ADOPTED (owner decision, Option B).**
+  The two Tensile-recipe rows (`_af4em4`: `mt64x64x8 / tt4x4 / VW2 / GLVW2/2 /
+  WGM4 / AssertFree0ElementMultiple=4 / AssertFree1ElementMultiple=4`) ship in
+  `phases.yaml` as first-class CC rows (deck 279 → 280; CC 47 → 48); the D5
+  pilot row graduated and left `DECISION_TRIAL_TILES` (only D1 remains, with
+  D2/D3 already retired 2026-11-14). `oto check candidates`: 280 checked,
+  0 illegal. GPU legality carried over: both rows are the same config already
+  validated with `NumElementsToValidate=128` on silicon at both shapes. fp for
+  the 256 row is unchanged (`ca20ec…`); the 512 row is new (`75c7e5ce…`).
+  What adoption does NOT claim: faster. The AF4/4 rows are reference-deck now;
+  the A/B against AF2/2 (paired-widen) and AF1 (base) is the overnight runs'
+  job; bars do not move without TTY measurement. Rationale: the vendor recipe
+  (sgemm_large_square_nt.yaml, AF0/1EM=4) is the default the vendor ships
+  for f32 free dims; 6 gates passed, GPU-validated, zero new machinery; A was
+  the "unproven unless measured" option, B the "adopt proven-legal, measure in
+  the campaign" option; owner chose B. Commit: phases.yaml rows, decks.py
+  DECISION_TRIAL_TILES (D5 removed with the adoption record),
+  tests/test_knob_sweep.py docstring + assert, knob_sweep CLI help string.
