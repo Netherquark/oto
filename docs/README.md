@@ -97,6 +97,7 @@ Corollaries:
 | `plans/CLI_UX_REWORK.md` | dev | Ecosystem | CLI UX rework plan — one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev |
 | `plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md` | dev | Ecosystem | Automated agentic consult: API key → `potential_configs.md` with fewest GPU legs |
 | `plans/RENAME_AND_DOC_CLEANUP_PLAN.md` | dev | Ecosystem | Detailed rename + doc cleanup plan: 40 module renames, 9 test renames, 5.1 device-fact violations, 3 support-module unifications, 4-phase migration order (read-only proposal) |
+| `plans/MASTER_PLAN.md` | dev | Ecosystem | Master plan: full session ledger, open work register, two development models, convergence pipeline, guardrails, verification commands, file map |
 | `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
 | `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
