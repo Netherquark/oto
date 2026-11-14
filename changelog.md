@@ -4326,3 +4326,17 @@ the pre-built seed pool.
   stdout with narration on stderr or /dev/null. `oto stats` and
   `oto check candidates --json` confirmed: one document on stdout, the
   per-line scan log on stderr. Suite green; verifier PASSED.
+
+- **2026-11-14 (43rd) — `oto agent consult` lands; every one-shot plan in git history is now accounted for.**
+  Plans resurrected from `git log --all -- plans/`: Refactor 1 (codebase org), Refactor 2
+  (Universal GPU), CLI UX rework (front door, implemented), test optimization (9x suite speed-up),
+  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (both executed earlier this arc), MASTER_PLAN
+  (open items folded into incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS (the one unexecuted
+  plan). The last is now implemented as `oto agent consult [starter] [--with-docs]`: a CPU-only
+  consult that emits `<codename>_potential_configs.md` — device identity from the profile,
+  practical ceilings, a structurally-illegal rejection-taxa list, corpus priors from the local
+  `kernel_db.json` (reference-device measurements, never claimed as this part's numbers),
+  gate-checked ladder rows per family (refusals shown so they cannot sneak into a deck), and a
+  TTY to-do list with zero measurements and no claims until the GPU runs. Synthetic-profile tests
+  pass; no GPU required. Bug fixed en route: generate_device_docs crashed with FileNotFoundError
+  when the `<codename>_docs/` directory did not exist. Suite green; verifier PASSED; ruff clean.
