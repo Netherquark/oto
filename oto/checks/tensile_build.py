@@ -176,7 +176,8 @@ def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -
 
 # --------------------------------------------------------------------------
 def select_phases(args: argparse.Namespace) -> list[dict[str, Any]]:
-    deck = yamlio.load_yaml(REPO / "phases.yaml") or []
+    base = Path(args.base_dir).resolve() if args.base_dir else REPO
+    deck = yamlio.load_yaml(base / "phases.yaml") or []
     if args.phase_id:
         deck = [p for p in deck if p.get("phase_id") == args.phase_id]
         if not deck:
@@ -263,6 +264,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--compare", action="store_true",
                     help="cross-check oto's occupancy model against Tensile's verdict")
     ap.add_argument("--keep", help="keep build artifacts in this dir")
+    ap.add_argument("--base-dir", default=None,
+                    help="project base directory (default: the repo root)")
     # internal
     ap.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--phase-yaml", help=argparse.SUPPRESS)

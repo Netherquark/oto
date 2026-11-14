@@ -18,13 +18,17 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   a human must review the numbers and accept the profile; testing it blind
   would pretend gfx902 hardware exists, which it does not here. The gate
   tests already exercise a `dataclasses.replace`-derived synthetic device.
-- **CC:256 `AssertFree0/1ElementMultiple=4` — the empirical half is being
-  verified (2026-11-14).** Owner authorized ≤512² legality work on the GPU.
-  CPU-side gates green; the on-silicon check runs Tensile's own
-  `NumElementsToValidate` reference comparison (SGEMM-4-assert recipe,
-  `Tensile/Perf/sgemm_large_square_nt.yaml`); the trial row is being added as
-  `D5` to `DECISION_TRIAL_TILES` (option A) and as the CC:256/512 deck
-  emission (option B). GPU is legality-only here — no perf bars.
+- **CC:256 `AssertFree0/1ElementMultiple=4` — legality verified 2026-11-14
+  on silicon; perf run not done (TTY-only).** All 11 probes (the CC 256/512
+  AF0/1EM=4 config, its AF0/1EM=2 and AF0/1EM=1 controls, the two CC:256 D5
+  trial rows, the four retired-budget ZZ tiles, and the two at-budget ZZ
+  controls) pass Tensile's own `NumElementsToValidate=128` reference
+  validation on gfx90c — same pipeline Tensile uses for its own CI.
+  The D5 trial row is decked and cited; the R8 1/2/4-assert rows are already
+  the emission path; the decision between "SGEMM-style AF4/4 everywhere at
+  CC:256/512" and "keep AF2/2" belongs to the owner's TTY perf run. GPU leg
+  is legality only — no perf bars claimed anywhere; no adoption until TTY
+  comparison lands.
 - **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
   Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
   six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;

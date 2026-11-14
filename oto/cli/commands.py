@@ -321,7 +321,7 @@ def run_check(args: Any) -> int:
         return _json_file(argv, m) if args.json else _call(argv, m)
     if name == "tensile-build":
         from oto.checks.tensile_build import main as m
-        argv = []
+        argv = ["--base-dir", str(base)]
         for key, flag in (("family", "--family"), ("phase_id", "--phase-id"),
                           ("arch", "--arch"), ("keep", "--keep")):
             if getattr(args, key, None):

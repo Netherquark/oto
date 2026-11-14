@@ -9,6 +9,47 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (25th) — CC:256/512 4-assert GPU legality PASSED; TensileClient 7.x quirks recorded.**
+  GPU verification of the CC:256 (256³) and CC:512 (512³) `AF0EM=4/AF1EM=4` (SGEMM-ethos,
+  `Tensile/Perf/sgemm_large_square_nt.yaml`) rows: Tensile's own reference validator
+  (`NumElementsToValidate=128`, the writer default since the 22nd) **passes** on gfx90c
+  against Tensile's own scalar CPU reference for the exact kernels the D5/R8 rows produce —
+  MT64x64x8/tt4x4/VW2/AF0=4/AF1EM=4 at 256 and 512, plus the paired AF2/2 control and the
+  VW1/AF1/AF1 base row; all 11 probes (including four ZZ above-budget tiles the gate now
+  rejects: 64x64x16@256/@512, 128x32x8@256/@512, 32x128x8@512 — all build and validate on
+  device, intentionally rejected by the gate) **PASS**. Perf at this shape is not measured:
+  the comparison the SGEMM-recipe asserts need a coalesced TTY sweep with clock telemetry;
+  that decision belongs to the owner and is not taken here.
+  Verifier note: D5/D2/D3 trial-tile verdicts were already gated at the CPU boundary
+  (`oto check candidates` green; `oto check tensile-build --compare` green on the full
+  ZZ deck earlier in this session); this entry adds the first on-silicon confirmation.
+
+  7.x quirks recorded (for the next person who builds on the nightly `.dist`):
+  - Tensile 7.x drops `--client-build-path` (now `./build/client/tensile-client` or
+    `--prebuilt-client`, oto now passes the latter — `4afc28e`).
+  - `Architecture: gfx90c` must appear in `GlobalParameters` — Tensile's default is
+    `all`, and clang-15 cannot compile gfx1170/gfx1250; the writer now pins it to the
+    profile codename.
+  - `LibraryFormat: msgpack` is Tensile's default — requires `msgpack` in whatever Python
+    environment drives it (uv's `ai` venv got `msgpack==1.2.4`).
+  - The nightly `dist-7.15.0a20260728` SDK shadows `/usr/include/hip/hip_runtime.h` with
+    the new `v7.15` headers; the client must be built against the `dist-7.15.0a*` prefix
+    (or wrap `amdclang++` with `-I` + `-D__AMDGCN_WAVEFRONT_SIZE=64`). The current
+    `./build/client/tensile-client` build at `/tmp/opencode/client-build-7.15b/` is a
+    certified-working configuration for reproducing these probes.
+  - `HIP_DEVICE_LIB_PATH`/`ROCM_DEVICE_LIB_PATH` must point at `dist-…/lib/llvm/amdgcn/bitcode`
+    (the device bitcode tree), not the system ROCm one, or the device kernels cannot link.
+  - GPU hang on the *old* `.dat` library (`best_effort_library/`, built 2026-10-29 with
+    system ROCm 6.4.4 + Tensile 4.44.0) reproduces deterministically on the 7.x stack;
+    the rebuilt-from-`rocm-libraries` `.dat` (2026-11-13, Tensile `d950c74` + nightly
+    `_rocm_sdk_core`) runs clean. This was not driver/HSA corruption.
+
+  Also landed: `oto check tensile-build --base-dir` is now honoured (previously the flag
+  was parsed but silently ignored — the check always read the repo-root phases.yaml);
+  `_global_parameters` now emits `Architecture: <codename>`; the old stage-6/7 "wavefront"
+  errors the 6.4.4 `dist` client produced (`__AMDGCN_WAVEFRONT_SIZE` underflow in the
+  `v6.4` headers against a v7.15 SDK LLVM) are not reproducible once the SDK prefix
+  takes precedence.
 - **2026-11-14 (24th) — `docs/work_archive_2026-11-14.md` consolidated and deleted; its contents folded into the ecosystem.**
   Verifier bringup (archived 5.4): the gate differential found two real defects —
   three copies of `parse_tensile_shape` had drifted (the candidate-version copy dropped the

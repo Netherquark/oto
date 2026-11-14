@@ -60,6 +60,7 @@ import yaml
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
+from oto.device import loader as _loader
 from oto.tensile.knob_surface import DEPRECATED_KEYS as _DEPRECATED_KEYS
 from oto.tensile.knob_surface import FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_C_KNOBS
 from oto.tensile.knob_surface import FORWARDED_KNOBS as FORWARDED_KNOBS
@@ -340,7 +341,8 @@ def _drop_unsupported(fork_params: dict[str, Any],
 
 def _global_parameters(schedule_name: str,
                        num_benchmarks: int) -> dict[str, Any]:
-    """The fixed ``GlobalParameters`` block. CpuThreads is the only variable.
+    """The fixed ``GlobalParameters`` block. Hints only: CpuThreads is the
+    only variable.
 
     ``NumElementsToValidate`` is Tensile's own default (128): every benchmarked
     kernel is checked against Tensile's scalar CPU reference on every run, and a
@@ -348,8 +350,14 @@ def _global_parameters(schedule_name: str,
     0 -- validation is the correctness gate for headless runs (a handful of
     sampled C elements vs a host contraction per problem; negligible next to a
     benchmark). This is what makes the AF0/AF1-assert deck rows safe to adopt.
+
+    ``Architecture`` pins kernel compile to the profile's codename. Tensile's
+    global default is ``all``, compiling every supported ISA; that breaks
+    toolchains whose clang does not know a target the host's LLVM has not yet
+    seen, and wastes build time on archs this GPU is not.
     """
     return {
+        "Architecture": _loader.current_profile().codename,
         "MinimumRequiredVersion": "4.4.0",
         "PrintLevel": 1,
         "ForceRedoBenchmarkProblems": True,
