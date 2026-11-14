@@ -6,7 +6,7 @@ Owns: the method-equivalence corpus -- normalise + collect old
 REFACTOR_BASE methods vs the new runner mixins, incl. the RESTRUCTURED and
 ALIASES rewrite tables.
 Does NOT own: the methods themselves (they live in the runners mixins) or
-the equivalence of symbols (verify_ast_equivalence).
+the equivalence of symbols (verify_symbols).
 Public API: head_source, normalise, collect (internal); the contract is the
 process exit code (0 clean, 1 findings).
 
@@ -27,7 +27,7 @@ if not sys_path_added:
     sys.path.insert(0, str(ROOT))
 sys_path_added = True
 
-from oto.tools.verifiers._evergreen import print_drift_summary
+from oto.tools.verifiers.ref_worktree import print_drift_summary
 
 NEW = [
     "oto/ledger/registry_core.py", "oto/ledger/queries.py",
@@ -82,7 +82,7 @@ RESTRUCTURED = {"_write_phase_config": "config_writer.write_phase_config",
                 "generate_acceptance_report": "decomposed into the report "
                                               "section builders; proved "
                                               "byte-for-byte by "
-                                              "verify_report_html.py",
+                                              "verify_report_render.py",
                 "synthesize_library": "decomposed into _emit_* helpers; proved "
                                       "by test_*synthes*",
                 # Second decomposition pass (2026-10-16, AC 1b). These three
@@ -178,7 +178,7 @@ def main():
     src = head_source(args.base)
     if src is None:
         print(f"HEAD is post-split; port_tensile.py does not exist at {args.base}.")
-        print("Symbol-level equivalence for this era is covered by verify_ast_equivalence.py")
+        print("Symbol-level equivalence for this era is covered by verify_symbols.py")
         print("(same-path AST comparison). No regression to measure here.")
         sys.exit(0)
 

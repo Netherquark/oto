@@ -80,16 +80,16 @@ def render(report, html_path: Path) -> bytes:
 
 
 def _ref_render(ref: str, payload_path: Path) -> bytes | None:
-    from oto.tools.verifiers import _evergreen
+    from oto.tools.verifiers import ref_worktree
 
     try:
-        tree = _evergreen.ref_worktree(ref)
-    except _evergreen.EvergreenError as exc:
+        tree = ref_worktree.ref_worktree(ref)
+    except ref_worktree.EvergreenError as exc:
         print(f"REF comparison BLOCKED: {exc}")
         return None
-    out = _evergreen.scratch_dir() / f"_evergreen_report_{abs(hash(ref)) & 0xffffff:x}.html"
+    out = ref_worktree.scratch_dir() / f"_evergreen_report_{abs(hash(ref)) & 0xffffff:x}.html"
     code = _REF_SRC.format(tree=str(tree), payload_path=str(payload_path), out=str(out), main_root=str(ROOT))
-    proc = _evergreen.probe(tree, code, timeout=900)
+    proc = ref_worktree.probe(tree, code, timeout=900)
     if proc.returncode != 0:
         tail = proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "child failed"
         print(f"REF comparison BLOCKED: {tail}")
@@ -157,7 +157,7 @@ def main() -> int:
     print("This is the regression gate: any or all of the delta must trace to a "
           "known renderer change (see drift_manifest.json, report_html::render).")
     rc = 0
-    from oto.tools.verifiers._evergreen import print_drift_summary
+    from oto.tools.verifiers.ref_worktree import print_drift_summary
     rc = print_drift_summary("report_html", ["report_html::render"])
     if rc == 0:
         print("REPORT HTML: OK (manifested renderer evolution)")

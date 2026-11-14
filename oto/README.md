@@ -33,11 +33,11 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tensile/knob_surface.py`` — The launch-boundary knob surface: what Tensile may and may not receive.
 * ``tensile/knob_sweep.py`` — Emit the knob-sweep deck: every family's winner tile x one knob change.
 * ``tensile/legality.py`` — The legality prior: manifest-derived legal domain, and source-cited walls.
-* ``tensile/library.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
 * ``tensile/library_parity.py`` — The coverage-parity rule: what the produced TensileLibrary may address.
 * ``tensile/patterns.py`` — The contraction-pattern vocabulary: one spelling, one meaning.
 * ``tensile/shape_order.py`` — Canonical numeric ordering for Tensile problem-shape strings.
 * ``tensile/shipped_library.py`` — The shipped gfx900 library: locating it, parsing it, rebuiling a kernel from its name.
+* ``tensile/shipped_manifest.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
 
 ### ``tensile/gates/``
 
@@ -51,8 +51,8 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ### ``tensile/synthesis/``
 
-* ``tensile/synthesis/donor_mutator.py`` — DB-hooked candidate synthesis: wide + narrow + direction mutants.
 * ``tensile/synthesis/donor_knobs.py`` — The forward-knob domains the DB-hooked mutator draws from.
+* ``tensile/synthesis/donor_mutator.py`` — DB-hooked candidate synthesis: wide + narrow + direction mutants.
 * ``tensile/synthesis/donor_patterns.py`` — The per-family mutation patterns for the DB-hooked mutator.
 * ``tensile/synthesis/manifest.py`` — Coverage-guided candidate synthesis for one cell.
 * ``tensile/synthesis/tile_space.py`` — The one home for the tile and knob-group vocabulary the synthesisers share.
@@ -65,38 +65,38 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``ledger/harvest.py`` — Parent selection: which candidate a cell's next mutation starts from.
 * ``ledger/mutator.py`` — The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay.
 * ``ledger/mutator_outcomes.py`` — Candidate classification: what a measured candidate turned out to be.
-* ``ledger/proposals.py`` — The Option-H proposal ledger: emitted candidates and their measured outcomes.
-* ``ledger/queries.py`` — The registry's read side: records, phases and run lookups.
 * ``ledger/registry.py`` — The ledger: append-only records, runs, phases and the Option-H proposals.
 * ``ledger/registry_core.py`` — The ledger engine: connection, schema, transactions and run writes.
+* ``ledger/registry_proposals.py`` — The Option-H proposal ledger: emitted candidates and their measured outcomes.
+* ``ledger/registry_queries.py`` — The registry's read side: records, phases and run lookups.
 
 ## oto/metrics/ — turning benchmark rows into verdicts, reports and status
 
-* ``metrics/_status_common.py`` — Shared run-status helpers: timestamp parsing, duration formatting and the status/result -> display bucket mapping.
 * ``metrics/ab_audit.py`` — Stage 7 acceptance A/B audit, and the CLI that prints it.
 * ``metrics/ab_band.py`` — The acceptance band: how large a gap has to be before it is real.
 * ``metrics/ab_delta.py`` — The native-vs-spoof A/B delta: the arithmetic every acceptance number rests on.
 * ``metrics/ab_identity.py`` — A/B record identity: how the two arms are made comparable.
 * ``metrics/ab_records.py`` — A/B record loading: the canonical (native, floor) inputs.
 * ``metrics/analytics.py`` — Stage 5 analytics: CSV loading and per-cell aggregation.
+* ``metrics/build_status.py`` — The status report builder: state assembly, ETA pricing and the report dict.
+* ``metrics/cell_policy.py`` — Cell policy: aggregation, the should_run gate, and retirement eligibility.
 * ``metrics/cell_status.py`` — Cell status: the RED / ORANGE / graded coverage classification.
 * ``metrics/coverage.py`` — Coverage: cell evidence, cell states, and fitness for parent selection.
 * ``metrics/family_attribution.py`` — Cell/family attribution: which family a measurement row belongs to.
 * ``metrics/ledger_state.py`` — Ledger/corpus state for the status report: one read of the registry plus the reference corpus tally.
-* ``metrics/policy.py`` — Cell policy: aggregation, the should_run gate, and retirement eligibility.
 * ``metrics/protocol.py`` — Measurement-protocol classification: the like-for-like rule, in one place.
 * ``metrics/read_thermals.py`` — The thermal envelope of one run, read from its telemetry CSV.
 * ``metrics/render_status.py`` — The run-status text renderings and the live TTY panel.
 * ``metrics/report.py`` — Stage 7 acceptance report: the verdict compute and the JSON writer.
-* ``metrics/report_build.py`` — The status report builder: state assembly, ETA pricing and the report dict.
+* ``metrics/report_coverage.py`` — The acceptance report's problem-space coverage section.
 * ``metrics/report_css.py`` — The dashboard's static assets: CSS and the two inline scripts.
-* ``metrics/report_figures.py`` — The acceptance report's problem-space coverage section.
 * ``metrics/report_html.py`` — The acceptance dashboard renderer (JSON payload -> one HTML file).
 * ``metrics/report_js.py`` — The dashboard report's inline JavaScript literals.
 * ``metrics/report_models.py`` — The report's two payload dataclasses.
 * ``metrics/report_sections.py`` — The dashboard's HTML section builders.
 * ``metrics/run_plan.py`` — The run plan and the cost model that prices it.
 * ``metrics/run_status.py`` — Run status: the report builder, the renderers and the live panel.
+* ``metrics/status_common.py`` — Shared run-status helpers: timestamp parsing, duration formatting and the status/result -> display bucket mapping.
 * ``metrics/telemetry.py`` — Telemetry: per-run CSV sampling of the GPU's clocks and power.
 
 ## oto/runners/ — execution
@@ -135,26 +135,23 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tools/consolidate_floor.py`` — The locked floor: plan it, materialise it, clone the registry under it.
 * ``tools/consolidate_install.py`` — Installation: stage, install, and archive what is superseded.
 * ``tools/consolidate_targets.py`` — Which cells a consolidated deck must address.
+* ``tools/corpus_audit.py`` — Corpus snapshot / diff / telemetry verification.
 * ``tools/deck_review.py`` — The three questions to settle before decking a candidate or trusting a score.
 * ``tools/potential_configs.py`` — Automated potential_configs.md generator from run outputs.
-* ``tools/verify_run.py`` — Corpus snapshot / diff / telemetry verification.
 
 ### ``tools/verifiers/``
 
-* ``tools/verifiers/_evergreen.py`` — Shared machinery for the evergreen verification checks.
-* ``tools/verifiers/_verdicts_worker.py`` — Shared verdict worker for the evergreen gate differential.
+* ``tools/verifiers/ref_worktree.py`` — Shared machinery for the evergreen verification checks.
+* ``tools/verifiers/verdict_corpus.py`` — Shared verdict worker for the evergreen gate differential.
 * ``tools/verifiers/verify_all.py`` — Orchestrator for the evergreen verification checks.
-* ``tools/verifiers/verify_ast_equivalence.py`` — Evergreen symbol-level equivalence check.
-* ``tools/verifiers/verify_config_writer.py`` — Evergreen config-writer equivalence.
-* ``tools/verifiers/verify_gate_differential.py`` — Evergreen gate differential.
-* ``tools/verifiers/verify_method_equivalence.py`` — Method-level equivalence: every TensileDriver method moved into a mixin, and every port_tensile function moved into a new module, must keep its exact body.
-* ``tools/verifiers/verify_report_html.py`` — Evergreen HTML report check.
+* ``tools/verifiers/verify_config_render.py`` — Evergreen config-writer equivalence.
+* ``tools/verifiers/verify_gates.py`` — Evergreen gate differential.
+* ``tools/verifiers/verify_methods.py`` — Method-level equivalence: every TensileDriver method moved into a mixin, and every port_tensile function moved into a new module, must keep its exact body.
+* ``tools/verifiers/verify_report_render.py`` — Evergreen HTML report check.
+* ``tools/verifiers/verify_symbols.py`` — Evergreen symbol-level equivalence check.
 
 ## oto/harness/ — the analysis harness
 
-* ``harness/rows_ladders.py`` — Candidate row builders, part 1: the tile ladders and the batch literal.
-* ``harness/rows_frontier.py`` — Candidate row builders, part 2: the tie-adapt and frontier blocks.
-* ``harness/rows_smallcells.py`` — Candidate row builders, part 3: the small-cell evidence blocks.
 * ``harness/asm_occupancy.py`` — Measured occupancy of every emitted Tensile kernel in the run corpus.
 * ``harness/candidate_overlay.py`` — The candidate overlay: what is written, pruned and mirrored.
 * ``harness/candidate_pool.py`` — The candidate loaders and the new module's helpers.
@@ -172,6 +169,9 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``harness/occupancy_bounds.py`` — Resident-workgroup audit per (family, shape) cell.
 * ``harness/regression_matrix.py`` — Deck-vs-floor-vs-all-time cell regression matrix.
 * ``harness/resolve_cells.py`` — Per-cell native-vs-floor winner resolution on the full knob surface.
+* ``harness/rows_frontier.py`` — Candidate row builders, part 2: the tie-adapt and frontier blocks.
+* ``harness/rows_ladders.py`` — Candidate row builders, part 1: the tile ladders and the batch literal.
+* ``harness/rows_smallcells.py`` — Candidate row builders, part 3: the small-cell evidence blocks.
 * ``harness/rule_calibration.py`` — Rule calibration: would a *proposed* gate rule add false rejections?
 * ``harness/tensile_probe.py`` — The legality oracle: ask Tensile itself whether a config builds.
 * ``harness/visual_check.py`` — Visual/layout regression check for the acceptance report.

@@ -11,7 +11,7 @@ pinned.
 Owns: the verdict-stream comparison (verdict_flipped / text_differs /
 old_raised / new_raised buckets).
 Does NOT own: the gate logic (oto.tensile.gates.*) or the corpus
-(_verdicts_worker). Public API: main; the contract is the process exit code.
+(verdict_corpus). Public API: main; the contract is the process exit code.
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def check(row, out):
 
 
 def _attest(name: str, base: str) -> bool:
-    from oto.tools.verifiers._evergreen import gate_attested
+    from oto.tools.verifiers.ref_worktree import gate_attested
     return gate_attested("gate_differential", base, name)
 
 
@@ -95,18 +95,18 @@ def _compress_shim(profile=None) -> tuple[str, str]:
 
 def _emit(tree: Path, path: Path, base: str, shim: str, archs: str,
           worker: Path | None = None) -> None:
-    from oto.tools.verifiers import _evergreen
+    from oto.tools.verifiers import ref_worktree
 
     if worker is not None:
         import shutil
 
-        dst = tree / "oto/tools/verifiers/_verdicts_worker.py"
+        dst = tree / "oto/tools/verifiers/verdict_corpus.py"
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(worker, dst)
 
-    proc = _evergreen.probe(
+    proc = ref_worktree.probe(
         tree,
-        f"from oto.tools.verifiers._verdicts_worker import emit; "
+        f"from oto.tools.verifiers.verdict_corpus import emit; "
         f"emit({str(path)!r}, {base!r})",
         env_extra={"OTO_PROFILE_SHIM": shim, "OTO_ARCHS": archs},
     )
@@ -173,21 +173,21 @@ def main() -> int:
                          "evergreen check; pass 2824c2f for the split-era comparison)")
     args = ap.parse_args()
 
-    from oto.tools.verifiers import _evergreen
+    from oto.tools.verifiers import ref_worktree
 
     print(f"base: {args.base}")
     shim, archs = _compress_shim()
-    cur_path = _evergreen.scratch_dir() / "_gate_cur.jsonl"
-    ref_path = _evergreen.scratch_dir() / "_gate_ref.jsonl"
+    cur_path = ref_worktree.scratch_dir() / "_gate_cur.jsonl"
+    ref_path = ref_worktree.scratch_dir() / "_gate_ref.jsonl"
 
     _emit(ROOT, cur_path, args.base, shim, archs)
     try:
-        ref_dir = _evergreen.ref_worktree(args.base)
-    except _evergreen.EvergreenError as exc:
+        ref_dir = ref_worktree.ref_worktree(args.base)
+    except ref_worktree.EvergreenError as exc:
         print(f"REF worktree BLOCKED: {exc}")
         sys.exit(2)
 
-    worker_src = Path(__file__).with_name("_verdicts_worker.py")
+    worker_src = Path(__file__).with_name("verdict_corpus.py")
     _emit(ref_dir, ref_path, args.base, shim, archs, worker=worker_src)
     return _compare(cur_path, ref_path, args.base)
 

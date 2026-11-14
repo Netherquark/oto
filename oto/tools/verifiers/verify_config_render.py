@@ -202,11 +202,11 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
     """Render ``phases`` through REF's writer; None when REF cannot boot."""
     import json as _json
 
-    from oto.tools.verifiers import _evergreen
+    from oto.tools.verifiers import ref_worktree
 
     try:
-        tree = _evergreen.ref_worktree(ref)
-    except _evergreen.EvergreenError as exc:
+        tree = ref_worktree.ref_worktree(ref)
+    except ref_worktree.EvergreenError as exc:
         print(f"REF comparison BLOCKED: {exc}")
         return None
     payload = tmpdir / "corpus.json"
@@ -215,7 +215,7 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
     code = _REF_SRC.format(tree=str(tree), phases_json=str(payload),
                            workdir=str(tmpdir / "ref"), report=str(report))
     (tmpdir / "ref").mkdir(parents=True, exist_ok=True)
-    proc = _evergreen.probe(tree, code, timeout=1800)
+    proc = ref_worktree.probe(tree, code, timeout=1800)
     if proc.returncode != 0 or not report.exists():
         tail = proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "child failed"
         print(f"REF comparison BLOCKED: {tail}")

@@ -8,7 +8,7 @@ DECOMPOSED / PROMOTED / RESTRUCTURED tables from the package split still
 apply; for a post-split base the same-path comparison applies to all
 ``oto/**/*.py`` files.
 Does NOT own: the split-era equivalence semantics (this is evergreen: REF is
-a parameter, not a pin) or method comparison (verify_method_equivalence).
+a parameter, not a pin) or method comparison (verify_methods).
 Public API: main, head_text, strip, sig, collect; contract = exit code.
 """
 from __future__ import annotations
@@ -163,7 +163,7 @@ RESTRUCTURED = {
 #: deleted private helper would otherwise pass silently (the private-symbol skip
 #: at the top of the comparison loop). FOLDED holds the private helpers this
 #: refactor folded *into* a larger function instead of extracting, so they have
-#: no symbol of their own -- verify_gate_differential.py proves their effect.
+#: no symbol of their own -- verify_gates.py proves their effect.
 FOLDED = {
     "scheduler.py::CandidateGenerator._estimate_lds_usage",
     "scheduler.py::CandidateGenerator._estimate_occupancy",
@@ -202,7 +202,7 @@ PROMOTED = {
     "db_mutator.py::DBMutator._floor_direction",
 }
 
-#: Report renderer methods, proved by verify_report_html.py.
+#: Report renderer methods, proved by verify_report_render.py.
 REPORT_SPLIT = {"AcceptanceReporter", "ABVerdict", "AcceptanceReport",
                 "write_html_report", "_timing_metric", "_timing_section",
                 "_provenance_line", "_basis_headers", "_cell_status_section",
@@ -310,8 +310,8 @@ def new_bare_names(head_rel: str) -> set:
 
 def _collect_old_tree(ref: str, head_rel: str) -> tuple[dict[str, Any] | None, str]:
     """Dump one ref-tree module and collect its public symbols."""
-    from oto.tools.verifiers import _evergreen
-    old_path = _evergreen.scratch_dir() / "ast_check" / head_rel
+    from oto.tools.verifiers import ref_worktree
+    old_path = ref_worktree.scratch_dir() / "ast_check" / head_rel
     old_path.parent.mkdir(parents=True, exist_ok=True)
     old_path.write_text(head_text(ref, head_rel))
     old_syms, err = collect(old_path)
@@ -324,7 +324,7 @@ def _compare_symbols(head_rel: str, old_syms: dict[str, Any],
                      new_syms: dict[str, Any],
                      decomposed: list[str]) -> tuple[list[str], list[str]]:
     """Compare every public symbol of one pre-refactor module."""
-    from oto.tools.verifiers._evergreen import drift_matches
+    from oto.tools.verifiers.ref_worktree import drift_matches
 
     missing: list[str] = []
     differs: list[str] = []
@@ -374,7 +374,7 @@ def _compare_symbols(head_rel: str, old_syms: dict[str, Any],
 
 def _promoted_missing(bare_names_fn) -> list[str]:
     """PROMOTED entries whose new name exists nowhere in the new tree."""
-    from oto.tools.verifiers._evergreen import drift_matches
+    from oto.tools.verifiers.ref_worktree import drift_matches
 
     out: list[str] = []
     for entry in sorted(PROMOTED):
@@ -409,16 +409,16 @@ def _print_report(all_missing: list[str], all_differs: list[str],
 
     # The private-symbol skip above would hide a deleted helper, so every
     # PROMOTED entry is checked for existence under its new name (FOLDED, which
-    # has no symbol of its own, is proved by verify_gate_differential.py).
+    # has no symbol of its own, is proved by verify_gates.py).
     print("\nMISSING, classified:")
     print(f"  TensileDriver methods moved to a runner mixin "
-          f"(verify_method_equivalence.py): {len(driver_methods)}")
+          f"(verify_methods.py): {len(driver_methods)}")
     print(f"  SQLiteRegistry methods moved to a ledger mixin, same public "
           f"class: {len(ledger_methods)}")
     print(f"  AcceptanceReporter renderer methods "
-          f"(verify_report_html.py, byte-identical): {len(report_methods)}")
+          f"(verify_report_render.py, byte-identical): {len(report_methods)}")
     print(f"  Analytics methods moved to an analytics mixin "
-          f"(verify_report_html.py exercises them): {len(analytics_methods)}")
+          f"(verify_report_render.py exercises them): {len(analytics_methods)}")
     print(f"  UNEXPLAINED: {len(unexplained)}")
     for _m in unexplained:
         print("   ", _m)
@@ -475,8 +475,8 @@ def _postsplit_check(ref: str) -> int:
     """Public-API loss check vs a post-split ref: missing symbols + signature drift."""
     import subprocess as _sp
 
-    from oto.tools.verifiers import _evergreen
-    from oto.tools.verifiers._evergreen import print_drift_summary
+    from oto.tools.verifiers import ref_worktree
+    from oto.tools.verifiers.ref_worktree import print_drift_summary
 
     out = _sp.run(["git", "ls-tree", "-r", "--name-only", ref],
                   cwd=ROOT, capture_output=True, text=True)
@@ -489,7 +489,7 @@ def _postsplit_check(ref: str) -> int:
             continue
         if "__pycache__" in rel or "tools/verifiers" in rel:
             continue
-        ref_path = _evergreen.scratch_dir() / "ast_check" / rel
+        ref_path = ref_worktree.scratch_dir() / "ast_check" / rel
         ref_path.parent.mkdir(parents=True, exist_ok=True)
         ref_text = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=ROOT,
                                   capture_output=True, text=True).stdout

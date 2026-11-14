@@ -23,11 +23,11 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
 CHECKS = [
-    ("gate differential", "verify_gate_differential.py"),
-    ("method equivalence", "verify_method_equivalence.py"),
-    ("config writer", "verify_config_writer.py"),
-    ("report html", "verify_report_html.py"),
-    ("ast equivalence", "verify_ast_equivalence.py"),
+    ("gate differential", "verify_gates.py"),
+    ("method equivalence", "verify_methods.py"),
+    ("config writer", "verify_config_render.py"),
+    ("report html", "verify_report_render.py"),
+    ("ast equivalence", "verify_symbols.py"),
 ]
 
 ENV = dict(os.environ)
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     for label, script in CHECKS:
         cmd = [sys.executable, str(HERE / script), "--base", args.base]
-        if args.limit is not None and script == "verify_config_writer.py":
+        if args.limit is not None and script == "verify_config_render.py":
             cmd += ["--limit", str(args.limit)]
         proc = subprocess.run(cmd, cwd=ROOT, env=ENV,
                               capture_output=True, text=True)

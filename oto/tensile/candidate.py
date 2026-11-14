@@ -227,7 +227,7 @@ def parse_tensile_shape(shape_str: str) -> dict[str, int]:
     ``str.split("x")`` -- which raises ``ValueError`` on anything that is not a
     bare shape string, where the original returned the default 1024 cube. It
     read plausibly and was called by no production module, but
-    ``verify_config_writer`` and ``verify_gate_differential`` both import it, so
+    ``verify_config_render`` and ``verify_gates`` both import it, so
     it quietly became the thing those checks compared the original against, and
     both checks failed for that reason rather than for any real divergence.
     Delegate instead.
