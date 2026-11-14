@@ -391,123 +391,121 @@ kernel as inspiration, but:
    until a within-run measurement shows a win, no bar claims it. Your job
    is evidence, not persistence.
 
-## §11A. What the corpus teaches — nine lessons, codified
+## §11A. What tuning teaches — nine universal lessons, codified
 
-Everything below is distilled from the project's own measurement history and
-stored here because the operator reaches for it reflexively; it is not history
-reading material — the operator doesn't have the history, the operator has
-this page.
+Everything below is device-general: the classes and constants your campaign
+will eventually detect, on any GPU you point this at. Where a number appears,
+it is illustrative from the device this methodology was built on (a 7-CU
+Vega-class part, ROCm 7.x, 2026 corpus); the rule it supports is portable.
 
-### L1 — Identical configs in both arms still delta ±17.5 %
+### L1 — Benchmarks vary inside the noise; anchor verdicts outside it
 
-Nine of the 38 target cells run the same kernel in both arms (the vendor
-floor-tile transferred unchanged); their measured deltas span **+1.1 % to
-+18.6 %**. That spread is noise (clock, temperature, thermal throttling). A
-winner must clear the ±5 % floor, which means the verdict band soaks the
-delta. A "win" inside the band is a tie by construction; a "loss" inside the
-band is a tie by construction. Never chase anything inside it; never interpret
-anything inside it as a hardware regression.
+Benchmark deltas of the same binary measured on the same machine span a
+honest, measurable band from run to run — typically ±1 % to ±18 % from clock
+frequency, temperature, and thermal throttling alone. This is not a bug in
+the measurement pipeline; it is the machine. Consequence: any verdict whose
+delta sits inside the noise band is indistinguishable from a tie; nothing
+inside it can honestly be declared a win or a loss; nothing inside it can
+justify a deck change. Every campaign should know its noise floor before
+judging any candidate, by measuring the identical config repeatedly (same
+clock, same heat soak) and using that spread as the acceptance band — not a
+hand-picked ±2 % band someone wrote once.
 
-### L2 — Like-for-like is the only truth; protocol is not visible from names
+### L2 — Compare like-for-like or compare nothing at all
 
-There are two invocation forms the client can produce, and phase names do not
-encode which one ran:
+Every benchmark in this pipeline carries a protocol stamp (e.g. a
+family-protocol invocation over a multi-row problem list, a single-problem
+one, a trio). Two measurements of the same config under different protocols
+are **different quantities**. On the device this was built on the same kernel
+read 412 GFLOPS family-protocol and 98 GFLOPS single-problem in the same
+run. Names of phases do not encode the protocol; the stamp does. Grading
+across protocols grades the benchmark, not the kernel. Every verdict pair
+before the A/B must be protocol-checked — same shape set, same problem-list,
+same clocks, same measurement pass — or the verdict is decided by the harness,
+not by the silicon.
 
-- a **single-problem** invocation (`num-benchmarks=8`, a 1-row problem list) —
-  the measurement of a kernel run standalone, cold-start-to-cold-start;
-- a **family-protocol** invocation (same INI plus a 5–8-row problem list — the
-  family contract list) — every floor-phase and every deck phase since then.
+### L3 — Vendor benchmarks under-report complex work
 
-Same config, same binary, same process settings, different numbers: SS
-96x96x16/6x6/VW2/DU16 at 1024³ reads **412.1** in single-problem and **98.5**
-family in one run. HH 32x64x16/4x4/VW4 reads **763.4** single vs **188.9–206.5**
-family in four runs. HH_HPA 128x128x8/8x8 reads **853.4** single vs **440–538**
-family. The floor only ever ran the family form. Any verdict that pairs an arm
-with a measurement from the other form is grading the protocol, not the kernel.
-Until verdict rows carry a protocol stamp explicitly markeding
-`family`-like, treat `SINGLE`-protocol readings against the floor as
-incomparable chemical noise; re-measure both in one run before trusting any
-verdict whose delta is inside the like-for-like band.
+Complex single (Cgemm) and complex double (Zgemm) MACs execute as four real
+FMAs — eight real FLOP — but every client out there counts a complex MAC as
+2 flops, so a complex GFLOPS figure is reported at ¼ of its real BLAS rate.
+The FP32 roof therefore looks more distant on the dashboard than it is; do
+not read a complex cell's reported GFLOPS against the FP32 roof ratio;
+re-score in the natural units this repo's tooling exposes via
+`reported_to_blas8` before concluding anything about the kernel.
 
-### L3 — Complex GEMM accounting is 4× off
+### L4 — The launcher's refusal IS the silicon
 
-Tensile's client charges `2·packing` flops per MAC with `packing == 1` for
-complex types, so a reported complex GFLOPS is **¼ of its BLAS-8 value**. The
-roof is therefore not 20–25 % — it is **80–97 %** (CC at 80–97 % of the FP32
-FMA roof, ZZ at 96–97 % of the FP64 roof). This was the third correction in
-this project's accounting history. An ORANGE reading on a complex cell is
-a red flag about the *bar*, not the kernel — re-read every complex number in
-BLAS-8 units (reported ×4 for this device's 8-bit-alloc unit) before deciding
-that a cell is behind.
+When the library builder or the gate refuses a config, the reason is part of
+the hardware map: the workgroup register file can hold only so many
+accumulators, the LDS can stage only so many bytes, the workgroup scheduler
+can only hold so many waves, the LSU can only feed so many threads. A gate
+that says no is not a bug in the gate; it is a probe of what your silicon
+physically cleared. Appealing a refusal with syntax is sterile; reading the
+emitted code-object (`readelf`/`llvm-readelf` on the `.hsaco` shows you the
+actual per-thread VGPR count) gives you the real answer. The rule: before
+questioning a rejection, look at the emit.
 
-### L4 — Tensile's refusal is the silicon
+### L5 — Measurement order is not neutral
 
-When the launch gate refuses, it is because the solution doesn't fit this
-part: the workgroup register file (`weight × MT0 × MT1 × LocalSplitU < 65536
-registers`), the LDS budget, the error-4 occupancy (`maxVGPR` per thread
-vs `65536 / NumThreads`), the classic load-divisibility rule, the variant
-rules for the half-assembly GSU path. These are not "maybe the gate is
-wrong"; they are hardware cut-outs. The only exceptions triage has ever
-caught were bugs in the gate's shadow (e.g. an absent key being read as
-`-1` for `StaggerU`, the `Z` VW row using `reg=2` instead of `reg=4`) — all
-found by reading the emitted code objects. The discipline: before appealing
-an ORANGE, always read the assembly of the kernel in the same batch; Tensile
-is never the bug when the kernel simply has no room.
+Ops that run back-to-back renew the thermal state of the part differently;
+the first kernel of a sorted pass reads cooler clocks than the last. The
+2026-10-15 bug here ran 2048³ ahead of 256³ on the deck; the 256³ kernel then
+"lost" for hours of campaign time until the order was sorted by assumption,
+not by correctness. Order `ProblemSizes` numerically at the producer and
+never A/B interleaved runs; `oto/tensile/shape_order.py` is the helper this
+project maintains for that job.
 
-### L5 — The sweep order decides whether 256³ verdicts are possible
+### L6 — Structural locality travels; byte-copying does not
 
-A phase's `ProblemSizes` list runs in list order. When the deck once emitted
-`2048³` earlier in the list and `256³` last, the small cube measured right
-after the slow 2048³ kernel — the 256³ kernel was read at throttle and the
-campaign chased the phantom for three days (the "THE ONE LOSER" saga, later
-flipped by the 2026-10-15 ordering fix). Any candidate generator that sorts
-shapes lexicographically ("1024, 192, 2048, 256, 512") produces the same
-measurement-order defect for every family, not just CC. Verdicts across a
-sorted sequence must be excluded from A/B; enforce numerical order at the
-producer, not at the reader.
+A config that wins on one part is not automatically portable to another of the
+same family. What travels: the tile geometry (MacroTile, ThreadTile, DepthU).
+What does not: `WorkGroupMapping`, `StaggerU`, padding knobs, assert values,
+LDS-pressure annotations, L2 hints — all of those encode the *peer* silicon's
+geometry (CUs, LDS size, wave width, cache bisection). Copying those
+blindly manufactures a new loser every time. Re-derive per part: what
+does this part's LDS map to, how many wavefronts per SIMD, how wide is the
+bank conflict, where does the L2 cap hit — and answer those from the part,
+not from the sibling.
 
-### L6 — Structural locality beats byte-copying
+### L7 — Stolen from the floor always means retuned, never verbatim
 
-The gfx900 floor ships kernels tuned for 56 CUs, HBM2, and a 2048-barrel
-raster; a 7-CU Vega-class APU with 1 MiB L2 and DDR4 has none of that geometry
-in common. Copying a floor winner unchanged into this deck produces nothing —
-the differences (`StaggerU` horizon, `WorkGroupMapping` sign, atomic-reduction
-cost on `GSU=2`, `LdsPad{A,B}` on complex, assert-value scaling in complex
-at `AF0EM≥2`) are not inherited. The floor supplies *one* thing: a known-good
-geometry that at least builds and runs on this part. Everything else is
-re-derived. A steal means "the 64×64 tile is legal here and known-good on the
-sibling silicon" — never "everything else follows".
+When a floor library exists for your silicon family, you may copy the floors'
+geometry as a *starting point* — nothing else. Every kernel-attribute differ-
+ence between the floor and your part is worth documenting **in the config
+note**: assert values, stagger hints, padding, non-temporal loads, LDS hints.
+If you cannot defend a field's inclusion in this part's profile in one line,
+the field doesn't ship. This directory carries worked examples (`CC:256` @
+this repo's 2026-10-16 entry) where the floor contributed exactly one tile
+geometry and zero other knobs.
 
-### L7 — Stealing is informed-mode only and always a retune, never a verbatim
+### L8 — An axis that never reaches the writer is a placebo
 
-The one recorded steal (CC:256, 2026-10-16) carried only `MacroTile=64x64`,
-`WorkGroup=16x16x1`, and `GlobalLoadVectorWidth=2` verbatim; `StaggerU 32`,
-`WGM 8`, `LdsPad`, `AssertFree{0,1}ElementMultiple`, `PGR`, and `LSU` were
-all re-swept because gfx900 silicon did not match gfx90c (60 CUs, HBM2). Every
-altered field gets a one-line reason in the config's `note`. If you cannot
-state the reason, steal nothing — it is a debt entry, not a shortcut.
+When a knob is "recorded forwarded" but emits nothing, your sweep measures
+the default and prints it as the knob's result — wasted measurement, magic
+zero timings, spurious "no-op" verdicts that took out whole axes in this
+kind of tuning session. Before reading any "no effect" result as a tuning
+truth, check that the knob actually reaches the kernel emitter — e.g. this
+repo ships `tests/test_writer_forwards_sweep_knobs.py`, a targeted forwarding
+harness, so this class of bug is caught here. "No effect" means nothing
+unless the conduit is proven.
 
-### L8 — Dead axes and silent placebos are a known failure mode
+### L9 — Legality gates are machine code, not policy
 
-When a knob is declared forwarded but nothing emits it, the sweep measures the
-*Tensile default* and reports it as the knob. This exact class of bug shipped
-only because the emitter was tested by outcome ("builds? yes/no") instead of
-by equivalence ("the knob reaches the writer"). If a row is recorded and
-never reaches the launch, it is a placebo, and the 17 hours it ran were spent
-on the default the whole time. Verify the `FORWARDED_KNOBS` list against the
-config writer before reading any "no effect" result as a tuning verdict.
+A gate that says no is the result of a proof, by parts of the library builder,
+about whether the workgroup fits the silicon — not an opinion. Bugs in a gate
+are possible, but far more often what you're seeing is the machine telling
+you the truth about the accumulator budget, `LDS` pressure, wave occupancy,
+or per-thread register count. Calibrate the gate; don't bypass it. When
+calibration prints `0 MISS / 0 FALSE REJECTION`, the gate is the chip made
+executable; when it prints otherwise, the bug is in the gate, not in the
+config the gate rejected.
 
-### L9 — Gates are not suggestions — they encode silicon facts
-
-Every legality gate this project calibrates against is a piece of silicon
-knowledge: the workgroup VGPR file (error 4), the LDS budget (two resident
-workgroups), the complex 2×/4× accumulator footprint, the wave-quantization
-fill rules (SS = GSU× wave fill; complex = MT1× accumulator count). A gate
-that fires is correct — CALIBRATION exists to count false-rejections and all
-other rules so your deck never ships a phase the silicon refuses. When
-calibration prints `0 MISS` / `0 FALSE REJECTION`, the gate represents the
-machine; when it prints otherwise, a human error belongs in the commit, not
-in the deck.
+All nine rules above travel untouched to any future part this project supports.
+What never travels are the *invariants* of the specific silicon — 448 FP32
+lanes, FP64 at 1/16 FP32, the 64 KiB LDS this class carries, the 16 B
+global-load cap — which live in `profiles/<codename>.json`, where they belong,
+and are never interpolated from these lessons.
 
 ## §12. Informed mode — the floor-steal protocol, in full
 

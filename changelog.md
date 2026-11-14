@@ -4251,3 +4251,16 @@ the pre-built seed pool.
   dead axes and silent placebos were a real failure class, gates are silicon
   facts not suggestions. One heading previously swallowed by an edit was
   restored; docs_index regenerated; docs tests green.
+
+- **2026-11-14 (39th) — the corpus lessons are now device-general (§11A).**
+  The nine lessons §11A shipped in the prior commit were gfx90c-shaped: L1
+  tied the noise band to this device's clock telemetry; L2 quoted this-device's
+  412-vs-98 GFLOPS family/single read; L3 was the complex-GEMM correction; L4
+  named gfx9-specific gate outputs; L5 named this repo's shape-order fix; L6
+  named gfx900 floor geometry; L7 named this repo's 2026-10-16 steal record;
+  L8 named this repo's emitter-forwarding bug; L9 named this repo's gate
+  calibration contract. All nine are rewritten to stand on any GPU this
+  project supports (and any other GCN5-class APU the operator lands on);
+  illustrative numbers retained with explicit "device this methodology was
+  built on" framing. Device invariants explicitly stay in profiles/*.json
+  where they belong.
