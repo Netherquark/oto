@@ -52,7 +52,6 @@ def _tensile_candidates() -> list[str]:
             p = os.path.join(base, sub) if sub else base
             if os.path.isdir(os.path.join(p, "Tensile", "bin")):
                 cands.append(p)
-    cands.append("/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
     # try dotenv-loaded value
     try:
         from oto.runners.toolchain import DEFAULT_TENSILE_ROOT

@@ -76,8 +76,15 @@ def _capture_derived() -> tuple[Any, list[dict[str, Any]]]:
         (the original function, the recorder list). The caller restores the
         original -- the patch is process-local and short-lived.
     """
-    sys.path.insert(0, os.environ.get("TENSILE_ROOT", "") or
-                    "/home/netherquark/Soham/Large_code/sources/GPU/Tensile")
+    tr = os.environ.get("TENSILE_ROOT")
+    if not tr:
+        try:
+            from oto.runners.toolchain import DEFAULT_TENSILE_ROOT
+            tr = str(DEFAULT_TENSILE_ROOT) if DEFAULT_TENSILE_ROOT else None
+        except Exception:
+            tr = None
+    if tr:
+        sys.path.insert(0, tr)
     from Tensile.SolutionStructs import Solution
 
     original = Solution.assignDerivedParameters

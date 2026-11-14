@@ -19,7 +19,21 @@ from pathlib import Path
 # `oto check candidates`, and all three resolve via module invocation.
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
-for _p in (os.environ.get("TENSILE_ROOT"), "/home/netherquark/Soham/Large_code/sources/GPU/Tensile"):
+def _tensile_root():
+    """TENSILE_ROOT from the live env, else the repo-root .env (gitignored)."""
+    v = os.environ.get("TENSILE_ROOT")
+    if v:
+        return v
+    env_file = BASE / ".env"
+    if env_file.is_file():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("TENSILE_ROOT="):
+                return line.split("=", 1)[1].strip()
+    return None
+
+
+for _p in (_tensile_root(),):
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
