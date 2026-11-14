@@ -4351,3 +4351,55 @@ the pre-built seed pool.
   machine-local paths in tracked files, no .pyc/artifact files tracked, no stale module references
   outside changelog/archive, Class A/B docs current, `oto doctor` clean. The 44th entry closes the
   arc begun 2026-11-13 with the CLI front door and the 2026-11-14 doc restructure.
+
+- **2026-11-15 (45th) — the production-readiness sweep: every audit finding fixed honestly, and the box declared honestly not ready.**
+  The v1-readiness audit (A.md/B2.md) findings were fixed, in priority order, one concern per commit:
+  - **Reference floor crash**: `_create_reference_run_dir` returned a 4-tuple bound into the sqlite `run_id`
+    — every `--gfx900-reference` run died after the GPU work with a ProgrammingError. The caller now
+    unpacks the tuple, the run row is stamped, and the pre-existing run dirs are restored in `finally`.
+  - **`oto check db` honours integrity**: `--json` reports the real `PRAGMA integrity_check` and exits 1
+    on corruption (it hardcoded `integrity: true` and exit 0); the human path exits 1 on failure too.
+  - **The mutation arm cannot bypass the ledger guard silently**: `bypass_identical_skip` is honoured
+    only when the ledger backs the bypass (agent present + outcome signal), never unconditionally.
+  - **DB synthesis arm reachable again**: `convergence_agent` imported `db_mutator` from a nonexistent
+    top-level module behind `except Exception: None`; it now imports the real module path and warns on stderr.
+  - **`idx_cell_key`** is created by the schema (`_EXPRESSION_INDEX_DDL`), so a fresh DB has it.
+  - **Native-subject selection is profile-aware**: `latest_run_id(arm="native")` excludes the *current
+    profile's* spoof prefix (LIKE-escaped, parameter-bound), not only `gfx900_ref_%`; smoke floors are
+    never recalled for promotion (`latest_reference_run_id` filters `meta.smoke`); the two remaining
+    `LIKE '{arch}_ref_%'` interpolations are parameter-bound.
+  - **The driver honours OTO_PROFILE**: an explicit OTO_PROFILE binding wins over rocminfo detection
+    (documented resolution order), so a gfx902 session is not silently run as gfx90c; the process-wide
+    rebind failure prints to stderr instead of vanishing.
+  - **Toolchain compilers**: the client-build compiler defaults follow the ROCm tree (llvm-bin amdclang
+    preferred, matching Tensile's native default) with explicit `TENSILE_CXX_COMPILER`/`TENSILE_C_COMPILER`
+    overrides (bare names pass through verbatim; bad paths are hard errors); `hipcc` is selected only
+    when the tree ships no clang. `.env.example` documents both.
+  - **`--prebuilt-client` is honest**: `OTO_TENSILE_CLIENT` pointing at a missing path is a hard error;
+    the default is also verified — the campaign raises before any phase instead of failing inside every
+    Tensile subprocess. `oto doctor` gained a "Tensile client" row that FAILs on this box today
+    (the client is genuinely not built here; the fix is the one-time next-cmake build, not a code edit).
+  - **`oto candidate --json` mirrors the text view**: `phases` is the deck (280), with `seed_overlay`
+    (1146) and `manifest` (1426) as distinct fields instead of a merged-only count.
+  - **CLI housekeeping forced by the 600-line file guard**: adapter helpers extracted to
+    `oto/cli/_adapter.py`, the verify adapters to `oto/cli/verify_cmds.py`; `commands.py` keeps its
+    stated public API (`dispatch`, `show_help`, `write_completions`).
+  - **`oto verify all --base-ref REF`** passes a base ref through to the verifier (previously
+    `--base` was swallowed by the global flag and the verifier silently ran HEAD~1).
+  - **Comparator/verifier repairs**: split-era MOVES pointed at renamed paths (`oto/checks/db.py`,
+    `oto/ledger/queries.py`, `oto/ledger/proposals.py`); `harness/occupancy_bounds.py` MOVES source
+    corrected to `harness/occupancy_audit.py`; `verify_methods.py` NEW list follows renames; the
+    config-writer accepted classes now cover exactly the documented emitter deltas
+    (`+ Architecture:` echo, `NumElementsToValidate: 0 -> 128`) and their composition with the
+    already-accepted knob classes); 21 manifest attestations added for the
+    mechanical Refactor-2 evolution signatures; `oto verify all` returns 5/5 OK at both HEAD and 2824c2f.
+  - **Slop retired**: accept-report generation failures raise loudly (calls cannot tell a dry run from
+    a bug otherwise); the dead per-family `_<fam>_mutation_pattern` methods deleted; `self.scheduler`
+    renamed `self.generator` throughout; the benchmark chart's device literals are profile-derived.
+  - **Release-readiness additions**: pinned split requirements (`requirements.txt` runtime,
+    `requirements-dev.txt` suite+lint), `NOTICE` (copyright assertion; LICENSE stays verbatim),
+    `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`, GitHub Actions CI (CPU-only: install, ruff,
+    pytest, split-era verifier), README quick-start + license section, `oto/README.md` regenerated.
+  Suite green (1084 passed, 8 skipped, 242 subtests, RC=0). `oto verify all` PASSED at HEAD~1 and at
+  2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
+  owner's API key and the Tensile client build are both still required.

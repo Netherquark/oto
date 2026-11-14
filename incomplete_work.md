@@ -31,24 +31,18 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; the gfx902 starter pair (research output) is the missing piece;
   it depends on C4 above.
-- **Refactor-1 slop (still open).**
-  `oto/runners/acceptance_reporting.py`: the registry-read failure silently returns
-  "no arm data" (a real fault is indistinguishable from a dry run), and the
-  report-generation failure prints a warning and returns `None` instead of
-  failing loudly — both are review-grade swallowed exceptions, open since
-  the Refactor-1 pass.
-- **Dead mutators in `oto/tensile/synthesis/donor_patterns.py`.** The four
-  `_<fam>_mutation_pattern` methods (`_ss/_dd/_cc/_zz`) are dead base-deck
-  leftovers, not called by `synthesize_mutants`; `_ss_mutation_pattern`
-  reads the nonexistent `FORWARD_KNOB_DOMAINS["GSU"]` (latent KeyError).
-  Decision owed: delete, or wire them with real GSU domains (the family
-  split is already in `db.FAMILY_KNOB_DOMAINS`).
-- **`self.scheduler` legacy alias.** `scheduler` holds a
-  `CandidateGenerator` (`oto/runners/driver.py`); renaming to
-  `self.generator` is mechanical but touches many call sites.
-- **`idx_cell_key` never created by the schema.** `oto/ledger/registry_core.py`
-  `_INDEX_DDL` has no `idx_cell_key`; only the live registry carries one.
-  A fresh DB misses it; add the index explicitly.
+- **Refactor-1 slop (closed 2026-11-15).** Both swallowed exceptions are fixed:
+  registry-read failures propagate, and report-generation failures raise loudly.
+  The four dead `_<fam>_mutation_pattern` methods are deleted (never called by
+  `synthesize_mutants`); `self.scheduler` is now `self.generator` everywhere;
+  `idx_cell_key` is created by the schema (`_EXPRESSION_INDEX_DDL`). See the
+  changelog 45th entry — no further owner decision needed.
+- **Toolchain honesty (closed 2026-11-15, see 45th changelog entry).**
+  `OTO_TENSILE_CLIENT` pointing at a missing path is a hard error; `oto doctor`
+  reports the Tensile client row — on this box it FAILs (the client is genuinely
+  not built; one-time next-cmake build per context_raw.md §2.4, or
+  `OTO_TENSILE_CLIENT=/path/to/tensile-client`). GPU legs other than yolo26 remain
+  whitelist-gated.
 
 - **2 × `oto doctor` warnings** (advisory; user's earlier call stands —
   do not silence them):
