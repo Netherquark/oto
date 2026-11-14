@@ -22,7 +22,7 @@ from typing import Any
 
 from oto.device import loader as _loader
 
-from ..patterns import pattern_of, tlu_flags
+from ..contraction_patterns import pattern_of, tlu_flags
 from .memo import memo_gate
 from .vgpr_model import (
     FAMILY_BYTES_PER_ELEMENT,
@@ -144,7 +144,7 @@ def _transposes(config: dict[str, Any]) -> tuple[bool, bool]:
     needs and which are NOT the problem type's transpose flags: the solution
     built for ``Alik_Bjlk`` carries ``TransposeA: true, TransposeB: true``
     but ``TLUA: false, TLUB: true``. The spelling is read from the canonical
-    map (``oto.tensile.patterns``), so the two readings cannot drift.
+    map (``oto.tensile.contraction_patterns``), so the two readings cannot drift.
     """
     return tlu_flags(pattern_of(config))
 

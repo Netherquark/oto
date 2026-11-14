@@ -18,8 +18,8 @@ from typing import Any
 
 import yaml
 
-import oto.tensile.best_library as bestlib
-import oto.tensile.shipped_manifest as tlib
+import oto.tensile.best_effort_library as bestlib
+import oto.tensile.shipped_floor_manifest as tlib
 from oto.agents import agent_tools as harness_tools
 from oto.agents import meta_agent as agent_meta
 from oto.agents.research_client import make_researcher

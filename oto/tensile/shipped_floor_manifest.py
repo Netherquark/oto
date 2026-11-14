@@ -12,7 +12,7 @@ computed from the live dat once, cached, and regenerated only on an explicit
 measurement still describes the config that would run now.
 
 Does NOT own: the binary .dat parse and the spoof-phase emitter
-(oto.tensile.shipped_library).
+(oto.tensile.shipped_floor).
 Public API: see ``__all__``.
 """
 
@@ -35,7 +35,7 @@ def manifest_rel(arch: str = "gfx900") -> str:
 # The shipped-library parse and the spoof-phase emitter live in their own module
 # so the manifest cache, the tier triage and the identity helpers here are not
 # buried under a binary .dat parser.
-from oto.tensile.shipped_library import (
+from oto.tensile.shipped_floor import (
     CONTRACTION_PATTERNS,
     SHIPPED_FAMILIES,
     _all_rocm_prefixes,

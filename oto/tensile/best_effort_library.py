@@ -149,7 +149,7 @@ def _cell_rows_from_db(db: dict[str, Any], basis: str) -> dict[tuple[str, str], 
 
 def _carve_one_cell(cell, pool, mut, sched, ldspad_feasible, basis):
     """Return (info_dict, step_label, refused_flag, refused_entry)."""
-    from oto.tensile.decks import FAMILY_DECKS
+    from oto.tensile.family_decks import FAMILY_DECKS
     fam = cell[0]
     chain = [
         ("native_basis", _best_row(pool["native_basis"], basis)),

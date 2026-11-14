@@ -135,12 +135,12 @@ class CandidateGenerator(CandidateEmitMixin):
     def _load_family_decks(self) -> dict[str, list[dict[str, Any]]]:
         """The curated family deck for this device.
 
-        The data lives in oto.tensile.decks so the generator and the deck can
+        The data lives in oto.tensile.family_decks so the generator and the deck can
         be read separately: the deck is a table of measured/quant/ladder
         candidates, and the generator is the code that clamps and emits them.
         Every entry is annotated in that module with which kind it is.
         """
-        from oto.tensile.decks import FAMILY_DECKS
+        from oto.tensile.family_decks import FAMILY_DECKS
 
         return FAMILY_DECKS
 

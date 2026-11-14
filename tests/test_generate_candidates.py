@@ -387,7 +387,7 @@ class TestEveryDeckRowIsGenerative:
         return not gen.validate_config(cfg)[0]
 
     def test_family_decks_are_gate_clean(self):
-        from oto.tensile.decks import FAMILY_DECKS
+        from oto.tensile.family_decks import FAMILY_DECKS
         bad = []
         for family, rows in FAMILY_DECKS.items():
             # Legal under *some* pattern is enough: the generator emits the

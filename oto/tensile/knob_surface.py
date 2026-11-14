@@ -9,7 +9,7 @@ knobs that would benchmark at defaults while their manifest claims the
 treatment ran.
 Does NOT own: the gates that make a forwarded value legal (oto.tensile.gates),
 the YAML emission itself (oto.tensile.config_writer), or the contraction
-pattern vocabulary (oto.tensile.patterns).
+pattern vocabulary (oto.tensile.contraction_patterns).
 Public API: GLOBAL_LOAD_WIDTH_KEYS, FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS,
 NOT_FORWARDED_KNOBS, DEPRECATED_KEYS.
 

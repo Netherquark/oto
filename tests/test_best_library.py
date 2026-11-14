@@ -8,7 +8,7 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 from oto.runners.result_paths import results_rel
-from oto.tensile.best_library import (
+from oto.tensile.best_effort_library import (
     SHIPPED_CELLS,
     _tensile_env,
     build_best_library,
@@ -135,7 +135,7 @@ def test_logic_filename_hint_falls_back_without_tensile_root():
 def test_logic_filename_hint_asks_target_tensile(monkeypatch):
     class _P:
         stdout = "vega10\n"
-    monkeypatch.setattr("oto.tensile.best_library.subprocess.run",
+    monkeypatch.setattr("oto.tensile.best_effort_library.subprocess.run",
                         lambda *a, **k: _P())
     assert logic_filename_hint(Path("FakeTensile-does-not-exist"), "gfx90c") == "vega10"
 
@@ -143,7 +143,7 @@ def test_logic_filename_hint_asks_target_tensile(monkeypatch):
 def test_logic_filename_hint_falls_back_on_error(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("no tensile")
-    monkeypatch.setattr("oto.tensile.best_library.subprocess.run", boom)
+    monkeypatch.setattr("oto.tensile.best_effort_library.subprocess.run", boom)
     assert logic_filename_hint(Path("FakeTensile-does-not-exist"), "gfx90c") == "gfx90c"
 
 
@@ -151,7 +151,7 @@ def test_emit_logic_yaml_names_files_for_tensile_selection(tmp_path, monkeypatch
     """ROCm 7.x maps gfx90c -> vega10; the merge step selects logic files by
     the mapped name as a stem substring, so the YAML filenames must carry it."""
     _require_live_corpus()
-    monkeypatch.setattr("oto.tensile.best_library.logic_filename_hint",
+    monkeypatch.setattr("oto.tensile.best_effort_library.logic_filename_hint",
                         lambda root, cn: "vega10")
     cm, _, _ = cell_solution_map(Path("."), "family")
     logic = tmp_path / "3_LibraryLogic"

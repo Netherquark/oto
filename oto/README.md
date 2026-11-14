@@ -25,20 +25,20 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/tensile/ — the Tensile-facing candidate pipeline
 
-* ``tensile/best_library.py`` — Best-effort device ``TensileLibrary.dat`` carved from the full kernel database.
+* ``tensile/best_effort_library.py`` — Best-effort device ``TensileLibrary.dat`` carved from the full kernel database.
 * ``tensile/candidate.py`` — Candidate generation: the family deck, the sampler, and the append boundary.
 * ``tensile/candidate_config.py`` — The candidate payload dataclass.
 * ``tensile/candidate_emission.py`` — The append boundary: how a candidate becomes a launchable phase.
 * ``tensile/config_writer.py`` — The launch-boundary config writer.
-* ``tensile/decks.py`` — The curated family tile decks: the starting candidates, and what kind each is.
+* ``tensile/contraction_patterns.py`` — The contraction-pattern vocabulary: one spelling, one meaning.
+* ``tensile/family_decks.py`` — The curated family tile decks: the starting candidates, and what kind each is.
 * ``tensile/knob_surface.py`` — The launch-boundary knob surface: what Tensile may and may not receive.
 * ``tensile/knob_sweep.py`` — Emit the knob-sweep deck: every family's winner tile x one knob change.
 * ``tensile/legality.py`` — The legality prior: manifest-derived legal domain, and source-cited walls.
 * ``tensile/library_parity.py`` — The coverage-parity rule: what the produced TensileLibrary may address.
-* ``tensile/patterns.py`` — The contraction-pattern vocabulary: one spelling, one meaning.
 * ``tensile/shape_order.py`` — Canonical numeric ordering for Tensile problem-shape strings.
-* ``tensile/shipped_library.py`` — The shipped gfx900 library: locating it, parsing it, rebuiling a kernel from its name.
-* ``tensile/shipped_manifest.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
+* ``tensile/shipped_floor.py`` — The shipped gfx900 library: locating it, parsing it, rebuiling a kernel from its name.
+* ``tensile/shipped_floor_manifest.py`` — The shipped gfx900 manifest: pinning, identity, and the rerun tier triage.
 
 ### ``tensile/gates/``
 

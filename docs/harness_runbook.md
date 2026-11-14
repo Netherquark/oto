@@ -207,7 +207,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 ### 5. Ask Tensile, not the model (the legality oracle)
 
 > The three implementation modules behind this section -- `oto.yaml_cached` (the
-> libyaml reader every YAML read goes through), `oto.tensile.patterns` (one
+> libyaml reader every YAML read goes through), `oto.tensile.contraction_patterns` (one
 > spelling, one meaning for the contraction patterns) and
 > `oto.tensile.gates.memo` (the content-keyed cache the gates use) -- are
 > listed in `oto/README.md` and `docs/agent_reference.md`.

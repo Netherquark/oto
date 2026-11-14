@@ -28,7 +28,7 @@ sys.path.insert(0, str(BASE))
 
 from oto.runners.driver import TensileDriver
 from oto.tensile import config_writer
-from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
+from oto.tensile.family_decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
 CC_BASE = dict(KNOB_SWEEP_BASES["CC"][0])
 

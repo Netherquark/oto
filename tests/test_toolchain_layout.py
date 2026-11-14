@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 
 from oto.runners.toolchain import require_tensile_root
-from oto.tensile import best_library
+from oto.tensile import best_effort_library as best_library
 
 
 def _fake_root(base: Path, sub: str) -> Path:

@@ -6,7 +6,7 @@ the audited triage, reuse by content fingerprint, run in a dedicated
 ``gfx900_ref_*`` run) and the five helpers that decide what the floor already
 covers -- ``_latest_reference_run``, ``_reference_floor_runs``,
 ``_reusable_phase_keys``, ``_chain_phase_sets`` and ``_reference_remaining``.
-Does NOT own: the shipped manifest itself (oto.tensile.shipped_manifest), the phase
+Does NOT own: the shipped manifest itself (oto.tensile.shipped_floor_manifest), the phase
 runner it delegates to (phases.py), or the verdicts it is compared in
 (oto.metrics.ab_audit).
 Public API: ReferenceMixin.
@@ -20,7 +20,7 @@ from typing import Any
 
 import yaml
 
-import oto.tensile.shipped_manifest as tlib
+import oto.tensile.shipped_floor_manifest as tlib
 from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.runners.result_paths import runs_dir as _runs_dir

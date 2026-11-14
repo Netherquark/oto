@@ -9,13 +9,13 @@ pads, dropped StaggerUStride).
 Does NOT own: the gates it consults (oto.tensile.gates), the shape parser it
 uses (oto.tensile.candidate.parse_tensile_shape), the driver that calls it
 (oto.runners.benchmark), the forwarding-surface tuples (oto.tensile.knob_surface),
-or the contraction-pattern vocabulary (oto.tensile.patterns).
+or the contraction-pattern vocabulary (oto.tensile.contraction_patterns).
 Public API: write_phase_config, parse_tensile_shape, TRANSPOSE_MAP,
 GLOBAL_LOAD_WIDTH_KEYS, FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS,
 NOT_FORWARDED_KNOBS.
 
 The forwarding-surface tuples live in ``oto.tensile.knob_surface`` and the
-pattern vocabulary in ``oto.tensile.patterns``; both are re-exported here for
+pattern vocabulary in ``oto.tensile.contraction_patterns``; both are re-exported here for
 the tests and gate_calibration. The driver's private ``_TENSILE_VALID_PARAMS``
 is consulted at the launch boundary but is not re-exported here.
 
@@ -58,6 +58,8 @@ from typing import Any
 import yaml
 
 from oto.device import loader as _loader
+from oto.tensile.contraction_patterns import SPELLINGS
+from oto.tensile.contraction_patterns import TRANSPOSE_MAP as TRANSPOSE_MAP
 from oto.tensile.gates.assembly import assembly_class_valid
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import ldspad_feasible, occupancy_feasible
@@ -66,8 +68,6 @@ from oto.tensile.knob_surface import FORWARDED_GROUP_C_KNOBS as FORWARDED_GROUP_
 from oto.tensile.knob_surface import FORWARDED_KNOBS as FORWARDED_KNOBS
 from oto.tensile.knob_surface import GLOBAL_LOAD_WIDTH_KEYS as GLOBAL_LOAD_WIDTH_KEYS
 from oto.tensile.knob_surface import NOT_FORWARDED_KNOBS as NOT_FORWARDED_KNOBS
-from oto.tensile.patterns import SPELLINGS
-from oto.tensile.patterns import TRANSPOSE_MAP as TRANSPOSE_MAP
 from oto.tensile.shape_order import ordered_shapes
 
 __all__ = [

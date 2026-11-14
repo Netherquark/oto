@@ -56,7 +56,7 @@ from oto.tensile.gates.occupancy import (
     tile_dims,
 )
 from oto.tensile.gates.vgpr_model import VGPR_PER_ELEMENT, measured_accvgpr
-from oto.tensile.shipped_manifest import shipped_kernel_config
+from oto.tensile.shipped_floor_manifest import shipped_kernel_config
 
 
 def _divisibility(gen, cfg):

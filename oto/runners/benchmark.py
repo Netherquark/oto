@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.tensile.shipped_manifest as tlib
+import oto.tensile.shipped_floor_manifest as tlib
 from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler

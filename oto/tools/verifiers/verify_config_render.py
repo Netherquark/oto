@@ -154,7 +154,7 @@ def load_legacy(base: str):
                      ("library_parity", "oto.tensile.library_parity")):
         sys.modules[old] = __import__(new, fromlist=["*"])
     sys.modules["auto_prompt"] = __import__("oto.runners.auto_prompt", fromlist=["*"])
-    sys.modules["tensile_library"] = __import__("oto.tensile.shipped_manifest", fromlist=["*"])
+    sys.modules["tensile_library"] = __import__("oto.tensile.shipped_floor_manifest", fromlist=["*"])
     sys.modules["run_status"] = __import__("oto.metrics.run_status", fromlist=["*"])
     sys.modules["port_tensile"] = __import__("oto.runners.stage_cli", fromlist=["*"])
     mod = types.ModuleType("old_port_tensile")

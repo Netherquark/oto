@@ -189,8 +189,8 @@ class TestCountReading(unittest.TestCase):
 
         import json
 
-        import oto.tensile.shipped_manifest as tlib
-        from oto.tensile.shipped_library import _CANON
+        import oto.tensile.shipped_floor_manifest as tlib
+        from oto.tensile.shipped_floor import _CANON
 
         counts = auto_prompt._read_counts(BASE)
         manifest = tlib.load_rerun_manifest(BASE)

@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import oto.tensile.shipped_manifest as tlib
+import oto.tensile.shipped_floor_manifest as tlib
 from oto.metrics.run_plan import RunPlan
 from oto.metrics.status_helpers import _parse_ts, bucket
 from oto.runners.result_paths import results_rel

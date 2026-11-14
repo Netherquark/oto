@@ -20,7 +20,7 @@ _parse_ts, _jittery, read_thermals, main, tlib.
 
 from __future__ import annotations
 
-import oto.tensile.shipped_manifest as tlib
+import oto.tensile.shipped_floor_manifest as tlib
 from oto.metrics.build_status import build_report
 
 # Re-exported for the pre-split import surface; the implementations live in

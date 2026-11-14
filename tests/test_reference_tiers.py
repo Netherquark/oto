@@ -25,9 +25,9 @@ sys.path.insert(0, str(ROOT))
 
 import oto.runners.auto_prompt as ap
 import oto.runners.driver as pt
-import oto.tensile.shipped_manifest as tl
+import oto.tensile.shipped_floor_manifest as tl
 from oto.runners.result_paths import results_rel
-from oto.tensile.shipped_library import _CANON
+from oto.tensile.shipped_floor import _CANON
 
 T1 = ["p_t1_a", "p_t1_b", "p_t1_c"]
 T2 = ["p_t2_a", "p_t2_b"]

@@ -4,7 +4,7 @@
 Owns: the command line for the knob-sweep deck -- resolving which families,
 shapes and sweeps to emit, calling ``CandidateGenerator
 .generate_knob_sweep_phases``, and reporting what was refused and why.
-Does NOT own: the sweep data (oto.tensile.decks), the generator that merges
+Does NOT own: the sweep data (oto.tensile.family_decks), the generator that merges
 template and knobs (oto.tensile.candidate_emission), or the gates that refuse a
 candidate (oto.tensile.gates).
 Public API: main.
@@ -37,7 +37,7 @@ if str(_HERE) not in sys.path:
 
 from oto.device import loader as _loader
 from oto.tensile.candidate import CandidateGenerator
-from oto.tensile.decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
+from oto.tensile.family_decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -140,7 +140,7 @@ profile=None,
 
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
-    from oto.tensile.decks import KNOB_SWEEP_BASES
+    from oto.tensile.family_decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     for family in families:
@@ -174,7 +174,7 @@ profile=None,
 
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
-    from oto.tensile.decks import KNOB_SWEEP_BASES
+    from oto.tensile.family_decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     for family in families:
@@ -219,7 +219,7 @@ profile=None,
 
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
-    from oto.tensile.decks import DECISION_TRIAL_TILES
+    from oto.tensile.family_decks import DECISION_TRIAL_TILES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     for trial in DECISION_TRIAL_TILES:

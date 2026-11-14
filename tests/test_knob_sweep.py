@@ -34,7 +34,7 @@ sys.path.insert(0, str(BASE))
 
 from oto.device import loader as _loader
 from oto.tensile.candidate import CandidateGenerator
-from oto.tensile.decks import (
+from oto.tensile.family_decks import (
     DECISION_TRIAL_TILES,
     FAMILY_DECKS,
     KNOB_SWEEP_BASES,
@@ -126,7 +126,7 @@ def test_every_sweep_row_offers_a_non_default_value():
     ``TENSILE_KNOB_DEFAULTS`` and ``docs/knowledge_base.md`` §7.1. This is what
     removed the ``BufferLoad: True`` row (its default is already ``True``).
     """
-    from oto.tensile.decks import TENSILE_KNOB_DEFAULTS
+    from oto.tensile.family_decks import TENSILE_KNOB_DEFAULTS
 
     for sweep in KNOB_SWEEPS:
         # The knob *label* is not always the key set (`GlobalLoadVectorWidth`
@@ -470,7 +470,7 @@ def test_decision_trials_cover_d1():
     for CC:256 and CC:512 ship as first-class deck rows (`_af4em4`), validated
     on silicon at both shapes, and D5 must not reappear as a trial. D1 remains
     the only open owner-decision and keeps its trial."""
-    from oto.tensile.decks import DECISION_TRIAL_TILES
+    from oto.tensile.family_decks import DECISION_TRIAL_TILES
 
     covered = {t["decision"] for t in DECISION_TRIAL_TILES}
     assert {"D1"} <= covered, f"D1 has no trial: {covered}"

@@ -8,7 +8,7 @@ dedupe, and write the deck), ``generate_family_phases`` (build one phase per
 (family, pattern, shape, tile), clamping VectorWidth down until the gates accept
 it) and ``generate_knob_sweep_phases`` (cross-join a family's winner tile with
 the never-varied knob list).
-Does NOT own: the deck it draws from (oto.tensile.decks), the gates that refuse a
+Does NOT own: the deck it draws from (oto.tensile.family_decks), the gates that refuse a
 candidate (oto.tensile.gates), or the config writer
 (oto.tensile.config_writer).
 Public API: CandidateEmitMixin, generate_knob_sweep_phases.
@@ -305,7 +305,7 @@ class CandidateEmitMixin:
         Separate from generate_family_phases: iterates KNOB_SWEEP_BASES x KNOB_SWEEPS.
         width_override on a sweep row is honoured before validation.
         """
-        from oto.tensile.decks import KNOB_SWEEP_BASES
+        from oto.tensile.family_decks import KNOB_SWEEP_BASES
 
         fams = families or list(KNOB_SWEEP_BASES)
         pats = patterns or ["Ailk_Bljk"]
@@ -356,7 +356,7 @@ class CandidateEmitMixin:
 
     def _emit_sweeps(self, candidates, refused, family, pattern, bases, shapes):
         """Emit sweep candidates for all KNOB_SWEEPS."""
-        from oto.tensile.decks import KNOB_SWEEPS
+        from oto.tensile.family_decks import KNOB_SWEEPS
         for base in bases:
             for sweep in KNOB_SWEEPS:
                 if family not in sweep.get("families", []):
@@ -422,7 +422,7 @@ class CandidateEmitMixin:
         optionally its own shapes. Tagged _trialD<n> to show which decision.
         ``profile`` -- optional, ambient by default.
         """
-        from oto.tensile.decks import DECISION_TRIAL_TILES
+        from oto.tensile.family_decks import DECISION_TRIAL_TILES
 
         pats = patterns or ["Ailk_Bljk"]
         candidates: list[CandidateConfig] = []
