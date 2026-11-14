@@ -69,18 +69,20 @@ def main(profile=None) -> int:
         print(json.dumps({
             "registry": str(db),
             "db_ok": db_ok,
-            "integrity": (True if db_ok else False),
+            "integrity": integrity_ok if db_ok else False,
             "total_records": total,
             "contaminated": bad,
-            "ok": db_ok and not bad,
+            "ok": db_ok and integrity_ok and not bad,
         }, indent=2, default=str))
-        return 1 if (db_ok and bad) else 0
+        return 1 if (db_ok and (bad or not integrity_ok)) else 0
 
     if not db_ok:
         print(f"registry missing: {db}")
         return 1
     print(f"registry: {db}")
     print(f"integrity: {'ok' if integrity_ok else 'FAIL'}")
+    if not integrity_ok:
+        return 1
     print(f"records: {total}")
     if bad:
         print("contaminated records:")
