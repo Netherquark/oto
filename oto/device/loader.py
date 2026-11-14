@@ -1,6 +1,7 @@
 """Device profile loader.
 
 Owns: reading ``profiles/<codename>.json`` into a frozen ``DeviceProfile``.
+Public API: load_profile, current_profile, rebind_profile, bound_profile, detect_codename via oto.device.detect.
 Does NOT own: the dataclass (oto.device.profile) or the constants.
 
 Public API: load_profile, load_profile_from_starter.
@@ -8,7 +9,9 @@ Public API: load_profile, load_profile_from_starter.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -143,3 +146,83 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Path | None = No
 def default_profile():
     """The default profile used as the default when no device is specified."""
     return load_profile("gfx90c")
+
+
+# ---------------------------------------------------------------------------
+# Canonical accessor (C2.5-C2.9): the profile THIS process runs as.
+# Resolution order:
+#   1. OTO_PROFILE env var -- a codename (resolved from profiles/) or a path
+#      to a profile JSON (explicit wins, loudly errors)
+#   2. auto-detected codename (rocminfo) when a profile exists for it
+#   3. the committed default (gfx90c) -- the project's shipping device
+# Cached for the life of the process. Use bound_profile() to scope a change
+# (tests, the driver's profile override); rebind_profile() to set it outright.
+# ---------------------------------------------------------------------------
+OTO_PROFILE_VAR = "OTO_PROFILE"
+DEFAULT_CODENAME = "gfx90c"
+
+_CURRENT_PROFILE: DeviceProfile | None = None
+
+
+def current_profile() -> DeviceProfile:
+    """The DeviceProfile this process runs as (cached)."""
+    global _CURRENT_PROFILE
+    if _CURRENT_PROFILE is None:
+        _CURRENT_PROFILE = _resolve_profile()
+    return _CURRENT_PROFILE
+
+
+def rebind_profile(profile: DeviceProfile) -> None:
+    """Make ``profile`` this process's current profile."""
+    global _CURRENT_PROFILE
+    _CURRENT_PROFILE = profile
+
+
+
+
+@contextlib.contextmanager
+def bound_profile(profile: DeviceProfile):
+    """Scope :func:`rebind_profile` to the ``with`` block; restore on exit."""
+    old = current_profile()
+    rebind_profile(profile)
+    try:
+        yield profile
+    finally:
+        rebind_profile(old)
+
+
+def _from_override(spec: str) -> DeviceProfile:
+    p = Path(spec)
+    if p.is_file():
+        return _from_json_path(p)
+    return load_profile(spec)
+
+
+def _from_json_path(p: Path) -> DeviceProfile:
+    data = json.loads(p.read_text())
+    if "codename" not in data:
+        raise ValueError(f"{p} has no 'codename' key")
+    return _to_profile(data, str(p))
+
+
+def _detect() -> str | None:
+    try:
+        from oto.device.detect import detect_codename
+        code = detect_codename()
+    except Exception:
+        return None
+    try:
+        load_profile(code)
+    except (FileNotFoundError, ValueError):
+        return None
+    return code
+
+
+def _resolve_profile() -> DeviceProfile:
+    override = os.environ.get(OTO_PROFILE_VAR, "").strip()
+    if override:
+        return _from_override(override)
+    detected = _detect()
+    if detected:
+        return load_profile(detected)
+    return load_profile(DEFAULT_CODENAME)
