@@ -120,6 +120,19 @@ per-failure breakdown is archived in `changelog.md`. The rc=1 bucket is
 Family split: HS_HPA 204, SS 106, HH+HH_HPA 94. The doubled `phase_phase_*` config
 naming is the consistent convention, not the fault.
 
+### 9.1 Floor triage tiers (`gfx900_ref_20260926_201843_resume`, keyed by `phase_key()`)
+
+The 1,881 resume failure set was triaged into three action tiers:
+
+| tier | n | action | outcome |
+|---|---|---|---|
+| `T1_RERUN` | 127 | staged first, mandatory; `--auto` blocks until done | 0 remain |
+| `T2_RERUN_HELD` | 1,881 | opt-in only; the mechanism landed and is tested, the staging decision was withheld | deliberately NOT run (re-measuring correct kernels for no correctness gain); the floor keeps default-resolved measurements |
+| `T3_UNREPRODUCIBLE` | 277 | never staged, terminal | 154 half-input kernels pinned to VW1; 121 refused by `assembly_class_valid()`; 2 with no resolvable schedule — the vendored Tensile cannot reproduce these and benchmarking a different computation instead is worse than a documented gap |
+| `T0_KEEP` | 0 | reused | — |
+
+127 + 1,881 + 277 = 2,285. `phase_id` is not safe as identity (328 of 2,285 change when the deck is rebuilt after the config fixes); every triage decision keys by `tlib.phase_key()` (hash of the shipped solution name), never by phase_id. The T1/T2/T3 statuses are code, owned by `oto.tensile.library` (`TIER_FIRST`/`TIER_LAST`/`TIER_HELD`, `apply_rerun_tiers(..., release_held=)`).
+
 ## 10. Acceptance report — native arm re-armed to the whole database
 
 **Mechanism (archived).** The arm-scope fix (the native arm reads the whole

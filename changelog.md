@@ -9,6 +9,26 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `implementation_plan.md`)
 and NOT the experimental data (that is `results.md`).
 
+- **2026-11-14 (24th) — `docs/work_archive_2026-11-14.md` consolidated and deleted; its contents folded into the ecosystem.**
+  Verifier bringup (archived 5.4): the gate differential found two real defects —
+  three copies of `parse_tensile_shape` had drifted (the candidate-version copy dropped the
+  `_B16` batch suffix and returned `ValueError` where the original returned the default cube), so both failing
+  verifiers compared it against itself; and six gates raised `TypeError` on `None`-valued knobs instead of
+  returning a verdict, fixed with `vgpr_model.knob_int` (bracketed as its own bucket — 1,593 comparisons).
+  `verify_*.py` wrappers were dead (`main` does not exist; they `runpy` their target now). Relative to the stale
+  register: the file-length claim was wrong — `oto/checks/tensile_build.py` sat at 606 lines — while the function
+  criterion (60 lines) was met and is now enforced by `tests/test_function_length.py`.
+  Refactor-1 slop register status today: (a) still open — swallowed registry-read / report-generation exceptions
+  in `oto/runners/reporting.py`, the four dead `_<family>_mutation_pattern` methods in `db_patterns.py`,
+  the `self.scheduler` legacy alias — tracked in `incomplete_work.md`; (b) closed — hardcoded Tensile fallbacks
+  deleted (15th), `oto/ledger/registry_core.py` dead `SQLiteRegistry` stub and shadowed module docstring removed
+  (15th), unused-import debt closed by the pyflakes gate, corpus-count docstrings swept to date-and-decision phrasing,
+  `oto/_map.py` dead root branch removed, `AMDY_TO_DTYPE`/`DEFAULT_ITERATIONS` shadow copies eliminated, and
+  `TEMPLATE_KEYS` and `FAMILY_DTYPE_CHAR` now owned by `oto.tensile.legality` / `oto.tensile.candidate`, and
+  `db.py`'s duplicate `FAMILY_TO_DTYPE` reduced to a re-export. The floor reconstruction (tiers
+  T1=127 / T2=1,881 held / T3=277 / T0=0) now lives in `results.md` §9.1. The verifier split-era attestations
+  (`drift_manifest.json`) replace the frozen `REFACTOR_BASE=2824c2f` requirement; `verify_all.py --base REF`
+  parameterised across all five checks. Archive deleted; git holds the pre-fold snapshot.
 - **2026-11-14 (23rd) — yolo26 acceptance re-verified on the nightly stack; CC D5 trial decked; Tensile-client SIGSEGV found.**
   Ran yolo26 (`webcam.py`, person 0.87, frame written) against the new
   TensileLibrary (`best_effort_library_rocmlibs`, built 2026-11-13 with the super-repo
