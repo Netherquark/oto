@@ -44,7 +44,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `gfx90c_tuning_guide.md` §1.1–§1.2, §9.1 | Primary-source knob reference + geometry |
 | `tensile_tuning_context.md` | Stage 0–3 search order + NOT VERIFIED note |
 | (research corpus: deleted — durable facts promoted to this doc + gfx90c_tuning_guide.md + tensile_tuning_context.md) | absorbed |
-| `oto/device/loader.py` | Device profile access (`current_profile()`), the canonical device view |
+| `oto/device/loader.py` | Device profile access — `resolve_profile(profile=None)` is the choke point for explicit gates/engines (`None` = ambient `current_profile()`), the canonical device view |
 | `oto/device/vocabulary.py` | Cell/kernel vocabulary (cell_key, cube_side, shipped_cells, ...) |
 | `oto/device/profile.py` | DeviceProfile dataclass (the frozen profile schema) |
 | `oto/device/detect.py` | `detect_codename()` — auto-detect via rocminfo |
