@@ -260,6 +260,12 @@
     {
       "class": "operator",
       "kind": "Ecosystem",
+      "owns": "The persistent autonomous tuning campaign: corpus study \u2192 straggler classes \u2192 candidate routes \u2192 consultation triggers",
+      "path": "docs/operator_campaign.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
       "owns": "The starter Markdown+JSON pair protocol",
       "path": "docs/starter_pair.md"
     },
@@ -283,6 +289,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 38,
+  "total": 39,
   "version": 1
 }
