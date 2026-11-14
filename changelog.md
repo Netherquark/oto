@@ -43,6 +43,32 @@ and NOT the experimental data (that is `results.md`).
   its removed behavior; none are caused by the four commits above. Re-run after
   the rework lands; the smoke tests asserting the pre-rework UX should be
   re-asserted against the final renderer.
+- **2026-11-14 — Verifier orchestrator import fix + machine-literal sweep;
+  suite RC=0 re-verified.** `verify_all.py` spawned its children as scripts, so
+  `import oto` died in every child (sys.path[0] = `oto/tools/verifiers`) — the
+  same failure class as the tensile-build worker. Fixed by putting the repo root
+  on the children's PYTHONPATH (no equivalence logic touched). After the fix:
+  **gate differential OK, config writer OK** — the latter had been dead on
+  import for this whole session's runs. Method equivalence still FAILs on 45
+  body-drifted driver methods (intentional Refactor-2 device-independence
+  rewiring), report html FAILs on the intentional `gfx90c Port Acceptance
+  Dashboard` → device-title rebrand (the only rendered diff beyond refutable
+  functionally-identical sections), and AST equivalence FAILs on
+  signature-style drift (`Optional[X]` → `X | None`) plus
+  `scheduler.py::ldspad_feasible`, which moved to `oto/tensile/gates/ldspad_gate.py`
+  (re-exported via `gates/occupancy.py`) — i.e. a MOVES-table row, not code.
+  All three fail against the frozen `REFACTOR_BASE=2824c2f` pin; making them
+  green needs a drift manifest or a re-pin — a decision for the owner, not a
+  mechanical fix. Also swept the last machine-specific Tensile fallbacks
+  (`best_library.py`, `tensile_oracle.py`, `tests/occupancy_gate_common.py` —
+  now env/.env only) and the PYTHONPATH of children in verify_all. Machine-
+  literal grep (`/home/`, `/usr/lib64`, `/opt/rocm`) shows only conventional
+  system-path heuristics and the verifier's frozen legacy references remain.
+  Full suite re-run after the changes (zz_suite26): **RC=0 — 1047 passed, 8
+  skipped, 242 subtests, ~214 s**. `oto doctor` on the landed tree: 13 ok / 2
+  warnings (venv-not-active notice; started-but-unfinished run_20261029_152402
+  — left for the owner) / 0 failure(s); registry integrity ok (46,703 records,
+  44 runs, no label contamination); deck parity 38/38; docs index 37.
 - **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8

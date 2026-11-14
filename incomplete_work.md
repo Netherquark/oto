@@ -1,5 +1,24 @@
 # Incomplete Work register (re-verified 2026-09-13; refreshed 2026-09-26; 2026-11-13)
 
+**2026-11-14 — verifier state measured precisely (post front-door).**
+`oto/tools/verifiers/verify_all.py` children now import `oto` (PYTHONPATH put
+on the repo root; no equivalence logic touched). Current verdicts: gate
+differential **OK**, config writer **OK**; **FAIL** on method equivalence
+(45 driver methods, intentional Refactor-2 body drift), report html (only
+rendered diff is the intentional device-title rebrand) and AST equivalence
+(signature-style drift + `scheduler.py::ldspad_feasible` → now in
+`oto.tensile.gates.ldspad_gate`; needs a MOVES-table row). All three compare
+against the frozen `REFACTOR_BASE=2824c2f`; green requires either (a) a
+reviewed drift manifest enumerating the intentional changes, or (b) a
+REFACTOR_BASE re-pin. Decision owed by the owner; not attempted by editing
+the frozen comparison tables. Also resolved 2026-11-14: the last
+machine-specific Tensile path fallbacks in tracked source (env/.env only);
+suite re-verified RC=0 (zz_suite26, 1047 passed). Open: same as before — C4
+(API key), verifier bringup decision (above), C2.5–C2.9 (deferred by
+design), Class B end-to-end (needs gfx902 TTY + key + human gate),
+gfx906 real-hardware validation, and the 2 `oto doctor` warnings
+(venv-not-active; unfinished run_20261029_152402).
+
 **2026-11-13 (night) — CLI front door landed; suite green again.**
 The 2026-11-13 (evening) caveat above is RESOLVED by this session's Phase-1..4
 land: the verb-first `oto` front (subcommands, global flags, `--json`/quiet/
