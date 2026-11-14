@@ -4079,3 +4079,21 @@ the pre-built seed pool.
   the campaign" option; owner chose B. Commit: phases.yaml rows, decks.py
   DECISION_TRIAL_TILES (D5 removed with the adoption record),
   tests/test_knob_sweep.py docstring + assert, knob_sweep CLI help string.
+
+- **2026-11-14 (29th) — operator_campaign.md rewritten after deep history study.**
+  Full re-derivation from primary sources: backrocm git history (FOSS United
+  grant, Jul 2026; attempt1 ~9.2K LoC shell suite, ruler math broken four ways,
+  retirement conflation, telemetry gaps), attempt2 (the draft run and the
+  append-only import decision), the ROCm reference corpus (ROCm/AMD
+  vis-à-vis GPUs research diaries, CDNA/Vega first-party papers) and the full
+  oto commit graph (2026-09-17 → 2026-11-14). The doc now carries the
+  genealogy explicitly, the neurosymbolic division of labour (neural proposals
+  enter only via the symbolic gates + Tensile reference validator), the
+  persistent session protocol (state on disk — kernel_db / acceptance report /
+  resolve_cells / registry — read before any work), the exact corpus-study
+  commands, the straggler class catalogue (W/R/C/K/D/F/N/H with detection and
+  closing evidence), candidate routes in priority order (machine loop,
+  targeted trial rows, documented floor steal, virgin axes, profile-rung
+  Class A), and the consultation triggers T1-T5 with a self-contained payload
+  contract. No fact in the doc is remembered; every date and claim was
+  checked against the tree.
