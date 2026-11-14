@@ -51,6 +51,63 @@ BOOL_AS_INT = {("true", "1"), ("true", "2"), ("1", "true"), ("2", "true")}
 DIVISIBILITY_SINCE_BASE = "load divisibility illegal"
 
 
+def _only_arch_and_numvalidate(diff: list[str]) -> bool:
+    """The two intentional emitter deltas, post owner decisions 2026-11-13/14.
+
+    ``+  Architecture: <id>`` -- the writer now echoes the resolved device
+    architecture into every config instead of leaving Tensile to default it
+    (Refactor-2 device-independence arc; the YAML carried no architecture before).
+    ``NumElementsToValidate: 0 -> 128`` -- owner decision 2026-11-14: Tensile's
+    own CI-equivalent per-phase validation is the reference; the old 0 (never
+    validate) was the split-era behaviour.
+    Every line must be one of these three; anything else is drift.
+    """
+    if not diff:
+        return False
+    saw_arch = False
+    saw_numvalidate_rm = False
+    saw_numvalidate_add = False
+    for line in diff:
+        body = line[1:].strip()
+        if line.startswith("+"):
+            if body.startswith("Architecture:"):
+                saw_arch = True
+                continue
+            if body == "NumElementsToValidate: 128":
+                saw_numvalidate_add = True
+                continue
+            return False
+        if line.startswith("-"):
+            if body == "NumElementsToValidate: 0":
+                saw_numvalidate_rm = True
+                continue
+            return False
+        return False
+    # Exactly the value swap (0 removed && 128 added), and/or the arch addition.
+    if (saw_numvalidate_rm or saw_numvalidate_add) and not (
+            saw_numvalidate_rm and saw_numvalidate_add):
+        return False
+    return saw_arch or saw_numvalidate_add
+
+
+def _arch_numvalidate_free(diff: list[str]) -> list[str]:
+    """Diff with the two intentional emitter deltas removed (see
+    ``_only_arch_and_numvalidate``). The remainder must then pass an
+    already-accepted class, so the accepted divergences compose — but never
+    widen: a diff that is not exactly forwarded-knob additions still fails."""
+    out = []
+    for line in diff:
+        body = line[1:].strip()
+        if line.startswith("+") and (
+                body.startswith("Architecture:")
+                or body == "NumElementsToValidate: 128"):
+            continue
+        if line.startswith("-") and body == "NumElementsToValidate: 0":
+            continue
+        out.append(line)
+    return out
+
+
 def _scalar(line: str) -> str:
     return line[1:].strip().lstrip("-").strip()
 
@@ -262,8 +319,16 @@ def _legacy_compare(base: str, all_phases: list[dict], workdir: Path) -> int:
             diff = [ln for ln in difflib.unified_diff(
                 a_lines, b_lines, "orig", "new", lineterm="", n=0)
                 if ln[:1] in "+-" and ln[:3] not in ("+++", "---")]
+            r = _arch_numvalidate_free(diff)
+            if len(r) != len(diff) and (
+                    _only_adds_of(r, FORWARDED_SINCE_BASE)
+                    or _only_honoured_value_changes(r, p.get("phase_id"))):
+                # The two emitter deltas compose with already-accepted classes.
+                n_forwarded += 1
+                continue
             if (_only_adds_of(diff, FORWARDED_SINCE_BASE)
-                    or _only_honoured_value_changes(diff, p.get("phase_id"))):
+                    or _only_honoured_value_changes(diff, p.get("phase_id"))
+                    or _only_arch_and_numvalidate(diff)):
                 n_forwarded += 1
                 continue
             mismatch.append((p.get("phase_id"), "YAML DIFFERS", diff[:20]))
@@ -273,7 +338,7 @@ def _legacy_compare(base: str, all_phases: list[dict], workdir: Path) -> int:
         else:
             n_refused += 1
     print(f"phases: {len(all_phases)}; written: {n_ok}, refused: {n_refused}")
-    print(f"accepted as newly-forwarded knobs: {n_forwarded}")
+    print(f"accepted as newly-forwarded knobs / post-decision emitter deltas: {n_forwarded}")
     print(f"accepted as intentional tightening (GLVW<VW refused): {n_divisibility}")
     print(f"mismatches: {len(mismatch)}")
     from collections import Counter

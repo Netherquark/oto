@@ -180,6 +180,14 @@
   ],
   "ast_equivalence": [
     {
+      "key": "ab_audit.py::arm_record_sets",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "ab_audit.py::arm_records",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
       "key": "ab_audit.py::audit",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
@@ -268,12 +276,52 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
+      "key": "consolidate.py::build_floor",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::cmd_all",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::floor_chain",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
       "key": "consolidate.py::install",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
       "key": "consolidate.py::locked_run_id",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "consolidate.py::manifest_cells",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::measured_index",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::native_runs",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::phantom_runs",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::plan_floor",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::source_chain",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
+    },
+    {
+      "key": "consolidate.py::target_cells",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
       "key": "consolidate.py::write_deck",
@@ -328,8 +376,20 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
+      "key": "gfx90c_common.py::dtype_from_kernel_name",
+      "reason": "Verified move, not a deletion: the kernel-name parsing helpers moved with their module in the rename (oto/device/vocabulary.py -> oto/device/kernel_vocabulary.py, commit a24ec6b) and the implementations are identical. Attested 2026-11-15."
+    },
+    {
+      "key": "gfx90c_common.py::family_from_kernel_name",
+      "reason": "Verified move, not a deletion: the kernel-name parsing helpers moved with their module in the rename (oto/device/vocabulary.py -> oto/device/kernel_vocabulary.py, commit a24ec6b) and the implementations are identical. Attested 2026-11-15."
+    },
+    {
       "key": "gfx90c_common.py::kernel_key",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "gfx90c_common.py::kernel_typecode",
+      "reason": "Verified move, not a deletion: the kernel-name parsing helpers moved with their module in the rename (oto/device/vocabulary.py -> oto/device/kernel_vocabulary.py, commit a24ec6b) and the implementations are identical. Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::shipped_cell_set",
@@ -344,8 +404,24 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
+      "key": "harness/cell_resolver.py::build",
+      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "harness/cell_resolver.py::main",
+      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "harness/cell_resolver.py::parse_run_config_yaml",
+      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
       "key": "harness/kernel_db.py::build_kernel_db",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "harness/kernel_db.py::discover_runs",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
       "key": "harness/kernel_db.py::load_kernel_db",
@@ -354,6 +430,10 @@
     {
       "key": "harness/kernel_db.py::main",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+    },
+    {
+      "key": "harness/measure_vgprs.py::main",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
       "key": "harness/occupancy_audit.py::main",
@@ -368,16 +448,16 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
-      "key": "harness/cell_resolver.py::build",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "key": "harness/resolve_cells.py::build",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
-      "key": "harness/cell_resolver.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "key": "harness/resolve_cells.py::main",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
-      "key": "harness/cell_resolver.py::parse_run_config_yaml",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "key": "harness/resolve_cells.py::parse_run_config_yaml",
+      "reason": "Refactor-2/3 evolution: YAML load centralized through oto.yaml_cached.load_yaml_text (identical safe_load semantics), the BenchmarkFinalParameters fold rewritten as out.update(...) producing the same dict, and mechanical type-annotation modernization (Optional[Dict] -> dict | None). Attested 2026-11-15."
     },
     {
       "key": "legality.py::assembly_gsu_vector_width",
@@ -496,6 +576,46 @@
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
     {
+      "key": "oto/device/resolvers.py::DTYPE_TO_FAMILY",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::annotations",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::cell_key",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::cube_side",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::dtype_from_kernel_name",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::family_from_kernel_name",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::kernel_key",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::kernel_typecode",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::shipped_cell_set",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
+      "key": "oto/device/resolvers.py::shipped_cells",
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
+    },
+    {
       "key": "policy.py::aggregate_cell",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
     },
@@ -554,6 +674,10 @@
     {
       "key": "scheduler.py::assembly_class_valid",
       "reason": "Refactor-2: gates are profile-aware; calls default to the current device profile (loader.current_profile()), which is a no-op at the gfx90c default."
+    },
+    {
+      "key": "scheduler.py::cap_vector_width",
+      "reason": "Refactor-2 device-independence sweep: explicit ``profile=None`` appended as a defaulted kwarg (callers unaware of it bind the ambient profile) plus the mechanical type-annotation modernization (Optional[X]/Dict/List -> X | None/builtins); implementation otherwise identical. Covered by the second-profile tests and the full suite. Attested 2026-11-15."
     },
     {
       "key": "scheduler.py::occupancy_feasible",
@@ -662,46 +786,6 @@
     {
       "key": "verify_run.py::telemetry",
       "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
-    },
-    {
-      "key": "oto/device/resolvers.py::annotations",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::DTYPE_TO_FAMILY",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::cell_key",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::cube_side",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::dtype_from_kernel_name",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::family_from_kernel_name",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::kernel_key",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::kernel_typecode",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::shipped_cell_set",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
-    },
-    {
-      "key": "oto/device/resolvers.py::shipped_cells",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     }
   ],
   "gate_differential": [

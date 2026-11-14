@@ -30,8 +30,8 @@ sys_path_added = True
 from oto.tools.verifiers.ref_worktree import print_drift_summary
 
 NEW = [
-    "oto/ledger/registry_core.py", "oto/ledger/queries.py",
-    "oto/ledger/proposals.py", "oto/runners/driver.py", "oto/runners/benchmark.py", "oto/runners/phase_runner.py",
+    "oto/ledger/registry_core.py", "oto/ledger/registry_queries.py",
+    "oto/ledger/registry_proposals.py", "oto/runners/driver.py", "oto/runners/benchmark.py", "oto/runners/phase_runner.py",
     "oto/runners/reference_floor.py", "oto/runners/convergence_loop.py",
     "oto/runners/corpus_loaders.py", "oto/runners/acceptance_reporting.py",
     "oto/runners/clock_telemetry.py", "oto/runners/timing.py",

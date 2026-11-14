@@ -48,7 +48,7 @@ MOVES = [
                       "oto/tensile/synthesis/donor_patterns.py",
                       "oto/tensile/synthesis/tile_space.py"]),
     ("registry.py", ["oto/ledger/registry.py", "oto/ledger/registry_core.py",
-                     "oto/ledger/queries.py", "oto/ledger/proposals.py"]),
+                     "oto/ledger/registry_queries.py", "oto/ledger/registry_proposals.py"]),
     ("mutator.py", ["oto/ledger/mutator.py", "oto/ledger/mutator_outcomes.py"]),
     ("agent.py", ["oto/ledger/convergence_agent.py", "oto/ledger/harvest.py",
                   "oto/ledger/agent_coverage.py"]),
@@ -88,7 +88,7 @@ MOVES = [
     ("check_candidates.py", ["oto/checks/deck_legality.py"]),
     ("check_tensile_build.py", ["oto/checks/tensile_build.py", "oto/checks/tensile_build_probe.py"],),
     ("check_library_parity.py", ["oto/checks/library_parity.py"]),
-    ("check_db.py", ["oto/checks/db.py"]),
+    ("check_db.py", ["oto/checks/registry_audit.py"]),
     ("check_retirement.py", ["oto/checks/stability_retirement.py"]),
     ("harness/cell_knob_diff.py", ["oto/harness/cell_knob_diff.py"]),
     ("harness/generate_candidates.py", ["oto/harness/candidate_generator.py",
@@ -97,7 +97,7 @@ MOVES = [
                                       "oto/harness/candidate_overlay.py"]),
     ("harness/kernel_db.py", ["oto/harness/kernel_db.py"]),
     ("harness/measure_vgprs.py", ["oto/harness/vgpr_measurement.py"]),
-    ("harness/occupancy_bounds.py", ["oto/harness/occupancy_bounds.py"]),
+    ("harness/occupancy_audit.py", ["oto/harness/occupancy_bounds.py"]),
     ("harness/regression_matrix.py", ["oto/harness/regression_matrix.py"]),
     ("harness/resolve_cells.py", ["oto/harness/cell_resolver.py"]),
 ]
@@ -195,10 +195,6 @@ PROMOTED = {
     "scheduler.py::CandidateGenerator.generate_family_phases",
     # DBMutator methods moved into the pattern mixin.
     "db_mutator.py::DBMutator._forward_draws",
-    "db_mutator.py::DBMutator._ss_mutation_pattern",
-    "db_mutator.py::DBMutator._dd_mutation_pattern",
-    "db_mutator.py::DBMutator._cc_mutation_pattern",
-    "db_mutator.py::DBMutator._zz_mutation_pattern",
     "db_mutator.py::DBMutator._floor_direction",
 }
 
