@@ -201,7 +201,7 @@ class LoopActuallyCallsTheResolverTests(Harness):
         driver.base_dir = self.tmp
         driver.registry = self.registry
         driver.analytics = self.analytics
-        driver.scheduler = _StubScheduler()
+        driver.generator = _StubScheduler()
         driver.mutator = self.mutator
         driver.agent = ConvergenceAgent(self.tmp, _StubScheduler(),
                                         self.analytics, mutator=self.mutator)

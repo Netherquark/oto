@@ -129,7 +129,7 @@ class HarvestMixin:
 
         # 3. Family-aware default fallback tile from scheduler family decks
         fam = str(analytics.family or "").upper()
-        deck = self.scheduler.family_decks.get(fam, self.scheduler.family_decks.get("SS", []))
+        deck = self.generator.family_decks.get(fam, self.generator.family_decks.get("SS", []))
         if deck:
             return dict(deck[0])
 

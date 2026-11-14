@@ -163,7 +163,7 @@ class ProposalRunIdTests(Harness):
         agent.iteration = 0
         # Drive emission directly with one knob so the path is exercised without
         # depending on the shipped manifest being present.
-        agent.scheduler.emit_candidate = lambda **kw: _StubScheduler().emit_candidate(
+        agent.generator.emit_candidate = lambda **kw: _StubScheduler().emit_candidate(
             **{k: kw[k] for k in
                ("phase_id", "label", "dtype", "shapes", "template", "knobs")})
         orig_sample = self.mutator.sample_cell

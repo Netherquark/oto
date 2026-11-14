@@ -208,7 +208,7 @@ class AutoMixin:
         phases = self.load_phases_manifest()
         if not phases:
             print("Manifest empty; generating family phases...")
-            self.scheduler.generate_family_phases("SS", ["Ailk_Bljk"], ["1024x1024x1024"])
+            self.generator.generate_family_phases("SS", ["Ailk_Bljk"], ["1024x1024x1024"])
 
         self.run_phases(opt_in_identical_skip=opt_in_identical_skip)
 

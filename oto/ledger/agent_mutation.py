@@ -153,7 +153,7 @@ class MutateMixin:
                     lattice_fallbacks.append(cell_key)
                 mutants = [c["knobs"] for c in synth.get("candidates", [])]
         else:
-            mutants = self.scheduler.mutate_winner(winner_config, mutation_budget)
+            mutants = self.generator.mutate_winner(winner_config, mutation_budget)
         return mutants, sweep_shapes, cell_state
 
     def _build_template(self, family: str, data_type: str, profile=None) -> dict[str, Any]:
@@ -177,7 +177,7 @@ class MutateMixin:
         winner_info: dict[str, Any],
     ) -> str:
         """Validate candidate and record rejection if invalid. Returns 'invalid' or 'ok'."""
-        is_valid, reason = self.scheduler.validate_config({**template, **mutant})
+        is_valid, reason = self.generator.validate_config({**template, **mutant})
         if not is_valid and self.mutator:
             self.mutator.registry.record_proposal(
                 fp=candidate.fingerprint,
@@ -265,7 +265,7 @@ class MutateMixin:
         """Process a single mutant. Returns status: 'ok', 'rejected_non_novel', or 'invalid'."""
         template = self._build_template(family, data_type)
         shapes_for_candidate = sweep_shapes if len(sweep_shapes) >= 2 else [shape]
-        candidate = self.scheduler.emit_candidate(
+        candidate = self.generator.emit_candidate(
             phase_id=phase_id,
             label=label,
             dtype=data_type.lower(),
@@ -288,7 +288,7 @@ class MutateMixin:
                 template, replayed, ungraded_cells, cell_key
             )
         else:
-            self.scheduler.append_to_phases(candidate)
+            self.generator.append_to_phases(candidate)
         return "ok"
 
     def _record_emission_stats(

@@ -106,10 +106,10 @@ class AgentTestCase(unittest.TestCase):
         self.analytics = AnalyticsEngine(self.registry, self.tmp)
 
     def make_agent(self, mutants, **kw):
-        self.scheduler = StubGenerator(mutants, **kw)
+        self.generator = StubGenerator(mutants, **kw)
         self.mutator = Mutator(self.registry, self.tmp, self.analytics)
         self.agent = ConvergenceAgent(
-            self.tmp, self.scheduler, self.analytics, mutator=self.mutator)
+            self.tmp, self.generator, self.analytics, mutator=self.mutator)
 
     def assert_deck_unchanged(self):
         assert self.phases.read_text() == CURATED, "the curated deck was modified; candidates belong in the overlay"
@@ -120,7 +120,7 @@ class OverlayRoutingTests(AgentTestCase):
         self.make_agent([{"MacroTile": "64x64x16"}])
         emitted = self.agent.mutate_and_feed(WINNERS)
         assert len(emitted) >= 1
-        assert self.scheduler.appended == []
+        assert self.generator.appended == []
         self.assert_deck_unchanged()
 
     def test_overlay_file_is_written_for_the_run(self):
@@ -205,7 +205,7 @@ class ValidationAssertionTests(AgentTestCase):
     def test_validate_config_is_still_called(self):
         self.make_agent([{"MacroTile": "64x64x16"}])
         self.agent.mutate_and_feed(WINNERS)
-        assert self.scheduler.validated, "validate_config must stay an assertion, not be dropped"
+        assert self.generator.validated, "validate_config must stay an assertion, not be dropped"
 
 
 class SkipBypassTests(AgentTestCase):
@@ -218,8 +218,8 @@ class SkipBypassTests(AgentTestCase):
         assert self.agent.has_outcome_signal
 
     def test_skip_reenabled_when_no_mutator(self):
-        self.scheduler = StubGenerator([{"MacroTile": "64x64x16"}])
-        agent = ConvergenceAgent(self.tmp, self.scheduler, self.analytics)
+        self.generator = StubGenerator([{"MacroTile": "64x64x16"}])
+        agent = ConvergenceAgent(self.tmp, self.generator, self.analytics)
         assert not agent.ledger_enabled
         assert agent.skip_mutation_arm(), "without a ledger the identical-fp skip must stay on"
 
@@ -237,17 +237,17 @@ class SkipBypassTests(AgentTestCase):
         self.make_agent([{"MacroTile": "64x64x16"}])
         with mock.patch.object(type(self.mutator), "resolve_phase_dir", None):
             agent = ConvergenceAgent(
-                self.tmp, self.scheduler, self.analytics, mutator=self.mutator)
+                self.tmp, self.generator, self.analytics, mutator=self.mutator)
             assert not agent.has_outcome_signal
             assert agent.skip_mutation_arm(), "a novelty-only ledger must keep the skip on"
 
     def test_no_mutator_falls_back_to_legacy_append(self):
         """The pre-Phase-1 path stays reachable for comparison."""
-        self.scheduler = StubGenerator([{"MacroTile": "64x64x16"}])
-        agent = ConvergenceAgent(self.tmp, self.scheduler, self.analytics)
+        self.generator = StubGenerator([{"MacroTile": "64x64x16"}])
+        agent = ConvergenceAgent(self.tmp, self.generator, self.analytics)
         emitted = agent.mutate_and_feed(WINNERS)
         assert len(emitted) == 1
-        assert len(self.scheduler.appended) == 1
+        assert len(self.generator.appended) == 1
         assert not agent.last_emission_stats["wrote_overlay"]
 
 

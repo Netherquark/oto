@@ -45,7 +45,7 @@ class SynthesisMixin:
                 "ScheduleName": "isa",
                 "Architecture": _loader.resolve_profile(profile,).codename,
                 "DeviceNames": [_loader.resolve_profile(profile,).codename],
-                "Solutions": self.scheduler.family_decks.get(fam, [],)
+                "Solutions": self.generator.family_decks.get(fam, [],)
             }
             with open(logic_file, "w") as f:
                 yaml.safe_dump(logic_content, f)
