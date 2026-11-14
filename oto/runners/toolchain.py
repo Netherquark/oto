@@ -209,6 +209,42 @@ def _assembler(prefix: Path, llvm_bin: str) -> str:
     )
 
 
+def _compilers(prefix: Path, bin_dir: str, llvm_bin: str) -> tuple[str, str]:
+    """CXX/C compiler argv entries for the Tensile client build.
+
+    Precedence: explicit ``TENSILE_CXX_COMPILER`` / ``TENSILE_C_COMPILER``
+    win (a bare name is passed to Tensile verbatim; a path must exist, like
+    the assembler). Otherwise probe the resolved ROCm tree, llvm-bin first:
+    the SDK's ``amdclang++``/``amdclang`` (Tensile's native default, and what
+    TheRock nightly ships). ``hipcc`` is selected only when the tree ships no
+    clang at all (distro ROCm with compilers on PATH) -- accepted upstream but
+    deprecated, hence never preferred. No fallback to /usr; a missing explicit
+    path is fatal with an actionable message.
+    """
+    dirs = [d for d in (llvm_bin, bin_dir) if d]
+
+    def _probe(names: list[str]) -> str:
+        for d in dirs:
+            base = Path(d)
+            for name in names:
+                cand = base / name
+                if cand.is_file():
+                    return str(cand)
+        return ""
+
+    def _explicit(env_name: str) -> str:
+        val = os.environ.get(env_name, "").strip()
+        if val and "/" in val and not Path(val).is_file():
+            raise ValueError(
+                f"{env_name}={val!r} is set in the environment/.env but is "
+                "not a file. Fix the value; there is no fallback.")
+        return val
+
+    cxx = _explicit("TENSILE_CXX_COMPILER") or _probe(["amdclang++"]) or "hipcc"
+    cc = _explicit("TENSILE_C_COMPILER") or _probe(["amdclang"]) or "hipcc"
+    return cxx, cc
+
+
 def resolve_rocm_paths() -> dict[str, str]:
     """Resolve the ROCm toolchain from the user-provided `ROCM_PATH` only.
 
@@ -238,6 +274,9 @@ def resolve_rocm_paths() -> dict[str, str]:
     if bitcode_dir.is_dir():
         paths["HIP_DEVICE_LIB_PATH"] = str(bitcode_dir)
     version = os.environ.get("ROCM_VERSION", "").strip()
+    cxx, cc = _compilers(prefix, bin_dir, llvm_bin)
+    paths["TENSILE_CXX_COMPILER"] = cxx
+    paths["TENSILE_C_COMPILER"] = cc
     if version:
         paths["ROCM_VERSION"] = version
     return paths

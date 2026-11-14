@@ -154,14 +154,12 @@ class TensileDriver(
         self.tensile_root = require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)
         self.cooldown_s = cooldown_s
         self.create_run = create_run
-        # Resolve the device profile (auto-detect if not given).
+        # Resolve the device profile: an explicit codename wins; otherwise the
+        # ambient resolution order applies (OTO_PROFILE > rocminfo detection >
+        # the committed default), the same order `oto.device.loader` documents.
         if codename is None:
-            try:
-                from oto.device.device_detect import detect_codename
-                codename = detect_codename()
-            except Exception:
-                from oto.device.loader import resolve_profile
-                codename = resolve_profile(profile).codename
+            from oto.device.loader import resolve_profile
+            codename = resolve_profile(profile).codename
         self.codename = codename
         from oto.device.loader import load_profile, rebind_profile
         self.profile = load_profile(codename)
@@ -169,8 +167,9 @@ class TensileDriver(
         # accessor (thread-scoped for tests; process-global here).
         try:
             rebind_profile(self.profile)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[driver] failed to bind the profile for this process: {e}",
+                  file=sys.stderr)
 
         self._init_registry_and_scheduler()
         self._init_run_dirs()
@@ -194,7 +193,7 @@ class TensileDriver(
 
     def _init_registry_and_scheduler(self) -> None:
         self.registry = SQLiteRegistry(self.base_dir)
-        self.scheduler = CandidateGenerator(self.base_dir, registry=self.registry)
+        self.generator = CandidateGenerator(self.base_dir, registry=self.registry)
 
     def _init_analytics_and_mutator(self) -> None:
         self.analytics = AnalyticsEngine(self.registry, self.base_dir)
@@ -217,7 +216,7 @@ class TensileDriver(
     def _init_agent_and_reporter(self) -> None:
         self.agent = ConvergenceAgent(
             self.base_dir,
-            self.scheduler,
+            self.generator,
             self.analytics,
             mutator=self.mutator,
         )

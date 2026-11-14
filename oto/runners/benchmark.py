@@ -44,17 +44,26 @@ def _refuse_reuse_of(phase_out_dir: Path) -> None:
 
 
 def _tensile_client(tensile_root: Path) -> Path | None:
-    """Locate the Tensile client binary, or return None with a hint.
+    """Locate the Tensile client binary.
 
-    Tensile v4.50.0 dropped ``--client-build-path``; it now resolves the
-    client from ``./build/client/tensile-client`` relative to its CWD
-    (here, the Tensile checkout) or from ``--prebuilt-client``. Override
-    with the ``OTO_TENSILE_CLIENT`` environment variable.
+    Tensile v4.50.0 dropped ``--client-build-path``; it resolves the client
+    from ``--prebuilt-client``. Resolution order: an explicit
+    ``OTO_TENSILE_CLIENT`` environment value wins (missing path is a hard
+    error, matching every other explicit-env contract in this package);
+    otherwise the default under the checkout. Returns None only when the
+    default also does not exist -- the caller then raises with the path so the
+    campaign fails before any phase is scheduled.
     """
     env = os.environ.get("OTO_TENSILE_CLIENT", "").strip()
     if env:
         cand = Path(env).resolve()
-        return cand if cand.is_file() else None
+        if not cand.is_file():
+            raise ValueError(
+                f"OTO_TENSILE_CLIENT={env!r} is set in the environment/.env "
+                "but is not a file. Fix the value or unset it; there is no "
+                "fallback (this package never silently replaces an explicit "
+                "env path).")
+        return cand
     default = tensile_root / "build" / "client" / "tensile-client"
     return default if default.is_file() else None
 
@@ -79,14 +88,19 @@ profile=None,
                        _loader.resolve_profile(profile,).codename)
     client = _tensile_client(driver.tensile_root)
     if client is None:
-        client = driver.tensile_root / "build" / "client" / "tensile-client"
+        raise FileNotFoundError(
+            f"Tensile client not found: expected {driver.tensile_root}/build/client/"
+            "tensile-client or an OTO_TENSILE_CLIENT override. Tensile would read the "
+            "config, build the launcher, and die deep inside every phase; fail before "
+            "the campaign instead. Build the client (see docs/operator_runbook.md) or "
+            "set OTO_TENSILE_CLIENT to an existing tensile-client.")
 
     cmd = [
         sys.executable,
         str(tensile_bin),
         "--arch", codename,
-        "--cxx-compiler", "hipcc",
-        "--c-compiler", "hipcc",
+        "--cxx-compiler", rocm["TENSILE_CXX_COMPILER"],
+        "--c-compiler", rocm["TENSILE_C_COMPILER"],
     ]
     if os.path.isfile(assembler):
         cmd += ["--assembler", assembler]

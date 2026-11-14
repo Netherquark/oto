@@ -88,3 +88,48 @@ def test_rocversion_passes_through_when_set(monkeypatch, tmp_path):
     monkeypatch.setenv("ROCM_VERSION", "7.15.0a20260728")
     paths = toolchain.resolve_rocm_paths()
     assert paths["ROCM_VERSION"] == "7.15.0a20260728"
+
+
+def test_compilers_probe_sdk_amdclang_over_hipcc(monkeypatch, tmp_path):
+    """The SDK's amdclang is Tensile's native default and is preferred; hipcc
+    is only ever a fallback for trees that ship no clang."""
+    prefix = _sdk_tree(tmp_path)
+    (prefix / "lib" / "llvm" / "bin" / "amdclang").write_text("# sdk amdclang\n")
+    monkeypatch.delenv("TENSILE_CXX_COMPILER", raising=False)
+    monkeypatch.delenv("TENSILE_C_COMPILER", raising=False)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["TENSILE_CXX_COMPILER"].endswith("llvm/bin/amdclang++")
+    assert paths["TENSILE_C_COMPILER"].endswith("llvm/bin/amdclang")
+
+
+def test_compilers_fall_back_to_bare_hipcc_when_tree_has_no_clang(monkeypatch, tmp_path):
+    prefix = tmp_path / "distro"
+    (prefix / "bin").mkdir(parents=True)
+    (prefix / "bin" / "hipcc").write_text("# hipcc shim\n")
+    monkeypatch.delenv("TENSILE_CXX_COMPILER", raising=False)
+    monkeypatch.delenv("TENSILE_C_COMPILER", raising=False)
+    monkeypatch.delenv("ROCM_LLVM_BIN", raising=False)
+    monkeypatch.delenv("ROCM_BIN", raising=False)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["TENSILE_CXX_COMPILER"] == "hipcc"
+    assert paths["TENSILE_C_COMPILER"] == "hipcc"
+
+
+def test_explicit_compiler_env_wins(monkeypatch, tmp_path):
+    prefix = _sdk_tree(tmp_path)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    monkeypatch.setenv("TENSILE_CXX_COMPILER", "my-cxx-shim")  # bare name passthrough
+    monkeypatch.setenv("TENSILE_C_COMPILER", str(prefix / "bin" / "hipcc"))
+    paths = toolchain.resolve_rocm_paths()
+    assert paths["TENSILE_CXX_COMPILER"] == "my-cxx-shim"
+    assert paths["TENSILE_C_COMPILER"] == str(prefix / "bin" / "hipcc")
+
+
+def test_explicit_compiler_env_missing_path_raises(monkeypatch, tmp_path):
+    prefix = _sdk_tree(tmp_path)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+    monkeypatch.setenv("TENSILE_CXX_COMPILER", "/nonexistent/amdclang++")
+    with pytest.raises(ValueError, match="TENSILE_CXX_COMPILER"):
+        toolchain.resolve_rocm_paths()

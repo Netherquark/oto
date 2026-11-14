@@ -170,6 +170,18 @@ class TestRunDirIsNotSilentlyReused(unittest.TestCase):
             reg.create_run_dir("run_b")
 
 
+def _rocm_fixture(root: Path):
+    """Minimal ROCm tree fixture so ``resolve_rocm_paths()`` answers on a
+    box with no real ROCm (checked in CI-style environments)."""
+    prefix = root / "rocm"
+    (prefix / "bin").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "bin").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "amdgcn" / "bitcode").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "bin" / "amdclang++").write_text("# shim\n")
+    (prefix / "bin" / "hipcc").write_text("# shim\n")
+    return prefix
+
+
 class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
     def test_rerun_refuses_existing_benchmark_csvs(self):
         import oto.runners.benchmark as _bench
@@ -188,13 +200,34 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
                     _Stub(), Path(d) / "cfg.yaml", phase_out, 60)
 
     def test_empty_phase_dir_is_allowed(self):
+        import contextlib
+        import os
+
         import oto.runners.benchmark as _bench
+
+        @contextlib.contextmanager
+        def _env(**overrides):
+            old = dict(os.environ)
+            os.environ.update(overrides)
+            try:
+                yield
+            finally:
+                os.environ.clear()
+                os.environ.update(old)
 
         with tempfile.TemporaryDirectory() as d:
             phase_out = Path(d) / "phase_fresh"
+            root = Path(d) / "no-such-tensile"
+            # Client present (a build could have happened once on a real
+            # checkout), Tensile itself absent: the launcher resolves, the
+            # Tensile-missing fallback engages, guard did not fire.
+            client = root / "build" / "client" / "tensile-client"
+            client.parent.mkdir(parents=True)
+            client.write_bytes(b"\x7fELF\n")
+            rocm = _rocm_fixture(Path(d))
 
             class _Stub:
-                tensile_root = Path(d) / "no-such-tensile"
+                tensile_root = root
 
                 def __init__(self, root):
                     self.client_build_dir = root / "client_build"
@@ -203,10 +236,11 @@ class TestPhaseResultsAreNotOverwritten(unittest.TestCase):
                 def _get_tensile_env(self):
                     return {}
 
-            # No Tensile binary present, so it returns a failure result rather
-            # than raising; the point is that the guard did not fire.
-            result = _bench.BenchmarkMixin._run_tensile_benchmark(
-                _Stub(Path(d)), Path(d) / "cfg.yaml", phase_out, 5)
+            with _env(ROCM_PATH=str(rocm),
+                      TENSILE_CXX_COMPILER=str(rocm / "lib" / "llvm" / "bin" / "amdclang++"),
+                      TENSILE_C_COMPILER=str(rocm / "bin" / "hipcc")):
+                result = _bench.BenchmarkMixin._run_tensile_benchmark(
+                    _Stub(root), Path(d) / "cfg.yaml", phase_out, 5)
             assert isinstance(result, dict)
 
 
