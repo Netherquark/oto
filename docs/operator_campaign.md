@@ -135,11 +135,11 @@ If anything is unknown, **derive it deterministically**, don't invent it
 ### §4.1 The limits are derived, not guessed
 
 Every theoretical limit the job will ever compare against lives in
-`oto.device.derive` — `python3 -m oto.device.derive` prints them from the
+`oto.device.derive_limits` — `python3 -m oto.device.derive_limits` prints them from the
 profile:
 
 ```text
-$ python3 -m oto.device.derive
+$ python3 -m oto.device.derive_limits
 codename=gfx90c lanes=448 ...
 { "SS": 1613,  "CC": 1613,  "HH": 3226, "DD": 101,  "ZZ": 101 }
 bandwidth_gb_s derived: 51.2
@@ -166,7 +166,7 @@ the formula.
 
 On this part, the peaks are read off this silicon (via `rocminfo`/spec sheets and
 `topo` measurements), not off any document. There is exactly one honest answer
-per channel. The formula is public inside `oto/device/derive.py`; verify it;
+per channel. The formula is public inside `oto/device/derive_limits.py`; verify it;
 challenge it; then trust it with the rest of the sweep.
 
 ## §5. `oto doctor`

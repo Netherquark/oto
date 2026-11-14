@@ -26,7 +26,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import blas8_gflops
+from oto.device.kernel_vocabulary import blas8_gflops
 from oto.runners.paths import runs_rel as _runs_rel
 
 RUNS = BASE / _runs_rel("")

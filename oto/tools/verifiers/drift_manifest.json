@@ -665,43 +665,43 @@
     },
     {
       "key": "oto/device/resolvers.py::annotations",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::DTYPE_TO_FAMILY",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::cell_key",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::cube_side",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::dtype_from_kernel_name",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::family_from_kernel_name",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::kernel_key",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::kernel_typecode",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::shipped_cell_set",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     },
     {
       "key": "oto/device/resolvers.py::shipped_cells",
-      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.vocabulary with identical implementations. Attested 2026-11-14."
+      "reason": "Refactor-2 C2 rework: oto/device/resolvers.py deleted as a dead re-export shim; its public names moved to oto.device.kernel_vocabulary with identical implementations. Attested 2026-11-14."
     }
   ],
   "gate_differential": [

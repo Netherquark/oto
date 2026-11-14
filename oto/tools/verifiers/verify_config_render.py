@@ -128,7 +128,7 @@ LIFT = {
 
 
 def lift(src: str) -> str:
-    src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.vocabulary import", src)
+    src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.kernel_vocabulary import", src)
     for old_text, new_text in LIFT.items():
         src = src.replace(old_text, new_text)
     return src

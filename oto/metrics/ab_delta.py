@@ -18,7 +18,7 @@ from collections import defaultdict
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cube_side
+from oto.device.kernel_vocabulary import cube_side
 from oto.metrics.family_attribution import resolve_cell_family
 from oto.metrics.protocol import SINGLE, protocol_of
 

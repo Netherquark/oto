@@ -54,7 +54,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cell_key
+from oto.device.kernel_vocabulary import cell_key
 from oto.harness.kernel_db import read_kernel_db
 from oto.runners.paths import results_rel
 
@@ -274,7 +274,7 @@ def cell_history(rows: Sequence[dict[str, Any]], family: str, side: int,
     collapsed into that geometry's record (``n`` rows, ``gflops`` the best of
     them), because replication is evidence about noise, not a distinct
     candidate. ``top=0`` returns every geometry. Non-cube shapes have no cell
-    and are excluded by ``oto.device.vocabulary.cell_key``. The floor reference is
+    and are excluded by ``oto.device.kernel_vocabulary.cell_key``. The floor reference is
     computed from rows tagged ``side='floor'``; it is absent when the caller
     loaded only native rows.
     """

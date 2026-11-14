@@ -55,7 +55,7 @@ for _p in (str(_HERE), os.environ.get("TENSILE_ROOT")):
         sys.path.insert(0, _p)
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import family_from_kernel_name, kernel_typecode
+from oto.device.kernel_vocabulary import family_from_kernel_name, kernel_typecode
 from oto.metrics.family_attribution import extract_family_from_phase_id
 from oto.metrics.protocol import classify_count, problem_count_text
 from oto.runners.paths import results_rel

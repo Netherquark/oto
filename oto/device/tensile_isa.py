@@ -5,7 +5,7 @@ Owns: the codename -> Tensile ``CurrentISA`` triple table (``ISA_TRIPLES``)
 and the ``isa_triple`` lookup used by the CPU-only build proof. The only oto
 module allowed to hold these triples.
 Does NOT own: any other hardware fact (``oto.device.loader``), device detection
-(``oto.device.detect``), or Tensile's own ISA semantics (the triple is opaque
+(``oto.device.device_detect``), or Tensile's own ISA semantics (the triple is opaque
 to us).
 Public API: ``ISA_TRIPLES``, ``isa_triple``.
 """

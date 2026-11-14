@@ -45,9 +45,9 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `docs/search_philosophy.md` | Stage 0–3 search order + NOT VERIFIED note |
 | (research corpus: deleted — durable facts promoted to this doc + docs/gfx90c_tuning_guide.md + docs/search_philosophy.md) | absorbed |
 | `oto/device/loader.py` | Device profile access — `resolve_profile(profile=None)` is the choke point for explicit gates/engines (`None` = ambient `current_profile()`), the canonical device view |
-| `oto/device/vocabulary.py` | Cell/kernel vocabulary (cell_key, cube_side, shipped_cells, ...) |
+| `oto/device/kernel_vocabulary.py` | Cell/kernel vocabulary (cell_key, cube_side, shipped_cells, ...) |
 | `oto/device/profile.py` | DeviceProfile dataclass (the frozen profile schema) |
-| `oto/device/detect.py` | `detect_codename()` — auto-detect via rocminfo |
+| `oto/device/device_detect.py` | `detect_codename()` — auto-detect via rocminfo |
 | `oto/yaml_cached.py` | The project's YAML reader: libyaml when present, memoised by content |
 | `oto/tensile/gates/memo.py` | The content-keyed memo the pure legality gates use |
 | `oto/tensile/decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |

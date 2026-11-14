@@ -20,7 +20,7 @@ from __future__ import annotations
 import pytest
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import (
+from oto.device.kernel_vocabulary import (
     dtype_from_kernel_name,
     family_from_kernel_name,
     kernel_typecode,

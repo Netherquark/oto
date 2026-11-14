@@ -142,7 +142,7 @@ class TestGeneratedPhaseCellIdentity(unittest.TestCase):
             return cands
 
     def test_every_family_emits_a_resolvable_cell_key(self):
-        from oto.device.vocabulary import cell_key
+        from oto.device.kernel_vocabulary import cell_key
         for family, sides in _loader.current_profile().family_shapes.items():
             with self.subTest(family=family):
                 shape = f"{sides[0]}x{sides[0]}x{sides[0]}"

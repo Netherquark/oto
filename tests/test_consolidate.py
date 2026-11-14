@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cell_key
+from oto.device.kernel_vocabulary import cell_key
 from oto.tools.consolidate import (
     _fam,
     _is_legal,

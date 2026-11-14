@@ -15,7 +15,7 @@ from typing import Any
 
 from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
-from oto.device.vocabulary import cell_key
+from oto.device.kernel_vocabulary import cell_key
 from oto.metrics.ab_audit import (
     BASE as _AB_BASE,
 )

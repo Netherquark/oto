@@ -41,7 +41,7 @@ from collections.abc import Iterable, Sequence
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cube_side, shipped_cell_set
+from oto.device.kernel_vocabulary import cube_side, shipped_cell_set
 from oto.runners.paths import results_dir as _results_dir
 
 #: Family-name normalisation for the `phase_id` fallback path.
@@ -77,7 +77,7 @@ def phase_family(phase: dict[str, Any], profile=None) -> str:
     """Resolve a phase's canonical family name ('' when unresolvable).
 
     ``config.FamilyLabel`` is the authoritative identity (stamped at emit time,
-    so HH / HH_HPA / HS_HPA never collapse — see `oto.device.vocabulary.cell_key`).
+    so HH / HH_HPA / HS_HPA never collapse — see `oto.device.kernel_vocabulary.cell_key`).
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.

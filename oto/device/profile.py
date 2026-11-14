@@ -7,7 +7,7 @@ carries are those in ``profiles/<codename>.json`` -- no device fact may be
 invented anywhere else. Reading is loader's job
 (``oto.device.loader.load_profile``); this module is plumbing.
 Does NOT own: loading (``oto.device.loader``), the profile JSON files
-(profiles/), auto-detection (``oto.device.detect``), or any legality rule
+(profiles/), auto-detection (``oto.device.device_detect``), or any legality rule
 (``oto.tensile.gates``).
 Public API: DeviceProfile, AssemblyGatePolicy, TheoreticalLimits.
 """

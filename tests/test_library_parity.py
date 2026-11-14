@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO))
 import yaml
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cube_side
+from oto.device.kernel_vocabulary import cube_side
 from oto.runners.paths import results_rel
 from oto.tensile.library_parity import (
     load_pipeline_phases,
@@ -64,7 +64,7 @@ class TestShippedGrid:
         assert GRID_TOTAL == 38
 
     def test_grid_uses_cube_shapes(self):
-        from oto.device.vocabulary import shipped_cell_set
+        from oto.device.kernel_vocabulary import shipped_cell_set
         for family, shape in shipped_cell_set():
             assert cube_side(shape) is not None
             assert int(shape.split("x")[0]) in _loader.current_profile().family_shapes[family]
@@ -86,7 +86,7 @@ class TestDeckParity:
         assert len(phases_cells(DECK)) == GRID_TOTAL
 
     def test_families_carry_correct_dtype_char(self):
-        from oto.device.vocabulary import shipped_cell_set
+        from oto.device.kernel_vocabulary import shipped_cell_set
         grid = shipped_cell_set()
         for family, shape in phases_cells(DECK):
             assert (family, shape) in grid

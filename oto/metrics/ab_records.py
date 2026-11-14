@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import kernel_key
+from oto.device.kernel_vocabulary import kernel_key
 from oto.metrics.ab_identity import _driver, _resolved_config, norm_config
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.metrics.cell_policy import aggregate_cell

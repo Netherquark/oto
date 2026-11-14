@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import (
+from oto.device.kernel_vocabulary import (
     dtype_to_family,
     family_from_kernel_name,
     kernel_typecode,

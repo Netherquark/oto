@@ -1,7 +1,7 @@
 """Agent-1: generate <codename>_theoretical_limits.md from a profile + starter.
 
 Owns: the document template and the ALU peaks / ceilings section, which is
-DERIVED from the profile on every call (see oto.device.derive). Does NOT own:
+DERIVED from the profile on every call (see oto.device.derive_limits). Does NOT own:
 web research (injected via `research` callable) or writing to disk (caller
 decides).
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from oto.device import derive
+from oto.device import derive_limits as derive
 from oto.device.profile import DeviceProfile
 
 
@@ -58,8 +58,8 @@ def generate(profile: DeviceProfile, starter_text: str = "",
         "",
         "> Derived from hardware facts on every run. Numbers below re-check "
         "equal ",
-        "> ``oto.device.derive`` exactly; if `oto.device.derive` disagrees with ",
-        "> `profiles/<codename>.json`, `oto.device.derive` is right — the "
+        "> ``oto.device.derive_limits`` exactly; if `oto.device.derive_limits` disagrees with ",
+        "> `profiles/<codename>.json`, `oto.device.derive_limits` is right — the "
         "profile ",
         "> has a mistake and the profile needs fixing, not the formula.",
         "",

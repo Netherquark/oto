@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from oto.device.vocabulary import cell_key
+from oto.device.kernel_vocabulary import cell_key
 from oto.ledger.agent_coverage import CoverageMixin
 from oto.ledger.agent_mutate import MutateMixin
 from oto.ledger.harvest import HarvestMixin

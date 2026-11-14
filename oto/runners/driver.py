@@ -23,7 +23,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from oto.device.vocabulary import cell_key, kernel_key
+from oto.device.kernel_vocabulary import cell_key, kernel_key
 from oto.ledger.agent import ConvergenceAgent
 from oto.ledger.mutator import Mutator
 from oto.ledger.registry import SQLiteRegistry
@@ -157,7 +157,7 @@ class TensileDriver(
         # Refactor 2: resolve the device profile (auto-detect if not given).
         if codename is None:
             try:
-                from oto.device.detect import detect_codename
+                from oto.device.device_detect import detect_codename
                 codename = detect_codename()
             except Exception:
                 from oto.device.loader import resolve_profile

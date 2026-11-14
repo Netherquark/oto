@@ -215,12 +215,12 @@ def build_matrix(db_path: str, base_dir: str,
     """deck / floor / all-time per shipped grid cell + aggregate verdicts.
 
     The universe of cells is the repo's canonical shipped grid
-    (`oto.device.vocabulary.shipped_cell_set`), so this tool can never report an
+    (`oto.device.kernel_vocabulary.shipped_cell_set`), so this tool can never report an
     out-of-grid cell; non-cube probe shapes have no cell and are excluded by
     construction. Rows are admitted under the like-for-like rule
     (`protocol='family'`) unless ``any_protocol=True``.
     """
-    from oto.device.vocabulary import shipped_cell_set
+    from oto.device.kernel_vocabulary import shipped_cell_set
     from oto.harness.kernel_db import load_kernel_db
     from oto.tensile.library_parity import phase_family
 

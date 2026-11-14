@@ -15,5 +15,5 @@ statistics (oto.metrics.*), or the driver's behaviour (oto.runners.*).
 No numeric hardware fact may exist outside ``profiles/<codename>.json``.
 Public API: none at import time; this package re-exports nothing. Callers
 use ``oto.device.loader.current_profile()`` for device facts and
-``oto.device.vocabulary`` for cell identity.
+``oto.device.kernel_vocabulary`` for cell identity.
 """

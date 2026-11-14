@@ -161,7 +161,7 @@ HH_HPA:512 35, HS_HPA:512 33, HH_HPA:4096 1. None went to any cell that ties.
 The mechanism is one line. `_mutate_cell` returned early when
 `winner_info["is_below_ceiling"] is False`, and `is_below_ceiling`
 (`oto/metrics/analytics.py`) is measured against `REALISTIC_CEILINGS`
-(`oto/device/loader.py` and `oto/device/vocabulary.py`), a measured-empirical snapshot the large cells have since
+(`oto/device/loader.py` and `oto/device/kernel_vocabulary.py`), a measured-empirical snapshot the large cells have since
 *passed*: SS publishes 1118.7 and measures **1135.1**. So the cells that tie the
 floor are exactly the cells the arm refuses to touch, and the budget recirculates
 into the small cells forever.

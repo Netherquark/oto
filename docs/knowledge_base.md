@@ -271,7 +271,7 @@ Translation constraint:
 > **The `tensilelibrary.dat` this pipeline produces must map EXACTLY to the
 > shipped gfx900 TensileLibrary in the (shape, dtype) combinations addressed —
 > no contraction, no extension.** "Addressed" cells are the canonical contract
-> grid `oto.device.vocabulary.shipped_cells()`: per family, the cube shapes in
+> grid `oto.device.kernel_vocabulary.shipped_cells()`: per family, the cube shapes in
 > `FAMILY_SHAPES`, family → dtype char via `FAMILY_DTYPE_CHAR` (38 cells, the
 > same deck the acceptance report classifies RED/ORANGE/GREEN against).
 
@@ -301,7 +301,7 @@ check, never a restatement):
   overlay to exact parity (38/38 today), so a future D1-style edit that breaks
   the grid fails CI before any GPU time is spent.
 
-The grid's single source is `oto.device.vocabulary.shipped_cells()`; family keys,
+The grid's single source is `oto.device.kernel_vocabulary.shipped_cells()`; family keys,
 shape lists and dtype chars live in `profiles/gfx90c.json` and are read
 through `oto.device.loader.current_profile()` — never transcribed. Non-cube probe shapes (e.g. `32x4096x1`)
 have no cell and are excluded from the check by construction — they are

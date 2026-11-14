@@ -1,6 +1,6 @@
 """The deterministic limits derivation must equal the shipped profile.
 
-Serves as the no-error contract for ``oto.device.derive`` — every ceiling in
+Serves as the no-error contract for ``oto.device.derive_limits`` — every ceiling in
 ``oto.device.loader.current_profile().theoretical_peaks_blas8`` and
 ``peak_gflops`` is re-derived from the hardware facts and compared
 exactly. If the profile ever disagrees with the formula, the derivation is
@@ -17,9 +17,9 @@ from dataclasses import replace
 
 import pytest
 
-from oto.device import derive
+from oto.device import derive_limits as derive
 from oto.device import loader as _loader
-from oto.device.derive import (
+from oto.device.derive_limits import (
     derive_lane_classes,
     derive_peak_gflops,
     derive_theoretical_peaks_blas8,
@@ -99,7 +99,7 @@ def test_probe_device_derives_from_its_own_facts():
 def test_derive_module_cli_prints_and_exits_zero():
     import subprocess
 
-    r = subprocess.run([sys.executable, "-m", "oto.device.derive"],
+    r = subprocess.run([sys.executable, "-m", "oto.device.derive_limits"],
                        capture_output=True, text=True)
     assert r.returncode == 0
     assert "codename=gfx90c" in r.stdout

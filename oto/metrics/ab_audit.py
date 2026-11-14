@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cell_key
+from oto.device.kernel_vocabulary import cell_key
 from oto.metrics.ab_band import (
     BAND_HI,
     BAND_LO,

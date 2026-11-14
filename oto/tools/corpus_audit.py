@@ -262,7 +262,7 @@ def cheapest(family: str | None = None, n: int = 5,
     phases = yamlio.load_yaml(deck_path) or []
 
     # Families are labelled "ZZ" but Tensile's DataType is "Z"; the mapping
-    # belongs to oto.device.vocabulary, so accept either and let it resolve.
+    # belongs to oto.device.kernel_vocabulary, so accept either and let it resolve.
     want = _loader.resolve_profile(profile,).family_dtype_char.get(family, family,) if family else None
 
     def volume(phase: dict[str, Any]) -> float:

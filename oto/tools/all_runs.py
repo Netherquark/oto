@@ -44,7 +44,7 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
         sys.path.insert(0, _p)
 
 from oto.device import loader as _loader
-from oto.device.vocabulary import cube_side, dtype_to_family
+from oto.device.kernel_vocabulary import cube_side, dtype_to_family
 from oto.metrics.analytics import extract_family_from_phase_id
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import runs_dir as _runs_dir

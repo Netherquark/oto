@@ -30,7 +30,7 @@ import json
 from pathlib import Path
 
 from oto import yaml_cached as yamlio
-from oto.device.vocabulary import shipped_cells
+from oto.device.kernel_vocabulary import shipped_cells
 from oto.tensile.library_parity import (
     load_pipeline_phases,
     parity_report,

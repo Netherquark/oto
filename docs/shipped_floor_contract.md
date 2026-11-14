@@ -3,7 +3,7 @@
 Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
 Floor: 2,285
 Date: 2026-09-13 (kernel counts re-derived live from the dat on 2026-09-25)
-Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `oto/device/loader.py` (`oto.device.vocabulary` for the cell vocabulary), measured prior conclusions (`archive/prior_insights.md` §5.1). Kernel identity now comes from `oto/tensile/library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
+Sources: the shipped gfx900 footprint `TensileLibrary_*_gfx900.dat` (decoded from the installed rocblas `library/` dir — ROCm prefix per `.env`/§6), `oto/device/loader.py` (`oto.device.kernel_vocabulary` for the cell vocabulary), measured prior conclusions (`archive/prior_insights.md` §5.1). Kernel identity now comes from `oto/tensile/library.py` (union of `/usr` + `/opt/rocm` prefixes; deduped canonical `Cijk_...` solution names, msgpack-length-prefixed in the dat), pinned once at `gfx90c_results/gfx900_shipped_manifest.json` after first load. The earlier 3,066 was per-file token counting; the clean per-family total below is 2,285.
 
 ## 1. What the shipped gfx900 library actually is
 

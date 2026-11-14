@@ -345,7 +345,7 @@ class RegistryCore:
             base = str(self.base_dir)
             if base not in sys.path:
                 sys.path.insert(0, base)
-            # Lazy import: harness.kernel_db imports oto.device.vocabulary only, so
+            # Lazy import: harness.kernel_db imports oto.device.kernel_vocabulary only, so
             # there is no cycle back into registry/runners.
             from oto.harness.kernel_db import load_kernel_db
             cache = str(self.results_dir / "analysis" / "kernel_db.json")

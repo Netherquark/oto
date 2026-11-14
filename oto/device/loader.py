@@ -5,7 +5,7 @@ resolving the *process* profile (``current_profile``) and scoping swaps
 (``rebind_profile`` / ``bound_profile``). The public API surface is one
 function per job: load, resolve, rebind, bind.
 Does NOT own: the dataclass layout (``oto.device.profile``), the JSON files
-themselves, or device auto-detection (``oto.device.detect``).
+themselves, or device auto-detection (``oto.device.device_detect``).
 Public API: load_profile, load_profile_from_starter, default_profile,
 current_profile, resolve_profile, rebind_profile, bound_profile.
 """
@@ -224,7 +224,7 @@ def _from_json_path(p: Path) -> DeviceProfile:
 
 def _detect() -> str | None:
     try:
-        from oto.device.detect import detect_codename
+        from oto.device.device_detect import detect_codename
         code = detect_codename()
     except Exception:
         return None

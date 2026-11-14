@@ -461,6 +461,8 @@ RENAMES: dict[str, str] = {
     "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py", "oto/runners/cli.py": "oto/runners/stage_cli.py",
     "oto/runners/flags.py": "oto/runners/stage_flags.py", "oto/runners/synthesis.py": "oto/runners/library_build.py",
     "oto/_map.py": "oto/readme_gen.py", "oto/cli/flags.py": "oto/cli/global_flags.py", "oto/cli/docs.py": "oto/cli/help_command.py",
+    "oto/device/derive.py": "oto/device/derive_limits.py", "oto/device/detect.py": "oto/device/device_detect.py",
+    "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py",
     "oto/inventory.py": "oto/readme_gen.py",
     "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py",
 }
