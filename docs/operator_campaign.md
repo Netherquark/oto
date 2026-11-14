@@ -681,7 +681,7 @@ When a floor library is in hand:
 - anything under `gfx90c_results/`/`gfx90c_runs/` for any `<codename>` other than
   the one you were given;
 - `.env` and `.env.example`;
-- `phases.yaml` and every `o.yaml`, every `.yamlio`-authored file — you never edit
+- `phases.yaml` and every authored overlay YAML file — you never edit
   the deck directly; the tool verbs emit rows onto the overlay safely;
 - `incomplete_work.md`, `changelog.md`, and `docs/results.md` — the developer's
   register; if you found something truly relevant, write it in

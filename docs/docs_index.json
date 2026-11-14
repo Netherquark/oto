@@ -80,7 +80,7 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Automated agentic consult: API key \u2192 docs/potential_configs.md with the least GPU-trial budget (design plan, not implemented)",
+      "owns": "Automated agentic consult: starter + API key \u2192 potential_configs.md with the least GPU-trial budget (`oto agent consult` implemented; GPU proof pending)",
       "path": "docs/agentic_consult.md"
     },
     {
