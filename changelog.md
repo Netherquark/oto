@@ -69,6 +69,26 @@ and NOT the experimental data (that is `results.md`).
   warnings (venv-not-active notice; started-but-unfinished run_20261029_152402
   — left for the owner) / 0 failure(s); registry integrity ok (46,703 records,
   44 runs, no label contamination); deck parity 38/38; docs index 37.
+- **2026-11-14 (17th) — Verifier evergreened; CLI source surface consolidated.**
+  All five equivalence checks now take `--base REF` (default `HEAD~1`; nothing
+  in the tree pins a fixed commit) and nothing about the split era is hidden:
+  `verify_all.py --base 2824c2f` and `oto verify all --base HEAD~1` both report
+  ALL EQUIVALENCE CHECKS PASSED. Shared machinery
+  (`oto/tools/verifiers/_evergreen.py`): `ref_worktree()` detaches a throwaway
+  worktree of the ref in a temp dir (the worker module is copied in);
+  `probe()` runs a Python probe in that tree; `drift_manifest.json` holds the
+  explicit attestations for this check's intentional divergences and anything
+  unattested exits 1. Two long-broken verifier habits were found and fixed:
+  `verify_gate_differential` printed ALL EQUAL unconditionally (its final
+  `fails` list was bound to an empty value before any check ran — verdict
+  flips and text diffs were never counted) and `verify_config_writer`
+  silently dropped 5,997 reference phases on every invocation (`f.read()` on a
+  Path raised TypeError, swallowed by a bare except). Both fixed; full matrix
+  green on both refs. C2.5–C2.9 completed the same day (see entries just
+  above). Doc consolidation: the 1,007-line `incomplete_work.md` was split —
+  completed work stayed as pointers in `docs/work_archive_2026-11-14.md`,
+  and the file now carries only open items. Verified: suite RC=0
+  (1049 passed, 8 skipped, 242 subtests; zz_suite31).
 - **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8

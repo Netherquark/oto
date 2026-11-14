@@ -89,6 +89,7 @@ Corollaries:
 | `knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
 | `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | dev | Ecosystem | Open-work register |
+| `docs/work_archive_2026-11-14.md` | dev | Ecosystem (frozen) | The 1,007-line incomplete_work register snapshot at consolidation time (2026-11-14) |
 | `prior_*.md` | dev | Ecosystem (frozen) | Prior conclusions, results only |
 | `tensile_tuning_context.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
 | `adversarial_review.md` | dev | Ecosystem | Audit register |

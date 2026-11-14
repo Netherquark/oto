@@ -56,8 +56,11 @@ def test_check_candidates():
 
 
 def test_verify_all_runs():
-    r = _run("verify", "all")
-    # verify_all returns non-zero if any check fails (pre-existing)
+    # The evergreen five-check matrix requires a REF worktree of HEAD~1 and
+    # a ~6k-phase config-writer render; ~64 s end to end. A 60-second
+    # timeout would fail here even though the check is green.
+    r = subprocess.run([*BASE_CMD, "verify", "all"],
+                      capture_output=True, text=True, cwd=str(ROOT), timeout=300)
     assert r.returncode in (0, 1)
 
 
