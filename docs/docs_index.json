@@ -187,6 +187,12 @@
     },
     {
       "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Detailed rename + doc cleanup plan: 40 module renames, 9 test renames, 5.1 device-fact violations, 3 support-module unifications, 4-phase migration order (read-only proposal)",
+      "path": "plans/RENAME_AND_DOC_CLEANUP_PLAN.md"
+    },
+    {
+      "class": "dev",
       "kind": "Ecosystem (frozen)",
       "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
       "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
@@ -289,6 +295,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 39,
+  "total": 40,
   "version": 1
 }

@@ -631,3 +631,375 @@ independently shippable.
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
 20. `oto/tensile/synthesis/db.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
+
+---
+
+## 7. Docs ecosystem audit (from `docs_ecosystem.md`)
+
+The docs ecosystem has 43 tracked markdown docs (root 21, `docs/` 19 incl.
+skills, `plans/` 4, `archive/` 5) plus 5 JSON docs. 30 are live/essential;
+7 are frozen evidence/prior layer; 4 are transitional plan docs; 2 are
+research inputs.
+
+### 7.1 Dead-symbol citations in live docs (15 files, 7 essential)
+
+The following live docs cite deleted modules or retired files. They are not
+violations of the same kind as the code-level device-fact leaks (these are
+historical pointers, which the docs ecosystem rules permit in the right place),
+but the phrasing should be reworded to point at the replacement:
+
+| file | dead symbol cited | fix |
+|---|---|---|
+| `docs/cli.md` (8) | `port_tensile.py --auto` etc. (in the MIGRATION table) | exempt the migration table explicitly in `claude.md` §8.1, or delete the table |
+| `plans/REFACTOR_2_UNIVERSAL_GPU.md` (4) | `gfx90c_common.py`, `peaks.py`, `resolvers.py` | frozen plan doc; only used as history; leave or archive |
+| `plans/CLI_UX_REWORK.md` (4) | `port_tensile.py` shorthand | archive (status: implemented) |
+| `prior_INSIGHTS_CAVEMAN_ULTRA.md` (3) | `gfx90c_common.py`, `proposed_fixes.md`, `changes_kb.md`, `run_gfx90c_suite.sh` | sanctioned prior-knowledge copy; keep as-is; the cites are the *point* of the file |
+| `kernel_tuning_research.md` (2) | `gates/assembly.py`, `scheduler.py` (as shorthand) | reword to `oto/tensile/gates/assembly.py` + full path |
+| `prior_RESEARCH_ARCHIVE.md` (1) | `gfx90c_common.py`, `AsmCaps.py`, `auto_retire.py` | sanctioned prior-knowledge copy; keep as-is |
+| `implementation_plan.md` (1) | `scheduler.py` shorthand | reword or archive |
+| `changelog.md` (65) | all of the above | append-only history; keep verbatim |
+
+The MIGRATION-table case in `docs/cli.md` is the one that needs an explicit
+policy decision (open question 5 in §9).
+
+### 7.2 Ephemeral-state citations in live docs (9 files)
+
+Files that cite `/tmp/`, `todo.txt`, `command.txt`, concrete run ids, or
+"this session":
+
+| file | evidence |
+|---|---|
+| `adversarial_review.md` | `:155` (`/tmp/opencode/*_fixed.py`) |
+| `docs/operator_runbook.md` | `:221` (`command.txt`) |
+| `implementation_plan.md` | `:459,480,495,496,579` |
+| `potential_configs.md` | `:2431,3301,3312,3349` |
+| `results.md` | `:22,92,99,106,123,147,269` (run ids) |
+| `tensile_tuning_context.md` | `:147` (run id) |
+| `changelog.md` | `:25,38,90,243,334,1135,...` (33 hits) |
+| `claude.md` | `:175,483,487,491,492,495,533` (policy refs) |
+| `prior_RESEARCH_ARCHIVE.md` | `:...` (history refs) |
+
+The policy-only references (`claude.md`, `docs/operator_runbook.md`) are
+guardrails, not data citations; the rest are live ephemeral-state citations
+that violate the docs-ecosystem boundary rule. The largest scrub is the
+changelog (33 `/tmp` hits, 8 `command.txt` hits, 14 dead-module hits) —
+append-only history, so the scrub must be careful not to rewrite history,
+only to genericize the machine-local portion (`/tmp/opencode/foo.py` →
+`<scratch>/foo.py`).
+
+### 7.3 Consolidation recommendations (docs ecosystem)
+
+| action | files | rationale |
+|---|---|---|
+| **Merge** | `prior_INSIGHTS_CAVEMAN_ULTRA.md` + `prior_RESEARCH_ARCHIVE.md` → `archive/prior_campaign_20260913.md` | two sanctioned copies of the same prior-campaign materials; one is a redundant copy |
+| **Merge** | `tensile_tuning_context.md` + `complex_gemm_research_brief.md` into `kernel_tuning_research.md` | philosophy + complex-GEMM sections already overlap; `kernel_tuning_research.md` is the owner of both |
+| **Absorb** | `incomplete_work.md` open items into `implementation_plan.md` §open register; drop `incomplete_work.md` | the register is a to-do list, not a status |
+| **Split** | `potential_configs.md` (3440 lines) → `candidate_deck.md` + `candidate_research.md` | deck + decisions vs research integration; the file is too big to navigate |
+| **Split** | `changelog.md` (4280 lines) → `changelog.md` (current year) + `archive/changelog_pre_2026-11.md` | keep the current-year log readable; keep the append-only chain intact |
+| **Archive** | `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/` | all three are `IMPLEMENTED`/`EXECUTED`; live pointer in `changelog.md` is enough |
+| **Bundle** | `archive/corpus.pass1_20261014.md`, `corpus2.pass2_20261014.md`, `corpus3.pass3_20261014.md`, `RESEARCH_PROMPT3.pass3_20261014.md`, `potential_configs.pre_rewrite_20261014.md` → `archive/research_corpus_20261014.md` | five frozen evidence snapshots; one bundle is easier to reference |
+| **Move** | `docs/design_language.md` → `docs/ui/design_language.md` (or drop from index) | unrelated to kernel-tuning content; lives in the docs ecosystem by accident |
+| **Rename** | `context.md` → `rocm_coupling_context.md`; `mapping.md` → `shipped_footprint.md` (optional); `incomplete_work.md` → `open_work.md` (if not merged); `potential_configs.md` → `candidate_deck.md` (if split) | generic names |
+| **Scrub** | all live docs: `/tmp/opencode/*`, `/home/netherquark/*`, `/opt/rocm` (where not env documentation), `todo.txt`/`command.txt`, deleted-module shorthands | docs-ecosystem boundary rule |
+
+### 7.4 Docs ecosystem — non-`.md` strays
+
+- `oto/oto_script` — tracked stray duplicate of `bin/oto` (see §5.6 of python_layout.md and §8.2 below).
+- `docs/docs_index.json` — generated; 39 entries vs 43 tracked md files. Either include all live docs or mark exclusions explicitly.
+- `gfx90c_vs_spoof.png` — generated chart artifact, not a registered doc; move to `gfx90c_results/` or delete.
+
+---
+
+## 8. Root & config audit (from `root_config.md`)
+
+### 8.1 Per-file verdicts (root/config)
+
+| File | Verdict | Reason | Evidence |
+|---|---|---|---|
+| `README.md` | keep | Landing/orientation doc with TOC; not a log | `README.md:1`, `README.md:11` |
+| `LICENSE` | keep | GPL-3.0 license text | `LICENSE:1` |
+| `.gitignore` | keep (fix) | Ignores `archive/` while 4 `archive/*.md` are tracked; also carries forward-looking dead patterns (`*.bak2`, `*.pre_*_fix_*`) | `.gitignore:100`, `git ls-files archive/` |
+| `.env.example` | keep (update) | Missing API/agent vars used by code (see Q4) | `.env.example:1`, `oto/agents/research.py:56` |
+| `ruff.toml` | keep | Pinned guard config consumed by `tests/test_ruff.py` | `ruff.toml:1` |
+| `pytest.ini` | keep | Suite config (testpaths/markers) | `pytest.ini:1` |
+| `requirements.txt` | keep | Runtime + dev deps | `requirements.txt:1` |
+| `bin/oto` | keep | Canonical shell entry point; delegates to `python3 -m oto` | `bin/oto:1-12` |
+| `oto/oto_script` | delete | Unreferenced leftover from R2-cli Phase 2; no imports anywhere; broken `sys.path` target | `oto/oto_script:1`, `git log -- oto/oto_script` |
+| `prior_INSIGHTS_CAVEMAN_ULTRA.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
+| `prior_RESEARCH_ARCHIVE.md` | keep | Sanctioned frozen prior conclusions | `docs/README.md` registry row; `claude.md:221` |
+| `gfx90c_vs_spoof.png` | delete (or move to `gfx90c_results/`) | Generated chart artifact (`oto chart`), not source; not a registered doc | `oto/tools/chart.py:101`, `docs/cli.md:154` |
+| `gfx90c_tuning_guide.md` | keep | Sanctioned root docs-ecosystem file | `docs/README.md` registry row |
+| `gfx90c_theoretical_limits.md` | keep | Sanctioned root docs-ecosystem file (acceptance authority) | `docs/README.md` registry row |
+| `archive/*` | keep (frozen) | Frozen evidence; `RESEARCH_PROMPT3.pass3_20261014.md` has no live prose refs (only docs index); the three `corpus*.md` are referenced by `kernel_tuning_research.md` / `knowledge_base.md` | `docs/docs_index.json:192` |
+
+### 8.2 Docs-ecosystem boundary violations (tracked files)
+
+Files that reference ephemeral state (`todo.txt`, `command.txt`, concrete run
+ids, `/tmp/` paths, "this session"):
+
+| File | Evidence |
+|---|---|
+| `adversarial_review.md` | `adversarial_review.md:155` (`/tmp/opencode/*_fixed.py`) |
+| `changelog.md` | `changelog.md:25,38,90,243,334,1135,1336,1373,1395,1479,1538,1648,1830,2134,2351,2393,2400,2442,2448` |
+| `claude.md` | `claude.md:175,483,487,491,492,495,533` (policy refs to `todo.txt`/`command.txt`/`/tmp/opencode`) |
+| `docs/comparability.md` | `docs/comparability.md:57` (concrete run id `gfx900_ref_locked_52149f315d`) |
+| `docs/operator_runbook.md` | `docs/operator_runbook.md:221` (`command.txt`) |
+| `implementation_plan.md` | `implementation_plan.md:459,480,495,496,579` |
+| `potential_configs.md` | `potential_configs.md:2431,3301,3312,3349` |
+| `results.md` | `results.md:22,92,99,106,123,147,269` (concrete run ids) |
+| `tensile_tuning_context.md` | `tensile_tuning_context.md:147` (concrete run id) |
+
+Policy-only references (`claude.md`, `docs/operator_runbook.md`) are guardrails,
+not data citations; the rest are live ephemeral-state citations that violate the
+"docs ecosystem never references ephemeral state" rule.
+
+### 8.3 Headline answers (root/config)
+
+1. **`bin/oto` vs `oto/cli`:** `bin/oto` is the sole user-facing shell shim
+   (`python3 -m oto`); `oto/cli/dispatch.py` owns command dispatch.
+   `oto/oto_script` duplicates neither usefully and should be deleted.
+2. **`oto/oto_script` tracked intentionally?** No — it is an unreferenced leftover
+   from the R2-cli Phase 2 commit (copied from the deleted root `oto.py`); nothing
+   imports it. Verdict: delete.
+3. **`gfx90c_*` files:** `gfx90c_tuning_guide.md` and `gfx90c_theoretical_limits.md`
+   are sanctioned (registered in `docs/README.md`). `gfx90c_vs_spoof.png` is an
+   unregistered generated artifact → delete or move to `gfx90c_results/`.
+4. **`.env.example` missing:** `OTO_API_KEY`, `OTO_API_ENDPOINT`, `OTO_API_MODEL`,
+   `OTO_API_MAX_TOKENS`, `OTO_API_TIMEOUT`, `OTO_ARCHS`, `OTO_NO_AUTO_KERNEL_DB_REBUILD`,
+   `OTO_PROFILE_SHIM`, `OTO_TENSILE_CLIENT` (and dev-only `OTO_GUARD_FILES`).
+5. **README.md:** A landing/orientation page (title explained at `README.md:1-7`),
+   not a log — but its `oto` link points at the package dir, not `bin/oto`.
+6. **`archive/*` with no live references:** `RESEARCH_PROMPT3.pass3_20261014.md`
+   has no prose references (only the docs registry index). The three `corpus*.md`
+   files are referenced by `kernel_tuning_research.md` / `knowledge_base.md`.
+   Untracked `archive/` contents are gitignored by design.
+
+### 8.4 `.gitignore` note
+
+Ignores `archive/` while 4 `archive/*.md` are tracked — that's a feature, not a
+bug (tracked evidence vs untracked working files). Also carries forward-looking
+dead patterns (`*.bak2`, `*.pre_*_fix_*`); harmless but noisy.
+
+---
+
+## 9. The tests audit (from `tests_names.md`)
+
+### 9.1 Per-file verdict summary
+
+- 80 test files inventoried; 74 are KEEP (name matches subject), 6 RENAME:
+  - `tests/test_phase1_durability.py` → `tests/test_proposal_durability.py`
+  - `tests/test_phase1_overlay.py` → `tests/test_overlay_merge.py`
+  - `tests/test_phase1_readonly_gpu.py` → `tests/test_readonly_reporting.py`
+  - `tests/test_phase1_writeback.py` → `tests/test_outcome_writeback.py`
+  - `tests/test_coverage_phase3.py` → `tests/test_coverage.py`
+  - `tests/test_interactive_keys.py` → `tests/test_run_keys.py`
+- 4 support modules unified under `support_*`:
+  - `tests/occupancy_gate_common.py` → `tests/support_occupancy_gate.py`
+  - `tests/phase1_harness.py` → `tests/support_convergence.py`
+  - `tests/run_status_fixture.py` → `tests/support_run_status.py`
+- `conftest.py` marker scheme well-documented; gaps: hardcoded `PREFLIGHT_FILES`
+  tuple drift risk, no test currently carries `serial` (prospective only).
+
+### 9.2 Consolidation opportunities (tests)
+
+- Split `test_interactive_keys.py` into `test_run_keys.py` + fold CLI option
+  surface into `test_cli_smoke.py`.
+- Merge `test_auto_prompt.py` + `test_auto_reference_floor.py` → `test_auto_mode.py`.
+- Optionally merge `test_run_status_live.py` + `test_run_status_report.py` over
+  `support_run_status.py`.
+- Telemetry/run-integrity cluster (`test_verify_run.py`, `test_measurement_integrity.py`,
+  `test_tensile_params.py`) acceptable as-is.
+
+### 9.3 Appendix: 10 best-named / 10 worst-named test files
+
+Best: `test_paths.py`, `test_protocol.py`, `test_shape_order.py`, `test_toolchain.py`,
+`test_toolchain_layout.py`, `test_thermal_gate.py`, `test_visual_check.py`,
+`test_derive.py`, `test_docs_index.py`, `test_profile.py`.
+
+Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
+`test_phase1_readonly_gpu.py`, `test_phase1_writeback.py`,
+`test_coverage_phase3.py`, `test_interactive_keys.py`,
+`test_measurement_integrity.py`, `test_agents.py`, `test_db_mutator.py`,
+`test_ab_audit.py`.
+
+---
+
+## 10. Consolidated rename table (old → new → reason → risk)
+
+### 10.1 `oto/` modules (40 renames, §1 of python_layout.md)
+
+| old | new | reason | risk |
+|---|---|---|---|
+| `oto/_version.py` | `oto/version.py` | cross-package imports violate private-marker intent | low |
+| `oto/_map.py` | `oto/inventory.py` | CLI entry (`python3 -m oto._map`) hidden behind underscore | low |
+| `oto/runners/cli.py` | `oto/runners/stage_cli.py` | collides with `oto/cli/` | medium (docs/cli.md) |
+| `oto/runners/flags.py` | `oto/runners/stage_flags.py` | collides with `oto/cli/flags.py` | medium |
+| `oto/runners/reference.py` | `oto/runners/reference_floor.py` | "reference" alone doesn't say which reference | low |
+| `oto/runners/analytics_loaders.py` | `oto/runners/corpus_loaders.py` | promises analytics; delivers driver ingestion | low |
+| `oto/runners/synthesis.py` | `oto/runners/library_build.py` | collides with `oto/tensile/synthesis/` | medium |
+| `oto/metrics/policy.py` | `oto/metrics/cell_policy.py` | catch-all name | low |
+| `oto/metrics/report_build.py` | `oto/metrics/build_status.py` | acceptance-report-family collision | low |
+| `oto/metrics/report_figures.py` | `oto/metrics/report_coverage.py` | "figures" promises plotting; owns a coverage section | low |
+| `oto/metrics/_status_common.py` | `oto/metrics/status_common.py` | inconsistent with public sibling `render_status.py` | low |
+| `oto/tensile/library.py` | `oto/tensile/shipped_manifest.py` | inverted pair with `shipped_library.py` | medium |
+| `oto/tensile/gates/ldspad_gate.py` | `oto/tensile/gates/ldspad.py` | redundant `_gate` suffix | low |
+| `oto/tensile/gates/occupancy_common.py` | `oto/tensile/gates/gate_common.py` | named for one of two consumers | low |
+| `oto/tensile/synthesis/db.py` | `oto/tensile/synthesis/donor_mutator.py` | "db" is insider shorthand | low |
+| `oto/tensile/synthesis/db_knobs.py` | `oto/tensile/synthesis/donor_knobs.py` | same | low |
+| `oto/tensile/synthesis/db_patterns.py` | `oto/tensile/synthesis/donor_patterns.py` | same | low |
+| `oto/harness/_rows_core.py` | `oto/harness/rows_ladders.py` | underscore-private yet effectively public | medium (import-order fragility) |
+| `oto/harness/_rows_frontier.py` | `oto/harness/rows_frontier.py` | same | medium |
+| `oto/harness/_rows_smallcells.py` | `oto/harness/rows_smallcells.py` | same | medium |
+| `oto/harness/deck_check.py` | `oto/harness/deck_probe.py` | subject is the build probe, not "checking" | low |
+| `oto/harness/tensile_oracle.py` | `oto/harness/tensile_probe.py` | "oracle" is repo jargon; siblings are "probe" | low |
+| `oto/harness/occupancy_audit.py` | `oto/harness/occupancy_bounds.py` | "audit" promises a judgment; computes physical bounds | low |
+| `oto/agents/harness_tools.py` | `oto/agents/agent_tools.py` | echoes `oto/harness/` package | low |
+| `oto/agents/meta.py` | `oto/agents/orchestrator.py` | "meta" is a non-name | low |
+| `oto/checks/candidates.py` | `oto/checks/deck_legality.py` | bare "candidates" indistinguishable from generation | low |
+| `oto/checks/db.py` | `oto/checks/registry_audit.py` | "db" says nothing | low |
+| `oto/tools/allruns.py` | `oto/tools/all_runs.py` | squashed pre-refactor script name | low |
+| `oto/tools/potential_configs_gen.py` | `oto/tools/potential_configs.py` | trailing `_gen` is the version-suffix smell | low |
+| `oto/tools/verify_run.py` | `oto/tools/corpus_audit.py` | namespace clash with `tools/verifiers/`; it audits the corpus | low |
+| `oto/tools/verifiers/verify_ast_equivalence.py` | `oto/tools/verifiers/verify_symbols.py` | subject is public symbols + signatures | medium (verifier tables) |
+| `oto/tools/verifiers/verify_method_equivalence.py` | `oto/tools/verifiers/verify_methods.py` | subject is method bodies | medium |
+| `oto/tools/verifiers/verify_gate_differential.py` | `oto/tools/verifiers/verify_gates.py` | subject is gate verdicts | medium |
+| `oto/tools/verifiers/verify_config_writer.py` | `oto/tools/verifiers/verify_config_render.py` | subject is the rendered output | medium |
+| `oto/tools/verifiers/verify_report_html.py` | `oto/tools/verifiers/verify_report_render.py` | subject is rendered HTML bytes | medium |
+| `oto/tools/verifiers/_evergreen.py` | `oto/tools/verifiers/ref_worktree.py` | drop the underscore + the "evergreen" jargon | low |
+| `oto/tools/verifiers/_verdicts_worker.py` | `oto/tools/verifiers/verdict_corpus.py` | "worker" with no subject | low |
+
+### 10.2 `tests/` renames (9 renames)
+
+- `tests/phase1_harness.py` → `tests/support_convergence.py`
+- `tests/test_phase1_durability.py` → `tests/test_proposal_durability.py`
+- `tests/test_phase1_overlay.py` → `tests/test_overlay_merge.py`
+- `tests/test_phase1_readonly_gpu.py` → `tests/test_readonly_reporting.py`
+- `tests/test_phase1_writeback.py` → `tests/test_outcome_writeback.py`
+- `tests/test_coverage_phase3.py` → `tests/test_coverage.py`
+- `tests/occupancy_gate_common.py` → `tests/support_occupancy_gate.py`
+- `tests/run_status_fixture.py` → `tests/support_run_status.py`
+- `tests/test_interactive_keys.py` → `tests/test_run_keys.py`
+
+### 10.3 Docs/root renames and moves
+
+- `context.md` → `rocm_coupling_context.md` (generic name)
+- `mapping.md` → `shipped_footprint.md` (optional)
+- `incomplete_work.md` → `open_work.md` (or merge into `implementation_plan.md`)
+- `potential_configs.md` → split into `candidate_deck.md` + `candidate_research.md`
+- `changelog.md` → split into `changelog.md` (current year) + `archive/changelog_pre_2026-11.md`
+- `plans/CLI_UX_REWORK.md`, `plans/REFACTOR_2_UNIVERSAL_GPU.md`, `plans/test_optimization.md` → `archive/plans/`
+- `docs/design_language.md` → `docs/ui/design_language.md` or drop from index
+- `oto/oto_script` → delete (move to `bin/oto` if needed)
+- `gfx90c_vs_spoof.png` → delete or move to `gfx90c_results/`
+- `prior_INSIGHTS_CAVEMAN_ULTRA.md` + `prior_RESEARCH_ARCHIVE.md` → `archive/prior_campaign_20260913.md`
+- `tensile_tuning_context.md` + `complex_gemm_research_brief.md` → merge into `kernel_tuning_research.md`
+- `archive/corpus*.md` + `archive/RESEARCH_PROMPT3.pass3_20261014.md` + `archive/potential_configs.pre_rewrite_20261014.md` → `archive/research_corpus_20261014.md`
+
+---
+
+## 11. Open questions for the owner (carried from the python_layout audit + this pass)
+
+1. Does the `ab_*` prefix survive ("A/B" is the domain abbreviation, repo-wide) or does it
+   become `acceptance_*`?
+2. Are the `consolidate_*` files a family worth keeping, or should they become `deck_*` /
+   `install_*`?
+3. Does the `phase1_*` rename happen now, or wait until the Option H tests are touched next?
+4. Should `_version.py` keep its underscore because PEP 562 / setuptools convention, or move
+   to `version.py`? (Recommendation: move; cross-package imports override the convention.)
+5. Does the migration-table (`port_tensile.py` → `oto ...`) survive `claude.md` §8.1, or
+   does §8.1 get amended to exempt migration tables?
+6. Is `oto/oto_script` deleted, or relocated to `bin/oto`? (Recommendation: delete; `bin/oto`
+   already exists and is the documented entry.)
+7. Should the `verify_*` files be re-expressed as "REF vs tree property tests" once the
+   split-era base is no longer reachable, or kept indefinitely?
+8. Does the `_rows_*` collapse happen in this rename PR, or as a separate refactor (§2.3)?
+9. Should `potential_configs.md` be split (3440 lines, deck + research) or kept as the
+   canonical single file?
+10. Should `changelog.md` be split (4280 lines) into current-year + archive?
+11. Does the docs ecosystem scrub of `/tmp` / `todo.txt` / `command.txt` / run-id references
+    happen in this PR or a separate docs-only PR?
+12. Does `docs/design_language.md` move to `docs/ui/design_language.md` or stay at the top level?
+
+---
+
+## 12. Migration order (seven phases, each independently shippable)
+
+1. **Phase A — leaf-module renames** (§1.4–§1.13): 40 renames in `oto/`, no public API
+   changes, no behaviour change. `oto/README.md` regenerated; `test_py_compile`/`ruff`/
+   `pyflakes` are the guard. ~8-12 commits, one per package. **Safest first step.**
+2. **Phase B — the runner CLI pair**: `runners/cli.py` → `stage_cli.py`,
+   `runners/flags.py` → `stage_flags.py`. Touches `docs/cli.md`,
+   `docs/agent_reference.md`, `oto/cli/commands.py`, `oto/cli/parser.py` help strings.
+   One commit. Run `oto help --write` and `tests/test_docs_cli.py` to verify the doc
+   stays byte-identical.
+3. **Phase C — test family renames**: the 5 `phase1_*` files + `test_coverage_phase3.py`
+   → the `support_*`/`test_*` names; 3 support-module unifications. Touches `tests/*`
+   imports only. One commit. Full suite green.
+4. **Phase D — the `_rows_*` collapse (optional)**: collapse into `candidate_rows.py` or a
+   `rows/` subpackage with explicit ordered init. This is a *design* change, not a rename;
+   do it only if the maintainers want to retire the "import order matters" invariant. One
+   commit, with a property test that the order is established by construction.
+5. **Phase E — docstring/comment sweep**: milestone vocabulary → subject vocabulary in live
+   docstrings; `oto/device/__init__.py` drops "Refactor 2"; `oto/cli/docs.py` migration
+   table decided (open question 5); `oto/__init__.py` "historical flat names" note either
+   justified or removed.
+6. **Phase F — stray cleanup**: delete `oto/oto_script` (or move to `bin/`); add a docstring
+   to `oto/tools/verifiers/__init__.py`; fix the 3 `chart.py` + `parser.py:350` + `decks.py:381`
+   device-name violations; document `manifest.py:297`/`legality.py:516`'s `gfx900` baked-in
+   default.
+7. **Phase G — docs ecosystem consolidation**: apply the merge/rename/split/archive plan
+   in §7; scrub ephemeral references per §7.3; regenerate `docs/docs_index.json`.
+
+After Phase A the package is already legible. Phases B–G are incremental and each
+independently shippable.
+
+---
+
+## Summary of counts
+
+- Files inventoried: 297 tracked files (165 `oto/`, 80 `tests/`, 41 root/docs/plans/archive).
+- Proposed renames: 40 in `oto/` (§1 roll-up) + 9 in `tests/` (6 file renames + 3 support-module
+  unifications, §3).
+- Hard violations of the repo's device-fact contract: 3 sites (`oto/tools/chart.py` ×2-3,
+  `oto/cli/parser.py:350`, `oto/tensile/decks.py:381` comment).
+- Dead vocabulary in live names: the 5 `tests/phase1_*` files + `test_coverage_phase3.py`;
+  "Stage 1..7"/"Phase-0" in `oto/` docstrings (§6.2).
+- Empty package root: `oto/tools/verifiers/__init__.py` (0 bytes).
+- Non-`.py` stray inside package: `oto/oto_script`.
+- Zero hits: `wave_tile`, `candidate_prune` in `oto/`/`tests/` (clean).
+- `ab_*` prefix: keep; `report_*/` families: split after the renames.
+- No functional change is proposed anywhere. Public API (`oto/__init__.py` re-exports)
+  is untouched by Phases A–C.
+- Nothing has been applied. This file is the proposal; implementation is a later task.
+
+---
+
+## Appendix: the 20 worst names (common-sense judgment, summarised)
+
+1. `tests/phase1_harness.py` (reads as "the first benchmark phase"; it is Option H Phase 1's mutator/write-back fixtures) — `tests/phase1_harness.py:2`.
+2. `tests/test_coverage_phase3.py:1` — reads as pipeline phase 3; tests `oto/metrics/coverage.py`.
+3. `oto/runners/cli.py` — the *second* "cli"; its docstring (`:2`) still calls itself "the `python3 -m oto` command line" though that is `oto/cli/dispatch.py` today.
+4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets are unrelated.
+5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
+6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`, `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
+7. `oto/harness/_rows_core.py` / `_rows_frontier.py` / `_rows_smallcells.py` — split tables whose meaning depends on import order (`_rows_frontier.py:5-6`) and a word ("core") that says nothing.
+8. `oto/metrics/_status_common.py` — private-marked module imported as the public status helper (`run_status.py:24` re-exports it).
+9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a REF-worktree probe runner (`_evergreen.py:1-6`).
+10. `oto/tools/verifiers/_verdicts_worker.py` — "worker" with no subject; it emits the verdict corpus.
+11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` — two files indistinguishable without opening both; name the halves (`verify_symbols.py`, `verify_methods.py`).
+12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
+13. `oto/harness/tensile_oracle.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
+14. `oto/harness/occupancy_audit.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
+15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
+16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
+17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
+18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
+19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
+20. `oto/tensile/synthesis/db.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
+
+Honourable mentions (kept, with notes): `oto/yamlio.py`, `oto/runners/auto.py`,
+`oto/metrics/read_thermals.py`, `oto/metrics/analytics.py` ("Stage 5"), `oto/tools/consolidate_*`
+(vague "consolidate" family prefix, §1.12), `oto/metrics/render_status.py` vs
+`oto/metrics/run_status.py` (fine), `oto/runners/reporting.py`, `oto/checks/candidates.py`,
+`oto/checks/db.py`, `oto/tensile/library_parity.py` (fine), `oto/tools/verify_run.py` (namespace
+clash with `tools/verifiers/`).
