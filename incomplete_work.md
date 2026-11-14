@@ -54,9 +54,6 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 - **`idx_cell_key` never created by the schema.** `oto/ledger/registry_core.py`
   `_INDEX_DDL` has no `idx_cell_key`; only the live registry carries one.
   A fresh DB misses it; add the index explicitly.
-- **C2.5–C2.9 (mechanical `DeviceProfile` threading, explicit parameters)
-  deferred by design.** Mechanism is equivalent via `set_profile`/`bound_profile`;
-  high churn across call sites. Revisit when a third device lands.
 
 - **2 × `oto doctor` warnings** (advisory; user's earlier call stands —
   do not silence them):
@@ -79,7 +76,17 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 
 - **C2.5–C2.9 — all consumer reads migrated** to `loader.current_profile()`
   (2026-11-14, commits `06c21fd`, `dffec27`, `bea5672`); the
-  `oto.device.peaks` constant set is gone.
+  `oto.device.peaks` constant set is gone. The explicit-parameter threading the
+  2026-11-14 round deferred was completed the same day: every profile-consuming
+  function in the package now takes `profile=None` resolved through the
+  `oto.device.loader.resolve_profile` choke point, internal call sites thread
+  the caller's profile explicitly (qualified resolution + AST-verified, never
+  bare-name matching), and the import-time frozen captures are gone (all lazy
+  derivation). Verified by the second-profile tests, the new
+  `test_explicit_profile_threading.py` (end-to-end through `validate_config`),
+  and the verifier, whose ast-equivalence check now recognises the Refactor 2
+  signature shape evergreen. Commits `e5ebdc4` (choke point + gates),
+  `ae99b75` (sweep), `a7500ea` (verifier), `0807157` (threading test).
 - **Verifier evergreen** — `--base REF` on all five checks; nothing pinned to
   `2824c2f` anymore; `archive/` entries from before the overhaul are
   superseded. Loads gate `int(None)` crash found (and fixed) upstream.

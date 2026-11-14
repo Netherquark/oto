@@ -4001,3 +4001,30 @@ the pre-built seed pool.
   Full suite green: 1044 passed / 8 skipped / 242 subtests; ruff + py_compile + pyflakes
   + function/file-length + interactive-keys gates clean; no new failures vs the pre-existing
   `verify_all` baseline.
+
+- **2026-11-14 — explicit DeviceProfile threading, end to end (the C2.5–C2.9 close, for real).**
+  Every profile-consuming function in the package now takes an explicit
+  `profile=None` kwarg resolved through the new `oto.device.loader.resolve_profile`
+  choke point (explicit always wins; `None` = ambient `current_profile()`).
+  Internal call sites thread the caller's profile instead of silently
+  re-resolving ambient; import-time frozen captures (`FAMILY_TO_DTYPE`,
+  `_DEFAULT_CELLS`, `SHIPPED_CELLS`) are now lazy derivations or `__getattr__`
+  shims. Implementation was AST-verified at every step: Stage 1 added the kwargs
+  (144 functions), Stage 2b threaded call sites with *qualified* resolution
+  (from-imports, package re-exports, `self.` methods — never bare attribute-name
+  matching, which had corrupted `dict.get`-style calls), and an AST fixer
+  collapsed duplicated positional+keyword `profile` passes. Stage-2's failure
+  modes were caught by the parse gate and the suite (`dict.get` TypeError), and
+  rolled back cleanly before being re-done qualified. Gates now route through
+  `resolve_profile` uniformly; `_store_knobs_feasible`'s docstring-swallowing
+  bug (profile resolved *before* the docstring) fixed en route. New
+  `tests/test_explicit_profile_threading.py` proves the explicit path: gfx90c
+  refuses complex GSU>1 (no MFMA), an MFMA-capable synthetic passes it, and
+  `validate_config` threads the explicit profile into every gate it calls.
+  The verifier's ast-equivalence check now recognises the Refactor 2 signature
+  shape evergreen (a signature delta of exactly one trailing defaulted
+  `profile=None` is the expected shape, base-agnostic; anything else still
+  fails loudly) — `oto verify all` at HEAD: ALL EQUIVALENCE CHECKS PASSED.
+  Suite green at every commit step: 1061 passed, 8 skipped, 242 subtests.
+  Commits `e5ebdc4` (choke point + gate retrofit), `ae99b75` (the sweep, 81
+  files), `0807157` (threading test), `a7500ea` (verifier).
