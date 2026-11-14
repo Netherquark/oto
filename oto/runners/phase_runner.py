@@ -409,7 +409,12 @@ class PhaseMixin:
             from_overlay and self.agent is not None
             and not self.agent.skip_mutation_arm())
         if phase.get("bypass_identical_skip"):
-            bypass_identical_skip = True
+            # The flag means "measure me regardless of prior fps", which is only
+            # sound while the ledger backs the bypass (novelty is provable).
+            # With no/dead ledger the mutation arm is not running, so the phase
+            # honours the identical-fp skip like any other candidate.
+            bypass_identical_skip = (
+                self.agent is not None and not self.agent.skip_mutation_arm())
         if (phase.get("overlay_run_id") == "seed"
                 and self.run_dir is not None
                 and self.registry.has_run_benchmarked(
