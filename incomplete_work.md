@@ -28,10 +28,6 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   the AF1 baseline rows — adoption makes AF4/4 the reference deck, but no
   perf bars are claimed anywhere; the winner is measured in the overnight run,
   not asserted here.
-- **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
-  Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
-  six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;
-  `docs/gfx90c_theoretical_limits.md` §6.1 records the outcome.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; the gfx902 starter pair (research output) is the missing piece;
   it depends on C4 above.
@@ -69,14 +65,24 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   New library is the working one; the old one is stale against nightly.
 - **Owner decision — 9.9 GB nightly tarball deletion** (the extracted SDK is in use under `dist-7.15.0a20260728/`); blocked on the owner's word.
 - **HIP_PATH canonical choice** — the ROCm nightly venv vs the extracted `dist-7.15.0a20260728/` SDK; no code blocker, owner confirms.
-- **gfx90c tuning guide → caveman-full rewrite** — the guide is professional prose today; the owner wants caveman-full for it.
-- **AGENTIC agentic-consult implementation** — the agentic `docs/potential_configs.md` synthesis design was never implemented; the scratch design doc was removed 2026-11-14; implement only if the owner wants it (re-derivable from `docs/operator_runbook.md` + `docs/operator_campaign.md`).
 
 - **Any GPU leg other than yolo26 (and explicit CC-256 D5 legality probes)** —
   forbidden without the owner's explicit whitelist. Keep GPU use to yolo26 + the
   D5 probe only; never overload the GPU.
 
 ## Recently closed (pointers, not restated here)
+
+- **AGENTIC consult implemented** — `oto agent consult [starter] [--with-docs]`
+  (`8b73424`); CPU-only census consult emits `<codename>_potential_configs.md`;
+  the gfx90c potential_configs is not auto-generated (stays a human artifact).
+  All one-shot plans in git history now audited; changelog 43rd entry.
+- **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
+  Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
+  six D2/D3 trial rows were retired; the ZZ deck keeps the at-budget ladder;
+  `docs/gfx90c_theoretical_limits.md` §6.1 records the outcome.
+- **gfx90c tuning guide → caveman-full rewrite — DONE 2026-11-14.**
+  `docs/gfx90c_tuning_guide.md` rewritten in strict caveman-full style; all
+  technical content intact; ~28% smaller.
 
 - **C2.5–C2.9 — all consumer reads migrated** to `loader.current_profile()`
   (2026-11-14, commits `06c21fd`, `dffec27`, `bea5672`); the
