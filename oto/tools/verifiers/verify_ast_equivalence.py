@@ -241,6 +241,23 @@ def strip(node):
     return clean(ast.parse(ast.unparse(node)))
 
 
+def _threading_shaped(old_sig: str, new_sig: str) -> bool:
+    """True when ``new_sig`` is ``old_sig`` plus a trailing ``profile=None``.
+
+    Signatures here are the arguments tuple unparsed *without* surrounding
+    parens (see :func:`sig`). Refactor 2 (C2.5-C2.9) makes the device profile
+    an explicit argument on every profile-consuming API, appended as a
+    defaulted kwarg -- callers unaware of it bind the ambient profile exactly
+    as before. That delta is the expected shape of the sweep, not drift.
+    """
+    if new_sig == old_sig:
+        return True
+    for tail in (", profile=None", ",profile=None"):
+        if new_sig.endswith(tail) and new_sig[: -len(tail)].rstrip() == old_sig:
+            return True
+    return old_sig == "" and new_sig == "profile=None"
+
+
 def sig(node) -> str:
     return (ast.unparse(node.args)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else "")
@@ -468,6 +485,8 @@ def _postsplit_check(ref: str) -> int:
                 all_missing.append(f"{rel}::{name}")
                 continue
             if new_syms[name][1] != args:
+                if _threading_shaped(args, new_syms[name][1]):
+                    continue  # explicit profile= kwarg appended: the Refactor 2 shape
                 sig_changes.append(f"{rel}::{name} signature changed")
 
     print(f"public symbols at risk of loss or signature change, vs {ref}:")
