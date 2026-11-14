@@ -67,6 +67,11 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   solver. The old library (`best_effort_library`, ROCm 6.4.4 / Tensile 4.44)
   reproducibly wedges this nightly: `HW Exception by GPU node-1 ... GPU Hang`.
   New library is the working one; the old one is stale against nightly.
+- **Owner decision — 9.9 GB nightly tarball deletion** (the extracted SDK is in use under `dist-7.15.0a20260728/`); blocked on the owner's word.
+- **HIP_PATH canonical choice** — the ROCm nightly venv vs the extracted `dist-7.15.0a20260728/` SDK; no code blocker, owner confirms.
+- **gfx90c tuning guide → caveman-full rewrite** — the guide is professional prose today; the owner wants caveman-full for it.
+- **AGENTIC agentic-consult implementation** — the agentic `docs/potential_configs.md` synthesis design was never implemented; the scratch design doc was removed 2026-11-14; implement only if the owner wants it (re-derivable from `docs/operator_runbook.md` + `docs/operator_campaign.md`).
+
 - **Any GPU leg other than yolo26 (and explicit CC-256 D5 legality probes)** —
   forbidden without the owner's explicit whitelist. Keep GPU use to yolo26 + the
   D5 probe only; never overload the GPU.

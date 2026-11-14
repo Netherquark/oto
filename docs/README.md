@@ -93,13 +93,7 @@ Corollaries:
 | `archive/prior_research_archive.md` | dev | Ecosystem (frozen) | Prior-campaign supporting material |
 | `docs/search_philosophy.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
 | `docs/audit_register.md` | dev | Ecosystem | Audit register |
-| `plans/REFACTOR_*.md` | dev | Ecosystem | The refactor plans this package was built against |
-| `plans/test_optimization.md` | dev | Ecosystem | Test-suite optimisation plan |
-| `plans/CLI_UX_REWORK.md` | dev | Ecosystem | CLI UX rework plan — one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev |
-| `plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md` | dev | Ecosystem | Automated agentic consult: API key → `docs/potential_configs.md` with fewest GPU legs |
-| `plans/RENAME_AND_DOC_CLEANUP_PLAN.md` | dev | Ecosystem | Detailed rename + doc cleanup plan: 40 module renames, 9 test renames, 5.1 device-fact violations, 3 support-module unifications, 4-phase migration order (read-only proposal) |
-| `plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md` | dev | Ecosystem | Proposal: intuitive rename + docs slimming pass — 34 module renames, 13 test renames, root/docs/plans ephemera deletion, AI-slop sweep |
-| `plans/MASTER_PLAN.md` | dev | Ecosystem | Master plan: full session ledger, open work register, two development models, convergence pipeline, guardrails, verification commands, file map |
+| `plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md` | dev | Ecosystem | Intuitive rename + docs slimming execution plan (in flight 2026-11-14) |
 | `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
 | `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
@@ -167,7 +161,7 @@ first; after the best-effort library exists, `docs/operator_campaign.md` is the
 living procedure for the tuning campaign). Then: `claude.md` **§2.0 only** (the shared invariants) →
 [`docs/starter_pair.md`](starter_pair.md) (the pair protocol) →
 [`docs/agent_reference.md`](agent_reference.md) (CPU-only harness commands) →
-[`plans/REFACTOR_2_UNIVERSAL_GPU.md`](../plans/REFACTOR_2_UNIVERSAL_GPU.md) (implementation context and backlog) → the module
+`changelog.md` (the Refactor-2 device-independence record) → the module
 docstring of anything you edit. Do **not** adopt the campaign-specific
 framing in `claude.md` (gfx90c convergence, the shipped-floor acceptance
 framework): on a new platform there may be no floor library to beat, and

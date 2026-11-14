@@ -164,44 +164,8 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "The refactor plans this package was built against",
-      "path": "plans/REFACTOR_2_UNIVERSAL_GPU.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Test-suite optimisation plan",
-      "path": "plans/test_optimization.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "CLI UX rework plan \u2014 one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev",
-      "path": "plans/CLI_UX_REWORK.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Automated agentic consult: API key \u2192 `docs/potential_configs.md` with fewest GPU legs",
-      "path": "plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Detailed rename + doc cleanup plan: 40 module renames, 9 test renames, 5.1 device-fact violations, 3 support-module unifications, 4-phase migration order (read-only proposal)",
-      "path": "plans/RENAME_AND_DOC_CLEANUP_PLAN.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Proposal: intuitive rename + docs slimming pass \u2014 34 module renames, 13 test renames, root/docs/plans ephemera deletion, AI-slop sweep",
+      "owns": "Intuitive rename + docs slimming execution plan (in flight 2026-11-14)",
       "path": "plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Master plan: full session ledger, open work register, two development models, convergence pipeline, guardrails, verification commands, file map",
-      "path": "plans/MASTER_PLAN.md"
     },
     {
       "class": "dev",
@@ -307,6 +271,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 42,
+  "total": 36,
   "version": 1
 }
