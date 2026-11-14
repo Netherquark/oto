@@ -3,10 +3,10 @@
 
 These paths existed but nothing landed atomically: the proposal and its phase
 were two commits, WinnerFreq was parsed by a private reader, and the negative
-cache was process-local. See ``tests/phase1_harness.py`` for the fixtures.
+cache was process-local. See ``tests/support_convergence.py`` for the fixtures.
 """
 import pytest
-from phase1_harness import HEADER, Harness
+from support_convergence import HEADER, Harness
 
 from oto.ledger.mutator import Mutator
 

@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 import yaml
-from occupancy_gate_common import BASE
+from support_occupancy_gate import BASE
 
 from oto.device import loader as _loader
 from oto.tensile.gates.occupancy import occupancy_feasible

@@ -18,7 +18,7 @@ from datetime import datetime
 import pytest
 
 # (import side effect: the fixture module puts the repo root on sys.path)
-from run_status_fixture import StatusFixture, _record
+from support_run_status import StatusFixture, _record
 
 import oto.metrics.run_status as rs
 

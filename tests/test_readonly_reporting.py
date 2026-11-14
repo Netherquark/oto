@@ -3,13 +3,13 @@
 
 Read-only surfaces must never mutate the registry, and a lost GPU during a run
 must abort the outcome write-back cleanly instead of persisting garbage.
-See ``tests/phase1_harness.py`` for the fixtures.
+See ``tests/support_convergence.py`` for the fixtures.
 """
 import shutil
 from pathlib import Path
 
 import pytest
-from phase1_harness import Harness, _StubScheduler
+from support_convergence import Harness, _StubScheduler
 
 from oto.ledger.registry import SQLiteRegistry
 from oto.runners.driver import TensileDriver

@@ -3,10 +3,10 @@
 
 The overlay was written and never merged, and ``run_id`` was dropped on
 emission; these drive the driver's merge path and the proposal emission
-contract. See ``tests/phase1_harness.py`` for the shared fixtures.
+contract. See ``tests/support_convergence.py`` for the shared fixtures.
 """
 import yaml
-from phase1_harness import Harness, _StubScheduler
+from support_convergence import Harness, _StubScheduler
 
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import results_rel

@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from unittest import mock
 
-from run_status_fixture import StatusFixture, _record
+from support_run_status import StatusFixture, _record
 
 import oto.metrics.run_status as rs
 

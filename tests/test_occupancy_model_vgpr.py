@@ -6,11 +6,11 @@ ThreadTile1 * dtype_weight (capped by the 256-VGPR ISA limit), the vector
 width is capped by dtype size and thread-tile shape, and VHI/load geometry is
 validated against the same measured tables Tensile reported on gfx90c.
 See ``tests/test_occupancy_model_lds.py`` for the LDS/workgroup rules, and
-``tests/occupancy_gate_common.py`` for the shared ground truth.
+``tests/support_occupancy_gate.py`` for the shared ground truth.
 """
 import unittest
 
-from occupancy_gate_common import OBSERVED, cfg
+from support_occupancy_gate import OBSERVED, cfg
 
 from oto.device import loader as _loader
 from oto.tensile.gates.loads import validate_tensile_loads

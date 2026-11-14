@@ -6,11 +6,11 @@ LocalSplitU with room for operands; the LSU > 1 reduction buffer is LDS bytes
 per bank; LDS reduction (LSU > 1) = LSU * MT0 * MT1 * numBytes() capped at the
 65536-per-CU ceiling; real dtypes unaffected and unknown dtypes failing closed.
 See ``tests/test_occupancy_model_vgpr.py`` for the per-thread rules, and
-``tests/occupancy_gate_common.py`` for the shared synthetic config builder.
+``tests/support_occupancy_gate.py`` for the shared synthetic config builder.
 """
 import unittest
 
-from occupancy_gate_common import cfg
+from support_occupancy_gate import cfg
 
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import (

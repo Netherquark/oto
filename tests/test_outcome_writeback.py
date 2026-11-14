@@ -4,9 +4,9 @@ run loop's resolver call.
 
 The driver computed winner-freq skips but never consulted them, the outcome
 write-back never reached the registry, and the loop never called the resolver
-at all. See ``tests/phase1_harness.py`` for the fixtures.
+at all. See ``tests/support_convergence.py`` for the fixtures.
 """
-from phase1_harness import HEADER, Harness, _StubScheduler
+from support_convergence import HEADER, Harness, _StubScheduler
 
 from oto.runners.driver import TensileDriver
 
