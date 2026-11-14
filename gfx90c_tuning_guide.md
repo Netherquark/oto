@@ -550,7 +550,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
 
 1. Real benchmarks run in the USER's TTY — never from a GUI session
    (GNOME constraint; CPU-only PoCs are safe).
-2. Generator deck: `phases.yaml` ships **284 rows**; the seed overlay adds
+2. Generator deck: `phases.yaml` ships **279 rows**; the seed overlay adds
    **1101** (of which **401 are unmeasured** — the R47 axes that were never
    varied, the R48 geometries for the three ORANGE cells, and the R49 ranked
    unexplored space of those cells: ~9 h of new work at the measured 83 s per
@@ -581,7 +581,7 @@ attribution. Keep them; rename legacy S/Z tokens to ss/zz at hygiene time.
    before any verdict quote.
 6. New numbers must be kernel-typecode-attributable (ground-truth §3) and
    clock-flagged (M4).
-7. **Sizing (10+ h, packed):** the deck (`phases.yaml`, 284 rows) plus the
+7. **Sizing (10+ h, packed):** the deck (`phases.yaml`, 279 rows) plus the
    seed overlay (`gfx90c_results/overlays/phases.seed.overlay.yaml`, 1101 rows
    of which **401 are unmeasured**) = **401 new phases ≈ 9 h** at the measured
    83 s per phase, and the DB mutator adds ~10 per iteration on top. The
@@ -677,3 +677,55 @@ within-run only, ≥3 seeds, median, ±2 % tie band.
 active, which is the next iteration's input. Never re-propose a config already
 in the ledger (novelty is enforced), and never re-propose the retired tiles in
 §8.
+
+## 12. The 2026-11-14 session — nightly toolchain, LDS Z=16, the CC 4-assert probes
+
+### 12.1 Toolchain (read first — nothing else reproduces without it)
+
+Nightly (ROCm 7.15.0a20260728, TheRock SDK under the user's venv). `.env` carries
+a required `ROCM_PATH` (no `/usr` fallback; tarball/RPM/python-sdk layouts all
+supported). `hipcc` → `amdclang++` preferred. `Architecture: <codename>` is
+pinned into `GlobalParameters` (no clang failures on non-target archs). The
+launch path passes `--prebuilt-client` (Tensile v4.50 dropped
+`--client-build-path`). The 6.4.4-built best-effort library **wedges yolo26 on
+this stack** (rebuilt byte-identical to the Oct-29 artifact, `b6ccd4…`); the
+rocm-libraries best-effort build works (`frames=1 … person 0.87`, CPU NMS,
+MIOpen GEMM solver, CUDA path True). Do not chase the old library's crashes.
+
+### 12.2 LDS `Z` byte width — option A (2026-11-14)
+
+`BYTES_PER_ELEMENT["Z"] = 16` (Tensile `numBytes()`); `LDS_BUDGET` **stays 16384**.
+Consequences, accepted: six above-budget ZZ rows retired (`64x64x16`, `128x32x8`,
+`32x128x8` at 512/1024), the `DECISION_TRIAL_TILES` D2/D3 entries dropped, and
+the ZZ deck narrowed to at-budget rungs. Gate is intentionally more conservative
+than Tensile's `MaxLDS=65536` (contract: never admit Tensile's refuses). All
+eleven ZZ probes (4 above-budget + at-budget controls) **build and pass Tensile's
+reference validation on silicon**.
+
+### 12.3 `NumElementsToValidate: 128` (commit dc1b3ca)
+
+Tensile now runs its own CI-equivalent validation on every phase. Regression
+sweep clean (13/13 best-library tests), suite green at every step.
+
+### 12.4 CC:256 / CC:512 AF0EM=4/AF1EM=4 — GPU legality (not perf)
+
+Deck row D5 (`mt64x64x8 / tt4x4 / VW2 / AF0EM=4 / AF1EM=4`), in `phases.yaml`;
+`oto check candidates`: **279 checked, 0 illegal**. Tensile reference validation
+(M=`NumElementsToValidate=128`) on gfx90c: **PASSED at 256³ and 512³**. Controls:
+base AF1 row (256 + 512), paired-widen AF22 row, ZZ control pair — **all PASSED**.
+No perf claim attaches: both are legal, which one the deck adopts is an option-A
+vs option-B decision (SGEMM-style 4-assert) that belongs to the TTY comparison.
+See `changelog.md` (2026-11-14 GPU verdicts), `incomplete_work.md` (CC adoption
+item), `potential_configs.md` (option-B analysis).
+
+### 12.5 Explicit DeviceProfile threading (C2.5–C2.9) — done
+
+Every profile-consuming function takes `profile=None`; resolution goes through
+`oto.device.loader.resolve_profile` (explicit wins, ambient otherwise). Internal
+call sites thread the caller's profile explicitly (qualified resolution +
+AST-verified — never bare attribute-name matching). Import-time frozen captures
+are gone; verifier recognises the trailing-defaulted-`profile=None` shape
+evergreen. End-to-end coverage: `tests/test_explicit_profile_threading.py`
+(complex GSU>1: gfx90c refuses, MFMA-capable synthetic passes). Full suite
+1061 passed at the landed state; `oto verify all`: **ALL EQUIVALENCE CHECKS
+PASSED**.
