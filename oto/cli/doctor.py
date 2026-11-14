@@ -128,6 +128,31 @@ def _tensile_root() -> Check:
     return _ok("toolchain", "TENSILE_ROOT", f"{resolved}{version}")
 
 
+def _tensile_client_check() -> Check:
+    """The prebuilt Tensile launcher every benchmark phase shells out to."""
+    from oto.runners.benchmark import _tensile_client
+    from oto.runners.toolchain import (
+        DEFAULT_TENSILE_ROOT,
+        require_tensile_root,
+    )
+    try:
+        root = require_tensile_root(None, DEFAULT_TENSILE_ROOT)
+    except Exception as exc:
+        return _warn("toolchain", "Tensile client", f"skipped: {exc}",
+                     "Fix TENSILE_ROOT first; then re-check.")
+    try:
+        client = _tensile_client(root)
+    except ValueError as exc:
+        return _fail("toolchain", "Tensile client", str(exc),
+                     "Fix or unset OTO_TENSILE_CLIENT (see .env.example).")
+    if client is not None:
+        return _ok("toolchain", "Tensile client", str(client))
+    return _fail("toolchain", "Tensile client", "not found",
+                 f"expected {root}/build/client/tensile-client (or "
+                 f"OTO_TENSILE_CLIENT). Build the client once with Tensile's "
+                 f"next-cmake (context_raw.md §2.4), then re-check.")
+
+
 def _rocm() -> list[Check]:
     """The full resolved-toolchain dashboard: resolved paths, verified files,
     queried versions. No fallback, no system /usr, every row is this repo's
@@ -361,6 +386,7 @@ def _all_checks(base: Path) -> list[Check]:
         _safe("toolchain", "Python dependencies", _dependencies),
         _safe("toolchain", ".env", _dotenv),
         _safe("toolchain", "TENSILE_ROOT", _tensile_root),
+        _safe("toolchain", "Tensile client", _tensile_client_check),
     ]
     checks.extend(_rocm())
     checks.append(_safe("gpu", "GPU", _gpu))
