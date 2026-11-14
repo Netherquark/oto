@@ -27,7 +27,6 @@ from oto.tensile.config_writer import NOT_FORWARDED_KNOBS
 #: Family label -> the Tensile dtype char, for the generated config's
 #: ``DataType``. An alias of ``oto.device.loader.current_profile().family_dtype_char``
 #: generated rows are read alongside that name.
-FAMILY_DTYPE = _loader.current_profile().family_dtype_char
 
 # --- per-family tile ladders ------------------------------------------------
 # (MacroTile, ThreadTile) pairs are validated by the occupancy gate below; the
@@ -163,7 +162,6 @@ PATTERNS = {
 # 2026-10-23 (§R56.3-A): the list itself moved to the device contract
 # vocabulary (``family_cells`` from the profile) so the deck and the like-for-like
 # protocol classifier share one definition; the export name stays TARGET_CELLS.
-TARGET_CELLS = dict(_loader.current_profile().family_cells)
 
 # --- narrow-mutation knob map (mirrors the generator neighbour map) ---------
 NARROW_NEIGHBOURS: dict[str, dict[str, list[Any]]] = {
@@ -498,3 +496,12 @@ for fam, pattern, tile, tt, vw, du, rows in (
 # lands on the geometry that actually ties; `_offer_row` gate-verifies each
 # against validate_config and ldspad_feasible, and a refusal is reported, never
 # silently dropped.
+
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == "FAMILY_DTYPE":
+        return dict(_loader.current_profile().family_dtype_char)
+    if name == "TARGET_CELLS":
+        return dict(_loader.current_profile().family_cells)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

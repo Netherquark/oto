@@ -22,8 +22,6 @@ from oto.harness.candidate_pool import __yaml_load
 from oto.runners.paths import results_dir as _results_dir
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OVERLAY_PATH = _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
-
 
 
 def _overlay_path() -> Path:
@@ -221,3 +219,9 @@ def _summarise(rows: list[dict[str, Any]]) -> None:
         print(line)
         total[0] += sum(counts.values())
     print(f"  TOTAL  candidates={total[0]}")
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == 'OVERLAY_PATH':
+        return _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

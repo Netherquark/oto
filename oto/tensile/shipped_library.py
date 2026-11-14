@@ -32,7 +32,6 @@ from oto.device import loader as _loader
 
 #: Dat TYPE token (from the shipped filename `TensileLibrary_Type_<TYPE>_...`)
 #: maps 1:1 to our family keys for the 7 analysed families.
-SHIPPED_FAMILIES = list(_loader.current_profile().family_dtypes.keys())
 
 CONTRACTION_PATTERNS = ["Ailk_Bjlk", "Ailk_Bljk", "Alik_Bjlk", "Alik_Bljk"]
 
@@ -342,3 +341,9 @@ def emit_spoof_phases(manifest: dict[str, Any],
                     f"{arch}_reference_source": "+".join(manifest.get("rocm_prefixes", []) or []),
                 })
     return phases
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == 'SHIPPED_FAMILIES':
+        return list(_loader.current_profile().family_dtypes.keys())
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

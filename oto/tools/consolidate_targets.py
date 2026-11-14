@@ -23,7 +23,6 @@ from oto.runners.paths import runs_dir as _runs_dir
 BASE = _AB_BASE
 
 #: The locked floor, expressed in one registry db.
-LIVE_DB = _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
 
 
 def _stamp() -> str:
@@ -103,3 +102,9 @@ def source_chain(base: Path = BASE) -> list[str]:
     except Exception:
         src = []
     return src or chain
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == 'LIVE_DB':
+        return _results_dir(BASE, _loader.current_profile().codename) / "registry.db"
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

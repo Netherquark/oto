@@ -88,8 +88,6 @@ FAMILY_ALIASES = {
     "HHS": ("HH", "HHS"), "HSS": ("HH", "HSS"),
 }
 
-_FAMILY_ORDER = {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
-
 
 def _ints(value: Any) -> tuple[int, ...]:
     """The integers in a kernel_db tile field (``'[128, 128]'`` or ``'8'``)."""
@@ -452,3 +450,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == '_FAMILY_ORDER':
+        return {f: i for i, f in enumerate(_loader.current_profile().family_shapes)}
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

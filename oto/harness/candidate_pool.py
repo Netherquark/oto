@@ -40,7 +40,6 @@ from oto.tensile.shape_order import ordered_shapes
 from oto.tensile.synthesis.db_knobs import forward_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OVERLAY_PATH = _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
 
 #: Notes for rows dropped because no target shape satisfied their element-
 #: multiple assertions. Appended to by ``_offer_row``; drained by
@@ -120,7 +119,9 @@ def _load_seed_fps() -> set[str]:
     own previous appends: those are exactly what a re-run must skip deduping
     against, or wide rows colliding with the last append silently vanish)."""
     fps: set[str] = set()
-    payload = __yaml_load(OVERLAY_PATH, fallback={})
+    payload = __yaml_load(
+        _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml",
+        fallback={})
     for row in (payload.get("phases", []) or []):
         if not isinstance(row, dict) or not row.get("fp"):
             continue
@@ -491,3 +492,9 @@ def _deck_winner_for(deck: dict[str, list[dict[str, Any]]], fam: str,
 
 def _pattern_for(fam: str, mt: str) -> str:
     return PATTERNS.get(fam, ("Ailk_Bjlk",))[0]
+
+def __getattr__(name: str):
+    """Resolve device-profile-derived names per attribute access (call time)."""
+    if name == 'OVERLAY_PATH':
+        return _results_dir(REPO_ROOT, _loader.current_profile().codename) / "overlays" / "phases.seed.overlay.yaml"
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
