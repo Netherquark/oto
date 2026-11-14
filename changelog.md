@@ -107,6 +107,12 @@ and NOT the experimental data (that is `results.md`).
   `oto/device/{loader,profile,vocabulary}.py`.
   Suite: 1049 passed, RC=0 (zz_suite32).
   Nothing pushed; registry untouched, GPU unused this session.
+- **2026-11-14 (19th) — Docs final-sync of prose corpus.** Remaining prose docs
+  (`implementation_plan.md`, `potential_configs.md`, `results.md`,
+  `kernel_tuning_research.md`, `gfx90c_tuning_guide.md`) updated to current
+  CLI/test names (`oto check candidates`, `oto.tools.allruns`, current test files);
+  `ota/oto.md` regenerated through `oto agent index`. No code changes; suite RC=0
+  (1049 passed), docs registry + index green.
 - **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8
