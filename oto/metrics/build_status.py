@@ -15,10 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import oto.tensile.library as tlib
+import oto.tensile.shipped_manifest as tlib
 from oto import yamlio
 from oto.device import loader as _loader
-from oto.metrics._status_common import _jittery
 from oto.metrics.ledger_state import (
     DB_REL,
     _load_ledger,
@@ -35,6 +34,7 @@ from oto.metrics.run_plan import (
     _reference_unit_count,
     _tuning_unit_count,
 )
+from oto.metrics.status_common import _jittery
 from oto.runners.paths import runs_dir as _runs_dir
 
 

@@ -307,7 +307,10 @@ class TensileDriver(
         parity_line = "not checked"
         parity_ok = True
         try:
-            from oto.tensile.library_parity import load_pipeline_phases, parity_report
+            from oto.tensile.library_parity import (
+                load_pipeline_phases,
+                parity_report,
+            )
             manifest = load_pipeline_phases(
                 self.base_dir,
                 run_id=self.run_dir.name if self.run_dir else None)

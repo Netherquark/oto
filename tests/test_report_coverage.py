@@ -25,7 +25,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.metrics.report_figures import coverage_dir, coverage_rows, coverage_section
+from oto.metrics.report_coverage import coverage_dir, coverage_rows, coverage_section
 from oto.runners.paths import results_rel
 
 ROWS = [

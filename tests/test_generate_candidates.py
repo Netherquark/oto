@@ -420,7 +420,7 @@ class TestEveryDeckRowIsGenerative:
 class TestDeckLoader:
     def test_accepts_a_deck_list_and_a_seed_overlay(self, tmp_path):
         """The preflight must be able to check the launch set, not just the deck."""
-        from oto.checks.candidates import load_deck
+        from oto.checks.deck_legality import load_deck
         row = {"phase_id": "phase_x", "config": {}}
         deck = tmp_path / "deck.yaml"
         deck.write_text(yaml.safe_dump([row]))

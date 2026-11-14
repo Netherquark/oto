@@ -31,7 +31,11 @@ from pathlib import Path
 
 from oto import yamlio
 from oto.device.vocabulary import shipped_cells
-from oto.tensile.library_parity import load_pipeline_phases, parity_report, phases_cells
+from oto.tensile.library_parity import (
+    load_pipeline_phases,
+    parity_report,
+    phases_cells,
+)
 
 DEFAULT_BASE = Path(__file__).resolve().parents[2]
 

@@ -123,7 +123,7 @@ def default_profile():
 @pytest.fixture(scope="session")
 def shipped_manifest() -> dict[str, Any]:
     """The shipped gfx900 footprint manifest, read once per session."""
-    from oto.tensile.library import load_shipped_manifest
+    from oto.tensile.shipped_manifest import load_shipped_manifest
 
     try:
         return load_shipped_manifest(REPO)

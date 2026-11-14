@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 
 import oto.runners.auto_prompt as ap
 import oto.runners.driver as pt
-import oto.tensile.library as tl
+import oto.tensile.shipped_manifest as tl
 from oto.runners.paths import results_rel
 from oto.tensile.shipped_library import _CANON
 

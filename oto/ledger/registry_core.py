@@ -7,7 +7,7 @@ that makes a read-only registry refuse to write, the run-row write path
 status triggers.
 
 Does NOT own: the registry's read side (oto.ledger.queries), the Option-H proposal ledger
-(oto.ledger.proposals), or the cell policy (oto.metrics.policy).
+(oto.ledger.proposals), or the cell policy (oto.metrics.cell_policy).
 
 Code prohibitions the driver must not reintroduce (moved here from
 adversarial_review.md §2):

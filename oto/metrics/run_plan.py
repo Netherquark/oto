@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import oto.tensile.library as tlib
+import oto.tensile.shipped_manifest as tlib
 from oto.runners.paths import results_rel
 
 DB_REL = Path(results_rel("registry.db"))

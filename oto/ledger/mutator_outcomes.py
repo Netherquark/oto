@@ -51,7 +51,7 @@ def _per_cell_medians(analytics: AnalyticsEngine,
     never fires. The dtype lives in the phase id (or the deck entry for it), not
     in the CSV, exactly as `ab_audit.phase_records` already handles.
     """
-    from oto.metrics.policy import aggregate_cell
+    from oto.metrics.cell_policy import aggregate_cell
     out: dict[tuple, float] = {}
     try:
         cell_map = analytics.aggregate_by_cell(records,

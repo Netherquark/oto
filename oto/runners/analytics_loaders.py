@@ -20,7 +20,7 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.metrics.analytics import CellAnalytics, extract_family_from_phase_id
-from oto.metrics.policy import check_retirement_eligibility
+from oto.metrics.cell_policy import check_retirement_eligibility
 from oto.metrics.protocol import classify
 from oto.runners.paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes

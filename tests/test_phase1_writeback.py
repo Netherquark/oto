@@ -49,7 +49,7 @@ class SkipBypassTests(Harness):
         assert agent.skip_mutation_arm()
 
     def test_identical_fp_skip_is_overridden_for_overlay_phases(self):
-        from oto.metrics.policy import should_run
+        from oto.metrics.cell_policy import should_run
         driver = self._driver()
         self.registry.append_record(
             {"type": "benchmark_result", "fp": "fpPassed", "GFLOPS": 12.0,
@@ -78,7 +78,7 @@ class SkipBypassTests(Harness):
             {"type": "benchmark_result", "fp": "fpCur", "GFLOPS": 12.0,
              "status": "completed"},
             run_id="prior")
-        from oto.metrics.policy import should_run
+        from oto.metrics.cell_policy import should_run
         allowed, reason = should_run(
             "phase_curated_0", "fpCur", registry=self.registry,
             opt_in_identical_skip=True)

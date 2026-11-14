@@ -20,9 +20,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import oto.tensile.library as tlib
-from oto.metrics._status_common import _parse_ts, bucket
+import oto.tensile.shipped_manifest as tlib
 from oto.metrics.run_plan import RunPlan
+from oto.metrics.status_common import _parse_ts, bucket
 from oto.runners.paths import results_rel
 
 #: The registry's path relative to the project root.

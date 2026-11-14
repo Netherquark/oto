@@ -5,7 +5,7 @@ requirement), the shipped support table read from the pinned manifest, the
 co-occurrence check, and ``sample_legal`` / ``sampler_sweep``.
 
 Does NOT own: the four launch gates (oto.tensile.gates), the manifest it reads
-(oto.tensile.library), or the candidate generator (oto.tensile.candidate).
+(oto.tensile.shipped_manifest), or the candidate generator (oto.tensile.candidate).
 
 Public API: is_half_input, thread_tile_dimensions, enable_matrix_instruction,
 half_vector_width_floor, assembly_gsu_vector_width, check_hard_walls,
@@ -25,7 +25,7 @@ assembly with VectorWidth 1), ``assembly_gsu_vector_width`` (its GSU case) and
 Legality is never a judgement call: each predicate resolves to either Tensile
 source or the pinned shipped manifest, and the citation is the code rather than an
 audit's prose. Shipped values are read through the single canonical parser in
-``oto.tensile.library`` rather than re-parsed solution names, so a knob-parse
+``oto.tensile.shipped_manifest`` rather than re-parsed solution names, so a knob-parse
 defect cannot be reintroduced here.
 """
 
@@ -38,7 +38,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import oto.tensile.library as tlib
+import oto.tensile.shipped_manifest as tlib
 from oto.device import loader as _loader
 from oto.runners.paths import results_rel
 

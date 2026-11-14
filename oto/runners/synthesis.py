@@ -19,7 +19,7 @@ from typing import Any
 import yaml
 
 import oto.tensile.best_library as bestlib
-import oto.tensile.library as tlib
+import oto.tensile.shipped_manifest as tlib
 from oto.agents import agent_tools as harness_tools
 from oto.agents import orchestrator as agent_meta
 from oto.agents.research import make_researcher

@@ -16,13 +16,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from oto.metrics.report_coverage import coverage_section
 from oto.metrics.report_css import (
     DASHBOARD_CSS,
     JS_COLLAPSIBLE,
     JS_THEME_INIT,
     JS_THEME_TOGGLE,
 )
-from oto.metrics.report_figures import coverage_section
 from oto.metrics.report_models import AcceptanceReport
 
 

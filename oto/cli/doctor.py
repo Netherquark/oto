@@ -310,7 +310,10 @@ def _coverage(base: Path) -> Check:
         return _fail("corpus", "phases.yaml", f"missing {phases}",
                      "Restore phases.yaml from the repository.")
     try:
-        from oto.tensile.library_parity import load_pipeline_phases, parity_report
+        from oto.tensile.library_parity import (
+            load_pipeline_phases,
+            parity_report,
+        )
         report = parity_report(load_pipeline_phases(base))
     except Exception as exc:
         return _fail("corpus", "Coverage parity", f"{type(exc).__name__}: {exc}",

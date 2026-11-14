@@ -287,7 +287,7 @@ def run_check(args: Any) -> int:
     name = args.check_cmd
     base = str(base_dir(args))
     if name == "candidates":
-        from oto.checks.candidates import main as m
+        from oto.checks.deck_legality import main as m
         argv = ["--base-dir", base]
         if args.deck:
             argv += ["--deck", args.deck]
@@ -299,7 +299,7 @@ def run_check(args: Any) -> int:
             argv += ["--quiet"]
         return _json_file(argv, m) if args.json else _call(argv, m)
     if name == "db":
-        from oto.checks.db import main as m
+        from oto.checks.registry_audit import main as m
         argv = ["--base-dir", base] + (["--json"] if args.json else [])
         return _call(argv, m)
     if name == "retirement":

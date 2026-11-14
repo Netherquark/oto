@@ -6,7 +6,7 @@ the non-TTY defaults, and ``_read_counts`` (tier counts read live from the audit
 manifest -- never transcribed).
 
 Does NOT own: what the plan does (oto.runners.auto) or the tier manifest it reads
-(oto.tensile.library).
+(oto.tensile.shipped_manifest).
 
 Public API: AutoPlan, ask, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, _read_counts.
 
@@ -105,7 +105,7 @@ def _read_counts(base_dir: Any = None, profile=None) -> dict[str, int]:
     from collections import Counter
     from pathlib import Path
 
-    import oto.tensile.library as tlib
+    import oto.tensile.shipped_manifest as tlib
 
     base = Path(base_dir or ".")
     counts = {"illegal": 0, "underspecified": 0, "unreproducible": 0}

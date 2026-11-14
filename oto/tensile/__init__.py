@@ -1,7 +1,7 @@
 """Everything Tensile-facing: the candidate pipeline and its CPU legality gates.
 
 Submodules:
-  oto.tensile.library, shipped_library
+  oto.tensile.shipped_manifest, shipped_library
                             kernel-name parsing, the shipped gfx900 manifest
                             and the rerun tier triage
   oto.tensile.candidate    candidate generation / the curated deck / the gate

@@ -20,7 +20,7 @@ from typing import Any
 from oto import yamlio
 from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
-from oto.metrics.policy import should_run
+from oto.metrics.cell_policy import should_run
 from oto.runners.paths import results_dir as _results_dir
 
 #: Consecutive executed phases that *launched the client and measured nothing*

@@ -21,7 +21,7 @@ from typing import Any
 from oto.device import loader as _loader
 from oto.device.vocabulary import cell_key, kernel_key
 from oto.metrics.analytics import extract_family_from_phase_id
-from oto.metrics.policy import aggregate_cell
+from oto.metrics.cell_policy import aggregate_cell
 from oto.metrics.protocol import UNKNOWN, classify
 from oto.metrics.report import ABVerdict
 from oto.runners.paths import results_dir as _results_dir

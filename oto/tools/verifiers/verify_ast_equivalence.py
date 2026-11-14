@@ -439,6 +439,24 @@ def _print_report(all_missing: list[str], all_differs: list[str],
     print("\nAST EQUIVALENCE: OK")
 
 
+#: Intentional file renames within the package (old rel path -> new rel
+#: path). The post-split equivalence check follows these so a rename does not
+#: read as a wholesale public-API loss. Maintained alongside the rename work;
+#: every entry must correspond to a real git mv. See plans/RENAME_AND_DOC_CLEANUP_PLAN.md.
+RENAMES: dict[str, str] = {
+    "oto/tensile/gates/ldspad_gate.py": "oto/tensile/gates/ldspad.py",
+    "oto/tensile/gates/occupancy_common.py": "oto/tensile/gates/gate_common.py",
+    "oto/agents/harness_tools.py": "oto/agents/agent_tools.py",
+    "oto/agents/meta.py": "oto/agents/orchestrator.py",
+    "oto/checks/candidates.py": "oto/checks/deck_legality.py",
+    "oto/checks/db.py": "oto/checks/registry_audit.py",
+    "oto/metrics/policy.py": "oto/metrics/cell_policy.py",
+    "oto/metrics/report_build.py": "oto/metrics/build_status.py",
+    "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
+    "oto/metrics/_status_common.py": "oto/metrics/status_common.py",
+    "oto/tensile/library.py": "oto/tensile/shipped_manifest.py",
+}
+
 def _postsplit_check(ref: str) -> int:
     """Public-API loss check vs a post-split ref: missing symbols + signature drift."""
     import subprocess as _sp
@@ -468,12 +486,16 @@ def _postsplit_check(ref: str) -> int:
             continue
         cur = ROOT / rel
         if not cur.exists():
-            all_missing.extend(
-                f"{rel}::{name}" for name, kind in old_syms.items()
-                if kind != "alias"
-                and not name.rsplit(".", 1)[-1].startswith("_")
-            )
-            continue
+            new_rel = RENAMES.get(rel)
+            if new_rel is not None and (ROOT / new_rel).exists():
+                cur = ROOT / new_rel
+            else:
+                all_missing.extend(
+                    f"{rel}::{name}" for name, kind in old_syms.items()
+                    if kind != "alias"
+                    and not name.rsplit(".", 1)[-1].startswith("_")
+                )
+                continue
         new_syms, err = collect(cur)
         if err:
             print(f"parse error at HEAD:{rel}: {err}")

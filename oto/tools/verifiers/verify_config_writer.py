@@ -121,7 +121,7 @@ LIFT = {
     "from analytics import extract_family_from_phase_id":
         "from oto.metrics.analytics import extract_family_from_phase_id",
     "from policy import check_retirement_eligibility":
-        "from oto.metrics.policy import check_retirement_eligibility",
+        "from oto.metrics.cell_policy import check_retirement_eligibility",
     "from report import ABVerdict":
         "from oto.metrics.report import ABVerdict",
 }
@@ -146,7 +146,7 @@ def load_legacy(base: str):
     for old, new in (("registry", "oto.ledger.registry"),
                      ("scheduler", "oto.tensile.candidate"),
                      ("analytics", "oto.metrics.analytics"),
-                     ("policy", "oto.metrics.policy"),
+                     ("policy", "oto.metrics.cell_policy"),
                      ("agent", "oto.ledger.agent"),
                      ("mutator", "oto.ledger.mutator"),
                      ("report", "oto.metrics.report"),
@@ -154,7 +154,7 @@ def load_legacy(base: str):
                      ("library_parity", "oto.tensile.library_parity")):
         sys.modules[old] = __import__(new, fromlist=["*"])
     sys.modules["auto_prompt"] = __import__("oto.runners.auto_prompt", fromlist=["*"])
-    sys.modules["tensile_library"] = __import__("oto.tensile.library", fromlist=["*"])
+    sys.modules["tensile_library"] = __import__("oto.tensile.shipped_manifest", fromlist=["*"])
     sys.modules["run_status"] = __import__("oto.metrics.run_status", fromlist=["*"])
     sys.modules["port_tensile"] = __import__("oto.runners.cli", fromlist=["*"])
     mod = types.ModuleType("old_port_tensile")

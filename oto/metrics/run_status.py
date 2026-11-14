@@ -6,9 +6,9 @@ Owns: the façade every consumer imports — the re-exported ``build_report``
 (``render_compact``, ``render``, ``bar``), and ``LiveStatus`` with
 ``_PanelStdout`` — the background-threaded TTY repainter and the stdout
 proxy that erases the panel before any other write. The implementation is
-split across ``oto.metrics._status_common`` (helpers),
+split across ``oto.metrics.status_common`` (helpers),
 ``oto.metrics.ledger_state`` (registry/corpus state) and
-``oto.metrics.report_build`` (report assembly and ETAs); tests patch this
+``oto.metrics.build_status`` (report assembly and ETAs); tests patch this
 module's ``tlib`` and ``build_report``.
 Does NOT own: the plan it prices (oto.metrics.run_plan), the thermal
 envelope it cites (oto.metrics.read_thermals), or the driver that starts it
@@ -20,13 +20,8 @@ _parse_ts, _jittery, read_thermals, main, tlib.
 
 from __future__ import annotations
 
-import oto.tensile.library as tlib
-from oto.metrics._status_common import (
-    _jittery,
-    _parse_ts,
-    bucket,
-    fmt_duration,
-)
+import oto.tensile.shipped_manifest as tlib
+from oto.metrics.build_status import build_report
 
 # Re-exported for the pre-split import surface; the implementations live in
 # oto.metrics.read_thermals / oto.metrics.run_plan.
@@ -45,11 +40,16 @@ from oto.metrics.render_status import (
     render,
     render_compact,
 )
-from oto.metrics.report_build import build_report
 from oto.metrics.run_plan import (
     Estimate,
     PhaseCost,
     RunPlan,
+)
+from oto.metrics.status_common import (
+    _jittery,
+    _parse_ts,
+    bucket,
+    fmt_duration,
 )
 
 __all__ = [

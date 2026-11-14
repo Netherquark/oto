@@ -28,13 +28,13 @@ from oto.device import loader as _loader
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.
 from oto.metrics.ab_delta import ABDeltaMixin
+from oto.metrics.cell_policy import aggregate_cell
 from oto.metrics.cell_status import CellStatusMixin
 from oto.metrics.family_attribution import (
     extract_family_from_phase_id,
     family_to_dtype,
     resolve_cell_family,
 )
-from oto.metrics.policy import aggregate_cell
 from oto.runners.paths import results_dir as _results_dir
 
 __all__ = [
