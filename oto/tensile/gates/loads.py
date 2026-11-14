@@ -304,7 +304,8 @@ class _Operand:
             return False
         knob = ("AssertFree0ElementMultiple" if self.tc == "A"
                 else "AssertFree1ElementMultiple")
-        return int(self._config.get(knob, 1)) % glvw_eff != 0
+        af0 = self._config.get(knob)
+        return (True if af0 is None else int(af0) % glvw_eff != 0)
 
     def _nlca_stage(self, nlca: int) -> str | None:
         """NumLoadsCoalesced legality (SolutionStructs:2058)."""
