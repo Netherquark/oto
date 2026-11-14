@@ -48,6 +48,7 @@ _PROFILE_FINGERPRINT_FIELDS = (
 
 
 def _profile_fingerprint(profile=None) -> str:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     try:
         from oto.device import loader as _loader
         p = _loader.resolve_profile(profile)

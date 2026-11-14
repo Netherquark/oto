@@ -77,6 +77,7 @@ def _attest(name: str, base: str) -> bool:
 
 
 def _compress_shim(profile=None) -> tuple[str, str]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     import json as _json
 
     from oto.device.loader import resolve_profile

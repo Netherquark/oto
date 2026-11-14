@@ -56,6 +56,7 @@ def measured_fingerprints(base_dir: Path, profile=None) -> set:
 
     Returns:
         The set of measured fingerprints.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     db = _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "registry.db"
     if not db.is_file():

@@ -83,6 +83,7 @@ def cmd_mine(args) -> int:
 
 
 def cmd_all(args, profile=None) -> int:
+    """Consolidate runs end to end (db, matrix, best library). ``profile`` selects the device; ambient by default."""
     base = args.base_dir
     stamp = _stamp()
     stage = base / "archive" / f"consolidate_{stamp}"

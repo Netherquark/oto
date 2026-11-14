@@ -80,7 +80,10 @@ def _winner_per_cell(rows: Iterable[dict]) -> dict[tuple[str, int], dict]:
 
 
 def _bounds(row: dict, lds_factor: int, profile=None) -> tuple[int, int, int, int, str, dict] | None:
-    """(lds_bound, vgpr_bound, wave_bound, resident, binder, info)."""
+    """(lds_bound, vgpr_bound, wave_bound, resident, binder, info).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     fam = row.get("family", "",)
     ch = FAMILY_CHAR.get(fam,)
     if not ch:
@@ -129,6 +132,7 @@ def _floor_rows(db: dict[str, list[dict]]) -> tuple[list[dict], list[str]]:
 
 
 def _audit(rows_iter: Iterable[dict], lds_factor: int, profile=None) -> list[dict]:
+    """CLI: resident-workgroup audit per cell. ``profile`` selects the device; ambient by default."""
     winners = _winner_per_cell(rows_iter)
     out: list[dict] = []
     for (fam, side), row in sorted(winners.items()):
@@ -149,6 +153,7 @@ def _audit(rows_iter: Iterable[dict], lds_factor: int, profile=None) -> list[dic
 
 
 def main(profile=None) -> int:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side", choices=("native", "floor"), default="native",

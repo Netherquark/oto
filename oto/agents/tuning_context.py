@@ -14,6 +14,7 @@ from oto.device.profile import DeviceProfile
 
 def generate(profile: DeviceProfile, theoretical_limits_doc: str = "",
             starter_text: str = "", research: Callable[[str], str] | None = None) -> str:
+    """Generate the tuning-context doc for a device. ``profile`` is the device to tune."""
     extra = ""
     if research is not None:
         try:

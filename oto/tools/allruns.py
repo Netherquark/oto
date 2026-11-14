@@ -90,6 +90,7 @@ class _Knobs:
         self._cache: dict[tuple[str, str], dict] = {}
 
     def get(self, run, phase_id, profile=None) -> dict:
+        """Return one row of the phase ledger for the A/B arms view. ``profile`` selects the device; ambient by default."""
         key = (str(run), str(phase_id))
         if key in self._cache:
             return self._cache[key]
@@ -129,6 +130,7 @@ def _fam(rec, knobs: _Knobs) -> str:
 
 
 def _load_arms(base: Path, profile=None):
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     drv = TensileDriver(base, create_run=False)
     native = drv._native_records_all_runs()
     floor: list[dict] = []

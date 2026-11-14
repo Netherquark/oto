@@ -231,7 +231,10 @@ class ReportingMixin:
         return native_records
 
     def _load_spoof_records(self, run_id: str, profile=None) -> tuple:
-        """Load spoof records from reference floor runs."""
+        """Load spoof records from reference floor runs.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         ref_run_ids = self._reference_floor_runs(run_id,)
         spoof_records: list[dict[str, Any]] = []
         for ref in ref_run_ids:
@@ -393,7 +396,10 @@ class ReportingMixin:
 
     def _emit_report(self, run_id: str, run_dir: Path | None, report,
                      ab_verdicts, native_arm, all_analytics, red_list, profile=None):
-        """Write the JSON report(s) and return the result summary."""
+        """Write the JSON report(s) and return the result summary.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         if run_dir is not None:
             report_out = run_dir / "acceptance_report.json"
             self.reporter.write_report(report, report_out,)
@@ -501,6 +507,7 @@ class ReportingMixin:
         base_dir/<codename>_results/acceptance_report.{json,html}. The native arm
         spans the whole database, so the report may legitimately be won by
         cells from an older run than run_id.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         if run_id is None:
             run_id = self.registry.latest_run_id(arm="native")

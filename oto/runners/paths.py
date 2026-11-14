@@ -91,6 +91,9 @@ def results_rel(*parts: str, profile=None) -> str:
 
 
 def runs_rel(*parts: str, profile=None) -> str:
-    """Repo-relative runs subpath for the current device (see results_rel)."""
+    """Repo-relative runs subpath for the current device (see results_rel).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     from oto.device.loader import resolve_profile
     return str(Path(RUNS_DIR_TEMPLATE.format(codename=resolve_profile(profile).codename)).joinpath(*parts))

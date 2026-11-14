@@ -170,10 +170,9 @@ class CandidateEmitMixin:
         self,
         family: str,
         patterns: list[str],
-        base_shapes: list[str],
-    profile=None,
+        base_shapes: list[str], profile=None,
     ) -> list[CandidateConfig]:
-        """Generate native family phases for a dtype/op family."""
+        """Generate native family phases for a dtype/op family. ``profile`` -- optional, ambient by default."""
         candidates = []
         family_deck = self.family_decks.get(family, [],)
 
@@ -217,7 +216,10 @@ class CandidateEmitMixin:
                 e.get("ThreadTile"), e.get("VectorWidth")) == tile_key)
 
     def _build_family_template(self, family: str, pattern: str, shape: str, profile=None) -> dict:
-        """Build candidate template for family phases."""
+        """Build candidate template for family phases.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
@@ -328,7 +330,10 @@ class CandidateEmitMixin:
 
     def _emit_baselines(self, candidates, refused, family, pattern, bases,
                          shapes, include_baseline, profile=None):
-        """Emit baseline (unchanged base tile) candidates if requested."""
+        """Emit baseline (unchanged base tile) candidates if requested.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         if not include_baseline:
             return candidates, refused
         for base in bases:
@@ -362,7 +367,10 @@ class CandidateEmitMixin:
 
     def _emit_sweep_values(self, candidates, refused, family, pattern, base,
                             sweep, shapes, profile=None):
-        """Emit candidates for one sweep's values."""
+        """Emit candidates for one sweep's values.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         for value in sweep["values"]:
             knobs = dict(base)
             for over_fam, width in sweep.get("width_override", {},).items():
@@ -389,7 +397,10 @@ class CandidateEmitMixin:
         return candidates, refused
 
     def _build_template(self, family: str, pattern: str, shape: str, profile=None) -> dict[str, Any]:
-        """Build candidate template."""
+        """Build candidate template.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
@@ -404,13 +415,12 @@ class CandidateEmitMixin:
         families: list[str] | None = None,
         patterns: list[str] | None = None,
         base_shapes: list[str] | None = None,
-        phases_file: Path | None = None,
-    profile=None,
+        phases_file: Path | None = None, profile=None,
     ) -> list[CandidateConfig]:
         """Emit decision-labelled trial tiles (full tiles, not knob deltas).
-
         Each DECISION_TRIAL_TILES entry carries its own decision label and
         optionally its own shapes. Tagged _trialD<n> to show which decision.
+        ``profile`` -- optional, ambient by default.
         """
         from oto.tensile.decks import DECISION_TRIAL_TILES
 

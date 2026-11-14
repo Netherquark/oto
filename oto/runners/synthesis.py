@@ -31,7 +31,10 @@ class SynthesisMixin:
     """Final library synthesis, mixed into TensileDriver."""
 
     def _emit_family_logic(self, logic_dir: Path, profile=None) -> None:
-        """Placeholder logic definitions for the 7 dtype families."""
+        """Placeholder logic definitions for the 7 dtype families.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         hint = bestlib.logic_filename_hint(getattr(self, "tensile_root", None),
                                            _loader.resolve_profile(profile,).codename)
         for fam in ["SS", "DD", "HH", "ZZ", "CC", "HH_HPA", "HS_HPA"]:
@@ -49,7 +52,10 @@ class SynthesisMixin:
 
     def _run_tensile_create_library(self, tcl_bin: Path, logic_dir: Path,
                                     final_lib_dir: Path, profile=None) -> dict[str, Any] | None:
-        """Invoke TensileCreateLibrary; the error dict on failure, else None."""
+        """Invoke TensileCreateLibrary; the error dict on failure, else None.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         arch = getattr(getattr(self, 'profile', None), 'codename', _loader.resolve_profile(profile,).codename)
         cmd = [
             sys.executable,
@@ -146,7 +152,10 @@ class SynthesisMixin:
 
     def synthesize_best_library(self, dest: Path | None = None,
                                 protocol_basis: str = "family", profile=None) -> dict[str, Any]:
-        """Carve a best-effort device TensileLibrary.dat from the full db."""
+        """Carve a best-effort device TensileLibrary.dat from the full db.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         dest = Path(dest) if dest else bestlib.default_best_library_dest(self.base_dir)
         result = bestlib.build_best_library(
             self.base_dir, dest, basis=protocol_basis,

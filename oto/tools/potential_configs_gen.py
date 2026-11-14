@@ -24,6 +24,7 @@ def _load_json(path: Path) -> Any:
 
 
 def generate(profile: DeviceProfile, base_dir: Path) -> str:
+    """Generate potential_configs.md for the tuning corpus. ``profile`` is the device to tune."""
     base_dir = Path(base_dir)
     out: list[str] = [
         f"# potential_configs.md — {profile.codename}",
@@ -46,12 +47,16 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
 
 
 def _floor_prefix(profile: DeviceProfile) -> str:
+    """Generate potential_configs.md for the tuning corpus. ``profile`` is the device to tune."""
     ref = profile.spoof_reference or ""
     return f"{ref}_ref" if ref else "_ref_"
 
 
 def _corpus_section(profile: DeviceProfile, base_dir: Path) -> list[str]:
-    """The `## Corpus` + per-run stats block."""
+    """The `## Corpus` + per-run stats block.
+
+    ``profile`` -- the device profile to tune.
+    """
     kb = _results_dir(base_dir, profile.codename) / "analysis" / "kernel_db.json"
     db = _load_json(kb)
     if not isinstance(db, dict):
@@ -72,7 +77,10 @@ def _corpus_section(profile: DeviceProfile, base_dir: Path) -> list[str]:
 
 
 def _acceptance_section(profile: DeviceProfile, base_dir: Path) -> list[str]:
-    """The like-for-like acceptance + verdict anatomy + ranked attack plan."""
+    """The like-for-like acceptance + verdict anatomy + ranked attack plan.
+
+    ``profile`` -- the device profile to tune.
+    """
     ar = _load_json(_results_dir(base_dir, profile.codename) / "acceptance_report.json")
     if not isinstance(ar, dict):
         return []

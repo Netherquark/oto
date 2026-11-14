@@ -167,6 +167,7 @@ def subprocess_probe(argv: list[str], needle: str) -> bool:
 
 
 def _profile(base: Path, profile=None) -> Check:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.device.loader import resolve_profile
     codename = resolve_profile(profile).codename
     path = base / "profiles" / f"{codename}.json"
@@ -177,6 +178,7 @@ def _profile(base: Path, profile=None) -> Check:
 
 
 def _registry(base: Path, profile=None) -> list[Check]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.device.loader import resolve_profile
     from oto.runners.paths import results_dir
     results = results_dir(base, resolve_profile(profile).codename)

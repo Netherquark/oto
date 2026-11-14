@@ -187,6 +187,7 @@ def measured_geometries(db_path: Path | None = None,
 
     Returns:
         The measured geometry map, empty when the cache does not exist.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     base = Path(base_dir) if base_dir else _HERE
     path = db_path or (_results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")

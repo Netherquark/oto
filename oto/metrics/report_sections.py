@@ -334,7 +334,7 @@ class SectionMixin:
         return out
 
     def _telemetry_section(self, report, profile=None) -> str:
-        """Telemetry table derived from the run's telemetry.csv (drop fabricated values)."""
+        """Telemetry table from telemetry.csv. ``profile`` -- optional, ambient by default."""
         stats = self._load_run_telemetry(report.run_dir)
 
         empty = ("<section class=\"section collapsible\" data-collapsed=\"true\"><h2 class=\"section-title\" tabindex=\"0\" role=\"button\" aria-expanded=\"false\">Telemetry "

@@ -136,7 +136,10 @@ def _emit_baselines(
     shapes: list[str],
 profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Emit baseline tiles for each family/shape."""
+    """Emit baseline tiles for each family/shape.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
@@ -167,7 +170,10 @@ def _emit_sweeps(
     shapes: list[str],
 profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Emit sweep tiles for each family/knob/shape."""
+    """Emit sweep tiles for each family/knob/shape.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     from oto.tensile.decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
@@ -209,7 +215,10 @@ def _emit_trials(
     shapes: list[str],
 profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Emit decision trial tiles."""
+    """Emit decision trial tiles.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     from oto.tensile.decks import DECISION_TRIAL_TILES
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []

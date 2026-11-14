@@ -138,6 +138,7 @@ def _group_label(row: dict[str, Any]) -> str:
 
 
 def _group_sort(label: str, profile=None) -> tuple[int, str]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     family, _, typecode = label.partition("/")
     order = {f: i for i, f in enumerate(_loader.resolve_profile(profile,).family_shapes)}
     return (order.get(family, len(order),), typecode)

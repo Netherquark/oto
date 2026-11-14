@@ -280,6 +280,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) 
 
     Returns a zeroed summary rather than raising when the `proposals` table is
     absent (pre-Phase-1 registries), so this stays additive on an older DB.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     try:
         from oto.ledger.registry import SQLiteRegistry

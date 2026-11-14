@@ -150,6 +150,7 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
 
 
 def main(profile=None) -> int:
+    """CLI: measured per-thread VGPRs of emitted kernels. ``profile`` selects the device; ambient by default."""
     args = _build_arg_parser().parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE

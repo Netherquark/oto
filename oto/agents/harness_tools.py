@@ -77,7 +77,9 @@ def propose_candidates(base_dir, limit: int = 16) -> list[dict[str, Any]]:
 def verify_candidates(rows: list[dict[str, Any]],
                       profile: DeviceProfile | None = None) -> list[dict[str, Any]]:
     """Re-check each proposed row against the CPU gates (loads, occupancy,
-    ldspad). Independent of the emission-time check; no GPU involved."""
+    ldspad). Independent of the emission-time check; no GPU involved.
+    ``profile`` -- the device profile to tune.
+    """
     verified: list[dict[str, Any]] = []
     for row in rows:
         cfg = row.get("config",) or {}
@@ -100,7 +102,9 @@ def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
 def build_harness_study(base_dir, profile: DeviceProfile,
                         proposal_limit: int = 16) -> dict[str, Any]:
     """Study the corpus, propose + verify candidates, return the payload plus
-    a markdown section the doc generator can embed."""
+    a markdown section the doc generator can embed.
+    ``profile`` -- the device profile to tune.
+    """
     try:
         corpus = study_kernel_db(base_dir)
         rows = verify_candidates(propose_candidates(base_dir, limit=proposal_limit),
@@ -213,6 +217,7 @@ def validate_deck(base_dir):
             "failed": len(results) - passed, "results": results}
 
 def _study_markdown(profile: DeviceProfile, payload: dict[str, Any]) -> str:
+    """``profile`` -- the device profile to tune."""
     corpus = payload["corpus"]
     lines = [f"## Harness study — {profile.codename}", ""]
     if not corpus["present"]:

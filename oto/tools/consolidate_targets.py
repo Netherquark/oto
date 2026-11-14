@@ -43,7 +43,10 @@ def _fam(phase_id: str) -> str:
 # target matrix
 # --------------------------------------------------------------------------
 def target_cells(profile=None) -> list[tuple[str, str, str]]:
-    """(family, shape, cell_key) for every cell the shipped floor covers."""
+    """(family, shape, cell_key) for every cell the shipped floor covers.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     out = []
     for fam, sides in _loader.resolve_profile(profile,).family_shapes.items():
         for side in sides:
@@ -73,10 +76,12 @@ def manifest_cells(profile=None) -> set:
 # measurement inventory
 # --------------------------------------------------------------------------
 def native_runs(base: Path = BASE, profile=None) -> list[str]:
+    """Return the newest reference run of the native arm. ``profile`` selects the device; ambient by default."""
     return sorted(d.name for d in (_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*") if d.is_dir())
 
 
 def floor_chain(base: Path = BASE, profile=None) -> list[str]:
+    """Return the floor-arm reference chain. ``profile`` selects the device; ambient by default."""
     drv = _driver(base)
     return [r for r in drv._reference_floor_runs(None,)
             if (_runs_dir(base, _loader.resolve_profile(profile,).codename) / r).is_dir()]
@@ -89,6 +94,7 @@ def source_chain(base: Path = BASE, profile=None) -> list[str]:
     its result back into the lock would make the pipeline lock its own output and
     converge to a degenerate fixpoint. The locked run records where it came from,
     so the chain is recovered from there instead.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     chain = floor_chain(base, profile=profile,)
     if not chain or "_locked_" not in chain[0]:

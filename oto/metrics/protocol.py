@@ -76,7 +76,10 @@ def label(protocol: str | None) -> str:
 
 
 def gradeable(fam: str, profile=None):
-    """The graded-cell side set of a family ('NxNxN' strings; may be empty)."""
+    """The graded-cell side set of a family ('NxNxN' strings; may be empty).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     cells = _loader.resolve_profile(profile,).family_cells.get(str(fam or "").upper(),)
     if not cells:
         return set()

@@ -233,7 +233,10 @@ def _lds_bytes(state: dict[str, Any]) -> int:
 
 
 def _config_from_args(args: argparse.Namespace, profile=None) -> dict[str, Any]:
-    """The config dict the CLI describes."""
+    """The config dict the CLI describes.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     config: dict[str, Any] = {
         "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": args.dtype,

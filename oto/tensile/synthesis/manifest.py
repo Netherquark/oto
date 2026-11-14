@@ -282,6 +282,7 @@ profile=None,
     Wraps `legality`'s own machinery rather than re-implementing substitution, so
     a change to what counts as a hard wall lands here too. `sample_legal` picks
     its own groups, which is exactly what coverage guidance needs to override.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     support = legality.shipped_support(base_dir, family)
     if not support:

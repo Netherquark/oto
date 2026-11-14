@@ -80,6 +80,7 @@ def phase_family(phase: dict[str, Any], profile=None) -> str:
     so HH / HH_HPA / HS_HPA never collapse — see `oto.device.vocabulary.cell_key`).
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     cfg = phase.get("config",)
     if isinstance(cfg, dict):
@@ -165,6 +166,7 @@ def load_pipeline_phases(base_dir: str | None = None,
     so a preflight parity verdict covers the exact manifest a run would build.
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold
     in that run's per-run overlay (phases.<run_id>.overlay.yaml).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
 
     from pathlib import Path

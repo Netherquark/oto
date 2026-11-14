@@ -101,6 +101,7 @@ def census(base: str = ".", run_filter: str | None = None,
     Returns:
         ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
         "samples": [(run, phase, reason)]}``.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     run_dirs = sorted(d for d in runs_dir.iterdir() if d.is_dir())

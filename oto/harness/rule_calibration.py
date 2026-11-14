@@ -68,6 +68,7 @@ def _iter_rows(base: str, families: Sequence[str] | None, profile=None):
     (:func:`read_phase_config`) and the measurement test
     (:func:`measurement_produced`) are imported from ``gate_calibration`` so both
     censuses see exactly the same corpus.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     want = {f.upper() for f in families} if families else None
     runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)

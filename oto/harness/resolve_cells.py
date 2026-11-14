@@ -303,7 +303,10 @@ def _cell_row(
     floor_best: dict[tuple[str, str], dict[str, Any]],
 profile=None,
 ) -> dict[str, Any]:
-    """One resolved cell: values, delta and both winner configs."""
+    """One resolved cell: values, delta and both winner configs.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     fam = v["family"]
     shp = v["shape"]
     key = (fam, shp)
@@ -351,6 +354,7 @@ def build(base_dir: str = ".",
     """Resolve every cell of the acceptance report -> (cells, meta).
 
     CPU-only. All inputs are canonical repo caches / registries.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     base = Path(base_dir)
     acceptance_path = acceptance_path or str(_results_dir(base, _loader.resolve_profile(profile,).codename) / "acceptance_report.json")

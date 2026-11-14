@@ -124,6 +124,7 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
       3. GlobalSplitU > 1 on half Assembly -- legal only if
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     prof = _loader.resolve_profile(profile,)
     is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
@@ -185,6 +186,7 @@ def assembly_class_valid(config: dict[str, Any],
     Returns:
         ``(True, "")`` when legal, else ``(False, reason)`` citing the Tensile
         source line that refuses it.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     dtype_upper = str(config.get("DataType", "S",)).upper()
     gsu = knob_int(config.get("GlobalSplitU",), 1)

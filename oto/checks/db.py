@@ -45,6 +45,7 @@ def _load_labels(db: Path) -> tuple[list[str], int]:
 
 
 def main(profile=None) -> int:
+    """CLI: inspect the registry DB for label contamination. ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")

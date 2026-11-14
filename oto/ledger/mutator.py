@@ -150,6 +150,7 @@ class Mutator(MutatorOutcomesMixin):
         ``None`` means the family is not in the manifest or no draw survived the
         hard walls; the caller should skip the cell rather than fall back to the
         lattice, because a lattice draw is exactly what the prior replaces.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         if family not in _loader.resolve_profile(profile,).family_dtype_char:
             return None
@@ -433,6 +434,7 @@ class Mutator(MutatorOutcomesMixin):
         `phases.yaml` is the curated deck and stays that way. An overlay is
         disposable by construction: discarding a bad batch deletes this file and
         nothing else, so no history is edited to undo a mistake.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         import yaml
 
@@ -456,7 +458,10 @@ class Mutator(MutatorOutcomesMixin):
         return path
 
     def load_overlay(self, run_id: str, profile=None) -> list[dict[str, Any]]:
-        """Read back one run's overlay, or [] if there is none."""
+        """Read back one run's overlay, or [] if there is none.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
 
         path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays" / f"phases.{run_id}.overlay.yaml"
         if not path.exists():

@@ -157,6 +157,7 @@ class RegistryCore:
 
     def __init__(self, base_dir: Path, read_only: bool = False,
                  auto_rebuild_kernel_db: bool = True, profile=None):
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         self.base_dir = Path(base_dir)
         self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         self.runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)

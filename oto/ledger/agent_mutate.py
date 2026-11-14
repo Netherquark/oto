@@ -32,6 +32,7 @@ class MutateMixin:
         """Mutate one cell's winner.
 
         Returns (new_candidates, replayed, rejected_count, ungraded_cells).
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         family = str(winner_info.get("family",) or "").upper()
         data_type = _loader.resolve_profile(profile,).family_dtype_char.get(
@@ -156,7 +157,10 @@ class MutateMixin:
         return mutants, sweep_shapes, cell_state
 
     def _build_template(self, family: str, data_type: str, profile=None) -> dict[str, Any]:
-        """Build the candidate template."""
+        """Build the candidate template.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": data_type,

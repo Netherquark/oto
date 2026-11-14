@@ -108,6 +108,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     """Stage 5 analytics engine."""
 
     def __init__(self, registry, base_dir: Path, profile=None):
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         self.registry = registry
         self.base_dir = Path(base_dir)
         self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
@@ -336,6 +337,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         per-phase family (from phase_id text) is the fallback only, never the
         primary signal. Returns cells keyed (dtype, shape, fp, family) so the
         caller's CellAnalytics carries the resolved family, not a text guess.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         cell_map = defaultdict(list)
         for rec in records:
@@ -377,8 +379,7 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
             red_threshold_pct: Threshold below which ALU compute cell is RED
             family: Multi-letter family prefix (e.g. 'ss', 'hh_hpa', 'cc')
 
-        Returns:
-            CellAnalytics object
+        Returns: CellAnalytics object. ``profile`` -- optional, ambient by default.
         """
         agg = aggregate_cell(seeds)
 

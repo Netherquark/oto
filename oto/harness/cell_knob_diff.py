@@ -120,6 +120,7 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[s
     return rows_out
 
 def main(profile=None) -> int:
+    """CLI: native-vs-floor winner knob diff per cell. ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=None,

@@ -441,6 +441,7 @@ def _pair_cells(
 
     When a clock basis is asked for but only one arm is clock-covered, NEITHER
     is adjusted (see _clock_basis_values).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     basis, ns, ss, any_stats, iso_stats = _basis_collects(
         native_records, spoof_records, protocol_basis, sclk_by_phase, sclk_ref)

@@ -81,6 +81,7 @@ def _label_for(fam: str, pattern: str, knobs: dict[str, Any]) -> str:
 
 
 def _base_config(fam: str, profile=None) -> dict[str, Any]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     return {
         "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": FAMILY_DTYPE[fam],
@@ -117,7 +118,9 @@ def __yaml_load(path: Path, fallback: Any = None) -> Any:
 def _load_seed_fps(profile=None) -> set[str]:
     """fps already scheduled by the *curated* seed rows (never the generator's
     own previous appends: those are exactly what a re-run must skip deduping
-    against, or wide rows colliding with the last append silently vanish)."""
+    against, or wide rows colliding with the last append silently vanish).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     fps: set[str] = set()
     payload = __yaml_load(
         _results_dir(REPO_ROOT, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml",
@@ -459,6 +462,7 @@ def _narrow_row_gen(sched, fam: str, sides: tuple[int, ...],
 
 
 def _deck_rows_by_family(profile=None) -> dict[str, list[dict[str, Any]]]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     rows: dict[str, list[dict[str, Any]]] = {}
     for row in __yaml_load(REPO_ROOT / "phases.yaml", fallback=[]):
         if not isinstance(row, dict):

@@ -156,7 +156,10 @@ def _stage_retirement(driver, args, stage) -> int | None:
 
 
 def _stage_analytics(driver, args, stage, profile=None) -> int | None:
-    """Stage 5: per-dtype analytics summary for the latest run (registry-only)."""
+    """Stage 5: per-dtype analytics summary for the latest run (registry-only).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     if not ("5" in stage or "analytics" in stage):
         return None
     run_dir = driver.run_dir

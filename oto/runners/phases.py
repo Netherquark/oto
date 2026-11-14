@@ -141,6 +141,7 @@ class PhaseMixin:
         `<codename>_results/overlays/phases.seed.overlay.yaml` is curated by hand /
         by the D2 tooling and applied to every native run. The per-run overlay
         path is not used because the seed is not tied to a single run_id.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays" / "phases.seed.overlay.yaml"
         if not path.exists():
@@ -159,6 +160,7 @@ class PhaseMixin:
         Read through the mutator when one exists so overlay parsing has a single
         owner; falls back to the file directly so the overlay is still honoured
         with no ledger-backed mutator.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         path = (_results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "overlays"
                 / f"phases.{run_id}.overlay.yaml")

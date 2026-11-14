@@ -288,6 +288,7 @@ def _table(r: dict[str, Any]) -> str:
 
 
 def main(argv: Sequence[str] | None = None, profile=None) -> int:
+    """CLI: deck-vs-floor regression matrix. ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None, help="repo root")

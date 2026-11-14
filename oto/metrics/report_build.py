@@ -144,6 +144,7 @@ def build_report(base: Path, run_id: str | None,
     """Build the status report for a run.
 
     `now` overrides the wall clock used to age a still-running head run.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     state = _load_ledger_state(base, run_id)
     chain = state["chain"]

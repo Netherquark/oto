@@ -45,6 +45,7 @@ def write_deck(stage: Path, sel: dict[str, Any], stamp: str) -> Path:
 
 def install(base: Path, stage: Path, sel: dict[str, Any],
             lock: dict[str, Any], dbres: dict[str, Any], stamp: str, profile=None) -> None:
+    """Install a built best-effort library into the runs tree. ``profile`` selects the device; ambient by default."""
     deck_path = base / "phases.yaml"
     staged = write_deck(stage, sel, stamp)
 
@@ -86,6 +87,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB, profile=None) -> list[st
     The registry rows are left in place. They are already ``interrupted`` or
     ``started``, they are truthfully empty, and pruning rows is not this script's
     call to make.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     if not db.is_file():
         return []

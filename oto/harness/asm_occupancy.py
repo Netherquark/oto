@@ -61,12 +61,14 @@ VGPR_GRANULE = 4
 #: Register-file size of one SIMD = the CU file divided by the SIMD count.
 #: With 65536 per CU and 4 SIMDs this is 16384, i.e. 64 KiB per SIMD.
 def _simd_vgpr(profile=None) -> int:
+    """CLI: measured occupancy audit of emitted kernels. ``profile`` selects the device; ambient by default."""
     return _loader.resolve_profile(profile,).vgpr_per_cu // _loader.resolve_profile(profile,).simds_per_cu
 
 
 #: Max resident waves per SIMD. The hardware allows 10 (40/CU), which is what
 #: rocminfo reports and what Tensile's own occupancy calculator assumes.
 def _waves_per_simd_max(profile=None) -> int:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     return _loader.resolve_profile(profile,).max_waves_per_cu // _loader.resolve_profile(profile,).simds_per_cu
 
 #: The AMD/ORNL GFX9 VGPR-per-thread -> waves-per-SIMD table, the calibration this
@@ -94,6 +96,7 @@ _DTYPE_FACTS = {
 
 #: LDS in bytes per CU, one home in the device profile.
 def _lds_per_cu(profile=None) -> int:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     return _loader.resolve_profile(profile,).lds_per_cu_kb * 1024
 
 _KERNEL_MT = re.compile(r"_MT(\d+)x(\d+)x(\d+)_")
@@ -145,6 +148,7 @@ def binding_resource(vgprs: int, lds: int, threads: int, profile=None) -> tuple[
         the binding constraint. LDS is unknown when it is 0 or the workgroup
         exceeds the 1024-thread maximum, in which case the LDS half is unmeasured
         and VGPR is reported.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     by_vgpr = waves_per_simd(vgprs) * _loader.resolve_profile(profile,).simds_per_cu
     if lds > 0 and threads > 0:
@@ -418,6 +422,7 @@ def _cmd_sorted(rows: list[dict[str, Any]], args: Any) -> int:
 
 
 def main(profile=None) -> int:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     args = _build_arg_parser().parse_args()
 
     if args.check_calibration:

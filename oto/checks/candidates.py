@@ -78,6 +78,7 @@ def _occupancy_margin(cfg, profile=None) -> str:
     much of the file one workgroup's threads consume). Near-boundary configs —
     the ones that PASS today and die tomorrow when Tensile grows one
     instruction — show up here as high pressure %, not just pass/fail.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     wg = occupancy_workgroups_per_cu(cfg, profile=profile,)
     if wg <= 0:
@@ -235,6 +236,7 @@ def _floor_deck(base_dir: Path, profile=None) -> tuple[list[dict], Path]:
     gates would be a proof the Model over-rejects, not an excuse to skip the
     gate. Sweeping the pinned manifest through the same GATES makes that
     explicit instead of assumed.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     manifest_path = _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "gfx900_shipped_manifest.json"
     manifest = json.loads(manifest_path.read_text())

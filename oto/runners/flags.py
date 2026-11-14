@@ -217,7 +217,10 @@ def _add_reference_run_flags(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_run_flags(parser: argparse.ArgumentParser, profile=None) -> None:
-    """Per-run behaviour: force, the live status panel, and the dry run."""
+    """Per-run behaviour: force, the live status panel, and the dry run.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     parser.add_argument(
         "--force",
         action="store_true",
@@ -320,6 +323,7 @@ def build_parser(profile=None) -> argparse.ArgumentParser:
 
     Returns:
         An ``ArgumentParser`` with every flag the driver accepts.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     parser = argparse.ArgumentParser(
         description=f"oto — Tensile tuning driver for {_loader.resolve_profile(profile,).codename}"

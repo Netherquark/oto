@@ -43,6 +43,7 @@ print("ok")
 
 
 def _payload_parts(run_id: str, profile=None):
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.runners.driver import TensileDriver
 
     d = TensileDriver(base_dir=ROOT, create_run=False)

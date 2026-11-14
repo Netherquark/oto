@@ -15,6 +15,7 @@ from oto.device.profile import DeviceProfile
 
 
 def _peak_table(profile: DeviceProfile) -> str:
+    """``profile`` -- the device profile to tune."""
     lines = ["| Family | Peak GFLOPS (BLAS-8) |", "|---|---|"]
     for fam, val in sorted(profile.peak_gflops.items()):
         lines.append(f"| {fam} | {val} |")

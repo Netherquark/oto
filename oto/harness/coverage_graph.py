@@ -109,7 +109,10 @@ def _bucket(value: int, buckets: Sequence[int]) -> int | None:
 
 
 def _weight(family: str, profile=None) -> int:
-    """The accumulator VGPRs per element for a family (1 S, 2 D, 4 C, 8 Z)."""
+    """The accumulator VGPRs per element for a family (1 S, 2 D, 4 C, 8 Z).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     char = _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",)
     return {"S": 1, "H": 1, "D": 2, "C": 4, "Z": 8}.get(char, 1,)
 

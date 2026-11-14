@@ -21,6 +21,7 @@ def run(profile: DeviceProfile, starter_text: str = "",
         research: Callable[[str], str] | None = None,
         run_workflow: Callable[[], Any] | None = None,
         harness: Callable[[], Any] | None = None) -> dict:
+    """Run the agent consult: agent-1 limits doc, agent-2 tuning doc, optional harness study. ``profile`` is the device to tune."""
     tl = gen_tl(profile, starter_text, research,)
     tc = gen_tc(profile, tl, starter_text, research,)
     wf_result = run_workflow() if run_workflow is not None else None

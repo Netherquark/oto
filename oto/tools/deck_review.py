@@ -150,6 +150,7 @@ def _measured_tiles(base: Path, per_family: int, profile=None) -> dict[str, list
     verdict reports the tile's own budget overflow as the knob's fault — which
     is how a default value like `StaggerU=0` ends up looking broken on an
     LDS-full `256x256` tile.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     if not db_path.is_file():
@@ -193,7 +194,10 @@ def _measured_tiles(base: Path, per_family: int, profile=None) -> dict[str, list
 
 
 def _family_template(fam: str, profile=None) -> dict[str, Any]:
-    """The minimal contract template a draw is applied on top of."""
+    """The minimal contract template a draw is applied on top of.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     from oto.tensile.synthesis.db_knobs import _DEFAULT_PATTERN
     return {
         "Architecture": _loader.resolve_profile(profile,).codename,
@@ -236,7 +240,10 @@ def _classify_draw(template: dict[str, Any], tiles: list[dict[str, Any]],
 def _report_legality(n_fams: int, legal: int, coupled: Counter,
                      refused: list[tuple[str, str, Any, str]],
                      skipped: Counter, profile=None) -> None:
-    """Print the census. Split out so `_legality` stays inside the line budget."""
+    """Print the census. Split out so `_legality` stays inside the line budget.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     total = legal + sum(coupled.values()) + len(refused)
     print(f"{n_fams} families x up to {TILES_PER_FAMILY} measured tiles; "
           f"{total} (family, knob, value) draws through "
@@ -319,7 +326,7 @@ def _legality(base: Path, families: list[str] | None) -> int:
 # ----------------------------------------------------------------- flood
 
 def _flood(base: Path, cap: int | None, profile=None) -> int:
-    """Per-cell distinct-config census, and what a top-K cap would cost."""
+    """Per-cell distinct-config census and top-K cap cost. ``profile`` -- optional, ambient by default."""
     db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())

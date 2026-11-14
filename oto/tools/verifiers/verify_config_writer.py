@@ -224,6 +224,7 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
 
 
 def corpus(root: Path, profile=None) -> list[dict]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     from oto.device import loader as _loader
     from oto.runners.paths import results_dir, runs_dir
 

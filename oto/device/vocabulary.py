@@ -22,12 +22,18 @@ from oto.device.loader import resolve_profile
 
 
 def blas8_gflops(family: str, reported: float, profile=None) -> float:
-    """A client-reported GFLOPS figure in BLAS-8 units (complex x4)."""
+    """A client-reported GFLOPS figure in BLAS-8 units (complex x4).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     return reported * resolve_profile(profile).reported_to_blas8.get(family.upper(), 1.0,)
 
 
 def dtype_to_family(profile=None) -> dict[str, str]:
-    """DataType char -> canonical family (first-wins)."""
+    """DataType char -> canonical family (first-wins).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     out: dict[str, str] = {}
     for fam, ch in resolve_profile(profile).family_dtype_char.items():
         out.setdefault(ch, fam)
@@ -68,7 +74,10 @@ def family_from_kernel_name(kernel_name: object) -> str:
 
 
 def dtype_from_kernel_name(kernel_name: object, profile=None) -> str:
-    """Canonical DataType char of a kernel by its typecode ('' when unknown)."""
+    """Canonical DataType char of a kernel by its typecode ('' when unknown).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     return resolve_profile(profile).family_dtype_char.get(family_from_kernel_name(kernel_name), "",)
 
 
@@ -93,7 +102,10 @@ def cell_key(family: object, shape: object) -> str | None:
 
 
 def shipped_cells(profile=None) -> dict[str, dict[str, str]]:
-    """The device "shape x dtype" coverage grid (the coverage-parity rule)."""
+    """The device "shape x dtype" coverage grid (the coverage-parity rule).
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     fds = resolve_profile(profile).family_dtype_char
     shapes = resolve_profile(profile).family_shapes
     return {

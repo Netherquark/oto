@@ -57,6 +57,7 @@ def _load_manifests(args) -> list:
 
 
 def _fmt_cells(cells, profile=None) -> str:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     grid = shipped_cells()
     from oto.device import loader as _loader
     parts = []

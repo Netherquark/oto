@@ -231,6 +231,7 @@ def run_status(args: Any) -> int:
 
 
 def run_report(args: Any, profile=None) -> int:
+    """Report subcommand: resolve the run and render its report. ``profile`` selects the device; ambient by default."""
     from oto.device import loader as _loader
     from oto.runners.cli import main as cli_main
     from oto.runners.paths import results_dir as _results_dir

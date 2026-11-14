@@ -27,6 +27,7 @@ def _base(args: argparse.Namespace) -> Path:
 
 
 def make_report(base: Path, profile=None) -> dict[str, Any]:
+    """Render the analysis chart for a run. ``profile`` selects the device; ambient by default."""
     path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"
     return json.loads(path.read_text())
 

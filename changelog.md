@@ -4027,4 +4027,10 @@ the pre-built seed pool.
   fails loudly) — `oto verify all` at HEAD: ALL EQUIVALENCE CHECKS PASSED.
   Suite green at every commit step: 1061 passed, 8 skipped, 242 subtests.
   Commits `e5ebdc4` (choke point + gate retrofit), `ae99b75` (the sweep, 81
-  files), `0807157` (threading test), `a7500ea` (verifier).
+  files), `0807157` (threading test), `a7500ea` (verifier). Follow-through:
+  every function whose signature carries the `profile` kwarg (178) documents
+  it in its docstring — the documented functions gained the kwarg line, the
+  docstringless functions gained a one-line docstring, single-line docstrings
+  were expanded in place, and the required-`profile` agent entry points are
+  documented as required, not "optional ambient" (an injected claim caught
+  and corrected).

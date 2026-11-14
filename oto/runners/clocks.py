@@ -188,7 +188,10 @@ class ClockMixin:
         return {pid: d["sclk_hz"]
                 for pid, d in self._load_telemetry_by_phase(run_dir).items()}
     def _sclk_map(self, run_ids: list[str], profile=None) -> dict[tuple[str, str], float]:
-        """(source_run, phase_id) -> sustained sclk across the given runs."""
+        """(source_run, phase_id) -> sustained sclk across the given runs.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         if self._sclk_cache is None:
             self._sclk_cache: dict[tuple[str, str], float] = {}
         for rid in run_ids:
@@ -205,6 +208,7 @@ class ClockMixin:
         the temperature reported for a phase is the temperature of the exact
         samples its clock estimate came from -- a phase's clock and its thermal
         state can never be attributed to different windows.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         if self._thermal_cache is None:
             self._thermal_cache: dict[tuple[str, str], dict[str, Any]] = {}

@@ -83,6 +83,7 @@ def discover_runs(base_dir: str,
     all_ref=False only the locked floor (`gfx900_ref_locked_*`) is included,
     matching the published regression matrix; all_ref=True includes every
     gfx900 reference directory.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     runs_dir = _runs_dir(base_dir, _loader.resolve_profile(profile,).codename)
     out: list[tuple[str, str]] = []
@@ -224,6 +225,7 @@ def _family_and_dtype(cfg: dict[str, Any], kc: str,
     both lie about family — the `phase_auto_*` pool used to resolve to 'S'
     through its 'auto' prefix (the §13.2 contamination). Never derive a
     cell family from text when the kernel name is available.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     dt_enum = cfg.get("DataTypeEnum",)
     tc_family = family_from_kernel_name(kc)
@@ -339,6 +341,7 @@ def build_kernel_db(base_dir: str,
 
     `quiet=True` suppresses the per-run progress lines (used by the automatic
     post-run refresh in registry.SQLiteRegistry).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     runs = discover_runs(base_dir, all_ref=all_ref, profile=profile,)
     if run_ids:

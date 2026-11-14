@@ -66,7 +66,10 @@ def _tensile_command(
     phase_out_dir: Path,
 profile=None,
 ) -> tuple[list[str], dict[str, str]]:
-    """The Tensile argv and environment for one phase config."""
+    """The Tensile argv and environment for one phase config.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     rocm = resolve_rocm_paths()
     assembler = rocm["TENSILE_ASSEMBLER"]
     if not os.path.isfile(assembler):

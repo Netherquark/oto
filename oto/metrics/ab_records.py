@@ -175,7 +175,10 @@ def phase_records(driver, run_dir: Path, force_arm: str) -> list[dict[str, Any]]
 
 def arm_records(driver, runs: Iterable[str], arm: str,
                 base: Path = BASE, profile=None) -> list[dict[str, Any]]:
-    """Records for a set of runs, classified wholly as one arm."""
+    """Records for a set of runs, classified wholly as one arm.
+
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """
     recs: list[dict[str, Any]] = []
     for run in runs:
         recs.extend(phase_records(driver, _runs_dir(base, _loader.resolve_profile(profile,).codename) / run, arm))
@@ -196,6 +199,7 @@ def _corpus_stamp(base: Path, profile=None) -> tuple[Any, ...]:
 
     Returns:
         (base, run count, newest run mtime, registry size and mtime).
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     runs = [d for d in (_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*") if d.is_dir()]
     newest = 0.0
@@ -229,6 +233,7 @@ def arm_record_sets(base: Path = BASE, profile=None) -> tuple[list[dict[str, Any
     The result is memoised on the corpus stamp (see :func:`_corpus_stamp`):
     the walk costs ~76 s and every caller wants the same records. The returned
     lists are shared, so a caller must treat them as read-only.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     key = _corpus_stamp(base, profile=profile,)
     cached = _RECORD_SETS_CACHE.get(key,)

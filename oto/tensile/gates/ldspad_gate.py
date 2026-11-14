@@ -161,6 +161,7 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
     enforced by ``assembly_class_valid``; enforcing a *second* copy here would
     be two homes for one fact.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     profile = _loader.resolve_profile(profile,)
     af0em = config.get("AssertFree0ElementMultiple",)
@@ -220,6 +221,7 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
 
     Returns:
         ``(True, "")`` or ``(False, reason)``.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     return _ldspad_feasible_impl(config, profile=profile)
 

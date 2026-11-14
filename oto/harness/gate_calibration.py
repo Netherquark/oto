@@ -194,6 +194,7 @@ def audit(base: str = ".", families: Sequence[str] | None = None, profile=None) 
     Returns:
         ``{"meta": {...}, "populations": {"ours"|"reference": {...}}}``; each
         population carries the confusion counts and the two named work lists.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     from oto.tensile.candidate import CandidateGenerator
     from oto.tensile.gates.occupancy import ldspad_feasible

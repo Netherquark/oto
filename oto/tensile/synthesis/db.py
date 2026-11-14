@@ -79,6 +79,7 @@ class DBMutator(DbPatternsMixin):
 
     def __init__(self, base_dir: Path, mutator,
                  kernel_db_path: Path | None = None, profile=None):
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
@@ -145,6 +146,7 @@ class DBMutator(DbPatternsMixin):
         return self._sched
 
     def _template(self, family: str, profile=None) -> dict[str, Any]:
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),

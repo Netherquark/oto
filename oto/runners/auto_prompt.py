@@ -100,6 +100,7 @@ def _read_counts(base_dir: Any = None, profile=None) -> dict[str, int]:
     A failure here must not stop the run: the counts are only used to phrase the
     question ("re-measure the N ILLEGAL ..."), and a wrong-but-plausible number
     is far better than refusing to start.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     from collections import Counter
     from pathlib import Path

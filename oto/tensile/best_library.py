@@ -209,6 +209,7 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
                       kernel_db_path: Path | None = None, profile=None) -> tuple[
         dict[tuple[str, str], dict[str, Any]],
         list[dict[str, Any]], dict[str, Any]]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
         _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
@@ -270,6 +271,7 @@ def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
 
 
 def _problem_type_state(fam: str, tensile_root: Path | None = None, profile=None) -> dict[str, Any]:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     _ensure_tensile_importable(tensile_root)
     from Tensile.LibraryIO import updateProblemDatatypes
     from Tensile.SolutionStructs import ProblemType
@@ -473,6 +475,7 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
 
 
 def _default_codename(profile=None) -> str:
+    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
     return _loader.resolve_profile(profile,).codename
 
 

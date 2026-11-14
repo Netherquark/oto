@@ -76,7 +76,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         reference_floor_authoritative: bool = True,
     profile=None,
     ) -> AcceptanceReport:
-        """Generate final acceptance report."""
+        """Generate final acceptance report.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         orange_list = orange_list or []
         shipped = self._load_shipped_manifest()
         per_family_coverage = self._compute_family_coverage(all_analytics, shipped)
@@ -189,6 +192,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         expected_kernels: dict[str, int],
     profile=None,
     ) -> dict[str, Any]:
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         fam_lower = family.lower()
         short = family_to_dtype().get(fam_lower,)
 
@@ -320,7 +324,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         )
 
     def write_report(self, report: AcceptanceReport, output_path: Path | None = None, profile=None) -> None:
-        """Write acceptance report to JSON and HTML files."""
+        """Write acceptance report to JSON and HTML files.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         if output_path is None:
             output_path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)

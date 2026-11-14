@@ -399,6 +399,7 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str, profile=Non
 
     Returns:
         The widest legal VectorWidth (>= 1), or 0 when the family is unknown.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper(),)
     if not bpe:
@@ -433,6 +434,7 @@ def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, 
     Returns:
         ``(True, "")`` when every operand's classic-path load is legal, else
         ``(False, reason)`` naming the operand (A/B) and the branch that failed.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     profile = _loader.resolve_profile(profile,)
     return _validate_tensile_loads_impl(config, profile=profile)

@@ -78,6 +78,7 @@ def snapshot(base: Path = BASE, profile=None) -> dict[str, Any]:
     the point is to catch a rewrite in place (a rewritten CSV rarely keeps its
     byte length) and to catch deletion, not to attest to contents. Hashing every
     CSV in the corpus would cost more than the runs being verified.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     dirs: dict[str, list[int]] = {}
@@ -175,6 +176,7 @@ def telemetry(run_id: str, base: Path = BASE, profile=None) -> dict[str, Any]:
 
     Filters are reported cumulatively in the order `_telemetry_rows` applies
     them, so a phase losing everything at one step is obvious.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     from oto.runners.driver import TensileDriver
 
@@ -250,6 +252,7 @@ def cheapest(family: str | None = None, n: int = 5,
     driver executes the live deck; load_deck is the 1644-phase solution
     universe used for deck *selection*. Recommending from the union produces
     `--targets` the driver cannot resolve, which is worse than no answer.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     from oto.tools.consolidate import _is_legal
 

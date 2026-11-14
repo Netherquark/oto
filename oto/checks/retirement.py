@@ -23,6 +23,7 @@ from oto.runners.paths import results_dir as _results_dir
 
 
 def main(profile=None) -> int:
+    """CLI: report retirement records and per-cell samples. ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")

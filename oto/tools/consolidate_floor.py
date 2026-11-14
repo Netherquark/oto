@@ -39,6 +39,7 @@ def plan_floor(base: Path = BASE, profile=None) -> dict[str, Any]:
     prefers a complete sweep over a partial one without ever comparing GFLOPS
     across runs to decide, so the selection cannot be tuned by how fast a run
     happened to be.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     chain = source_chain(base, profile=profile,)
     stats: dict[str, dict[str, Any]] = {}
@@ -91,6 +92,7 @@ def build_floor(base: Path, dest: Path, stamp: str, profile=None) -> dict[str, A
     Only ``2_BenchmarkData/*.csv`` is copied -- that is all the floor arm reads --
     so the cost is tens of MB rather than the ~4GB the chain occupies with
     telemetry. CSV contents are copied byte-for-byte; only the name is suffixed.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     plan = plan_floor(base, profile=profile,)
     run_id = locked_run_id(plan["chain"])
@@ -135,6 +137,7 @@ def build_db(base: Path, lock: dict[str, Any], out: Path,
     database is a superset of the corpus and nothing is lost. The locked floor is
     inserted last, so it is the newest completed gfx900_ref_* row and
     ``reference_chain`` selects it as the head with no resume_of to follow.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     out.parent.mkdir(parents=True, exist_ok=True)
     src = sqlite3.connect(f"file:{_results_dir(base, _loader.resolve_profile(profile,).codename) / 'registry.db'}?mode=ro",

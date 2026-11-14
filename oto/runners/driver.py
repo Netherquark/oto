@@ -148,6 +148,7 @@ class TensileDriver(
         codename: str | None = None,
     profile=None,
     ):
+        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
         self.base_dir = Path(base_dir).resolve()
         self.phase_timeout_s = phase_timeout_s
         self.tensile_root = require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)

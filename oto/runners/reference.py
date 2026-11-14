@@ -121,7 +121,10 @@ class ReferenceMixin:
     """The spoof floor run chain, mixed into TensileDriver."""
 
     def _resume_chain_ids(self, base: str, profile=None) -> list[str]:
-        """Chain ids for a resume, base first."""
+        """Chain ids for a resume, base first.
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         arch = _spoof_arch(self)
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
                                         arch=arch)
@@ -290,7 +293,10 @@ class ReferenceMixin:
 
     def _get_resume_phases(self, manifest, resume_base: str | None,
                            release_held: bool, profile=None) -> tuple:
-        """Get phases for resume mode. Returns (phases, resume_meta)."""
+        """Get phases for resume mode. Returns (phases, resume_meta).
+
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         arch = _spoof_arch(self)
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
                                         arch=arch)
@@ -408,7 +414,9 @@ class ReferenceMixin:
 
     def _reference_floor_runs(self, run_id: Any, profile=None) -> list[str]:
         """Full resume chain of the recalled reference floor, newest first,
-        excluding the candidate run itself when it is a reference run."""
+        excluding the candidate run itself when it is a reference run.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        """
         arch = _spoof_arch(self)
         exclude = str(run_id) if str(run_id).startswith(f"{arch}_ref_") else None
         chain = tlib.reference_chain(self.registry, exclude=exclude, arch=arch)
@@ -496,7 +504,7 @@ class ReferenceMixin:
         Only T1 blocks. T1 needs re-measurement; T2 held (opt-in, never
         blocks --auto); T3 unbuildable, stays failed. A T1 phase is owed
         until newest record's config_fingerprint matches current phase's.
-        """
+        ``profile`` -- optional, ambient by default."""
         arch = _spoof_arch(self)
         chain = tlib.reference_chain(self.registry, exclude=self.run_dir.name,
                                     arch=arch)

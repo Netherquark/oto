@@ -129,6 +129,7 @@ class CorpusMixin:
 
         <runs>/gfx900_ref_* is the spoof floor (the shipped gfx900
         reference chain), never a native candidate, so it is excluded.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         return [d for d in sorted(runs_dir.glob("run_*")) if d.is_dir()]
@@ -259,6 +260,7 @@ class CorpusMixin:
         2_BenchmarkData CSVs (registry completed records carry no medians).
         Appends a record_type="retire" record for each eligible (phase_id,fp).
         Returns number of newly retired records appended.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         # Per (phase_id, fp): {run_dir_name: [gflops...]}
         by_cell: dict[tuple[str, str], dict[str, list[float]]] = {}

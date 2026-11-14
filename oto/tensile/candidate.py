@@ -175,6 +175,7 @@ class CandidateGenerator(CandidateEmitMixin):
 
         Returns:
             ``(True, "Valid")`` or ``(False, reason)``.
+        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         knob = _illegal_knob(config)
         if knob is not None:

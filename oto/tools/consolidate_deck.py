@@ -43,6 +43,7 @@ def measured_index(base: Path = BASE, profile=None) -> dict[tuple[str, str], dic
 
     GFLOPS for one phase/cell is the median across every run that measured it, so
     a phase that got lucky once does not outrank one that reproduced.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     drv = _driver(base)
     per: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
@@ -157,6 +158,7 @@ def _is_legal(phase: dict[str, Any], profile=None) -> tuple[bool, str]:
     ``occupancy_feasible`` and ``assembly_class_valid`` both pass ZZ VectorWidth 2,
     which Tensile rejects at assembly time with 20 empty phases and a wasted
     overnight run. ``python3 -m oto check candidates`` still misses it for the same reason.
+    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
     cfg = phase.get("config",) or {}
     try:
