@@ -26,11 +26,8 @@ import pytest
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.device.peaks import (
-    LDS_PER_CU_KB,
-    MAX_WAVES_PER_CU,
-    NUM_SIMDS_PER_CU,
-)
+from oto.device import loader as _loader
+_profile = _loader.current_profile()
 from oto.harness import asm_occupancy as ao
 
 # The AMD/ORNL GFX9 table, VGPR/thread -> waves/SIMD. Reproduced here rather
@@ -97,7 +94,7 @@ def test_unmeasured_lds_never_claims_lds_binding():
     binder, waves = ao.binding_resource(47, 0, 0)
     assert binder == "VGPR"
     # 47 VGPRs align to 48 at granule 4 -> 16384/(64*48) = 5 waves/SIMD = 20/CU
-    assert waves == ao.waves_per_simd(47) * NUM_SIMDS_PER_CU == 20
+    assert waves == ao.waves_per_simd(47) * _profile.simds_per_cu == 20
 
 
 def test_dtype_facts_agree_with_tensile_datatypes():
@@ -137,7 +134,6 @@ def test_corpus_occupancy_is_not_pathologically_low():
 
 
 def test_lds_and_caps_are_sourced_from_one_home():
-    from oto.device import peaks as _peaks
-    assert ao._lds_per_cu() == LDS_PER_CU_KB * 1024
-    assert ao._waves_per_simd_max() == MAX_WAVES_PER_CU // NUM_SIMDS_PER_CU
-    assert ao._simd_vgpr() * NUM_SIMDS_PER_CU == _peaks.VGPR_PER_CU
+    assert ao._lds_per_cu() == _profile.lds_per_cu_kb * 1024
+    assert ao._waves_per_simd_max() == _profile.max_waves_per_cu // _profile.simds_per_cu
+    assert ao._simd_vgpr() * _profile.simds_per_cu == _profile.vgpr_per_cu

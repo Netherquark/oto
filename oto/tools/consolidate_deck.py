@@ -160,9 +160,9 @@ def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     """
     cfg = phase.get("config") or {}
     try:
+        from oto.device import loader as _loader
         from oto.tensile.gates.assembly import assembly_class_valid
         from oto.tensile.gates.occupancy import occupancy_feasible
-        from oto.tensile.gates.vgpr_model import GLOBAL_LOAD_BYTE_CAP
     except Exception as exc:                       # pragma: no cover
         return True, f"gate unavailable ({exc})"
     try:
@@ -179,10 +179,10 @@ def _is_legal(phase: dict[str, Any]) -> tuple[bool, str]:
     dt = cfg.get("DataType") or phase.get("dtype")
     if vw is not None and dt:
         b = dtype_bytes(str(dt))
-        if b is not None and int(vw) * b > GLOBAL_LOAD_BYTE_CAP:
+        if b is not None and int(vw) * b > _loader.current_profile().global_load_byte_cap:
             return False, (
                 f"reject: GlobalLoadVectorWidthA * DataType.numBytes() > 16 "
-                f"(VectorWidth={vw} x {b}B for {dt} > {GLOBAL_LOAD_BYTE_CAP})")
+                f"(VectorWidth={vw} x {b}B for {dt} > {_loader.current_profile().global_load_byte_cap})")
     return True, ""
 
 

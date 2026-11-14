@@ -18,8 +18,9 @@ import dataclasses
 
 import pytest
 
-from oto.device.loader import load_profile
-from oto.tensile.gates import loads, occupancy, vgpr_model
+from oto.device import loader as _loader
+from oto.device.loader import bound_profile, load_profile
+from oto.tensile.gates import loads, occupancy
 
 SYNTH_FIELDS = {"vgpr_per_cu": 32768, "global_load_byte_cap": 8}
 
@@ -62,26 +63,25 @@ def test_profiles_round_trip_peaks():
     assert a.realistic_ceilings != b.realistic_ceilings
 
 
-def test_bound_profile_rebinds_downstream_modules(synthetic_profile, default_profile):
-    """The gate modules read import-time snapshots; the rebind must reach them."""
-    assert occupancy.VGPR_PER_CU == default_profile.vgpr_per_cu
-    assert loads.GLOBAL_LOAD_BYTE_CAP == default_profile.global_load_byte_cap
-    with vgpr_model.bound_profile(synthetic_profile):
-        assert vgpr_model.VGPR_PER_CU == 32768
-        assert occupancy.VGPR_PER_CU == 32768
-        assert loads.GLOBAL_LOAD_BYTE_CAP == 8
+def test_bound_profile_rebinds_gate_verdicts(synthetic_profile, default_profile):
+    """The bound profile must reach the gates, not just the loader."""
+    cfg = _dd_config()
+    assert occupancy.occupancy_feasible(cfg)[0] is True
+    with bound_profile(synthetic_profile):
+        assert _loader.current_profile().vgpr_per_cu == 32768
+        assert occupancy.occupancy_feasible(cfg)[0] is False
     # A scope exit is a full restore, byte-for-byte back to gfx90c.
-    assert vgpr_model.VGPR_PER_CU == default_profile.vgpr_per_cu
-    assert occupancy.VGPR_PER_CU == default_profile.vgpr_per_cu
-    assert loads.GLOBAL_LOAD_BYTE_CAP == default_profile.global_load_byte_cap
+    assert _loader.current_profile().vgpr_per_cu == default_profile.vgpr_per_cu
+    assert occupancy.occupancy_feasible(cfg)[0] is True
 
 
 def test_restore_even_on_exception(synthetic_profile, default_profile):
+    cfg = _dd_config()
     with pytest.raises(RuntimeError):
-        with vgpr_model.bound_profile(synthetic_profile):
+        with bound_profile(synthetic_profile):
             raise RuntimeError("boom")
-    assert occupancy.VGPR_PER_CU == default_profile.vgpr_per_cu
-    assert loads.GLOBAL_LOAD_BYTE_CAP == default_profile.global_load_byte_cap
+    assert _loader.current_profile().vgpr_per_cu == default_profile.vgpr_per_cu
+    assert occupancy.occupancy_feasible(cfg)[0] is True
 
 
 def _dd_config() -> dict:
@@ -109,5 +109,5 @@ def test_load_cap_verdict_follows_the_profile(synthetic_profile):
     # SS element = 4 bytes: VW 4 is exactly legal at the 16 B cap and illegal
     # at the synthetic 8 B cap (bound 1 of the gate's three bounds).
     assert loads.cap_vector_width("SS", "64x64x16", "4x4") == 4
-    with vgpr_model.bound_profile(synthetic_profile):
+    with bound_profile(synthetic_profile):
         assert loads.cap_vector_width("SS", "64x64x16", "4x4") == 2

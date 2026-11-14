@@ -37,6 +37,25 @@ from typing import Any
 MAX_ENTRIES = 50_000
 
 
+
+#: The device facts the legality gates read. A config's verdict is cached per
+#: (config, fingerprint) pair, so binding another profile recomputes rather
+#: than replaying a verdict reached under this one. Kept small on purpose --
+#: the gates consume exactly these.
+_PROFILE_FINGERPRINT_FIELDS = (
+    "codename", "vgpr_per_cu", "global_load_byte_cap", "lds_per_cu_kb", "has_mfma",
+)
+
+
+def _profile_fingerprint() -> str:
+    try:
+        from oto.device import loader as _loader
+        p = _loader.current_profile()
+        return "|".join(str(getattr(p, f, "")) for f in _PROFILE_FINGERPRINT_FIELDS)
+    except Exception:
+        return "unknown"
+
+
 def config_key(config: dict[str, Any]) -> str:
     """A stable key for a config dict's *content*.
 
@@ -68,10 +87,10 @@ def memo_gate(fn: Callable[[dict[str, Any]], tuple[bool, str]]
 
     @functools.wraps(fn)
     def wrapper(config: dict[str, Any], *args, **kwargs) -> tuple[bool, str]:
-        # Profile-aware calls are not memoised (they depend on device state).
+        # Explicit per-call profile kwargs are not memoised (device state varies).
         if args or kwargs:
             return fn(config, *args, **kwargs)
-        key = config_key(config)
+        key = config_key(config) + "||" + _profile_fingerprint()
         hit = cache.get(key)
         if hit is not None:
             return hit

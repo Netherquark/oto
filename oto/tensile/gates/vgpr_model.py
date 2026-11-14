@@ -9,106 +9,19 @@ out of Tensile's own kernel writer. Also the config readers those numbers need
 ``num_threads``, ``is_hpa``, ``compute_bytes``).
 Does NOT own: the pass/fail decision (oto.tensile.gates.occupancy) or the
 legality classes (oto.tensile.gates.assembly).
-Public API: GLOBAL_LOAD_BYTE_CAP, FAMILY_BYTES_PER_ELEMENT, VGPR_PER_CU,
-MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT, ACCVGPR_BUDGET, LDS_BUDGET,
-MAX_LDS_BYTES, BYTES_PER_ELEMENT, COMPUTE_BYTES_PER_ELEMENT, VGPR_BUDGET,
-LDS_PER_CU_KB,
-MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE, measured_accvgpr, depth_u,
-lds_base_bytes, local_split_u, num_threads, per_thread_vgpr, is_hpa,
-compute_bytes, set_profile, restore_profile, bound_profile.
+Public API: FAMILY_BYTES_PER_ELEMENT, MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT,
+ACCVGPR_BUDGET, LDS_BUDGET, MAX_LDS_BYTES, BYTES_PER_ELEMENT,
+COMPUTE_BYTES_PER_ELEMENT, MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE,
+measured_accvgpr, depth_u, lds_base_bytes, local_split_u, num_threads,
+per_thread_vgpr, is_hpa, compute_bytes.
+Device-dependent facts (byte cap, register file, LDS/CU) come from
+``oto.device.loader.current_profile()`` -- they are resolved at call time,
+never captured as module-global snapshots.
 """
 
 from __future__ import annotations
 
-import contextlib
 from typing import Any
-
-#: Bytes in the widest global load the classic (non-MFMA) path allows. Tensile
-#: enforces this at SolutionStructs:3460 (`GLVW * bytesPerElement <= 16`), and
-#: `validate_tensile_loads` rejects anything above it. (Refactor 2: sourced
-#: from the default profile; module global kept for backward compat.)
-try:
-    from oto.device.loader import default_profile as _vgpr_dp
-    GLOBAL_LOAD_BYTE_CAP = _vgpr_dp().global_load_byte_cap
-except Exception:  # pragma: no cover
-    GLOBAL_LOAD_BYTE_CAP = 16
-
-
-_TRACKED = ("GLOBAL_LOAD_BYTE_CAP", "VGPR_PER_CU", "LDS_PER_CU_KB")
-
-#: Gate modules that captured a profile-derived name with
-#: ``from .vgpr_model import X`` at import time (the plain name in their
-#: module namespace is a snapshot, so rebinding *our* globals would leave the
-#: gates reading the device value). set_profile/restore_profile rebind these
-#: module globals too; restore reverses them exactly. Only profile-derived
-#: names are listed -- calibrated constants (LDS_BUDGET, MAX_LDS_BYTES,
-#: ACCVGPR_BUDGET) stay fixed by design.
-_DOWNSTREAM: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("oto.tensile.gates.occupancy", ("VGPR_PER_CU",)),
-    ("oto.tensile.gates.loads", ("GLOBAL_LOAD_BYTE_CAP",)),
-)
-
-
-def _downstream_modules():
-    import importlib
-    for path, names in _DOWNSTREAM:
-        try:
-            yield importlib.import_module(path), names
-        except Exception:  # pragma: no cover - a gate module must import cleanly
-            continue
-
-
-def set_profile(profile) -> dict[str, Any]:
-    """Re-bind the module-level device constants to ``profile`` (Refactor 2).
-
-    Returns the previous bindings so a scoped call site can
-    :func:`restore_profile` them; the default (module-init) state is what a
-    restore brings back. Also rebinds the import-time snapshots held by the
-    gate modules (see ``_DOWNSTREAM``), or the bound profile would silently
-    change nothing a gate reads.
-    """
-    global GLOBAL_LOAD_BYTE_CAP, VGPR_PER_CU, LDS_PER_CU_KB
-    previous = {name: globals()[name] for name in _TRACKED}
-    try:
-        for mod, names in _downstream_modules():
-            for name in names:
-                if hasattr(mod, name):
-                    previous[f"{mod.__name__}.{name}"] = getattr(mod, name)
-        GLOBAL_LOAD_BYTE_CAP = profile.global_load_byte_cap
-        VGPR_PER_CU = profile.vgpr_per_cu
-        LDS_PER_CU_KB = profile.lds_per_cu_kb
-        for mod, names in _downstream_modules():
-            for name in names:
-                if name in globals():
-                    setattr(mod, name, globals()[name])
-    except Exception:
-        pass
-    return previous
-
-
-def restore_profile(state: dict[str, Any]) -> None:
-    """Restore the bindings :func:`set_profile` replaced (Refactor 2)."""
-    import importlib
-
-    for key, value in state.items():
-        if "." in key:
-            mod_name, _, name = key.rpartition(".")
-            try:
-                setattr(importlib.import_module(mod_name), name, value)
-            except Exception:  # pragma: no cover
-                pass
-        else:
-            globals()[key] = value
-
-
-@contextlib.contextmanager
-def bound_profile(profile):
-    """Scope ``set_profile`` to the ``with`` block; restore on exit."""
-    state = set_profile(profile)
-    try:
-        yield
-    finally:
-        restore_profile(state)
 
 #: Bytes per element per family, matching the dtype table in
 #: `validate_tensile_loads`. Cross-checked against ``Tensile.DataType.properties``
@@ -121,17 +34,9 @@ FAMILY_BYTES_PER_ELEMENT = {
     "HH_HPA": 2, "HS_HPA": 4,
 }
 
-# Register file is 64K VGPRs per CU, but a single thread is architecturally
-# capped at 256 VGPRs. Tensile enforces that cap when generating assembly and
-# raises instead of emitting a kernel
+# A single thread is architecturally capped at 256 VGPRs. Tensile enforces
+# that cap when generating assembly and raises instead of emitting a kernel
 # (KernelWriterAssembly: "total vgpr: N not in [0, 256]").
-try:
-    from oto.device.loader import default_profile as _vgpr_dp2
-    VGPR_PER_CU = _vgpr_dp2().vgpr_per_cu
-    LDS_PER_CU_KB = _vgpr_dp2().lds_per_cu_kb
-except Exception:  # pragma: no cover
-    VGPR_PER_CU = 65536
-    LDS_PER_CU_KB = 64
 MAX_VGPR_PER_THREAD = 256
 #: Effective VGPRs consumed per thread-tile element, per dtype char.
 VGPR_PER_ELEMENT = {"S": 1, "D": 2, "H": 1, "B": 1, "I8": 1, "C": 4, "Z": 8}
@@ -166,11 +71,6 @@ LDS_BUDGET = 16384
 #: refuses ZZ VectorWidth 2 (see potential_configs.md §R23). This LDS table stays
 #: at 8 because LDS_BUDGET was calibrated against it.
 BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 8}
-#: Retained for the workgroup estimate: budget is expressed in accumulators, and
-#: the register file is shared by every thread in a workgroup.
-VGPR_BUDGET = VGPR_PER_CU // 2
-
-
 #: Tensile's ``globalParameters["MaxLDS"]`` -- the *per-CU* LDS allocator ceiling,
 #: 64 KiB. Distinct from :data:`LDS_BUDGET`, which is the conservative
 #: per-workgroup tile proxy of 16 KiB. The two must not be conflated: the tile

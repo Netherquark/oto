@@ -47,6 +47,7 @@ for _p in (os.environ.get("TENSILE_ROOT"),):
         sys.path.insert(0, _p)
 
 import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.tensile.candidate import CandidateGenerator
 from oto.tensile.gates.assembly import assembly_class_valid
@@ -55,7 +56,7 @@ from oto.tensile.gates.occupancy import (
     occupancy_workgroups_per_cu,
     tile_dims,
 )
-from oto.tensile.gates.vgpr_model import VGPR_PER_CU, VGPR_PER_ELEMENT, measured_accvgpr
+from oto.tensile.gates.vgpr_model import VGPR_PER_ELEMENT, measured_accvgpr
 from oto.tensile.library import shipped_kernel_config
 
 
@@ -92,7 +93,7 @@ def _occupancy_margin(cfg) -> str:
         return f"wg/cu={wg}"
     acc = measured_accvgpr(tt0, tt1, r)
     threads = (mt0 // tt0) * (mt1 // tt1)
-    pct = 100.0 * threads * acc / VGPR_PER_CU if threads else 0.0
+    pct = 100.0 * threads * acc / _loader.current_profile().vgpr_per_cu if threads else 0.0
     return f"wg/cu={wg} acc={acc}vgpr {pct:.0f}% of 64K file"
 
 

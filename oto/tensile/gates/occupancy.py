@@ -78,6 +78,8 @@ __all__ = [
     'refuses_workgroup_register_file',
     'tile_dims',
 ]
+from oto.device import loader as _loader
+
 from .ldspad_gate import ldspad_feasible as ldspad_feasible  # re-export
 from .occupancy_common import dtype_char as dtype_char
 from .occupancy_common import tile_dims as tile_dims  # re-export
@@ -89,7 +91,6 @@ from .vgpr_model import (
     MAX_VGPR_PER_THREAD,
     MEASURED_VGPR,
     MEASURED_VGPR_BY_DTYPE,
-    VGPR_PER_CU,
     VGPR_PER_ELEMENT,
     compute_bytes,
     depth_u,
@@ -133,11 +134,11 @@ def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
     return (
         f"MacroTile {mt0}x{mt1} (LocalSplitU {lsu}, NumThreads {nt}) needs "
         f"{r*mt0*mt1*lsu} accumulator VGPRs across the workgroup ({ch} weight "
-        f"{r}); the file holds {VGPR_PER_CU}. The accumulators alone fill it, so "
+        f"{r}); the file holds {_loader.current_profile().vgpr_per_cu}. The accumulators alone fill it, so "
         f"Tensile raises 'Generating kernel source resulted in error 4' "
         f"(overflowedResources / the 'Occupancy limit' in KernelWriterAssembly "
         f"functionSuffix) with no room left for operands. Reduce MacroTile area "
-        f"(<= {VGPR_PER_CU // r} elements per workgroup) or drop LocalSplitU."
+        f"(<= {_loader.current_profile().vgpr_per_cu // r} elements per workgroup) or drop LocalSplitU."
     )
 
 
@@ -147,8 +148,8 @@ def _occupancy_limit_rejection(ch: str, tt0: int, tt1: int, vgpr: int,
     return (
         f"ThreadTile {tt0}x{tt1} emits {vgpr} VGPRs/thread and the workgroup "
         f"has {nt} threads: Tensile's occupancy limit is "
-        f"65536 // {nt} = {VGPR_PER_CU // nt} VGPRs/thread, so the workgroup "
-        f"needs {vgpr * nt} VGPRs against the file's {VGPR_PER_CU}. Tensile "
+        f"65536 // {nt} = {_loader.current_profile().vgpr_per_cu // nt} VGPRs/thread, so the workgroup "
+        f"needs {vgpr * nt} VGPRs against the file's {_loader.current_profile().vgpr_per_cu}. Tensile "
         f"raises 'Generating kernel source resulted in error 4' "
         f"(KernelWriterAssembly.functionSuffix: "
         f"numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1). "
@@ -219,7 +220,7 @@ def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
     acc = measured_accvgpr(tt0, tt1, r)
     if acc > ACCVGPR_BUDGET:
         return 0
-    if r * mt0 * mt1 * lsu >= VGPR_PER_CU:
+    if r * mt0 * mt1 * lsu >= _loader.current_profile().vgpr_per_cu:
         return 0
     compute = compute_bytes(config, ch)
     if lsu > 1 and compute and lsu * mt0 * mt1 * compute > MAX_LDS_BYTES:
@@ -229,7 +230,7 @@ def occupancy_workgroups_per_cu(config: dict[str, Any]) -> int:
         return 0
     if lds_base_bytes(mt0, mt1, dtype_char(config)) * ku > LDS_BUDGET:
         return 0
-    return VGPR_PER_CU // acc
+    return _loader.current_profile().vgpr_per_cu // acc
 
 
 def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
@@ -288,8 +289,7 @@ def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]
     """
     if profile is None:
         return _occupancy_feasible_impl(config)
-    from .vgpr_model import bound_profile as _bp
-    with _bp(profile):
+    with _loader.bound_profile(profile):
         return _occupancy_feasible_impl(config)
 
 
@@ -357,7 +357,7 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch) -> str | None:
     bound on the workgroup total and ``>= 65536`` is exactly "no room for one
     workgroup". ThreadTile cancels, so this bounds MacroTile *area*.
     """
-    if weight * mt0 * mt1 * lsu >= VGPR_PER_CU:
+    if weight * mt0 * mt1 * lsu >= _loader.current_profile().vgpr_per_cu:
         return _workgroup_vgpr_rejection(
             ch, weight, mt0, mt1, lsu, num_threads(dims, lsu))
     return None
@@ -386,7 +386,7 @@ def _occupancy_limit_check(dims, ch, tt0, tt1, lsu) -> str | None:
     vgpr = per_thread_vgpr(ch, tt0, tt1)
     if not vgpr:
         return None
-    if VGPR_PER_CU // nt < vgpr:
+    if _loader.current_profile().vgpr_per_cu // nt < vgpr:
         return _occupancy_limit_rejection(ch, tt0, tt1, vgpr, nt)
     return None
 
@@ -456,7 +456,7 @@ def refuses_per_thread_occupancy_limit(config: dict[str, Any]) -> bool | None:
     vgpr = per_thread_vgpr(dtype_char(config), tt0, tt1)
     if not vgpr:
         return None
-    return VGPR_PER_CU // nt < vgpr
+    return _loader.current_profile().vgpr_per_cu // nt < vgpr
 
 
 def refuses_lds_reduction_buffer(config: dict[str, Any]) -> bool | None:

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import oto.device.peaks as _peaks
+from oto.device import loader as _loader
 
 from .memo import memo_gate
 from .occupancy_common import dtype_char, tile_dims
@@ -193,7 +193,7 @@ def _store_knobs_feasible(config: dict[str, Any]) -> tuple[bool, str]:
             return False, err
         if tv == 1:
             return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           f"(SolutionStructs:4519-4521) and {_peaks.CODENAME} has no MFMA")
+                           f"(SolutionStructs:4519-4521) and {_loader.current_profile().codename} has no MFMA")
         if tv == -1:
             return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
                            "classic (VALU) path rejects: 'didn't support "
@@ -221,8 +221,7 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """
     if profile is None:
         return _ldspad_feasible_impl(config)
-    from .vgpr_model import bound_profile as _bp
-    with _bp(profile):
+    with _loader.bound_profile(profile):
         return _ldspad_feasible_impl(config)
 
 

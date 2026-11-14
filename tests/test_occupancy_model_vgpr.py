@@ -14,13 +14,12 @@ from occupancy_gate_common import OBSERVED, cfg
 
 from oto.tensile.gates.loads import validate_tensile_loads
 from oto.tensile.gates.occupancy import occupancy_feasible
+from oto.device import loader as _loader
 from oto.tensile.gates.vgpr_model import (
     ACCVGPR_BUDGET,
     MAX_VGPR_PER_THREAD,
     MEASURED_VGPR,
     MEASURED_VGPR_BY_DTYPE,
-    VGPR_BUDGET,
-    VGPR_PER_CU,
     VGPR_PER_ELEMENT,
 )
 
@@ -34,8 +33,8 @@ class TestVGPRWeights(unittest.TestCase):
 
     def test_isa_cap_is_256_per_thread(self):
         assert MAX_VGPR_PER_THREAD == 256
-        assert VGPR_PER_CU == 65536
-        assert VGPR_BUDGET == 32768
+        assert _loader.current_profile().vgpr_per_cu == 65536
+        assert _loader.current_profile().vgpr_per_cu // 2 == 32768
 
 
 class TestMeasuredRule(unittest.TestCase):
@@ -108,15 +107,13 @@ class TestVectorWidthCap(unittest.TestCase):
             assert cap_vector_width(fam, mt, tt) == want, fam
 
     def test_cap_vector_width_never_exceeds_the_hardware_cap(self):
+        from oto.device import loader as _loader
         from oto.tensile.gates.loads import cap_vector_width
-        from oto.tensile.gates.vgpr_model import (
-            FAMILY_BYTES_PER_ELEMENT,
-            GLOBAL_LOAD_BYTE_CAP,
-        )
+        from oto.tensile.gates.vgpr_model import FAMILY_BYTES_PER_ELEMENT
         for fam, bpe in FAMILY_BYTES_PER_ELEMENT.items():
             for _vw in (1, 2, 4, 8):
                 v = cap_vector_width(fam, "128x128x16", "8x8")
-                assert v * bpe <= GLOBAL_LOAD_BYTE_CAP, fam
+                assert v * bpe <= _loader.current_profile().global_load_byte_cap, fam
 
     def test_cap_vector_width_respects_tile_divisibility(self):
         from oto.tensile.candidate import cap_vector_width

@@ -158,17 +158,15 @@ class TensileDriver(
                 from oto.device.detect import detect_codename
                 codename = detect_codename()
             except Exception:
-                from oto.device.loader import default_profile
-                codename = default_profile().codename
+                from oto.device.loader import current_profile
+                codename = current_profile().codename
         self.codename = codename
-        from oto.device.loader import load_profile
+        from oto.device.loader import load_profile, rebind_profile
         self.profile = load_profile(codename)
-        # Propagate the profile to module-level constants (Refactor 2).
+        # Propagate the profile to every consumer through the canonical
+        # accessor (thread-scoped for tests; process-global here).
         try:
-            from oto.device import peaks as _peaks
-            from oto.tensile.gates import vgpr_model as _vgpr
-            _peaks.set_profile(self.profile)
-            _vgpr.set_profile(self.profile)
+            rebind_profile(self.profile)
         except Exception:
             pass
 

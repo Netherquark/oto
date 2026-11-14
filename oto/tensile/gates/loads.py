@@ -20,11 +20,12 @@ import math
 import re
 from typing import Any
 
+from oto.device import loader as _loader
+
 from ..patterns import pattern_of, tlu_flags
 from .memo import memo_gate
 from .vgpr_model import (
     FAMILY_BYTES_PER_ELEMENT,
-    GLOBAL_LOAD_BYTE_CAP,
     knob_int,
     local_split_u,
 )
@@ -401,7 +402,7 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str) -> int:
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper())
     if not bpe:
         return 0
-    limit = GLOBAL_LOAD_BYTE_CAP // bpe
+    limit = _loader.current_profile().global_load_byte_cap // bpe
     parts = [int(x) for x in str(macro_tile).split("x") if x.strip().isdigit()]
     tt = [int(x) for x in str(thread_tile).split("x") if x.strip().isdigit()]
     if len(parts) >= 2 and len(tt) == 2 and min(tt) > 0:
@@ -433,8 +434,7 @@ def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, 
     """
     if profile is None:
         return _validate_tensile_loads_impl(config)
-    from .vgpr_model import bound_profile as _bp
-    with _bp(profile):
+    with _loader.bound_profile(profile):
         return _validate_tensile_loads_impl(config)
 
 
