@@ -7,7 +7,7 @@ function per job: load, resolve, rebind, bind.
 Does NOT own: the dataclass layout (``oto.device.profile``), the JSON files
 themselves, or device auto-detection (``oto.device.detect``).
 Public API: load_profile, load_profile_from_starter, default_profile,
-current_profile, rebind_profile, bound_profile.
+current_profile, resolve_profile, rebind_profile, bound_profile.
 """
 
 from __future__ import annotations
@@ -173,6 +173,18 @@ def current_profile() -> DeviceProfile:
     if _CURRENT_PROFILE is None:
         _CURRENT_PROFILE = _resolve_profile()
     return _CURRENT_PROFILE
+
+
+def resolve_profile(profile: DeviceProfile | None = None) -> DeviceProfile:
+    """Return ``profile`` when an explicit profile is passed, else the
+    process's current profile.
+
+    The single choke point for "which profile does this call operate on".
+    Engines that accept an explicit profile take ``profile: DeviceProfile |
+    None = None`` and resolve through here, so an explicit argument always
+    wins and ambient resolution stays the boundary default.
+    """
+    return profile if profile is not None else current_profile()
 
 
 def rebind_profile(profile: DeviceProfile) -> None:

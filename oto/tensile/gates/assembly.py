@@ -125,7 +125,7 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
     """
-    prof = profile if profile is not None else _loader.current_profile()
+    prof = _loader.resolve_profile(profile)
     is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
 
     if dtype_upper in ("Z", "C") and gsu > 1 and not prof.has_mfma:

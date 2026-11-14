@@ -403,8 +403,7 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str, profile=Non
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper())
     if not bpe:
         return 0
-    if profile is None:
-        profile = _loader.current_profile()
+    profile = _loader.resolve_profile(profile)
     limit = profile.global_load_byte_cap // bpe
     parts = [int(x) for x in str(macro_tile).split("x") if x.strip().isdigit()]
     tt = [int(x) for x in str(thread_tile).split("x") if x.strip().isdigit()]
@@ -435,8 +434,7 @@ def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, 
         ``(True, "")`` when every operand's classic-path load is legal, else
         ``(False, reason)`` naming the operand (A/B) and the branch that failed.
     """
-    if profile is None:
-        profile = _loader.current_profile()
+    profile = _loader.resolve_profile(profile)
     return _validate_tensile_loads_impl(config, profile=profile)
 
 

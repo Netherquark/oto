@@ -61,3 +61,15 @@ def test_bound_profile_restores():
     with _loader.bound_profile(synthetic):
         assert _loader.current_profile().codename == "synthetictest"
     assert _loader.current_profile().codename == "gfx90c"
+
+
+def test_resolve_profile_prefers_explicit():
+    import dataclasses
+    synthetic = dataclasses.replace(load_profile("gfx90c"), codename="synthetictest")
+    assert _loader.resolve_profile(synthetic).codename == "synthetictest"
+    # Ambient default is gfx90c on this machine; explicit always wins.
+    assert _loader.resolve_profile(None).codename == "gfx90c"
+
+
+def test_resolve_profile_none_is_ambient_not_error():
+    assert _loader.resolve_profile() is _loader.current_profile()

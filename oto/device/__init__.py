@@ -3,7 +3,8 @@
 The only oto package allowed to hold device facts, and the home of the
 Refactor 2 seam: a driver that used to know gfx90c by name now reads one
 ``DeviceProfile`` at startup and works on any supported device. Concrete
-pieces: ``loader.py`` (profile resolution via ``current_profile()``),
+pieces: ``loader.py`` (profile resolution via ``current_profile()``;
+``resolve_profile()`` is the choke point explicit ``profile=`` kwargs use),
 ``profile.py`` (the frozen ``DeviceProfile`` shape), ``vocabulary.py``
 (kernel-name parsing + cell identity) and ``tensile_isa.py`` (build-proof ISA
 triples).

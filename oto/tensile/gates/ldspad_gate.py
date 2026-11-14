@@ -156,14 +156,13 @@ def _swizzle_feasible(config: dict[str, Any], ku: int,
 
 
 def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
-    if profile is None:
-        profile = _loader.current_profile()
     """AssertFree0ElementMultiple and StoreCInUnroll sanity.
 
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
     enforced by ``assembly_class_valid``; enforcing a *second* copy here would
     be two homes for one fact.
     """
+    profile = _loader.resolve_profile(profile)
     af0em = config.get("AssertFree0ElementMultiple")
     if af0em is not None:
         av, err = _int_or_reject(af0em, "AssertFree0ElementMultiple")
@@ -227,8 +226,7 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
 
 def _ldspad_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     """Body of :func:`ldspad_feasible`; ``profile`` defaults to the ambient one."""
-    if profile is None:
-        profile = _loader.current_profile()
+    profile = _loader.resolve_profile(profile)
     ku = depth_u(config)
     ch = dtype_char(config)
     bpe = BYTES_PER_ELEMENT.get(ch)
