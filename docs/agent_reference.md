@@ -204,7 +204,7 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
 ## CPU-only contract (`claude.md` §5)
 
 - **Never stress the GPU** from a GNOME session (no sustained `./benchmark` runs)
-- `oto check candidates`, `generate_candidates --dry-run`, and `oto doctor` are safe
+- `oto check candidates`, `python3 -m oto.harness.candidate_generator --dry-run`, and `oto doctor` are safe
 - Real benchmarking happens in the user's TTY only
 - CPU-only legality proofs: `validate_config`, `ldspad_feasible`, `occupancy_feasible`
 - **Any `pytest` invocation during programming takes minutes and must be run in

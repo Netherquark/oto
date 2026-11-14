@@ -164,7 +164,7 @@ class RegistryCore:
         self.read_only = read_only
         # Refresh <codename>_results/analysis/kernel_db.json automatically when a
         # run reaches a terminal data-producing status, so any later mutation /
-        # regression_matrix / resolve_cells read always sees the freshest
+        # regression_matrix / cell_resolver read always sees the freshest
         # corpus. Tests pass False; `OTO_NO_AUTO_KERNEL_DB_REBUILD=1` disables
         # it for seq runners that manage their own timing.
         self.auto_rebuild_kernel_db = auto_rebuild_kernel_db
@@ -337,7 +337,7 @@ class RegistryCore:
 
         Best-effort: a cache refresh must never fail a run finalisation, so any
         exception is logged (stderr) and swallowed. Rebuild is ~seconds and is
-        idempotent — later reads (mutations, regression_matrix, resolve_cells)
+        idempotent — later reads (mutations, regression_matrix, cell_resolver)
         then always see the freshest corpus, including resumed/interrupted
         partial data.
         """

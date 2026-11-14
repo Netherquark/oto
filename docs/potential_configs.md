@@ -461,7 +461,7 @@ which is what removes the overreach.
 
 ## R25 — the tie taxonomy on run_20261018_004835 (20 WIN / 18 TIE / 0 LOSS)
 
-`resolve_cells` is regenerated against the latest run. The 18 ties, with the
+`cell_resolver` is regenerated against the latest run. The 18 ties, with the
 mechanical native-vs-floor gap `cfg_gap` and the measured margin (`Δ %` = native
 over floor):
 
@@ -853,7 +853,7 @@ rows whose knob appears in the table above are executable.
 
 ## R17 — the tie taxonomy (latest A/B: 19 WIN / 19 TIE / 0 LOSS, 0 RED / 12 ORANGE)
 
-The 19 ties are not one problem. `resolve_cells` reports the mechanical gap
+The 19 ties are not one problem. `cell_resolver` reports the mechanical gap
 between the native winner's config and the floor's as `cfg_gap` and the classes
 it produces are the taxonomy below — so this split is now checkable, not read:
 
@@ -1040,7 +1040,7 @@ left the seed overlay (the ZZ VW2 candidate, two `AggressivePerfMode=2`
 candidates, and six `LocalSplitU=2` ones), and 8 left the `PLAN_BATCH`
 hypotheses (the same two classes). Coverage parity is unchanged (38/38 cells)
 because every removed row had a surviving sibling on the same tile and shape, and
-`generate_candidates` now emits a fully gate-legal set with nothing refused.
+`candidate_generator` now emits a fully gate-legal set with nothing refused.
 
 The durable Tensile mechanics behind these fixes (NumThreads/LSU, the
 shadowed-WorkGroup rule, the LSU LDS reduction, the 16-B cap check order, the
@@ -2403,7 +2403,7 @@ everything measured was junk. Capping distinct configs per cell at K:
 Recommend **K = 24** for the overnight: measured over the folded DB, that
 retains **765 of 3831 configs (20 %)** and **loses 0 of 35 cell winners**
 (the cap is ranked by measured median, so every cell's frontier survives). `--max-fp N` on
-`generate_candidates` is the round-robin knob; the run loop never applies it.
+`candidate_generator` is the round-robin knob; the run loop never applies it.
 
 ### 11.6 The command
 
@@ -2785,7 +2785,7 @@ arms.
   reference -- a 8-10 % systematic handicap on the native side. With telemetry on
   both arms the existing `ab_delta` clock correction can do its job (it needs
   >= 50 % coverage per arm; the native arm had 28.6 %).
-- **Report the environment band.** `resolve_cells --taxonomy` prints it; the
+- **Report the environment band.** `cell_resolver --taxonomy` prints it; the
   acceptance report should carry the identical-config spread next to the
   verdict band, so a "WIN" on an identical cell is visibly an environment win.
 
@@ -3025,7 +3025,7 @@ the floor uses, which the corpus has already swept.
 
 ### R48.5 The ties, one by one
 
-From `resolve_cells --taxonomy` (the gap is how far the two arms' winning
+From `cell_resolver --taxonomy` (the gap is how far the two arms' winning
 configs are apart):
 
 | cell | native | floor | delta | gap | roof (theoretical) | reading |

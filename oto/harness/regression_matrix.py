@@ -6,7 +6,7 @@ deck ships, what the gfx900 floor measured, and the best native kernel ever --
 and the standing loss / material-regression rules that decide which of those
 differences is signal.
 
-Does NOT own: the winner rule it shares with resolve_cells
+Does NOT own: the winner rule it shares with cell_resolver
 (oto.harness.cell_resolver), the shipped grid itself (oto.tensile.library_parity),
 or the acceptance report (oto.metrics.acceptance_report).
 

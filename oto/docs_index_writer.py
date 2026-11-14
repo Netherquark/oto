@@ -28,7 +28,7 @@ AGENT_CLASSES = {
         "reads": ["claude.md", "docs/agent_reference.md", "docs/docstrings.md",
                   "docs/harness_runbook.md", "docs/implementation_plan.md"],
         "never_needs": ["docs/operator_runbook.md", "docs/starter_*.md"],
-        "tools": ["pytest", "ruff", "pyflakes", "generate_candidates", "check_candidates"],
+        "tools": ["pytest", "ruff", "pyflakes", "candidate_generator", "deck_legality"],
     },
     "B": {
         "name": "operator",

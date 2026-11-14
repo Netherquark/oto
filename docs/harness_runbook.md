@@ -26,7 +26,7 @@ oto/tools/deck_review.py          # the three pre-deck questions (score/legality
 docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
-gfx90c_results/analysis/cells_resolved.json     # cache (winner map; resolve_cells)
+gfx90c_results/analysis/cells_resolved.json     # cache (winner map; cell_resolver)
 gfx90c_results/analysis/cells_resolved.full.txt # same, human table (docs/potential_configs.md §3)
 gfx90c_results/analysis/coverage_map.json      # cache (legal space + coverage; coverage_map)
 ```
@@ -136,7 +136,7 @@ published figures (wins/ties/losses and any material findings).
 
 ### 3. Resolve per-cell native-vs-floor winners (full knob surface)
 
-`resolve_cells` turns "regression_matrix says CC:256 is a loss" into the exact
+`cell_resolver` turns "regression_matrix says CC:256 is a loss" into the exact
 winning native phase / run / config and the floor kernel to beat — the input
 the per-cell triage (docs/potential_configs.md §3/§5) and any spoof-steal
 (§9: **configure, never copy**) are argued from:

@@ -19,8 +19,8 @@
         "pytest",
         "ruff",
         "pyflakes",
-        "generate_candidates",
-        "check_candidates"
+        "candidate_generator",
+        "deck_legality"
       ]
     },
     "B": {

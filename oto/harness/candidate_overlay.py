@@ -28,7 +28,7 @@ def _overlay_path() -> Path:
     """The seed overlay path, resolved at call time.
 
     Read through the CLI module's binding so a caller that rebinds
-    ``generate_candidates.OVERLAY_PATH`` is honoured rather than shadowed by
+    ``candidate_generator.OVERLAY_PATH`` is honoured rather than shadowed by
     this module's own copy. The tests use exactly that seam.
     """
     import oto.harness.candidate_generator as cli
