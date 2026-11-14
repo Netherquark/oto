@@ -4019,8 +4019,10 @@ the pre-built seed pool.
   `resolve_profile` uniformly; `_store_knobs_feasible`'s docstring-swallowing
   bug (profile resolved *before* the docstring) fixed en route. New
   `tests/test_explicit_profile_threading.py` proves the explicit path: gfx90c
-  refuses complex GSU>1 (no MFMA), an MFMA-capable synthetic passes it, and
-  `validate_config` threads the explicit profile into every gate it calls.
+  refuses complex GSU>1 (no MFMA), a fabricated MFMA-capable *synthetic test
+  profile* (codename `synthetictest`, has_mfma=True — never gfx90c, never a
+  shipped profile) passes it, and `validate_config` threads the explicit
+  profile into every gate it calls.
   The verifier's ast-equivalence check now recognises the Refactor 2 signature
   shape evergreen (a signature delta of exactly one trailing defaulted
   `profile=None` is the expected shape, base-agnostic; anything else still
