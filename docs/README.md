@@ -95,6 +95,7 @@ Corollaries:
 | `plans/REFACTOR_*.md` | dev | Ecosystem | The refactor plans this package was built against |
 | `plans/test_optimization.md` | dev | Ecosystem | Test-suite optimisation plan |
 | `plans/CLI_UX_REWORK.md` | dev | Ecosystem | CLI UX rework plan — one `oto` front, verb-first subcommands, POSIX/GNU/clig.dev |
+| `plans/AGENTIC_POTENTIAL_CONFIGS_PLAN.md` | dev | Ecosystem | Automated agentic consult: API key → `potential_configs.md` with fewest GPU legs |
 | `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
 | `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
