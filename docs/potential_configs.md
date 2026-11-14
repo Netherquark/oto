@@ -673,7 +673,7 @@ vendor's.
   never generate. Replaced with the **widest legal ZZ tiles**, `128x32x8/4x4` and
   `32x128x8/4x4` (fingerprints recomputed). `oto check candidates --quiet` goes
   4 illegal → **0 illegal**.
-* **`decks.py`:** the CC "widest legal MacroTile" rows `128x128x8/8x4`,
+* **`family_decks.py`:** the CC "widest legal MacroTile" rows `128x128x8/8x4`,
   `128x128x8/4x8`, `128x96x8/8x4` are replaced with `128x64x8/8x4|4x4` and
   `64x128x8/4x8` (VW2) — the *provable* widest legal CC tile, never emitted at
   VW2. The ZZ rows `128x128x8/4x4`, `128x64x8/4x4` become `128x32x8/4x4` and
@@ -1697,7 +1697,7 @@ re-run (`run_20261015_041159`, 19 W / 19 T / 0 L, CC:256 **TIE**) are in
 `docs/results.md` §13.4. Do not silently widen the band.
 
 **F2. Two knobs in the deck have only ever held ONE value, across all runs and
-both arms.** `all_runs.py` (`--json`), never-exercised-knobs section:
+both arms.** `oto/tools/run_census.py` (`--json`), never-exercised-knobs section:
 `GlobalSplitU = ['1']`, `StaggerU = ['32']`. Additionally, no winning config in
 `cells_resolved.json` sets `PrefetchGlobalRead`, `AggressivePerfMode`,
 `MaxOccupancy`, `LocalSplitU`, `BufferLoad`, `InnerUnroll`, `FractionalLoad`,
@@ -1718,7 +1718,7 @@ equal to the default re-measures the baseline. Verified defaults:
 
 **F3. The complex families are the two *narrowest* searches in the deck, which
 is exactly backwards.** Measured distinct `(MacroTile, ThreadTile,
-VectorWidth)` triples per family (`all_runs.py`): SS 49 (16 distinct TT), HH 42
+VectorWidth)` triples per family (`oto/tools/run_census.py`): SS 49 (16 distinct TT), HH 42
 (12), HS_HPA 40, HH_HPA 36, DD 17 (7), **CC 17 (6)**, **ZZ 9 (5)**. CC and ZZ
 are the worst performers AND the least searched. For CC the corpus only ever
 emits ThreadTiles 2x2, 2x4, 4x2, 4x4, 4x8, 8x4 — and the *widest legal* corner,
@@ -2155,7 +2155,7 @@ sequence in the harness, F needs a kernel-writer change. They are recorded in
 ## Sources
 
 All numbers in §1–§8 are reproduced by repo tooling, which is the citation:
-`all_runs.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
+`oto/tools/run_census.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
 measured occupancy + GFLOP/s join), `oto.harness.cell_resolver` (per-cell
 winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
@@ -2448,7 +2448,7 @@ The 18 ties are inside the ±16.45 % measurement band (§R36) and CC/ZZ sit at
 straggler classes, traces each through the database, and states the root cause
 and the remaining lever. Nothing below re-derives hardware; it cites
 `docs/gfx90c_theoretical_limits.md` (L), `docs/gfx90c_tuning_guide.md` (G),
-`docs/research/kernel_tuning.md`, and the live corpus (`corpus_census`, `all_runs.py`).
+`docs/research/kernel_tuning.md`, and the live corpus (`corpus_census`, `oto/tools/run_census.py`).
 
 ### R42.1 — The five classes
 

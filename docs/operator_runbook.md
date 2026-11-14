@@ -30,7 +30,7 @@ picked the wrong class and must switch to Class A (with the user's explicit
 permission).
 
 Enforced by: `oto/docs_index_writer.py` (`AGENT_CLASSES["B"]["never_needs"]` includes
-all `oto/**/*.py` paths; `oto/agents/meta.py` runs only CPU-only harness tools
+all `oto/**/*.py` paths; `oto/agents/meta_agent.py` runs only CPU-only harness tools
 that write to the run directory, never to `oto/`).
 
 

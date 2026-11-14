@@ -396,7 +396,7 @@ false rejections to both populations.** Tests:
 `python3 -m oto check candidates --floor` sweeps all **6 855** shipped gfx900
 manifest kernels (`gfx90c_results/gfx900_shipped_manifest.json`, 84 `.dat`
 entries; rebuilt into configs via `oto/tensile/shipped_floor.py:shipped_kernel_config`)
-through the same CPU-only preflight the deck must pass. `oto/checks/candidates.py`
+through the same CPU-only preflight the deck must pass. `oto/checks/deck_legality.py`
 owns the scope and the gate order (illegal knobs → tile divisibility → assembly
 class → classic-load divisibility → LDS footprint → register-file occupancy).
 CLI: `--deck <yaml>`, `--family SS`, `--quiet`, `--json <out>`; exit 1 on any

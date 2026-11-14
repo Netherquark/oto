@@ -105,6 +105,6 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 ## How to read this file
 
 Every completion moves to `changelog.md` (the project evolution log); the
-full historical version of this register lives in `archive/incomplete_work_2026-11-14.md`.
+full historical version (`docs/work_archive_2026-11-14.md`, the 1,007-line register) was folded into the ecosystem and deleted in `d8068f9`; it survives in git history via `git show d8068f9^:docs/work_archive_2026-11-14.md`.
 Nothing here is actioned without the owner's eyes on the controlling
 architecture (owner: Netherquark).

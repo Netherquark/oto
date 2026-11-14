@@ -131,7 +131,7 @@ The 1,881 resume failure set was triaged into three action tiers:
 | `T3_UNREPRODUCIBLE` | 277 | never staged, terminal | 154 half-input kernels pinned to VW1; 121 refused by `assembly_class_valid()`; 2 with no resolvable schedule — the vendored Tensile cannot reproduce these and benchmarking a different computation instead is worse than a documented gap |
 | `T0_KEEP` | 0 | reused | — |
 
-127 + 1,881 + 277 = 2,285. `phase_id` is not safe as identity (328 of 2,285 change when the deck is rebuilt after the config fixes); every triage decision keys by `tlib.phase_key()` (hash of the shipped solution name), never by phase_id. The T1/T2/T3 statuses are code, owned by `oto.tensile.library` (`TIER_FIRST`/`TIER_LAST`/`TIER_HELD`, `apply_rerun_tiers(..., release_held=)`).
+127 + 1,881 + 277 = 2,285. `phase_id` is not safe as identity (328 of 2,285 change when the deck is rebuilt after the config fixes); every triage decision keys by `tlib.phase_key()` (hash of the shipped solution name), never by phase_id. The T1/T2/T3 statuses are code, owned by `oto.tensile.shipped_floor_manifest` (`TIER_FIRST`/`TIER_LAST`/`TIER_HELD`, `apply_rerun_tiers(..., release_held=)`).
 
 ## 10. Acceptance report — native arm re-armed to the whole database
 

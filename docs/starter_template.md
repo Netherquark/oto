@@ -103,7 +103,7 @@ signs off — copy this list into your run:
   roofline, ceilings, acceptance bars, hardware section.
 - `docs/<codename>_tuning_context.md` — agent-2 output: knob surface, family
   shapes, what to build.
-- `docs/<codename>_harness_study.md` — from `oto/agents/harness_tools.py`:
+- `docs/<codename>_harness_study.md` — from `oto/agents/agent_tools.py`:
   corpus census + gap analysis seeded for this device.
 - Eventually `profiles/<codename>.json` — after the human verifies every
   number against a first-party source. NEVER before.

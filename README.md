@@ -319,14 +319,14 @@ orientation layer over it.
 | Module | Purpose |
 |---|---|
 | [`candidate.py`](oto/tensile/candidate.py) | Candidate generation: the family deck, the sampler, and the append boundary. |
-| [`decks.py`](oto/tensile/family_decks.py) | The curated per-family tile decks — the starting candidates and what kind each is. |
+| [`family_decks.py`](oto/tensile/family_decks.py) | The curated per-family tile decks — the starting candidates and what kind each is. |
 | [`legality.py`](oto/tensile/legality.py) | The legality prior: the manifest-derived legal domain and source-cited walls. |
 | [`config_writer.py`](oto/tensile/config_writer.py) | The launch-boundary config writer: the single place a candidate's knobs become Tensile YAML. |
 | [`gates/`](oto/tensile/gates/) | The **four-gate preflight** — `assembly.py` (GEMM-class reachability), `loads.py` (classic-path global-load divisibility + 16 B load cap), `occupancy.py` (VGPR + LDS budget), `vgpr_model.py` (the measured VGPR tables). Unknown dtype or unresolvable depth fails **closed**. |
-| [`synthesis/`](oto/tensile/synthesis/) | `db.py` (DB-hooked wide/narrow/direction mutants), `manifest.py` (coverage-guided synthesis for one cell), `tile_space.py` (the shared tile/knob vocabulary), `db_knobs.py` / `db_patterns.py` (the mutator's domains and per-family patterns). |
+| [`synthesis/`](oto/tensile/synthesis/) | `donor_mutator.py` (donor-driven wide/narrow/direction mutants), `pipeline_manifest.py` (coverage-guided synthesis for one cell), `tile_space.py` (the shared tile/knob vocabulary), `donor_knobs.py` / `donor_patterns.py` (the mutator's domains and per-family patterns). |
 | [`shipped_floor_manifest.py`](oto/tensile/shipped_floor_manifest.py) | The shipped gfx900 manifest: pinning, identity, and the rerun-tier triage. |
 | [`library_parity.py`](oto/tensile/library_parity.py) | The coverage-parity rule: what the produced `TensileLibrary` may address. |
-| [`shipped_library.py`](oto/tensile/shipped_floor.py) | Locating/parsing the system ROCm gfx900 `TensileLibrary.dat` and rebuilding a kernel from its name. |
+| [`shipped_floor.py`](oto/tensile/shipped_floor.py) | Locating/parsing the system ROCm gfx900 `TensileLibrary.dat` and rebuilding a kernel from its name. |
 
 ### `oto/ledger/` — durable state + the convergence state machine
 
@@ -343,11 +343,11 @@ orientation layer over it.
 
 | Module | Purpose |
 |---|---|
-| [`policy.py`](oto/metrics/cell_policy.py) | Median-of-seeds aggregation, the CV≤15% stability gate, evidence-gated Tier-2 retirement, and the `should_run` / `should_repeat` gates. |
+| [`cell_policy.py`](oto/metrics/cell_policy.py) | Median-of-seeds aggregation, the CV≤15% stability gate, evidence-gated Tier-2 retirement, and the `should_run` / `should_repeat` gates. |
 | [`analytics.py`](oto/metrics/benchmark_analytics.py) | Stage 5 analytics: CSV loading and per-cell aggregation. |
 | [`cell_status.py`](oto/metrics/cell_status.py) | Cell classification: RED (missing) / ORANGE (`<50%` ceiling) / graded coverage. |
 | [`ab_audit.py`](oto/metrics/ab_audit.py), [`ab_delta.py`](oto/metrics/ab_delta.py), [`ab_band.py`](oto/metrics/ab_band.py) | Stage 7 A/B: the native-vs-spoof delta arithmetic, the acceptance band, and the audit CLI. |
-| [`report.py`](oto/metrics/acceptance_report.py) | Acceptance report: verdict compute + JSON writer; per-family coverage vs the pinned shipped manifest. |
+| [`acceptance_report.py`](oto/metrics/acceptance_report.py) | Acceptance report: verdict compute + JSON writer; per-family coverage vs the pinned shipped manifest. |
 | [`report_html.py`](oto/metrics/report_html.py), [`report_sections.py`](oto/metrics/report_sections.py), [`report_css.py`](oto/metrics/report_css.py) | The HTML acceptance dashboard (JSON payload → one self-contained file). |
 | [`run_status.py`](oto/metrics/run_status.py), [`render_status.py`](oto/metrics/render_status.py) | Run-status text renderings and the live TTY panel. |
 | [`telemetry.py`](oto/metrics/telemetry.py) | Per-run CSV sampling of the GPU's clocks and power (non-root `sysfs`). |

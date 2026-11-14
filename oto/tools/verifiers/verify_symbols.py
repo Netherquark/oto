@@ -85,7 +85,7 @@ MOVES = [
                        "oto/tools/consolidate_install.py"]),
     ("allruns.py", ["oto/tools/run_census.py"]),
     ("verify_run.py", ["oto/tools/corpus_audit.py"]),
-    ("check_candidates.py", ["oto/checks/candidates.py"]),
+    ("check_candidates.py", ["oto/checks/deck_legality.py"]),
     ("check_tensile_build.py", ["oto/checks/tensile_build.py", "oto/checks/tensile_build_probe.py"],),
     ("check_library_parity.py", ["oto/checks/library_parity.py"]),
     ("check_db.py", ["oto/checks/db.py"]),
@@ -442,7 +442,7 @@ def _print_report(all_missing: list[str], all_differs: list[str],
 #: Intentional file renames within the package (old rel path -> new rel
 #: path). The post-split equivalence check follows these so a rename does not
 #: read as a wholesale public-API loss. Maintained alongside the rename work;
-#: every entry must correspond to a real git mv. Every entry must correspond to a real git mv.
+#: every entry must correspond to a real git mv.
 RENAMES: dict[str, str] = {
     "oto/_map.py": "oto/readme_gen.py", "oto/inventory.py": "oto/readme_gen.py", "oto/_version.py": "oto/version.py",
     "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py", "oto/agents/harness_tools.py": "oto/agents/agent_tools.py",

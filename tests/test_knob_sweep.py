@@ -4,7 +4,7 @@ test_knob_sweep.py — the knob-sweep deck.
 
 Regression guards for the deck that cross-joins each family's measured winner
 tile with one change to a knob the corpus never *explicitly* set
-(docs/potential_configs.md §8, after `all_runs.py` reported `GlobalSplitU = ['1']` and
+(docs/potential_configs.md §8, after `oto/tools/run_census.py` reported `GlobalSplitU = ['1']` and
 `StaggerU = ['32']` as the only values ever seen, and every complex winner
 leaving AggressivePerfMode/MaxOccupancy/GlobalLoadVectorWidth unset):
 

@@ -115,7 +115,7 @@ Fields and their sources:
 | `simds_per_cu` | 4 on every GCN SIMDs — verify in ISA manual |
 | `lanes_per_simd` | 16 on GCN5/Vega |
 | `max_clock_mhz` | spec sheet (or `pp_dpm_sclk` under load, e.g. 1800) |
-| `lds_per_cu_kb` | 64 on Vega; `gather_device_profile.py` in oto prints this for this host |
+| `lds_per_cu_kb` | 64 on Vega; verify against the spec sheet |
 | `l2_size_kb` | spec sheet; 1024 for gfx90c |
 | `vgpr_per_cu` | 65536 |
 | `max_waves_per_cu` | 40 on gfx90c |
@@ -714,9 +714,8 @@ Consult only when one of the following holds — these are the lift-gates:
 - **Toolchain-build wall.** A break in a pinned dependency, an unexplained
   `build fail` your own inspection can't explain, or a gate produce false
   rejections — anything that blocks the build (not the tuning).
-- **Spec-spec disagreement.** `rocminfo`, the spec sheet, and
-  `gather_device_profile.py` disagree on a field you need. You do not pick
-  a winner.
+- **Spec-spec disagreement.** `rocminfo`, the spec sheet, and the
+  starter file disagree on a field you need. You do not pick a winner.
 
 **You stop consulting and proceed again immediately** when the signal in
 `oto report --json` is clear and unchanged: winner for the cell is the
