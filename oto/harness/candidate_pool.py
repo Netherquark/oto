@@ -19,7 +19,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.harness.candidate_rows import (
     _NOT_FORWARDED_YET,

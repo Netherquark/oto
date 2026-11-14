@@ -52,7 +52,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 _HERE = Path(__file__).resolve().parents[2]
 if str(_HERE) not in sys.path:

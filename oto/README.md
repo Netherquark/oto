@@ -1,6 +1,6 @@
 # The ``oto/`` package map
 
-Generated. Regenerate with ``python3 -m oto.inventory``.
+Generated. Regenerate with ``python3 -m oto.readme_gen``.
 
 Each entry is the first sentence of that module's docstring, so the
 only way to make this file stale is to delete the docstring. Line
@@ -9,10 +9,10 @@ counts are never quoted here -- they go wrong the day a file moves.
 ## oto/ -- the package root
 
 * ``__main__.py`` — Entry point for ``python3 -m oto``.
-* ``docs_index.py`` — Machine-readable docs ecosystem index for agentic routing.
-* ``inventory.py`` — Regenerate oto/README.md from the module docstrings themselves.
+* ``docs_index_writer.py`` — Machine-readable docs ecosystem index for agentic routing.
+* ``readme_gen.py`` — Regenerate oto/README.md from the module docstrings themselves.
 * ``version.py`` — Version string for the oto CLI.
-* ``yamlio.py`` — The project's YAML reader: libyaml when it is there, cached by content.
+* ``yaml_cached.py`` — The project's YAML reader: libyaml when it is there, cached by content.
 
 ## oto/device/ — hardware facts
 

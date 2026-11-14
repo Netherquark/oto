@@ -459,7 +459,9 @@ RENAMES: dict[str, str] = {
     "oto/tools/verify_run.py": "oto/tools/corpus_audit.py", "oto/runners/reference.py": "oto/runners/reference_floor.py",
     "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py", "oto/runners/cli.py": "oto/runners/stage_cli.py",
     "oto/runners/flags.py": "oto/runners/stage_flags.py", "oto/runners/synthesis.py": "oto/runners/library_build.py",
-    "oto/_map.py": "oto/inventory.py", "oto/cli/flags.py": "oto/cli/global_flags.py",
+    "oto/_map.py": "oto/readme_gen.py", "oto/cli/flags.py": "oto/cli/global_flags.py",
+    "oto/inventory.py": "oto/readme_gen.py",
+    "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py",
 }
 
 def _head_path_for(rel, old_syms, all_missing):

@@ -1,4 +1,4 @@
-"""Tests for the machine-readable docs index (oto/docs_index.py)."""
+"""Tests for the machine-readable docs index (oto/docs_index_writer.py)."""
 
 import json
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from oto.docs_index import AGENT_CLASSES, build_index, doc_for_class, load_index
+from oto.docs_index_writer import AGENT_CLASSES, build_index, doc_for_class, load_index
 
 
 def test_build_index_has_documents():
@@ -47,7 +47,7 @@ def test_load_index_returns_dict():
 
 
 def test_index_is_valid_json():
-    from oto.docs_index import INDEX_PATH
+    from oto.docs_index_writer import INDEX_PATH
     if INDEX_PATH.exists():
         data = json.loads(INDEX_PATH.read_text())
         assert "documents" in data

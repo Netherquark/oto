@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.ledger.registry import fingerprint_config
 from oto.metrics.cell_policy import should_run

@@ -43,7 +43,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.checks.tensile_build_probe import (
     REPO,
     _default_arch,

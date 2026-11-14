@@ -38,7 +38,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))

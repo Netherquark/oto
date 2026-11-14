@@ -43,7 +43,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.runners.paths import results_dir
 

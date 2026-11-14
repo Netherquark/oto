@@ -299,7 +299,7 @@ oto/
 ```
 
 `oto/README.md` is a **generated** per-module index (regenerate with
-`python3 -m oto.inventory`): every entry is the first sentence of that module's
+`python3 -m oto.readme_gen`): every entry is the first sentence of that module's
 docstring, so it cannot drift from the code. The tables below are the human
 orientation layer over it.
 

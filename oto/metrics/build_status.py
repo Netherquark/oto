@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import oto.tensile.shipped_manifest as tlib
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.metrics.ledger_state import (
     DB_REL,

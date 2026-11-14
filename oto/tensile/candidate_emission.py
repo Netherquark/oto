@@ -23,7 +23,7 @@ from typing import Any
 
 import yaml
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.tensile.candidate_config import CandidateConfig
 from oto.tensile.gates.occupancy import occupancy_feasible, occupancy_workgroups_per_cu

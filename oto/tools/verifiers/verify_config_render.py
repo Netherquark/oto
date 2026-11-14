@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 # --- the classification machinery (from the split era; kept verbatim in
 # spirit) ---------------------------------------------------------------------
@@ -181,7 +181,10 @@ phases = json.load(open({phases_json!r}))
 import os
 from pathlib import Path
 os.makedirs({workdir!r}, exist_ok=True)
-import oto.yamlio as yamlio
+try:
+    import oto.yaml_cached as yamlio
+except ImportError:
+    import oto.yamlio as yamlio
 from oto.tensile import config_writer
 class _Stub: pass
 d = _Stub()

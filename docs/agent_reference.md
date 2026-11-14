@@ -48,7 +48,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `oto/device/vocabulary.py` | Cell/kernel vocabulary (cell_key, cube_side, shipped_cells, ...) |
 | `oto/device/profile.py` | DeviceProfile dataclass (the frozen profile schema) |
 | `oto/device/detect.py` | `detect_codename()` — auto-detect via rocminfo |
-| `oto/yamlio.py` | The project's YAML reader: libyaml when present, memoised by content |
+| `oto/yaml_cached.py` | The project's YAML reader: libyaml when present, memoised by content |
 | `oto/tensile/gates/memo.py` | The content-keyed memo the pure legality gates use |
 | `oto/tensile/decks.py` | FAMILY_DECKS, KNOB_SWEEPS, PLAN_BATCH |
 | `oto/tensile/gates/occupancy.py` | LDS + VGPR occupancy gate |

@@ -29,7 +29,7 @@ the bug to the user — it must never patch oto code. The Class A entry point is
 picked the wrong class and must switch to Class A (with the user's explicit
 permission).
 
-Enforced by: `oto/docs_index.py` (`AGENT_CLASSES["B"]["never_needs"]` includes
+Enforced by: `oto/docs_index_writer.py` (`AGENT_CLASSES["B"]["never_needs"]` includes
 all `oto/**/*.py` paths; `oto/agents/meta.py` runs only CPU-only harness tools
 that write to the run directory, never to `oto/`).
 

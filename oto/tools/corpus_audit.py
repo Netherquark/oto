@@ -44,7 +44,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.device import loader as _loader
 from oto.runners.paths import results_dir as _results_dir
 from oto.runners.paths import runs_dir as _runs_dir

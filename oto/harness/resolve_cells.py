@@ -42,7 +42,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 # Repo-root import (kept so the module also runs as
 # `python3 oto/harness/resolve_cells.py`; under `python3 -m oto.harness.resolve_cells`

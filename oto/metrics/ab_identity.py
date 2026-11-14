@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 #: The project root, resolved from this module's location.
 BASE = Path(__file__).resolve().parents[2]

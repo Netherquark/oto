@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 # `yaml` is imported lazily, inside the functions that use it, so that
 # importing this module does not pull in the parser.

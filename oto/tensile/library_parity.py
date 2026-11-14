@@ -171,7 +171,7 @@ def load_pipeline_phases(base_dir: str | None = None,
 
     from pathlib import Path
 
-    from oto import yamlio as _yamlio
+    from oto import yaml_cached as _yamlio
 
     base = Path(base_dir or Path(__file__).resolve().parents[2])
     deck: list[dict[str, Any]] = []

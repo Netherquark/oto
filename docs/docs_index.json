@@ -266,7 +266,7 @@
     {
       "class": "dev",
       "kind": "Package",
-      "owns": "The `oto/` package map (regenerate with `python3 -m oto.inventory`)",
+      "owns": "The `oto/` package map (regenerate with `python3 -m oto.readme_gen`)",
       "path": "oto/README.md"
     }
   ],

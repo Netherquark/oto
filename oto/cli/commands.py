@@ -389,7 +389,7 @@ def run_agent_generate(args: Any) -> int:
 
 
 def run_agent_index(args: Any) -> int:
-    from oto.docs_index import write_index
+    from oto.docs_index_writer import write_index
 
     result = write_index()
     path = result if isinstance(result, (str, Path)) else "docs/docs_index.json"

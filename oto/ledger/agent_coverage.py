@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 from oto.metrics import coverage
 
 

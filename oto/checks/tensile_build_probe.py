@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from oto import yamlio
+from oto import yaml_cached as yamlio
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_TENSILE_ROOT = Path(
