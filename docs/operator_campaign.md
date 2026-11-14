@@ -1,296 +1,369 @@
-# The oto tuning campaign — the post-prompt-spam operator playbook
+# The oto tuning campaign — the constrained path from backrocm to convergence
 
-**Class B document.** Read this when you are the operator agent (or supervising it)
-running the *tuning campaign* — the multi-day convergence effort that turns a
-working best-effort library into a converged one — after
-[`operator_runbook.md`](operator_runbook.md)'s best-effort gate has passed. If the
-library does not build yet, finish that first. If you are working **on** oto,
-this is the wrong file.
+**Class B document.** Read this when you are the operator agent (or supervising
+it) responsible for turning a working best-effort library into a converged one —
+one benchmarked batch at a time — across multiple multi-hour or multi-day
+sessions. If the library does not build yet, finish [`operator_runbook.md`](operator_runbook.md)'s
+verification matrix first. If you are working **on** oto, this is the wrong file.
 
-This document is the permanent answer to a pattern this project lived through:
-the first convergence ran by *spamming a long prompt into an agent session and
-re-spamming it until something moved*. Every idea in it that worked is now
-code, and every way it failed is now a documented constraint. You are not the
-first agent to touch this corpus; ~320 commits separate you from the first.
-Use them.
+This document exists because of three facts about how oto got here, none of
+which is negotiable:
 
-## 0. The two hard rules (inherited, never overridden)
+1. **This project was built by spamming a prompt into agent sessions and
+   re-spamming it until something moved** — the original converge‑gfx90c prompt
+   (the "three tildes" block) was run under live GNOME, GPU melting, no TELEM;
+   every time, the environment reset nearly cooked the machine, and the only
+   reason it converged is that the prompt demanded it converge, not that the
+   method was sound.
+2. **The project earned its method**, over ~320 commits, by burning every
+   shortcut it ever took:
+   a broken ruler math that selected wrong GEMV winners (attempt1), an
+   acceptance gate that graded baseline-vs-baseline (attempt2 draft), a corpus
+   whose "winners" were order statistics (October 2026), a gate that accepted
+   self-contradictory knobs, a complex-GEMM bar 4× over-scaled, a run-order bug
+   that made one cell "the one loser" for three days, and an illegality
+   manifest that shipped poisoned candidates for weeks without anyone noticing
+   because nothing validated them.
+3. **Every past iteration of that prompt is already encoded in this tree** — in
+   `oto/harness/`, in the gates, in the ledger, in `phases.yaml`, in the docs.
+   The campaign does not ask you to rediscover; it asks you to execute.
 
-1. **GPU work happens only in the user's TTY.** A desktop/Wayland session can
-   be reset by a runaway GEMM. In a display session you do CPU-only work and
-   stop. Whitelisted legality probes in a display session are at most 512³
-   CUBE BUILDS (Tensile's `NumElementsToValidate` reference check) — never a
-   benchmark, never "medium" sizes, and never on someone else's share of the
-   GPU.
-2. **CPU gates are not measurement.** A proposal that passes
-   `oto check candidates` / `validate_config` is legal to try, not competitive.
-   Only a TTY benchmark counts as evidence.
+Your job, in one sentence: **propose the highest-quality candidates this
+device has ever seen, cheap enough to gate, rare enough to ignore none, and
+expensive enough to respect the hours between you and the owner's TTY.**
+Everything in this file is in service of that sentence, and nothing in this
+file is in service of anything else.
 
-(So is the third rule in `claude.md` §5: the GPU belongs to the user; you wait.)
+## 0. Read this before anything else
 
-## 1. Why this file exists — the history you are standing on
+- **GPU happens only in the user's TTY.** A desktop/Wayland session is not a
+  tuning environment; it is a monitoring convenience. GPU legs in a display
+  session are limited to ≤512³ build/validation probes via Tensile's reference
+  validator — never benchmark runs, never "medium" sizes, never anything that
+  would make the fan curve uncomfortable while the owner is reading email.
+- **CPU gates are not measurement.** A config that passes
+  `validate_config` / `ldspad_feasible` is *legal to try*, not competitive.
+  Only a TTY benchmark is ground truth. Fourteen rows spent a GPU night to
+  discover this distinction; they are not being run again.
+- **The owner is the bar.** Adoption of any candidate row, deck change, or
+  report-graded verdict belongs to the owner. Your job is evidence, not
+  verdicts.
+- **The GPU belongs to the owner.** You do not start, schedule, watch, or kill
+  anything on the GPU; the user launches what both of you agreed on.
 
-All of this is why the campaign is shaped the way it is. Read it once; it
-never gets re-derived.
+## 1. Why you can do this at all — the history you are not allowed to repeat
 
-| date | what happened | the lesson baked into this file |
+Read this once. It never gets re-derived.
+
+| Era | What happened | What it means for you |
 |---|---|---|
-| Jul 2026 | FOSS grant: a generalisable pipeline for backporting ROCm to obsolete AMD GPUs (gfx90c 5650U, gfx902 2200G). | The deliverable was never "prove GEMM fast"; it is *a repeatable method*. |
-| Aug 2026 | GPU characterisation; the "AMD vis-à-vis GPUs" diaries; first-party CDNA/Vega ISA sources studied. | Hardware facts come from primary sources, never model memory. |
-| Aug–Sep 2026 | **attempt1**: `run_gfx90c_suite.sh` and helpers, ~9.2K LoC driving Tensile through shell. Found real wins (native SS@1024 native 698 GFLOPS vs spoof floor 608) but systemic breakage: ruler math wrong four ways, telemetry gaps, retirement conflating three tiers. | Shell-era state lived in ~9K LoC of shell and vibes; state must live in a database with append-only law. |
-| Sep 2026 | **attempt2**: parallel draft branch; case-by-case triage → telemetry fix ported, draft data imported append-only, draft's acceptance gate rejected. | A faster answer that skips provenance is not an answer. |
-| 2026-09-17 | oto born; the tuning loop becomes Python: corpus, ledger, mutator, acceptance report. | Convergence = a measured discipline, not a hope. |
-| Oct 2026 | Refactor 1: flat root → `oto/` package; function ≤ 60 LoC, file ≤ 600; suite 9× faster. | Effort goes into the candidate, never into the bookkeeping. |
-| Oct 2026 | The fold was found: native "wins" were arm-size artefacts; `agg=winner` is an order statistic; HPA rows were misattributed (typecode vs stamp); sweep-order depressed cells flipped verdicts. | Read verdicts like-for-like only; kernel typecode is ground truth. |
-| 2026-11-13 | The library (`best_effort_library_rocmlibs`) passed yolo26 acceptance on the nightly ROCm 7.x stack (person 0.87). | A library that builds but cannot dispatch is not a library. |
-| Nov 13–14 2026 | Refactor 2: device-profile machinery (`profiles/<codename>.json`), nightly ROCm 7.x port, CLI front door, `NumElementsToValidate=128`, explicit `profile=` threading, the AF4/4 CC rows adopted. | The device is data, not a code path — and validation is the correctness gate, not a courtesy. |
+| Jul 2026 | **FOSS United grant**: *A Generalisable Pipeline for Backporting ROCm to Obsolete AMD Hardware*. gfx90c/gfx902. | The deliverable is a **method**, not a faster GEMM. Every decision serves the method. |
+| Jul–Aug 2026 | GPU characterisation; the *AMD vis-à-vis GPUs* diaries; first-party CDNA/Vega ISA PDFs studied. | Hardware facts come from primary sources, never from model memory. |
+| Aug–Sep 2026 | **attempt1** — ~9.2 K LoC shell suite. The ruler math was broken four ways (shape tuples never matched; `adj_cells` no-op; missing controls inferred; phantom BF16 ruler). The report crashed. Retirement conflation made 0 benchmark-eligible phases survive gating. | If a script-level hack can teleport a wrong fact across 3 files, so can you. State lives in the database now. |
+| Sep 2026 | **attempt2** — parallel draft branch, integrated append-only. Its acceptance gate was rejected (baseline-vs-baseline A/B artifact); the draft's 698.3 GFLOP SS@1024 floor beat was kept — the floor model was right, the gate was wrong. | A faster answer that skips provenance is not an answer; **baseline-vs-source ≠ A/B**. |
+| 2026-09-17 | **oto is born**. The tuning loop becomes Python: corpus, ledger, mutator, acceptance report. | Loop > sermon; converge by measurement, not by argument. |
+| Oct 10–16 2026 | **Refactor 1**: flat root → `oto/`; ≤60 LoC/function, ≤600 LoC/file; suite split by responsibility; 9× faster suite. | Effort goes into candidates, never into bookkeeping. |
+| Oct 14–22 2026 | The failures that made this curriculum what it is:
+wide tiles eliminated (MacroTile 256-wide class), `AF0EM` silently wrong,
+`StaggerU=0` refused by an inverted gate, `LocalSplitU` shadowed by explicit
+`WorkGroup`, `AggressivePerfMode=2` dead, the **Z=8 vs Z=16 gate miss**,
+candidates oracle-checked by Tensile's own construction path (`tensile_oracle`/`deck_check`),
+`TransposeLDS` unreachable (MFMA path / `UnrollMajorLDS`). | Illegal configs must be refused by **gates**, not by a sad CSV at the end of the night. |
+| Oct 21–24 2026 | **The fold was found**: `agg=winner` is an order statistic; three of the "wins" were protocol artefacts; HPA rows were misattributed (typecode vs stamp); the 17.5-point environment band soaks the ±2 %/5 % verdict band; complex families re-scaled to BLAS-8 (CC 80–97 % of roof, not 20 %). | Like-for-like always; kernel typecode is ground truth; if coverage is weak the number is a machine reading. |
+| Oct 26–29 2026 | rocm-libraries super-repo port; user-provided ROCm 7.x; `best_effort_library_rocmlibs`; yolo26 person 0.87 on the nightly stack. The 6.4.4 library (`b6ccd448…`) deterministically wedges this stack. | The toolchain is user-provided; nothing from `/usr` leaks. |
+| Nov 13–14 2026 | **Refactor 2**: device profiles (`profiles/<codename>.json`), `NumElementsToValidate=128`, explicit `profile=` threading, CC AF4/4 rows adopted as first-class (Option B). | The device is **data**, not a code path; validation is a correctness gate, not an option. |
 
-Three implications you must internalise once and forever:
+Three implications, immutable:
 
-1. **The prompt-spam era is over.** Every legitimately-repeatable move is code
-   or a gate. Anything that still needs an LLM is (a) research synthesis off
-   primary sources, (b) candidate ideation **within harness-visible domains**,
-   or (c) post-mortem triage judgment. Nothing else.
-2. **The corpus is the memory.** Between sessions you remember nothing that the
-   artifacts do not contain; rebuild, re-read, re-derive. Never trust context.
-3. **Effort is finite and the GPU is precious.** Every candidate proposal must
-   be cheap to gate (CPU), expensive to ignore (gate-refused before TTY), and
-   costly to repeat (novelty enforced by the ledger).
+1. **Prompt-spam is over.** Everything repeatable is now either code or a gate.
+   What remains for you: research synthesis off primary sources, candidate
+   synthesis **inside harness-visible domains**, and judgment. Everything else
+   is already code.
+2. **The corpus is the memory.** Between sessions you remember nothing the
+   artifacts do not contain. Rebuild and re-read before deciding.
+3. **Effort is finite; the GPU is precious.** Every candidate proposal must be
+   cheap to gate and costly to ignore.
 
 ## 2. The neurosymbolic division of labour
 
-| layer | who does it | examples |
+| Layer | Owner | Examples |
 |---|---|---|
-| **symbolic** (rules, exact, reproducible) | the gates + Tensile + the ledger | `validate_config` → `ldspad_feasible` → `assembly_class_valid`; the Tensile reference validator (`NumElementsToValidate=128`); the ledger's identical-fingerprint skip (with the `bypass_identity` exception for mutants); the retirement gate |
-| **neural** (judgment, synthesis, narrative) | you, within the harness | synthesising candidate families from corpus history; reading the acceptance report; triaging failure classes; writing docs; proposing the next hypothesis class |
-| **measure** | the user's TTY only | every kernel's actual performance |
+| **Symbolic** (exact, reproducible, unchanged) | gates + Tensile + the ledger | `validate_config` → `ldspad_feasible` → `assembly_class_valid` → `occupancy_feasible`; Tensile's own reference validator (`NumElementsToValidate=128`) via the client — the one legality oracle no config gets past; the ledger's identical-fingerprint skip (with the documented mutant exception); the retirement gate |
+| **Neural** (judgment, synthesis, narrative) | you, inside the harness | candidate families in corpus space; reading the acceptance report; triaging failure classes; docs; the next hypothesis class |
+| **Measure** | the user's TTY only | every kernel's actual performance |
 
-The invariant: **neural proposals may only enter through the symbolic
-pipeline.** You never hand a config to the deck that has not passed the gates
-and the deck check. You never "know" a kernel is fast; you read the report.
+Invariant: **neural proposals enter only via the symbolic pipeline.** You never
+hand a config to the deck that has not passed the gates; you never submit
+ungated candidates to a bench. You never "know" a kernel is fast; you read a
+report.
 
-## 3. The persistent operating model
+## 3. The persistent operating model — every session
 
-State lives on disk, not in context. Between sessions the campaign carries:
-
-| artefact | what it holds | owner |
-|---|---|---|
-| `gfx90c_results/analysis/kernel_db.json` | every measured kernel: family, shape, winner, verdict inputs | oto (rebuilt, never edited) |
-| `acceptance_report.json` + `acceptance_report.html` | last batch's verdicts: per-cell delta, tie bands, clock coverage, red/orange lists | oto (`AcceptanceReporter`) |
-| `cells_resolved.json` / `cells_resolved.full.txt` | per-cell winner map + cfg_gap | `resolve_cells` |
-| `regression_matrix.json` | deck vs floor vs all-time | `regression_matrix` |
-| `docs/harness_runbook.md` outputs | axis history, empty-phase causes, legal-space coverage | harness tools |
-| the seed overlay (`phases.seed.overlay.yaml`) | candidate rows not yet in the deck | `generate_candidates` |
-| `incomplete_work.md`, `<codename>_potential_configs.md`, `results.md` | your working notes: decisions, verdicts, retired losers with reason | **you** (docs only) |
-
-Every session: read these before touching anything. A context that disagrees
-with the artifacts is wrong, because the artifacts are the record.
-
-### 3.1 The session-start protocol (≈5 minutes)
+### 3.1 Session start (≈5 minutes, no exceptions)
 
 ```bash
-python3 -m oto doctor                       # 0 failures, or stop
-python3 -m oto verify all                   # evergreen across commits
-python3 -m oto.harness.kernel_db --rebuild  # never trust a stale cache
+python3 -m oto doctor                        # 0 failures or stop
+python3 -m oto verify all                    # evergreen, across commits
+python3 -m oto.harness.kernel_db --rebuild   # never trust a stale cache
 python3 -m oto.harness.resolve_cells --taxonomy
 ```
 
-Then, in order:
-1. The **last acceptance report** — JSON for numbers, HTML for shape
-   (`per_cell_verdicts[].{delta_pct, tie, verdict, clock_adjusted,
-   native_clock_coverage}`, `red_list`, `orange_list`). Never `winner`-basis
-   headlines (order statistics flatter the arm that drew more kernels).
-2. The **deck state** — `python3 -m oto check candidates` (0 illegal, or stop);
+Then, in order, all reading from artifacts, none from memory:
+
+1. **The last acceptance report** — `oto report --json` (or the HTML for shape):
+   `per_cell_verdicts[].{delta_pct, tie, verdict, clock_adjusted,
+   native_clock_coverage}`, `red_list`, `orange_list`, `basis_protocol`. Never
+   `agg=winner` headlines — order statistics flatter the arm that draws more
+   kernels. Judge only like-for-like (`comparability.md`).
+2. **The deck** — `python3 -m oto check candidates` (must be 0 illegal) — plus
    `python3 -m oto.tools.deck_review score|legality|flood --cap N`.
-3. The **open list** — `incomplete_work.md` plus the device's untried items in
-   `potential_configs.md`.
+3. **The unresolved list** — `incomplete_work.md` open items and the device's
+   untried items in `potential_configs.md` / `results.md`.
 
-Decide: consultation trigger (§7) → reconnect; otherwise, autonomous work (§4–§6).
+Decide **before** touching anything: consult (§7) or extend (§4–§6). If you
+cannot say which within the 5 minutes, you have not read enough — read more.
 
-### 3.2 The session-end protocol (≈10 minutes)
+### 3.2 Session end (≈10 minutes)
 
-1. Append to `incomplete_work.md` anything you opened; strike out anything you
-   closed (open items only — completed work moves to `changelog.md`/`results.md`).
-2. Write the decision context: which cells moved, which retired, which opened.
-3. If a silicon fact got resolved, update the device docs (starter/profile → no;
-   `<codename>_theoretical_limits.md` or `<codename>_tuning_context.md` → yes, with evidence).
-4. Never commit anything you did not measure.
+1. `incomplete_work.md` is the open register: close what closed, add what
+   opened. Completed work moves out to `changelog.md` / `results.md`.
+2. Record the session in `results.md` if anything was measured; the deck's
+   `potential_configs.md` otherwise. One paragraph per batch; no speculation.
+3. If a silicon fact got resolved: update `<codename>_theoretical_limits.md` or
+   `<codename>_tuning_context.md` with the evidence; if a ceiling moved, it moved
+   in that doc, nowhere else.
+4. Never claim, never imply, never report a win you did not measure.
 
-## 4. The campaign phases — where effort goes, in order
+### 3.3 State map
 
-### Phase 1 — Study the corpus (CPU only; the slow read that decides everything)
+| artefact | who writes | who reads |
+|---|---|---|
+| `kernel_db.json` | `kernel_db --rebuild` | everyone |
+| `acceptance_report.{json,html}` | `AcceptanceReporter` | everyone |
+| `cells_resolved.{json,full.txt}` | `resolve_cells` | everyone |
+| `config_writer` GlobalParameters flow into every phase's YAML | you via the deck/`generate_candidates` | you via the ledger |
+| `phases.yaml` (deck) + `phases.seed.overlay.yaml` (overlay) | you (rows) · you (with user sign-off) (deck/overlay) | `oto check candidates` · preflight · the run |
+| the registry `gfx90c_results/registry.db` (runs, phases, records, proposals) | runs; `kernel_db --rebuild` | ledger · mutation arm · retirement |
+| `potential_configs.md` / `<cn>_potential_configs.md` | you | everyone |
+| `incomplete_work.md` / `results.md` / `changelog.md` | you | everyone |
 
-For each family × cell where native is `TIE` or `FLOOR WIN`, before writing a
-single candidate:
+## 4. Phase 1 — Study the corpus (the slow part; decides everything)
+
+For every family × cell where native `TIE` or `FLOOR WIN`, before you propose
+anything, narrate its history:
 
 ```bash
 python3 -m oto.harness.corpus_census --cell FAM:side
 ```
-— every geometry ever measured there, with counts and floor-best. An empty
-cell is data, not a blank.
+— exhaustive local history: every geometry ever measured here, counts, floor
+best. Empty cell = data, not blank.
 ```bash
 python3 -m oto.harness.cell_knob_diff
 ```
-— native winner vs floor winner, knob-by-knob. Where they agree, the gap is
-structural; where they diverge, the gap is a knob.
+— native winner vs floor winner knob-by-knob; where the configs agree the gap
+is structural; where they diverge, the gap is a knob. Look for `cfg_gap`
+in `resolve_cells --taxonomy` output: `identical` / `near` / `retile` /
+`no-floor` — it is the mechanical half of the tie taxonomy.
 
-Attribution check (non-negotiable): kernel header typecode is ground truth
-(`dtype_to_family`). Never trust a phase stamp; HPA rows stamped `HH` vs `HHH`
-are the classic contamination.
+Fact protocol before you believe a number:
 
-Clock coverage: if `native_clock_coverage` or `spoof_clock_coverage` is weak,
-the cell's absolute numbers are machine readings, not kernel readings; judge
-within-run only (M4). Re-measure in TTY before drawing conclusions.
+- **Attribution.** Kernel header typecode is ground truth (`dtype_to_family`).
+  A phase stamp can lie (HPA rows stamped `HH` vs `HHH`).
+- **Clock coverage.** Weak `native_clock_coverage` → the cell is machine noise;
+  judge within-run only; re-measure before concluding.
+- **Protocol.** Like-for-like only (`comparability.md`); verdicts grade one
+  protocol at a time.
 
-Like-for-like only: absolute numbers across runs with different SCLK or weak
-`*_clock_coverage` are machine readings, not kernel readings; judge verdicts
-within-run and like-for-like ([`comparability.md`](comparability.md)) —
-`agg=winner` flatters the arm that drew more kernels.
+Write the decomposition down: one row per cell — `family, cell, delta,
+{identical|near|retile|no-floor}, clock_ok, typecode_ok, class`. The classes
+are §5. If a cell does not land in a class, you do not understand it yet.
 
-Write the decomposition down: one row per tied/lost cell — `family, cell,
-delta, clock_ok, typecode_ok, class`. The classes are in §5.
+### The historical pattern inventory — read this before proposing candidates
 
-### Phase 2 — Classify the stragglers (the class catalogue)
+What has actually won on this part, per the corpus:
 
-| class | detection | route | closes when |
+- **SS** — wins on bigger tiles at this APU's wave-quantization (the 192/256/
+  512 residency starvation is the binding constraint; the `resolve_cells --taxonomy`
+  output names these `R`-class cells — see §5). GlobalSplitU=2/4 matters on small
+  squares; `LdsPadA=2` is a real difference maker in the CC/ZZ space (a blind
+  spot shared by Tensile's perf yamls); `WGM 2/3/-1/-4` was unexplored before
+  the R47 batch.
+- **HH/HH_HPA** — 91% of the legal space unexplored at 512³-class cells; the
+  HPA band had headroom.
+- **CC/ZZ** — at 80–97 % of the FMA roof in BLAS-8 units; nothing to fix in the
+  deck, everything to fix in the *report*; `U`/`P` bytes are the truth.
+- **DD** — floor parity through the floor itself (`retile`-class, not a deck gap);
+  1024/1365 are re-tiles on a smaller winner.
+- **Winners never come from the floor unchanged** — they come from native
+  configs re-tuned for this part's 7 CUs, 1 MiB L2, 40-slot/SIMD waves.
+
+## 5. Phase 2 — Decompose the straggler list into its classes
+
+One class at a time; address each in its own sequence, never all at once.
+
+| class | detect | route | closed by |
 |---|---|---|---|
-| **W — ceiling-saturated wall (M1)** | delta tie band, both arms on same wave (per-cell residency arithmetic) | none — record and skip | same wall across ≥2 runs |
-| **R — residency-starved small cell (M2)** | ≤30 % waves/SIMD | smaller tiles / `GlobalSplitU` (SS only; structurally illegal on CC/ZZ/HH/HPA) | within-run win above band |
-| **C — complex accounting artefact (M3)** | CC/ZZ "stuck" at ~290/22 GFLOPS | none — re-read in BLAS-8 units (×4); they are at 80–97 % of the roof | doc cite, no deck change |
-| **K — clock confound (M4)** | weak `*_clock_coverage` | re-run in TTY; pin SCLK only with the user's agreement; within-run verdicts only | strong-coverage batch shows a within-run win |
-| **D — depressed cell / sweep-order defect** | family measured back-to-back in one old session (e.g. 2048³ then 256³) | re-measure in the next batch, one family per session | re-run flips the verdict |
-| **F — floor-geometry steal (the only legal copy)** | floor winner differs, gfx900-tuned | §4.4 protocol (documented retune; worst cells only) | measured variant passes gates + batch |
-| **N — virgin axis** | knob in forward domain, never drawn at the winner geometry (StaggerU trio, `1LDSBuffer`, `DepthULdsDivisor`, `LocalSplitU>1`) | NARROW draws from the mutator, or a targeted trial row (`DECISION_TRIAL_TILES`) | verdict flip or deck retirement with reason |
-| **H — contaminated attribution** | stamp ≠ typecode (HH_HPA rows stamped `HH`) | fix attribution at the DB read (never edit the DB), re-derive verdicts | attribution matches across ≥2 independent reads |
+| **W — ceiling-saturated wall (M1)** | tie band, both arms on the same wave (per-cell residency arithmetic) | none — record and skip | ≥2 runs same wall |
+| **R — residency-starved small cell (M2)** | ≤30 % waves per SIMD (e.g. `SS:256`, `HH:256`, `DD:192`, `ZZ:128`) | smaller tiles / `GlobalSplitU` (SS only; structurally forbidden on CC/ZZ/HH/HPA) | within-run win vs band |
+| **C — complex accounting artefact (M3)** | CC/ZZ pinned at ~290/22 GFLOPS | none — re-read in BLAS-8 units (×4 — the roof is 80–97 %, not 20–24 %) | doc correction, no deck change |
+| **K — clock confound (M4)** | weak `*_clock_coverage` | re-run with the user; within-run only; pin SCLK only with explicit permission | strong-coverage batch + within-run win |
+| **D — depressed-cell / sweep-order defect** | family back-to-back in one old run (2048³ ahead of 256³ …) | re-measure; one family per session | flipped verdict on the re-run |
+| **F — floor-geometry steal (worst cells only)** | floor winner beats native winner at the *worst* native cell of the family; gfx900-tuned | §4.4 protocol: documented retune, gate-green, TTY-measured | measured variant on both shapes |
+| **N — virgin axis** | axis in forward domain, never drawn at the winner geometry (StaggerU trio, `1LDSBuffer`, `DepthULdsDivisor`, `LocalSplitU>1`, `GLVW` wandering) | mutator NARROW or a trial row (`DECISION_TRIAL_TILES`) | verdict flip or retired row with reason |
+| **H — contaminated attribution** | stamp ≠ typecode | fix attribution at the DB read (`dtype_to_family`); never edit the DB | independent reads agree |
 
-Anything unclassifiable: suspect the measurement (K) or the attribution (H)
-before the deck.
+If a cell fits no class: suspect K or H, then the deck — never the "ceiling".
 
-### Phase 3 — Candidate routes, in priority order
+## 6. Candidate routes, in priority order
 
-**Route 1 — the machine (default).** `oto tune --budget N --mutations M`:
-the convergence loop (harvest winners → mutate ≤2 knobs → re-measure → verdict)
-and the DB mutator's NARROW (1–3 knob draws) and WIDE (floor/DB tile donors ×
-forward draws) — every mutant gated and novelty-checked before emission. You
-supervise: after the batch, rebuild the DB, census, `cell_knob_diff`, read
-verdicts, triage empties, decide the deck, hand off.
+**Route 1 — the machine (default).** `oto tune --budget N --mutations M` — the
+convergence loop: harvest winners → mutate ≤2 knobs → re-measure → verdict. The
+DB-hooked mutator emits NARROW (1–3 forward-knob deltas), WIDE (floor/DB tile
+donors × forward draws) and DIRECTION (parent → floor winner) with `bypass`
+enabled and novelty enforced by the ledger; every mutant is gated and novelty-
+checked before emission. You **supervise** it: you do not hand-describe the
+tiles; you keep the run legal and the harness fed (census, kernel_db rebuild,
+run-start, run-stop). This is where 90 % of the campaign's tokens should go.
 
-**Route 2 — targeted trial rows.** One hypothesis, one cell family — the
-CC:256 `AF0/1EM=4` (D5) pattern, now first-class deck rows (2026-11-14, owner
-Option B). Workflow: `python3 -m oto check candidates` green → GPU-validated in
-TTY with `NumElementsToValidate` enforced → permanent deck row or retirement
-with reason.
+**Route 2 — targeted trial rows.** One hypothesis, one family, one shape — the
+CC:256 `AF0/1EM=4` (D5) pattern, now permanent deck content (2026-11-14, owner
+Option B). The workflow:
 
-**Route 3 — floor-winner steal, with a bounded protocol.** The floor config is
-gfx900 silicon; gfx90c differs in CU count, L2, and wave quantization. So:
-1. steal only for the **worst** cells in the family (never the leader);
-2. **document every changed knob** and why (e.g. StaggerU for the 7-CU raster,
-   WGM − I/J swap family, LdsPad — CC never pads in the floor, a blind spot
-   shared by Tensile's perf yamls, AF0/1EM←4 from the SGEMM recipe, DepthU);
-3. gates green, then TTY-measure at both shapes; verdicts like-for-like. Never
-   byte-copy, never "the floor is old so it must be worse".
+```bash
+python3 -m oto check candidates      # row must be 0 illegal
+# TTY: the phase benchmarks via the 7.x client with NumElementsToValidate=128
+# THERE IS NO OTHER BAR — not your confidence, not the gate, not the tune guide
+```
+Gates preflight → TTY → measure → graduate or retire with reason. The row class
+starts as `_trialD<n>` via `DECISION_TRIAL_TILES` (`oto/tensile/decks.py`) and
+ends, if the owner agrees, as a permanent deck row.
 
-**Route 4 — virgin axes.** `N` rows from the mutator. Heed the forwarding
-caveats: `1LDSBuffer` needs `ScheduleInnerAccuracy ∈ {2,3}` — if the deck
-forwards no SIA, the gate refuses it and that is the correct answer, not a bug.
+**Route 3 — floor-winner steal, bounded and documented.** This is where the
+gfx900 floor configurations enter the deck. The constraints that make a steal
+*legal* here are the same constraints that made the attempt1 machine fail:
 
-**Route 5 — new cells / ladder rungs / TARGET_CELLS.** Class A territory
-(`claude.md`); request with evidence, never hand-edit.
+1. **Worst cells only.** Steal is for the family's weakest performable cells,
+   never the leader (the floor winner for a cell both arms flood is a copy, not a
+   candidate).
+2. **Document every changed knob and why.** The gfx900 floor winner is 56-CU,
+   HBM2, 2048-barrel-tuned silicon; the gfx90c part is 7-CU, DDR4-shared, wave-
+   quantization-starved. The differences that matter: `StaggerU` (32 was a
+   56-CU raster choice), `WorkGroupMapping` (7 CUs want the negative I/J-swap
+   family), `LdsPadA/B` (CC never pads in the floor — a blind spot shared by
+   Tensile's own perf yamls), `VectorWidth` (16-B cap on this part), LDS pressure
+   (16 KiB LDS/WG, not 64 KiB). Every adaptation gets a row in
+   `potential_configs.md` §steal with the reason before it is decked.
+3. **No byte copies.** Verify `AF0/1EM` (assertion only holds when 4-divisible;
+   verify free dims of the target cells), verify wave quantization, verify
+   residency math (`accVGPR` against the per-thread budget in
+   `oto/tensile/gates/occupancy.py`), verify LDS with `ldspad_feasible`, verify
+   load-divisibility with `validate_tensile_loads`, verify solution-construction
+   legality with `python3 -m oto.harness.tensile_oracle` for new rows, and verify
+   end-to-end with the client before you benchmark in TTY.
+4. **Measured only.** A steal that gates green and fails benchmarking is a
+   hypothesis honestly reported, not a failure to lament.
 
-Work only on **active cells** (below ceiling, outside the tie band, not a wall).
-Walls and settled cells are skipped without apology and without consultations.
+**Route 4 — virgin axes from the forward domain.** From `FORWARD_KNOB_DOMAINS`
+in `oto/tensile/synthesis/db_knobs.py`: `N` rows on the winner geometries. Notable cases that remain open: `StaggerU=0` (now legal — the gate
+had it inverted; it was never run), `1LDSBuffer` (blocked by missing
+`ScheduleInnerAccuracy ∈ {2,3}` forwarding — the gate is the truth, not a bug),
+`DepthULdsDivisor` (same SIA constraint), `WaveSeparateGlobalReadA/B` (never
+sampled). Consult the deck's `NOT_FORWARDED_KNOBS`
+(`oto/tensile/knob_surface.py`) before adding any.
 
-### Phase 4 — After the batch (the autonomous refinement loop)
+**Route 5 — new cells / ladder rungs.** `TARGET_CELLS`, `LADDER` — Class A
+(`claude.md`) content; request with evidence, never hand-edit.
 
-In order, after every batch:
+**The active-cell rule.** Everything else is scaffolding. Work only on active
+cells (below ceiling, outside the tie band, not a wall). Walls and settled cells
+are skipped; settled means the verdict is within-band for ≥2 runs.
 
-1. `python3 -m oto.harness.kernel_db --rebuild`
-2. regenerate and read the acceptance report; `cell_knob_diff`
-3. triage every failed/empty phase (`python3 -m oto.harness.failure_triage`):
-   - **gate-miss** — a kernel a gate would have refused: route to Class A with
-     evidence; **you never patch gates**;
-   - **measurement confound** — clock coverage, attribution, sweep order;
-   - **deck-empty** — the row was refused at solution construction: remove it,
-     reframe it, or retire it with reason;
-   - **floor-selection artefact** — the like-for-like rule caught it; no action.
-4. Retired losers get one line in `potential_configs.md` (never re-proposed).
-   Winners get winner status + the next knob class to try.
-5. Update `incomplete_work.md` and `results.md` with measured evidence only.
-6. Carry the next question forward in writing — never into a consultation you
-   do not need.
+## 7. Consultation triggers — when to reconnect, and for what
 
-## 5. The overnight run protocol
-
-- Deck state: `python3 -m oto check candidates` = 0 illegal; dry-run the
-  generator if you extended the overlay; every candidate gate-green, every trial
-  row gate-legal, every virgin row justified in a note.
-- Sizing: rows × measured per-phase cost (~83 s on the reference machine);
-  peak-family order beats mixed soup unless one cell is the whole point.
-- Launch: **the user** runs it. You never start, watch, or kill the GPU. Wait.
-- After: §4 Phase 4 loop immediately — stale reports mislead the next session.
-
-## 6. The consultation triggers — when to reconnect, and for what
-
-Reconnect for an agentic consultation only when:
+Reconnect for an agentic consultation only when one of these is true:
 
 - **T1** — a verdict flips loss → win or win → loss;
 - **T2** — three consecutive batches with no cell moving beyond the ±2 % band;
-- **T3** — an anomaly you cannot attribute with CPU tools;
-- **T4** — a hardware-fact consequence arises (profile field change — Class A,
-  you stop first);
-- **T5** — the campaign or a major increment completes (post-mortem: docs,
-  deck pruning, verification).
+- **T3** — an anomaly you cannot attribute with the CPU tools;
+- **T4** — a hardware-fact consequence arises (a profile field needs changing —
+  Class A territory; you stop before involving the owner);
+- **T5** — campaign completion / a major increment (post-mortem: docs tightened,
+  deck pruned, verification matrices refreshed).
 
-**Consultation payload** (write to a file; self-contained; no attachments):
-the question; verbatim JSON extracts (`per_cell_verdicts` rows, winner map,
-deltas) — never transcribed numbers; ruled-out strata with reasons; what you
-need back (ranked routes, a doc edit, or permission for something specific).
+**Payload** (always written to a file, self-contained, no attachments):
 
-**A consultation is not**: a status update, a rubber stamp, a research spree, or
-a substitute for `corpus_census`. If a CPU tool can answer it, it is not a
-consultation — that is the single most expensive failure mode of this loop, and
-it is how the prompt-spam era burned its budget.
+```
+q:        the one-line question / decision the consultation exists for
+evidence: verbatim JSON excerpts (never transcribed), `basis_protocol=family`
+ruled_out: strata you excluded and why
+needs:    ranked routes, or a doc edit, or permission (list exactly what)
+```
 
-**Research beyond the docs**: never spawn it unasked. The research is either in
-this ecosystem already (read it), or is a user-approved API-key invocation —
-and anything it produces stays UNVERIFIED until a human checks it.
+**A consultation is not**: a status check, a rubber stamp, a research spree, or
+a substitute for `corpus_census`/`resolve_cells`. If a CPU tool can answer it, it
+is not a consultation — that is the single most common, most expensive failure
+mode this campaign exists to prevent.
 
-## 7. The prior art you must read — and obey
+**Research is never spawned on your initiative.** The research is in the docs
+already (`kernel_tuning_research.md`, `gfx90c_tuning_guide.md`,
+`tensile_tuning_context.md`, `complex_gemm_research_brief.md`,
+`results.md`/`potential_configs.md` history); an agentic web-research consult
+runs only with the user's explicit key + permission, and its output stays
+UNVERIFIED until a human checks it.
 
-Before any campaign session beyond corpus study:
+## 8. After the batch — the autonomous refinement loop
 
-[`docs/harness_runbook.md`](harness_runbook.md) (census semantics + the three
-pre-deck questions) · [`docs/comparability.md`](comparability.md) (the
-like-for-like admission rule) · [`docs/operator_runbook.md`](operator_runbook.md)
-(the best-effort contract this campaign extends) · `potential_configs.md`
-(R41/R42..: what the corpus has finished with, what is virgin) · `results.md`
-§9 (the straggler classes and their machine evidence) · `kernel_tuning_research.md`
-(the mechanism model) · `gfx90c_theoretical_limits.md` (the bars) ·
-`gfx90c_tuning_guide.md` §5–§12 (measured winners, the M-mechanism fold, today's
-toolchain reality) · `knowledge_base.md` §10 (append-only law — the DB is the
-record, never edited) · `tensile_tuning_context.md` (search philosophy).
+After every TTY batch (and before the next one is scheduled):
 
-## 8. What you never do
+1. `python3 -m oto.harness.kernel_db --rebuild`
+2. `oto report` → read like-for-like; `cell_knob_diff` for the winners-moved list
+3. `python3 -m oto.harness.failure_triage` — classify every empty phase:
+   **gate-miss** → Class A with evidence (you never patch gates, the deck
+   or profiles); **measurement confound** → K-class retriage;
+   **deck-empty** → refused row: remove, reframe, or retire with the Tensile
+   reason recorded; **floor-selection artefact** → no action.
+4. Retired losers get one line in `potential_configs.md` (never re-proposed);
+   winners get their status + the knob class the next session probes.
+5. `incomplete_work.md` + `results.md` — every number measured, every verdict
+   cited, every retirement named.
+6. The next session's question rides in the docs, never into a consultation
+   you do not need.
 
-- Benchmark in a display/desktop session; stress the shared GPU; reset anyone.
-- Trust `winner`-basis headlines or re-litigate settled numbers without a
-  named like-for-like failure.
-- Propose a config that has not passed `validate_config` + `ldspad_feasible`
-  + (new rows) the deck check (`tensile_oracle` / `deck_check`).
-- Byte-copy a floor winner; or steal a winner that is not in this family's
-  worst cells.
-- Edit `oto/`, `tests/`, the deck, profiles, gates, or the ledger — Class A
-  territory; route with evidence.
-- Hand-edit `kernel_db.json`, `registry.db`, or the report artifacts; they are
-  append-only/rebuilt.
-- Re-derive settled facts; spawn research without permission; spend a
-  consultation on a CPU-answerable question.
-- Claim convergence, or a win, from anything but a TTY benchmark read like-for-like.
+## 9. The overnight run — 10+ h
 
-## 9. Assignments, one line
+- **Deck state first**: `python3 -m oto check candidates` = 0 illegal; dry-run
+  the generator (`generate_candidates --dry-run`) if you extended the overlay;
+  every row gate-green and every virgin row justified in a note.
+- **Sizing**: rows × measured per-phase cost (~83 s on the reference machine);
+  one family-blocked batch beats mixed soup (sweep-order depresses the tail).
+- **Launch**: the user. You do not start, watch, or kill.
+- **After**: §8 loop immediately — stale reports mislead the next session.
 
-`docs/operator_runbook.md` (bring-up) → this file (the campaign) →
-[`docs/harness_runbook.md`](harness_runbook.md) → [`docs/comparability.md`](comparability.md) →
-the device's starter + generated docs → the artifacts. Found a bug? Stop and
-report it — Class B never patches oto. The GPU belongs to the user; the record
-belongs to the ledger; the cadence belongs to the console.
+## 10. The operator's never-do list
+
+- Never benchmark in a display/desktop session.
+- Never trust `agg=winner` headlines or re-litigate settled numbers without a
+  named like-for-like failure; the ±2 % band is the tightest band that means
+  anything — anything tighter is precision you do not have.
+- Never propose a config that has not passed `validate_config` +
+  `ldspad_feasible` (+ the deck check / oracle for new rows).
+- Never byte-copy a floor winner; never steal for cells that are already won;
+  never treat a floor config as a substitute for thinking about *why* it wins.
+- Never edit `oto/`, `tests/`, the deck, profiles, gates, or the ledger —
+  route to Class A with evidence.
+- Never hand-edit `kernel_db.json`, `registry.db`, or the report artifacts;
+  they are append-only/rebuilt.
+- Never re-derive settled facts; never spend a consultation on a question a CPU
+  tool answers; never spawn research; never present a CPU-gated proposal as a
+  win.
+
+## 11. Reading order, one line
+
+`claude.md` §1 (role) → `docs/operator_runbook.md` (bring-up and the best-effort
+gate) → this file → `docs/harness_runbook.md` (census semantics + the three
+pre-deck questions) → `docs/comparability.md` (before you trust any A/B number)
+→ the device's starter + generated docs (`<cn>_theoretical_limits.md`,
+`<cn>_tuning_context.md`, `<cn>_harness_study.md`) → the artifacts themselves
+(report JSON, census output, `resolve_cells` table, ledger). The research is
+already done — read it. The gates are already written — use them. The ledger
+already remembers — trust it once you have rebuilt it.

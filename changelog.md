@@ -4097,3 +4097,23 @@ the pre-built seed pool.
   Class A), and the consultation triggers T1-T5 with a self-contained payload
   contract. No fact in the doc is remembered; every date and claim was
   checked against the tree.
+
+- **2026-11-14 (30th) — operator_campaign.md rewritten with full provenance.**
+  Every constraint in the doc now carries its origin: the FOSS United grant
+  (Jul 2026, method not product), attempt1 (~9.2K LoC shell; ruler math broken
+  four ways; retirement conflation), attempt2 (draft acceptance gate rejected,
+  floor itself retained), the oto birth (2026-09-17), Refactor 1 (package
+  split), the 2026-10 failures that made this curriculum (ComplexFloat/complexDouble
+  Z=8 gate miss, StaggerU inverted, LocalSplitU shadowed by explicit WorkGroup,
+  TransposeLDS unreachable, sweep-order depressed CC:256, complex bar 4x scale,
+  arm-size order-statistics artifact), rocm-libraries/nightly port, Refactor 2
+  (device profiles, NumElementsToValidate=128, explicit profile threading) and
+  the CC AF4/4 Option-B adoption. The doc now spells the bounded operating
+  model: corpus study with concrete commands, the class catalogue with
+  detection and closing evidence (W/R/C/K/D/F/N/H), candidate routes in
+  priority order (machine loop; targeted DECISION_TRIAL_TILES; documented floor
+  steal — worst cells only, every knob documented, no byte copies,
+  gate + oracle + TTY or it did not happen), consultation triggers T1-T5 with a
+  self-contained payload contract, and the post-batch autonomous refinement
+  loop. No fact remembered; every claim checked against the tree or the two
+  reference checkouts (backrocm, ROCm/).
