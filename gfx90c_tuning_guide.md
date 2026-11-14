@@ -214,7 +214,7 @@ at 80-97 % of the pipe.
 Kernel names, not phase-id text, decide the cell. The `phase_auto_*` pool used
 to resolve family `'auto'` → dtype `'S'` and dumped HH/CC/DD kernels into the SS
 cells (P §3: S 1024 reported **2142.55**, honest **1135.1**). Rule, enforced
-everywhere (analytics, kernel_db, port_tensile):
+everywhere (analytics, kernel_db, the driver):
 
 - typecode → family: **SB→SS, DB→DD, HB→HH, CB→CC, ZB→ZZ**; layout-suffixed
   codes (HHS_BH, HSS, ZB_GB) strip the layout token first.

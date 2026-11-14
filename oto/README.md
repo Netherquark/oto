@@ -17,7 +17,6 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 * ``device/detect.py`` — Device auto-detection: resolve the GPU codename from the system.
 * ``device/loader.py`` — Device profile loader.
-* ``device/peaks.py`` — Hardware peaks and the canonical cell/family vocabulary.
 * ``device/profile.py`` — Device profile: the single source of truth for device facts.
 * ``device/tensile_isa.py`` — Tensile ``CurrentISA`` version triples for the gfx9 family.
 * ``device/vocabulary.py`` — The cell/kernel vocabulary and the coverage-grid derivation.

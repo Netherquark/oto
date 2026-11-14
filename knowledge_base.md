@@ -302,8 +302,8 @@ check, never a restatement):
   the grid fails CI before any GPU time is spent.
 
 The grid's single source is `oto.device.vocabulary.shipped_cells()`; family keys,
-shape lists and dtype chars live in `oto.device.loader.FAMILY_*` and are imported,
-never transcribed, anywhere else. Non-cube probe shapes (e.g. `32x4096x1`)
+shape lists and dtype chars live in `profiles/gfx90c.json` and are read
+through `oto.device.loader.current_profile()` — never transcribed. Non-cube probe shapes (e.g. `32x4096x1`)
 have no cell and are excluded from the check by construction — they are
 reported separately, never counted as coverage.
 

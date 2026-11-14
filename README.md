@@ -280,7 +280,7 @@ oto/
 ├── phases.yaml                # the phase manifest: targets, per-family decks
 │
 ├── oto/                       # the package (see §5 and oto/README.md)
-│   ├── device/                # hardware facts: peaks, family/cell vocabulary
+│   ├── device/                # hardware facts: the device profile + cell/kernel vocabulary
 │   ├── tensile/               # the Tensile-facing candidate pipeline
 │   │   ├── gates/             # assembly / loads / occupancy / VGPR legality gates
 │   │   └── synthesis/         # DB-hooked + coverage-guided candidate synthesis

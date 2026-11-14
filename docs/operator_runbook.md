@@ -106,9 +106,8 @@ The agent writes `docs/<codename>_theoretical_limits.md` and
 **UNVERIFIED**, plus `docs/<codename>_harness_study.md` and
 `docs/<codename>_potential_configs.md` (both CPU-only; see §6). Without a
 key, research is a clean no-op and the docs carry the starter text only.
-If the target already has `profiles/<codename>.json`, you may omit the
-starter path and pass `--codename` to the driver:
-`python3 -m oto.runners.cli --generate-device-docs --codename <codename>`.
+If the target already has `profiles/<codename>.json` and its docs exist, no
+agent run is needed; just run `oto doctor` to confirm the profile loads.
 
 **Agent research is advisory. It is never the source of record for silicon
 facts.** See §4.

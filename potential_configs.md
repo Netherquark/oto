@@ -361,7 +361,7 @@ TTY only, never from a GNOME/Wayland session (§R34 cause 1):
 # 1. confirm the GPU is actually there, and say so in the transcript
 rocm-smi --showtemp --showpower
 # 2. the run
-python3 -m oto.runners.cli --auto --budget <N>
+python3 -m oto tune --budget <N>
 # 3. FIRST THING after it returns -- the guard files the run failed if the GPU left
 sqlite3 gfx90c_results/registry.db \
   "SELECT run_id,status,metadata FROM runs ORDER BY rowid DESC LIMIT 3;"
@@ -702,7 +702,7 @@ vendor's.
 * **Preflight is the authority, not a number written here.** `python3
   check_candidates.py --quiet` → `0 illegal`;
   `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;
-  `python3 -m oto.runners.cli --preflight` → parity (38/38 cells).
+  `python3 -m oto preflight` → parity (38/38 cells).
 
 ## R31 — what to stop doing
 
@@ -725,12 +725,12 @@ vendor's.
 
 ```bash
 # CPU-only, safe under GNOME (no GPU stress):
-python3 check_candidates.py --quiet
+python3 -m oto check candidates --quiet
 python3 -m oto.harness.generate_candidates --dry-run
 python3 -m oto.harness.gate_calibration --population ours --fail-on-false-reject
 python3 -m oto.harness.rule_calibration --fail-on-false-reject
 python3 -m oto.harness.failure_triage
-python3 -m oto.runners.cli --preflight
+python3 -m oto preflight
 python3 -m pytest -q tests/test_occupancy_gate.py tests/test_knob_sweep.py
 
 # TTY only — the real run:
@@ -946,8 +946,8 @@ dtypes, and forces `1LDSBuffer`).
   `NameError` and three tests were red. Now imported; the sweep test file is green.
 * **Preflight is the authority, not a number written here** (`claude.md`: never
   write a corpus count down). `python3 -m oto.harness.generate_candidates --dry-run`
-  must report `0 refused`, `python3 check_candidates.py --quiet` must report
-  `0 illegal`, and `python3 -m oto.runners.cli --preflight` must show
+  must report `0 refused`, `python3 -m oto check candidates --quiet` must report
+  `0 illegal`, and `python3 -m oto preflight` must show
   full parity (38/38 shipped cells) before the run.
 
 ## R20 — the launch-boundary extension (ranked, deliberately NOT done here)
@@ -985,9 +985,9 @@ out of the deck: a candidate carrying them is a no-op (R16).
 
 ```bash
 # CPU-only, safe under GNOME (no GPU stress):
-python3 check_candidates.py --quiet
+python3 -m oto check candidates --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-python3 -m oto.runners.cli --preflight
+python3 -m oto preflight
 
 # TTY only — the real run:
 python3 -m oto tune --budget 10 --yes
@@ -1336,16 +1336,16 @@ overnight run command:
 
 ```bash
 # CPU-only, from any session (safe under GNOME)
-python3 check_candidates.py --quiet
+python3 -m oto check candidates --quiet
 python3 -m oto.harness.generate_candidates --dry-run
-python3 -m oto.runners.cli --preflight
+python3 -m oto preflight
 
 # TTY only — the real run
 python3 -m oto tune --budget 10 --yes
 ```
 
 Sizing: `phases.yaml` plus the seed overlay is what a run builds;
-`python3 check_candidates.py --quiet` prints the live deck count and refuses
+`python3 -m oto check candidates --quiet` prints the live deck count and refuses
 anything illegal. The last run took 13 h 14 m wall clock for 7.95 h of phase-busy
 time, so ~12–14 h is the honest estimate. Judge **within-run only**, ≥3 seeds,
 median, ±2% tie band.
@@ -2394,16 +2394,16 @@ retains **765 of 3831 configs (20 %)** and **loses 0 of 35 cell winners**
 
 ```bash
 # 1. CPU-only, from any session (safe under GNOME)
-python3 check_candidates.py --family CC --quiet        # legal, or it names the rows
+python3 -m oto check candidates --family CC --quiet   # legal, or it names the rows
 python3 -m oto.harness.generate_candidates --dry-run  # prints the per-family tally
-python3 -m oto.runners.cli --preflight   # 38/38 parity, all OK
+python3 -m oto preflight       # 38/38 parity, all OK
 
 # 2. TTY only — the real run
 python3 -m oto tune --budget 10 --yes
 ```
 
 Sizing: `phases.yaml` plus the seed overlay is what a run builds;
-`python3 check_candidates.py --quiet` prints the live deck count and refuses
+`python3 -m oto check candidates --quiet` prints the live deck count and refuses
 anything illegal. The last run took 13 h 14 m wall clock for 7.95 h of phase-busy
 time (40 % overhead: config generation, Tensile build, queueing), so **~12–14 h**
 is the honest estimate and `--budget 10` iterations of mutation on top. Judge
@@ -2413,8 +2413,8 @@ is the honest estimate and `--budget 10` iterations of mutation on top. Judge
 
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
-python3 allruns.py --json /tmp/opencode/post.json      # knob census + cells_resolved
-python3 -m oto.runners.cli --native-agg floor_best   # the strict basis
+python3 -m oto.tools.allruns --json /tmp/opencode/post.json      # knob census + cells_resolved
+python3 -m oto.runners.cli --report --native-agg floor_best   # the strict basis
 ```
 
 Report `agg="floor_best"` as a **co-primary** alongside `winner`: it grades the

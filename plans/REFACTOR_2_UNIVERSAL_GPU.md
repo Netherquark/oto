@@ -1,6 +1,6 @@
 # Refactor 2 — Universal GPU (arch-independent oto): commit tasklist
 
-**Status:** IMPLEMENTATION PLAN. Execute commit-by-commit. Gate: full preflight green after every commit. No regressions.
+**Status:** EXECUTED 2026-11-13..14 — steps landed as commit series above (see `git log --oneline --reverse 2026-10-01..2026-11-15`). 30 C-series items closed including C2.5-C2.9 (loader.current_profile()) and C2.10 (gfx90c_common deleted; peaks.py retired). gf/o-renamed artefacts (e.g., `oto/device/loader.py`) exist in the tree today; the doc reflects master.
 
 **Companion:** REFACTOR_1 (oto/ package) — DONE. Assumes `oto/` layout + `oto/device/` seam exist.
 
