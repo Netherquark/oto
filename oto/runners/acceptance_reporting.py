@@ -153,10 +153,10 @@ class ReportingMixin:
         """
         native_records: list[dict[str, Any]] = []
         spoof_records: list[dict[str, Any]] = []
-        try:
-            records = self.registry.read_records(run_id=run_id, record_type="benchmark_result")
-        except Exception:
-            return native_records, spoof_records
+        # Registry read failures are bugs, not "no arm data" — they must surface,
+        # not masquerade as an empty corpus: a silently empty arm A/B grades
+        # against nothing and the report then carries a meaningless verdict.
+        records = self.registry.read_records(run_id=run_id, record_type="benchmark_result")
         for rec in records:
             gflops = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
             if gflops <= 0:
@@ -496,8 +496,7 @@ class ReportingMixin:
                                      native_arm, all_analytics,
                                      cell_status["red"])
         except Exception as e:
-            print(f"Report generation error: {e}")
-            return None
+            raise RuntimeError(f"Report generation failed: {e}") from e
     def regenerate_report(self, run_id: str | None = None,
                           native_agg: str = "winner",
                           protocol_basis: str = "family", profile=None) -> dict[str, Any] | None:
