@@ -303,7 +303,7 @@ def run_check(args: Any) -> int:
         argv = ["--base-dir", base] + (["--json"] if args.json else [])
         return _call(argv, m)
     if name == "retirement":
-        from oto.checks.retirement import main as m
+        from oto.checks.stability_retirement import main as m
         argv = ["--base-dir", base] + (["--json"] if args.json else [])
         return _call(argv, m)
     if name == "library-parity":

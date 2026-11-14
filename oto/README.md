@@ -123,7 +123,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``checks/deck_legality.py`` — Is this deck Tensile-legal? The four-gate preflight.
 * ``checks/library_parity.py`` — The coverage-parity rule, as an executable check over an external deck.
 * ``checks/registry_audit.py`` — Inspect the registry DB for label contamination ('auto' / 'Unknown').
-* ``checks/retirement.py`` — Inspect the registry DB for retirement records and per-cell samples.
+* ``checks/stability_retirement.py`` — Inspect the registry DB for retirement records and per-cell samples.
 * ``checks/tensile_build.py`` — CPU-only Tensile build proof: does Tensile's own writer accept this phase?
 * ``checks/tensile_build_probe.py`` — The Tensile-side proof machinery for the tensile-build check.
 
