@@ -4340,3 +4340,14 @@ the pre-built seed pool.
   TTY to-do list with zero measurements and no claims until the GPU runs. Synthetic-profile tests
   pass; no GPU required. Bug fixed en route: generate_device_docs crashed with FileNotFoundError
   when the `<codename>_docs/` directory did not exist. Suite green; verifier PASSED; ruff clean.
+
+- **2026-11-14 (44th) — production-readiness audit: the plans archaeology is complete and the last unexecuted plan shipped.**
+  Resurrected every one-shot plan from `git log --all -- plans/` and accounted for each:
+  Refactor 1 (org), Refactor 2 (Universal GPU), CLI front door, test optimisation (9x faster suite),
+  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (executed earlier), MASTER_PLAN (open items folded into
+  incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS — implemented as `oto agent consult [starter]`
+  in 8b73424. Repo state at audit: suite green (1081 passed + 8 skipped), `oto verify all` PASSED at
+  HEAD and 2824c2f, ruff clean, functions ≤ 60 lines / files ≤ 600 lines, docs registry fresh, no
+  machine-local paths in tracked files, no .pyc/artifact files tracked, no stale module references
+  outside changelog/archive, Class A/B docs current, `oto doctor` clean. The 44th entry closes the
+  arc begun 2026-11-13 with the CLI front door and the 2026-11-14 doc restructure.
