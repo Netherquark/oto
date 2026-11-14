@@ -3253,7 +3253,7 @@ verdict.
   winner tile: WorkGroupMapping {2,8}, MaxOccupancy {4,8}, InnerUnroll 2,
   NonTemporalA, LdsPadA/B 1 (per-family gate-checked subset).
 
-Preflight on the committed rows: `generate_candidates --dry-run` → pool 1141,
+Preflight on the committed rows: `oto.harness.candidate_generator --dry-run` → pool 1141,
 52 would-append; `oto check candidates` → **284 checked (phases.yaml) + 1146
 checked (overlay), 0 illegal**; real-Tensile deck_probe probe → **52/52
 built, 0 refusals** (`gfx90c_results/analysis/deck_probe_r50.log`; includes

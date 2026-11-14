@@ -203,7 +203,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
 with the conflict factor estimated from stride/DepthU/VectorWidth/bpe/LdsPad. **Use for ordering and
 pruning only** — never accept on the model; measurement is the ground truth.
 
-**Measurement hygiene (per all_runs.py pass 3 read).** Ban within-the-overlap measurement (a config
+**Measurement hygiene (per the run-census read).** Ban within-the-overlap measurement (a config
 whose median comes from a run that overlapped a different invocation) — the 658.2 vs 333.0
 multi-shape swing on the same kernel is **real**, not noise, and form-mismatched cells grade
 `UNGRADED`. Always destroy the optimizer's draws between iterations; 32 reps per config in
