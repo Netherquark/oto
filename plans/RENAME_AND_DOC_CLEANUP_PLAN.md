@@ -232,7 +232,7 @@ file or helper mentions "phase1".
   `[sys.executable, "-m", "oto", "check", "candidates"]`
   (`tests/test_occupancy_live_deck.py:109-115`).
 - `tests/test_measurement_integrity.py:41,52,96` — "scheduler's byte table must
-  agree...", "`scheduler table disagrees`", "disagrees between allruns and
+  agree...", "`scheduler table disagrees`", "disagrees between all_runs and
   scheduler" — the deleted pre-split `scheduler.py` named as if it were live.
 - `tests/test_cell_attribution.py:16,57,164` — "gfx90c_common" / "scheduler" —
   pre-split module names in live test narration.
@@ -482,7 +482,7 @@ losing information).
 11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` —
     two files indistinguishable without opening both; name the halves (`verify_symbols.py`,
     `verify_methods.py`).
-12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
+12. `oto/tools/all_runs.py` — squashed pre-refactor script name; `oto stats` maps to it.
 13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every
     sibling verb is "probe" (`checks/tensile_build_probe.py`).
 14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three
@@ -622,7 +622,7 @@ independently shippable.
 9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a REF-worktree probe runner (`_evergreen.py:1-6`).
 10. `oto/tools/verifiers/_verdicts_worker.py` — "worker" with no subject; it emits the verdict corpus.
 11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` — two files indistinguishable without opening both; name the halves (`verify_symbols.py`, `verify_methods.py`).
-12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
+12. `oto/tools/all_runs.py` — squashed pre-refactor script name; `oto stats` maps to it.
 13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
 14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
@@ -857,8 +857,8 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 | `oto/agents/meta.py` | `oto/agents/orchestrator.py` | "meta" is a non-name | low |
 | `oto/checks/candidates.py` | `oto/checks/deck_legality.py` | bare "candidates" indistinguishable from generation | low |
 | `oto/checks/db.py` | `oto/checks/registry_audit.py` | "db" says nothing | low |
-| `oto/tools/allruns.py` | `oto/tools/all_runs.py` | squashed pre-refactor script name | low |
-| `oto/tools/potential_configs_gen.py` | `oto/tools/potential_configs.py` | trailing `_gen` is the version-suffix smell | low |
+| `oto/tools/all_runs.py` | `oto/tools/all_runs.py` | squashed pre-refactor script name | low |
+| `oto/tools/potential_configs.py` | `oto/tools/potential_configs.py` | trailing `_gen` is the version-suffix smell | low |
 | `oto/tools/verify_run.py` | `oto/tools/corpus_audit.py` | namespace clash with `tools/verifiers/`; it audits the corpus | low |
 | `oto/tools/verifiers/verify_ast_equivalence.py` | `oto/tools/verifiers/verify_symbols.py` | subject is public symbols + signatures | medium (verifier tables) |
 | `oto/tools/verifiers/verify_method_equivalence.py` | `oto/tools/verifiers/verify_methods.py` | subject is method bodies | medium |
@@ -987,7 +987,7 @@ independently shippable.
 9. `oto/tools/verifiers/_evergreen.py` — 46 occurrences of unexplained jargon; the module is a REF-worktree probe runner (`_evergreen.py:1-6`).
 10. `oto/tools/verifiers/_verdicts_worker.py` — "worker" with no subject; it emits the verdict corpus.
 11. `oto/tools/verifiers/verify_ast_equivalence.py` vs `verify_method_equivalence.py` — two files indistinguishable without opening both; name the halves (`verify_symbols.py`, `verify_methods.py`).
-12. `oto/tools/allruns.py` — squashed pre-refactor script name; `oto stats` maps to it.
+12. `oto/tools/all_runs.py` — squashed pre-refactor script name; `oto stats` maps to it.
 13. `oto/harness/tensile_probe.py` — "oracle" is repo jargon for "ask Tensile itself"; every sibling verb is "probe" (`checks/tensile_build_probe.py`).
 14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.

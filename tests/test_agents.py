@@ -1,4 +1,4 @@
-"""Tests for Refactor 2 Phase 4/5: agents + potential_configs_gen."""
+"""Tests for Refactor 2 Phase 4/5: agents + potential_configs."""
 
 import sys
 from pathlib import Path
@@ -9,7 +9,7 @@ from oto.agents.orchestrator import run as meta_run
 from oto.agents.theoretical_limits import generate as gen_tl
 from oto.agents.tuning_context import generate as gen_tc
 from oto.device.loader import load_profile
-from oto.tools.potential_configs_gen import generate as gen_pc
+from oto.tools.potential_configs import generate as gen_pc
 
 
 def test_agent1_generates_doc():
@@ -35,7 +35,7 @@ def test_meta_orchestrates():
     assert "tuning_context" in res
 
 
-def test_potential_configs_gen():
+def test_potential_configs():
     prof = load_profile("gfx90c")
     from pathlib import Path
     doc = gen_pc(prof, Path("."))

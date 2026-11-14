@@ -16,7 +16,7 @@ import json
 from oto.device import loader
 from oto.harness import occupancy_bounds, regression_matrix
 from oto.runners.paths import results_rel
-from oto.tools.potential_configs_gen import generate
+from oto.tools.potential_configs import generate
 
 
 def _row(protocol: str = "family", gflops: float = 100.0) -> dict:

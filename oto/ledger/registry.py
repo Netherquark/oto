@@ -11,9 +11,9 @@ run (oto.runners), or how a row is graded (oto.metrics).
 Public API: SQLiteRegistry, fingerprint_config.
 """
 
+from oto.ledger.registry_core import RegistryCore, fingerprint_config
 from oto.ledger.registry_proposals import ProposalMixin
 from oto.ledger.registry_queries import QueryMixin
-from oto.ledger.registry_core import RegistryCore, fingerprint_config
 
 __all__ = ["SQLiteRegistry", "fingerprint_config"]
 

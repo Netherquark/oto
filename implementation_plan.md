@@ -21,7 +21,7 @@ footprint contract is `mapping.md`; the campaign is driven by
 
 ```
 shipped gfx900 footprint (28 families, 4 patterns; the live phase list is
-    generated and printed by `oto/tools/allruns.py`, never transcribed here)
+    generated and printed by `oto/tools/all_runs.py`, never transcribed here)
     ↓ translate decks (mapping.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)

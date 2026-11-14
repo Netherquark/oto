@@ -87,13 +87,13 @@ class TestDtypeByteTable(unittest.TestCase):
         assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["HS_HPA"] == dtype_bytes("S"), "HS_HPA is governed by its single operand"
         assert vgpr_model.FAMILY_BYTES_PER_ELEMENT["HH_HPA"] == dtype_bytes("H"), "HH_HPA is governed by its half operand"
 
-    def test_allruns_shares_the_same_table(self):
-        """allruns.py carried its own copy and drifted to the same wrong ZZ."""
-        import oto.tools.allruns as allruns
-        assert allruns.DTYPE_BYTES["Z"] == dtype_bytes("Z")
+    def test_all_runs_shares_the_same_table(self):
+        """all_runs.py carried its own copy and drifted to the same wrong ZZ."""
+        import oto.tools.all_runs as all_runs
+        assert all_runs.DTYPE_BYTES["Z"] == dtype_bytes("Z")
         for family, byte_width in vgpr_model.FAMILY_BYTES_PER_ELEMENT.items():
             with self.subTest(family=family):
-                assert allruns.DTYPE_BYTES[allruns.FAMILY_CHAR[family]] == byte_width, f"{family} disagrees between allruns and scheduler"
+                assert all_runs.DTYPE_BYTES[all_runs.FAMILY_CHAR[family]] == byte_width, f"{family} disagrees between all_runs and scheduler"
 
 
 class TestPhaseFamily(unittest.TestCase):

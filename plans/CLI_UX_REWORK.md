@@ -22,7 +22,7 @@ with new nomenclature in the same pass.
 
 **Three inconsistent invocation mechanisms, none of which are "the CLI":**
 - 11 root shims that only `sys.path.insert` and call `oto.tools.*:main`
-  (`allruns.py`, `check_db.py`, ...).
+  (`all_runs.py`, `check_db.py`, ...).
 - Package modules meant to be run as scripts — `python3 -m oto.metrics.render_status --help`
   **crashes today** (`No module named 'oto'`) — and `README.md:365` plus that
   module's own `--help` example reference `python3 run_status.py`, which
@@ -38,13 +38,13 @@ questions where Q1 (rerun_illegal) has no flag equivalent but Q2/Q3 do
 (`--release-under-specified` / `--release-unreproducible`), and the meaning of
 q1–q3 must be learned from `--yes`'s docstring.
 
-**Naming is internal jargon, not user tasks**: `port_tensile`? `allruns`?
+**Naming is internal jargon, not user tasks**: `port_tensile`? `all_runs`?
 `check_retirement`? Five `check_*` scripts with different nouns, `chart.py`,
 `verify_all` (refactor verifiers) vs `verify_run` (corpus snapshots) — a
 whole verifier vocabulary with no shared frame. Nothing answers "how do I see
 current status?" without reading `docs/README.md`.
 
-**Output discipline drifts**: `--json` exists piecemeal (`allruns --json`,
+**Output discipline drifts**: `--json` exists piecemeal (`all_runs --json`,
 `render_status --json`) but not on the driver; logs and reports interleave on
 stdout; no `NO_COLOR`/`--no-color`; pace/ETA mixed with real output;
 `--live` repaint machinery defaults on.
@@ -99,7 +99,7 @@ Old root shims are deleted, not deprecated.
 | `oto doctor` | nothing | diagnostics: TENSILE_ROOT resolves? TheRock toolchain real? GPU present? `.env` honoured? Prints per-line pass/fail with remediation — the "why doesn't it work on my box" command |
 | `oto verify all` / `oto verify run {snapshot,diff,telemetry,cheapest}` | `verify_all.py`, `verify_run.py` | keep semantics exactly |
 | `oto consolidate` | `consolidate.py` | deck consolidation |
-| `oto stats` | `allruns.py` | cross-run view; `--json` native |
+| `oto stats` | `all_runs.py` | cross-run view; `--json` native |
 | `oto chart` | `chart.py` | figures |
 | `oto docs generate [STARTER]` | `--generate-device-docs` | agent-1/agent-2 doc generation |
 | `oto version` / `oto help [topic]` | — | `oto help <topic>` pages via `less -FIRX` on a TTY |
@@ -290,10 +290,10 @@ Option A: oto verify all / oto verify run {snapshot,diff,telemetry,cheapest} Opt
 
 Recommendation: A — subcommands are discoverable; matches the noun-verb pattern.
 
-13. allruns.py
-Option A: oto stats Option B: oto allruns Option C: oto report allruns (nested under report)
+13. all_runs.py
+Option A: oto stats Option B: oto all_runs Option C: oto report all_runs (nested under report)
 
-Recommendation: A — stats is what it does; allruns is jargon.
+Recommendation: A — stats is what it does; all_runs is jargon.
 
 14. check_* scripts
 Option A: oto check candidates / oto check db / oto check retirement / oto check library-parity / oto check tensile-build Option B: oto check {candidates,db,retirement,library,build} Option C: Flat: oto check-candidates, oto check-db, etc.

@@ -154,7 +154,7 @@ and NOT the experimental data (that is `results.md`).
   and the toolchain is validated positionally (mirrors `Tensile/Tensile.py main()`).
   Verified PASS for one CC and two SS phases through the real worker subprocess
   (arch=gfx90c). Also: removed the hardcoded user-machine `TENSILE_ROOT` fallbacks
-  (`candidates.py`, `allruns.py`, `consolidate_deck.py`), deleted dead code
+  (`candidates.py`, `all_runs.py`, `consolidate_deck.py`), deleted dead code
   (empty `SQLiteRegistry` class in `registry_core.py`, the `depth_u` re-export in
   `tensile/candidate.py`), eradicated deleted-shim references from live
   docstrings/help text, rewrote README §3/§4/§5 + `docs/cli.md` to the real
@@ -244,8 +244,8 @@ and NOT the experimental data (that is `results.md`).
 - **2026-11-14 (19th) — Docs final-sync of prose corpus.** Remaining prose docs
   (`implementation_plan.md`, `potential_configs.md`, `results.md`,
   `kernel_tuning_research.md`, `gfx90c_tuning_guide.md`) normalised to the
-  current CLI/test names: bare `python3 check_candidates.py` / `allruns.py` ->
-  `oto check candidates` / `python3 -m oto.tools.allruns`; split-out test files
+  current CLI/test names: bare `python3 check_candidates.py` / `all_runs.py` ->
+  `oto check candidates` / `python3 -m oto.tools.all_runs`; split-out test files
   (`tests/test_occupancy_gate.py`, `tests/test_phase1_integration.py`) cited by
   current names; `oto/README.md` regenerated; `docs/docs_index.json` refreshed
   (`oto agent index`). No code changes. Suite RC=0; docs registry + index green.
@@ -322,7 +322,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_legality_prior.py` read `tlib.FAMILY_DTYPE_CHAR` (re-export
   removed by the ruff F401 cleanup; rewired to `oto.device.peaks`), and
   `tests/test_run_status.py`'s `fake_emit` mock rejected the new `arch` kwarg.
-  `potential_configs_gen.generate()` now synthesises the real document from
+  `potential_configs.generate()` now synthesises the real document from
   run artifacts: like-for-like acceptance, per-cell verdict anatomy table,
   ranked attack plan (LOSSes by gap, then TIEs), readable orange list,
   realistic ceilings, research citations; results paths now derive from
@@ -1968,12 +1968,12 @@ and NOT the experimental data (that is `results.md`).
   could destroy prior measurements turned up four, plus a duplicate of the same
   wrong constant:
   - *`scheduler.FAMILY_BYTES_PER_ELEMENT["ZZ"] = 8` had been fixed, but the same
-    number was hardcoded a second time in `allruns.py` (`DTYPE_BYTES["Z"] = 8`)* —
+    number was hardcoded a second time in `all_runs.py` (`DTYPE_BYTES["Z"] = 8`)* —
     the "one fact, one canonical home" rule violated by the byte table itself. It
     now reads widths through `consolidate.dtype_bytes()`, and
     `tests/test_measurement_integrity.py` asserts the two tables agree for every
     family, so a future drift fails a test instead of quietly understating a
-    width. `allruns.py` had also mapped `HS`/`HS_HPA` to `H` (2 B) while
+    width. `all_runs.py` had also mapped `HS`/`HS_HPA` to `H` (2 B) while
     `scheduler` mapped them to `S` (4 B); both now use the widest loaded operand,
     matching `scheduler.cap_vector_width`.
   - *Re-running a run directory silently reused it.* `create_run_dir()` now
@@ -2794,7 +2794,7 @@ so it returned ≥ 1 for every config and never fired.
 - New `check_candidates.py`: sweeps any deck through the 4 gates
   (divisibility, assembly-class, LDS, occupancy), exits 1 on any illegal config,
   so an illegal deck can be caught before a GPU run instead of mid-run.
-- New `allruns.py`: all-runs pattern analysis over the whole DB, driving oto's own
+- New `all_runs.py`: all-runs pattern analysis over the whole DB, driving oto's own
   loaders (`_native_records_all_runs`, `_ab_records_from_csv`,
   `compute_native_vs_spoof_delta` winner semantics) so it cannot drift from the
   pipeline that produced the ledger.
@@ -3356,7 +3356,7 @@ D1–D6 as enumerated and evidenced in `proposal.md` §H.2. In plan terms:
 
 **No new parser.** Every read of a phase's knobs, a CSV, or a fingerprint goes through the
 canonical loaders already mandated by `claude.md` §2.1 (`tensile_library`, `analytics`,
-`registry`, `allruns.py`, `check_candidates.py`). If a needed value cannot be obtained from
+`registry`, `all_runs.py`, `check_candidates.py`). If a needed value cannot be obtained from
 them, that is a defect in one of them — fix it there, do not add a parallel reader.
 
 **Hplan.3 Phase 1 — ledger + outcome (do this first; the rest is worthless without it)**

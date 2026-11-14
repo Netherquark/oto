@@ -474,7 +474,7 @@ Measurement no-go's:
 
 ### 8.1 Reading the raw evidence (canonical, do not re-derive)
 
-Getting these wrong produces confident, wrong conclusions. `oto.tools.allruns` encodes
+Getting these wrong produces confident, wrong conclusions. `oto.tools.all_runs` encodes
 all of them and drives oto's own loaders, so use it instead of hand-parsing.
 
 - **A `2_BenchmarkData` CSV is a multi-size sweep, one row per shape** — not one

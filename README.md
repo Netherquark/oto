@@ -288,7 +288,7 @@ oto/
 │   ├── metrics/               # aggregation, A/B, verdicts, reports, status
 │   ├── runners/               # execution: driver, phases, benchmark, toolchain
 │   ├── checks/                # operator diagnostics (the check_*.py backends)
-│   ├── tools/                 # offline corpus analysis (allruns / verify_run / consolidate)
+│   ├── tools/                 # offline corpus analysis (all_runs / verify_run / consolidate)
 │   └── harness/               # ground-truth candidate machinery for agents
 │
 ├── gfx90c_results/            # registry.db + emitted reports  (data, append-only)

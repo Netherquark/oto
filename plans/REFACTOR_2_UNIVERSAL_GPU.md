@@ -50,7 +50,7 @@ Order: gates first (most isolated), then analytics/report, then harness.
 
 ## Phase 5 — Automated potential_configs.md
 
-- **C5.1** `oto/tools/potential_configs_gen.py`: reads run outputs (kernel_db + ledger) + agent research, synthesises potential_configs.md sections (verdict anatomy, occupancy audit, ranked plan). Gate: generates gfx90c potential_configs matching current structure.
+- **C5.1** `oto/tools/potential_configs.py`: reads run outputs (kernel_db + ledger) + agent research, synthesises potential_configs.md sections (verdict anatomy, occupancy audit, ranked plan). Gate: generates gfx90c potential_configs matching current structure.
 - **C5.2** Meta-agent orchestrates: agents → workflow → potential_configs gen. Gate: full pipeline on gfx90c.
 
 ## Phase 6 — Generalise tests

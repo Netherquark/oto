@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import oto.tools.verify_run as vr
+import oto.tools.corpus_audit as vr
 from oto.runners.paths import results_rel, runs_rel
 
 TELEMETRY_HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"

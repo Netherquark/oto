@@ -253,7 +253,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
 #
 # `FAMILY_DECKS` is a tile deck. This is a different kind of candidate: one
 # family's *current winner tile*, crossed with a single change to a knob the
-# corpus never explicitly set. It exists because `oto.tools.allruns` reports
+# corpus never explicitly set. It exists because `oto.tools.all_runs` reports
 # `GlobalSplitU = ['1']` and `StaggerU = ['32']` as the only values ever seen
 # across both arms, and because no winning config in `cells_resolved.json`
 # sets PrefetchGlobalRead, AggressivePerfMode, MaxOccupancy, LocalSplitU,

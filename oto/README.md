@@ -128,7 +128,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/tools/ — offline corpus analysis
 
-* ``tools/allruns.py`` — Best config per cell across ALL runs, and the knob reach per family.
+* ``tools/all_runs.py`` — Best config per cell across ALL runs, and the knob reach per family.
 * ``tools/chart.py`` — Visually pleasing comparison: native gfx90c vs gfx900-spoofed (floor).
 * ``tools/consolidate.py`` — Deck consolidation: the CLI that dispatches to the four phases.
 * ``tools/consolidate_deck.py`` — The measurement inventory and the deck selected from it.
@@ -136,7 +136,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tools/consolidate_install.py`` — Installation: stage, install, and archive what is superseded.
 * ``tools/consolidate_targets.py`` — Which cells a consolidated deck must address.
 * ``tools/deck_review.py`` — The three questions to settle before decking a candidate or trusting a score.
-* ``tools/potential_configs_gen.py`` — Automated potential_configs.md generator from run outputs.
+* ``tools/potential_configs.py`` — Automated potential_configs.md generator from run outputs.
 * ``tools/verify_run.py`` — Corpus snapshot / diff / telemetry verification.
 
 ### ``tools/verifiers/``

@@ -17,9 +17,9 @@ own loaders and aggregators (the driver's all-runs record loaders, and the
 drift from the pipeline that produced the ledger. Byte widths come from the same
 place as the gate's, which ``tests.test_measurement_integrity`` asserts.
 
-    python3 -m oto.tools.allruns           # tables to stdout
-    python3 -m oto.tools.allruns --json out.json  # machine-readable
-    python3 -m oto.tools.allruns --family ZZ      # filter to one family
+    python3 -m oto.tools.all_runs           # tables to stdout
+    python3 -m oto.tools.all_runs --json out.json  # machine-readable
+    python3 -m oto.tools.all_runs --family ZZ      # filter to one family
 
 CPU only. Touches no GPU and launches no Tensile run.
 """
@@ -295,7 +295,7 @@ def _print_never_exercised(nat, flr):
             print(f"  {knob:20} = {sorted(vals)}   <- only ever this one value")
 
 
-def _write_allruns_json(path, ref_ids, native, floor, nat, flr, nat_t, flr_t):
+def _write_all_runs_json(path, ref_ids, native, floor, nat, flr, nat_t, flr_t):
     """The machine-readable dump of every table this tool printed."""
     path.write_text(json.dumps(
         {"floor_runs": ref_ids,
@@ -327,7 +327,7 @@ def main() -> int:
     _print_never_exercised(nat, flr)
 
     if args.json:
-        _write_allruns_json(args.json, ref_ids, native, floor,
+        _write_all_runs_json(args.json, ref_ids, native, floor,
                             nat, flr, nat_t, flr_t)
         print(f"\nwrote {args.json}")
     return 0

@@ -24,7 +24,7 @@ MIGRATION = (
     ("python3 port_tensile.py --generate-device-docs", "oto agent generate"),
     ("python3 port_tensile.py --gfx900-reference", "oto bench"),
     ("python3 port_tensile.py --native", "oto bench --native"),
-    ("python3 allruns.py", "oto stats"),
+    ("python3 all_runs.py", "oto stats"),
     ("python3 check_candidates.py", "oto check candidates"),
     ("python3 check_db.py", "oto check db"),
     ("python3 check_retirement.py", "oto check retirement"),
@@ -33,7 +33,7 @@ MIGRATION = (
     ("python3 consolidate.py", "oto consolidate"),
     ("python3 chart.py", "oto chart"),
     ("python3 verify_all.py", "oto verify all"),
-    ("python3 verify_run.py snapshot", "oto verify run snapshot"),
+    ("python3 corpus_audit.py snapshot", "oto verify run snapshot"),
     ("python3 -m oto.metrics.render_status", "oto status"),
 )
 

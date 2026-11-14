@@ -83,8 +83,8 @@ MOVES = [
                        "oto/tools/consolidate_deck.py",
                        "oto/tools/consolidate_floor.py",
                        "oto/tools/consolidate_install.py"]),
-    ("allruns.py", ["oto/tools/allruns.py"]),
-    ("verify_run.py", ["oto/tools/verify_run.py"]),
+    ("all_runs.py", ["oto/tools/all_runs.py"]),
+    ("verify_run.py", ["oto/tools/corpus_audit.py"]),
     ("check_candidates.py", ["oto/checks/candidates.py"]),
     ("check_tensile_build.py", ["oto/checks/tensile_build.py", "oto/checks/tensile_build_probe.py"],),
     ("check_library_parity.py", ["oto/checks/library_parity.py"]),
@@ -135,7 +135,7 @@ RESTRUCTURED = {
     # PROMOTED key above never matched; proved by test_legal_slow/test_mutator.
     "mutator.py::classify_outcome",
     # pure extraction of the CLI drivers; proved by their own tests.
-    "allruns.py::main",
+    "all_runs.py::main",
     "verify_run.py::main",
     # Second decomposition pass (2026-10-16, AC 1b "no function over 60 lines").
     # Registered here because the pass left this check red on arrival, and a
@@ -466,6 +466,9 @@ RENAMES: dict[str, str] = {
     "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py",
     "oto/ledger/queries.py": "oto/ledger/registry_queries.py",
     "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
+    "oto/tools/allruns.py": "oto/tools/all_runs.py",
+    "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
+    "oto/tools/verify_run.py": "oto/tools/corpus_audit.py",
 }
 
 def _postsplit_check(ref: str) -> int:

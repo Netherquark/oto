@@ -24,7 +24,7 @@ from oto.agents import agent_tools as harness_tools
 from oto.agents import orchestrator as agent_meta
 from oto.agents.research import make_researcher
 from oto.device import loader as _loader
-from oto.tools import potential_configs_gen
+from oto.tools import potential_configs
 
 
 class SynthesisMixin:
@@ -192,7 +192,7 @@ class SynthesisMixin:
         tl_harness = result.get("harness") or {}
         hs_path.write_text(tl_harness.get("markdown", ""))
         try:
-            pc_path.write_text(potential_configs_gen.generate(profile, self.base_dir))
+            pc_path.write_text(potential_configs.generate(profile, self.base_dir))
         except Exception as exc:  # configs doc is additive; never fail the docs
             pc_path.write_text(f"# potential_configs.md — {profile.codename}\n\n"
                                f"Synthesis failed: {exc}\n")

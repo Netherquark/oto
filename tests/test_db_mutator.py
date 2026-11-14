@@ -269,7 +269,10 @@ class TestDrawsAreJointlyLegal(unittest.TestCase):
 
     def test_joint_domain_is_a_subset_of_the_forward_domain(self):
         """The filter narrows; it never invents a value the family may not draw."""
-        from oto.tensile.synthesis.donor_knobs import FORWARD_KNOB_DOMAINS, forward_domain
+        from oto.tensile.synthesis.donor_knobs import (
+            FORWARD_KNOB_DOMAINS,
+            forward_domain,
+        )
         for family, parent in PARENTS.items():
             for knob in FORWARD_KNOB_DOMAINS:
                 with self.subTest(family=family, knob=knob):

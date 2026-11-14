@@ -17,11 +17,11 @@ it has no side effects.
 from __future__ import annotations
 
 __all__ = [
-    "allruns",
+    "all_runs",
     "consolidate",
     "consolidate_deck",
     "consolidate_floor",
     "consolidate_install",
     "consolidate_targets",
-    "verify_run",
+    "corpus_audit",
 ]

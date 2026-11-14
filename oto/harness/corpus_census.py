@@ -63,7 +63,7 @@ DEFAULT_DB_REL = results_rel("analysis", "kernel_db.json")
 #: The structural axes this census reports. The forward-knob domain
 #: (WorkGroupMapping, LdsPad, StaggerU, ...) is deliberately absent: those are
 #: not in ``kernel_db`` rows, and their coverage question is owned by
-#: ``oto.tools.deck_review legality`` and ``oto.tools.allruns``.
+#: ``oto.tools.deck_review legality`` and ``oto.tools.all_runs``.
 AXES: tuple[str, ...] = (
     "MacroTile", "MacroTile area", "ThreadTile", "ThreadTile area",
     "DepthU", "VectorWidth", "GlobalSplitU", "WorkGroup",

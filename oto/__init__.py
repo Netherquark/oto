@@ -14,7 +14,7 @@ Layout -- one responsibility per package, named for it:
     oto.metrics    turning benchmark rows into verdicts, reports and status
     oto.runners    the driver, phase runner, reference floor, auto loop, CLI
     oto.checks    operator diagnostics (check_* family)
-    oto.tools      offline corpus analysis (consolidate / allruns / verify_run)
+    oto.tools      offline corpus analysis (consolidate / all_runs / corpus_audit)
     oto.harness   the analysis harness (kernel_db, regression matrix, ...)
 
 See ``docs/README.md`` for the boundary between this docs ecosystem and the

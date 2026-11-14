@@ -1697,7 +1697,7 @@ re-run (`run_20261015_041159`, 19 W / 19 T / 0 L, CC:256 **TIE**) are in
 `results.md` §13.4. Do not silently widen the band.
 
 **F2. Two knobs in the deck have only ever held ONE value, across all runs and
-both arms.** `allruns.py` (`--json`), never-exercised-knobs section:
+both arms.** `all_runs.py` (`--json`), never-exercised-knobs section:
 `GlobalSplitU = ['1']`, `StaggerU = ['32']`. Additionally, no winning config in
 `cells_resolved.json` sets `PrefetchGlobalRead`, `AggressivePerfMode`,
 `MaxOccupancy`, `LocalSplitU`, `BufferLoad`, `InnerUnroll`, `FractionalLoad`,
@@ -1718,7 +1718,7 @@ equal to the default re-measures the baseline. Verified defaults:
 
 **F3. The complex families are the two *narrowest* searches in the deck, which
 is exactly backwards.** Measured distinct `(MacroTile, ThreadTile,
-VectorWidth)` triples per family (`allruns.py`): SS 49 (16 distinct TT), HH 42
+VectorWidth)` triples per family (`all_runs.py`): SS 49 (16 distinct TT), HH 42
 (12), HS_HPA 40, HH_HPA 36, DD 17 (7), **CC 17 (6)**, **ZZ 9 (5)**. CC and ZZ
 are the worst performers AND the least searched. For CC the corpus only ever
 emits ThreadTiles 2x2, 2x4, 4x2, 4x4, 4x8, 8x4 — and the *widest legal* corner,
@@ -2155,7 +2155,7 @@ sequence in the harness, F needs a kernel-writer change. They are recorded in
 ## Sources
 
 All numbers in §1–§8 are reproduced by repo tooling, which is the citation:
-`allruns.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
+`all_runs.py` (knob census, tile triples), `oto.harness.asm_occupancy` (5757-kernel
 measured occupancy + GFLOP/s join), `oto.harness.resolve_cells` (per-cell
 winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
@@ -2428,7 +2428,7 @@ is the honest estimate and `--budget 10` iterations of mutation on top. Judge
 
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
-python3 -m oto.tools.allruns --json /tmp/opencode/post.json      # knob census + cells_resolved
+python3 -m oto.tools.all_runs --json /tmp/opencode/post.json      # knob census + cells_resolved
 python3 -m oto.runners.cli --report --native-agg floor_best   # the strict basis
 ```
 
@@ -2448,7 +2448,7 @@ The 18 ties are inside the ±16.45 % measurement band (§R36) and CC/ZZ sit at
 straggler classes, traces each through the database, and states the root cause
 and the remaining lever. Nothing below re-derives hardware; it cites
 `gfx90c_theoretical_limits.md` (L), `gfx90c_tuning_guide.md` (G),
-`kernel_tuning_research.md`, and the live corpus (`corpus_census`, `allruns.py`).
+`kernel_tuning_research.md`, and the live corpus (`corpus_census`, `all_runs.py`).
 
 ### R42.1 — The five classes
 

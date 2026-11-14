@@ -58,7 +58,7 @@ def _json_file(argv: list[str], func: Callable[..., Any]) -> int:
     """Run ``func`` with ``--json <tmp>`` and print the file to stdout.
 
     The backends already own their JSON schema (candidates, parity, build
-    proof, allruns). We only change the destination: temp file -> stdout, so
+    proof, all_runs). We only change the destination: temp file -> stdout, so
     callers see one document and no progress text.
     """
     fd, name = tempfile.mkstemp(prefix="oto-", suffix=".json")
@@ -265,7 +265,7 @@ def run_verify_all(args: Any) -> int:
 
 
 def run_verify_run(args: Any) -> int:
-    from oto.tools.verify_run import main as vr_main
+    from oto.tools.corpus_audit import main as vr_main
 
     argv = ["--base-dir", str(base_dir(args)), args.verify_cmd]
     if args.verify_cmd == "snapshot" and args.out:
@@ -360,7 +360,7 @@ def run_consolidate(args: Any) -> int:
 
 
 def run_stats(args: Any) -> int:
-    from oto.tools.allruns import main as m
+    from oto.tools.all_runs import main as m
 
     argv = ["--base-dir", str(base_dir(args))]
     if args.family:

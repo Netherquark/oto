@@ -16,6 +16,7 @@ the overlay read/write (``oto.harness.candidate_overlay``), or candidate
 from __future__ import annotations
 
 from oto.harness import rows_smallcells as rows_smallcells
+from oto.harness.rows_frontier import _FRONTIER
 from oto.harness.rows_ladders import (
                                      _NOT_FORWARDED_YET,
                                      AUTO_EXPLICIT,
@@ -29,7 +30,6 @@ from oto.harness.rows_ladders import (
                                      WGM_VARIANTS,
                                      _pad_rows,
 )
-from oto.harness.rows_frontier import _FRONTIER
 
 __all__ = [
                                      "AUTO_EXPLICIT",
