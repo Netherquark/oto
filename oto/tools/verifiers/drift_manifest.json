@@ -3,179 +3,179 @@
   "method_equivalence": [
     {
       "key": "_ab_records_from_csv",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_ab_records_from_registry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_apply_cooldown",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_chain_phase_sets",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_clock_coverage",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_compute_execution_timing",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_compute_family_timing",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_ensure_telemetry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_fmt_minutes",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_get_tensile_env",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_latest_reference_run",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_analytics_from_registry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_analytics_from_run",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_run_overlay",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_sclk_by_phase",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_seed_overlay",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_load_telemetry_by_phase",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_merge_overlay_entries",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_named_cell_stamps",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_native_analytics_all_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_native_arm_provenance",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_native_records_all_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_native_run_dirs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_read_key",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_reference_floor_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_reference_remaining",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_resolve_proposal_outcome",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_retire_stable_candidates",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_reusable_phase_keys",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_run_span_minutes",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_run_stamp",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_sclk_map",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_sclk_reference",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_signal_handler",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_stamp_str",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_start_live_status",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_stop_live_status",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_tee_stream",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_telemetry_rows",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_thermal_map",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "_thermal_summary",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "load_phases_manifest",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "regenerate_report",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     },
     {
       "key": "run_preflight",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See plans/REFACTOR_2_UNIVERSAL_GPU.md and changelog 2026-11-13."
+      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
     }
   ],
   "ast_equivalence": [

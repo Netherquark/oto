@@ -93,7 +93,6 @@ Corollaries:
 | `archive/prior_research_archive.md` | dev | Ecosystem (frozen) | Prior-campaign supporting material |
 | `docs/search_philosophy.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
 | `docs/audit_register.md` | dev | Ecosystem | Audit register |
-| `plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md` | dev | Ecosystem | Intuitive rename + docs slimming execution plan (in flight 2026-11-14) |
 | `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
 | `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |

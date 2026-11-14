@@ -163,12 +163,6 @@
     },
     {
       "class": "dev",
-      "kind": "Ecosystem",
-      "owns": "Intuitive rename + docs slimming execution plan (in flight 2026-11-14)",
-      "path": "plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md"
-    },
-    {
-      "class": "dev",
       "kind": "Ecosystem (frozen)",
       "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
       "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
@@ -271,6 +265,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 36,
+  "total": 35,
   "version": 1
 }

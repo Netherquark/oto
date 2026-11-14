@@ -287,14 +287,13 @@ oto/
 │   ├── ledger/                # append-only registry + mutation/convergence loop
 │   ├── metrics/               # aggregation, A/B, verdicts, reports, status
 │   ├── runners/               # execution: driver, phases, benchmark, toolchain
-│   ├── checks/                # operator diagnostics (the check_*.py backends)
-│   ├── tools/                 # offline corpus analysis (all_runs / verify_run / consolidate)
+│   ├── checks/                # operator diagnostics (the check backends)
+│   ├── tools/                 # offline corpus analysis (run_census / corpus_audit / consolidate)
 │   └── harness/               # ground-truth candidate machinery for agents
 │
 ├── gfx90c_results/            # registry.db + emitted reports  (data, append-only)
 ├── gfx90c_runs/               # per-run output directories (telemetry, logs)
 ├── docs/                      # ecosystem docs + the harness runbook (see §7)
-├── plans/                     # tracked implementation & refactor plans (MD)
 └── *.md                       # the live MD docs (see §7)
 ```
 

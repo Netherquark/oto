@@ -4278,3 +4278,38 @@ the pre-built seed pool.
   never consult mid-cut; answer-artifact-tagged stops); §16 is the full
   consultation schedule. §17 carries the 38-cell matrix verbatim. Two sloppy
   constructions from the earlier §13 rewrite fixed.
+
+- **2026-11-14 (41st) — plans/ is gone; the tree is smaller by design.** The remaining
+  one-shot plans (MASTER_PLAN, RENAME_AND_DOC_CLEANUP, CLI_UX_REWORK,
+  REFACTOR_2_UNIVERSAL_GPU, AGENTIC_POTENTIAL_CONFIGS, test_optimization) are
+  deleted — their durable content was folded into `incomplete_work.md`,
+  `claude.md`, `docs/operator_runbook.md` and this log before removal. The
+  docs/root layout was flattened to a single `docs/` home:
+  `mapping.md -> docs/shipped_floor_contract.md`,
+  `results.md -> docs/results.md`, `knowledge_base.md -> docs/knowledge_base.md`,
+  `gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md`,
+  `implementation_plan.md` (kept, not deleted: self-contained driver
+  architecture + triaged fixes), `potential_configs.md -> docs/potential_configs.md`,
+  `tensile_tuning_context.md -> docs/search_philosophy.md`,
+  `kernel_tuning_research.md` + `complex_gemm_research_brief.md` -> `docs/research/`,
+  `adversarial_review.md -> docs/audit_register.md`;
+  `implementation_plan.md` and all references re-pointed; `context.md` /
+  `context_raw.md` were untracked owner scratch and are out of scope. `prior_*`
+  moved to `archive/`. Module renames across `oto/` (34) and `tests/` (13):
+  `metrics/{analytics->benchmark_analytics, coverage->cell_coverage,
+  protocol->measurement_protocol, read_thermals->thermal_telemetry,
+  report->acceptance_report, status_common->status_helpers}`,
+  `runners/{auto->convergence_loop, clocks->clock_telemetry, paths->result_paths,
+  phases->phase_runner, reporting->acceptance_reporting}`,
+  `device/{derive->derive_limits, detect->device_detect, vocabulary->kernel_vocabulary}`,
+  `ledger/{agent->convergence_agent, agent_mutate->agent_mutation}`,
+  `harness/{generate_candidates->candidate_generator, measure_vgprs->vgpr_measurement,
+  resolve_cells->cell_resolver}`,
+  `tensile/{best_library->best_effort_library, decks->family_decks, patterns->contraction_patterns,
+  shipped_library->shipped_floor, shipped_manifest->shipped_floor_manifest, synthesis/manifest->pipeline_manifest}`,
+  `tools/{allruns->run_census, chart->benchmark_chart}`,
+  `checks/retirement->stability_retirement`, `cli/docs->help_command`,
+  `agents/{orchestrator->meta_agent, research->research_client}`,
+  `oto/{yamlio->yaml_cached, inventory->readme_gen, docs_index->docs_index_writer}`.
+  Verifier RENAMES rebuilt (old->new only, no identity keys). `gfx90c_vs_spoof.png`
+  (generated artifact) removed. Suite green, verifier green, ruff clean.
