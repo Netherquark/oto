@@ -232,7 +232,7 @@ and NOT the experimental data (that is `results.md`).
   in `implementation_plan.md` and `potential_configs.md`; stale references to
   `oto/device/peaks.py` (now `oto/device/loader.py` / `vocabulary.py`) in
   `knowledge_base.md`, `mapping.md`, `adversarial_review.md`, `claude.md`,
-  `gfx90c_tuning_guide.md`; stale `oto.runners.cli` invocations mapped to the
+  `gfx90c_tuning_guide.md`; stale `oto.runners.stage_cli` invocations mapped to the
   current `oto <cmd>` vocabulary; `docs/comparability.md` command example for
   `regression_matrix` (`--side` never existed; `--any-protocol` is the flag);
   `docs/docstrings.md` doc verifier path corrected after the evergreen rewrite;
@@ -315,7 +315,7 @@ and NOT the experimental data (that is `results.md`).
   `_config_from_kernel` / `shipped_kernel_config` / `emit_spoof_phases` take
   `arch` (+ `schedule`); `load_shipped_manifest` / `reference_chain` /
   `latest_reference_run_id` take `arch=`; cache filename is arch-scoped;
-  `runners/reference.py` resolves `profile.spoof_reference` and threads it
+  `runners/reference_floor.py` resolves `profile.spoof_reference` and threads it
   into the manifest load, emit, resume chains and the `<arch>_ref_*` run-id
   prefix; a profile with no `spoof_reference` still short-circuits to
   native-only. Two lint-fallout defects were caught and fixed:

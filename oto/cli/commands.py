@@ -100,7 +100,7 @@ def _common_run_argv(args: Any) -> list[str]:
 # ------------------------------------------------------------------ core
 
 def run_tune(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     argv = _common_run_argv(args)
     if args.budget is not None:
@@ -122,7 +122,7 @@ def run_tune(args: Any) -> int:
 
 
 def run_stages(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     argv = _common_run_argv(args)
     if args.stage:
@@ -131,7 +131,7 @@ def run_stages(args: Any) -> int:
 
 
 def run_bench(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     selectors = bool(args.targets or args.family or args.pattern or args.shape)
     argv = _common_run_argv(args)
@@ -153,7 +153,7 @@ def run_bench(args: Any) -> int:
 
 
 def run_preflight(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(base_dir(args)), "--stage", "preflight"]
     if getattr(args, "tensile_root", None):
@@ -171,7 +171,7 @@ def run_preflight(args: Any) -> int:
 
 
 def run_stage(name: str, args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
     from oto.tensile.library_parity import load_pipeline_phases
 
     argv = ["--base-dir", str(base_dir(args)), "--stage", name]
@@ -233,8 +233,8 @@ def run_status(args: Any) -> int:
 def run_report(args: Any, profile=None) -> int:
     """Report subcommand: resolve the run and render its report. ``profile`` selects the device; ambient by default."""
     from oto.device import loader as _loader
-    from oto.runners.cli import main as cli_main
     from oto.runners.paths import results_dir as _results_dir
+    from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(base_dir(args)), "--report"]
     if args.run:
@@ -338,7 +338,7 @@ def run_check(args: Any) -> int:
 
 
 def run_library_best_effort(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(base_dir(args)), "--best-library"]
     if args.dest:
@@ -378,7 +378,7 @@ def run_chart(args: Any) -> int:
 
 
 def run_agent_generate(args: Any) -> int:
-    from oto.runners.cli import main as cli_main
+    from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(base_dir(args)), "--generate-device-docs"]
     if args.starter:
@@ -549,13 +549,13 @@ def dispatch(args: Any, parser: Any) -> int:
 
 
 def print_version() -> int:
-    from oto._version import __version__
+    from oto.version import __version__
     print(f"oto {__version__}")
     return 0
 
 
 def _orientation(parser: Any) -> int:
-    from oto._version import __version__
+    from oto.version import __version__
     print(f"oto {__version__} — deterministic Tensile tuning for unsupported AMD GPUs")
     print()
     print("Start here:")

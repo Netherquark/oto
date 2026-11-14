@@ -30,14 +30,14 @@ from oto.ledger.registry import SQLiteRegistry
 from oto.metrics.analytics import AnalyticsEngine
 from oto.metrics.report import AcceptanceReporter
 from oto.metrics.telemetry import TelemetrySampler as SysfsTelemetrySampler
-from oto.runners import analytics_loaders as _analytics
 from oto.runners import auto as _auto
 from oto.runners import benchmark as _benchmark
 from oto.runners import clocks as _clocks
+from oto.runners import corpus_loaders as _analytics
+from oto.runners import library_build as _synthesis
 from oto.runners import phases as _phases
-from oto.runners import reference as _reference
+from oto.runners import reference_floor as _reference
 from oto.runners import reporting as _reporting
-from oto.runners import synthesis as _synthesis
 from oto.runners import timing as _timing
 from oto.runners.toolchain import (
     DEFAULT_TENSILE_ROOT,

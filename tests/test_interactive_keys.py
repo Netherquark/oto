@@ -36,7 +36,7 @@ from oto.runners.paths import runs_rel
 
 # The parser and the option wiring live in the CLI module; the entrypoint the
 # operator actually runs is the repo-root CLI entry (`python3 -m oto`).
-DRIVER_SRC = ROOT / "oto" / "runners" / "cli.py"
+DRIVER_SRC = ROOT / "oto" / "runners" / "stage_cli.py"
 CLI_ARGS = ["-m", "oto", "tune"]
 
 
@@ -259,7 +259,7 @@ class TestPreflightNeedsNoRunDir(unittest.TestCase):
 
     @staticmethod
     def _ends(preflight, stage):
-        from oto.runners.cli import _ends_after_preflight
+        from oto.runners.stage_cli import _ends_after_preflight
         return _ends_after_preflight(mock.Mock(preflight=preflight), set(stage))
 
     def test_preflight_alone_and_stage_1_stop_without_a_run(self):

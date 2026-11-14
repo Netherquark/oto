@@ -12,7 +12,7 @@ docstring and writes the file that describes it.
 
 Run from the repo root:
 
-    python3 -m oto._map
+    python3 -m oto.inventory
 """
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ def _emit_tree(out: list[str], directory: Path, level: int) -> None:
 def main() -> int:
     out = ["# The ``oto/`` package map\n",
            "\n",
-           "Generated. Regenerate with ``python3 -m oto._map``.\n",
+           "Generated. Regenerate with ``python3 -m oto.inventory``.\n",
            "\n",
            "Each entry is the first sentence of that module's docstring, so the\n",
            "only way to make this file stale is to delete the docstring. Line\n",

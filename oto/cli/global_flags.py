@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from oto._version import __version__
+from oto.version import __version__
 
 
 def add_global_flags(parser: argparse.ArgumentParser) -> None:

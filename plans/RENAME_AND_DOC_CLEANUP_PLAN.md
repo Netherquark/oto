@@ -50,12 +50,12 @@ documentation boundary contract and registry).
 A developer landing on the repo for the first time faces three failures:
 
 1. **Two CLIs share a package tree.** `oto/cli/` (the real `python3 -m oto`
-   front) and `oto/runners/cli.py` + `oto/runners/flags.py` (the legacy
+   front) and `oto/runners/stage_cli.py` + `oto/runners/stage_flags.py` (the legacy
    stage-dispatch backend) differ only in an adjective that is not written
    anywhere. "flags.py" could mean either.
 2. **"Phase" means three things.** A benchmark phase (`phases.yaml`,
    `oto/runners/phases.py`), a pipeline stage (`Stage 1..7` in
-   `oto/runners/cli.py:50-251`, `oto/cli/parser.py:131-205`), and a
+   `oto/runners/stage_cli.py:50-251`, `oto/cli/parser.py:131-205`), and a
    milestone code (`Option H Phase 1..4`, `Refactor 1/2`). Five test files
    carry the dead milestone vocabulary in their names.
 3. **The private-helper convention is inconsistent.** Nine underscore-prefixed
@@ -165,7 +165,7 @@ mean a benchmark phase. And the workspace has since moved on: nothing in
 - `oto/runners/phases.py` (the phase runner),
 - `oto/runners/benchmark.py` / `oto/cli/parser.py:181-205` ("Stage 1..7"),
 - `oto/runners/driver.py:6` ("Phase-0 preflight", `:301-304`),
-- `oto/runners/cli.py:56` ("Stage 1: Phase-0 preflight" — same thing, two
+- `oto/runners/stage_cli.py:56` ("Stage 1: Phase-0 preflight" — same thing, two
   names in one file pair),
 - `oto/cli/commands.py:26` (`_STRUCTURED_STAGE_JSON = frozenset({"candidate", "2"})` — a raw stage number beside a word),
 
@@ -315,7 +315,7 @@ Out of scope for naming, recorded for the rename PR: `verify_ast_equivalence.py:
 ("gfx90c_common.py"), `:37,73,111,168-195` ("scheduler.py", "port_tensile.py") and
 `verify_method_equivalence.py:3,118-120,180` ("port_tensile.py"),
 `verify_config_writer.py:8-9,138-163` ("2824c2f", `sys.modules["port_tensile"] =
-__import__("oto.runners.cli")`) deliberately encode the pre-split tree so the
+__import__("oto.runners.stage_cli")`) deliberately encode the pre-split tree so the
 checks can run against old commits. This is not accidental legacy — it is the
 entire point of an "evergreen" check. It stays; the *names* change, the
 *tables* do not.
@@ -428,11 +428,11 @@ losing information).
 
 ## 6. Cross-cutting notes the rename PR must carry
 
-1. **Two CLIs.** `oto/runners/cli.py` (stage dispatch backend) + `oto/runners/flags.py`
+1. **Two CLIs.** `oto/runners/stage_cli.py` (stage dispatch backend) + `oto/runners/stage_flags.py`
    vs `oto/cli/` (real CLI) + `oto/cli/flags.py`. Until the runner pair is renamed
    (`stage_cli.py`/`stage_flags.py`), every "flags" or "cli.py" reference in docs/tests is
    ambiguous. `docs/agent_reference.md:247` still tells humans to run
-   `python3 -m oto.runners.cli --report ...` — that path stays valid, but say so.
+   `python3 -m oto.runners.stage_cli --report ...` — that path stays valid, but say so.
 2. **`Stage`/`Phase-0`/`Option H Phase`/`Refactor N` vocabulary** lives in live docstrings
    (full grep list: §3.4, §3.5). None of it appears in filenames except the `tests/phase1_*`
    family and `tests/test_coverage_phase3.py`. A milestone→subject docstring sweep is the
@@ -465,9 +465,9 @@ losing information).
    `test_phase1_readonly_gpu.py`, `test_phase1_writeback.py`) — reads as "the first benchmark
    phase"; actually Option H Phase 1's mutator/write-back fixtures. `tests/phase1_harness.py:2`.
 2. `tests/test_coverage_phase3.py:1` — reads as pipeline phase 3; tests `oto/metrics/coverage.py`.
-3. `oto/runners/cli.py` — the *second* "cli"; its docstring (`:2`) still calls itself
+3. `oto/runners/stage_cli.py` — the *second* "cli"; its docstring (`:2`) still calls itself
    "the `python3 -m oto` command line" though that is `oto/cli/dispatch.py` today.
-4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets
+4. `oto/runners/stage_flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets
    are unrelated.
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`,
@@ -490,7 +490,7 @@ losing information).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the
     *status* report; `build_status.py` dissolves the ambiguity.
 16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
-17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus
+17. `oto/runners/corpus_loaders.py` — promises analytics; delivers the driver's whole-corpus
     ingestion + retirement sweep (`corpus_loaders.py`).
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`).
     `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
@@ -565,8 +565,8 @@ appendix with the same 20 entries.)
 1. **Phase A — leaf-module renames (§1.4–§1.13)**: 40 renames, no public API changes,
    no behaviour change. `oto/README.md` regenerated, `test_py_compile`/`ruff`/`pyflakes`
    are the guard. ~one commit per package (8-12 commits). **Safest first step.**
-2. **Phase B — the runner CLI pair** (`runners/cli.py` → `stage_cli.py`,
-   `runners/flags.py` → `stage_flags.py`): touches `docs/cli.md`, `docs/agent_reference.md`,
+2. **Phase B — the runner CLI pair** (`runners/stage_cli.py` → `stage_cli.py`,
+   `runners/stage_flags.py` → `stage_flags.py`): touches `docs/cli.md`, `docs/agent_reference.md`,
    `oto/cli/commands.py`, `oto/cli/parser.py` help strings. One commit. Run `oto help --write`
    and `tests/test_docs_cli.py` to verify the doc stays byte-identical.
 3. **Phase C — test family renames** (5 `phase1_*` files + `test_coverage_phase3.py` →
@@ -613,8 +613,8 @@ independently shippable.
 
 1. `tests/phase1_harness.py` (reads as "the first benchmark phase"; it is Option H Phase 1's mutator/write-back fixtures) — `tests/phase1_harness.py:2`.
 2. `tests/test_coverage_phase3.py:1` — reads as "pipeline phase 3"; tests `oto/metrics/coverage.py`.
-3. `oto/runners/cli.py` — the *second* "cli"; its own docstring (`:2`) claims "the `python3 -m oto` command line" though that entry is `oto/cli/dispatch.py`.
-4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`.
+3. `oto/runners/stage_cli.py` — the *second* "cli"; its own docstring (`:2`) claims "the `python3 -m oto` command line" though that entry is `oto/cli/dispatch.py`.
+4. `oto/runners/stage_flags.py` — identical bare name to `oto/cli/flags.py`.
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`, `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
 7. `oto/harness/rows_ladders.py` / `rows_frontier.py` / `rows_smallcells.py` — split tables whose meaning depends on import order (`rows_frontier.py:5-6`) and a word ("core") that says nothing.
@@ -627,7 +627,7 @@ independently shippable.
 14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
 16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
-17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
+17. `oto/runners/corpus_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
 20. `oto/tensile/synthesis/donor_mutator.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.
@@ -832,11 +832,11 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 |---|---|---|---|
 | `oto/_version.py` | `oto/version.py` | cross-package imports violate private-marker intent | low |
 | `oto/_map.py` | `oto/inventory.py` | CLI entry (`python3 -m oto._map`) hidden behind underscore | low |
-| `oto/runners/cli.py` | `oto/runners/stage_cli.py` | collides with `oto/cli/` | medium (docs/cli.md) |
-| `oto/runners/flags.py` | `oto/runners/stage_flags.py` | collides with `oto/cli/flags.py` | medium |
-| `oto/runners/reference.py` | `oto/runners/reference_floor.py` | "reference" alone doesn't say which reference | low |
-| `oto/runners/analytics_loaders.py` | `oto/runners/corpus_loaders.py` | promises analytics; delivers driver ingestion | low |
-| `oto/runners/synthesis.py` | `oto/runners/library_build.py` | collides with `oto/tensile/synthesis/` | medium |
+| `oto/runners/stage_cli.py` | `oto/runners/stage_cli.py` | collides with `oto/cli/` | medium (docs/cli.md) |
+| `oto/runners/stage_flags.py` | `oto/runners/stage_flags.py` | collides with `oto/cli/flags.py` | medium |
+| `oto/runners/reference_floor.py` | `oto/runners/reference_floor.py` | "reference" alone doesn't say which reference | low |
+| `oto/runners/corpus_loaders.py` | `oto/runners/corpus_loaders.py` | promises analytics; delivers driver ingestion | low |
+| `oto/runners/library_build.py` | `oto/runners/library_build.py` | collides with `oto/tensile/synthesis/` | medium |
 | `oto/metrics/policy.py` | `oto/metrics/cell_policy.py` | catch-all name | low |
 | `oto/metrics/report_build.py` | `oto/metrics/build_status.py` | acceptance-report-family collision | low |
 | `oto/metrics/report_figures.py` | `oto/metrics/report_coverage.py` | "figures" promises plotting; owns a coverage section | low |
@@ -927,8 +927,8 @@ Worst: `test_phase1_durability.py`, `test_phase1_overlay.py`,
 1. **Phase A — leaf-module renames** (§1.4–§1.13): 40 renames in `oto/`, no public API
    changes, no behaviour change. `oto/README.md` regenerated; `test_py_compile`/`ruff`/
    `pyflakes` are the guard. ~8-12 commits, one per package. **Safest first step.**
-2. **Phase B — the runner CLI pair**: `runners/cli.py` → `stage_cli.py`,
-   `runners/flags.py` → `stage_flags.py`. Touches `docs/cli.md`,
+2. **Phase B — the runner CLI pair**: `runners/stage_cli.py` → `stage_cli.py`,
+   `runners/stage_flags.py` → `stage_flags.py`. Touches `docs/cli.md`,
    `docs/agent_reference.md`, `oto/cli/commands.py`, `oto/cli/parser.py` help strings.
    One commit. Run `oto help --write` and `tests/test_docs_cli.py` to verify the doc
    stays byte-identical.
@@ -978,8 +978,8 @@ independently shippable.
 
 1. `tests/phase1_harness.py` (reads as "the first benchmark phase"; it is Option H Phase 1's mutator/write-back fixtures) — `tests/phase1_harness.py:2`.
 2. `tests/test_coverage_phase3.py:1` — reads as pipeline phase 3; tests `oto/metrics/coverage.py`.
-3. `oto/runners/cli.py` — the *second* "cli"; its docstring (`:2`) still calls itself "the `python3 -m oto` command line" though that is `oto/cli/dispatch.py` today.
-4. `oto/runners/flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets are unrelated.
+3. `oto/runners/stage_cli.py` — the *second* "cli"; its docstring (`:2`) still calls itself "the `python3 -m oto` command line" though that is `oto/cli/dispatch.py` today.
+4. `oto/runners/stage_flags.py` — identical bare name to `oto/cli/flags.py`; the two CLIs' option sets are unrelated.
 5. `oto/_map.py` — a hyphen from meaningless; a CLI-invoked README generator named like a private map.
 6. `oto/_version.py` — "private" module imported by four other packages (`oto/__init__.py:34`, `oto/cli/flags.py:15`, `oto/cli/docs.py:16`, `oto/cli/commands.py:552`).
 7. `oto/harness/rows_ladders.py` / `rows_frontier.py` / `rows_smallcells.py` — split tables whose meaning depends on import order (`rows_frontier.py:5-6`) and a word ("core") that says nothing.
@@ -992,7 +992,7 @@ independently shippable.
 14. `oto/harness/occupancy_bounds.py` — "audit" promises a judgment; the file computes three physical bounds (`occupancy_bounds.py`).
 15. `oto/metrics/report_build.py` — sits in the acceptance-report namespace but builds the *status* report; `build_status.py` dissolves the ambiguity.
 16. `oto/metrics/policy.py` — a catch-all name for the per-cell run/retire policy; `cell_policy.py`.
-17. `oto/runners/analytics_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
+17. `oto/runners/corpus_loaders.py` — promises analytics; delivers the driver's whole-corpus ingestion + retirement sweep (`corpus_loaders.py`).
 18. `oto/agents/meta.py` — "meta" is a non-name; it is the orchestrator (`agents/orchestrator.py`). `oto/agents/harness_tools.py` (echoes `oto/harness/`) rides along in the same class.
 19. `oto/tensile/library.py` vs `oto/tensile/shipped_library.py` — inverted pair: the manifest cache vs the binary .dat; newcomers swap them every time.
 20. `oto/tensile/synthesis/donor_mutator.py` (+ `db_knobs.py`, `db_patterns.py`) — "db" = "the analysis kernel_db.json" is insider vocabulary; "donor" is the files' own word for the same things.

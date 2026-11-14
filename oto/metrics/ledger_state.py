@@ -192,7 +192,7 @@ def _resolve_corpus(base: Path, arch: str = "gfx900"
         return corpus, tag_to_key
     # The reference corpus naming convention is <arch>_ref_*; only the
     # gfx900 corpus exists today, hence the default. The profile-driven
-    # path lives in oto/runners/reference.py.
+    # path lives in oto/runners/reference_floor.py.
     for phase in tlib.emit_spoof_phases(shipped, arch=arch):
         key = tlib.phase_key(phase)
         corpus[key] = tlib.tier_for(phase, manifest)

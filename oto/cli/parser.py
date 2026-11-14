@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from oto.cli.flags import (
+from oto.cli.global_flags import (
     add_dry_run_flag,
     add_global_flags,
     add_json_flag,

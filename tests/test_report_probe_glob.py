@@ -29,7 +29,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
-from oto.runners.cli import TensileDriver
+from oto.runners.stage_cli import TensileDriver
 
 
 class _FakeAnalytics:

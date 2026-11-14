@@ -72,11 +72,11 @@ MOVES = [
                        "oto/metrics/render_status.py"]),
     ("port_tensile.py", ["oto/runners/toolchain.py", "oto/runners/driver.py",
                          "oto/runners/benchmark.py", "oto/runners/phases.py",
-                         "oto/runners/reference.py", "oto/runners/auto.py",
-                         "oto/runners/analytics_loaders.py",
+                         "oto/runners/reference_floor.py", "oto/runners/auto.py",
+                         "oto/runners/corpus_loaders.py",
                          "oto/runners/reporting.py", "oto/runners/clocks.py",
                          "oto/runners/timing.py",
-                         "oto/runners/synthesis.py", "oto/runners/cli.py",
+                         "oto/runners/library_build.py", "oto/runners/stage_cli.py",
                          "oto/tensile/config_writer.py"]),
     ("consolidate.py", ["oto/tools/consolidate.py",
                        "oto/tools/consolidate_targets.py",
@@ -469,6 +469,13 @@ RENAMES: dict[str, str] = {
     "oto/tools/allruns.py": "oto/tools/all_runs.py",
     "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
     "oto/tools/verify_run.py": "oto/tools/corpus_audit.py",
+    "oto/runners/reference.py": "oto/runners/reference_floor.py",
+    "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py",
+    "oto/runners/cli.py": "oto/runners/stage_cli.py",
+    "oto/runners/flags.py": "oto/runners/stage_flags.py",
+    "oto/runners/synthesis.py": "oto/runners/library_build.py",
+    "oto/_map.py": "oto/inventory.py",
+    "oto/cli/flags.py": "oto/cli/global_flags.py",
 }
 
 def _postsplit_check(ref: str) -> int:

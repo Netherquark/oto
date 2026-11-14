@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from oto._version import __version__
+from oto.version import __version__
 
 MIGRATION = (
     ("python3 port_tensile.py --auto", "oto tune"),

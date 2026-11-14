@@ -1,6 +1,6 @@
 # The ``oto/`` package map
 
-Generated. Regenerate with ``python3 -m oto._map``.
+Generated. Regenerate with ``python3 -m oto.inventory``.
 
 Each entry is the first sentence of that module's docstring, so the
 only way to make this file stale is to delete the docstring. Line
@@ -9,8 +9,9 @@ counts are never quoted here -- they go wrong the day a file moves.
 ## oto/ -- the package root
 
 * ``__main__.py`` — Entry point for ``python3 -m oto``.
-* ``_version.py`` — Version string for the oto CLI.
 * ``docs_index.py`` — Machine-readable docs ecosystem index for agentic routing.
+* ``inventory.py`` — Regenerate oto/README.md from the module docstrings themselves.
+* ``version.py`` — Version string for the oto CLI.
 * ``yamlio.py`` — The project's YAML reader: libyaml when it is there, cached by content.
 
 ## oto/device/ — hardware facts
@@ -101,19 +102,19 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/runners/ — execution
 
-* ``runners/analytics_loaders.py`` — Corpus readers: how the driver loads measurements from every run.
 * ``runners/auto.py`` — The ``--auto`` convergence loop: floor first, then tune to convergence.
 * ``runners/auto_prompt.py`` — The five --auto questions, and the AutoPlan their answers bind.
 * ``runners/benchmark.py`` — Phase execution: the one place a Tensile subprocess is launched.
-* ``runners/cli.py`` — The argparse stage dispatch: the ``python3 -m oto`` command line.
 * ``runners/clocks.py`` — Per-phase telemetry clocks and the thermal envelope around them.
+* ``runners/corpus_loaders.py`` — Corpus readers: how the driver loads measurements from every run.
 * ``runners/driver.py`` — The driver composition root: identity, toolchain, and wiring.
-* ``runners/flags.py`` — The driver's argparse flags, one helper per group.
+* ``runners/library_build.py`` — Stage 6: emit the per-family library logic and build it with TensileCreateLibrary.
 * ``runners/paths.py`` — Shared path conventions for the driver.
 * ``runners/phases.py`` — The phase runner: manifest merge, policy filter, identical-fp skip bypass.
-* ``runners/reference.py`` — The gfx900 reference floor: build, resume, and recall.
+* ``runners/reference_floor.py`` — The gfx900 reference floor: build, resume, and recall.
 * ``runners/reporting.py`` — The acceptance report: verdicts, arms, and the emitted JSON.
-* ``runners/synthesis.py`` — Stage 6: emit the per-family library logic and build it with TensileCreateLibrary.
+* ``runners/stage_cli.py`` — The argparse stage dispatch: the ``python3 -m oto`` command line.
+* ``runners/stage_flags.py`` — The driver's argparse flags, one helper per group.
 * ``runners/timing.py`` — The three numbers that get conflated as "runtime".
 * ``runners/toolchain.py`` — Toolchain discovery: the Tensile checkout and the ROCm toolchain.
 

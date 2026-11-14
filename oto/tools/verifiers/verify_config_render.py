@@ -156,7 +156,7 @@ def load_legacy(base: str):
     sys.modules["auto_prompt"] = __import__("oto.runners.auto_prompt", fromlist=["*"])
     sys.modules["tensile_library"] = __import__("oto.tensile.shipped_manifest", fromlist=["*"])
     sys.modules["run_status"] = __import__("oto.metrics.run_status", fromlist=["*"])
-    sys.modules["port_tensile"] = __import__("oto.runners.cli", fromlist=["*"])
+    sys.modules["port_tensile"] = __import__("oto.runners.stage_cli", fromlist=["*"])
     mod = types.ModuleType("old_port_tensile")
     mod.__file__ = str(ROOT / "port_tensile.py")
     mod.__dict__["__name__"] = "old_port_tensile"

@@ -25,7 +25,7 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from oto.runners.auto_prompt import AutoPlan
-from oto.runners.cli import TensileDriver
+from oto.runners.stage_cli import TensileDriver
 
 #: Stand-in for "the reference floor still owes work". The value is opaque to
 #: run_auto -- it only ever asks whether the count is zero -- so it is a

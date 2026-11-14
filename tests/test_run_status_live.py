@@ -101,7 +101,7 @@ class TestExecutionTiming(StatusFixture):
 
     def _driver(self):
         from oto.ledger.registry import SQLiteRegistry
-        from oto.runners.cli import TensileDriver
+        from oto.runners.stage_cli import TensileDriver
         d = TensileDriver.__new__(TensileDriver)
         d.base_dir = self.base
         d._last_run_status = "completed"

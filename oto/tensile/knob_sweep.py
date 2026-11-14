@@ -9,7 +9,7 @@ template and knobs (oto.tensile.candidate_emission), or the gates that refuse a
 candidate (oto.tensile.gates).
 Public API: main.
 
-Why this exists as a module rather than a CLI stage: ``oto.runners.cli`` stage 2
+Why this exists as a module rather than a CLI stage: ``oto.runners.stage_cli`` stage 2
 is deliberately READ_ONLY ("manifest summary only -- no execution, no run
 minted"), and a deck generator writes ``phases.yaml``. Putting it here keeps that
 contract intact while still giving the run a one-line entry point.

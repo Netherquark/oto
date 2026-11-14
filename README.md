@@ -128,7 +128,7 @@ the flowchart and again in the [stage table](#stage--owning-package) below.
 | Adaptive repeat & policy | median-of-seeds, CV gate, retirement | [`oto/metrics/policy.py`](oto/metrics/policy.py) |
 | Analytics & ledger | aggregation, SQLite persistence | [`oto/metrics/analytics.py`](oto/metrics/analytics.py), [`oto/ledger/`](oto/ledger/) |
 | Convergence loop | harvest → mutate → decide | [`oto/ledger/agent.py`](oto/ledger/agent.py) |
-| Synthesis / build | per-family logic + `TensileCreateLibrary` | [`oto/runners/synthesis.py`](oto/runners/synthesis.py) |
+| Synthesis / build | per-family logic + `TensileCreateLibrary` | [`oto/runners/library_build.py`](oto/runners/library_build.py) |
 | Acceptance A/B & report | native-vs-floor verdicts + dashboard | [`oto/metrics/ab_audit.py`](oto/metrics/ab_audit.py), [`oto/metrics/report.py`](oto/metrics/report.py) |
 
 ---
@@ -299,7 +299,7 @@ oto/
 ```
 
 `oto/README.md` is a **generated** per-module index (regenerate with
-`python3 -m oto._map`): every entry is the first sentence of that module's
+`python3 -m oto.inventory`): every entry is the first sentence of that module's
 docstring, so it cannot drift from the code. The tables below are the human
 orientation layer over it.
 
@@ -357,13 +357,13 @@ orientation layer over it.
 
 | Module | Purpose |
 |---|---|
-| [`cli.py`](oto/runners/cli.py) | The driver's stage dispatch — the `--preflight`/`--bench`-style flag routing consumed by [`oto/cli/`](oto/cli/) (`oto <cmd>` itself lives there, in [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
+| [`cli.py`](oto/runners/stage_cli.py) | The driver's stage dispatch — the `--preflight`/`--bench`-style flag routing consumed by [`oto/cli/`](oto/cli/) (`oto <cmd>` itself lives there, in [`oto/cli/dispatch.py`](oto/cli/dispatch.py)). |
 | [`driver.py`](oto/runners/driver.py) | The driver composition root: identity, toolchain, wiring. |
 | [`phases.py`](oto/runners/phases.py) | The phase runner: manifest merge, policy filter, identical-`fp` skip bypass. |
 | [`benchmark.py`](oto/runners/benchmark.py) | The one place a Tensile subprocess is launched. |
-| [`reference.py`](oto/runners/reference.py) | The gfx900 reference floor: build, resume, recall. |
+| [`reference.py`](oto/runners/reference_floor.py) | The gfx900 reference floor: build, resume, recall. |
 | [`auto.py`](oto/runners/auto.py), [`auto_prompt.py`](oto/runners/auto_prompt.py) | The `--auto` convergence loop and the five questions → `AutoPlan`. |
-| [`synthesis.py`](oto/runners/synthesis.py) | Stage 6: emit per-family library logic and build with `TensileCreateLibrary`. |
+| [`synthesis.py`](oto/runners/library_build.py) | Stage 6: emit per-family library logic and build with `TensileCreateLibrary`. |
 | [`toolchain.py`](oto/runners/toolchain.py) | Toolchain discovery: the Tensile checkout and the ROCm toolchain. |
 | [`timing.py`](oto/runners/timing.py), [`clocks.py`](oto/runners/clocks.py) | The three numbers conflated as "runtime"; per-phase telemetry clocks and the thermal envelope. |
 

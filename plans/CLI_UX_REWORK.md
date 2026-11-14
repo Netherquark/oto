@@ -156,7 +156,7 @@ Shorter flag names on the new surface: `--include-illegal`, `--include-underspec
   tests; file_length watch (scaffold files <600 lines).
 
 **Phase 2 — command tree by adapters, not rewrites**
-- `oto tune` → `oto/runners/cli.py:main` via argparse parent parser
+- `oto tune` → `oto/runners/stage_cli.py:main` via argparse parent parser
   (flag semantics byte-identical); add `--include-illegal`,
   `--include-underspecified`, `--include-unreproducible`;
   `--no-input` forbids prompts.

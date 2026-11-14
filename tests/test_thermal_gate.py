@@ -40,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import oto.runners.cli as pt
+import oto.runners.stage_cli as pt
 
 HEADER = ["timestamp", "sclk_hz", "mclk_hz", "power_uw", "temp_mc",
           "gpu_busy_percent", "vram_used_bytes", "vram_total_bytes",

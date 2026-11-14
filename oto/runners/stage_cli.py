@@ -20,7 +20,7 @@ from typing import Any
 
 from oto.device import loader as _loader
 from oto.metrics.analytics import CellAnalytics
-from oto.runners import flags
+from oto.runners import stage_flags as flags
 from oto.runners.driver import TensileDriver
 from oto.runners.paths import runs_dir as _runs_dir
 
@@ -40,7 +40,7 @@ _FAMILY_TOKENS = ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the driver's argument parser; see oto.runners.flags."""
+    """Build the driver's argument parser; see oto.runners.stage_flags."""
     return flags.build_parser()
 
 

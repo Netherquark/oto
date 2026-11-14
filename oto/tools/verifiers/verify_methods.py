@@ -32,10 +32,10 @@ from oto.tools.verifiers.ref_worktree import print_drift_summary
 NEW = [
     "oto/ledger/registry_core.py", "oto/ledger/queries.py",
     "oto/ledger/proposals.py", "oto/runners/driver.py", "oto/runners/benchmark.py", "oto/runners/phases.py",
-    "oto/runners/reference.py", "oto/runners/auto.py",
-    "oto/runners/analytics_loaders.py", "oto/runners/reporting.py",
+    "oto/runners/reference_floor.py", "oto/runners/auto.py",
+    "oto/runners/corpus_loaders.py", "oto/runners/reporting.py",
     "oto/runners/clocks.py", "oto/runners/timing.py",
-    "oto/runners/synthesis.py", "oto/runners/cli.py",
+    "oto/runners/library_build.py", "oto/runners/stage_cli.py",
     "oto/tensile/config_writer.py",
 ]
 
