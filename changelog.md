@@ -89,6 +89,24 @@ and NOT the experimental data (that is `results.md`).
   completed work stayed as pointers in `docs/work_archive_2026-11-14.md`,
   and the file now carries only open items. Verified: suite RC=0
   (1049 passed, 8 skipped, 242 subtests; zz_suite31).
+- **2026-11-14 (18th) — Full docs ecosystem sync pass: every prose doc reviewed
+  against the code.** A repo-wide read-through of each tracked `.md` found and
+  fixed: stale test-file references after the occupancy/phase1 splits
+  (`tests/test_occupancy_gate.py` -> `test_occupancy_model_lds.py` /
+  `test_occupancy_model_vgpr.py`; `tests/test_phase1_integration.py` ->
+  `tests/test_phase1_readonly_gpu.py`); remaining `port_tensile.py` invocations
+  in `implementation_plan.md` and `potential_configs.md`; stale references to
+  `oto/device/peaks.py` (now `oto/device/loader.py` / `vocabulary.py`) in
+  `knowledge_base.md`, `mapping.md`, `adversarial_review.md`, `claude.md`,
+  `gfx90c_tuning_guide.md`; stale `oto.runners.cli` invocations mapped to the
+  current `oto <cmd>` vocabulary; `docs/comparability.md` command example for
+  `regression_matrix` (`--side` never existed; `--any-protocol` is the flag);
+  `docs/docstrings.md` doc verifier path corrected after the evergreen rewrite;
+  `oto/README.md` regenerate. `peaks.py` was deleted (no import site left in the
+  code) — the profile table is now only `profiles/gfx90c.json` plus
+  `oto/device/{loader,profile,vocabulary}.py`.
+  Suite: 1049 passed, RC=0 (zz_suite32).
+  Nothing pushed; registry untouched, GPU unused this session.
 - **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8

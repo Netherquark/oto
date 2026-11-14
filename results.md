@@ -348,7 +348,7 @@ in `potential_configs.md`; this section is the measured evidence.
 
 ### 13.1 The knob census — two knobs have only ever held one value
 
-`allruns.py` reports, across both arms and every cell:
+`python3 -m oto.tools.allruns` reports, across both arms and every cell:
 
 ```
 never-exercised knobs (both arms, all cells)

@@ -156,7 +156,7 @@ convergence verdict compares against these, throttled+median-of-seeds.
   headroom list is retired as wrong.
 - The same dead wide tiles lived in **three** homes and are all repaired
   (`phases.yaml` 4 rows, `decks.FAMILY_DECKS`, `candidate_rows.LADDER` +
-  `PLAN_BATCH`). `check_candidates.py --quiet` is **284 rows, 0 illegal**;
+  `PLAN_BATCH`). `oto check candidates --quiet` — 284 rows, 0 illegal;
   `TestEveryDeckRowIsGenerative` pins that no deck/ladder/batch row is
   gate-refused under any contraction pattern. Candidate pool 405 → 416.
 - Live report `run_20261018_004835` reads **20 WIN / 18 TIE / 0 LOSS** (0 RED /

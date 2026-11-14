@@ -671,7 +671,7 @@ vendor's.
   (`mt128x128x8_tt4x4`, `mt128x64x8_tt4x4` at 512³ and 1024³) fail the workgroup
   register-file rule (`8·128·128 = 131072`, `8·128·64 = 65536`), so they can
   never generate. Replaced with the **widest legal ZZ tiles**, `128x32x8/4x4` and
-  `32x128x8/4x4` (fingerprints recomputed). `check_candidates --quiet` goes
+  `32x128x8/4x4` (fingerprints recomputed). `oto check candidates --quiet` goes
   4 illegal → **0 illegal**.
 * **`decks.py`:** the CC "widest legal MacroTile" rows `128x128x8/8x4`,
   `128x128x8/4x8`, `128x96x8/8x4` are replaced with `128x64x8/8x4|4x4` and
@@ -700,7 +700,7 @@ vendor's.
   (`tests/test_generate_candidates.py`), which pins that no deck, ladder or
   batch row is gate-refused under any contraction pattern.
 * **Preflight is the authority, not a number written here.** `python3
-  check_candidates.py --quiet` → `0 illegal`;
+  `oto check candidates --quiet` → `0 illegal`;
   `python3 -m oto.harness.generate_candidates --dry-run` → `0 refused`;
   `python3 -m oto preflight` → parity (38/38 cells).
 
@@ -1600,7 +1600,7 @@ That is not a tuning problem, it is an **allocation** problem: the deck spends
 
 1. **Bound the population per cell.** Cap distinct kernels per (family, cell) so
    the frontier is the top-K by the analytic model, and let the DB mutator mutate
-   only the *active* survivors. `check_candidates.py --floor` already proves the
+   only the *active* survivors. `oto check library-parity --quiet` already proves the
    floor's 30 per-cell winners all pass every gate (todo 3 DONE), so the analytic
    pre-filter has a known-good reference set to imitate.
 2. **Judge on a robust statistic, and report both.** The report should grade
@@ -2259,7 +2259,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`
    (dry-run default; 246 sweep + 14 baselines + 8 trials = 268, 0 refusals).
 2. **Dry-run** — `python3 -m oto.tensile.candidate --dry-run` (or
-   `check_candidates.py --deck <deck>.yaml`) to confirm the phase count and that
+   `oto check candidates --deck <deck>.yaml`) to confirm the phase count and that
    no entry is silently dropped.
 3. **Legality PoC only** — verify the new ZZ deck is non-empty after D2 lands
    (§9, D3). This is the one interaction that can empty a family.
@@ -3239,7 +3239,7 @@ verdict.
   NonTemporalA, LdsPadA/B 1 (per-family gate-checked subset).
 
 Preflight on the committed rows: `generate_candidates --dry-run` → pool 1141,
-52 would-append; `check_candidates.py` → **284 checked (phases.yaml) + 1146
+52 would-append; `oto check candidates` → **284 checked (phases.yaml) + 1146
 checked (overlay), 0 illegal**; real-Tensile deck_check probe → **52/52
 built, 0 refusals** (`gfx90c_results/analysis/deck_check_r50.log`; includes
 the HPA VW8 tile). The unmeasured deck is exactly those 52 rows — everything
