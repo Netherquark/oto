@@ -329,15 +329,76 @@ PYTHONPATH=. python3 -m oto report --json   # machine-readable
 python3 -m oto report                       # shows the full HTML path
 ```
 
-Key file: `<results>/acceptance_report.json`. What matters — the fields in
-`per_cell_verdicts`:
+Key file: `<results>/acceptance_report.json`. The report is the operator
+agent's **primary context**: every tuning decision, every consultation trigger
+(T1–T5 in §12) and every campaign edit starts from a field in this file.
+Read it before touching anything; the HTML (`acceptance_report.html`) is the
+human-facing mirror and carries the same numbers.
 
-- `family` / `shape` — one row per (family, cube-size cell)
-- `verdict` — `WIN` / `TIE` / `LOSS` (or `?` for no evidence)
-- `delta_pct` — native vs floor (or vs previous; like-for-like basis is
-  stated in the report)
-- `clock_adjusted` — if this is false, the row is not machine-readable
-  (weak clock coverage; re-measure in TTY if you care)
+### §10.1 Top-level fields (the campaign's dashboard)
+
+- `overall_pass` — bool; true only when every target cell is `WIN` or `TIE`
+  *like-for-like* under the same protocol.
+- `summary` — one-line human verdict string.
+- `timestamp` / `run_id` / `reference_run_id` — provenance; never compare
+  two reports without matching `reference_run_id` (L2).
+- `native_arm` — which arm (native vs spoof-floor) the report is judging.
+- `shipped_manifest` — the manifest the run was built against; confirms the
+  candidate set you are tuning is the one the report measured.
+- `red_list` — list of cell keys that are `LOSS` or worse; the operator
+  agent's punch list.
+- `orange_list` — cells below 50% of the derived bar; usually a candidate
+  that was pruned before you saw it.
+- `per_family_coverage` — per-family roll-up (win/tie/loss counts); use this
+  to decide which family to attack next.
+- `execution_timing` / `family_timing` — where the benchmark time went; pairs
+  with §11A L5 (measurement order is not neutral).
+
+### §10.2 Per-cell fields (`per_cell_verdicts`, one row per (family, cube))
+
+Each row is a single (family, shape) cell. The fields the operator agent
+actually consumes:
+
+- `family` / `shape` / `fp` (phase id) — identity of the cell.
+- `verdict` — `WIN` / `TIE` / `LOSS` / `?` (no evidence).
+- `agg` — aggregation rule used (`winner`, `median`, …).
+- `native_value` / `spoof_value` — the headline numbers on the like-for-like
+  basis.
+- `native_median` / `spoof_median` / `native_best` / `spoof_best` /
+  `native_best_median` / `spoof_best_median` / `native_worst_median` /
+  `spoof_worst_median` — the full distribution; use these, not `delta_pct`,
+  to judge whether a win is real (L1).
+- `delta_pct` — native vs floor on the stated basis.
+- `tie` — bool; a `TIE` row is a legal win for acceptance purposes.
+- `clock_adjusted` — if false the row is **not machine-readable** (weak clock
+  coverage); re-measure in TTY before trusting it. `native_clock_coverage` /
+  `spoof_clock_coverage` / `sclk_ref_hz` / `native_clock_sclk_hz` /
+  `spoof_clock_sclk_hz` tell you why.
+- `native_temp_c` / `spoof_temp_c` / `native_temp_max_c` /
+  `spoof_temp_max_c` — thermal context; pair with L5.
+- `native_runs` — the run ids that fed this row; the audit trail.
+
+### §10.3 How the operator agent uses the report as context
+
+1. **Load, don't re-derive.** The agent reads
+   `acceptance_report.json` first; it never re-derives a verdict from raw
+   benchmark rows when the report already has one. Raw rows are only for
+   re-measurement of a single contested cell.
+2. **Red list first.** Walk `red_list` in order; each entry is a cell to
+   investigate with §11's class catalogue before any edit.
+3. **Orange list second.** Each orange cell names a candidate that was
+   pruned; check `shipped_manifest` and the candidate-generation strategy
+   (§9A) before regenerating.
+4. **Clock gate.** Any cell with `clock_adjusted == false` is excluded from
+   verdicts; the agent records it as "unmeasured" and schedules a TTY
+   re-measure rather than tuning against it.
+5. **Family roll-up.** `per_family_coverage` decides the next family to attack;
+   never start a new family while the current one still has red cells.
+6. **Consultation triggers.** T1–T5 (§12) are evaluated against report
+   fields, not against intuition: e.g. T3 fires when a red cell's
+   `native_best` is within 2% of `spoof_best` but `verdict == LOSS`.
+7. **HTML is the audit artefact.** Commit the HTML alongside the JSON; the
+   HTML is what a human reviewer reads, the JSON is what the agent reads.
 
 `ACCEPTANCE` means all 38 target cells are `WIN` or `TIE` *like-for-like
 under the same protocol*. Any other outcome names:
