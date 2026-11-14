@@ -73,13 +73,13 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/metrics/ — turning benchmark rows into verdicts, reports and status
 
-* ``metrics/ab_audit.py`` — Stage 7 acceptance A/B audit, and the CLI that prints it.
+* ``metrics/ab_audit.py`` — the acceptance-report stage acceptance A/B audit, and the CLI that prints it.
 * ``metrics/ab_band.py`` — The acceptance band: how large a gap has to be before it is real.
 * ``metrics/ab_delta.py`` — The native-vs-spoof A/B delta: the arithmetic every acceptance number rests on.
 * ``metrics/ab_identity.py`` — A/B record identity: how the two arms are made comparable.
 * ``metrics/ab_records.py`` — A/B record loading: the canonical (native, floor) inputs.
-* ``metrics/acceptance_report.py`` — Stage 7 acceptance report: the verdict compute and the JSON writer.
-* ``metrics/benchmark_analytics.py`` — Stage 5 analytics: CSV loading and per-cell aggregation.
+* ``metrics/acceptance_report.py`` — the acceptance-report stage acceptance report: the verdict compute and the JSON writer.
+* ``metrics/benchmark_analytics.py`` — the analytics stage analytics: CSV loading and per-cell aggregation.
 * ``metrics/build_status.py`` — The status report builder: state assembly, ETA pricing and the report dict.
 * ``metrics/cell_coverage.py`` — Coverage: cell evidence, cell states, and fitness for parent selection.
 * ``metrics/cell_policy.py`` — Cell policy: aggregation, the should_run gate, and retirement eligibility.
@@ -109,7 +109,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``runners/convergence_loop.py`` — The ``--auto`` convergence loop: floor first, then tune to convergence.
 * ``runners/corpus_loaders.py`` — Corpus readers: how the driver loads measurements from every run.
 * ``runners/driver.py`` — The driver composition root: identity, toolchain, and wiring.
-* ``runners/library_build.py`` — Stage 6: emit the per-family library logic and build it with TensileCreateLibrary.
+* ``runners/library_build.py`` — the synthesis/build stage: emit the per-family library logic and build it with TensileCreateLibrary.
 * ``runners/phase_runner.py`` — The phase runner: manifest merge, policy filter, identical-fp skip bypass.
 * ``runners/reference_floor.py`` — The gfx900 reference floor: build, resume, and recall.
 * ``runners/result_paths.py`` — Shared path conventions for the driver.
@@ -129,7 +129,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 
 ## oto/tools/ — offline corpus analysis
 
-* ``tools/benchmark_chart.py`` — Visually pleasing comparison: native gfx90c vs gfx900-spoofed (floor).
+* ``tools/benchmark_chart.py`` — Visually pleasing comparison: native vs the reference floor.
 * ``tools/consolidate.py`` — Deck consolidation: the CLI that dispatches to the four phases.
 * ``tools/consolidate_deck.py`` — The measurement inventory and the deck selected from it.
 * ``tools/consolidate_floor.py`` — The locked floor: plan it, materialise it, clone the registry under it.
