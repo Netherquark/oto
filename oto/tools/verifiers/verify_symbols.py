@@ -478,6 +478,22 @@ RENAMES: dict[str, str] = {
     "oto/cli/flags.py": "oto/cli/global_flags.py",
 }
 
+def _head_path_for(rel, old_syms, all_missing):
+    """Resolve the HEAD path for a ref file, following RENAMES; None if gone."""
+    cur = ROOT / rel
+    if cur.exists():
+        return cur
+    new_rel = RENAMES.get(rel)
+    if new_rel is not None and (ROOT / new_rel).exists():
+        return ROOT / new_rel
+    all_missing.extend(
+        f"{rel}::{name}" for name, kind in old_syms.items()
+        if kind != "alias"
+        and not name.rsplit(".", 1)[-1].startswith("_")
+    )
+    return None
+
+
 def _postsplit_check(ref: str) -> int:
     """Public-API loss check vs a post-split ref: missing symbols + signature drift."""
     import subprocess as _sp
@@ -505,18 +521,9 @@ def _postsplit_check(ref: str) -> int:
         if err:
             print(f"parse error at {ref}:{rel}: {err}")
             continue
-        cur = ROOT / rel
-        if not cur.exists():
-            new_rel = RENAMES.get(rel)
-            if new_rel is not None and (ROOT / new_rel).exists():
-                cur = ROOT / new_rel
-            else:
-                all_missing.extend(
-                    f"{rel}::{name}" for name, kind in old_syms.items()
-                    if kind != "alias"
-                    and not name.rsplit(".", 1)[-1].startswith("_")
-                )
-                continue
+        cur = _head_path_for(rel, old_syms, all_missing)
+        if cur is None:
+            continue
         new_syms, err = collect(cur)
         if err:
             print(f"parse error at HEAD:{rel}: {err}")

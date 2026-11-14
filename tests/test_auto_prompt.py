@@ -63,7 +63,7 @@ class TestDefaults(unittest.TestCase):
         assert not p.reruns_any_reference
 
     def test_cli_no_longer_defaults_to_100(self):
-        src = (BASE / "oto" / "runners" / "flags.py").read_text()
+        src = (BASE / "oto" / "runners" / "stage_flags.py").read_text()
         assert '"--budget"' in src
         # the argparse default must be None so the prompt owns it
         idx = src.index('"--budget"')

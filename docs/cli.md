@@ -710,5 +710,5 @@ There are no compatibility shims and no aliases. This is the clean break.
 | `python3 consolidate.py` | `oto consolidate` |
 | `python3 chart.py` | `oto chart` |
 | `python3 verify_all.py` | `oto verify all` |
-| `python3 verify_run.py snapshot` | `oto verify run snapshot` |
+| `python3 corpus_audit.py snapshot` | `oto verify run snapshot` |
 | `python3 -m oto.metrics.render_status` | `oto status` |

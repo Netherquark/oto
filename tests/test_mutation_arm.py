@@ -322,7 +322,7 @@ class NoCorpusLiteralsTests(unittest.TestCase):
         NAME-only scanner. The ledger's own methods and its numeric columns
         (INTEGER, PRAGMA timeout, index arity) are what must be visible.
         """
-        path = Path(__file__).parent.parent / "oto" / "ledger" / "proposals.py"
+        path = Path(__file__).parent.parent / "oto" / "ledger" / "registry_proposals.py"
         words = {w for _, w in self._executable_lines(path)}
         for expected in ("record_proposal", "resolve_proposal", "coverage_view"):
             assert expected in words, f"scanner missed {expected}; the guardrail would pass vacuously"
