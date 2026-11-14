@@ -360,7 +360,7 @@ def run_consolidate(args: Any) -> int:
 
 
 def run_stats(args: Any) -> int:
-    from oto.tools.all_runs import main as m
+    from oto.tools.run_census import main as m
 
     argv = ["--base-dir", str(base_dir(args))]
     if args.family:
@@ -369,7 +369,7 @@ def run_stats(args: Any) -> int:
 
 
 def run_chart(args: Any) -> int:
-    from oto.tools.chart import main as chart_main
+    from oto.tools.benchmark_chart import main as chart_main
 
     argv = ["--base", str(base_dir(args))]
     if args.out:

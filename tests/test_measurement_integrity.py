@@ -89,7 +89,7 @@ class TestDtypeByteTable(unittest.TestCase):
 
     def test_all_runs_shares_the_same_table(self):
         """all_runs.py carried its own copy and drifted to the same wrong ZZ."""
-        import oto.tools.all_runs as all_runs
+        import oto.tools.run_census as all_runs
         assert all_runs.DTYPE_BYTES["Z"] == dtype_bytes("Z")
         for family, byte_width in vgpr_model.FAMILY_BYTES_PER_ELEMENT.items():
             with self.subTest(family=family):

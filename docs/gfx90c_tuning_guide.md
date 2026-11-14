@@ -482,10 +482,10 @@ merely rarely. This is the cheapest possible candidate list: every one of these
 is a legal value on this device that no baseline measurement has ever occupied,
 so there is no "we already tried that" to discover later. The counts are not
 transcribed here on purpose (`claude.md` §5); re-derive the variance from
-`python3 -m oto.tools.all_runs` and the floor's own manifests.
+`python3 -m oto.tools.run_census` and the floor's own manifests.
 
 **The "floor state" column is transcribed from the shipped gfx900 reference
-floor's kernel census (prior-knowledge base), not re-derived here, and is marked `check`.** `oto.tools.all_runs` reports the knob
+floor's kernel census (prior-knowledge base), not re-derived here, and is marked `check`.** `oto.tools.run_census` reports the knob
 values of each cell's *winner*, not the full variance across the floor, so it
 cannot confirm or refute a "never moves" claim on its own. Verify a row against
 the floor manifests before spending a run on it.

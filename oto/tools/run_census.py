@@ -17,9 +17,9 @@ own loaders and aggregators (the driver's all-runs record loaders, and the
 drift from the pipeline that produced the ledger. Byte widths come from the same
 place as the gate's, which ``tests.test_measurement_integrity`` asserts.
 
-    python3 -m oto.tools.all_runs           # tables to stdout
-    python3 -m oto.tools.all_runs --json out.json  # machine-readable
-    python3 -m oto.tools.all_runs --family ZZ      # filter to one family
+    python3 -m oto.tools.run_census           # tables to stdout
+    python3 -m oto.tools.run_census --json out.json  # machine-readable
+    python3 -m oto.tools.run_census --family ZZ      # filter to one family
 
 CPU only. Touches no GPU and launches no Tensile run.
 """

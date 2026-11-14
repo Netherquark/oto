@@ -356,12 +356,12 @@ the plumbing; it does not settle the mechanism.
 
 A whole-corpus pass over all 5757 emitted kernels (`python3 -m
 oto.harness.asm_occupancy`, GFLOP/s joined against every phase's `2_BenchmarkData`)
-plus the knob census (`python3 -m oto.tools.all_runs`). Analysis and the resulting deck are
+plus the knob census (`python3 -m oto.tools.run_census`). Analysis and the resulting deck are
 in `docs/potential_configs.md`; this section is the measured evidence.
 
 ### 13.1 The knob census — two knobs have only ever held one value
 
-`python3 -m oto.tools.all_runs` reports, across both arms and every cell:
+`python3 -m oto.tools.run_census` reports, across both arms and every cell:
 
 ```
 never-exercised knobs (both arms, all cells)

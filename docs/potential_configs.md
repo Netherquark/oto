@@ -2428,7 +2428,7 @@ is the honest estimate and `--budget 10` iterations of mutation on top. Judge
 
 ```bash
 python3 -m oto.harness.kernel_db --rebuild
-python3 -m oto.tools.all_runs --json /tmp/opencode/post.json      # knob census + cells_resolved
+python3 -m oto.tools.run_census --json /tmp/opencode/post.json      # knob census + cells_resolved
 python3 -m oto.runners.stage_cli --report --native-agg floor_best   # the strict basis
 ```
 
