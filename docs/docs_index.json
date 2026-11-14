@@ -268,9 +268,21 @@
       "kind": "Package",
       "owns": "The `oto/` package map (regenerate with `python3 -m oto.readme_gen`)",
       "path": "oto/README.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The dev loop: setup, suite, verifier, GPU policy, commit discipline",
+      "path": "CONTRIBUTING.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Security scope & reporting path (no supported releases; `main` only)",
+      "path": "SECURITY.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 36,
+  "total": 38,
   "version": 1
 }

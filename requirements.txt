@@ -1,10 +1,9 @@
-rich>=13.0
-rich-argparse>=1.5
-tqdm>=4.66
-python-dotenv>=1.0
-PyYAML
-numpy>=1.26
-matplotlib>=3.8
-# dev/test
-pytest>=8.0
-pytest-xdist>=3.0
+# oto runtime requirements — pinned to the known-good audited set (2026-11).
+# Dev/test dependencies live in requirements-dev.txt.
+rich==14.1.0
+rich-argparse==1.8.0
+tqdm==4.67.2
+python-dotenv==1.2.3
+PyYAML==6.0.2
+numpy==2.3.5
+matplotlib==3.11.2

@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the verifier needs the split-era base commit
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: python3 -m ruff check --config ruff.toml oto tests
+
+      - name: Suite (CPU-only)
+        run: python3 -m pytest -q
+
+      - name: Refactor-split verifier
+        run: python3 oto/tools/verifiers/verify_all.py --base 2824c2f

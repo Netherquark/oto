@@ -108,6 +108,8 @@ Corollaries:
 | `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |
+| `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
+| `SECURITY.md` | shared | Ecosystem | Security scope & reporting path (no supported releases; `main` only) |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 
 ## The quality gates
