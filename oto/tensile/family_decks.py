@@ -378,7 +378,7 @@ KNOB_SWEEP_BASES: dict[str, list[dict[str, Any]]] = {
 #: decision, Option B: vendor-recipe adoption): the 4-assert rows for CC:256 and
 #: CC:512 ship as first-class deck rows
 #: (`phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_af4em4` / `_512x512x512_...`),
-#: gate-legal and GPU-validated on gfx90c at both shapes with NumElementsToValidate=128
+#: gate-legal and GPU-validated on the reference device at both shapes with NumElementsToValidate=128
 #: in the client config. It is no longer a trial; DECISION_TRIAL_TILES keeps D1.
 DECISION_TRIAL_TILES: list[dict[str, Any]] = [
     {

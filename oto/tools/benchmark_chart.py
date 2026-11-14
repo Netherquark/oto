@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Visually pleasing comparison: native gfx90c vs gfx900-spoofed (floor).
+"""Visually pleasing comparison: native vs the reference floor.
 
 Owns: the figure itself -- reading the acceptance report, per-cell GFLOP/s for
-the native best vs the spoof (gfx900 shipped library) best, with verdict +
+the native best vs the spoof (the reference device's shipped library) best, with verdict +
 delta, and the matplotlib output.
 Does NOT own: the data it plots or the report design language.
 Public API: main.
@@ -34,7 +34,7 @@ def make_report(base: Path, profile=None) -> dict[str, Any]:
 
 def _figure(reps: list[dict[str, Any]], labels: list[str],
            native: list[float], spoof: list[float],
-           verdicts: list[str], deltas: list[float]) -> Any:
+           verdicts: list[str], deltas: list[float], codename: str) -> Any:
     """Render the native-vs-spoof figure (matplotlib is an optional dep)."""
     import matplotlib
     matplotlib.use("Agg")
@@ -43,7 +43,7 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
     fig, ax = plt.subplots(figsize=(12, 6.5))
     x = range(len(reps))
     w = 0.38
-    bars_n = ax.bar([i - w / 2 for i in x], native, w, label="Native gfx90c (best)", color="#2563eb", edgecolor="white", linewidth=0.6)
+    bars_n = ax.bar([i - w / 2 for i in x], native, w, label=f"Native {codename} (best)", color="#2563eb", edgecolor="white", linewidth=0.6)
     bars_s = ax.bar([i + w / 2 for i in x], spoof, w, label="gfx900 spoof floor", color="#f97316", edgecolor="white", linewidth=0.6)
     for b in list(bars_n) + list(bars_s):
         h = b.get_height()
@@ -56,7 +56,7 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylabel("GFLOP/s (best per cell)", fontsize=11, fontweight="semibold")
-    ax.set_title("Native gfx90c vs gfx900-spoofed on identical hardware\n(per-cell best; tie band ±5%)", fontsize=13, fontweight="bold", pad=12)
+    ax.set_title(f"Native {codename} vs reference spoof floor on identical hardware\n(per-cell best; tie band ±5%)", fontsize=13, fontweight="bold", pad=12)
     ax.legend(loc="upper left", frameon=False, fontsize=10)
     ax.grid(axis="y", linestyle=":", alpha=0.4)
     ax.set_axisbelow(True)
@@ -64,7 +64,7 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
     wins = sum(1 for v in verdicts if v == "WIN")
     ties = sum(1 for v in verdicts if v == "TIE")
     losses = sum(1 for v in verdicts if v == "LOSS")
-    fig.text(0.99, 0.93, "Native gfx90c vs gfx900 spoof floor (per-cell best)", ha="right", va="top", fontsize=8, family="monospace")
+    fig.text(0.99, 0.93, f"Native {codename} vs spoof floor (per-cell best)", ha="right", va="top", fontsize=8, family="monospace")
     fig.text(0.99, 0.01, f"WIN {wins} / TIE {ties} / LOSS {losses}   (cells total)", ha="right", va="bottom", fontsize=9, style="italic", color="#4b5563")
     fig.tight_layout()
     return fig
@@ -74,8 +74,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default=None, help="project base dir")
     ap.add_argument("--out", default=None, help="output PNG path")
+    ap.add_argument("--codename", default=None,
+                    help="profile codename to label the chart (default: ambient profile)")
     args = ap.parse_args(argv)
     base = _base(args)
+    profile = _loader.resolve_profile() if args.codename is None else _loader.load_profile(args.codename)
     report = make_report(base)
     cells = report.get("per_cell_verdicts") or []
     by_fam: dict[str, list[dict[str, Any]]] = {}
@@ -94,11 +97,11 @@ def main(argv: list[str] | None = None) -> int:
     verdicts = [c.get("verdict") or "?" for c in reps]
     deltas = [c.get("delta_pct") or 0 for c in reps]
     try:
-        fig = _figure(reps, labels, native, spoof, verdicts, deltas)
+        fig = _figure(reps, labels, native, spoof, verdicts, deltas, profile.codename)
     except Exception as exc:  # pragma: no cover - optional plotting dep
         print(f"matplotlib is required for the chart: {exc}", file=sys.stderr)
         return 2
-    out = Path(args.out) if args.out else Path(__file__).resolve().parent / "gfx90c_vs_spoof.png"
+    out = Path(args.out) if args.out else Path(__file__).resolve().parent / f"{profile.codename}_vs_floor.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     print(f"saved: {out}")
