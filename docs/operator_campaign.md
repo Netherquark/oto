@@ -248,8 +248,7 @@ Preflight runs, `kernel_db.json` rebuilt, then the loop:
 harvest winner configs per (family, cell) → mutate ≤2 knobs each (NARROW);
 re-seed from floor winners (WIDE); walk one knob at a time toward the floor
 (DIRECTION) → gate → launch in TTY → verdict recorded, ledger updated
-(pending → winner-demoted-to- loser or loser-promoted-to-pending),
-always with the kernel kept, never overwritten.
+(demoted configs are retired in place, never overwritten).
 
 `--budget N` is how many iterations. `--mutations M` is the fuzz cap per
 harvest. The campaign stops at a budget, not at "no improvement possible";
@@ -266,6 +265,40 @@ next. Your only actions:
 
 Run it repeatedly while iterating: each `oto tune` pass leaves the corpus
 stronger. The best-effort library automatically includes everything.
+
+## §9A. Candidate generation — the five strategy classes
+
+Oto forms the whole pipeline for you, but when you author a row or review the
+loop output, the vocabulary matters. Every candidate the corpus produced came
+through one of these strategies (or a combination thereof):
+
+| strategy | mechanism | where it won in this corpus | when to use |
+|---|---|---|---|
+| **NARROW** | single-knob deltas on the parent winner (1–3 knobs/draw, gated + novelty-checked) | `DD:192/256/512` at `32x32` (+267 %/+20 %/+7 %); `DD:1024/1365` ties; every wave-quantisation-starved small cell | default lever — cheapest finest-grained search; the small-shape band is where it lives |
+| **WIDE** | tile donors (measured winners or floor winner) recombined with forward-knob draws | `SS:256/512` WGM family; every family's rank-1 oracle step | after NARROW saturates a cell; required to move the *geometry*, escape a local minimum |
+| **DIRECTION** | one knob at a time toward the floor-winner geometry (skipping values the winner already uses) | CC:256 winner at 7 CUs (the only cell that lit up as a steal) | informed mode; fastest path to "match the floor" when the floor winner is legal here |
+| **EXPLORE** | virgin axes never co-varied with the winner tile — `LdsPad{A,B}`, `NLCA`, `StaggerU`, `TransposeLDS`, `MaxOccupancy`, `NonTemporal{A,B}`, `AssertFree*ElementMultiple` | `CC:256` pad probes (`LdsPadB ∈ {1,2,4}` + `LdsPadA=2`; the floor never pads the complex families — a shared blind spot in Tensile's perf yamls); `StaggerU=0` (the gate once refused it; it was never measured before the fix); `MaxOccupancy` axis untried for 6 months of decks | where the census names an untried axis; the highest-yield blind spots in the corpus |
+| **STEAL** | floor-winner geometry used verbatim as the starting point | CC:256 (`d5` row now first-class deck content), ZZ `LdsPad` probes | informed mode only; worst cells first; every changed field documented (§12) |
+
+Priority order (from the corpus): NARROW > WIDE > DIRECTION; EXPLORE probes the
+axes the census marks untried; STEAL only when informed with a documented
+floor-steal protocol (§12). Narrow-first preserves the gradient cheaply: the
+widest axis can always be queried once narrow hills flatten; the virgin axes
+come back cheaply once the simple map is drawn.
+
+Reading order for any cell before proposing a row:
+
+```bash
+python3 -m oto.harness.corpus_census --cell FAM:side   # what's been tried?
+python3 -m oto.harness.resolve_cells --taxonomy          # what kind of cell?
+python3 -m oto check candidates                          # will the gates accept it?
+```
+
+If the census says this axis is exhausted, skip it — the proof is usually in
+`potential_configs.md` in the §R-corpus history (per-axis findings) or
+`results.md` §9 (straggler classes). If you cannot locate a measurement, the
+axis is probably still unprobed and a NARROW draw is honest evidence on its
+behalf.
 
 ## §10. Reading the report
 

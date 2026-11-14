@@ -4216,3 +4216,17 @@ the pre-built seed pool.
   for the nightly build; `.env.example` now states the contract in line 1:
   nothing falls back to /usr, /usr/lib64, or /opt/rocm unless you write it
   there yourself.
+
+- **2026-11-14 (37th) — operator_campaign.md gains §9A: the candidate-generation strategies in one place.**
+  The operator reference the three generation strategies scattered implicitly
+  through §9 (`oto tune`) and §11 (the straggler-class catalogue) and never named
+  the fourth — EXPLORE — nor why they were ever proven to win. New §9A names all
+  five (NARROW / WIDE / DIRECTION / EXPLORE / STEAL), cites concrete corpus
+  wins for each (the DD:192/256/512 +267 %/+20 %/+7 %; the CC:256 pad blind
+  spot every GCN5 perf yaml shares; the CC/ZZ firm caps at 16384/8192 elements;
+  the R8 CC:256 steal as the only "take the floor verbatim" example the corpus
+  has ever validated). Hierarchy documented: NARROW first on the cheapest
+  gradient, WIDE for geometry hops, DIRECTION informed-mode fastest path,
+  EXPLORE for census-marked virgin axes, STEAL only with a documented
+  floor-steal protocol (§12) and never for winning cells. Reading order for any
+  cell: census → taxonomy → gate candidates. No other sections changed.
