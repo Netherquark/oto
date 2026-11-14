@@ -4230,3 +4230,24 @@ the pre-built seed pool.
   EXPLORE for census-marked virgin axes, STEAL only with a documented
   floor-steal protocol (§12) and never for winning cells. Reading order for any
   cell: census → taxonomy → gate candidates. No other sections changed.
+
+- **2026-11-14 (38th) — operator_campaign.md gains §11A: the corpus's own lessons, distilled.**
+  After a full walk of the potential_configs.md diff history (26 commits that
+  touch the file: verdict-flip re-annots, like-for-like regrades, the 2026-10-15
+  ordering fix that reversed "THE ONE LOSER" CC:256 (it was a deck-order
+  defect, not a kernel deficit), 18 re-analyses of the straggler list, the
+  2026-10-10 complex-accounting correction (Tensile's client charges 2 flops
+  per MAC — complex GEMM is reported at 1/4 its BLAS-8 GFLOPS), the floor-steal
+  record (the one steal the corpus endorses, §R25: `MacroTile 64x64 / WorkGroup
+  16x16x1 / GLVW 2/2 verbatim, everything else re-swept; verbatim copies count
+  as nothing), and the 2026-10-21 R47 re-derivation that shrank the ORANGE
+  list from 12 to 3 by streaming every claim through the corpus census), nine
+  lessons are now stated in the operator doc, each tied to its source evidence
+  as a rule of thumb: identical-config deltas are environment noise (±17.5%,
+  never chased), like-for-like is the only graded basis, complex GEMM reads at
+  80-97% of the roof, Tensile's refusal is the silicon not the bug, sweep
+  order is causal (the 2026-10-15 lesson), structural locality beats byte
+  copying, informed-mode steals are documented-retunes not verbatim copies,
+  dead axes and silent placebos were a real failure class, gates are silicon
+  facts not suggestions. One heading previously swallowed by an edit was
+  restored; docs_index regenerated; docs tests green.

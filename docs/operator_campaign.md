@@ -391,6 +391,124 @@ kernel as inspiration, but:
    until a within-run measurement shows a win, no bar claims it. Your job
    is evidence, not persistence.
 
+## §11A. What the corpus teaches — nine lessons, codified
+
+Everything below is distilled from the project's own measurement history and
+stored here because the operator reaches for it reflexively; it is not history
+reading material — the operator doesn't have the history, the operator has
+this page.
+
+### L1 — Identical configs in both arms still delta ±17.5 %
+
+Nine of the 38 target cells run the same kernel in both arms (the vendor
+floor-tile transferred unchanged); their measured deltas span **+1.1 % to
++18.6 %**. That spread is noise (clock, temperature, thermal throttling). A
+winner must clear the ±5 % floor, which means the verdict band soaks the
+delta. A "win" inside the band is a tie by construction; a "loss" inside the
+band is a tie by construction. Never chase anything inside it; never interpret
+anything inside it as a hardware regression.
+
+### L2 — Like-for-like is the only truth; protocol is not visible from names
+
+There are two invocation forms the client can produce, and phase names do not
+encode which one ran:
+
+- a **single-problem** invocation (`num-benchmarks=8`, a 1-row problem list) —
+  the measurement of a kernel run standalone, cold-start-to-cold-start;
+- a **family-protocol** invocation (same INI plus a 5–8-row problem list — the
+  family contract list) — every floor-phase and every deck phase since then.
+
+Same config, same binary, same process settings, different numbers: SS
+96x96x16/6x6/VW2/DU16 at 1024³ reads **412.1** in single-problem and **98.5**
+family in one run. HH 32x64x16/4x4/VW4 reads **763.4** single vs **188.9–206.5**
+family in four runs. HH_HPA 128x128x8/8x8 reads **853.4** single vs **440–538**
+family. The floor only ever ran the family form. Any verdict that pairs an arm
+with a measurement from the other form is grading the protocol, not the kernel.
+Until verdict rows carry a protocol stamp explicitly markeding
+`family`-like, treat `SINGLE`-protocol readings against the floor as
+incomparable chemical noise; re-measure both in one run before trusting any
+verdict whose delta is inside the like-for-like band.
+
+### L3 — Complex GEMM accounting is 4× off
+
+Tensile's client charges `2·packing` flops per MAC with `packing == 1` for
+complex types, so a reported complex GFLOPS is **¼ of its BLAS-8 value**. The
+roof is therefore not 20–25 % — it is **80–97 %** (CC at 80–97 % of the FP32
+FMA roof, ZZ at 96–97 % of the FP64 roof). This was the third correction in
+this project's accounting history. An ORANGE reading on a complex cell is
+a red flag about the *bar*, not the kernel — re-read every complex number in
+BLAS-8 units (reported ×4 for this device's 8-bit-alloc unit) before deciding
+that a cell is behind.
+
+### L4 — Tensile's refusal is the silicon
+
+When the launch gate refuses, it is because the solution doesn't fit this
+part: the workgroup register file (`weight × MT0 × MT1 × LocalSplitU < 65536
+registers`), the LDS budget, the error-4 occupancy (`maxVGPR` per thread
+vs `65536 / NumThreads`), the classic load-divisibility rule, the variant
+rules for the half-assembly GSU path. These are not "maybe the gate is
+wrong"; they are hardware cut-outs. The only exceptions triage has ever
+caught were bugs in the gate's shadow (e.g. an absent key being read as
+`-1` for `StaggerU`, the `Z` VW row using `reg=2` instead of `reg=4`) — all
+found by reading the emitted code objects. The discipline: before appealing
+an ORANGE, always read the assembly of the kernel in the same batch; Tensile
+is never the bug when the kernel simply has no room.
+
+### L5 — The sweep order decides whether 256³ verdicts are possible
+
+A phase's `ProblemSizes` list runs in list order. When the deck once emitted
+`2048³` earlier in the list and `256³` last, the small cube measured right
+after the slow 2048³ kernel — the 256³ kernel was read at throttle and the
+campaign chased the phantom for three days (the "THE ONE LOSER" saga, later
+flipped by the 2026-10-15 ordering fix). Any candidate generator that sorts
+shapes lexicographically ("1024, 192, 2048, 256, 512") produces the same
+measurement-order defect for every family, not just CC. Verdicts across a
+sorted sequence must be excluded from A/B; enforce numerical order at the
+producer, not at the reader.
+
+### L6 — Structural locality beats byte-copying
+
+The gfx900 floor ships kernels tuned for 56 CUs, HBM2, and a 2048-barrel
+raster; a 7-CU Vega-class APU with 1 MiB L2 and DDR4 has none of that geometry
+in common. Copying a floor winner unchanged into this deck produces nothing —
+the differences (`StaggerU` horizon, `WorkGroupMapping` sign, atomic-reduction
+cost on `GSU=2`, `LdsPad{A,B}` on complex, assert-value scaling in complex
+at `AF0EM≥2`) are not inherited. The floor supplies *one* thing: a known-good
+geometry that at least builds and runs on this part. Everything else is
+re-derived. A steal means "the 64×64 tile is legal here and known-good on the
+sibling silicon" — never "everything else follows".
+
+### L7 — Stealing is informed-mode only and always a retune, never a verbatim
+
+The one recorded steal (CC:256, 2026-10-16) carried only `MacroTile=64x64`,
+`WorkGroup=16x16x1`, and `GlobalLoadVectorWidth=2` verbatim; `StaggerU 32`,
+`WGM 8`, `LdsPad`, `AssertFree{0,1}ElementMultiple`, `PGR`, and `LSU` were
+all re-swept because gfx900 silicon did not match gfx90c (60 CUs, HBM2). Every
+altered field gets a one-line reason in the config's `note`. If you cannot
+state the reason, steal nothing — it is a debt entry, not a shortcut.
+
+### L8 — Dead axes and silent placebos are a known failure mode
+
+When a knob is declared forwarded but nothing emits it, the sweep measures the
+*Tensile default* and reports it as the knob. This exact class of bug shipped
+only because the emitter was tested by outcome ("builds? yes/no") instead of
+by equivalence ("the knob reaches the writer"). If a row is recorded and
+never reaches the launch, it is a placebo, and the 17 hours it ran were spent
+on the default the whole time. Verify the `FORWARDED_KNOBS` list against the
+config writer before reading any "no effect" result as a tuning verdict.
+
+### L9 — Gates are not suggestions — they encode silicon facts
+
+Every legality gate this project calibrates against is a piece of silicon
+knowledge: the workgroup VGPR file (error 4), the LDS budget (two resident
+workgroups), the complex 2×/4× accumulator footprint, the wave-quantization
+fill rules (SS = GSU× wave fill; complex = MT1× accumulator count). A gate
+that fires is correct — CALIBRATION exists to count false-rejections and all
+other rules so your deck never ships a phase the silicon refuses. When
+calibration prints `0 MISS` / `0 FALSE REJECTION`, the gate represents the
+machine; when it prints otherwise, a human error belongs in the commit, not
+in the deck.
+
 ## §12. Informed mode — the floor-steal protocol, in full
 
 When a floor library is in hand:
