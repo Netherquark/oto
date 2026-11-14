@@ -193,6 +193,18 @@
     },
     {
       "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Proposal: intuitive rename + docs slimming pass \u2014 34 module renames, 13 test renames, root/docs/plans ephemera deletion, AI-slop sweep",
+      "path": "plans/INTUITIVE_NAMING_AND_DOC_SLIMMING_PLAN.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Master plan: full session ledger, open work register, two development models, convergence pipeline, guardrails, verification commands, file map",
+      "path": "plans/MASTER_PLAN.md"
+    },
+    {
+      "class": "dev",
       "kind": "Ecosystem (frozen)",
       "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
       "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
@@ -290,11 +302,11 @@
     {
       "class": "dev",
       "kind": "Package",
-      "owns": "The `oto/` package map (regenerate with `python3 -m oto._map`)",
+      "owns": "The `oto/` package map (regenerate with `python3 -m oto.inventory`)",
       "path": "oto/README.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 40,
+  "total": 42,
   "version": 1
 }
