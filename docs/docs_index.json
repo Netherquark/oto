@@ -280,9 +280,15 @@
       "kind": "Ecosystem",
       "owns": "Security scope & reporting path (no supported releases; `main` only)",
       "path": "SECURITY.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out",
+      "path": "docs/documentation_tooling_options.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 38,
+  "total": 39,
   "version": 1
 }
