@@ -5546,3 +5546,30 @@
     AssertFree0ElementMultiple: 4
     AssertFree1ElementMultiple: 4
   fp: 75c7e5ce8735ea029b31e52f7746e9143e1241fba635a613fbf0de65695fccea
+- phase_id: phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  label: CC_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_swAssertFree0ElementMultiple2_AssertFree1ElementMultiple2_GlobalLoadVectorWidthA2_GlobalLoadVectorWidthB2
+  dtype: C
+  shapes:
+  - 256x256x256
+  ScheduleName: isa
+  NumBenchmarks: 8
+  config:
+    Architecture: gfx90c
+    DataType: C
+    ContractionPattern: Ailk_Bljk
+    ProblemType: 256x256x256
+    ScheduleName: isa
+    FamilyLabel: CC
+    MacroTile: 64x64x8
+    ThreadTile: 4x4
+    VectorWidth: 1
+    GlobalLoadVectorWidthA: 2
+    GlobalLoadVectorWidthB: 2
+    WorkGroup:
+    - 16
+    - 16
+    - 1
+    WorkGroupMapping: 4
+    AssertFree0ElementMultiple: 2
+    AssertFree1ElementMultiple: 2
+  fp: e99f3fdbc561d2a989dc36821025ed4b19f0e0ea12dbd0fa9b61b61f6a07292e
