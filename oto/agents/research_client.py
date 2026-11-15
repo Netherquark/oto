@@ -64,6 +64,7 @@ def _extract_api_key(starter_text: str = "") -> tuple[str, str]:
 
 
 def _provider(key: str, source: str) -> str:
+    """Which provider `key`/`source` is for (anthropic/perplexity/openai/none)."""
     if key.startswith("sk-ant-"):
         return "anthropic"
     if key.startswith("pplx-"):
@@ -81,6 +82,7 @@ def _provider(key: str, source: str) -> str:
 
 def _openai_compatible_research(key: str, endpoint: str, model: str,
                                 query: str, timeout: int) -> str:
+    """POST one OpenAI-compatible chat completion; return its content, or ``''`` on failure."""
     resp = requests.post(
         endpoint,
         headers={"Authorization": f"Bearer {key}",
@@ -98,6 +100,7 @@ def _openai_compatible_research(key: str, endpoint: str, model: str,
 
 
 def _anthropic_research(key: str, model: str, query: str, timeout: int) -> str:
+    """POST one Anthropic message with web search; return the text blocks, or ``''`` on failure."""
     resp = requests.post(
         _ANTHROPIC_ENDPOINT,
         headers={"x-api-key": key,
@@ -128,6 +131,7 @@ def make_researcher(api_key: str = "", starter_text: str = "",
     timeout = int(os.environ.get("OTO_API_TIMEOUT", "60"))
 
     def research(query: str) -> str:
+        """The research callable; ``''`` when no key/endpoint or ``requests`` is available."""
         if not key or not _HAS_REQUESTS:
             return ""
         try:

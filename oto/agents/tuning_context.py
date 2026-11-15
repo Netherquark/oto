@@ -17,6 +17,7 @@ from oto.device.profile import DeviceProfile
 
 
 def _knob_section() -> list[str]:
+    """The '1. Knob surface' section lines."""
     return [
         "## 1. Knob surface (universal; device rules live in the tuning guide)",
         "",

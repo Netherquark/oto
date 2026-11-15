@@ -33,6 +33,7 @@ _H_NOTE = ("Proposals are CPU-gate-checked models only. They still need GPU "
 
 
 def _target_cells() -> set:
+    """The contract ``(family, side)`` cells from the target deck."""
     return {(fam, side) for fam, sides in TARGET_CELLS.items() for side in sides}
 
 
@@ -95,6 +96,7 @@ def verify_candidates(rows: list[dict[str, Any]],
 
 
 def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
+    """The report-facing subset of one proposed candidate row."""
     return {"label": row.get("label"), "tier": row.get("tier"),
             "family": (row.get("config") or {}).get("FamilyLabel"),
             "contraction_pattern": row.get("contraction_pattern"),
@@ -105,7 +107,8 @@ def build_harness_study(base_dir, profile: DeviceProfile,
                         proposal_limit: int = 16) -> dict[str, Any]:
     """Study the corpus, propose + verify candidates, return the payload plus
     a markdown section the doc generator can embed.
-    ``profile`` -- the device profile to tune.
+
+    `profile` is the device profile to tune.
     """
     try:
         corpus = study_kernel_db(base_dir)
@@ -136,6 +139,7 @@ def compare_runs(base_dir, run_a, run_b):
     rows_b = db.get(run_b, [])
 
     def _best(rows):
+        """Best measured GFLOP/s per cell for one run's rows."""
         out = {}
         for r in rows:
             cell = (r.get("family"), _side(r.get("shape")))
@@ -166,7 +170,7 @@ def compare_runs(base_dir, run_a, run_b):
 
 
 def _study_markdown(profile: DeviceProfile, payload: dict[str, Any]) -> str:
-    """``profile`` -- the device profile to tune."""
+    """The harness-study markdown section for the doc generator."""
     corpus = payload["corpus"]
     lines = [f"## Harness study — {profile.codename}", ""]
     if not corpus["present"]:
