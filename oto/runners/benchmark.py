@@ -120,7 +120,7 @@ profile=None,
 
 
 class BenchmarkMixin:
-    """Phase execution and Tensile process management, mixed into TensileDriver."""
+    """Phase execution and Tensile process management, mixed into `oto.runners.driver.TensileDriver`."""
 
     _KEY_POLL_S = 0.2
 

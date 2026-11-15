@@ -33,7 +33,7 @@ TERMINAL_OUTCOMES = frozenset({
 
 
 class MutatorOutcomesMixin:
-    """Candidate classification, mixed into Mutator."""
+    """Candidate classification, mixed into `oto.ledger.mutator.Mutator`."""
 
 
 def _per_cell_medians(analytics: AnalyticsEngine,

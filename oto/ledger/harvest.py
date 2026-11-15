@@ -25,7 +25,7 @@ from oto.metrics import cell_coverage as coverage
 
 
 class HarvestMixin:
-    """Parent selection, mixed into ConvergenceAgent."""
+    """Parent selection, mixed into `oto.ledger.convergence_agent.ConvergenceAgent`."""
 
 
     def harvest(

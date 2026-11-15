@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 
 class CellStatusMixin:
-    """Coverage classification, mixed into AnalyticsEngine."""
+    """Coverage classification, mixed into `oto.metrics.benchmark_analytics.AnalyticsEngine`."""
 
 
     def classify_cell_status(

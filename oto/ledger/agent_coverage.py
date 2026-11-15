@@ -19,7 +19,7 @@ from oto.metrics import cell_coverage as coverage
 
 
 class CoverageMixin:
-    """Coverage guidance, mixed into ConvergenceAgent."""
+    """Coverage guidance, mixed into `oto.ledger.convergence_agent.ConvergenceAgent`."""
 
 
     def _shape_sweeps(self) -> dict[str, list[str]]:

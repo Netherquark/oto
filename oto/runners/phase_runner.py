@@ -51,7 +51,7 @@ _CLIENT_ABORT_MARKERS = ("exited with code 134", "hipErrorNoDevice")
 
 
 class PhaseMixin:
-    """Deck merge + policy-filtered phase execution, mixed into TensileDriver."""
+    """Deck merge and policy-filtered phase execution, mixed into `oto.runners.driver.TensileDriver`."""
 
     def load_phases_manifest(self, phases_path: Path | None = None,
                              include_overlay: bool = True

@@ -27,7 +27,7 @@ from oto.metrics.report_models import AcceptanceReport
 
 
 class HtmlMixin:
-    """HTML dashboard rendering, mixed into AcceptanceReporter."""
+    """HTML dashboard rendering, mixed into `oto.metrics.acceptance_report.AcceptanceReporter`."""
 
     # -- A/B head-to-head --------------------------------------------------
 

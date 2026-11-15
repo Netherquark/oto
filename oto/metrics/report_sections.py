@@ -22,7 +22,7 @@ from oto.tensile.shape_order import ordered_shapes
 
 
 class SectionMixin:
-    """HTML section builders, mixed into AcceptanceReporter."""
+    """HTML section builders, mixed into `oto.metrics.acceptance_report.AcceptanceReporter`."""
 
 
     def _timing_metric(self, report) -> str:

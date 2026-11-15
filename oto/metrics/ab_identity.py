@@ -27,7 +27,7 @@ _CP_RE = re.compile(r"Cijk_(.+?)_(?:SB|CB)_")
 
 
 class AbIdentityMixin:
-    """Config identity and arm pairing, mixed into the audit module."""
+    """Config identity and arm pairing helpers; module-level functions consumed by `oto.metrics.ab_audit` (the mixin is not composed anywhere today)."""
 
 
 def _driver(base: Path = BASE):

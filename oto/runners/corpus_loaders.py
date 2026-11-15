@@ -27,7 +27,7 @@ from oto.tensile.shape_order import ordered_shapes
 
 
 class CorpusMixin:
-    """Whole-corpus measurement loading, mixed into TensileDriver."""
+    """Whole-corpus measurement loading, mixed into `oto.runners.driver.TensileDriver`."""
 
     def _load_analytics_from_run(self, run_dir: Path | None = None,
                                  protocol_basis: str = "family") -> list[CellAnalytics]:

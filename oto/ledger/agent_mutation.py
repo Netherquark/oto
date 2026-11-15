@@ -23,6 +23,8 @@ from oto.tensile.candidate import CandidateConfig
 
 
 class MutateMixin:
+    """The mutation arm of the convergence loop, mixed into `oto.ledger.convergence_agent.ConvergenceAgent`."""
+
     def _mutate_cell(
         self,
         cell_key: str,

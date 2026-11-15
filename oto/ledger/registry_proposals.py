@@ -22,7 +22,7 @@ from typing import Any
 
 
 class ProposalMixin:
-    """The Option-H proposal ledger: emitted candidates and their measured outcomes, mixed into SQLiteRegistry."""
+    """The Option-H proposal ledger: emitted candidates and their measured outcomes, mixed into `oto.ledger.registry.SQLiteRegistry`."""
 
 
     # ------------------------------------------------------------------

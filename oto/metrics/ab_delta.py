@@ -211,7 +211,7 @@ def _stat(stats: dict[str, Any], which: str, agg: str) -> float:
 
 
 class ABDeltaMixin:
-    """ABDeltaMixin behaviour, mixed into AnalyticsEngine."""
+    """A/B delta behaviour, mixed into `oto.metrics.benchmark_analytics.AnalyticsEngine`."""
 
 
     def compute_native_vs_spoof_delta(

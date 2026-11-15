@@ -26,7 +26,7 @@ from oto.runners.result_paths import runs_dir as _runs_dir
 
 
 class ClockMixin:
-    """Telemetry clocks and thermals, mixed into TensileDriver."""
+    """Telemetry clocks and thermals, mixed into `oto.runners.driver.TensileDriver`."""
 
     # Telemetry join: only busy samples count (idle sits at the 400 MHz floor),
     # a phase needs a few samples to be trusted, and readings at or below the

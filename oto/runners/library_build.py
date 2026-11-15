@@ -27,7 +27,7 @@ from oto.tools import potential_configs
 
 
 class SynthesisMixin:
-    """Final library synthesis, mixed into TensileDriver."""
+    """Final library synthesis, mixed into `oto.runners.driver.TensileDriver`."""
 
     def _emit_family_logic(self, logic_dir: Path, profile=None) -> None:
         """Placeholder logic definitions for the 7 dtype families.

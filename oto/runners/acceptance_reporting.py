@@ -29,7 +29,7 @@ from oto.tensile.shape_order import ordered_shapes
 
 
 class ReportingMixin:
-    """Acceptance report assembly, mixed into TensileDriver."""
+    """Acceptance report assembly, mixed into `oto.runners.driver.TensileDriver`."""
 
     def _ab_records_from_csv(self, run_dir: Path | None = None, force_arm: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Build native/spoof per-cell record lists from a run's CSVs.

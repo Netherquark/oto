@@ -20,7 +20,7 @@ from oto.metrics.benchmark_analytics import extract_family_from_phase_id
 
 
 class TimingMixin:
-    """Execution-time accounting, mixed into TensileDriver."""
+    """Execution-time accounting, mixed into `oto.runners.driver.TensileDriver`."""
 
     def _compute_family_timing(self, run_id: str) -> dict[str, dict[str, Any]]:
         """Per-family throughput timing from registry started -> ended pairs."""

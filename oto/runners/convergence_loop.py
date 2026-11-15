@@ -17,7 +17,7 @@ from oto.runners.auto_prompt import AutoPlan
 
 
 class AutoMixin:
-    """The one-command overnight loop, mixed into TensileDriver."""
+    """The one-command overnight loop, mixed into `oto.runners.driver.TensileDriver`."""
 
     def run_auto(
         self,

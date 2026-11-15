@@ -118,7 +118,7 @@ def _filter_resume_deck(
 
 
 class ReferenceMixin:
-    """The spoof floor run chain, mixed into TensileDriver."""
+    """The spoof floor run chain, mixed into `oto.runners.driver.TensileDriver`."""
 
     def _resume_chain_ids(self, base: str, profile=None) -> list[str]:
         """Chain ids for a resume, base first.
