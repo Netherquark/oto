@@ -4,7 +4,7 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 
-**Entry**: `docs/skills/caveman.md` (optional) → `claude.md` → `docs/harness_runbook.md` → `docs/docstrings.md`
+**Entry**: `docs/skills/caveman.md` (token efficiency, optional) → `claude.md` → `docs/harness_runbook.md` → `docs/docstrings.md`
 
 ## What you do
 - Work ON the oto codebase (fix bugs, add features, refactor)
