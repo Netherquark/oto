@@ -476,9 +476,10 @@ def _validate_tensile_loads_impl(config: dict[str, Any], profile=None) -> tuple[
     tlu_a, tlu_b = _transposes(config)
     for tc, mt_tc, tlu in (("A", mt0, tlu_a), ("B", mt1, tlu_b)):
         glvw = _glvw_for(config, tc, glvw_default)
-        # GLVW * bpe <= 16 (SolutionStructs:3460)
-        if glvw * dtype["bytes"] > 16:
-            return False, f"GLVW{tc} {glvw} * bpe {dtype['bytes']} > 16"
+        glvb = (profile.global_load_byte_cap
+                if profile is not None else 16)
+        if glvw * dtype["bytes"] > glvb:
+            return False, f"GLVW{tc} {glvw} * bpe {dtype['bytes']} > {glvb}"
         operand = _Operand(tc, mt_tc, depth_u, num_threads, glvw, vw, tlu, config)
         reason = operand.rejection()
         if reason:

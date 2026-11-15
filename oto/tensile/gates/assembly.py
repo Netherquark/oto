@@ -101,6 +101,22 @@ def assembly_depth_u(config: dict[str, Any]) -> int:
     return 16
 
 
+def _allows_complex_gsu(prof) -> bool:
+    """Complex k-split permission: policy-enabled or MFMA fallback."""
+    policy = getattr(prof, "assembly_gates", None)
+    if policy is not None and policy.complex_allows_gsu:
+        return True
+    return prof.has_mfma
+
+
+def _allows_half_gsu(prof) -> bool:
+    """Half GSU permission: policy-enabled or MFMA fallback."""
+    policy = getattr(prof, "assembly_gates", None)
+    if policy is not None and policy.half_allows_gsu:
+        return True
+    return prof.has_mfma
+
+
 def _is_hpa(config: dict[str, Any], dtype_upper: str) -> bool:
     """True when the config runs half with an f32 accumulator (HPA class).
 
@@ -113,15 +129,13 @@ def _is_hpa(config: dict[str, Any], dtype_upper: str) -> bool:
 
 def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
                    gsu: int, profile=None) -> str | None:
-    """GlobalSplitU class rejection text, or None when GSU is legal here.
+    """GlobalSplitU class rejection text, or None when GSU is legal.
 
     Rules:
-      1. GlobalSplitU > 1 on complex (Z/C) -- illegal on this device (no MFMA;
-         SolutionStructs:3553).
-      2. GlobalSplitU > 1 on half with f32 accumulate (HPA / HS_HPA,
-         ComputeDataType 's') -- illegal (needs half/mixed compute or MFMA;
-         SolutionStructs:3553).
-      3. GlobalSplitU > 1 on half Assembly -- legal only if
+      1. GSU > 1 on complex (Z/C) -- policy-enabled or MFMA; SolutionStructs:3553.
+      2. GSU > 1 on half with f32 accumulate (HPA / HS_HPA,
+         ComputeDataType 's') -- policy-enabled or MFMA; SolutionStructs:3553.
+      3. GSU > 1 on half Assembly -- legal only if
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
@@ -129,11 +143,11 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
     prof = _loader.resolve_profile(profile,)
     is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
 
-    if dtype_upper in ("Z", "C") and gsu > 1 and not prof.has_mfma:
+    if dtype_upper in ("Z", "C") and gsu > 1 and not _allows_complex_gsu(prof):
         return (f"GlobalSplitU={gsu} on complex {dtype_upper}: illegal on "
                 f"{prof.codename} (no MatrixInstruction; SolutionStructs:3553)")
 
-    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1 and not prof.has_mfma:
+    if dtype_upper in ("H", "B") and is_hs_hpa and gsu > 1 and not _allows_half_gsu(prof):
         return (f"GlobalSplitU={gsu} on half with f32 accumulate "
                 f"(HPA): illegal on {prof.codename} (needs half/mixed compute or "
                 "MFMA; SolutionStructs:3553)")

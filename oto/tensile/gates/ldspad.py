@@ -195,8 +195,14 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
         if err:
             return False, err
         if tv == 1:
-            return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
-                           f"(SolutionStructs:4519-4521) and {profile.codename} has no MFMA")
+            # TransposeLDS=1 is legal only on the MFMA path of a device with
+            # MFMA actually available. Either leg missing -> refusal.
+            if bool(config.get("MatrixInstruction", 0)) and getattr(profile, "has_mfma", False):
+                pass
+            else:
+                return False, ("TransposeLDS=1 requires MatrixInstruction=1 "
+                               f"(SolutionStructs:4519-4521) and {profile.codename} "
+                               "has no MFMA path for it")
         if tv == -1:
             return False, ("TransposeLDS=-1 forces UnrollMajorLDS, which the "
                            "classic (VALU) path rejects: 'didn't support "

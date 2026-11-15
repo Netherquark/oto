@@ -366,7 +366,7 @@ def write_completions(shell: str) -> str:
     if shell == "bash":
         words = " ".join(sorted(top))
         cases = "\n".join(
-            f'        {name}) opts="{_flags(parser, [name])}" ;;'
+            f'        {name}) opts="{_flags(parser, [name])} {_subcommands(parser, [name])}" ;;'
             for name in sorted(top))
         return (
             "_oto_completions() {\n"
@@ -422,6 +422,16 @@ def _flags(parser: Any, path: list[str]) -> str:
     for action in current._actions:
         out.extend(o for o in action.option_strings if o.startswith("--"))
     return " ".join(sorted(set(out)))
+
+
+def _subcommands(parser: Any, path: list[str]) -> str:
+    current = parser
+    for token in path:
+        current = _subparsers(current).get(token)
+        if current is None:
+            return ""
+    subs = _subparsers(current)
+    return " ".join(sorted(subs)) if subs else ""
 
 
 def show_help(args: Any, parser: Any) -> int:
