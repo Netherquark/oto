@@ -134,3 +134,21 @@ troubleshooting table. The most common failure modes:
   consent) `.env`.
 - Does not run the GPU. Every step is CPU-only.
 - Does not invent silicon facts. The starter pair refuses unverified profiles.
+
+## Upstream Tensile / rocm-libraries facts (folded from research prompts)
+
+- Tensile now lives in the rocm-libraries monorepo at `shared/tensile/`
+  (Python package `shared/tensile/Tensile/`, CLI shims under `shared/tensile/Tensile/bin/`).
+  `Tensile/bin/Tensile` is a 39-line shim that does `from Tensile import Tensile; Tensile.main()`.
+- Upstream Tensile version: `4.49.0` (`shared/tensile/Tensile/__init__.py`).
+- gfx90c is supported upstream: `(9, 0, 12)` in `SupportedISA`, `'gfx90c':'vega10'` in
+  `architectureMap`, and a `(9, 0, 12)` entry in `AsmCaps` (byte-identical to the local patch).
+  The gfx90c bookkeeping patch is therefore already upstream; do not re-add it.
+- `AsmCaps.getCapabilitiesCache(rocmVersion)` takes a NamedTuple with `.major/.minor/.patch`
+  (not a plain tuple).
+- The Assembly (non-MFMA) kernel writer still exists (`KernelWriterAssembly.py`,
+  `KernelWriterSource.py`); `KernelLanguage` domain is still `["Assembly", "Source"]`.
+- `validParameters` is identical (157 names) between pinned 4.44.0 and current 4.49.0.
+- oto drives Tensile via `TENSILE_ROOT` (env / `.env` / `--tensile-root`); no hardcoded paths.
+  Full SDK required: `<prefix>/include/hip/amd_detail/amd_warp_functions.h` must exist.
+- The client resolves via `--prebuilt-client` (Tensile v4.50.0 dropped `--client-build-path`).
