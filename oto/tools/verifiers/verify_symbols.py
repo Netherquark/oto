@@ -3,11 +3,10 @@
 
 Owns: comparing the public surface of ``--base REF`` and the working tree:
 every public symbol in the ref tree must exist in the working tree, with the
-same signature. For a pre-split base (``port_tensile.py`` at REF) the MOVES /
-DECOMPOSED / PROMOTED / RESTRUCTURED tables from the package split still
-apply; for a post-split base the same-path comparison applies to all
-``oto/**/*.py`` files.
-Does NOT own: the split-era equivalence semantics (this is evergreen: REF is
+same signature. For a legacy-era base (``port_tensile.py`` at REF) the
+MOVES / DECOMPOSED / PROMOTED / RESTRUCTURED tables apply; for a package-era
+base the same-path comparison applies to all ``oto/**/*.py`` files.
+Does NOT own: the legacy equivalence semantics (this is evergreen: REF is
 a parameter, not a pin) or method comparison (verify_methods).
 Public API: main, head_text, strip, sig, collect; contract = exit code.
 """
@@ -102,7 +101,7 @@ MOVES = [
     ("harness/resolve_cells.py", ["oto/harness/cell_resolver.py"]),
 ]
 
-#: Modules this refactor deliberately decomposed, so a "body differs" for their
+#: Modules deliberately decomposed, so a "body differs" for their
 #: symbols is expected. The first group is proved by another check (the gate
 #: differential, method equivalence, config-writer or report-html checks); the
 #: second is pure extraction (same statements, moved into helpers), proved by
@@ -118,7 +117,7 @@ DECOMPOSED = (
     "check_tensile_build.py",
 )
 
-#: Private helpers this refactor gave a public name.
+#: Private helpers later promoted to a public name.
 #: Classes that are now composition roots over mixins; the *methods* are all
 #: accounted for individually, so the class-level "body differs" is expected.
 COMPOSITION_ROOTS = {
@@ -162,7 +161,7 @@ RESTRUCTURED = {
 #: PROMOTED symbols must still exist in the new tree under their new name; a
 #: deleted private helper would otherwise pass silently (the private-symbol skip
 #: at the top of the comparison loop). FOLDED holds the private helpers this
-#: refactor folded *into* a larger function instead of extracting, so they have
+#: folded *into* a larger function instead of extracting, so they have
 #: no symbol of their own -- verify_gates.py proves their effect.
 FOLDED = {
     "scheduler.py::CandidateGenerator._estimate_lds_usage",
@@ -319,7 +318,7 @@ def _collect_old_tree(ref: str, head_rel: str) -> tuple[dict[str, Any] | None, s
 def _compare_symbols(head_rel: str, old_syms: dict[str, Any],
                      new_syms: dict[str, Any],
                      decomposed: list[str]) -> tuple[list[str], list[str]]:
-    """Compare every public symbol of one pre-refactor module."""
+    """Compare every public symbol of one legacy module."""
     from oto.tools.verifiers.ref_worktree import drift_matches
 
     missing: list[str] = []
@@ -542,7 +541,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="ref to compare against (default: HEAD~1, the evergreen "
-                         "per-commit check; pass 2824c2f for the split-era comparison)")
+                         "per-commit check; pass a specific ref for the legacy comparison)")
     args = ap.parse_args()
     print(f"base: {args.base}")
 

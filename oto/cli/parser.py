@@ -216,11 +216,11 @@ def _add_verify(sub: Any) -> None:
                                    "  oto verify run snapshot --out before.json")
     vsub = p.add_subparsers(dest="verify_group", help="Verification group")
 
-    a = _add(vsub, "all", "Run all refactor verifiers",
+    a = _add(vsub, "all", "Run all equivalence verifiers",
              "  oto verify all\n  oto verify all --base-ref 2824c2f\n  oto verify all --json", read=True)
     a.add_argument("--base-ref", default=None,
                    help="Ref to compare against (default: HEAD~1, the evergreen "
-                        "per-commit base; pass 2824c2f for the split-era "
+                        "per-commit base; pass a specific ref for the legacy "
                         "comparison)")
     add_json_flag(a)
 

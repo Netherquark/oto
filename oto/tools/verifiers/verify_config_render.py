@@ -5,11 +5,11 @@ For every phase in today's live corpus (``phases.yaml`` + the reference and
 recovery overlays), the writer must render the same (ok, reason) verdict in
 this tree and in ``--base REF``, and identical YAML bytes when both write.
 Between post-split refs this is the library's reset button for emitter drift;
-the split-era comparison against ``port_tensile.py`` is preserved for
-``--base 2824c2f`` (and any ref carrying ``port_tensile.py``).
+the legacy comparison against ``port_tensile.py`` is preserved for
+``--base <ref>`` (and any ref carrying ``port_tensile.py``).
 
 Owns: the corpus render + comparison; the (forward/LocalSplitU/bool-spelling)
-divergence classes the refactor accepted, still honored for legacy refs.
+divergence classes historically accepted, still honored for legacy refs.
 Does NOT own: the writer (oto.tensile.config_writer) or the corpus.
 Public API: main, corpus, phases_from, render_ref. Contract: exit code.
 """
@@ -30,11 +30,11 @@ if str(ROOT) not in sys.path:
 
 from oto import yaml_cached as yamlio
 
-# --- the classification machinery (from the split era; kept verbatim in
+# --- the classification machinery (from the earlier codebase; kept verbatim in
 # spirit) ---------------------------------------------------------------------
-# Knobs the refactor forwarded (the old writer silently dropped them), and the
+# Knobs historically forwarded (the old writer silently dropped them), and the
 # LocalSplitU -> WorkGroup[2] honored value. These excuse only the divergences
-# between the pre-split base and today -- never a divergence introduced today.
+# between the historical base and today -- never a divergence introduced today.
 FORWARDED_SINCE_BASE = frozenset({
     "MaxOccupancy", "AggressivePerfMode", "UseSgprForGRO", "InnerUnroll",
     "FractionalLoad", "NonTemporalA", "NonTemporalB",
@@ -44,7 +44,7 @@ HONOURED_SINCE_BASE = {"LocalSplitU"}
 BOOL_AS_INT = {("true", "1"), ("true", "2"), ("1", "true"), ("2", "true")}
 
 #: The load-divisibility gate (this check's peers refused A: GLVW < VW) was added
-#: after the split as a *fix* for kernels Tensile rejects. The pre-split writer
+#: established as a *fix* for kernels Tensile rejects. The former writer
 #: emitted those configs and they were silently dead (Tensile refuses them at
 #: SolutionStructs). Accepted for the base-vs-HEAD comparison only, and counted
 #: separately so the reader always knows what was excused.
@@ -52,14 +52,15 @@ DIVISIBILITY_SINCE_BASE = "load divisibility illegal"
 
 
 def _only_arch_and_numvalidate(diff: list[str]) -> bool:
-    """The two intentional emitter deltas, post owner decisions 2026-11-13/14.
+    """The two intentional emitter deltas, with the reason recorded.
 
-    ``+  Architecture: <id>`` -- the writer now echoes the resolved device
+    ``+  Architecture: <id>`` -- the writer echoes the resolved device
     architecture into every config instead of leaving Tensile to default it
-    (Refactor-2 device-independence arc; the YAML carried no architecture before).
-    ``NumElementsToValidate: 0 -> 128`` -- owner decision 2026-11-14: Tensile's
-    own CI-equivalent per-phase validation is the reference; the old 0 (never
-    validate) was the split-era behaviour.
+    (the YAML carried no architecture value before; the base comparison must
+    tolerate this one emission delta).
+    ``NumElementsToValidate: 0 -> 128`` -- Tensile's own CI-equivalent
+    per-phase validation is the reference; the old 0 (never validate) was
+    the earlier behaviour.
     Every line must be one of these three; anything else is drift.
     """
     if not diff:
@@ -157,7 +158,7 @@ def _only_honoured_value_changes(diff: list[str], phase_id: object) -> bool:
     return _only_bool_spelling(diff) or _only_honoured_local_split_u(diff, phase_id)
 
 
-# --- the split-era legacy lift (kept, used only when the ref carries it) ------
+# --- the legacy lift (kept, used only when the ref carries it) ------
 LIFT = {
     "from scheduler import (parse_tensile_shape, assembly_class_valid,\n"
     "                               occupancy_feasible, ldspad_feasible)":
@@ -416,7 +417,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="REF to compare against; default HEAD~1 (per-commit evergreen); "
-                         "pass 2824c2f for the split-era legacy comparison")
+                         "pass a specific ref for the legacy comparison")
     ap.add_argument("--limit", type=int, default=None,
                     help="render only the first N phases (bring-up/triage)")
     args = ap.parse_args()

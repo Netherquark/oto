@@ -168,7 +168,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="ref to compare against (default: HEAD~1, the evergreen "
-                         "per-commit check; pass 2824c2f for the split-era comparison)")
+                         "per-commit check; pass a specific ref for the legacy comparison)")
     args = ap.parse_args()
 
     src = head_source(args.base)

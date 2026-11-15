@@ -38,8 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--base", default="HEAD~1",
-                    help="ref to compare against (default: HEAD~1; use 2824c2f for "
-                         "the canonic split-era check)")
+                    help="ref to compare against (default: HEAD~1; pass a specific ref for the legacy-base comparison)")
     ap.add_argument("--limit", type=int, default=None,
                     help="render at most this many phases (config-writer triage)")
     args = ap.parse_args(argv)

@@ -146,7 +146,7 @@ def _compare(cur_path: Path, ref_path: Path, base: str) -> int:
             buckets[bucket_name] = kept
         if n_attested:
             print(f"INTENTIONAL DIVERGENCE vs {base} "
-                  f"(manifest-attested, split-era legality closure): "
+                  f"(manifest-attested, legacy legality closure): "
                   f"{n_attested} rows attested and excused")
 
     fails = buckets["verdict_flipped"] + buckets["text_differs"] + buckets["new_raised"]
@@ -170,7 +170,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="ref to compare against (default: HEAD~1 -- the per-commit "
-                         "evergreen check; pass 2824c2f for the split-era comparison)")
+                         "evergreen check; pass a specific ref for the legacy comparison)")
     args = ap.parse_args()
 
     from oto.tools.verifiers import ref_worktree

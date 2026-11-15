@@ -3,7 +3,7 @@
 
 Owns: emitting (func, config, verdict) tuples for the corpus in this tree,
 by resolving the gate symbols through whichever layout the tree carries
-(pre-split ``scheduler.py`` or the post-split ``oto/tensile/gates/*`` package).
+(the former ``scheduler.py`` or the ``oto/tensile/gates/*`` package).
 Does NOT own: the gate logic (oto.tensile.gates.*) or the parent comparison.
 Public API: emit.
 """
@@ -14,7 +14,7 @@ import random
 
 #: The gate surface shared by both layouts. Each row: the label, the module
 #: attribute in the CURRENT (post-split) tree, and the module attribute in the
-#: legacy (pre-split scheduler.py) tree.
+#: legacy scheduler.py tree.
 _TABLE = [
     ("cap_vector_width", "oto.tensile.candidate", "cap_vector_width",
      ("mod", "cap_vector_width")),
@@ -107,7 +107,7 @@ def _corpus(archs):
 
 
 def _load_legacy(root):
-    """Materialise the pre-split scheduler.py once at REF (cached)."""
+    """Materialise the legacy scheduler.py once at REF (cached)."""
     # Synthetic gfx90c_common built from the CURRENT profile's values (passed
     # via env by the parent): the REF tree has no oto.* at this commit.
     import json as _json

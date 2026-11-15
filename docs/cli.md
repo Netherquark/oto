@@ -585,7 +585,7 @@ oto verify run snapshot --out before.json
 
 #### `oto verify all`
 
-Run all refactor verifiers
+Run all equivalence verifiers
 
 ```bash
 oto verify all
@@ -600,7 +600,7 @@ Flags:
 - `-v`, `--verbose` — Show the command being run and full tracebacks on failure
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
-- `--base-ref` — Ref to compare against (default: HEAD~1, the evergreen per-commit base; pass 2824c2f for the split-era comparison)
+- `--base-ref` — Ref to compare against (default: HEAD~1, the evergreen per-commit base; pass a specific ref for the legacy comparison)
 - `--json` — Emit one JSON document on stdout; silence narration
 
 #### `oto verify run`
