@@ -94,18 +94,180 @@ def _discover_tensile() -> list[Path]:
 
     if os.environ.get("TENSILE_ROOT"):
         _add(Path(os.environ["TENSILE_ROOT"]))
-    # common dev roots (shallow + one level deeper) so a typical checkout is
-    # auto-found without --tensile-root.
-    scan_roots = [Path("/home"), Path("/opt"), Path("/tmp")]
+    # Bounded-depth scan of the usual dev roots. Typical repo trees nest
+    # several segments deep (e.g. ~/a/b/c/rocm-libraries/shared/tensile);
+    # shallow globbing misses them. Hidden dirs, wheels environments and
+    # node_modules are pruned so the walk stays cheap.
+    # /tmp is deliberately not scanned: CI/test droppings live there and
+    # pollute the pick list. Override with --tensile-root instead.
+    scan_roots = [Path("/home"), Path("/opt")]
+    prune = {"node_modules", "__pycache__", "site-packages", "venv", ".venv"}
+    max_depth = 7
     for root in scan_roots:
         if not root.is_dir():
             continue
-        for cand in root.glob("*"):
-            _add(cand)
-            if cand.is_dir():
-                for sub in cand.glob("*"):
-                    _add(sub)
-    return cands
+        for dirpath, dirnames, _ in os.walk(root, followlinks=False):
+            rel = Path(dirpath).relative_to(root)
+            depth = 0 if rel == Path(".") else len(rel.parts)
+            if depth >= max_depth:
+                dirnames[:] = []
+                continue
+            dirnames[:] = [d for d in dirnames
+                           if not d.startswith(".") and d not in prune]
+            _add(Path(dirpath))
+    # keep discovery order, drop duplicates
+    unique: list[Path] = []
+    for c in cands:
+        if c not in unique:
+            unique.append(c)
+    return unique
+
+
+#: TheRock Nightly multi-arch index carrying the gfx90c wheels
+#: (ROCm/TheRock issue #3818; the project's nightly dev venv was installed
+#: from exactly this index). Used by ``oto setup --download-rocm python``.
+THE_ROCK_NIGHTLY_INDEX = "https://rocm.nightlies.amd.com/whl-multi-arch/"
+
+
+def _expand(path_str: str) -> Path:
+    """Expand a user-supplied path (handles ~); return an absolute Path."""
+    return Path(path_str).expanduser().resolve()
+
+
+def _find_sdk_core(venv: Path) -> Path | None:
+    """Return the python-sdk core inside ``venv`` if it passes the hip marker."""
+    for c in sorted(venv.glob("lib/python*/site-packages/_rocm_sdk_core")):
+        if (c / "include" / "hip" / "amd_detail" /
+                "amd_warp_functions.h").is_file():
+            return c
+    return None
+
+
+def _git_clone_tensile(dest: Path, dry_run: bool) -> None:
+    """Sparse-clone ROCm/rocm-libraries (Tensile subtree) into ``dest``."""
+    cmds = [
+        ["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse",
+         "https://github.com/ROCm/rocm-libraries.git", str(dest)],
+        ["git", "-C", str(dest), "sparse-checkout", "set", "shared/tensile"],
+    ]
+    for cmd in cmds:
+        _say("+ " + " ".join(cmd))
+        if not dry_run:
+            subprocess.run(cmd, check=True)
+
+
+def _pip_install_sdk(venv: Path, torch: bool, dry_run: bool) -> None:
+    """Create ``venv`` and install the gfx90c nightly wheels + optional torch."""
+    pip = venv / "bin" / "pip"
+    pkgs = ["rocm[libraries,device-gfx90c]"]
+    if torch:
+        # per the gfx90c enablement track (TheRock #3818)
+        pkgs = ["rocm[libraries,device-gfx90c]",
+                "torch[device-gfx90c]==2.12.0",
+                "torchvision[device-gfx90c]==0.27.0",
+                "torchaudio==2.11.0"]
+    cmds = [[sys.executable, "-m", "venv", str(venv)],
+            [str(pip), "install", "--index-url", THE_ROCK_NIGHTLY_INDEX, *pkgs]]
+    for cmd in cmds:
+        _say("+ " + " ".join(cmd))
+        if not dry_run:
+            subprocess.run(cmd, check=True)
+
+
+def _interactive() -> bool:
+    """True when the wizard may prompt (a TTY with no opt-outs)."""
+    return (sys.stdin.isatty()
+            and os.environ.get("OTO_NO_INPUT") != "1"
+            and os.environ.get("OTO_FORCE_NONINTERACTIVE") != "1")
+
+
+def _download_rocm(args: Any, yes: bool, dry_run: bool) -> Path | None:
+    """Install a nightly SDK on request; return its prefix or ``None``.
+
+    ``--download-rocm python`` creates a nightly wheel venv at ``--rocm-venv``;
+    ``--download-rocm dnf`` prints package guidance instead of running sudo;
+    ``none`` skips. Interactive runs may choose; ``--yes`` without the flag
+    installs nothing (prints the hint).
+    """
+    choice = getattr(args, "download_rocm", None)
+    interactive = _interactive()
+    if choice is None:
+        if interactive:
+            _say("No complete ROCm SDK found on this box.")
+            choice = _ask("Install one now? [python/dnf/none]", "none",
+                         ["python", "dnf", "none"])
+        else:
+            _say("No complete ROCm SDK found on this box.")
+            _say("  Pass --download-rocm python to install the gfx90c nightly wheels")
+            _say("  into --rocm-venv, or --download-rocm dnf for package guidance.")
+            _say("  Nothing was downloaded.")
+            return None
+    if choice in (None, "none"):
+        _say("Skipping ROCm install.")
+        return None
+    if choice == "dnf":
+        _say("dnf install is not run by oto (it needs sudo). See rocm.docs.amd.com")
+        _say("for your distro's ROCm 6.4.x / 7.x packages, then re-run 'oto setup'.")
+        return None
+    venv = _expand(args.rocm_venv)
+    torch = bool(getattr(args, "download_torch", False))
+    if interactive and not yes and not dry_run and not getattr(args, "download_torch", False):
+        torch = _ask("Also install torch/torchvision (large download)?", "no",
+                     ["yes", "no"]) == "yes"
+    _say(f"  nightly index : {THE_ROCK_NIGHTLY_INDEX}")
+    _say(f"  venv          : {venv}")
+    _say("  sdk           : rocm[libraries,device-gfx90c]"
+         + (" (+ torch 2.12.0/torchvision 0.27.0/torchaudio 2.11.0)" if torch else ""))
+    try:
+        _pip_install_sdk(venv, torch, dry_run)
+    except subprocess.CalledProcessError as exc:
+        _say(f"  ERROR: ROCm wheel install failed ({exc.returncode}).")
+        _say("  The nightly index moves daily; pin or re-check rocm.nightlies.amd.com.")
+        return None
+    if dry_run:
+        _say("  (dry-run: nothing was installed)")
+        return None
+    sdk = _find_sdk_core(venv)
+    if sdk is None:
+        _say(f"  WARN: nightly wheels installed but {venv} has no full SDK marker.")
+        return None
+    _say(f"  installed SDK : {sdk}")
+    return sdk
+
+
+def _download_tensile(args: Any, yes: bool, dry_run: bool) -> Path | None:
+    """Sparse-clone ROCm/rocm-libraries on request; return the root or ``None``."""
+    choice = getattr(args, "download_tensile", None)
+    interactive = _interactive()
+    if choice is None:
+        if interactive:
+            choice = _ask("No Tensile checkout found. Sparse-clone it now?", "none",
+                          ["clone", "none"])
+        else:
+            _say("No Tensile checkout found (shared/tensile needed for the client build).")
+            _say("  Pass --download-tensile clone to sparse-checkout it into --tensile-dest,")
+            _say("  or --tensile-root /path/to/rocm-libraries. Nothing was downloaded.")
+            return None
+    if choice in (None, "none"):
+        _say("Skipping Tensile clone.")
+        return None
+    dest = _expand(args.tensile_dest)
+    _say("  clone         : github.com/ROCm/rocm-libraries (sparse: shared/tensile)")
+    _say(f"  dest          : {dest}")
+    try:
+        _git_clone_tensile(dest, dry_run)
+    except subprocess.CalledProcessError as exc:
+        _say(f"  ERROR: git clone failed ({exc.returncode}).")
+        return None
+    if dry_run:
+        _say("  (dry-run: nothing was cloned)")
+        return None
+    marker = dest / "shared" / "tensile" / "Tensile" / "bin" / "Tensile"
+    if not marker.is_file():
+        _say(f"  WARN: cloned but {marker} is missing; aborting Tensile detection.")
+        return None
+    _say(f"  cloned Tensile : {dest / 'shared' / 'tensile'}")
+    return dest
 
 
 def _say(msg: str = "") -> None:
@@ -262,12 +424,8 @@ def _step_rocm_discovery(args, yes, dry_run):
         _say(f"  ROCm prefix: {rocm or '(none — set ROCM_PATH manually)'}")
         _say()
     else:
-        _say("No complete ROCm SDK found on this box.")
-        _say("  Install TheRock nightly (or ROCm 7.x) and re-run, or pass")
-        _say("  --rocm-prefix /path/to/full/sdk.")
+        rocm = _download_rocm(args, yes, dry_run)
         _say()
-        if not yes:
-            _ask("Press Enter to continue anyway", "")
     if rocm is None and getattr(args, "rocm_prefix", None):
         rocm = Path(args.rocm_prefix)
     if rocm is not None and not (rocm / "include" / "hip" / "amd_detail" /
@@ -277,7 +435,7 @@ def _step_rocm_discovery(args, yes, dry_run):
     return rocm
 
 
-def _step_tensile_discovery(args, yes):
+def _step_tensile_discovery(args, yes, dry_run):
     """Discover Tensile checkouts and let the user pick one; return the root or ``None``."""
     tensile_cands = _discover_tensile()
     tensile = None
@@ -297,12 +455,8 @@ def _step_tensile_discovery(args, yes):
         _say(f"  Tensile root: {tensile or '(none)'}")
         _say()
     else:
-        _say("No Tensile checkout found under /home or TENSILE_ROOT.")
-        _say("  Clone rocm-libraries (shared/tensile) and re-run, or pass")
-        _say("  --tensile-root /path/to/rocm-libraries.")
+        tensile = _download_tensile(args, yes, dry_run)
         _say()
-        if not yes:
-            _ask("Press Enter to continue anyway", "")
     if tensile is None and getattr(args, "tensile_root", None):
         tensile = Path(args.tensile_root)
     return tensile
@@ -414,7 +568,7 @@ def run_setup(args: Any) -> int:
     mode, spoof = _step_convergence_mode(args, yes)
     prefs = _step_toolchain_prefs(args, yes)
     rocm = _step_rocm_discovery(args, yes, dry_run)
-    tensile = _step_tensile_discovery(args, yes)
+    tensile = _step_tensile_discovery(args, yes, dry_run)
     targets = _step_gpu_targets(args, yes)
     _step_client_build(rocm, tensile, targets, args, dry_run)
     _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=prefs)

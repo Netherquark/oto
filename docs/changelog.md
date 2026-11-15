@@ -4927,3 +4927,21 @@ This content was preserved from the former harness runbook that referenced `/tmp
   session are not a tuning verdict; the A/B remains TTY-gated.
   `phases.yaml` gained the CC:256 paired-widen control row (`...swAssertFree0ElementMultiple2_...`),
   fingerprinted as the deck does (`e99f3f...`, 281 rows, 0 illegal by `check candidates`).
+
+## November 2026
+
+- **2026-11-15 — Easy mode can install the nightly stack on request; deep Tensile discovery.**
+  `oto setup` previously only *discovered* existing SDKs/Tensile checkouts — nothing
+  could be downloaded on request, and the Tensile discovery was a 2-level glob that
+  missed checkouts nested a few segments deep (like `sources/GPU/rocm-libraries/shared/tensile`).
+  Now `--download-rocm python` creates a nightly wheel venv at `--rocm-venv`
+  (index `rocm.nightlies.amd.com/whl-multi-arch/`, the same multi-arch index the
+  nightly dev venv was installed from; `--download-torch` adds torch 2.12.0 /
+  torchvision 0.27.0 / torchaudio 2.11.0 per TheRock #3818), `--download-rocm dnf`
+  prints package guidance (no sudo executed), and `--download-tensile clone` sparse-clones
+  ROCm/rocm-libraries (`shared/tensile`) into `--tensile-dest`. Interactively the wizard
+  asks; non-interactive without the flags installs nothing (prints the opt-in hint).
+  `--dry-run` prints the exact commands and executes nothing — pinned by
+  `tests/test_setup_downloads.py` (4 tests). Discovery is now a bounded-depth walk with
+  hidden/venv/node_modules prune (`/tmp` no longer scanned to avoid test-droppings
+  polluting the pick list; use `--tensile-root` for unusual layouts).

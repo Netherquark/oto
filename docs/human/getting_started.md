@@ -35,6 +35,20 @@ python3 -m oto setup --dry-run      # print the plan only
 convergence, the first complete ROCm SDK it finds, the first Tensile checkout
 it finds, gfx90c GPU targets, builds the client, writes `.env`).
 
+Both the SDK and the Tensile checkout can also be installed on request —
+easy mode never downloads anything you did not ask for:
+
+```bash
+python3 -m oto setup --yes --download-rocm python --rocm-venv ~/rocm-venv \
+    --download-tensile clone --tensile-dest ~/rocm-libraries   # sparse clone of ROCm/rocm-libraries
+```
+
+`--download-rocm python` creates a venv and installs the gfx90c nightly
+wheels from `rocm.nightlies.amd.com/whl-multi-arch/` (add `--download-torch`
+for torch 2.12.0/torchvision 0.27.0/torchaudio 2.11.0). `--download-rocm dnf`
+prints package guidance instead of invoking sudo. Interactively, the wizard
+asks; non-interactively without the flags it downloads nothing.
+
 ## 3. What it asks (and the good defaults)
 
 | Step | Question | Default | Why |
@@ -57,11 +71,14 @@ it finds, gfx90c GPU targets, builds the client, writes `.env`).
 ## 4. The full-SDK rule (the thing that bites)
 
 A ROCm install is **usable** only when it ships a complete HIP include tree:
-`<prefix>/include/hip/amd_detail/amd_warp_functions.h` must exist. A
-python-sdk venv ships a *partial* `include/hip` and the build silently resolves
-HIP headers from `/usr` (ROCm 6), failing with `__AMDGCN_WAVEFRONT_SIZE`
-errors. Point `--rocm-prefix` at the full extracted dist (e.g. the TheRock
-`dist-<ver>` directory) or `/opt/rocm`.
+`<prefix>/include/hip/amd_detail/amd_warp_functions.h` must exist. The marker
+is what easy mode checks before accepting any prefix. The python-sdk wheel
+layout ships a complete tree — but not the `amd_smi` C headers the Tensile
+client links with; those live only in the full tarball (`dist-<ver>`). If the
+client build fails on amd_smi, point `--rocm-prefix` at a full dist extraction
+or pass `--download-rocm python` and use the wheel-built client instead.
+Never let the build resolve HIP headers from `/usr` (ROCm 6) — see the
+`__AMDGCN_WAVEFRONT_SIZE` failure it caused in the Nov-2026 probes.
 
 ## 5. Manual setup
 

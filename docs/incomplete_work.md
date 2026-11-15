@@ -30,8 +30,14 @@ not re-raise closed items without new information.
   `acceptance_report.{json,html}` were overwritten in the v1-readiness audit;
   byte comparison confidence does not exist. The drift manifest stands at its
   last re-attestation (2026-11-15). Re-attestation is a deliberate on-machine act.
-- **2 × `oto doctor` warnings (advisory; user's call stands — do not
-  silence):** venv-not-active; abandoned run `run_20261029_152402`.
+- **`oto doctor` advisory warnings (advisory; user's call stands — do not
+  silence):** venv-not-active (the interpreter is a bare `python3`, not the
+  nightly venv — harmless for oto core, masks missing rocm/torch packages for
+  PYTorch paths); and an abandoned run `run_20261029_152402` recorded in
+  `runs` (status not completed/interrupted). The Oct-29 abandoned-run warning
+  no longer surfaces because a completed run (`run_20261115_175934`) is now the
+  newest, but the stale row remains in the append-only ledger and is kept as
+  history, not deleted.
 
 ## Open items
 

@@ -127,6 +127,8 @@ Corollaries:
 | `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 | `docs/developer/docstrings.md` | dev | Ecosystem | The docstring convention: Owns/Does NOT own/Public API, prose-first function docstrings |
+| `docs/developer/release_contract.md` | dev | Ecosystem | The 1.0.0 stability contract: which CLI/exit codes/JSON formats are contracted, which are not, and how the release battery re-verifies them |
+| `docs/developer/release_notes_v1_0_0.md` | shared | Ecosystem | GitHub release notes for v1.0.0 — paste this into the release form when tagging |
 
 ## The quality gates
 

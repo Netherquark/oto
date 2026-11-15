@@ -378,6 +378,16 @@ def _add_setup(sub: Any) -> None:
     p.add_argument("--spoof", help="Spoof (reference floor) GPU codename (informed mode)")
     p.add_argument("--rocm-prefix", help="ROCM install prefix (auto-detected if omitted)")
     p.add_argument("--tensile-root", help="Tensile checkout root (auto-detected if omitted)")
+    p.add_argument("--download-rocm", choices=("python", "dnf", "none"), default=None,
+                   help="Install a nightly TheRock SDK into --rocm-venv (python) or print dnf commands (dnf). Default: none; without this flag and without --yes, the wizard asks.")
+    p.add_argument("--rocm-venv", default="~/.local/share/oto/rocm-nightly-venv",
+                   help="Where the nightly wheel venv is created (default: ~/.local/share/oto/rocm-nightly-venv)")
+    p.add_argument("--download-torch", action="store_true",
+                   help="Also install torch/torchvision/torchaudio nightly wheels for --rocm-venv (large download)")
+    p.add_argument("--download-tensile", choices=("clone", "none"), default=None,
+                   help="Sparse-clone ROCm/rocm-libraries (shared/tensile) into --tensile-dest. Default: none; without this flag and without --yes, the wizard asks.")
+    p.add_argument("--tensile-dest", default="~/.local/share/oto/rocm-libraries",
+                   help="Where ROCm/rocm-libraries is sparse-cloned (default: ~/.local/share/oto/rocm-libraries)")
     p.add_argument("--gpu-targets", help="GPU targets for the client build (comma list)")
     p.add_argument("--jobs", type=int, default=4, help="Parallel build jobs")
     p.add_argument("--skip-build", action="store_true",

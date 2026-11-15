@@ -508,6 +508,11 @@ Flags:
 - `--spoof` — Spoof (reference floor) GPU codename (informed mode)
 - `--rocm-prefix` — ROCM install prefix (auto-detected if omitted)
 - `--tensile-root` — Tensile checkout root (auto-detected if omitted)
+- `--download-rocm` {python,dnf,none} — Install a nightly TheRock SDK into --rocm-venv (python) or print dnf commands (dnf). Default: none; without this flag and without --yes, the wizard asks.
+- `--rocm-venv` (default: `~/.local/share/oto/rocm-nightly-venv`) — Where the nightly wheel venv is created (default: ~/.local/share/oto/rocm-nightly-venv)
+- `--download-torch` — Also install torch/torchvision/torchaudio nightly wheels for --rocm-venv (large download)
+- `--download-tensile` {clone,none} — Sparse-clone ROCm/rocm-libraries (shared/tensile) into --tensile-dest. Default: none; without this flag and without --yes, the wizard asks.
+- `--tensile-dest` (default: `~/.local/share/oto/rocm-libraries`) — Where ROCm/rocm-libraries is sparse-cloned (default: ~/.local/share/oto/rocm-libraries)
 - `--gpu-targets` — GPU targets for the client build (comma list)
 - `--jobs` (default: `4`) — Parallel build jobs
 - `--skip-build` — Do not build the Tensile client

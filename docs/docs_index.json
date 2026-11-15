@@ -250,9 +250,21 @@
       "kind": "Ecosystem",
       "owns": "The docstring convention: Owns/Does NOT own/Public API, prose-first function docstrings",
       "path": "docs/developer/docstrings.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The 1.0.0 stability contract: which CLI/exit codes/JSON formats are contracted, which are not, and how the release battery re-verifies them",
+      "path": "docs/developer/release_contract.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "GitHub release notes for v1.0.0 \u2014 paste this into the release form when tagging",
+      "path": "docs/developer/release_notes_v1_0_0.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 33,
+  "total": 35,
   "version": 1
 }
