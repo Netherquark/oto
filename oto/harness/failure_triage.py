@@ -93,15 +93,13 @@ def census(base: str = ".", run_filter: str | None = None,
            sample_limit: int = 12, profile=None) -> dict[str, Any]:
     """Walk the run corpus and classify every empty phase.
 
-    Args:
-        base: Repo root holding the runs directory.
-        run_filter: When given, only this run directory is scanned.
-        sample_limit: How many example empty phases to retain.
+    `base` is the repo root holding the runs directory; `run_filter` scans
+    only this run directory; `sample_limit` caps how many example empty
+    phases are retained.
 
-    Returns:
-        ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
-        "samples": [(run, phase, reason)]}``.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Returns ``{"meta": {...}, "runs": [...], "reasons": {reason: count},
+    "samples": [(run, phase, reason)]}``. ``profile`` is an optional
+    ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     runs_dir = _runs_dir(base, _loader.resolve_profile(profile,).codename)
     run_dirs = sorted(d for d in runs_dir.iterdir() if d.is_dir())
@@ -137,6 +135,7 @@ def census(base: str = ".", run_filter: str | None = None,
 
 
 def _report(result: dict[str, Any], top: int) -> None:
+    """Print the census: runs, the empty-phase reason histogram and samples."""
     meta = result["meta"]
     print(f"runs scanned: {meta['runs_scanned']}")
     print(f"phase dirs: {meta['phase_dirs']}   with no non-empty CSV: {meta['empty']}")
@@ -162,6 +161,7 @@ def _report(result: dict[str, Any], top: int) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Classify every empty phase in the run corpus (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)

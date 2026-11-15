@@ -85,7 +85,7 @@ def _tile_str(value: Any) -> Any:
     """A tile/workgroup list -> the ``"MxN"`` string the gates parse.
 
     A list whose entries are not integers (e.g. ``["NONE"]``) is returned
-    unchanged, so :func:`_tile_parses` can reject it rather than this raising.
+    unchanged, so ``_tile_parses`` can reject it rather than this raising.
     """
     if isinstance(value, (list, tuple)):
         try:
@@ -171,6 +171,7 @@ def measurement_produced(phase_dir: Path) -> bool:
 
 
 def _empty_population() -> dict[str, Any]:
+    """A zeroed confusion-count dict for one population (ours or reference)."""
     return {"phases": 0, "built": 0, "confusion": {}, "false_rejections": [],
             "misses": []}
 
@@ -187,14 +188,13 @@ def population_of(run_name: str) -> str:
 def audit(base: str = ".", families: Sequence[str] | None = None, profile=None) -> dict[str, Any]:
     """Classify every phase with a launch config against the gates.
 
-    Args:
-        base: Repo root holding the runs directory.
-        families: When given, keep only phases whose resolved family is listed.
+    `base` is the repo root holding the runs directory; `families` keeps
+    only phases whose resolved family is listed.
 
-    Returns:
-        ``{"meta": {...}, "populations": {"ours"|"reference": {...}}}``; each
-        population carries the confusion counts and the two named work lists.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Returns ``{"meta": {...}, "populations": {"ours"|"reference": {...}}}``;
+    each population carries the confusion counts and the two named work
+    lists. ``profile`` is an optional ``DeviceProfile``; it defaults to the
+    process's ambient profile.
     """
     from oto.tensile.candidate import CandidateGenerator
     from oto.tensile.gates.occupancy import ldspad_feasible
@@ -245,6 +245,7 @@ def audit(base: str = ".", families: Sequence[str] | None = None, profile=None) 
 
 
 def _report(name: str, pop: dict[str, Any], limit: int) -> None:
+    """Print one population's confusion table and its first `limit` work-list rows."""
     conf = pop["confusion"]
     print(f"\n{name}   phases={pop['phases']}  built={pop['built']}")
     cells = [
@@ -270,6 +271,7 @@ def _report(name: str, pop: dict[str, Any], limit: int) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Audit the launch gates against the measured corpus (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)

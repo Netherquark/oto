@@ -64,7 +64,7 @@ REQUIRED_SECTIONS = [
 
 
 def _check_viewport(page, name: str, expected_cols: int) -> list[str]:
-    """Check one viewport. Returns list of failure messages."""
+    """Check one viewport; returns the list of failure messages."""
     failures = []
     data = page.evaluate(JS_SNAPSHOT)
 
@@ -96,7 +96,7 @@ def _check_viewport(page, name: str, expected_cols: int) -> list[str]:
 
 
 def check_report(report_path: Path, base_url: str | None = None) -> int:
-    """Run visual/layout checks. Returns 0 on pass, 1 on fail."""
+    """Run the visual/layout checks; return 0 on pass, 1 on fail."""
     if base_url:
         url = f"{base_url.rstrip('/')}/{report_path}"
     else:
@@ -126,6 +126,7 @@ def check_report(report_path: Path, base_url: str | None = None) -> int:
 
 
 def main():
+    """Check an acceptance report's HTML layout visually (CLI entry)."""
     parser = argparse.ArgumentParser(description="Visual/layout regression check for acceptance report")
     parser.add_argument("report", type=Path, help="Path to acceptance_report.html")
     parser.add_argument("--url", help="Base URL if served (e.g. http://127.0.0.1:8765)")

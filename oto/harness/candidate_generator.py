@@ -40,6 +40,7 @@ __all__ = [
 
 
 def main() -> int:
+    """Emit or prune the candidate overlay (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true",
                     help="validate + count only; do not write the overlay")

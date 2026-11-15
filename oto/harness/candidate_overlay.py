@@ -206,6 +206,7 @@ def _round_robin_prune(rows: list[dict[str, Any]],
 
 
 def _summarise(rows: list[dict[str, Any]]) -> None:
+    """Print the per-family candidate counts and the grand total."""
     by_family: dict[str, dict[str, int]] = {}
     for r in rows:
         fam = str(r["config"].get("FamilyLabel", "")).upper() or "?"

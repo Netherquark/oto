@@ -184,6 +184,7 @@ def _floor_best(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 def _clamp_pct(x: float | None) -> float | None:
+    """Round to one decimal; ``None`` passes through."""
     return round(x, 1) if x is not None else None
 
 
@@ -401,6 +402,7 @@ def build(base_dir: str = ".",
 
 
 def _compact_cfg(cfg: dict[str, Any], kb: bool = False) -> str:
+    """One-line config summary for the table/TSV output (``kb`` for the short form)."""
     if not cfg:
         return "?"
     if kb:
@@ -418,12 +420,14 @@ def _compact_cfg(cfg: dict[str, Any], kb: bool = False) -> str:
 
 
 def _pct_str(x: float | None, w: int = 6) -> str:
+    """Format a percentage for the fixed-width column; ``"-"`` when ``None``."""
     if x is None:
         return "-".rjust(w)
     return (f"{x:+6.1f}") if w == 6 else (f"{x:6.1f}")
 
 
 def _table(cells: list[dict[str, Any]]) -> str:
+    """The aligned cells-resolved table as text."""
     lines = [
         f"{'fam':<4}{'shape':<18}{'verdict':<7}{'gap':<10}{'d%':>7}{'nat':>8}{'spoof':>8}"
         f"{'%ceil':>7}{'%theo':>7}  {'NATIVE WINNER CONFIG':<82}  FLOOR CONFIG",
@@ -488,6 +492,7 @@ def _taxonomy(cells: list[dict[str, Any]]) -> str:
 
 
 def _tsv(cells: list[dict[str, Any]]) -> str:
+    """The verdicts TSV as text."""
     head = ("family\tshape\tdtype\tverdict\tcfg_gap\tdelta_pct\tnative_median\tnative_value"
             "\tspoof_median\tspoof_value\tpct_ceiling\tpct_theoretical"
             "\tnative_winner_phase\tnative_winner_run\tnative_config\tspoof_config")
@@ -508,6 +513,7 @@ def _tsv(cells: list[dict[str, Any]]) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Resolve every cell's verdict and write the caches (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None, help="repo root")
@@ -538,6 +544,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(_taxonomy(cells))
 
     def _write(flag_off: bool, path: str, payload: str) -> None:
+        """Write `payload` to `path` unless `flag_off` (creating parents)."""
         if flag_off:
             return
         out = Path(path)

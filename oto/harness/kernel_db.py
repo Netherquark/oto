@@ -376,16 +376,13 @@ _LOADED_CACHE: dict[tuple[str, int, float], dict[str, list[dict[str, Any]]]] = {
 def read_kernel_db(cache_path: str) -> dict[str, list[dict[str, Any]]]:
     """Read the cached kernel DB, memoised, without ever rebuilding it.
 
-    The read-only sibling of :func:`load_kernel_db`: the analysis tools want
+    The read-only sibling of ``load_kernel_db``: the analysis tools want
     the cache that is on disk (and an empty mapping when there is none), not a
     rebuild. The parse is memoised on (path, size, mtime), so the 18 MB of
     JSON is read once per session and a rewritten cache is re-read.
 
-    Args:
-        cache_path: The ``kernel_db.json`` to read.
-
-    Returns:
-        The ``run_id -> rows`` mapping (empty when the file is absent).
+    `cache_path` is the ``kernel_db.json`` to read. Returns the
+    ``run_id -> rows`` mapping (empty when the file is absent).
     """
     path = Path(cache_path)
     if not path.is_file():
@@ -453,6 +450,7 @@ DEFAULT_CACHE = results_rel("analysis", "kernel_db.json")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Build or refresh the kernel DB cache (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None,

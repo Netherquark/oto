@@ -138,7 +138,10 @@ def _group_label(row: dict[str, Any]) -> str:
 
 
 def _group_sort(label: str, profile=None) -> tuple[int, str]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Sort key ordering census groups by the profile's family order, then typecode.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     family, _, typecode = label.partition("/")
     order = {f: i for i, f in enumerate(_loader.resolve_profile(profile,).family_shapes)}
     return (order.get(family, len(order),), typecode)
@@ -219,6 +222,7 @@ def axis_census(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _geometry(row: dict[str, Any]) -> tuple[str | None, ...]:
+    """The row's raw geometry tuple (same keys and order as `GEOMETRY_KEYS`)."""
     return tuple(_raw(row, key) for key in GEOMETRY_KEYS)
 
 
@@ -312,10 +316,12 @@ def cell_history(rows: Sequence[dict[str, Any]], family: str, side: int,
 
 
 def _fmt(value: Any | None) -> str:
+    """Format one knob value for the table output ('-' when absent)."""
     return "-" if value is None else str(value)
 
 
 def _geometry_text(record: dict[str, Any]) -> str:
+    """One line describing a geometry record (MT/TT/DU/VW/GSU/WG)."""
     return (f"MT={_fmt(record.get('macro_tile'))} "
             f"TT={_fmt(record.get('thread_tile'))} "
             f"DU={_fmt(record.get('depth_u'))} "
@@ -394,6 +400,7 @@ def _payload(args: argparse.Namespace, rows: Sequence[dict[str, Any]],
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Census the corpus by axis or by cell (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=None,
                     help="repo root override (default: this file's parent of package)")

@@ -51,6 +51,7 @@ _FAMILY_ORDER = ("SS", "DD", "HH", "HH_HPA", "HS_HPA", "CC", "ZZ")
 
 
 def _side(shape: object) -> int | None:
+    """Side length of a ``"SxSxS"`` shape string; ``None`` when unparseable."""
     try:
         return int(str(shape).split("x")[0])
     except (ValueError, TypeError, IndexError):
@@ -72,10 +73,12 @@ def _winner_per_cell(rows: list[dict[str, Any]]) -> dict[tuple[str, int], dict[s
 
 
 def _knob_dict(r: dict[str, Any]) -> dict[str, Any]:
+    """The structural knobs of a corpus row, with missing keys dropped."""
     return {k: r.get(k) for k in STRUCTURAL_KNOBS if r.get(k) is not None}
 
 
 def _knob_diff(a: dict[str, Any], b: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Diff two structural knob dicts; return ``({only_native, only_floor, changed}, summary lines)``."""
     keys = sorted(set(a) | set(b))
     only_a = {k: a[k] for k in keys if k in a and k not in b}
     only_b = {k: b[k] for k in keys if k in b and k not in a}
@@ -92,6 +95,7 @@ def _knob_diff(a: dict[str, Any], b: dict[str, Any]) -> tuple[dict[str, Any], li
 
 
 def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[str, Any]]:
+    """Print and return the per-cell native-vs-floor diff rows."""
     rows_out: list[dict[str, Any]] = []
     for fam, side in cells:
         n, f = native_w[(fam, side)], floor_w[(fam, side)]
@@ -120,7 +124,7 @@ def _paired_rows(cells, native_w, floor_w, floor_wins_only: bool) -> list[dict[s
     return rows_out
 
 def main(profile=None) -> int:
-    """CLI: native-vs-floor winner knob diff per cell. ``profile`` selects the device; ambient by default."""
+    """Native-vs-floor winner knob diff per cell (CLI entry). ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=None,

@@ -92,12 +92,9 @@ def _bucket(value: int, buckets: Sequence[int]) -> int | None:
     "8k-ish", and a 96x96 tile (9216 elements) lands in the 8k column
     rather than being counted as a 16k tile.
 
-    Args:
-        value: The measured quantity.
-        buckets: The bucket edges, ascending.
-
-    Returns:
-        The bucket, or None when the value falls outside the axis.
+    `value` is the measured quantity; `buckets` are the bucket edges,
+    ascending. Returns the bucket, or ``None`` when the value falls outside
+    the axis.
     """
     chosen = None
     for edge in buckets:
@@ -109,9 +106,9 @@ def _bucket(value: int, buckets: Sequence[int]) -> int | None:
 
 
 def _weight(family: str, profile=None) -> int:
-    """The accumulator VGPRs per element for a family (1 S, 2 D, 4 C, 8 Z).
+    """The accumulator VGPRs per element for `family` (1 S, 2 D, 4 C, 8 Z).
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     char = _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",)
     return {"S": 1, "H": 1, "D": 2, "C": 4, "Z": 8}.get(char, 1,)
@@ -122,14 +119,10 @@ def _grid(family: str, legal: Iterable[Sequence[Any]],
           ) -> dict[tuple[int, int], dict[str, Any]]:
     """The 2D projection: bucket -> {legal, value, geometries}.
 
-    Args:
-        family: The family key (for the accumulator weight).
-        legal: The legal geometries (tile, thread tile, vw, du).
-        measured: The measured geometries of the cell.
-
-    Returns:
-        ``(area_bucket, acc_bucket) -> {"legal": bool, "value": float,
-        "n_legal": int, "n_measured": int}``.
+    `family` is the family key (for the accumulator weight); `legal` are the
+    legal geometries (tile, thread tile, vw, du); `measured` are the measured
+    geometries of the cell. Returns ``(area_bucket, acc_bucket) ->
+    {"legal": bool, "value": float, "n_legal": int, "n_measured": int}``.
     """
     weight = _weight(family)
     grid: dict[tuple[int, int], dict[str, Any]] = {}
@@ -184,11 +177,8 @@ def _extrema(grid: dict[tuple[int, int], dict[str, Any]]
     neighbour is slower. Buckets with fewer than two measured neighbours are
     not called either -- there is nothing to compare them against.
 
-    Args:
-        grid: The projected grid.
-
-    Returns:
-        (peaks, traps), each a list of (area, acc) buckets.
+    `grid` is the projected grid. Returns ``(peaks, traps)``, each a list of
+    ``(area, acc)`` buckets.
     """
     peaks: list[tuple[int, int]] = []
     traps: list[tuple[int, int]] = []
@@ -268,16 +258,9 @@ def _figure(family: str, shape: str, row: dict[str, Any],
             traps: Sequence[tuple[int, int]]) -> str:
     """The SVG of one cell's coverage grid.
 
-    Args:
-        family: The family key.
-        shape: The cell shape.
-        row: The coverage row (the counts and the best measured).
-        grid: The projected grid.
-        peaks: The local maxima.
-        traps: The local minima.
-
-    Returns:
-        The SVG document.
+    `family` is the family key; `shape` the cell shape; `row` the coverage
+    row (the counts and the best measured); `grid` the projected grid;
+    `peaks`/`traps` the local extrema. Returns the SVG document.
     """
     width = _MARGIN_L + _CELL * len(AREA_BUCKETS) + 230
     height = _MARGIN_T + _CELL * len(ACC_BUCKETS) + _MARGIN_B
@@ -441,6 +424,7 @@ def _write_data(entries: list[dict[str, Any]], out_dir: Path) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Render the per-cell coverage grids as SVG (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", action="append", help="limit to a family")

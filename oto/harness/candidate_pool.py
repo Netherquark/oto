@@ -49,6 +49,7 @@ DROPPED_ASSERTIONS: list[str] = []
 
 
 def _tile_key(mt: str, tt: str) -> str:
+    """The tile-identity key used to bucket candidates by tile."""
     return f"{mt.lower()}_tt{tt.lower()}"
 
 
@@ -75,13 +76,17 @@ def _merge_shapes(existing: list[str], sides: tuple[int, ...]) -> list[str]:
 
 
 def _label_for(fam: str, pattern: str, knobs: dict[str, Any]) -> str:
+    """The human-readable label for a candidate row."""
     return (f"{fam}_{pattern}_mt{knobs['MacroTile']}_tt{knobs['ThreadTile']}"
             f"_vw{knobs.get('VectorWidth', 1)}_wgm{knobs.get('WorkGroupMapping', 4)}"
             f"_du{knobs.get('DepthU', 16)}_alu")
 
 
 def _base_config(fam: str, profile=None) -> dict[str, Any]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The base candidate template for `fam` (DataType from the family table).
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     return {
         "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": FAMILY_DTYPE[fam],
@@ -92,10 +97,12 @@ def _base_config(fam: str, profile=None) -> dict[str, Any]:
 
 
 def _fingerprint(config: dict[str, Any]) -> str:
+    """The content fingerprint of a candidate config."""
     return fingerprint_config(config)
 
 
 def _load_deck_fps() -> set[str]:
+    """The fingerprints already in the curated ``phases.yaml`` deck."""
     fps: set[str] = set()
     p = REPO_ROOT / "phases.yaml"
     if p.exists():
@@ -116,10 +123,12 @@ def __yaml_load(path: Path, fallback: Any = None) -> Any:
 
 
 def _load_seed_fps(profile=None) -> set[str]:
-    """fps already scheduled by the *curated* seed rows (never the generator's
-    own previous appends: those are exactly what a re-run must skip deduping
-    against, or wide rows colliding with the last append silently vanish).
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    """FPs already scheduled by the *curated* seed rows.
+
+    The generator's own previous appends are deliberately excluded: those are
+    exactly what a re-run must skip deduplicating against, or wide rows
+    colliding with the last append silently vanish. ``profile`` is an
+    optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     fps: set[str] = set()
     payload = __yaml_load(
@@ -135,6 +144,7 @@ def _load_seed_fps(profile=None) -> set[str]:
 
 
 def _strip_not_forwarded(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Drop the knobs the launch boundary does not forward; returns ``(config, dropped)``."""
     dropped = [k for k in _NOT_FORWARDED_YET if k in config]
     return {k: v for k, v in config.items() if k not in _NOT_FORWARDED_YET}, dropped
 
@@ -381,6 +391,7 @@ def iter_candidates() -> Iterator[dict[str, Any]]:
         sides: tuple[int, ...],
         note: str = "",
     ) -> dict[str, Any] | None:
+        """Offer one candidate row; None when the row is illegal, known or pruned."""
         return _offer_row(sched, seen_fp, pool, fam, tier, pattern, knobs,
                           sides, note)
 
@@ -462,7 +473,10 @@ def _narrow_row_gen(sched, fam: str, sides: tuple[int, ...],
 
 
 def _deck_rows_by_family(profile=None) -> dict[str, list[dict[str, Any]]]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The curated deck's rows grouped by family, for floor-donor lookup.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     rows: dict[str, list[dict[str, Any]]] = {}
     for row in __yaml_load(REPO_ROOT / "phases.yaml", fallback=[]):
         if not isinstance(row, dict):
@@ -480,6 +494,7 @@ def _deck_rows_by_family(profile=None) -> dict[str, list[dict[str, Any]]]:
 
 def _deck_winner_for(deck: dict[str, list[dict[str, Any]]], fam: str,
                      side: int) -> dict[str, Any] | None:
+    """The deck's winning knobs for `(fam, side)`'s cell, or None when the cell has none."""
     shape = f"{side}x{side}x{side}"
     for row in deck.get(fam, []):
         if shape in (row.get("shapes") or []):
@@ -495,6 +510,7 @@ def _deck_winner_for(deck: dict[str, list[dict[str, Any]]], fam: str,
 
 
 def _pattern_for(fam: str, mt: str) -> str:
+    """The family's first contraction pattern (the deck default)."""
     return PATTERNS.get(fam, ("Ailk_Bjlk",))[0]
 
 def __getattr__(name: str, profile=None):

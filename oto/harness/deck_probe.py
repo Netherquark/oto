@@ -51,12 +51,8 @@ OVERLAY = Path(results_rel("overlays", "phases.seed.overlay.yaml"))
 def measured_fingerprints(base_dir: Path, profile=None) -> set:
     """The config fingerprints the registry already holds a measurement for.
 
-    Args:
-        base_dir: The repo root.
-
-    Returns:
-        The set of measured fingerprints.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    `base_dir` is the repo root. Returns the set of measured fingerprints.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     db = _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "registry.db"
     if not db.is_file():
@@ -85,12 +81,8 @@ def measured_fingerprints(base_dir: Path, profile=None) -> set:
 def unmeasured_rows(base_dir: Path, overlay: Path) -> list[dict[str, Any]]:
     """The overlay rows the corpus has never measured.
 
-    Args:
-        base_dir: The repo root.
-        overlay: The launch set (the seed overlay).
-
-    Returns:
-        The phase dicts, in the overlay's order.
+    `base_dir` is the repo root; `overlay` is the launch set (the seed
+    overlay). Returns the phase dicts, in the overlay's order.
     """
     import yaml
 
@@ -133,15 +125,10 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
           result_path: Path | None = None) -> dict[str, Any]:
     """Probe every unmeasured row and collect the refusals.
 
-    Args:
-        base_dir: The repo root.
-        overlay: The launch set.
-        families: Only probe these families (all of them when empty).
-        limit: Stop after this many rows.
-
-    Returns:
-        A summary dict: the rows checked, the refusals (with their reason),
-        and the elapsed seconds.
+    `base_dir` is the repo root; `overlay` is the launch set; `families`
+    limits the probe to these families (all of them when empty); `limit`
+    stops after this many rows. Returns a summary dict: the rows checked, the
+    refusals (with their reason), and the elapsed seconds.
     """
     rows = unmeasured_rows(base_dir, overlay)
     if families:
@@ -191,6 +178,7 @@ def check(base_dir: Path, overlay: Path, families: Sequence[str] = (),
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Probe the unmeasured overlay rows against Tensile and write the report (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None, help="repo root")

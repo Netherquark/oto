@@ -58,14 +58,17 @@ def _best(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 def _med(row: dict[str, Any] | None) -> float:
+    """The row's `gflops_median`; 0.0 when the row is absent or unscored."""
     return float(row.get("gflops_median") or 0.0) if row else 0.0
 
 
 def _pct(a: float, b: float) -> float | None:
+    """Percentage delta of `a` over `b`; ``None`` when `b` is not positive."""
     return ((a - b) / b * 100.0) if b > 0 else None
 
 
 def _cfg(row: dict[str, Any] | None) -> dict[str, str]:
+    """The row's comparable config knobs as strings (``{}`` when absent)."""
     return {k: str(row.get(k) or "") for k in CONFIG_KEYS} if row else {}
 
 
@@ -264,6 +267,7 @@ def build_matrix(db_path: str, base_dir: str,
 
 
 def _table(r: dict[str, Any]) -> str:
+    """The win/loss regression table as text."""
     lines = [f"{'cell':>12} {'deck med':>10} {'floor med':>10} {'% vs fl':>9}  kern"]
     lines.append("-" * 72)
     for key in r["cell_keys"]:
@@ -288,7 +292,7 @@ def _table(r: dict[str, Any]) -> str:
 
 
 def main(argv: Sequence[str] | None = None, profile=None) -> int:
-    """CLI: deck-vs-floor regression matrix. ``profile`` selects the device; ambient by default."""
+    """Deck-vs-floor regression matrix (CLI entry). ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", default=None, help="repo root")

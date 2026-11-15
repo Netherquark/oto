@@ -76,6 +76,7 @@ def _vgpr_from_object(obj: Path) -> dict[str, Any] | None:
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the VGPR-measurement CLI parser."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", help="only this run dir name")
@@ -88,6 +89,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _collect_objects(runs_dir: Path, run_filter: str | None) -> list[Path]:
+    """The emitted ``.o`` files to read VGPRs from, optionally one run only."""
     objs: list[Path] = []
     for run_dir in sorted(runs_dir.glob("run_*")):
         if not run_dir.is_dir():
@@ -142,7 +144,7 @@ def _extract_key(obj: Path) -> tuple[str, int, int] | None:
 
 
 def main(profile=None) -> int:
-    """CLI: measured per-thread VGPRs of emitted kernels. ``profile`` selects the device; ambient by default."""
+    """Measured per-thread VGPRs of emitted kernels (CLI entry). ``profile`` selects the device; ambient by default."""
     args = _build_arg_parser().parse_args()
 
     base = Path(args.base_dir) if args.base_dir else _HERE

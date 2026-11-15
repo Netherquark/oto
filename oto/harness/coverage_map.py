@@ -86,6 +86,7 @@ Geometry = tuple[str, str, int, int]
 
 
 def _generator() -> CandidateGenerator:
+    """The candidate generator used for gate validation (cheap to build)."""
     return CandidateGenerator(_HERE)
 
 
@@ -103,11 +104,8 @@ def _legal(fam: str, geom: Geometry, extra: dict[str, Any] | None = None
 def legal_geometries(fam: str) -> list[Geometry]:
     """Every geometry the gate admits for a family (assertion level 0 or 2).
 
-    Args:
-        fam: Canonical family key ("SS", "HH", "CC", ...).
-
-    Returns:
-        The legal geometries, de-duplicated and sorted.
+    `fam` is the canonical family key ("SS", "HH", "CC", ...). Returns the
+    legal geometries, de-duplicated and sorted.
     """
     out: set = set()
     gen = _generator()
@@ -175,19 +173,18 @@ def measured_geometries(db_path: Path | None = None,
                         ) -> dict[tuple[str, str], dict[Geometry, float]]:
     """``(family, shape) -> {geometry: best seed-median}`` from the corpus.
 
-    Args:
-        db_path: The kernel_db cache; the repo default when None.
-        protocol: The invocation form the "measured" best admits (§R56.3,
-            default "family": like-for-like with the floor, so the
-            neighbour-finder ranks against values reproducible under the
-            deck protocol rather than against 2-4x-inflated single-problem
-            readings). "any" restores the unfiltered corpus view; other
-            values select that form, and rows WITHOUT a stamp (pre-§R56.3
-            caches) count as "unknown" and are admitted only under "any".
+    `db_path` is the kernel_db cache (the repo default when ``None``);
+    `protocol` is the invocation form the "measured" best admits (§R56.3,
+    default ``"family"``: like-for-like with the floor, so the
+    neighbour-finder ranks against values reproducible under the deck
+    protocol rather than against 2-4x-inflated single-problem readings).
+    ``"any"`` restores the unfiltered corpus view; other values select that
+    form, and rows WITHOUT a stamp (pre-§R56.3 caches) count as
+    ``"unknown"`` and are admitted only under ``"any"``.
 
-    Returns:
-        The measured geometry map, empty when the cache does not exist.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Returns the measured geometry map, empty when the cache does not exist.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the
+    process's ambient profile.
     """
     base = Path(base_dir) if base_dir else _HERE
     path = db_path or (_results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
@@ -226,12 +223,9 @@ def neighbour_score(geom: Geometry, measured: dict[Geometry, float]
     thread tile with another tile) measure well. That is the signature of a
     local minimum: the neighbourhood is fast, the point itself is untried.
 
-    Args:
-        geom: The unmeasured geometry.
-        measured: The measured geometries of the same cell.
-
-    Returns:
-        The best measured value among the neighbours (0.0 when there are none).
+    `geom` is the unmeasured geometry; `measured` are the measured geometries
+    of the same cell. Returns the best measured value among the neighbours
+    (0.0 when there are none).
     """
     tile, tt, _vw, _du = geom
     mt0, _, mt1 = tile.partition("x")
@@ -258,15 +252,11 @@ def coverage_row(fam: str, shape: str, legal: Sequence[Geometry],
                   measured: dict[Geometry, float]) -> dict[str, Any]:
     """One cell's coverage: legal space, measured part, and the gaps.
 
-    Args:
-        fam: The family key.
-        shape: The cell shape ("256x256x256").
-        legal: The legal geometries for the family.
-        measured: The cell's measured geometries (geometry -> best median).
-
-    Returns:
-        A row with the coverage counts, the best measured value, and the
-        unmeasured geometries ranked by their neighbours' score.
+    `fam` is the family key; `shape` is the cell shape ("256x256x256");
+    `legal` are the legal geometries for the family; `measured` are the
+    cell's measured geometries (geometry -> best median). Returns a row with
+    the coverage counts, the best measured value, and the unmeasured
+    geometries ranked by their neighbours' score.
     """
     hit = {g: v for g, v in measured.items() if g in set(legal)}
     gaps = []
@@ -290,6 +280,7 @@ def coverage_row(fam: str, shape: str, legal: Sequence[Geometry],
 
 
 def _fmt_geom(geom: Sequence[Any] | None) -> str:
+    """Format one geometry for the table output ('-' when absent)."""
     if not geom:
         return "-"
     tile, tt, vw, du = geom
@@ -297,6 +288,7 @@ def _fmt_geom(geom: Sequence[Any] | None) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Print the per-cell coverage map (legal vs measured) (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", action="append",

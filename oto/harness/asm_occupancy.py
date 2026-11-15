@@ -61,14 +61,14 @@ VGPR_GRANULE = 4
 #: Register-file size of one SIMD = the CU file divided by the SIMD count.
 #: With 65536 per CU and 4 SIMDs this is 16384, i.e. 64 KiB per SIMD.
 def _simd_vgpr(profile=None) -> int:
-    """CLI: measured occupancy audit of emitted kernels. ``profile`` selects the device; ambient by default."""
+    """Per-SIMD VGPR file size for `profile`; the ambient profile when not passed."""
     return _loader.resolve_profile(profile,).vgpr_per_cu // _loader.resolve_profile(profile,).simds_per_cu
 
 
 #: Max resident waves per SIMD. The hardware allows 10 (40/CU), which is what
 #: rocminfo reports and what Tensile's own occupancy calculator assumes.
 def _waves_per_simd_max(profile=None) -> int:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Max resident waves per SIMD for `profile`; the ambient profile when not passed."""
     return _loader.resolve_profile(profile,).max_waves_per_cu // _loader.resolve_profile(profile,).simds_per_cu
 
 #: The AMD/ORNL GFX9 VGPR-per-thread -> waves-per-SIMD table, the calibration this
@@ -96,7 +96,7 @@ _DTYPE_FACTS = {
 
 #: LDS in bytes per CU, one home in the device profile.
 def _lds_per_cu(profile=None) -> int:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """LDS bytes per CU for `profile`; the ambient profile when not passed."""
     return _loader.resolve_profile(profile,).lds_per_cu_kb * 1024
 
 _KERNEL_MT = re.compile(r"_MT(\d+)x(\d+)x(\d+)_")
@@ -110,18 +110,16 @@ _GLVW_B = re.compile(r"GlobalLoadVectorWidthB\s*=\s*(\d+)")
 def waves_per_simd(vgprs: int) -> int:
     """Resident waves per SIMD for a kernel's per-thread VGPR total.
 
-    Args:
-        vgprs: The kernel's ``amdhsa_next_free_vgpr`` value -- the *total*
-            per-thread VGPR count including kernarg, operand and accumulator
-            registers, not the accumulator demand a gate models.
+    `vgprs` is the kernel's ``amdhsa_next_free_vgpr`` value -- the *total*
+    per-thread VGPR count including kernarg, operand and accumulator
+    registers, not the accumulator demand a gate models.
 
-    Returns:
-        ``_simd_vgpr() // (WAVE * aligned)``, clamped to
-        :data:`_waves_per_simd_max(). A total of 0 or less returns 0, which is
-        "not a number", not "no occupancy".
+    Returns ``_simd_vgpr() // (WAVE * aligned)``, clamped to
+    ``_waves_per_simd_max()``. A total of 0 or less returns 0, which is
+    "not a number", not "no occupancy".
 
     Why granule 4 and not 8 or 16: the 8/16 rule is the older model and it does
-    not fit the hardware. AMD/ORNL's GFX9 table (see :data:`_CALIBRATION`) reads
+    not fit the hardware. AMD/ORNL's GFX9 table (see ``_CALIBRATION``) reads
     <=24 -> 10, 28 -> 9, 36 -> 7, 84 -> 3 waves; granule 4 reproduces all ten
     rows exactly, while granule 8 already mispredicts V=28 and V=84. Do not
     "fix" this to 8/16 without a measurement that contradicts the table.
@@ -135,20 +133,18 @@ def waves_per_simd(vgprs: int) -> int:
 def binding_resource(vgprs: int, lds: int, threads: int, profile=None) -> tuple[str, int]:
     """Which resource caps this kernel, and the waves/CU it allows.
 
-    Args:
-        vgprs: Total per-thread VGPRs.
-        lds: LDS bytes per workgroup (``group_segment_fixed_size``).
-        threads: Workgroup size in threads.
+    `vgprs` is the total per-thread VGPRs; `lds` is the LDS bytes per
+    workgroup (``group_segment_fixed_size``); `threads` is the workgroup
+    size in threads.
 
-    Returns:
-        ``(binder, waves_per_cu)`` where binder is one of ``"VGPR"``, ``"LDS"``
-        or ``"LDS+VGPR"`` when both cap identically, or ``"waveslots"`` when
-        neither does. Ties are reported rather than broken by declaration order:
-        15.9% of this corpus ties, and hiding that understates how often LDS is
-        the binding constraint. LDS is unknown when it is 0 or the workgroup
-        exceeds the 1024-thread maximum, in which case the LDS half is unmeasured
-        and VGPR is reported.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Returns ``(binder, waves_per_cu)`` where binder is one of ``"VGPR"``,
+    ``"LDS"`` or ``"LDS+VGPR"`` when both cap identically, or
+    ``"waveslots"`` when neither does. Ties are reported rather than broken by
+    declaration order: 15.9% of this corpus ties, and hiding that understates
+    how often LDS is the binding constraint. LDS is unknown when it is 0 or
+    the workgroup exceeds the 1024-thread maximum, in which case the LDS half
+    is unmeasured and VGPR is reported. ``profile`` is an optional
+    ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     by_vgpr = waves_per_simd(vgprs) * _loader.resolve_profile(profile,).simds_per_cu
     if lds > 0 and threads > 0:
@@ -180,13 +176,10 @@ def _family_of(path: Path) -> str | None:
 def parse_asm_kernel(path: Path) -> dict | None:
     """Read one Tensile-emitted assembly file's hardware directives.
 
-    Args:
-        path: A ``build_tmp/SOURCE/assembly/*.s`` file.
-
-    Returns:
-        A dict of ``vgpr``, ``sgpr``, ``lds``, ``scratch``, ``threads``, tile
-        fields and the kernel name, or None when the file carries no
-        ``amdhsa_next_free_vgpr`` directive (a stub, or not a Tensile kernel).
+    `path` points at a ``build_tmp/SOURCE/assembly/*.s`` file. Returns a
+    dict of ``vgpr``, ``sgpr``, ``lds``, ``scratch``, ``threads``, tile
+    fields and the kernel name, or ``None`` when the file carries no
+    ``amdhsa_next_free_vgpr`` directive (a stub, or not a Tensile kernel).
     """
     try:
         text = path.read_text(errors="replace")
@@ -228,11 +221,8 @@ def read_phase_gflops(phase_dir: Path) -> dict[str, tuple[float, list[int]]]:
     problem index and a corpus-wide maximum under 10 GFLOP/s, which is the
     symptom of getting this wrong.
 
-    Args:
-        phase_dir: A phase directory containing ``2_BenchmarkData/``.
-
-    Returns:
-        ``{solution name: (best GFLOP/s, [I, J, K, L of the best])}``.
+    `phase_dir` is a phase directory containing ``2_BenchmarkData/``. Returns
+    ``{solution name: (best GFLOP/s, [I, J, K, L of the best])}``.
     """
     out: dict[str, tuple[float, list[int]]] = {}
     bd = phase_dir / "2_BenchmarkData"
@@ -282,6 +272,7 @@ def iter_asm(runs_root: Path) -> Iterable[tuple[Path, dict]]:
 
 def measure_corpus(runs_root: Path,
                    dtype: str | None = None) -> list[dict]:
+    """Measure every emitted kernel under `runs_root`, joined to its GFLOP/s; `dtype` filters by typecode."""
     rows: list[dict] = []
     cache: dict[str, dict[str, tuple[float, list[int]]]] = {}
     for phase, k in iter_asm(runs_root):
@@ -329,6 +320,7 @@ def measure_corpus(runs_root: Path,
 
 
 def _fmt(row: dict) -> str:
+    """Format one corpus row for the table output."""
     size = "-"
     if row["mt0"] and row["depth_u"]:
         size = f"{row['mt0']}x{row['mt1']}x{row['depth_u']}"
@@ -341,6 +333,7 @@ def _fmt(row: dict) -> str:
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the measured-occupancy CLI parser."""
     ap = argparse.ArgumentParser(
         description="Measured occupancy of Tensile's emitted kernels, joined "
                     "to their GFLOP/s. CPU only, reads nothing outside "
@@ -362,6 +355,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_calibration() -> int:
+    """Verify `waves_per_simd` against the AMD/ORNL GFX9 table; 1 on any mismatch."""
     bad = [(v, waves_per_simd(v), want)
            for v, want in _CALIBRATION.items()
            if waves_per_simd(v) != want]
@@ -373,6 +367,7 @@ def _cmd_calibration() -> int:
 
 
 def _cmd_binder(rows: list[dict[str, Any]]) -> int:
+    """Print the resource tally and waves/CU distribution for `rows`; exit 0."""
     print("\n-- resource tally --")
     tally: dict[str, int] = {}
     for r in rows:
@@ -392,6 +387,7 @@ def _cmd_binder(rows: list[dict[str, Any]]) -> int:
 
 
 def _cmd_count(rows: list[dict[str, Any]], top: int) -> int:
+    """Print the `top` most common shape groups in `rows`; exit 0."""
     groups: dict[tuple, int] = {}
     for r in rows:
         key = (r["dtype"], r["mt0"], r["mt1"], r["tt"], r["depth_u"])
@@ -407,6 +403,7 @@ def _cmd_count(rows: list[dict[str, Any]], top: int) -> int:
 
 
 def _cmd_sorted(rows: list[dict[str, Any]], args: Any) -> int:
+    """Print the top rows sorted by the `--by` metric; exit 0."""
     if args.by == "vgpr":
         ordered = sorted(rows, key=lambda r: -r["vgpr"])[:args.top]
     elif args.by == "waves":
@@ -422,7 +419,7 @@ def _cmd_sorted(rows: list[dict[str, Any]], args: Any) -> int:
 
 
 def main(profile=None) -> int:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Run the measured-occupancy audit; ``profile`` selects the device (ambient by default)."""
     args = _build_arg_parser().parse_args()
 
     if args.check_calibration:

@@ -65,8 +65,8 @@ def _iter_rows(base: str, families: Sequence[str] | None, profile=None):
 
     One row per ``phase*`` dir whose ``configs/phase_<name>.yaml`` reconstructs
     and whose resolved family survives ``families``. The reconstruction
-    (:func:`read_phase_config`) and the measurement test
-    (:func:`measurement_produced`) are imported from ``gate_calibration`` so both
+    (``read_phase_config``) and the measurement test
+    (``measurement_produced``) are imported from ``gate_calibration`` so both
     censuses see exactly the same corpus.
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
     """
@@ -88,6 +88,7 @@ def _iter_rows(base: str, families: Sequence[str] | None, profile=None):
 
 
 def _new_population() -> dict[str, Any]:
+    """A zeroed confusion-count dict for one population (ours or reference)."""
     return {"applicable": 0, "built": 0, "not_applicable": 0, "agrees": 0,
             "allowed_empty": 0, "false_rejections": [], "catches": [],
             "caught_by_family": {}}
@@ -117,18 +118,16 @@ def probe(rule: Rule, name: str = "rule", base: str = ".",
           families: Sequence[str] | None = None) -> dict[str, Any]:
     """Apply one candidate rule to the corpus and count the confusion.
 
-    Args:
-        rule: ``config -> Optional[bool]`` (``True`` = would refuse).
-        name: Label for the report / JSON.
-        base: Repo root holding the runs directory.
-        families: When given, keep only phases whose resolved family is listed.
+    `rule` is a ``config -> Optional[bool]`` (``True`` = would refuse);
+    `name` labels the report / JSON; `base` is the repo root holding the
+    runs directory; `families` keeps only phases whose resolved family is
+    listed.
 
-    Returns:
-        ``{"meta": {...}, "populations": {"ours"|"reference": {...}}}``; each
-        population carries ``applicable``/``built``/``not_applicable``, the
-        ``false_rejections`` (would-refuse + built) and ``catches``
-        (would-refuse + empty) work lists, the ``agrees``/``allowed_empty``
-        counts, and ``caught_by_family``.
+    Returns ``{"meta": {...}, "populations": {"ours"|"reference": {...}}}``;
+    each population carries ``applicable``/``built``/``not_applicable``, the
+    ``false_rejections`` (would-refuse + built) and ``catches``
+    (would-refuse + empty) work lists, the ``agrees``/``allowed_empty``
+    counts, and ``caught_by_family``.
     """
     populations = {"ours": _new_population(), "reference": _new_population()}
     meta = {"tool": "harness.rule_calibration", "rule": name, "base": str(base),
@@ -188,7 +187,7 @@ def builtin_rules() -> dict[str, Rule]:
     a future agent probes and the rule the gate enforces is impossible.
     ``apm2`` is the generator-seam rule. ``nt_budget`` is the per-thread
     occupancy limit, adopted 2026-10-21 after the measured VGPR table was
-    corrected (see :func:`_refuses_nt_budget`).
+    corrected (see ``_refuses_nt_budget``).
     """
     from oto.tensile.gates.occupancy import (
         refuses_lds_reduction_buffer,
@@ -214,9 +213,8 @@ def _import_file(path: Path) -> Any:
 def load_rule(spec: str) -> Rule:
     """Load a candidate rule from ``module:attr`` or ``path.py:attr``.
 
-    Raises:
-        SystemExit: when ``spec`` is not ``...:attr``, the module cannot be
-            imported, or the attribute is not callable.
+    Raises ``SystemExit`` when ``spec`` is not ``...:attr``, the module
+    cannot be imported, or the attribute is not callable.
     """
     if ":" not in spec:
         raise SystemExit(
@@ -236,6 +234,7 @@ def load_rule(spec: str) -> Rule:
 
 
 def _resolve_rules(specs: Sequence[str] | None) -> dict[str, Rule]:
+    """Map each requested rule spec to its builtin or loaded rule."""
     builtins = builtin_rules()
     if not specs:
         return builtins
@@ -243,6 +242,7 @@ def _resolve_rules(specs: Sequence[str] | None) -> dict[str, Rule]:
 
 
 def _report(label: str, pop: dict[str, Any], limit: int) -> None:
+    """Print one population's confusion table and its first `limit` false rejections."""
     n_fr = len(pop["false_rejections"])
     flag = "  ok" if n_fr == 0 else "  <-- the decision rule: must be 0"
     print(f"  {label}   applicable={pop['applicable']}  built={pop['built']}  "
@@ -260,6 +260,7 @@ def _report(label: str, pop: dict[str, Any], limit: int) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Probe candidate legality rules against the corpus (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)

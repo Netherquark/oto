@@ -56,6 +56,7 @@ FAMILY_CHAR = {                            # typecode -> dtype character
 
 
 def _ints(raw: object) -> list[int]:
+    """All integer tokens in `raw` (``[]`` when `raw` is empty)."""
     if not raw:
         return []
     return [int(x) for x in re.findall(r"\d+", str(raw))]
@@ -134,7 +135,7 @@ def _floor_rows(db: dict[str, list[dict]]) -> tuple[list[dict], list[str]]:
 
 
 def _audit(rows_iter: Iterable[dict], lds_factor: int, profile=None) -> list[dict]:
-    """CLI: resident-workgroup audit per cell. ``profile`` selects the device; ambient by default."""
+    """Resident-workgroup audit per cell. ``profile`` selects the device; ambient by default."""
     winners = _winner_per_cell(rows_iter)
     out: list[dict] = []
     for (fam, side), row in sorted(winners.items()):
@@ -174,7 +175,7 @@ def _select_rows(db: dict, args, profile) -> list[dict] | None:
 
 
 def main(profile=None) -> int:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Print the resident-workgroup audit; ``profile`` selects the device (ambient by default)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side", choices=("native", "floor"), default="native",

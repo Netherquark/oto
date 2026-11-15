@@ -72,9 +72,8 @@ def _phase(config: dict[str, Any], phase_id: str = "probe_oracle",
 def _capture_derived() -> tuple[Any, list[dict[str, Any]]]:
     """Patch Tensile's solution builder to record what it derived.
 
-    Returns:
-        (the original function, the recorder list). The caller restores the
-        original -- the patch is process-local and short-lived.
+    Returns ``(the original function, the recorder list)``; the caller
+    restores the original -- the patch is process-local and short-lived.
     """
     tr = os.environ.get("TENSILE_ROOT")
     if not tr:
@@ -91,6 +90,7 @@ def _capture_derived() -> tuple[Any, list[dict[str, Any]]]:
     seen: list[dict[str, Any]] = []
 
     def wrapper(state: dict[str, Any]) -> None:
+        """Record `state`'s derived fields, then delegate to the original builder."""
         original(state)
         seen.append({k: state.get(k) for k in _LDS_FIELDS})
 
@@ -119,12 +119,9 @@ def probe_phase(phase: dict[str, Any], base_dir: Path | None = None
     driver's own ``_write_phase_config`` -- so the probe exercises the same
     materialisation the launch boundary will.
 
-    Args:
-        phase: The phase dict (phase_id, label, dtype, shapes, config).
-        base_dir: The repo root.
-
-    Returns:
-        The same dict as :func:`probe_config`.
+    Accepts the phase dict (`phase_id`, `label`, `dtype`, `shapes`,
+    `config`); `base_dir` is the repo root. Returns the same dict shape as
+    ``probe_config``.
     """
     from oto.runners.driver import TensileDriver
 
@@ -151,15 +148,11 @@ def probe_config(config: dict[str, Any], base_dir: Path | None = None,
                  shapes: Sequence[str] | None = None) -> dict[str, Any]:
     """Ask Tensile what it makes of a config.
 
-    Args:
-        config: The Tensile solution dict (the knobs, not the template).
-        base_dir: The repo root; the driver and the Tensile tree are found
-            from it.
-        shapes: The problem shapes for the probe (512^3 by default).
-
-    Returns:
-        A dict with our gate's verdict, Tensile's verdict, the derived fields
-        Tensile computed, and the register pools it allocated.
+    `config` is the Tensile solution dict (the knobs, not the template);
+    `base_dir` is the repo root (the driver and the Tensile tree are found
+    from it); `shapes` overrides the probe's problem shapes (512^3 by
+    default). Returns a dict with our gate's verdict, Tensile's verdict, the
+    derived fields Tensile computed, and the register pools it allocated.
     """
     from oto.runners.driver import TensileDriver
 
@@ -233,10 +226,7 @@ def _lds_bytes(state: dict[str, Any]) -> int:
 
 
 def _config_from_args(args: argparse.Namespace, profile=None) -> dict[str, Any]:
-    """The config dict the CLI describes.
-
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
-    """
+    """The config dict the CLI describes; `profile` selects the device (ambient by default)."""
     config: dict[str, Any] = {
         "Architecture": _loader.resolve_profile(profile,).codename,
         "DataType": args.dtype,
@@ -261,6 +251,7 @@ def _config_from_args(args: argparse.Namespace, profile=None) -> dict[str, Any]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Probe one config or phase against a local Tensile install (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dtype", default="S", help="Tensile DataType char (S/D/H/C/Z)")
