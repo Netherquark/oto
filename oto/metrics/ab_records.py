@@ -5,8 +5,8 @@ Owns: ``phase_records`` / ``arm_records`` / ``arm_record_sets`` (every caller's
 inputs, computed once) and ``_registry_records`` (registry-only records for
 merged and draft runs, with the comparison form marked unknown rather than
 invented).
-Does NOT own: the identity they carry (oto.metrics.ab_identity), the band
-measured from them (oto.metrics.ab_band) or the audit (oto.metrics.ab_audit).
+Does NOT own: the identity they carry (`oto.metrics.ab_identity`), the band
+measured from them (`oto.metrics.ab_band`) or the audit (`oto.metrics.ab_audit`).
 Public API: phase_records, arm_records, arm_record_sets, _registry_records,
 phase_family, BASE.
 """

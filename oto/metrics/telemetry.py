@@ -4,9 +4,9 @@
 Owns: ``TelemetrySampler`` -- the background thread writing `logs/telemetry.csv`,
 the header contract, and the parsing rules a reader relies on.
 
-Does NOT own: the per-phase clock/thermal aggregate (oto.runners.clock_telemetry), the sclk
-normalisation in the A/B delta (oto.metrics.ab_delta), or the driver that
-starts a sampler (oto.runners.benchmark).
+Does NOT own: the per-phase clock/thermal aggregate (`oto.runners.clock_telemetry`), the sclk
+normalisation in the A/B delta (`oto.metrics.ab_delta`), or the driver that
+starts a sampler (`oto.runners.benchmark`).
 
 Public API: TelemetrySampler, HEADER.
 """

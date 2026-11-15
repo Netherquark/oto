@@ -6,8 +6,8 @@ takes the parser and adds one coherent group of flags, so a flag's grouping and
 its meaning are stated in the same place. Adding a flag that is never read is
 caught by tests/test_interactive_keys.py.
 Does NOT own: the stage dispatch that reads the parsed flags
-(oto.runners.stage_cli), or the --auto plan the answers become
-(oto.runners.auto_prompt).
+(`oto.runners.stage_cli`), or the --auto plan the answers become
+(`oto.runners.auto_prompt`).
 Public API: build_parser.
 """
 

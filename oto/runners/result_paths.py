@@ -8,8 +8,8 @@ Checkouts that still have the legacy directory keep working: the primary
 ``<codename>_runs`` wins when it exists (or the legacy one does not), and the
 legacy directory is used as a fallback otherwise -- never silently moved or
 renamed.
-Does NOT own: device facts (oto.device owns those) or the results directory
-for best-effort libraries (oto.tensile.best_effort_library owns its dest).
+Does NOT own: device facts (`oto.device` owns those) or the results directory
+for best-effort libraries (`oto.tensile.best_effort_library` owns its dest).
 Public API: runs_dir, legacy_runs_dir.
 """
 

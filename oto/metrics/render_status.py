@@ -5,8 +5,8 @@ Owns: ``bar`` / ``render_compact`` / ``render`` (the three text renderings of th
 same report dict), ``LiveStatus`` (the background-threaded repainter that keeps a
 TTY current) and ``_PanelStdout`` (the stdout proxy that erases the panel before
 any other write, so a print does not leave half a panel on screen).
-Does NOT own: the report dict itself (oto.metrics.run_status) or the plan it
-prices (oto.metrics.run_plan).
+Does NOT own: the report dict itself (`oto.metrics.run_status`) or the plan it
+prices (`oto.metrics.run_plan`).
 Public API: bar, render_compact, render, LiveStatus, _PanelStdout.
 
 ``LiveStatus`` repaints a compact panel into the terminal while a run executes;
@@ -25,7 +25,7 @@ its four non-obvious mechanics:
   the reason a run dies.
 
 Flags: ``--live on|off`` (default on), ``--live-interval SECONDS`` (default 15);
-``python3 -m oto.metrics.run_status --watch`` remains the standalone full-panel
+``python3 -m `oto.metrics.run_status` --watch`` remains the standalone full-panel
 view.
 """
 

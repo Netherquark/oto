@@ -3,8 +3,8 @@
 Owns: reading the codename from ``rocminfo`` and falling back to the
 committed default (``gfx90c``) when that fails. Used by the loader's profile
 resolution (``OTO_PROFILE`` override > detection > committed default).
-Does NOT own: profile loading (``oto.device.loader``) or the codename table
-(``oto.device.tensile_isa``).
+Does NOT own: profile loading (```oto.device.loader```) or the codename table
+(```oto.device.tensile_isa```).
 Public API: detect_codename.
 """
 

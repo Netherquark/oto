@@ -5,8 +5,8 @@ Owns: ``tile_dims`` (MacroTile/ThreadTile parse) and ``dtype_char``
 gate, the LdsPad gate and their callers all read. Separated so neither gate
 module imports the other. Read-only helpers; the gate logic lives with the
 gates.
-Does NOT own: the gate verdicts (``oto.tensile.gates.occupancy`` /
-``ldspad``) or the profile (``oto.device.loader``).
+Does NOT own: the gate verdicts (```oto.tensile.gates.occupancy``` /
+``ldspad``) or the profile (```oto.device.loader```).
 Public API: tile_dims, dtype_char.
 """
 

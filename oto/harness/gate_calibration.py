@@ -14,10 +14,10 @@ it:
 * **misses** -- the gate allowed a phase that produced no measurement (gate too
   loose; the work list for a new gate rule).
 
-Does NOT own: the gates themselves (``oto.tensile.gates``), the config the
+Does NOT own: the gates themselves (```oto.tensile.gates```), the config the
 driver *intended* (the registry -- this reads the compiled launch truth), the
-census over the device-truth knob DOMAIN (``oto.tools.deck_review legality``), or
-the failure *reason* mining (``oto.harness.failure_triage``).
+census over the device-truth knob DOMAIN (```oto.tools.deck_review` legality``), or
+the failure *reason* mining (```oto.harness.failure_triage```).
 
 Public API: main, audit, read_phase_config, measurement_produced.
 
@@ -36,10 +36,10 @@ label (``library_parity.phase_family``).
 
 CPU only, read-only, never benchmarks.
 
-    python3 -m oto.harness.gate_calibration                  # both populations
-    python3 -m oto.harness.gate_calibration --population ours
-    python3 -m oto.harness.gate_calibration --json out.json
-    python3 -m oto.harness.gate_calibration --fail-on-false-reject
+    python3 -m `oto.harness.gate_calibration`                  # both populations
+    python3 -m `oto.harness.gate_calibration` --population ours
+    python3 -m `oto.harness.gate_calibration` --json out.json
+    python3 -m `oto.harness.gate_calibration` --fail-on-false-reject
 """
 
 from __future__ import annotations

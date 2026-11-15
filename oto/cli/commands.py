@@ -3,8 +3,8 @@
 Owns: argument translation and the read-command JSON contract (one document on
 stdout, no narration). Every adapter is deliberately thin; the work stays in the
 owning module.
-Does NOT own: the parser (``oto.cli.parser``), the process-wide output policy
-(``oto.cli.dispatch``), or any stage's behaviour.
+Does NOT own: the parser (```oto.cli.parser```), the process-wide output policy
+(```oto.cli.dispatch```), or any stage's behaviour.
 Public API: dispatch, show_help, write_completions.
 """
 

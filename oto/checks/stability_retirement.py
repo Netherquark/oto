@@ -3,8 +3,8 @@
 
 Owns: retirement records and the per-cell sample counts for
 ``<codename>_results/registry.db``.
-Does NOT own: the retirement policy (oto.metrics.cell_policy) or any other registry
-read (use ``oto.checks.registry_audit`` / ``oto.ledger.registry`` where they belong).
+Does NOT own: the retirement policy (`oto.metrics.cell_policy`) or any other registry
+read (use ```oto.checks.registry_audit``` / ```oto.ledger.registry``` where they belong).
 Public API: main.
 
     oto check retirement            # human view

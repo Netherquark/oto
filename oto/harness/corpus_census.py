@@ -6,11 +6,11 @@ the distinct values each structural axis has held and the best seed-median
 GFLOP/s at each, the distinct geometries and their best, and every geometry
 measured on one cell next to the floor's best.
 
-Does NOT own: the database builder (``oto.harness.kernel_db``), the per-cell
-winner resolution (``oto.harness.cell_resolver``), the native-vs-floor knob
-diff (``oto.harness.cell_knob_diff``), the forward-knob legality domain
-(``oto.tools.deck_review legality``), or the regression verdicts
-(``oto.harness.regression_matrix``).
+Does NOT own: the database builder (```oto.harness.kernel_db```), the per-cell
+winner resolution (```oto.harness.cell_resolver```), the native-vs-floor knob
+diff (```oto.harness.cell_knob_diff```), the forward-knob legality domain
+(```oto.tools.deck_review` legality``), or the regression verdicts
+(```oto.harness.regression_matrix```).
 
 Public API: load_rows, group_rows, resolve_family, axis_census,
 geometry_census, cell_history, main.
@@ -29,13 +29,13 @@ so ``--family HH_HPA`` and ``--cell HH_HPA:1024`` are resolved to that block
 
 CPU only, read-only, never benchmarks.
 
-    python3 -m oto.harness.corpus_census                     # axes + geometries
-    python3 -m oto.harness.corpus_census --family SS --top 20
-    python3 -m oto.harness.corpus_census --knob DepthU --family HH
-    python3 -m oto.harness.corpus_census --cell SS:1024
-    python3 -m oto.harness.corpus_census --cell HH_HPA:1024
-    python3 -m oto.harness.corpus_census --typecode HHS
-    python3 -m oto.harness.corpus_census --json out.json
+    python3 -m `oto.harness.corpus_census`                     # axes + geometries
+    python3 -m `oto.harness.corpus_census` --family SS --top 20
+    python3 -m `oto.harness.corpus_census` --knob DepthU --family HH
+    python3 -m `oto.harness.corpus_census` --cell SS:1024
+    python3 -m `oto.harness.corpus_census` --cell HH_HPA:1024
+    python3 -m `oto.harness.corpus_census` --typecode HHS
+    python3 -m `oto.harness.corpus_census` --json out.json
 """
 
 from __future__ import annotations
@@ -274,7 +274,7 @@ def cell_history(rows: Sequence[dict[str, Any]], family: str, side: int,
     collapsed into that geometry's record (``n`` rows, ``gflops`` the best of
     them), because replication is evidence about noise, not a distinct
     candidate. ``top=0`` returns every geometry. Non-cube shapes have no cell
-    and are excluded by ``oto.device.kernel_vocabulary.cell_key``. The floor reference is
+    and are excluded by ```oto.device.kernel_vocabulary.cell_key```. The floor reference is
     computed from rows tagged ``side='floor'``; it is absent when the caller
     loaded only native rows.
     """

@@ -7,9 +7,9 @@ run's own configs dir, the registry ``phases.data``, any native run's configs,
 then the kernel_db structural row); and the mechanical ``cfg_gap`` between the
 native winner's config and the floor's (identical / near / retile / no-floor).
 
-Does NOT own: the verdicts it surfaces (oto.metrics.ab_audit), the acceptance
-report itself (oto.metrics.acceptance_report), the kernel_db it falls back to
-(oto.harness.kernel_db), or the *reading* of ``cfg_gap`` as a tie taxonomy and
+Does NOT own: the verdicts it surfaces (`oto.metrics.ab_audit`), the acceptance
+report itself (`oto.metrics.acceptance_report`), the kernel_db it falls back to
+(`oto.harness.kernel_db`), or the *reading* of ``cfg_gap`` as a tie taxonomy and
 the routes it implies (docs/gfx90c_tuning_guide.md §13 §R17-§R18).
 
 Public API: main, _table, _tsv.
@@ -23,9 +23,9 @@ Outputs, under ``<codename>_results/analysis/``: ``cells_resolved.json`` (machin
 cache: metadata plus one row per graded cell) and ``cells_resolved.full.txt``
 (the aligned human evidence table).
 
-    python3 -m oto.harness.cell_resolver                     # table + caches
-    python3 -m oto.harness.cell_resolver --tsv verdicts.tsv  # + verdicts dump
-    python3 -m oto.harness.cell_resolver --no-json --no-text # table only
+    python3 -m `oto.harness.cell_resolver`                     # table + caches
+    python3 -m `oto.harness.cell_resolver` --tsv verdicts.tsv  # + verdicts dump
+    python3 -m `oto.harness.cell_resolver` --no-json --no-text # table only
 """
 
 

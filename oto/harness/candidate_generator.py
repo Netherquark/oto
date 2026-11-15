@@ -3,9 +3,9 @@
 
 Owns: ``main`` -- argparse, the generate/prune/summarise subcommands and the
 exit code.
-Does NOT own: the rows (oto.harness.candidate_rows), the pool
-(oto.harness.candidate_pool) or the overlay I/O
-(oto.harness.candidate_overlay).
+Does NOT own: the rows (`oto.harness.candidate_rows`), the pool
+(`oto.harness.candidate_pool`) or the overlay I/O
+(`oto.harness.candidate_overlay`).
 Public API: main, and the overlay/pool names it re-exports so the tests can
 import them from here.
 """

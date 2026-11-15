@@ -7,7 +7,7 @@ Owns: the three ways the corpus is read -- per-run CSV analytics
 (``_native_run_dirs`` / ``_native_analytics_all_runs`` / ``_native_records_all_runs``
 / ``_native_arm_provenance``). Also the retirement sweep that walks every run's
 CSVs and appends ``record_type="retire"`` rows (``_retire_stable_candidates``).
-Does NOT own: the aggregation itself (oto.metrics.benchmark_analytics) or the report these
+Does NOT own: the aggregation itself (`oto.metrics.benchmark_analytics`) or the report these
 feed (acceptance_reporting.py).
 Public API: CorpusMixin.
 """

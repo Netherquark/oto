@@ -10,7 +10,7 @@ the legacy comparison against ``port_tensile.py`` is preserved for
 
 Owns: the corpus render + comparison; the (forward/LocalSplitU/bool-spelling)
 divergence classes historically accepted, still honored for legacy refs.
-Does NOT own: the writer (oto.tensile.config_writer) or the corpus.
+Does NOT own: the writer (`oto.tensile.config_writer`) or the corpus.
 Public API: main, corpus, phases_from, render_ref. Contract: exit code.
 """
 from __future__ import annotations

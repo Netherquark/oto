@@ -6,7 +6,7 @@ Owns: ``AcceptanceReporter`` -- the composition root over the section builders
 itself: per-family coverage against the realistic and theoretical ceilings, the
 overall pass/fail gate, and the one-line summary.
 Does NOT own: the payload shape (report_models), the HTML (report_html), the
-static assets (report_css), or how a verdict is graded (oto.metrics.ab_audit).
+static assets (report_css), or how a verdict is graded (`oto.metrics.ab_audit`).
 Public API: AcceptanceReporter, ABVerdict, AcceptanceReport.
 """
 
@@ -53,7 +53,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     """Stage-7 acceptance A/B compute + report payload assembly.
 
     One mixin per responsibility; see each module's docstring for what it owns.
-    The payload dataclasses live in oto.metrics.report_models.
+    The payload dataclasses live in `oto.metrics.report_models`.
     """
 
     def __init__(self, base_dir: Path, cooldown_s: int = 30):

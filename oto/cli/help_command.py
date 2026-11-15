@@ -3,7 +3,7 @@
 Owns: the JSON document behind ``oto help --json`` and the Markdown reference
 behind ``oto help --write``. Keeping both derived from the live parser is what
 stops ``docs/cli.md`` from advertising a command that no longer exists.
-Does NOT own: the parser itself (``oto.cli.parser``) or help paging.
+Does NOT own: the parser itself (```oto.cli.parser```) or help paging.
 Public API: command_document, write_reference.
 """
 

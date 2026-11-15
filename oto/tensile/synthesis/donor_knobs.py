@@ -4,9 +4,9 @@
 Owns: ``FORWARD_KNOB_DOMAINS`` (what a forward knob may take), ``_DEFAULT_PATTERN``
 (the fallback contraction pattern) and the donor-pool sizing knobs.
 Does NOT own: the tile vocabulary (``TILE_KNOBS`` lives in
-oto.tensile.synthesis.tile_space, imported by both synthesisers), the donor
-loader that pops the pool (oto.tensile.synthesis.donor_mutator), or the per-family mutation
-patterns that consume these domains (oto.tensile.synthesis.donor_patterns).
+`oto.tensile.synthesis.tile_space`, imported by both synthesisers), the donor
+loader that pops the pool (`oto.tensile.synthesis.donor_mutator`), or the per-family mutation
+patterns that consume these domains (`oto.tensile.synthesis.donor_patterns`).
 Public API: FORWARD_KNOB_DOMAINS, _DEFAULT_PATTERN, _DONOR_POOL, _FORWARD_DRAWS,
 forward_domain, census_domain.
 """

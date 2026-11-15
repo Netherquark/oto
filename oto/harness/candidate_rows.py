@@ -10,9 +10,9 @@ load-bearing -- rows_ladders defines ``PLAN_BATCH``; rows_frontier hangs its
 rows off it; rows_smallcells hangs its rows off those. Load order:
 ``ladders -> frontier -> smallcells``; do not let an import sorter flip it.
 
-Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
-the overlay read/write (``oto.harness.candidate_overlay``), or candidate
- generation (``oto.harness.candidate_generator``).
+Does NOT own: the deck/seed fingerprint sets (```oto.harness.candidate_pool```),
+the overlay read/write (```oto.harness.candidate_overlay```), or candidate
+ generation (```oto.harness.candidate_generator```).
 Public API: re-exports of the row builders (``PLAN_BATCH`` and the deck
 helpers) for import by the deck generator.
 """

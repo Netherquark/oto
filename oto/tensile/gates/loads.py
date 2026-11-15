@@ -4,9 +4,9 @@ Owns: ``validate_tensile_loads`` (a faithful port of Tensile SolutionStructs'
 ``setGlobalLoadVectorWidth`` + ``setGlobalLoadTileDimClassic`` for the non-MI,
 FractionalLoad=False, Assembly kernel path) and ``cap_vector_width`` (the
 highest VectorWidth that still reaches the 16 B global-load cap).
-Does NOT own: the register-file/LDS model (oto.tensile.gates.occupancy), the
-GEMM class rules (oto.tensile.gates.assembly), or the tiles of a candidate
-(oto.tensile.candidate).
+Does NOT own: the register-file/LDS model (`oto.tensile.gates.occupancy`), the
+GEMM class rules (`oto.tensile.gates.assembly`), or the tiles of a candidate
+(`oto.tensile.candidate`).
 
 Every rejection cites the SolutionStructs line it mirrors. That is deliberate:
 these rejects read as arbitrary arithmetic ("totalVectorsCoalesced % NLCA != 0")
@@ -144,7 +144,7 @@ def _transposes(config: dict[str, Any]) -> tuple[bool, bool]:
     needs and which are NOT the problem type's transpose flags: the solution
     built for ``Alik_Bjlk`` carries ``TransposeA: true, TransposeB: true``
     but ``TLUA: false, TLUB: true``. The spelling is read from the canonical
-    map (``oto.tensile.contraction_patterns``), so the two readings cannot drift.
+    map (```oto.tensile.contraction_patterns```), so the two readings cannot drift.
     """
     return tlu_flags(pattern_of(config))
 

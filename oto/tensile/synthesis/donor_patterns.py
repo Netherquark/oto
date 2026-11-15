@@ -14,8 +14,8 @@ Both draws go through ``_joint_domain``, never through ``forward_domain``
 directly: a forward knob's *legal* values depend on the rest of the tile, so
 treating the domains as independent axes generates configs the launch boundary
 then refuses (``docs/potential_configs.md`` §R23).
-Does NOT own: the domains they draw from (oto.tensile.synthesis.donor_knobs) or the
-mutant synthesis that gates them (oto.tensile.synthesis.donor_mutator).
+Does NOT own: the domains they draw from (`oto.tensile.synthesis.donor_knobs`) or the
+mutant synthesis that gates them (`oto.tensile.synthesis.donor_mutator`).
 Public API: DbPatternsMixin.
 """
 

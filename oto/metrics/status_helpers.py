@@ -2,8 +2,8 @@
 """Shared run-status helpers: timestamp parsing, duration formatting and the
 status/result -> display bucket mapping.
 
-Owns: the four primitives ``oto.metrics.ledger_state`` and
-``oto.metrics.build_status`` both read (``_parse_ts``, ``fmt_duration``,
+Owns: the four primitives ```oto.metrics.ledger_state``` and
+```oto.metrics.build_status``` both read (``_parse_ts``, ``fmt_duration``,
 ``_jittery``, ``bucket``). One home keeps the bucket vocabulary identical to
 what the report tallies and prints.
 Does NOT own: anything about the registry file, the corpus, or the ETAs.

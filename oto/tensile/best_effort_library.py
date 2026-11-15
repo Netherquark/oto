@@ -9,9 +9,9 @@ per-family library-logic YAMLs in the Tensile-confirmed schema, and driving
 destination. Also owns the per-cell provenance manifest and the parity /
 anti-alias gates.
 
-Does NOT own: the kernel database (oto.harness.kernel_db), the protocol stamp
-(oto.metrics.measurement_protocol), the launch gates (oto.tensile.gates), or the Tensile
-environment (oto.runners.toolchain).
+Does NOT own: the kernel database (`oto.harness.kernel_db`), the protocol stamp
+(`oto.metrics.measurement_protocol`), the launch gates (`oto.tensile.gates`), or the Tensile
+environment (`oto.runners.toolchain`).
 
 Public API: ``cell_solution_map``, ``dedupe_configs``, ``emit_logic_yaml``,
 ``default_best_library_dest``, ``build_best_library``.

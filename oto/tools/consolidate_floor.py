@@ -3,7 +3,7 @@
 
 Owns: ``plan_floor`` (which runs form one logical floor), ``locked_run_id`` (the deterministic id a chain pins to), ``build_floor`` (pool the chain's CSVs into one run dir) and ``build_db`` (clone the live registry and insert the locked-floor run).
 Does NOT own: the deck selected for the next native run (consolidate_deck) or the cells the floor must cover (consolidate_targets).
-Public API: plan_floor, locked_run_id, build_floor, build_db, PREFERRED_FORMS, SINGLE_FORM_ONLY_RUNS. (``LIVE_DB`` lives in oto.tools.consolidate_targets.)"""
+Public API: plan_floor, locked_run_id, build_floor, build_db, PREFERRED_FORMS, SINGLE_FORM_ONLY_RUNS. (``LIVE_DB`` lives in `oto.tools.consolidate_targets`.)"""
 
 from __future__ import annotations
 

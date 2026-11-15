@@ -5,8 +5,8 @@ Owns: ``reproducible_band`` (cross-arm disagreement on identical configs),
 ``repeat_dispersion`` (raw repeat spread within one config), ``verdict`` and
 ``measured_band`` (the band and where each component came from), plus the
 percentile helper and the shipped tie band that is only a floor.
-Does NOT own: the records the band is measured from (oto.metrics.ab_records) or
-the audit that reports it (oto.metrics.ab_audit).
+Does NOT own: the records the band is measured from (`oto.metrics.ab_records`) or
+the audit that reports it (`oto.metrics.ab_audit`).
 Public API: reproducible_band, repeat_dispersion, verdict, measured_band,
 TIE_BAND_PCT, BAND_LO, BAND_HI.
 """

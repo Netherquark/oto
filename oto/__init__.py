@@ -9,14 +9,14 @@ used before the package split (``TensileDriver``, ``CandidateGenerator``,
 
 Layout -- one responsibility per package, named for it:
 
-    oto.device     hardware facts: device profile access + cell/kernel vocabulary
-    oto.tensile    the Tensile-facing candidate pipeline and its legality gates
-    oto.ledger     durable state + the mutation/convergence state machine
-    oto.metrics    turning benchmark rows into verdicts, reports and status
-    oto.runners    the driver, phase runner, reference floor, auto loop, CLI
-    oto.checks    operator diagnostics (check_* family)
-    oto.tools      offline corpus analysis (consolidate / all_runs / corpus_audit)
-    oto.harness   the analysis harness (kernel_db, regression matrix, ...)
+    `oto.device`     hardware facts: device profile access + cell/kernel vocabulary
+    `oto.tensile`    the Tensile-facing candidate pipeline and its legality gates
+    `oto.ledger`     durable state + the mutation/convergence state machine
+    `oto.metrics`    turning benchmark rows into verdicts, reports and status
+    `oto.runners`    the driver, phase runner, reference floor, auto loop, CLI
+    `oto.checks`    operator diagnostics (check_* family)
+    `oto.tools`      offline corpus analysis (consolidate / all_runs / corpus_audit)
+    `oto.harness`   the analysis harness (kernel_db, regression matrix, ...)
 
 See ``docs/README.md`` for the boundary between this docs ecosystem and the
 docstrings inside the package, and ``docs/docstrings.md`` for the module and
@@ -27,7 +27,7 @@ lazily (PEP 562) so ``import oto`` never pays for the whole tree and never
 triggers the driver's ``load_dotenv`` side effect.
 Does NOT own: any of those symbols' implementations (they live in the
 subpackages, and each module's docstring says which), the hardware facts
-(oto.device), or the docs ecosystem (docs/).
+(`oto.device`), or the docs ecosystem (docs/).
 Public API: TensileDriver, CandidateGenerator, Mutator, ConvergenceAgent,
 AnalyticsEngine, AcceptanceReporter, SQLiteRegistry, __version__.
 """
@@ -51,7 +51,7 @@ def __getattr__(name):
 
     A module-level import of every subpackage would make ``import oto`` pay for
     the whole tree and, worse, would import the driver (and its ``load_dotenv``
-    side effect) before a caller that only wants ``oto.device`` asked for
+    side effect) before a caller that only wants ```oto.device``` asked for
     it. Lazy resolution keeps ``import oto`` cheap and side-effect free.
     """
     if name == "TensileDriver":

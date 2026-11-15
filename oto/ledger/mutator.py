@@ -4,9 +4,9 @@
 Owns: ``Mutator`` -- the composition root over the outcome classifier
 (:class:`MutatorOutcomesMixin`), plus its own sampling, emission, outcome
 write-back, negative cache and per-run overlay read/write.
-Does NOT own: the convergence loop that drives it (oto.ledger.convergence_agent), the
-candidate sampler that produces knobs (oto.tensile.synthesis), or the registry
-it writes to (oto.ledger.registry).
+Does NOT own: the convergence loop that drives it (`oto.ledger.convergence_agent`), the
+candidate sampler that produces knobs (`oto.tensile.synthesis`), or the registry
+it writes to (`oto.ledger.registry`).
 Public API: Mutator, Proposal, classify_outcome (re-exported).
 """
 

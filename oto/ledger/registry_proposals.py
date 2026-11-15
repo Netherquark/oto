@@ -5,9 +5,9 @@ Owns: one row per emitted candidate and at most one outcome per row -- the
 durable state that makes "novel" and "replicate" decidable. The only place a
 proposal is written or advanced.
 
-Does NOT own: the record log (oto.ledger.registry_queries), the engine that opens the db
-(oto.ledger.registry_core), or the samplers that call it
-(oto.ledger.mutator / oto.tensile.synthesis).
+Does NOT own: the record log (`oto.ledger.registry_queries`), the engine that opens the db
+(`oto.ledger.registry_core`), or the samplers that call it
+(`oto.ledger.mutator` / `oto.tensile.synthesis`).
 
 Public API: ProposalMixin.
 """

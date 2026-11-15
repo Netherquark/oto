@@ -5,9 +5,9 @@ Owns: ``TRANSPOSE_MAP`` (the four pattern spellings and the transpose flags
 they imply) and ``pattern_of`` (the pattern a config or a phase names).
 
 Does NOT own: the per-family pattern lists (the deck's, in
-oto.harness.candidate_rows), the problem type the writer emits
-(oto.tensile.config_writer), or the load-divisibility rules that read these
-flags (oto.tensile.gates.loads).
+`oto.harness.candidate_rows`), the problem type the writer emits
+(`oto.tensile.config_writer`), or the load-divisibility rules that read these
+flags (`oto.tensile.gates.loads`).
 
 Why this module exists: one spelling must mean one thing, and the two
 readings of it are NOT the same thing.

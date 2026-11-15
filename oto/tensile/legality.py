@@ -4,8 +4,8 @@ Owns: the hard walls (half Assembly needing VW>=2, the shipped-schedule
 requirement), the shipped support table read from the pinned manifest, the
 co-occurrence check, and ``sample_legal`` / ``sampler_sweep``.
 
-Does NOT own: the four launch gates (oto.tensile.gates), the manifest it reads
-(oto.tensile.shipped_floor_manifest), or the candidate generator (oto.tensile.candidate).
+Does NOT own: the four launch gates (`oto.tensile.gates`), the manifest it reads
+(`oto.tensile.shipped_floor_manifest`), or the candidate generator (`oto.tensile.candidate`).
 
 Public API: is_half_input, thread_tile_dimensions, enable_matrix_instruction,
 half_vector_width_floor, assembly_gsu_vector_width, check_hard_walls,
@@ -25,7 +25,7 @@ assembly with VectorWidth 1), ``assembly_gsu_vector_width`` (its GSU case) and
 Legality is never a judgement call: each predicate resolves to either Tensile
 source or the pinned shipped manifest, and the citation is the code rather than an
 audit's prose. Shipped values are read through the single canonical parser in
-``oto.tensile.shipped_floor_manifest`` rather than re-parsed solution names, so a knob-parse
+```oto.tensile.shipped_floor_manifest``` rather than re-parsed solution names, so a knob-parse
 defect cannot be reintroduced here.
 """
 
@@ -73,8 +73,8 @@ def thread_tile_dimensions(config: dict[str, Any]) -> list[int]:
     """Normalise ``ThreadTile`` to its dimensions.
 
     Phase configs carry ThreadTile as the string ``"8x4"`` (the form
-    ``oto.tensile.shipped_floor._config_from_kernel`` emits and
-    ``CandidateGenerator.validate_config`` (oto.tensile.candidate) accepts), while Tensile's own state holds a two-element list. The
+    ```oto.tensile.shipped_floor._config_from_kernel``` emits and
+    ``CandidateGenerator.validate_config`` (`oto.tensile.candidate`) accepts), while Tensile's own state holds a two-element list. The
     EnableMatrixInstruction derivation tests ``len(ThreadTile) == 2``, so the
     string form has to be normalised first or every candidate reads as
     undetermined -- which silently disarmed the half VectorWidth wall.

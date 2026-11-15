@@ -11,9 +11,9 @@ The floor is sourced from the *installed* library, never from hand-authored
 baselines: a floor that is not what shipped is not a floor.
 
 Does NOT own: the manifest cache and its refresh policy
-(oto.tensile.shipped_floor_manifest), the rerun triage and tier ordering
-(oto.tensile.shipped_floor_manifest), or the fingerprint/phase-key identity (also
-oto.tensile.shipped_floor_manifest).
+(`oto.tensile.shipped_floor_manifest`), the rerun triage and tier ordering
+(`oto.tensile.shipped_floor_manifest`), or the fingerprint/phase-key identity (also
+`oto.tensile.shipped_floor_manifest`).
 Public API: shipped_kernel_config, shipped_kernel_knobs,
 emit_spoof_phases, SHIPPED_FAMILIES, CONTRACTION_PATTERNS, find_gfx900_dat_files,
 parse_shipped_kernels.

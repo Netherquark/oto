@@ -10,7 +10,7 @@ pinned.
 
 Owns: the verdict-stream comparison (verdict_flipped / text_differs /
 old_raised / new_raised buckets).
-Does NOT own: the gate logic (oto.tensile.gates.*) or the corpus
+Does NOT own: the gate logic (`oto.tensile.gates`.*) or the corpus
 (verdict_corpus). Public API: main; the contract is the process exit code.
 """
 from __future__ import annotations

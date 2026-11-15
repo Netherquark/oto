@@ -10,10 +10,10 @@ pieces: ``loader.py`` (profile resolution via ``current_profile()``;
 triples).
 Owns: the profile dataclass and its nested policies, the profile loaders,
 the codename -> ISA triple table, and the cell/kernel vocabulary.
-Does NOT own: any legality rule (oto.tensile.gates), any measurement or
-statistics (oto.metrics.*), or the driver's behaviour (oto.runners.*).
+Does NOT own: any legality rule (`oto.tensile.gates`), any measurement or
+statistics (`oto.metrics`.*), or the driver's behaviour (`oto.runners`.*).
 No numeric hardware fact may exist outside ``profiles/<codename>.json``.
 Public API: none at import time; this package re-exports nothing. Callers
-use ``oto.device.loader.current_profile()`` for device facts and
-``oto.device.kernel_vocabulary`` for cell identity.
+use ```oto.device.loader.current_profile`()`` for device facts and
+```oto.device.kernel_vocabulary``` for cell identity.
 """

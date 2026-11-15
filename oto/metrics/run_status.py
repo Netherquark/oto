@@ -6,13 +6,13 @@ Owns: the façade every consumer imports — the re-exported ``build_report``
 (``render_compact``, ``render``, ``bar``), and ``LiveStatus`` with
 ``_PanelStdout`` — the background-threaded TTY repainter and the stdout
 proxy that erases the panel before any other write. The implementation is
-split across ``oto.metrics.status_helpers`` (helpers),
-``oto.metrics.ledger_state`` (registry/corpus state) and
-``oto.metrics.build_status`` (report assembly and ETAs); tests patch this
+split across ```oto.metrics.status_helpers``` (helpers),
+```oto.metrics.ledger_state``` (registry/corpus state) and
+```oto.metrics.build_status``` (report assembly and ETAs); tests patch this
 module's ``tlib`` and ``build_report``.
-Does NOT own: the plan it prices (oto.metrics.run_plan), the thermal
-envelope it cites (oto.metrics.thermal_telemetry), or the driver that starts it
-(oto.runners.driver).
+Does NOT own: the plan it prices (`oto.metrics.run_plan`), the thermal
+envelope it cites (`oto.metrics.thermal_telemetry`), or the driver that starts it
+(`oto.runners.driver`).
 Public API: RunPlan / PhaseCost / Estimate (re-exported), build_report, bar,
 render_compact, render, LiveStatus, _PanelStdout, fmt_duration, bucket,
 _parse_ts, _jittery, read_thermals, main, tlib.

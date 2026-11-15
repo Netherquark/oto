@@ -1,7 +1,7 @@
 """Agent-1: generate <codename>_theoretical_limits.md from a profile + starter.
 
 Owns: the document template and the ALU peaks / ceilings section, which is
-DERIVED from the profile on every call (see oto.device.derive_limits). Does NOT own:
+DERIVED from the profile on every call (see `oto.device.derive_limits`). Does NOT own:
 web research (injected via `research` callable) or writing to disk (caller
 decides).
 

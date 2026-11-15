@@ -2,8 +2,8 @@
 """Inspect the registry DB for label contamination ('auto' / 'Unknown').
 
 Owns: this one ad-hoc SQLite inspection of ``<codename>_results/registry.db``.
-Does NOT own: any read the rest of oto performs (use ``oto.ledger.registry`` or
-``oto.tools.run_census`` for anything the project depends on).
+Does NOT own: any read the rest of oto performs (use ```oto.ledger.registry``` or
+```oto.tools.run_census``` for anything the project depends on).
 Public API: main.
 
     oto check db            # human inspector

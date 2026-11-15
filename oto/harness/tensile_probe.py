@@ -7,10 +7,10 @@ and decided: the solution count, the reject reason, the LDS allocation it
 computed, the register pool it allocated, and our own gate's verdict beside
 it.
 
-Does NOT own: the gates (oto.tensile.gates -- this tool *asks* them), the
-config materialisation (oto.tensile.config_writer), the Tensile pipeline
-(oto.checks.tensile_build), or the corpus-wide agreement census
-(oto.harness.gate_calibration -- that one sweeps the corpus; this one answers
+Does NOT own: the gates (`oto.tensile.gates` -- this tool *asks* them), the
+config materialisation (`oto.tensile.config_writer`), the Tensile pipeline
+(`oto.checks.tensile_build`), or the corpus-wide agreement census
+(`oto.harness.gate_calibration` -- that one sweeps the corpus; this one answers
 about a single config).
 Public API: probe_config, probe_phase, main.
 
@@ -25,9 +25,9 @@ answers in one place.
 CPU only: the pipeline builds the kernel source and compiles it (a few
 seconds per config), and never launches anything.
 
-    python3 -m oto.harness.tensile_probe --dtype S --macro 128x128x16 \\
+    python3 -m `oto.harness.tensile_probe` --dtype S --macro 128x128x16 \\
         --thread 8x8 --vw 4 --du 16
-    python3 -m oto.harness.tensile_probe --phase-id phase_cand_ss_... --json out.json
+    python3 -m `oto.harness.tensile_probe` --phase-id phase_cand_ss_... --json out.json
 """
 
 from __future__ import annotations

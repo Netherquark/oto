@@ -7,8 +7,8 @@ environment, the preflight check, and the run-wide live status panel.
 ``TensileDriver`` is the composition root: it inherits one mixin per
 responsibility (benchmark.py, phase_runner.py, reference_floor.py, convergence_loop.py,
 acceptance_reporting.py, clock_telemetry.py, timing.py, library_build.py) and owns nothing else.
-Does NOT own: the gates (oto.tensile.gates), the verdict model (oto.metrics), or
-durable state (oto.ledger).
+Does NOT own: the gates (`oto.tensile.gates`), the verdict model (`oto.metrics`), or
+durable state (`oto.ledger`).
 Public API: TensileDriver, NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS.
 """
 

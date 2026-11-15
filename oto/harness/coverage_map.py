@@ -8,25 +8,25 @@ geometries ranked by how well their neighbours measured. That last number is the
 local-minimum finder: a geometry whose siblings (same tile, other thread tile;
 same thread tile, other tile) measure well is the one worth running next.
 
-Does NOT own: the gate (oto.tensile.gates), the corpus (oto.harness.kernel_db),
-the candidate deck (oto.harness.candidate_rows), the per-cell winners
-(oto.harness.cell_resolver) or the verdicts (oto.metrics.ab_audit).
+Does NOT own: the gate (`oto.tensile.gates`), the corpus (`oto.harness.kernel_db`),
+the candidate deck (`oto.harness.candidate_rows`), the per-cell winners
+(`oto.harness.cell_resolver`) or the verdicts (`oto.metrics.ab_audit`).
 
 Public API: legal_geometries, measured_geometries, coverage_row, neighbour_score,
 main.
 
 Why it exists: candidate generation asks "has this cell, at this geometry, on
 this axis, already been measured -- and how did it score?". The corpus census
-(oto.harness.corpus_census) answers the second half for *what exists*; this
+(`oto.harness.corpus_census`) answers the second half for *what exists*; this
 answers the first half for the *whole legal space*, so a run spends its budget
 on unexplored ground instead of re-measuring a neighbour of a winner.
 
 CPU only, read-only, no Tensile, no GPU.
 
-    python3 -m oto.harness.coverage_map                 # every family
-    python3 -m oto.harness.coverage_map --family SS
-    python3 -m oto.harness.coverage_map --cell SS:256 --top 12
-    python3 -m oto.harness.coverage_map --json out.json
+    python3 -m `oto.harness.coverage_map`                 # every family
+    python3 -m `oto.harness.coverage_map` --family SS
+    python3 -m `oto.harness.coverage_map` --cell SS:256 --top 12
+    python3 -m `oto.harness.coverage_map` --json out.json
 """
 
 from __future__ import annotations

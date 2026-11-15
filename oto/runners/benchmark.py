@@ -6,8 +6,8 @@ write, ledger records, telemetry tag, launch, timeout/failure recovery) and
 ``_run_tensile_benchmark`` (the argv/env, the detached process group, the log
 tee, the key poll, the CSV collection). Also the two shared mechanisms those
 need: ``_read_key`` (single owner of stdin) and ``_apply_cooldown``.
-Does NOT own: what makes a config legal (oto.tensile.gates), what a config is
-(oto.tensile.config_writer), or which phases run in what order (phase_runner.py).
+Does NOT own: what makes a config legal (`oto.tensile.gates`), what a config is
+(`oto.tensile.config_writer`), or which phases run in what order (phase_runner.py).
 Public API: BenchmarkMixin.
 """
 
@@ -205,7 +205,7 @@ class BenchmarkMixin:
         Kept as a method (the former `TensileDriver._write_phase_config`
         surface) so `oto.checks.tensile_build.write_phase_configs` and tests can
         call or patch it on the driver; the ~240-line implementation lives in
-        oto.tensile.config_writer.write_phase_config and is delegated to here.
+        `oto.tensile.config_writer.write_phase_config` and is delegated to here.
         """
         return config_writer.write_phase_config(self, path, phase)
 

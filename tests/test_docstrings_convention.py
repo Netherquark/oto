@@ -20,8 +20,6 @@ def test_every_module_docstring_has_three_clauses():
         if not doc:
             missing.append((path, "no module docstring"))
             continue
-        for clause in CLAUSES:
-            if clause not in doc:
-                missing.append((path, clause))
+        missing.extend((path, clause) for clause in CLAUSES if clause not in doc)
     assert not missing, "modules missing docstring clauses:\n" + "\n".join(
         f"  {p}: {c}" for p, c in missing)

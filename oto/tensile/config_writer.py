@@ -6,16 +6,16 @@ before it is written when a CPU gate cannot prove legality. This is the one plac
 a knob becomes Tensile YAML, so it is the one place that has to answer for every
 silent-drop bug in the project's history (GlobalReduceVectorWidth, dropped LDS
 pads, dropped StaggerUStride).
-Does NOT own: the gates it consults (oto.tensile.gates), the shape parser it
-uses (oto.tensile.candidate.parse_tensile_shape), the driver that calls it
-(oto.runners.benchmark), the forwarding-surface tuples (oto.tensile.knob_surface),
-or the contraction-pattern vocabulary (oto.tensile.contraction_patterns).
+Does NOT own: the gates it consults (`oto.tensile.gates`), the shape parser it
+uses (`oto.tensile.candidate.parse_tensile_shape`), the driver that calls it
+(`oto.runners.benchmark`), the forwarding-surface tuples (`oto.tensile.knob_surface`),
+or the contraction-pattern vocabulary (`oto.tensile.contraction_patterns`).
 Public API: write_phase_config, parse_tensile_shape, TRANSPOSE_MAP,
 GLOBAL_LOAD_WIDTH_KEYS, FORWARDED_GROUP_C_KNOBS, FORWARDED_KNOBS,
 NOT_FORWARDED_KNOBS.
 
-The forwarding-surface tuples live in ``oto.tensile.knob_surface`` and the
-pattern vocabulary in ``oto.tensile.contraction_patterns``; both are re-exported here for
+The forwarding-surface tuples live in ```oto.tensile.knob_surface``` and the
+pattern vocabulary in ```oto.tensile.contraction_patterns```; both are re-exported here for
 the tests and gate_calibration. The driver's private ``_TENSILE_VALID_PARAMS``
 is consulted at the launch boundary but is not re-exported here.
 

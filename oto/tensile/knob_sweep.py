@@ -4,12 +4,12 @@
 Owns: the command line for the knob-sweep deck -- resolving which families,
 shapes and sweeps to emit, calling ``CandidateGenerator
 .generate_knob_sweep_phases``, and reporting what was refused and why.
-Does NOT own: the sweep data (oto.tensile.family_decks), the generator that merges
-template and knobs (oto.tensile.candidate_emission), or the gates that refuse a
-candidate (oto.tensile.gates).
+Does NOT own: the sweep data (`oto.tensile.family_decks`), the generator that merges
+template and knobs (`oto.tensile.candidate_emission`), or the gates that refuse a
+candidate (`oto.tensile.gates`).
 Public API: main.
 
-Why this exists as a module rather than a CLI stage: ``oto.runners.stage_cli`` stage 2
+Why this exists as a module rather than a CLI stage: ```oto.runners.stage_cli``` stage 2
 is deliberately READ_ONLY ("manifest summary only -- no execution, no run
 minted"), and a deck generator writes ``phases.yaml``. Putting it here keeps that
 contract intact while still giving the run a one-line entry point.
@@ -18,10 +18,10 @@ CPU only. Writes ``phases.yaml`` (the candidate manifest) and nothing else. It
 never launches a kernel, and it has no Tensile/GPU dependency beyond the gates,
 which are pure Python.
 
-    python3 -m oto.tensile.knob_sweep                       # dry run, all families
-    python3 -m oto.tensile.knob_sweep --emit                # append to phases.yaml
-    python3 -m oto.tensile.knob_sweep --families CC ZZ      # the worst losers first
-    python3 -m oto.tensile.knob_sweep --shapes 256x256x256 512x512x512
+    python3 -m `oto.tensile.knob_sweep`                       # dry run, all families
+    python3 -m `oto.tensile.knob_sweep` --emit                # append to phases.yaml
+    python3 -m `oto.tensile.knob_sweep` --families CC ZZ      # the worst losers first
+    python3 -m `oto.tensile.knob_sweep` --shapes 256x256x256 512x512x512
 """
 
 from __future__ import annotations

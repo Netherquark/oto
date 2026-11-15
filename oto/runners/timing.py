@@ -6,8 +6,8 @@ Owns: per-family phase timing from registry started->ended pairs
 ``_run_stamp``), and the report's execution-time block that keeps native wall
 clock, reference-chain wall clock and busy minutes explicitly separate
 (``_compute_execution_timing``).
-Does NOT own: the registry rows it reads (oto.ledger.registry) or the report it
-is formatted for (oto.metrics.acceptance_report).
+Does NOT own: the registry rows it reads (`oto.ledger.registry`) or the report it
+is formatted for (`oto.metrics.acceptance_report`).
 Public API: TimingMixin.
 """
 

@@ -5,9 +5,9 @@ Owns: ``main`` -- grading a manifest (``phases.yaml`` plus the seed overlay, or 
 run's overlay) against the shipped gfx900 contract grid, and exiting non-zero on
 divergence.
 
-Does NOT own: the rule itself (oto.tensile.library_parity), the driver's
-non-fatal ``--preflight`` check (oto.runners.driver), or the install-time refusal
-(oto.tools.consolidate_install).
+Does NOT own: the rule itself (`oto.tensile.library_parity`), the driver's
+non-fatal ``--preflight`` check (`oto.runners.driver`), or the install-time refusal
+(`oto.tools.consolidate_install`).
 
 Public API: main.
 

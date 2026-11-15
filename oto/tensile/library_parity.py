@@ -4,12 +4,12 @@ Owns: the single implementation of the rule -- the produced
 ``tensilelibrary.dat`` must address exactly the (family, shape) cells the shipped
 gfx900 library addresses, no contraction and no extension.
 
-Does NOT own: the CLI that grades an external deck (oto.checks.library_parity),
-the driver's non-fatal ``--preflight`` check (oto.runners.driver), or the
-install-time refusal (oto.tools.consolidate_install).
+Does NOT own: the CLI that grades an external deck (`oto.checks.library_parity`),
+the driver's non-fatal ``--preflight`` check (`oto.runners.driver`), or the
+install-time refusal (`oto.tools.consolidate_install`).
 
 Public API: phase_family, phase_cells, phases_cells, load_pipeline_phases,
-parity_report. (The CLI ``main`` lives in oto.checks.library_parity.)
+parity_report. (The CLI ``main`` lives in `oto.checks.library_parity`.)
 
 The rule, canonically stated in ``docs/gfx90c_knowledge_base.md`` §6.1:
 
@@ -161,7 +161,7 @@ def load_pipeline_phases(base_dir: str | None = None,
                          include_seed: bool = True, profile=None) -> list[dict[str, Any]]:
     """Deck + current overlays, merged in the manifest order the run uses.
 
-    Mirrors ``oto.runners.phase_runner`` (``PhaseMixin.load_phases_manifest``)'s merge order (deck, then the
+    Mirrors ```oto.runners.phase_runner``` (``PhaseMixin.load_phases_manifest``)'s merge order (deck, then the
     live run's overlay when one is active, then the persistent seed overlay)
     so a preflight parity verdict covers the exact manifest a run would build.
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold

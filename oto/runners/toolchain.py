@@ -10,8 +10,8 @@ python-sdk: ``lib/python*/site-packages/_rocm_sdk_core/lib/llvm/bin``; TheRock
 tarball: ``llvm/bin``). ``hipconfig`` is kept for compatibility but is no longer
 consulted by the resolver. Also owns reading the repo-root `.env` via
 `python-dotenv`, so no other module hand-parses it.
-Does NOT own: the driver that uses these paths (oto.runners.driver) or the
-Tensile subprocess environment (also oto.runners.driver).
+Does NOT own: the driver that uses these paths (`oto.runners.driver`) or the
+Tensile subprocess environment (also `oto.runners.driver`).
 Public API: REPO_ROOT, DOTENV_PATH, DEFAULT_TENSILE_ROOT, require_tensile_root,
 require_rocm_path, hipconfig, resolve_rocm_paths.
 """

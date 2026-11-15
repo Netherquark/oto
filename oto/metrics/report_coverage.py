@@ -5,9 +5,9 @@ Owns: ``coverage_rows`` (the per-cell coverage numbers, read from the
 coverage tool's hand-off file) and ``coverage_section`` (the rendered
 section: one grouped coverage table, plus the maps in one appendix).
 
-Does NOT own: the figures (oto.harness.coverage_graph writes them), the
-report payload (oto.metrics.report_models) or the stylesheet
-(oto.metrics.report_css).
+Does NOT own: the figures (`oto.harness.coverage_graph` writes them), the
+report payload (`oto.metrics.report_models`) or the stylesheet
+(`oto.metrics.report_css`).
 Public API: coverage_rows, coverage_section, coverage_dir.
 
 Why the section exists: the acceptance report said *how fast* the best kernel

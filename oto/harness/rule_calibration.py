@@ -18,18 +18,18 @@ Owns: probing an arbitrary candidate rule against the corpus, and the
 ``builtin_rules`` registry (the shipped rules as *views* of the gate, plus the
 rejected ``nt_budget`` counter-example).
 
-Does NOT own: the implemented rules (``oto.tensile.gates.occupancy`` /
-``oto.tensile.gates.loads`` / ``oto.tensile.candidate``), the whole-gate census
-``oto.harness.gate_calibration``, or the rule under test -- the caller supplies
+Does NOT own: the implemented rules (```oto.tensile.gates.occupancy``` /
+```oto.tensile.gates.loads``` / ```oto.tensile.candidate```), the whole-gate census
+```oto.harness.gate_calibration```, or the rule under test -- the caller supplies
 it, as a builtin name or ``--rule module:attr``.
 
 Public API: Rule, probe, builtin_rules, load_rule, main.
 
 CPU only, read-only, never benchmarks.
 
-    python3 -m oto.harness.rule_calibration                    # every builtin
-    python3 -m oto.harness.rule_calibration --rule nt_budget
-    python3 -m oto.harness.rule_calibration --rule myrules.py:refuse_wide --json out.json
+    python3 -m `oto.harness.rule_calibration`                    # every builtin
+    python3 -m `oto.harness.rule_calibration` --rule nt_budget
+    python3 -m `oto.harness.rule_calibration` --rule myrules.py:refuse_wide --json out.json
 """
 
 from __future__ import annotations

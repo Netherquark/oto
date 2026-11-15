@@ -28,9 +28,9 @@ The four forms, stamped into records, kernel_db rows and the report payload:
   never recorded, or an unattributable family. Never asserted either way and
   never admitted to a graded basis.
 
-Does NOT own: the records it classifies (oto.metrics.ab_records builds them),
-the deltas they feed (oto.metrics.ab_delta), or the corpus it stamps
-(oto.harness.kernel_db).
+Does NOT own: the records it classifies (`oto.metrics.ab_records` builds them),
+the deltas they feed (`oto.metrics.ab_delta`), or the corpus it stamps
+(`oto.harness.kernel_db`).
 Public API: SINGLE, PARTIAL, FAMILY, UNKNOWN, PROTOCOLS, LABEL, label,
 gradeable, classify, classify_count, protocol_of, like_for_like, yaml_count,
 problem_count_text.

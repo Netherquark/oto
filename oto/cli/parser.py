@@ -2,8 +2,8 @@
 
 Owns: the parser, the noun/verb groups, the examples-first descriptions, and
 the metadata the dispatcher uses (``mutating``, ``read``, ``examples``).
-Does NOT own: any command's implementation (``oto.cli.commands`` adapts the
-existing backends) or the global output/error policy (``oto.cli.dispatch``).
+Does NOT own: any command's implementation (```oto.cli.commands``` adapts the
+existing backends) or the global output/error policy (```oto.cli.dispatch```).
 Public API: build_parser, subparser_for.
 """
 

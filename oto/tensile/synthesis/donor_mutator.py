@@ -7,9 +7,9 @@ survive (``_scheduler``/``ldspad_feasible`` CPU gate + novelty) and the per-fami
 mutation patterns (``_ss_``, ``_dd_``, ``_cc_``, ``_zz_``) plus the
 floor-direction walk that moves a parent toward the shipped winner.
 Does NOT own: the forward-knob domains it draws from
-(oto.tensile.synthesis.donor_knobs), the manifest-driven synthesis
-(oto.tensile.synthesis.pipeline_manifest), or the ledger that records what it emits
-(oto.ledger.mutator).
+(`oto.tensile.synthesis.donor_knobs`), the manifest-driven synthesis
+(`oto.tensile.synthesis.pipeline_manifest`), or the ledger that records what it emits
+(`oto.ledger.mutator`).
 
 Mutation strategies (moved here from docs/potential_configs.md). Every sore loser
 gets novel, valid mutants from three strategy families, with
@@ -24,7 +24,7 @@ history -- novelty is guaranteed by the ledger, not by pass/fail history:
     (structural knobs only; knobs the parent already matches are left alone).
 Budget: 5 forward draws per iteration; each mutant is gated through
 `validate_config` + `ldspad_feasible` before ledger emission. The campaign's
-convergence test lives in oto.ledger.convergence_agent.
+convergence test lives in `oto.ledger.convergence_agent`.
 
 The value sets are NOT restated here. A knob's per-family draw set is
 ``db_knobs.forward_domain``; the *jointly* legal subset of it -- GLVW against

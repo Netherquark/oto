@@ -6,8 +6,8 @@ defect), ``lower_confidence_bound`` / ``select_parent``, the ledger-wide view,
 and the acceptance band / per-cell slow bars read from the reference chain
 rather than defaulted.
 
-Does NOT own: the A/B arithmetic (oto.metrics.ab_delta), the report layout
-(oto.metrics.acceptance_report), or the harnesses that read the band.
+Does NOT own: the A/B arithmetic (`oto.metrics.ab_delta`), the report layout
+(`oto.metrics.acceptance_report`), or the harnesses that read the band.
 
 Public API: coverage_cells, decide_state, CELL_STATES, STATE_EXPLORE,
 STATE_REPLICATE, STATE_RETIRED, lower_confidence_bound, select_parent,

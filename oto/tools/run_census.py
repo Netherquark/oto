@@ -5,9 +5,9 @@ Owns: the cross-run view -- winners across every run directory (not just the
 latest), the load width each arm actually reached, and the never-exercised
 knobs, because those are the three questions that decide what to run next.
 
-Does NOT own: the winners of one run's own phases (oto.metrics.benchmark_analytics), the
-acceptance verdicts (oto.metrics.ab_audit), or the registry it reads
-(oto.ledger.registry).
+Does NOT own: the winners of one run's own phases (`oto.metrics.benchmark_analytics`), the
+acceptance verdicts (`oto.metrics.ab_audit`), or the registry it reads
+(`oto.ledger.registry`).
 
 Public API: main, DTYPE_BYTES, FAMILY_CHAR, GLOBAL_LOAD_CAP_BYTES.
 
@@ -17,9 +17,9 @@ own loaders and aggregators (the driver's all-runs record loaders, and the
 drift from the pipeline that produced the ledger. Byte widths come from the same
 place as the gate's, which ``tests.test_measurement_integrity`` asserts.
 
-    python3 -m oto.tools.run_census           # tables to stdout
-    python3 -m oto.tools.run_census --json out.json  # machine-readable
-    python3 -m oto.tools.run_census --family ZZ      # filter to one family
+    python3 -m `oto.tools.run_census`           # tables to stdout
+    python3 -m `oto.tools.run_census` --json out.json  # machine-readable
+    python3 -m `oto.tools.run_census` --family ZZ      # filter to one family
 
 CPU only. Touches no GPU and launches no Tensile run.
 """

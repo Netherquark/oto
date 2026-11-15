@@ -3,9 +3,9 @@
 Owns: the process-wide adapter primitives every command-group adapter uses:
 the ``--base-dir``/``.env`` path resolution and the subprocess argv shuffle.
 Command-group adapters live in their own modules (this one holds no command).
-Does NOT own: the command tree (oto.cli.dispatch dispatches over
-``oto.cli.commands`` and its sibling adapters) or the process output policy
-(oto.cli.dispatch).
+Does NOT own: the command tree (`oto.cli.dispatch` dispatches over
+```oto.cli.commands``` and its sibling adapters) or the process output policy
+(`oto.cli.dispatch`).
 Public API: base_dir, _with_argv, _call, _call_muted, _json_file.
 """
 

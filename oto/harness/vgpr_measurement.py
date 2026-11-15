@@ -5,9 +5,9 @@ Owns: reading the AMDGPU metadata of each phase's compiled ``.o`` and comparing
 the measured VGPR count against the model, which is the only way to retire the
 model's calibration headroom.
 
-Does NOT own: the model itself (oto.tensile.gates.vgpr_model), building the
+Does NOT own: the model itself (`oto.tensile.gates.vgpr_model`), building the
 objects (the Tensile driver does that), or the audit that consumes the ratio
-(oto.harness.occupancy_bounds).
+(`oto.harness.occupancy_bounds`).
 
 Public API: main.
 
@@ -18,9 +18,9 @@ whose AMDGPU metadata holds the true ``vgpr_count``. This tool parses them with
 measured per-kernel counts and median, the model's accumulator VGPRs for the same
 ThreadTile, and the measured/model ratio -- the headroom indicator.
 
-    python3 -m oto.harness.vgpr_measurement                 # whole corpus
-    python3 -m oto.harness.vgpr_measurement --run run_20261008_030033
-    python3 -m oto.harness.vgpr_measurement --json out.json
+    python3 -m `oto.harness.vgpr_measurement`                 # whole corpus
+    python3 -m `oto.harness.vgpr_measurement` --run run_20261008_030033
+    python3 -m `oto.harness.vgpr_measurement` --json out.json
 """
 
 

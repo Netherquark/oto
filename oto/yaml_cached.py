@@ -7,7 +7,7 @@ path, size and mtime so a deck that has not changed is parsed once).
 
 Does NOT own: the YAML *content* (the deck is ``phases.yaml``, the overlay is
 ``<codename>_results/overlays/phases.seed.overlay.yaml``, the phase configs are
-written by oto.tensile.config_writer) or the JSON caches (those are JSON and
+written by `oto.tensile.config_writer`) or the JSON caches (those are JSON and
 are read with ``json``).
 
 Why this exists: the deck and the overlay are re-read by the driver, the

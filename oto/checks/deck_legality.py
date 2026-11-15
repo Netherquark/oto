@@ -6,8 +6,8 @@ JSON) through the same gates ``CandidateGenerator.validate_config`` applies to a
 candidate it just produced, so a deck that would die mid-run with Tensile
 ``error 4`` / ``error 2`` / ``error 3`` is rejected before any GPU work starts.
 
-Does NOT own: producing candidates (oto.tensile.candidate), the gates themselves
-(oto.tensile.gates -- assembly, loads, occupancy), or the ledger (oto.ledger).
+Does NOT own: producing candidates (`oto.tensile.candidate`), the gates themselves
+(`oto.tensile.gates` -- assembly, loads, occupancy), or the ledger (`oto.ledger`).
 
 Public API: main, load_deck.
 

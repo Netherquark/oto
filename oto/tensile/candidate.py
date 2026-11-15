@@ -5,13 +5,13 @@ Owns: ``CandidateGenerator`` -- the curated family tile decks, the neighbour
 search over a harvested winner, the fingerprint identity, the append boundary
 that refuses an illegal candidate before it becomes a launchable phase, and
 ``validate_config``, the single orchestrator over the three gate families.
-Does NOT own: the gates themselves (oto.tensile.gates), the launch-boundary
-config writer (oto.tensile.config_writer), or the run loop (oto.runners).
+Does NOT own: the gates themselves (`oto.tensile.gates`), the launch-boundary
+config writer (`oto.tensile.config_writer`), or the run loop (`oto.runners`).
 Public API: CandidateConfig, CandidateGenerator, assembly_class_valid,
 cap_vector_width, ldspad_feasible, occupancy_feasible, occupancy_workgroups_per_cu,
 validate_tensile_loads. The gates are re-exported here for the historical flat
-import surface (``from oto.tensile.candidate import occupancy_feasible``);
-``oto.tensile.gates`` is their canonical home.
+import surface (``from `oto.tensile.candidate` import occupancy_feasible``);
+```oto.tensile.gates``` is their canonical home.
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ class CandidateGenerator(CandidateEmitMixin):
     def _load_family_decks(self) -> dict[str, list[dict[str, Any]]]:
         """The curated family deck for this device.
 
-        The data lives in oto.tensile.family_decks so the generator and the deck can
+        The data lives in `oto.tensile.family_decks` so the generator and the deck can
         be read separately: the deck is a table of measured/quant/ladder
         candidates, and the generator is the code that clamps and emits them.
         Every entry is annotated in that module with which kind it is.
@@ -332,7 +332,7 @@ def estimate_lds_usage(config: dict[str, Any]) -> float:
 
     The ``dtype_sizes`` table below is the RAW element byte count for A/B
     tiles (Z = 2xFP32 = 8 B, C = 2xFP64 = 16 B). It is deliberately different
-    from ``oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT``, which is
+    from ```oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT```, which is
     Tensile's per-register assembly accounting (Z = 16 there: reg=4, per
     6c7cc4e, adopted 2026-11-14). The two tables model different shapes of the
     same config; do not merge them.

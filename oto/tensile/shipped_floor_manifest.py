@@ -12,7 +12,7 @@ computed from the live dat once, cached, and regenerated only on an explicit
 measurement still describes the config that would run now.
 
 Does NOT own: the binary .dat parse and the spoof-phase emitter
-(oto.tensile.shipped_floor).
+(`oto.tensile.shipped_floor`).
 Public API: see ``__all__``.
 """
 

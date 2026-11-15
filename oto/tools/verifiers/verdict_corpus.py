@@ -4,7 +4,7 @@
 Owns: emitting (func, config, verdict) tuples for the corpus in this tree,
 by resolving the gate symbols through whichever layout the tree carries
 (the former ``scheduler.py`` or the ``oto/tensile/gates/*`` package).
-Does NOT own: the gate logic (oto.tensile.gates.*) or the parent comparison.
+Does NOT own: the gate logic (`oto.tensile.gates`.*) or the parent comparison.
 Public API: emit.
 """
 from __future__ import annotations

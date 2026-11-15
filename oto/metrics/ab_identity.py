@@ -6,8 +6,8 @@ survives whichever way Tensile happened to write a tile), ``_pair_key`` (the
 identity used to pair a native record with a floor record), ``_resolved_config``
 (reading a phase's config out of its own resolved 2_BenchmarkData YAML), and
 ``_driver`` (the read-only driver both arms are read through).
-Does NOT own: the band measured from the pairing (oto.metrics.ab_band) or the
-audit that grades it (oto.metrics.ab_audit).
+Does NOT own: the band measured from the pairing (`oto.metrics.ab_band`) or the
+audit that grades it (`oto.metrics.ab_audit`).
 Public API: AbIdentityMixin.
 """
 

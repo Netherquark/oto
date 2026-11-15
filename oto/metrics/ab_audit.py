@@ -4,9 +4,9 @@
 Owns: ``audit`` (classify every cell in both arms with a certainty grade),
 ``cell_deltas`` (the canonical per-cell pairing), ``_proposal_coverage``
 (cell coverage from the ledger), ``print_report`` and ``main``.
-Does NOT own: the record loading (oto.metrics.ab_records), the identity
-(oto.metrics.ab_identity), the band (oto.metrics.ab_band), or the report layout
-(oto.metrics.acceptance_report).
+Does NOT own: the record loading (`oto.metrics.ab_records`), the identity
+(`oto.metrics.ab_identity`), the band (`oto.metrics.ab_band`), or the report layout
+(`oto.metrics.acceptance_report`).
 Public API: BASE, TIE_BAND_PCT, BAND_LO, BAND_HI, audit, cell_deltas,
 measured_band, verdict, arm_record_sets, reproducible_band, repeat_dispersion,
 phase_records, arm_records, phase_family, norm_config, main (re-exports).

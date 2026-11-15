@@ -6,9 +6,9 @@ VGPR-bound and wave-slot-bound -- and their minimum, because ``MaxOccupancy`` in
 the kernel metadata is a REGISTER-SLOT count, not resident workgroups.
 
 Does NOT own: the register-file model it takes as truth
-(oto.tensile.gates.vgpr_model), the kernel_db rows it reads
-(oto.harness.kernel_db), or the gate that decides launchability
-(oto.tensile.gates.occupancy).
+(`oto.tensile.gates.vgpr_model`), the kernel_db rows it reads
+(`oto.harness.kernel_db`), or the gate that decides launchability
+(`oto.tensile.gates.occupancy`).
 
 Public API: main.
 
@@ -23,10 +23,10 @@ arm instead of the native winners.
 CPU only. Reads ``<codename>_results/analysis/kernel_db.json`` (typecode-corrected
 rebuild, the same provenance ``cell_knob_diff`` and the acceptance report cite).
 
-    python3 -m oto.harness.occupancy_bounds                 # native winners
-    python3 -m oto.harness.occupancy_bounds --side floor    # spoof-floor winners
-    python3 -m oto.harness.occupancy_bounds --lds-factor 1  # single-buffered LDS
-    python3 -m oto.harness.occupancy_bounds --at-most 3     # cells at <= N wg/CU
+    python3 -m `oto.harness.occupancy_bounds`                 # native winners
+    python3 -m `oto.harness.occupancy_bounds` --side floor    # spoof-floor winners
+    python3 -m `oto.harness.occupancy_bounds` --lds-factor 1  # single-buffered LDS
+    python3 -m `oto.harness.occupancy_bounds` --at-most 3     # cells at <= N wg/CU
 """
 
 

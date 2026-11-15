@@ -5,7 +5,7 @@ Owns: ``main`` -- every ``--flag`` the driver accepts and the stage that each on
 selects. Each stage is a named function here so the CLI is a routing table, not a
 400-line if-chain, and so a flag's effect can be read in one place.
 Does NOT own: any stage's behaviour (each belongs to the mixin that implements
-it), the plan the ``--auto`` questions produce (oto.runners.auto_prompt), or the
+it), the plan the ``--auto`` questions produce (`oto.runners.auto_prompt`), or the
 driver wiring (driver.py).
 Public API: main.
 """
@@ -40,7 +40,7 @@ _FAMILY_TOKENS = ("HH_HPA", "HS_HPA", "SS", "DD", "HH", "CC", "ZZ")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the driver's argument parser; see oto.runners.stage_flags."""
+    """Build the driver's argument parser; see `oto.runners.stage_flags`."""
     return flags.build_parser()
 
 

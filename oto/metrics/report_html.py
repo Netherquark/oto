@@ -7,7 +7,7 @@ the problem-space coverage section (report_coverage.py) and the document templat
 Nothing here writes anything but the final file.
 Does NOT own: the report payload (report_models), the section builders
 (report_sections), the coverage figures themselves (report_coverage.py reads
-oto.harness.coverage_graph's hand-off) or the static assets (report_css).
+`oto.harness.coverage_graph`'s hand-off) or the static assets (report_css).
 Public API: HtmlMixin.
 """
 

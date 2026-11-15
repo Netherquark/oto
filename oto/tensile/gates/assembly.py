@@ -4,9 +4,9 @@ Owns: ``assembly_class_valid``, the single source of truth for both seams (the
 candidate generator's ``validate_config`` and the launch boundary's config
 writer). Any cell that falls in an illegal class is caught pre-run, never
 launched.
-Does NOT own: the register-file/LDS model (oto.tensile.gates.occupancy), the
-classic-path load divisibility (oto.tensile.gates.loads), or the candidate
-sampler (oto.tensile.candidate).
+Does NOT own: the register-file/LDS model (`oto.tensile.gates.occupancy`), the
+classic-path load divisibility (`oto.tensile.gates.loads`), or the candidate
+sampler (`oto.tensile.candidate`).
 
 Faithful to the Tensile SolutionStructs Assembly rejects reproduced from the 24
 draft-run failures (this device = Assembly-only, FFMA, no MatrixInstruction/MFMA

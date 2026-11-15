@@ -7,7 +7,7 @@ is evaluated here on every call -- nothing is transcribed, no ceiling is
 remembered.
 Does NOT own: the realistic-ceilings catalogue (measured, and profile-owned),
 the lane-class JSON tables (``profiles/<codename>.json``), or any legality
-rule (``oto.tensile.gates``).
+rule (```oto.tensile.gates```).
 
 Formulas (GCN5 family, Vega subclass — the architecture class of both
 reference devices for this project; other archs may need a wider table):

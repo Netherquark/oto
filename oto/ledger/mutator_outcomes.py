@@ -4,8 +4,8 @@
 Owns: ``classify_outcome`` (the pure decision -- functional vs non-functional vs
 legal-rejected vs legal-slow vs pending, read off a candidate's on-disk CSVs)
 and ``_per_cell_medians`` (the per-cell medians it compares against).
-Does NOT own: the state that records the outcome (oto.ledger.mutator) or the bars
-a candidate is judged against (oto.tensile.synthesis).
+Does NOT own: the state that records the outcome (`oto.ledger.mutator`) or the bars
+a candidate is judged against (`oto.tensile.synthesis`).
 Public API: MutatorOutcomesMixin (classify_outcome, _per_cell_medians).
 """
 

@@ -5,13 +5,13 @@ authority on what a graded config looks like), ``choose_groups`` /
 ``_unstable_groups``, and ``synthesize_cell`` / ``synthesize_or_lattice``. The
 tile/group vocabulary and the tile reconciliation it draws in
 (``reconcile_tile`` / ``tile_product_holds`` / ``ALL_GROUPS`` /
-``TEMPLATE_KEYS``) live in oto.tensile.synthesis.tile_space and are re-exported
+``TEMPLATE_KEYS``) live in `oto.tensile.synthesis.tile_space` and are re-exported
 here unchanged, so the public names do not move.
 
-Does NOT own: the legality prior it draws inside (oto.tensile.legality), the
-ledger that records the drawn candidate (oto.ledger.mutator), the DB-hooked
-synthesis (oto.tensile.synthesis.donor_mutator), or the tile/group vocabulary itself
-(oto.tensile.synthesis.tile_space).
+Does NOT own: the legality prior it draws inside (`oto.tensile.legality`), the
+ledger that records the drawn candidate (`oto.ledger.mutator`), the DB-hooked
+synthesis (`oto.tensile.synthesis.donor_mutator`), or the tile/group vocabulary itself
+(`oto.tensile.synthesis.tile_space`).
 
 Public API: family_shape_sweeps, sweep_for_family, reconcile_tile,
 tile_product_holds, choose_groups, annotate_drawn_groups, synthesize_cell,

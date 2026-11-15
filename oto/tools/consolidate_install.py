@@ -2,7 +2,7 @@
 """Installation: stage, install, and archive what is superseded.
 
 Owns: ``write_deck`` (stage the selected deck), ``install`` (move the deck + floor + db into place and archive the superseded runs), ``phantom_runs`` (runs that registered a row but produced nothing) and ``explain_archive`` (say what was archived and why).
-Does NOT own: the deck being installed (consolidate_deck) or the CLI that dispatches here (oto.tools.consolidate).
+Does NOT own: the deck being installed (consolidate_deck) or the CLI that dispatches here (`oto.tools.consolidate`).
 Public API: write_deck, install, phantom_runs, explain_archive."""
 
 from __future__ import annotations

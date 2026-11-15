@@ -5,8 +5,8 @@ Owns: ``ask`` (the TTY prompt, five questions, in answer order), ``AutoPlan``,
 the non-TTY defaults, and ``_read_counts`` (tier counts read live from the audited
 manifest -- never transcribed).
 
-Does NOT own: what the plan does (oto.runners.convergence_loop) or the tier manifest it reads
-(oto.tensile.shipped_floor_manifest).
+Does NOT own: what the plan does (`oto.runners.convergence_loop`) or the tier manifest it reads
+(`oto.tensile.shipped_floor_manifest`).
 
 Public API: AutoPlan, ask, DEFAULT_ITERATIONS, DEFAULT_MUTATIONS, _read_counts.
 

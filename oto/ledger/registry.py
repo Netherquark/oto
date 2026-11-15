@@ -6,8 +6,8 @@ responsibility mixins: the engine (registry_core), the read side (queries) and
 the proposal ledger (proposals). It owns nothing itself but the ``__init__``
 signature and the base-dir/resolution behaviour, so
 ``SQLiteRegistry(base_dir, read_only=...)`` keeps working for every caller.
-Does NOT own: how a migration is mutated (oto.ledger.mutator), how a phase is
-run (oto.runners), or how a row is graded (oto.metrics).
+Does NOT own: how a migration is mutated (`oto.ledger.mutator`), how a phase is
+run (`oto.runners`), or how a row is graded (`oto.metrics`).
 Public API: SQLiteRegistry, fingerprint_config.
 """
 

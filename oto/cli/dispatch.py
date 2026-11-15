@@ -3,8 +3,8 @@
 Owns: the stdout/stderr contract, ``--quiet``/``--verbose``/``--no-input``/
 ``--no-color`` policy, the top-level exception -> exit-code translation, and
 bare-invocation orientation.
-Does NOT own: the command tree (``oto.cli.parser``) or any adapter
-(``oto.cli.commands``). Keeping this file small is deliberate: every command
+Does NOT own: the command tree (```oto.cli.parser```) or any adapter
+(```oto.cli.commands```). Keeping this file small is deliberate: every command
 gets the same policy because there is only one process boundary.
 Public API: main.
 """

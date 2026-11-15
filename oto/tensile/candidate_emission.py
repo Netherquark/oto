@@ -8,9 +8,9 @@ dedupe, and write the deck), ``generate_family_phases`` (build one phase per
 (family, pattern, shape, tile), clamping VectorWidth down until the gates accept
 it) and ``generate_knob_sweep_phases`` (cross-join a family's winner tile with
 the never-varied knob list).
-Does NOT own: the deck it draws from (oto.tensile.family_decks), the gates that refuse a
-candidate (oto.tensile.gates), or the config writer
-(oto.tensile.config_writer).
+Does NOT own: the deck it draws from (`oto.tensile.family_decks`), the gates that refuse a
+candidate (`oto.tensile.gates`), or the config writer
+(`oto.tensile.config_writer`).
 Public API: CandidateEmitMixin, generate_knob_sweep_phases.
 """
 

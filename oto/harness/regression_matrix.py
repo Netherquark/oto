@@ -7,8 +7,8 @@ and the standing loss / material-regression rules that decide which of those
 differences is signal.
 
 Does NOT own: the winner rule it shares with cell_resolver
-(oto.harness.cell_resolver), the shipped grid itself (oto.tensile.library_parity),
-or the acceptance report (oto.metrics.acceptance_report).
+(`oto.harness.cell_resolver`), the shipped grid itself (`oto.tensile.library_parity`),
+or the acceptance report (`oto.metrics.acceptance_report`).
 
 Public API: main, build_matrix.
 
@@ -28,9 +28,9 @@ cross-run variance rather than a regression.
 ``losses`` and ``material_regressions`` are the entry point for candidate-gap
 work: they name the exact cells and configs to attack.
 
-    python3 -m oto.harness.regression_matrix
-    python3 -m oto.harness.regression_matrix --rebuild
-    python3 -m oto.harness.regression_matrix --no-json
+    python3 -m `oto.harness.regression_matrix`
+    python3 -m `oto.harness.regression_matrix` --rebuild
+    python3 -m `oto.harness.regression_matrix` --no-json
 """
 
 

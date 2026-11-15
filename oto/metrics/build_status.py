@@ -5,8 +5,8 @@ Owns: ``build_report`` and the assembly helpers it consumes
 (``_load_ledger_state``, ``_plan_inputs``, ``_timing_inputs``, ``_price_plan``,
 ``_get_deck_size``, ``_calculate_elapsed``, ``_calculate_chain_span``,
 ``_build_estimate_dict`` and ``_build_plan_dict``).
-Does NOT own: the registry/corpus read path (``oto.metrics.ledger_state``),
-the plan it prices (``oto.metrics.run_plan``), or the renderer (render_status).
+Does NOT own: the registry/corpus read path (```oto.metrics.ledger_state```),
+the plan it prices (```oto.metrics.run_plan```), or the renderer (render_status).
 Public API: build_report.
 """
 

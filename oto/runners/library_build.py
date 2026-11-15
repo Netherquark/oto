@@ -4,7 +4,7 @@
 Owns: ``synthesize_library`` -- the 7 family logic YAMLs, the TensileCreateLibrary
 invocation, the anti-alias scan that rejects any ``gfx900``/``vega10`` leak into
 a native library, and the shipped-footprint coverage gate.
-Does NOT own: the family decks it writes (oto.tensile.candidate), or the
+Does NOT own: the family decks it writes (`oto.tensile.candidate`), or the
 Tensile environment it uses (driver.py).
 Public API: SynthesisMixin.
 """

@@ -6,9 +6,9 @@ Owns: walking every run/phase directory under the runs directory and producing, 
 structural config -- the canonical, repo-homed provenance the other harness
 modules cite.
 
-Does NOT own: the verdicts (oto.metrics.ab_audit), the regression rules
-(oto.harness.regression_matrix), or the candidate deck
-(oto.harness.candidate_rows).
+Does NOT own: the verdicts (`oto.metrics.ab_audit`), the regression rules
+(`oto.harness.regression_matrix`), or the candidate deck
+(`oto.harness.candidate_rows`).
 
 Public API: load_kernel_db, read_kernel_db, build_kernel_db, main.
 
@@ -25,9 +25,9 @@ matrix.
 
 Output: ``<codename>_results/analysis/kernel_db.json`` (run_id -> rows). CPU only.
 
-    python3 -m oto.harness.kernel_db --rebuild
-    python3 -m oto.harness.kernel_db --json out.json
-    python3 -m oto.harness.kernel_db --all-ref
+    python3 -m `oto.harness.kernel_db` --rebuild
+    python3 -m `oto.harness.kernel_db` --json out.json
+    python3 -m `oto.harness.kernel_db` --all-ref
 """
 
 
@@ -109,7 +109,7 @@ def parse_config(yaml_path: str) -> dict[str, Any]:
     Also reads the INTENDED PROBLEM COUNT (the number of ``- Exact:`` rows,
     i.e. how large an invocation the phase declared) as ``ProblemSizesCount``:
     that count plus the CSV's measured sides is what the invocation-form
-    classifier (oto.metrics.measurement_protocol) stamps per row (§R56.3).
+    classifier (`oto.metrics.measurement_protocol`) stamps per row (§R56.3).
     Returns {} on any read failure; callers fall back to their run-level
     default config.
     """

@@ -5,8 +5,8 @@ Owns: turning "the floor wins at 128-bit / WGM8 / GSU1" into an exact, per-cell
 knob delta -- read from the same kernel_db rows the acceptance report grades on,
 never from a benchmark run here.
 
-Does NOT own: producing kernel_db.json (oto.harness.kernel_db), the winner rule
-(oto.harness.regression_matrix), or the acceptance report (oto.metrics.acceptance_report).
+Does NOT own: producing kernel_db.json (`oto.harness.kernel_db`), the winner rule
+(`oto.harness.regression_matrix`), or the acceptance report (`oto.metrics.acceptance_report`).
 
 Public API: main.
 
@@ -17,12 +17,12 @@ native winner is the native kernel with the best per-cell median in each
 shipped gfx900 kernel with the best per-cell median in the same cell.
 
 CPU only. Reads ``<codename>_results/analysis/kernel_db.json`` (rebuild with
-``python3 -m oto.harness.kernel_db --rebuild``).
+``python3 -m `oto.harness.kernel_db` --rebuild``).
 
-    python3 -m oto.harness.cell_knob_diff                 # all cells
-    python3 -m oto.harness.cell_knob_diff --family SS     # one family
-    python3 -m oto.harness.cell_knob_diff --json out.json
-    python3 -m oto.harness.cell_knob_diff --floor-wins-only
+    python3 -m `oto.harness.cell_knob_diff`                 # all cells
+    python3 -m `oto.harness.cell_knob_diff` --family SS     # one family
+    python3 -m `oto.harness.cell_knob_diff` --json out.json
+    python3 -m `oto.harness.cell_knob_diff` --floor-wins-only
 """
 
 

@@ -8,17 +8,17 @@ in every run directory" triage (docs/gfx90c_tuning_guide.md §13 §R23), as a to
 of a one-off script.
 
 Does NOT own: whether the *gates* should have predicted the failure
-(``oto.harness.gate_calibration``), the per-phase M1/M2/M3 failure taxonomy
+(```oto.harness.gate_calibration```), the per-phase M1/M2/M3 failure taxonomy
 (``<codename>_tuning_guide.md`` §5), or the run status / telemetry
-(``oto.metrics.run_status``).
+(```oto.metrics.run_status```).
 
 Public API: main, census, reason_for_phase, measurement_produced.
 
 CPU only, read-only, never benchmarks.
 
-    python3 -m oto.harness.failure_triage                  # all runs
-    python3 -m oto.harness.failure_triage --run run_20261017_092909
-    python3 -m oto.harness.failure_triage --json out.json
+    python3 -m `oto.harness.failure_triage`                  # all runs
+    python3 -m `oto.harness.failure_triage` --run run_20261017_092909
+    python3 -m `oto.harness.failure_triage` --json out.json
 """
 
 from __future__ import annotations

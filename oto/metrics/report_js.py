@@ -4,7 +4,7 @@
 Owns: the JS_* script blocks the HTML report inlines (theme bootstrap, theme
 toggle, collapsible sections). Split from report_css.py so the CSS and JS
 literals each have one home; byte-for-byte identical to what was inline.
-Does NOT own: the CSS (oto.metrics.report_css) or the HTML assembly.
+Does NOT own: the CSS (`oto.metrics.report_css`) or the HTML assembly.
 Public API: JS_THEME_INIT, JS_THEME_TOGGLE, JS_COLLAPSIBLE.
 """
 

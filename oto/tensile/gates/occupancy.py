@@ -2,11 +2,11 @@
 
 Owns: the CPU-only model that reproduces every observed occupancy
 outcome on the reference device -- ``occupancy_feasible`` (accumulator VGPRs + the LDS tile budget); the
-LdsPad/swizzle gate lives in ``oto.tensile.gates.ldspad`` and is
+LdsPad/swizzle gate lives in ```oto.tensile.gates.ldspad``` and is
 re-exported here for the historical import path.
-Does NOT own: the candidate generator (oto.tensile.candidate), the VGPR
-*measurement* tables (oto.tensile.gates.vgpr_model), the legality class rules
-(oto.tensile.gates.assembly), or any device fact (`profiles/`, read through `oto.device.loader.current_profile()`).
+Does NOT own: the candidate generator (`oto.tensile.candidate`), the VGPR
+*measurement* tables (`oto.tensile.gates.vgpr_model`), the legality class rules
+(`oto.tensile.gates.assembly`), or any device fact (`profiles/`, read through `oto.device.loader.current_profile()`).
 
 Why this is CPU-only: error 4 (``overflowedResources``) is raised while Tensile
 generates the kernel, so without a model every rejected config costs a full
@@ -54,11 +54,11 @@ writer (``oto check tensile-build``, CPU-only) showed the per-thread constraint 
 per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
 limit; the MacroTile-area term belongs to the *separate* workgroup-file rule
 above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that
-old model got wrong. Calibration table now lives in oto.tensile.gates.vgpr_model;
+old model got wrong. Calibration table now lives in `oto.tensile.gates.vgpr_model`;
 post-mortem in docs/potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible (re-exported),
 occupancy_workgroups_per_cu, dtype_char, tile_dims (shared; see
-``oto.tensile.gates.gate_common``), refuses_workgroup_register_file,
+```oto.tensile.gates.gate_common```), refuses_workgroup_register_file,
 refuses_per_thread_occupancy_limit, refuses_lds_reduction_buffer.
 """
 
@@ -430,7 +430,7 @@ def refuses_workgroup_register_file(config: dict[str, Any], profile=None) -> boo
     ``None`` when the config cannot be modelled (unreadable tile dims or an
     unmapped dtype -- other gates own that case), else whether
     ``weight*MT0*MT1*LocalSplitU >= 65536``. This is the calibration-facing form
-    ``oto.harness.rule_calibration`` probes; it re-uses the same
+    ```oto.harness.rule_calibration``` probes; it re-uses the same
     :func:`_workgroup_file_check` ``occupancy_feasible`` enforces, so the two
     cannot drift.
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.

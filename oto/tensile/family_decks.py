@@ -18,8 +18,8 @@ what kind of candidate it is:
 Widths are requested, not assumed: the candidate generator clamps any width the
 gate rejects down to the widest it accepts, so an entry is never silently
 dropped.
-Does NOT own: the generator that consumes it (oto.tensile.candidate) or the
-gates that judge the entries (oto.tensile.gates).
+Does NOT own: the generator that consumes it (`oto.tensile.candidate`) or the
+gates that judge the entries (`oto.tensile.gates`).
 Public API: FAMILY_DECKS.
 """
 

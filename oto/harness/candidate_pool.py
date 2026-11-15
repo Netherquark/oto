@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The candidate loaders and the new module's helpers.
 
-Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable. The numeric ProblemSizes order every emitted row carries is defined once in ``oto.tensile.shape_order`` (``_shape_list`` / ``_merge_shapes`` are its call sites here).
-Does NOT own: the row data itself (oto.harness.candidate_rows) or the overlay read/write (oto.harness.candidate_overlay).
+Owns: ``iter_candidates`` (the whole pool generator: wide rows, narrow neighbours, auto rows -- each CPU-gated and fp-novel), the narrow/deck row generators, and the deck/seed fingerprint loaders that make novelty decidable. The numeric ProblemSizes order every emitted row carries is defined once in ```oto.tensile.shape_order``` (``_shape_list`` / ``_merge_shapes`` are its call sites here).
+Does NOT own: the row data itself (`oto.harness.candidate_rows`) or the overlay read/write (`oto.harness.candidate_overlay`).
 Public API: iter_candidates, _strip_not_forwarded, _narrow_row_gen, _deck_rows_by_family, _deck_winner_for, _pattern_for, _shape_list, _merge_shapes, _assertion_failures, _shapes_satisfying_assertions, DROPPED_ASSERTIONS."""
 
 from __future__ import annotations
@@ -177,7 +177,7 @@ def _assertion_failures(config: dict[str, Any], side: int) -> list[str]:
     summation case it says outright that this "requires runtime checking to
     ensure the specified summation value meets the requirements". The only
     divisibility Tensile checks is ``AF0EM % GlobalLoadVectorWidthA == 0``
-    (``GuaranteeNoPartialA``, enforced in ``oto.tensile.gates.loads``), which is a
+    (``GuaranteeNoPartialA``, enforced in ```oto.tensile.gates.loads```), which is a
     knob-to-knob rule and says nothing about the problem size. So a wrong value
     does not fail loudly -- the kernel drops the M/N predication it needed and
     returns **silently wrong numbers**. That is the whole reason this exists.

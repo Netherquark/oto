@@ -2,7 +2,7 @@
 """The candidate overlay: what is written, pruned and mirrored.
 
 Owns: ``_write_overlay`` (merge rows into the seed overlay, mirror the prunable phase_ids), ``_prune_candidates_from_seed`` (strip ``phase_cand_*`` rows while keeping winners, accepted rows and ``probe_*`` rows -- with a timestamped archive copy so the action is reversible), ``_round_robin_prune`` and ``_summarise``.
-Does NOT own: the rows being written (oto.harness.candidate_rows) or their generation (oto.harness.candidate_pool).
+Does NOT own: the rows being written (`oto.harness.candidate_rows`) or their generation (`oto.harness.candidate_pool`).
 Public API: _write_overlay, _prune_candidates_from_seed, _round_robin_prune, _summarise, OVERLAY_PATH."""
 
 from __future__ import annotations

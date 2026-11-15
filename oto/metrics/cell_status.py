@@ -4,9 +4,9 @@
 Owns: ``classify_cell_status`` -- which contractual cells are missing, which sit
 below half their realistic ceiling, and which are graded. A pure function of the
 analytics list.
-Does NOT own: the analytics themselves (oto.metrics.benchmark_analytics), the ceilings they
+Does NOT own: the analytics themselves (`oto.metrics.benchmark_analytics`), the ceilings they
 are graded against (`oto.device.loader`), or the report layout
-(oto.metrics.acceptance_report).
+(`oto.metrics.acceptance_report`).
 
 Acceptance-report colour mapping (moved here from design_language.md; the report
 renders each status with a Carbon support token, the status itself is decided

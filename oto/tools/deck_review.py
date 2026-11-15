@@ -26,10 +26,10 @@ loaders, so it cannot disagree with the pipeline that produced the ledger.
 
 CPU only. Read-only. Touches no GPU, launches no Tensile run, writes nothing.
 
-    python3 -m oto.tools.deck_review score            # per-basis scoreboard
-    python3 -m oto.tools.deck_review legality         # knob-domain draw census
-    python3 -m oto.tools.deck_review flood            # per-cell config census
-    python3 -m oto.tools.deck_review flood --cap 24   # ... and what K=24 costs
+    python3 -m `oto.tools.deck_review` score            # per-basis scoreboard
+    python3 -m `oto.tools.deck_review` legality         # knob-domain draw census
+    python3 -m `oto.tools.deck_review` flood            # per-cell config census
+    python3 -m `oto.tools.deck_review` flood --cap 24   # ... and what K=24 costs
 Public API: main (CLI); ``score``, ``legality``, ``flood``.
 """
 

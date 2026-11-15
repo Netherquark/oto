@@ -2,13 +2,13 @@
 """The one home for the tile and knob-group vocabulary the synthesisers share.
 
 Owns: the tile axis names (``TILE_KNOBS``), the knob-group vocabulary
-(``ALL_GROUPS`` / ``TEMPLATE_KEYS``, derived once from oto.tensile.legality), and
+(``ALL_GROUPS`` / ``TEMPLATE_KEYS``, derived once from `oto.tensile.legality`), and
 the tile-reconciliation rules (``_as_int_triple``, ``reconcile_tile``,
 ``tile_product_holds``) that make ``WorkGroup * ThreadTile == MacroTile`` hold by
 construction.
-Does NOT own: the legal prior itself (oto.tensile.legality), the coverage-guided
-sampler that draws whole groups (oto.tensile.synthesis.pipeline_manifest), or the
-DB-hooked donor/forward-knob mutator (oto.tensile.synthesis.donor_mutator, which imports
+Does NOT own: the legal prior itself (`oto.tensile.legality`), the coverage-guided
+sampler that draws whole groups (`oto.tensile.synthesis.pipeline_manifest`), or the
+DB-hooked donor/forward-knob mutator (`oto.tensile.synthesis.donor_mutator`, which imports
 ``TILE_KNOBS`` from here so the two never disagree on what a tile is).
 Public API: TILE_KNOBS, ALL_GROUPS, TEMPLATE_KEYS, reconcile_tile,
 tile_product_holds.

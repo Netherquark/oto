@@ -5,8 +5,8 @@ Owns: ``_shape_sweeps`` (the deck's sweep, read once per run), ``_cell_coverage`
 / ``_cell_coverage_state`` (this cell's evidence and its state) and
 ``_load_coverage_cells`` (the cached ``(family, shape) -> evidence`` map the
 synthesis guidance is drawn from).
-Does NOT own: the state machine itself (oto.metrics.cell_coverage) or the synthesis
-that consumes the guidance (oto.tensile.synthesis).
+Does NOT own: the state machine itself (`oto.metrics.cell_coverage`) or the synthesis
+that consumes the guidance (`oto.tensile.synthesis`).
 Public API: CoverageMixin.
 """
 

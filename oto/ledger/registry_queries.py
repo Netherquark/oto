@@ -4,8 +4,8 @@
 Owns: every query an operator or a caller makes of the ledger -- one run
 row, the record log with its run/type filters, the phase table, the newest
 run id, the retirement and novelty lookups, and the stale-run sweep.
-Does NOT own: the write side (oto.ledger.registry_core) or the Option-H
-proposal ledger (oto.ledger.registry_proposals).
+Does NOT own: the write side (`oto.ledger.registry_core`) or the Option-H
+proposal ledger (`oto.ledger.registry_proposals`).
 Public API: QueryMixin."""
 
 from __future__ import annotations

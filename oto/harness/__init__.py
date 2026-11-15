@@ -7,15 +7,15 @@ benchmarks, never touches a GPU.
 
 Workflow (see ``docs/harness_runbook.md`` for the full runbook):
 
-    python3 -m oto.harness.kernel_db --base-dir . --rebuild   # (re)build kernel_db.json
-    python3 -m oto.harness.regression_matrix --base-dir .    # deck vs all-time vs floor
-    python3 -m oto.harness.cell_resolver --base-dir .        # per-cell native+floor winners
+    python3 -m `oto.harness.kernel_db` --base-dir . --rebuild   # (re)build kernel_db.json
+    python3 -m `oto.harness.regression_matrix` --base-dir .    # deck vs all-time vs floor
+    python3 -m `oto.harness.cell_resolver` --base-dir .        # per-cell native+floor winners
 
 Owns: nothing at import time — this package holds no logic, only the docstrings
 of the modules underneath it.
 Does NOT own: the modules themselves (each carries its own), the run corpus
 they read (<codename>_runs/), or the acceptance report they cite
-(oto.metrics.acceptance_report).
+(`oto.metrics.acceptance_report`).
 Public API: none at import time; the module names live in ``__all__``, and the
 public names each one exposes are in its own docstring.
 

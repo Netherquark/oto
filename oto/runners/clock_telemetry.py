@@ -5,10 +5,10 @@ Owns: the telemetry CSV reader (``_telemetry_rows``), the per-phase median clock
 and thermal context (``_load_telemetry_by_phase``), the cached (run, phase) maps
 for clocks and thermals, the corpus-wide thermal summary, and the clock-coverage
 and reference-clock figures the A/B comparison scales by.
-Does NOT own: the telemetry sampler itself (oto.metrics.telemetry), the scaling
-it feeds (``oto.metrics.ab_delta`` -- the ``ABDeltaMixin.compute_native_vs_spoof_delta``
-method mixed into ``oto.metrics.benchmark_analytics.AnalyticsEngine``), or the report it
-appears in (oto.metrics.acceptance_report).
+Does NOT own: the telemetry sampler itself (`oto.metrics.telemetry`), the scaling
+it feeds (```oto.metrics.ab_delta``` -- the ``ABDeltaMixin.compute_native_vs_spoof_delta``
+method mixed into ```oto.metrics.benchmark_analytics.AnalyticsEngine```), or the report it
+appears in (`oto.metrics.acceptance_report`).
 Public API: ClockMixin. Its tunables are class constants: TELEMETRY_BUSY_PCT,
 TELEMETRY_MIN_SAMPLES, SCLK_MIN_HZ, SCLK_MAX_HZ, TELEMETRY_REQUIRE_BUSY,
 THERMAL_MAX_C.

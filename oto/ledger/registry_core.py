@@ -6,8 +6,8 @@ that makes a read-only registry refuse to write, the run-row write path
 (create_run_dir, update_run_status) and the kernel-DB rebuild a terminal
 status triggers.
 
-Does NOT own: the registry's read side (oto.ledger.registry_queries), the Option-H proposal ledger
-(oto.ledger.registry_proposals), or the cell policy (oto.metrics.cell_policy).
+Does NOT own: the registry's read side (`oto.ledger.registry_queries`), the Option-H proposal ledger
+(`oto.ledger.registry_proposals`), or the cell policy (`oto.metrics.cell_policy`).
 
 Code prohibitions the driver must not reintroduce (moved here from
 docs/audit_register.md §2):

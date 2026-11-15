@@ -3,8 +3,8 @@
 Owns: turning the measured corpus (through the same census machinery the
 --harness tools use) and the CPU gates into a potential-configs markdown for
 a device oto has never seen. Everything here is CPU-only; no GPU, no network.
-Does NOT own: benchmarks (oto.runners), the ledger (oto.ledger), the overlay
-emission (oto.harness.candidate_overlay), or the device docs (agent-1/agent-2).
+Does NOT own: benchmarks (`oto.runners`), the ledger (`oto.ledger`), the overlay
+emission (`oto.harness.candidate_overlay`), or the device docs (agent-1/agent-2).
 Public API: consult.
 """
 

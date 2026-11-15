@@ -12,7 +12,7 @@ docstring and writes the file that describes it.
 
 Run from the repo root:
 
-    python3 -m oto.readme_gen
+    python3 -m `oto.readme_gen`
 """
 from __future__ import annotations
 

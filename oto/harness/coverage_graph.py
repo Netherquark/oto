@@ -6,9 +6,9 @@ accumulators per thread), the SVG rendering of that grid, the local
 extrema (the peaks and the traps) on it, and the index page that ties the
 figures together.
 
-Does NOT own: the legal space itself (oto.harness.coverage_map), the corpus
-(oto.harness.kernel_db), the candidate deck (oto.harness.candidate_rows) or
-the verdicts (oto.metrics.ab_audit).
+Does NOT own: the legal space itself (`oto.harness.coverage_map`), the corpus
+(`oto.harness.kernel_db`), the candidate deck (`oto.harness.candidate_rows`) or
+the verdicts (`oto.metrics.ab_audit`).
 Public API: legal_geometries, measured_geometries, coverage_row, main.
 
 Why a 2D picture: the corpus is a *thin sample* of a large legal space --
@@ -35,10 +35,10 @@ CPU only, read-only, and it writes only into
 ``<codename>_results/analysis/coverage/``. No dependency beyond the standard
 library: the SVG is written by hand, so there is nothing to install.
 
-    python3 -m oto.harness.coverage_graph                     # every cell
-    python3 -m oto.harness.coverage_graph --family SS         # one family
-    python3 -m oto.harness.coverage_graph --cell HH:256       # one cell
-    python3 -m oto.harness.coverage_graph --no-svg            # numbers only
+    python3 -m `oto.harness.coverage_graph`                     # every cell
+    python3 -m `oto.harness.coverage_graph` --family SS         # one family
+    python3 -m `oto.harness.coverage_graph` --cell HH:256       # one cell
+    python3 -m `oto.harness.coverage_graph` --no-svg            # numbers only
 """
 
 from __future__ import annotations

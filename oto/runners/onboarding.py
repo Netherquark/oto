@@ -3,7 +3,7 @@
 Owns: interactive + non-interactive setup — convergence-mode choice, spoof
 GPU (informed mode), ROCm/Tensile discovery, client build orchestration,
 ``.env`` generation, and the final ``oto doctor`` / ``oto preflight`` gate.
-Does NOT own: the toolchain resolution itself (``oto.runners.toolchain``), the
+Does NOT own: the toolchain resolution itself (```oto.runners.toolchain```), the
 client build (``scripts/build_tensile_client.sh``), or any GPU work — this
 module never touches a GPU.
 

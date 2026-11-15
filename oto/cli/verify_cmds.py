@@ -3,8 +3,8 @@
 Owns: argument translation for the verify command tree -- the equivalence /
 evergreen equivalence orchestrator and the corpus snapshot/diff/telemetry
 runner.
-Does NOT own: the verifiers themselves (oto.tools.verifiers) or the corpus
-tool (oto.tools.corpus_audit).
+Does NOT own: the verifiers themselves (`oto.tools.verifiers`) or the corpus
+tool (`oto.tools.corpus_audit`).
 Public API: run_verify_all, run_verify_run.
 """
 

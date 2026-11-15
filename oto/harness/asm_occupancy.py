@@ -5,10 +5,10 @@ Owns: reading Tensile's own generated assembly (the `amdhsa_next_free_vgpr` /
 `amdhsa_group_segment_fixed_size` directives) and turning it into the kernels'
 actual resident-wave occupancy, joined to the GFLOP/s those kernels measured —
 plus the Tensile CSV column trap that joins it.
-Does NOT own: the *predicted* occupancy gate (oto.tensile.gates.occupancy), the
-VGPR/LDS calibration tables (oto.tensile.gates.vgpr_model), the device constants
+Does NOT own: the *predicted* occupancy gate (`oto.tensile.gates.occupancy`), the
+VGPR/LDS calibration tables (`oto.tensile.gates.vgpr_model`), the device constants
 (`oto.device.loader`), or the predicted resident-workgroup audit
-(oto.harness.occupancy_bounds). This module measures what was emitted; that
+(`oto.harness.occupancy_bounds`). This module measures what was emitted; that
 module predicts what a gate would allow.
 
 Public API: waves_per_simd, binding_resource, parse_asm_kernel,
@@ -25,10 +25,10 @@ reality.
 
 CPU only, read-only. Writes nothing into the repo.
 
-    python3 -m oto.harness.asm_occupancy                       # whole corpus
-    python3 -m oto.harness.asm_occupancy --dtype CC            # one family
-    python3 -m oto.harness.asm_occupancy --top 20 --by gflops   # best first
-    python3 -m oto.harness.asm_occupancy --binder              # resource tally
+    python3 -m `oto.harness.asm_occupancy`                       # whole corpus
+    python3 -m `oto.harness.asm_occupancy` --dtype CC            # one family
+    python3 -m `oto.harness.asm_occupancy` --top 20 --by gflops   # best first
+    python3 -m `oto.harness.asm_occupancy` --binder              # resource tally
 """
 
 from __future__ import annotations

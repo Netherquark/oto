@@ -4,8 +4,8 @@ Owns: reading ``profiles/<codename>.json`` into a frozen ``DeviceProfile``,
 resolving the *process* profile (``current_profile``) and scoping swaps
 (``rebind_profile`` / ``bound_profile``). The public API surface is one
 function per job: load, resolve, rebind, bind.
-Does NOT own: the dataclass layout (``oto.device.profile``), the JSON files
-themselves, or device auto-detection (``oto.device.device_detect``).
+Does NOT own: the dataclass layout (```oto.device.profile```), the JSON files
+themselves, or device auto-detection (```oto.device.device_detect```).
 Public API: load_profile, load_profile_from_starter, default_profile,
 current_profile, resolve_profile, rebind_profile, bound_profile.
 """

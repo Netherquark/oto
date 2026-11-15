@@ -2,7 +2,7 @@
 """The thermal envelope of one run, read from its telemetry CSV.
 
 Owns: ``read_thermals`` -- the median/peak temperature, power and clock of a run's *busy* samples. It exists so a suspicious clock-adjusted delta can be checked against the envelope it was measured in.
-Does NOT own: the per-phase estimate that consumes it (oto.metrics.run_status), or the gates that use it (oto.runners.clock_telemetry).
+Does NOT own: the per-phase estimate that consumes it (`oto.metrics.run_status`), or the gates that use it (`oto.runners.clock_telemetry`).
 Public API: read_thermals."""
 
 from __future__ import annotations

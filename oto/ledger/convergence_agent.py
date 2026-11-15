@@ -2,13 +2,13 @@
 """The convergence loop: harvest, mutate, decide, repeat.
 
 Owns: ``ConvergenceAgent`` -- the composition root over the three mixins it
-combines: harvest (``oto.ledger.harvest.HarvestMixin``), coverage evidence
-(``oto.ledger.agent_coverage.CoverageMixin``) and the mutation loop
-(``oto.ledger.agent_mutation.MutateMixin``); the convergence verdict and the
+combines: harvest (```oto.ledger.harvest.HarvestMixin```), coverage evidence
+(```oto.ledger.agent_coverage.CoverageMixin```) and the mutation loop
+(```oto.ledger.agent_mutation.MutateMixin```); the convergence verdict and the
 band it grades against, plus the mutation-arm gate that decides whether
 novelty is verifiable.
-Does NOT own: the ledger-backed mutation (oto.ledger.mutator), the gates that
-judge a candidate (oto.tensile.gates), or the phase runner (oto.runners).
+Does NOT own: the ledger-backed mutation (`oto.ledger.mutator`), the gates that
+judge a candidate (`oto.tensile.gates`), or the phase runner (`oto.runners`).
 Public API: ConvergenceAgent, ConvergenceVerdict.
 """
 

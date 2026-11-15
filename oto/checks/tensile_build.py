@@ -6,8 +6,8 @@ Owns: for each phase, driving the same pipeline the real tuner uses minus the GP
 ``KernelWriterAssembly.getSourceFileString``) and reporting Tensile's own
 verdict, because the occupancy gate is a calibrated model, not Tensile's truth.
 
-Does NOT own: the gates it cross-checks (oto.tensile.gates), the phases it reads
-(oto.tensile.candidate), or any GPU work -- none happens here.
+Does NOT own: the gates it cross-checks (`oto.tensile.gates`), the phases it reads
+(`oto.tensile.candidate`), or any GPU work -- none happens here.
 
 Public API: main, probe_phase_config, write_phase_configs, select_phases.
 

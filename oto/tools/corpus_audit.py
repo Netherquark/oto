@@ -6,8 +6,8 @@ and registry row counts; a diff of two snapshots that flags any reduction or
 in-place rewrite as a violation; the telemetry funnel; and the cheapest LEGAL
 live-deck phases for a smoke run.
 
-Does NOT own: the ledger it counts (oto.ledger.registry) or the clocks it parses
-(oto.runners.clock_telemetry).
+Does NOT own: the ledger it counts (`oto.ledger.registry`) or the clocks it parses
+(`oto.runners.clock_telemetry`).
 
 Public API: snapshot, diff_snapshots, telemetry, cheapest, main.
 
@@ -162,7 +162,7 @@ def _driver():
     """A TensileDriver with only the telemetry loaders, no run context.
 
     Same trick tests/test_thermal_gate.py uses: the loaders are taken unbound
-    from the real class so they cannot drift from what oto.metrics.acceptance_report consumes.
+    from the real class so they cannot drift from what `oto.metrics.acceptance_report` consumes.
     """
     from oto.runners.driver import TensileDriver
     d = TensileDriver.__new__(TensileDriver)

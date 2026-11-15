@@ -120,8 +120,8 @@ def dtype_bytes(char: str) -> int | None:
 
     ``Tensile.DataType.DataType.properties`` is the authority: numBytes() is
     reg * 4. It is read here rather than from the modelled tables
-    (``oto.device.loader.current_profile().family_bytes_per_element`` and
-    ``oto.tensile.gates.loads.LOAD_DTYPE_INFO``) because this gate exists to
+    (```oto.device.loader.current_profile`().family_bytes_per_element`` and
+    ```oto.tensile.gates.loads.LOAD_DTYPE_INFO```) because this gate exists to
     cross-check those models rather than to copy them. The load gate's ``Z`` row
     once carried ComplexFloat's 8 bytes for complex double, which let VectorWidth
     2 through for ZZ and produced the ``GlobalLoadVectorWidthA *

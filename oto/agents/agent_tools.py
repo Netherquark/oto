@@ -3,8 +3,8 @@
 Owns: the deterministic tool functions an agent can call to study the measured
 kernel-db corpus and the candidate pipeline. No GPU, no Tensile subprocess,
 no network — everything here is CPU-only and safe to run during doc generation.
-Does NOT own: the convergence ledger (oto.ledger), the deck emission
-(oto.tensile.candidate), benchmarking, or rendering of the tuning reports.
+Does NOT own: the convergence ledger (`oto.ledger`), the deck emission
+(`oto.tensile.candidate`), benchmarking, or rendering of the tuning reports.
 Public API: study_kernel_db, propose_candidates, verify_candidates,
 build_harness_study.
 """

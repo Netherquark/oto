@@ -5,9 +5,9 @@ Owns: ``config_key`` (a stable, hashable key for a config dict) and
 ``memo_gate`` (a decorator that caches a pure ``(config) -> (ok, reason)``
 gate by the config's *content*).
 
-Does NOT own: the gates themselves (oto.tensile.gates.assembly,
-oto.tensile.gates.loads, oto.tensile.gates.occupancy), the candidate
-orchestrator (oto.tensile.candidate), or the corpus (oto.harness.kernel_db).
+Does NOT own: the gates themselves (`oto.tensile.gates.assembly`,
+`oto.tensile.gates.loads`, `oto.tensile.gates.occupancy`), the candidate
+orchestrator (`oto.tensile.candidate`), or the corpus (`oto.harness.kernel_db`).
 
 Why: the gates are pure functions of their config, and the *test suite* asks
 the same question thousands of times -- the deck's rows, the frontier sweep

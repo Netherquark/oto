@@ -1,7 +1,7 @@
 """Entry point for ``python3 -m oto``.
 
 Owns: exposing ``main`` as the process entry. Does NOT own argument parsing
-(that is ``oto.cli.parser``/:mod:`oto.cli.dispatch`), the CLI surface (``oto.cli``),
+(that is ```oto.cli.parser```/:mod:`oto.cli.dispatch`), the CLI surface (```oto.cli```),
 or the run loop (:mod:`oto.runners`).
 Public API: ``main``.
 """

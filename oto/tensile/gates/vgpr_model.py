@@ -8,15 +8,15 @@ allocator), the compute-dtype byte table, and the two measured VGPR tables read
 out of Tensile's own kernel writer. Also the config readers those numbers need
 (``depth_u``, ``lds_base_bytes``, ``measured_accvgpr``, ``local_split_u``,
 ``num_threads``, ``is_hpa``, ``compute_bytes``).
-Does NOT own: the pass/fail decision (oto.tensile.gates.occupancy) or the
-legality classes (oto.tensile.gates.assembly).
+Does NOT own: the pass/fail decision (`oto.tensile.gates.occupancy`) or the
+legality classes (`oto.tensile.gates.assembly`).
 Public API: FAMILY_BYTES_PER_ELEMENT, MAX_VGPR_PER_THREAD, VGPR_PER_ELEMENT,
 ACCVGPR_BUDGET, LDS_BUDGET, MAX_LDS_BYTES, BYTES_PER_ELEMENT,
 COMPUTE_BYTES_PER_ELEMENT, MEASURED_VGPR, MEASURED_VGPR_BY_DTYPE,
 measured_accvgpr, depth_u, lds_base_bytes, local_split_u, num_threads,
 per_thread_vgpr, is_hpa, compute_bytes.
 Device-dependent facts (byte cap, register file, LDS/CU) come from
-``oto.device.loader.current_profile()`` -- they are resolved at call time,
+```oto.device.loader.current_profile`()`` -- they are resolved at call time,
 never captured as module-global snapshots.
 """
 
@@ -217,7 +217,7 @@ def is_hpa(config: dict[str, Any]) -> bool:
 
     Reads Tensile's own key first, then the family label -- the two places the
     class is recorded. Shared by the compute-byte reader here and the
-    GlobalSplitU class rule (oto.tensile.gates.assembly), so the two cannot
+    GlobalSplitU class rule (`oto.tensile.gates.assembly`), so the two cannot
     disagree about which family a config belongs to.
     """
     return bool(config.get("HighPrecisionAccumulate", False)) or (

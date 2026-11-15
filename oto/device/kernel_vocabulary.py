@@ -7,8 +7,8 @@ cell identity helpers (``cell_key``, ``kernel_key``, ``cube_side``,
 native candidate with its reference-floor kernel. Profile-aware: the dtype-
 char tables come from :func:`oto.device.loader.current_profile` at call
 time, never from module globals.
-Does NOT own: any calibrated constant (see ``oto.tensile.gates``), the
-profile dataclass (``oto.device.profile``), or loader/detection.
+Does NOT own: any calibrated constant (see ```oto.tensile.gates```), the
+profile dataclass (```oto.device.profile```), or loader/detection.
 Public API: blas8_gflops, dtype_to_family, kernel_typecode,
 family_from_kernel_name, dtype_from_kernel_name, cube_side, cell_key,
 shipped_cells, shipped_cell_set, kernel_key.

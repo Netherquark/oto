@@ -9,7 +9,7 @@ dashboard.
 Does NOT own: the document skeleton (report_html) or the section markup
 (report_sections).
 Public API: DASHBOARD_CSS (JS_THEME_INIT, JS_THEME_TOGGLE, JS_COLLAPSIBLE are
-re-exported from oto.metrics.report_js).
+re-exported from `oto.metrics.report_js`).
 """
 
 from oto.metrics.report_js import JS_COLLAPSIBLE as JS_COLLAPSIBLE
