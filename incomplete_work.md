@@ -19,7 +19,7 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   would pretend gfx902 hardware exists, which it does not here. The gate
   tests already exercise a `dataclasses.replace`-derived synthetic device.
   **gfx902 readiness (mechanical) closed 2026-11-15** by the CI-removal arc:
-  class-B end-to-end commands walked in an isolated stub (`tests/test_class_b_rehearsal.py`), agent prompts now carry ISA-level directed questions, tuning-context template is a scaffold with profile-derived fill, and the tarball has been deleted (1.6 GB).
+  class-B end-to-end commands walked in an isolated stub (`tests/test_class_b_rehearsal.py`, 16 tests), agent prompts now carry ISA-level directed questions with ISA-manual citations, tuning-context template is a scaffold with profile-derived fill, the ISA-gating proof refuses unknown arches with an actionable message (`oto/checks/tensile_build_probe.py:_pin_isa`), and the first-light checklist is at `docs/gfx902_first_light.md`. The tarball has been deleted (1.6 GB).
 - **CC:256/512 `AssertFree0/1ElementMultiple=4` — CLOSED as a decision (owner's word, 2026-11-15).** GPU legality was verified: all 11 probes pass Tensile's `NumElementsToValidate=128` reference on gfx90c. The two AF4/4 rows ship in `phases.yaml` as first-class CC rows. TTY A/B (AF4/4 vs AF2/2 paired-widen and the pure baseline) will be measured when the overnight run resumes — no perf claim appears anywhere, and none is expected to appear until that
   measurement exists. (The question asked on 2026-11-14 is
   formally closed: the experiment is planned, not undone.)
