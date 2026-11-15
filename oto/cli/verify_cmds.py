@@ -16,6 +16,7 @@ from oto.cli._adapter import _call, base_dir
 
 
 def run_verify_all(args: Any) -> int:
+    """Translate `args` and run the evergreen equivalence orchestrator."""
     from oto.tools.verifiers.verify_all import main as va_main
 
     argv = ["--json"] if args.json else []
@@ -25,6 +26,7 @@ def run_verify_all(args: Any) -> int:
 
 
 def run_verify_run(args: Any) -> int:
+    """Translate `args` and run the corpus snapshot/diff/telemetry tool."""
     from oto.tools.corpus_audit import main as vr_main
 
     argv = ["--base-dir", str(base_dir(args)), args.verify_cmd]

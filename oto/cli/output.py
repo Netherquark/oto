@@ -16,6 +16,7 @@ from typing import Any
 
 
 def is_tty(stream: Any = None) -> bool:
+    """True when `stream` (stdout by default) is a terminal."""
     stream = stream if stream is not None else sys.stdout
     try:
         return bool(stream.isatty())
@@ -24,6 +25,7 @@ def is_tty(stream: Any = None) -> bool:
 
 
 def color_enabled(stream: Any = None, no_color: bool = False) -> bool:
+    """True when colour is allowed on `stream` (respects NO_COLOR and TERM)."""
     if no_color or os.environ.get("NO_COLOR", ""):
         return False
     if os.environ.get("TERM", "") == "dumb":
@@ -32,39 +34,48 @@ def color_enabled(stream: Any = None, no_color: bool = False) -> bool:
 
 
 def _wrap(code: str, text: str, stream: Any = None, no_color: bool = False) -> str:
+    """Wrap `text` in the SGR `code` when colour is enabled."""
     if not color_enabled(stream, no_color):
         return text
     return f"\033[{code}m{text}\033[0m"
 
 
 def bold(text: str, stream: Any = None, no_color: bool = False) -> str:
+    """`text` in bold SGR when colour is enabled."""
     return _wrap("1", text, stream, no_color)
 
 
 def red(text: str, stream: Any = None, no_color: bool = False) -> str:
+    """`text` in red SGR when colour is enabled."""
     return _wrap("31", text, stream, no_color)
 
 
 def green(text: str, stream: Any = None, no_color: bool = False) -> str:
+    """`text` in green SGR when colour is enabled."""
     return _wrap("32", text, stream, no_color)
 
 
 def yellow(text: str, stream: Any = None, no_color: bool = False) -> str:
+    """`text` in yellow SGR when colour is enabled."""
     return _wrap("33", text, stream, no_color)
 
 
 def cyan(text: str, stream: Any = None, no_color: bool = False) -> str:
+    """`text` in cyan SGR when colour is enabled."""
     return _wrap("36", text, stream, no_color)
 
 
 def stderr(msg: str) -> None:
+    """Print `msg` to stderr."""
     print(msg, file=sys.stderr)
 
 
 def stdout(msg: str) -> None:
+    """Print `msg` to stdout."""
     print(msg)
 
 
 def quiet_check(quiet: bool, msg: str) -> None:
+    """Print `msg` unless `quiet`."""
     if not quiet:
         print(msg)

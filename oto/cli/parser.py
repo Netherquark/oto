@@ -43,6 +43,7 @@ def _fmt(*, examples: str = "") -> type[argparse.HelpFormatter]:
 
 def _add(sub: Any, name: str, summary: str, examples: str = "",
          *, mutating: bool = False, read: bool = False) -> argparse.ArgumentParser:
+    """Register one subcommand; returns its parser."""
     description = summary
     if examples:
         description = f"{summary}\n\nExamples:\n{examples}"
@@ -55,6 +56,7 @@ def _add(sub: Any, name: str, summary: str, examples: str = "",
 
 
 def _add_scope(p: argparse.ArgumentParser) -> None:
+    """Add the target/family/pattern/shape scope flags."""
     p.add_argument("--targets", nargs="+", help="Target IDs or labels")
     p.add_argument("--family", nargs="+", help="Family labels (e.g. SS or CC DD)")
     p.add_argument("--pattern", nargs="+", help="Contraction patterns")
@@ -62,6 +64,7 @@ def _add_scope(p: argparse.ArgumentParser) -> None:
 
 
 def _add_run_flags(p: argparse.ArgumentParser) -> None:
+    """Add the per-run flags (--force, --live, --tensile-root, dry-run)."""
     add_dry_run_flag(p)
     p.add_argument("--force", action="store_true",
                    help="Run even when an identical fingerprint already passed")
@@ -73,6 +76,7 @@ def _add_run_flags(p: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the whole ``oto`` command tree."""
     parser = argparse.ArgumentParser(
         prog="oto",
         description="oto — deterministic Tensile tuning for unsupported AMD GPUs",
@@ -92,6 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _add_core(sub: Any) -> None:
+    """Add the core command groups (tune/run/bench/status/report/doctor)."""
     _add_tune(sub)
     _add_run(sub)
     _add_bench(sub)
@@ -99,6 +104,7 @@ def _add_core(sub: Any) -> None:
 
 
 def _add_tune(sub: Any) -> None:
+    """Add the ``tune`` command group."""
     p = _add(sub, "tune", "Run the convergence loop (the overnight job)",
              "  oto tune --dry-run                  # list the plan, no GPU work\n"
              "  oto tune --budget 10 --yes          # accept defaults, no prompts\n"
@@ -124,6 +130,7 @@ def _add_tune(sub: Any) -> None:
 
 
 def _add_run(sub: Any) -> None:
+    """Add the ``run`` command group."""
     p = _add(sub, "run", "Execute an explicit multi-stage selection",
              "  oto run --stage preflight candidate   # two stages, one process\n"
              "  oto run --stage benchmark --family SS --dry-run",
@@ -135,6 +142,7 @@ def _add_run(sub: Any) -> None:
 
 
 def _add_bench(sub: Any) -> None:
+    """Add the ``bench`` command group."""
     p = _add(sub, "bench", "Benchmark the reference floor, native loop, or a scope",
              "  oto bench --dry-run                  # list matched manifest targets\n"
              "  oto bench --native --limit 5         # native-only smoke test\n"
@@ -151,6 +159,7 @@ def _add_bench(sub: Any) -> None:
 
 
 def _add_status_report(sub: Any) -> None:
+    """Add the ``status`` and ``report`` command groups."""
     p = _add(sub, "status", "Show run status, ETA, and the live panel",
              "  oto status                      # one-shot report\n"
              "  oto status --watch 30           # refresh every 30 seconds\n"
@@ -179,6 +188,7 @@ def _add_status_report(sub: Any) -> None:
 
 
 def _add_stages(sub: Any) -> None:
+    """Add the stage commands (candidate/retirement/analytics/...)."""
     p = _add(sub, "preflight", "the preflight stage: validate the run environment",
              "  oto preflight\n  oto preflight --json",
              read=True)
@@ -211,6 +221,7 @@ def _add_stages(sub: Any) -> None:
 
 
 def _add_verify(sub: Any) -> None:
+    """Add the ``verify`` command group."""
     p = sub.add_parser("verify", help="Verification commands",
                        description="Verification commands\n\n"
                                    "Examples:\n  oto verify all\n"
@@ -257,6 +268,7 @@ def _add_verify(sub: Any) -> None:
 
 
 def _add_checks(sub: Any) -> None:
+    """Add the ``check`` command group."""
     p = sub.add_parser("check", help="Diagnostic assertions",
                        description="Diagnostic assertions (read-only)\n\n"
                                    "Examples:\n  oto check candidates --quiet\n"
@@ -304,6 +316,7 @@ def _add_checks(sub: Any) -> None:
 
 
 def _add_library(sub: Any) -> None:
+    """Add the ``library`` command group."""
     p = sub.add_parser("library", help="Tensile library operations",
                        description="Tensile library operations\n\n"
                                    "Examples:\n  oto library best-effort\n"
@@ -321,6 +334,7 @@ def _add_library(sub: Any) -> None:
 
 
 def _add_agent(sub: Any) -> None:
+    """Add the ``agent`` command group."""
     p = sub.add_parser("agent", help="Operator-agent operations",
                        description="Operator-agent operations\n\n"
                                    "Examples:\n  oto agent generate docs/starter.md\n"
@@ -347,6 +361,7 @@ def _add_agent(sub: Any) -> None:
 
 
 def _add_setup(sub: Any) -> None:
+    """Add the ``setup`` command group."""
     p = _add(sub, "setup", "Easy-mode onboarding: prepare oto for a new device",
              "  oto setup\n"
              "  oto setup --yes --convergence-mode blind\n"
@@ -376,6 +391,7 @@ def _add_setup(sub: Any) -> None:
 
 
 def _add_utility(sub: Any) -> None:
+    """Add the utility commands (consolidate/stats/chart/...)."""
     p = _add(sub, "consolidate", "Consolidate the floor into a locked deck",
              "  oto consolidate --dry-run        # stage only (default)\n"
              "  oto consolidate --commit         # install after parity passes",

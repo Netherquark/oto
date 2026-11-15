@@ -36,24 +36,29 @@ class Check:
     hint: str = ""
 
     def as_dict(self) -> dict[str, str]:
+        """The check as a JSON-serialisable dict."""
         return {"group": self.group, "name": self.name,
                 "status": self.status, "detail": self.detail,
                 "hint": self.hint}
 
 
 def _ok(group: str, name: str, detail: str = "") -> Check:
+    """An OK check."""
     return Check(group, name, OK, detail)
 
 
 def _warn(group: str, name: str, detail: str, hint: str = "") -> Check:
+    """A WARN check."""
     return Check(group, name, WARN, detail, hint)
 
 
 def _fail(group: str, name: str, detail: str, hint: str = "") -> Check:
+    """A FAIL check."""
     return Check(group, name, FAIL, detail, hint)
 
 
 def _safe(group: str, name: str, fn: Any, hint: str = "") -> Check:
+    """Run a probe `fn`, converting any exception into a FAIL check."""
     try:
         return fn()
     except Exception as exc:  # a doctor probe must never crash the doctor
@@ -63,6 +68,7 @@ def _safe(group: str, name: str, fn: Any, hint: str = "") -> Check:
 # ------------------------------------------------------------------ probes
 
 def _python() -> Check:
+    """Probe the interpreter version."""
     v = sys.version_info
     detail = f"{v.major}.{v.minor}.{v.micro} ({sys.executable})"
     if (v.major, v.minor) < (3, 10):
@@ -72,6 +78,7 @@ def _python() -> Check:
 
 
 def _venv() -> Check:
+    """Probe whether a virtual environment is active."""
     active = sys.prefix != sys.base_prefix or bool(os.environ.get("VIRTUAL_ENV"))
     detail = sys.prefix
     if active:
@@ -82,6 +89,7 @@ def _venv() -> Check:
 
 
 def _dependencies() -> Check:
+    """Probe the required Python packages."""
     missing = []
     for mod in ("yaml", "dotenv", "rich", "tqdm"):
         try:
@@ -96,6 +104,7 @@ def _dependencies() -> Check:
 
 
 def _dotenv() -> Check:
+    """Probe the repo-root .env."""
     from oto.runners.toolchain import DOTENV_PATH
     if DOTENV_PATH.is_file():
         return _ok("toolchain", ".env", str(DOTENV_PATH))
@@ -104,6 +113,7 @@ def _dotenv() -> Check:
 
 
 def _tensile_root() -> Check:
+    """Probe TENSILE_ROOT and the checkout behind it."""
     from oto.runners.toolchain import (
         DEFAULT_TENSILE_ROOT,
         DOTENV_PATH,
@@ -200,6 +210,7 @@ def _rocm() -> list[Check]:
 
 
 def _gpu() -> Check:
+    """Probe the GPU device nodes and rocminfo."""
     if Path("/dev/kfd").exists() and Path("/dev/dri").exists():
         return _ok("gpu", "GPU device nodes", "/dev/kfd + /dev/dri present")
     rocminfo = shutil.which("rocminfo")
@@ -216,6 +227,7 @@ def _gpu() -> Check:
 
 
 def subprocess_probe(argv: list[str], needle: str) -> bool:
+    """True when `needle` appears in the probe's stdout (20 s timeout)."""
     import subprocess
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=20)
@@ -225,7 +237,10 @@ def subprocess_probe(argv: list[str], needle: str) -> bool:
 
 
 def _profile(base: Path, profile=None) -> Check:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Probe that the device profile JSON exists.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     from oto.device.loader import resolve_profile
     codename = resolve_profile(profile).codename
     path = base / "profiles" / f"{codename}.json"
@@ -236,7 +251,10 @@ def _profile(base: Path, profile=None) -> Check:
 
 
 def _registry(base: Path, profile=None) -> list[Check]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Probe the results directory and the registry DB behind it.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     from oto.device.loader import resolve_profile
     from oto.runners.result_paths import results_dir
     results = results_dir(base, resolve_profile(profile).codename)
@@ -257,6 +275,7 @@ def _registry(base: Path, profile=None) -> list[Check]:
 
 
 def _db_health(db: Path) -> Check:
+    """Probe the registry's integrity, schema and size."""
     try:
         conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         try:
@@ -285,6 +304,7 @@ def _db_health(db: Path) -> Check:
 
 
 def _db_labels(db: Path) -> Check:
+    """Probe for auto/Unknown label contamination in the registry."""
     bad = []
     try:
         conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
@@ -309,6 +329,7 @@ def _db_labels(db: Path) -> Check:
 
 
 def _run_health(db: Path) -> Check:
+    """Probe the newest run's lifecycle status."""
     try:
         conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         try:
@@ -332,6 +353,7 @@ def _run_health(db: Path) -> Check:
 
 
 def _coverage(base: Path) -> Check:
+    """Probe the deck's coverage parity against the shipped grid."""
     phases = base / "phases.yaml"
     if not phases.is_file():
         return _fail("corpus", "phases.yaml", f"missing {phases}",
@@ -354,6 +376,7 @@ def _coverage(base: Path) -> Check:
 
 
 def _docs(base: Path) -> list[Check]:
+    """Probe the docs registry and docs index."""
     registry = base / "docs" / "README.md"
     index = base / "docs" / "docs_index.json"
     out = []
@@ -382,6 +405,7 @@ def _docs(base: Path) -> list[Check]:
 # ------------------------------------------------------------------ render
 
 def _all_checks(base: Path) -> list[Check]:
+    """Every probe the doctor runs, in report order."""
     checks: list[Check] = [
         _safe("toolchain", "Python >= 3.10", _python),
         _safe("toolchain", "Virtual environment", _venv),
@@ -400,6 +424,7 @@ def _all_checks(base: Path) -> list[Check]:
 
 
 def _flatten(items: list[Any]) -> list[Check]:
+    """Flatten nested lists of checks into one list."""
     out: list[Check] = []
     for item in items:
         if isinstance(item, Check):
@@ -412,6 +437,7 @@ def _flatten(items: list[Any]) -> list[Check]:
 
 
 def _label(check: Check, quiet: bool) -> str:
+    """The coloured status tag for a check."""
     status = check.status
     if status == OK:
         return output.green("[ OK ]")

@@ -27,6 +27,7 @@ _STRUCTURED_STAGE_JSON = frozenset({"candidate", "2"})
 
 
 def _common_run_argv(args: Any) -> list[str]:
+    """The argv shared by every stage/tune adapter."""
     argv = ["--base-dir", str(_adapter.base_dir(args))]
     for key, flag in (("targets", "--targets"), ("family", "--family"),
                       ("pattern", "--pattern"), ("shape", "--shape")):
@@ -49,6 +50,7 @@ def _common_run_argv(args: Any) -> list[str]:
 # ------------------------------------------------------------------ core
 
 def run_tune(args: Any) -> int:
+    """Adapter for ``oto tune``; translation-only, no GPU work."""
     from oto.runners.stage_cli import main as cli_main
 
     argv = _common_run_argv(args)
@@ -71,6 +73,7 @@ def run_tune(args: Any) -> int:
 
 
 def run_stages(args: Any) -> int:
+    """Adapter for ``oto run`` (explicit stages)."""
     from oto.runners.stage_cli import main as cli_main
 
     argv = _common_run_argv(args)
@@ -80,6 +83,7 @@ def run_stages(args: Any) -> int:
 
 
 def run_bench(args: Any) -> int:
+    """Adapter for ``oto bench`` (native run or reference floor)."""
     from oto.runners.stage_cli import main as cli_main
 
     selectors = bool(args.targets or args.family or args.pattern or args.shape)
@@ -102,6 +106,7 @@ def run_bench(args: Any) -> int:
 
 
 def run_preflight(args: Any) -> int:
+    """Adapter for ``oto preflight``."""
     from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(_adapter.base_dir(args)), "--stage", "preflight"]
@@ -120,6 +125,7 @@ def run_preflight(args: Any) -> int:
 
 
 def run_stage(name: str, args: Any) -> int:
+    """Dispatch one named stage; shared adapter for the read-mostly stages."""
     from oto.runners.stage_cli import main as cli_main
     from oto.tensile.library_parity import load_pipeline_phases
 
@@ -168,6 +174,7 @@ def run_stage(name: str, args: Any) -> int:
 # ---------------------------------------------------------------- read side
 
 def run_status(args: Any) -> int:
+    """Adapter for ``oto status``."""
     from oto.metrics.render_status import main as rs_main
 
     argv = ["--base", str(_adapter.base_dir(args))]
@@ -185,7 +192,10 @@ def run_status(args: Any) -> int:
 
 
 def run_report(args: Any, profile=None) -> int:
-    """Report subcommand: resolve the run and render its report. ``profile`` selects the device; ambient by default."""
+    """Resolve the run and render its report.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the ambient profile.
+    """
     from oto.device import loader as _loader
     from oto.runners.result_paths import results_dir as _results_dir
     from oto.runners.stage_cli import main as cli_main
@@ -206,17 +216,20 @@ def run_report(args: Any, profile=None) -> int:
 
 
 def run_doctor(args: Any) -> int:
+    """Adapter for ``oto doctor``."""
     from oto.cli.doctor import run as _run
 
     return _run(_adapter.base_dir(args), json_mode=args.json, quiet=args.quiet)
 
 
 def run_setup(args: Any) -> int:
+    """Adapter for ``oto setup``."""
     from oto.runners.onboarding import run_setup as _run_setup
     return _run_setup(args)
 
 
 def run_check(args: Any) -> int:
+    """Adapter for the ``oto check`` tree."""
     name = args.check_cmd
     base = str(_adapter.base_dir(args))
     if name == "candidates":
@@ -271,6 +284,7 @@ def run_check(args: Any) -> int:
 
 
 def run_library_best_effort(args: Any) -> int:
+    """Adapter for ``oto library best-effort``."""
     from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(_adapter.base_dir(args)), "--best-library"]
@@ -284,6 +298,7 @@ def run_library_best_effort(args: Any) -> int:
 
 
 def run_consolidate(args: Any) -> int:
+    """Adapter for ``oto consolidate``."""
     from oto.tools.consolidate import main as m
 
     argv = ["--base-dir", str(_adapter.base_dir(args)), "all"]
@@ -294,6 +309,7 @@ def run_consolidate(args: Any) -> int:
 
 
 def run_stats(args: Any) -> int:
+    """Adapter for ``oto stats``."""
     from oto.tools.run_census import main as m
 
     argv = ["--base-dir", str(_adapter.base_dir(args))]
@@ -303,6 +319,7 @@ def run_stats(args: Any) -> int:
 
 
 def run_chart(args: Any) -> int:
+    """Adapter for ``oto chart``."""
     from oto.tools.benchmark_chart import main as chart_main
 
     argv = ["--base", str(_adapter.base_dir(args))]
@@ -312,6 +329,7 @@ def run_chart(args: Any) -> int:
 
 
 def run_agent_generate(args: Any) -> int:
+    """Adapter for ``oto agent generate``."""
     from oto.runners.stage_cli import main as cli_main
 
     argv = ["--base-dir", str(_adapter.base_dir(args)), "--generate-device-docs"]
@@ -348,6 +366,7 @@ def run_agent_consult(args: Any) -> int:
 
 
 def run_agent_index(args: Any) -> int:
+    """Adapter for ``oto agent index``."""
     from oto.docs_index_writer import write_index
 
     result = write_index()
@@ -359,11 +378,13 @@ def run_agent_index(args: Any) -> int:
 # ------------------------------------------------------------------ meta
 
 def run_completion(args: Any) -> int:
+    """Adapter for ``oto completion``."""
     print(write_completions(args.shell))
     return 0
 
 
 def write_completions(shell: str) -> str:
+    """The shell completion script for `shell` (bash or zsh)."""
     from oto.cli.parser import build_parser
 
     parser = build_parser()
@@ -401,6 +422,7 @@ def write_completions(shell: str) -> str:
 
 
 def _subparsers(parser: Any) -> Any:
+    """The name -> subparser map of a parser ({} when none)."""
     import argparse
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
@@ -409,15 +431,18 @@ def _subparsers(parser: Any) -> Any:
 
 
 def _command_names(parser: Any) -> list[str]:
+    """The sorted command names at the top level."""
     return sorted(_subparsers(parser))
 
 
 def _summary(parser: Any, name: str) -> str:
+    """The one-line description of command `name`."""
     p = _subparsers(parser)[name]
     return (p.description or "").splitlines()[0] or name
 
 
 def _flags(parser: Any, path: list[str]) -> str:
+    """The ``--flag`` names at `path` in the command tree."""
     current = parser
     for token in path:
         current = _subparsers(current).get(token)
@@ -430,6 +455,7 @@ def _flags(parser: Any, path: list[str]) -> str:
 
 
 def _subcommands(parser: Any, path: list[str]) -> str:
+    """The subcommand names at `path` in the command tree."""
     current = parser
     for token in path:
         current = _subparsers(current).get(token)
@@ -468,6 +494,7 @@ def show_help(args: Any, parser: Any) -> int:
 
 
 def _page(text: str) -> None:
+    """Print `text`, paging it through pydoc on a TTY."""
     try:
         is_tty = sys.stdout.isatty()
     except Exception:
@@ -520,12 +547,14 @@ def dispatch(args: Any, parser: Any) -> int:
 
 
 def print_version() -> int:
+    """Print ``oto <version>``; return 0."""
     from oto.version import __version__
     print(f"oto {__version__}")
     return 0
 
 
 def _orientation(parser: Any) -> int:
+    """The bare-invocation orientation page."""
     from oto.version import __version__
     print(f"oto {__version__} — deterministic Tensile tuning for unsupported AMD GPUs")
     print()

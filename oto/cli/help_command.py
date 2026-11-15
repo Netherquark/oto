@@ -39,6 +39,7 @@ MIGRATION = (
 
 
 def _subparsers(parser: Any) -> dict[str, Any]:
+    """The name -> child parser map of a parser with subcommands ({} when none)."""
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
             return action.choices
@@ -46,6 +47,7 @@ def _subparsers(parser: Any) -> dict[str, Any]:
 
 
 def _flags(parser: Any) -> list[dict[str, Any]]:
+    """The flag dicts for one parser level."""
     out = []
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
@@ -64,6 +66,7 @@ def _flags(parser: Any) -> list[dict[str, Any]]:
 
 
 def _node(parser: Any, name: str, path: str) -> dict[str, Any]:
+    """One node of the command tree."""
     summary = ((parser.description or "").splitlines() or [name])[0]
     examples = [line.strip() for line in (parser.description or "").splitlines()
                 if line.strip().startswith("oto ")]
@@ -91,6 +94,7 @@ def command_document(parser: argparse.ArgumentParser) -> dict[str, Any]:
 
 
 def _flag_line(flag: dict[str, Any]) -> str:
+    """One Markdown bullet for a flag."""
     names = ", ".join(f"`{n}`" for n in flag["flags"])
     extra = ""
     if flag.get("choices"):
@@ -102,6 +106,7 @@ def _flag_line(flag: dict[str, Any]) -> str:
 
 
 def _render_node(node: dict[str, Any], level: int = 3) -> list[str]:
+    """The Markdown lines for a command node and its children."""
     heading = "#" * level
     out = [f"{heading} `oto {node['path']}`", "", node["summary"], ""]
     if node["examples"]:

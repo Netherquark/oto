@@ -21,6 +21,7 @@ from oto.cli.parser import build_parser
 
 
 def _apply_environment(args: Any) -> None:
+    """Apply the --no-color/--quiet/--verbose/--no-input flags to the environment."""
     if getattr(args, "no_color", False):
         os.environ["NO_COLOR"] = "1"
     if getattr(args, "quiet", False):
@@ -32,6 +33,7 @@ def _apply_environment(args: Any) -> None:
 
 
 def _verbose(args: Any, parser: Any) -> None:
+    """Print the verbose banner for `args` (no-op unless ``--verbose``)."""
     if not getattr(args, "verbose", False):
         return
     command = getattr(args, "command", "") or "oto"
@@ -57,6 +59,7 @@ def _mutating_stdout(args: Any) -> Any:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The process boundary: parse, apply output policy, dispatch, catch. Return the exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
     _apply_environment(args)

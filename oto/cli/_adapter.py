@@ -21,10 +21,12 @@ from typing import Any
 
 
 def base_dir(args: Any) -> Path:
+    """The ``--base-dir`` the command operates on (cwd resolved)."""
     return Path(getattr(args, "base_dir", None) or Path.cwd()).resolve()
 
 
 def _with_argv(argv: list[str], func: Callable[..., Any]) -> Any:
+    """Run `func` with ``sys.argv`` set to ``['oto', *argv]``; restore it after."""
     old = sys.argv
     sys.argv = ["oto", *argv]
     try:
@@ -34,6 +36,7 @@ def _with_argv(argv: list[str], func: Callable[..., Any]) -> Any:
 
 
 def _call(argv: list[str], func: Callable[..., Any]) -> int:
+    """Run a backend translating its result to a process exit code."""
     result = _with_argv(argv, func)
     return int(result or 0)
 

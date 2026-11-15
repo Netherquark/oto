@@ -53,6 +53,7 @@ class OtoError(Exception):
     """A failure the CLI already knows how to explain."""
 
     def __init__(self, message: str, hint: str = "", exit_code: int = EXIT_FAIL):
+        """Store the message, the remediation hint and the exit code."""
         super().__init__(message)
         self.hint = hint
         self.exit_code = exit_code
@@ -68,6 +69,7 @@ def exit_code_for(exc: BaseException) -> int:
 
 
 def _hint_for(exc: BaseException) -> str:
+    """The remediation hint for a known failure, or ``''``."""
     if isinstance(exc, OtoError):
         return exc.hint
     text = str(exc).lower()
@@ -78,6 +80,7 @@ def _hint_for(exc: BaseException) -> str:
 
 
 def _traceback_path(base: Path | None) -> Path:
+    """The path for the durable traceback file (creating ``logs/``)."""
     log_dir = (base or Path.cwd()) / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -85,6 +88,7 @@ def _traceback_path(base: Path | None) -> Path:
 
 
 def _write_traceback(exc: BaseException, base: Path | None) -> Path:
+    """Write the durable traceback for `exc`; return the path."""
     path = _traceback_path(base)
     body = [
         f"oto traceback — {datetime.now(UTC).isoformat()}",
