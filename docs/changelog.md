@@ -4567,3 +4567,13 @@ the pre-built seed pool.
   registry deduplicated; `oto agent index` regenerated; `docs/overview.md` birds-eye fixed; Get Started/usage block
   satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
   computed as the deck does) — 281 phases, 0 illegal.
+- **2026-11-15 (55th) — docs ecosystem reorganised into subfolders + changelog/incomplete_work folded into docs/.**
+  `changelog.md` → `docs/changelog.md`, `incomplete_work.md` → `docs/incomplete_work.md` (evolution log + open
+  register live with the rest of the docs now; every reference in code, tests, docs and configs swept to the new
+  paths). The flat `docs/` directory split into subject folders: `docs/human/` (people), `docs/operator/`
+  (Class B bring-up: runbook, starter pair, gfx902 starter), `docs/developer/` (Class A: invariants, harness
+  runbook, docstrings convention, audit register, design language), `docs/gfx90c/` (the gfx90c golden case study +
+  device-independent templates), `docs/research/` (unchanged), `docs/skills/` (unchanged); `docs/README.md`,
+  `docs/overview.md`, `docs/cli.md` stay at top level with `docs/changelog.md` and `docs/incomplete_work.md`.
+  Registry regenerated; all in-tree references swept (`grep` old paths → 0 hits outside logs/ backups); all
+  markdown link targets resolve; `oto agent index` regenerated; docs test battery green.
