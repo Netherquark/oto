@@ -21,7 +21,15 @@ thing. Confusing them is the failure mode this file exists to prevent.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Two agent classes
+## Three ecosystems — pick your reader first
+
+| Ecosystem | Reader | Entry point | Never needs |
+|---|---|---|---|
+| **Human** | person setting up / running oto | [`README.md`](../README.md) → [`docs/getting_started.md`](getting_started.md) | gate internals, docstrings, implementation plan |
+| **Class B — operator agent** | LLM/agent converging a device library | [`docs/operator_runbook.md`](operator_runbook.md) | developing oto, docstrings, implementation plan |
+| **Class A — developer agent** | LLM/agent changing oto itself | [`AGENTS.md`](../AGENTS.md) → [`docs/invariants.md`](invariants.md) | operator starter files, bring-up procedure |
+
+## Two agent classes (within the agent ecosystems)
 
 This ecosystem serves two different agent roles. An agent that hasn't picked
 one defaults to the wrong entry document. Pick first, then read.

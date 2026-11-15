@@ -1,8 +1,4 @@
 # oto CLI command reference
-owner: oto maintainer
-last-reviewed: 2026-11-15
-review-interval: 90d
-
 
 Generated from `oto help --json` for oto 26.11.0. Do not hand-edit;
 run `oto help --write docs/cli.md` after changing the command tree.

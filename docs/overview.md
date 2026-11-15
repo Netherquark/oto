@@ -3,46 +3,63 @@ owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d
 
-
-The birds-eye view of the oto documentation ecosystem. Every document in the
-repo, what it is for, who reads it, and in what order. The machine-readable
+The birds-eye view of the oto documentation ecosystem. The machine-readable
 version is [`docs/docs_index.json`](docs_index.json) (regenerated with
 `oto agent index`); the human version is this file. The class-tagged registry
-that both derive from is [`docs/README.md`](README.md).
+is [`docs/README.md`](README.md).
 
-## Audiences and entry points
+## The three ecosystems — who each document is for
 
-- **Human user:** [`README.md`](../README.md) → [`docs/getting_started.md`](getting_started.md).
-- **Class A — developer agents:** `claude.md` → `docs/agent_reference.md` →
-  `docs/docstrings.md` → `docs/harness_runbook.md` →
-  `docs/implementation_plan.md`.
-- **Class B — operator agents:** `docs/operator_runbook.md` →
-  `docs/starter_pair.md` → `docs/starter_template.md` →
-  `docs/operator_campaign.md` → `docs/gfx902_starter.md` (worked example).
+Every document in `docs/` (and the root `*.md`) belongs to exactly one of
+three ecosystems. If a document tries to serve two, it serves neither.
 
-## Core contract
+| Ecosystem | Reader | Entry point | Never needs |
+|---|---|---|---|
+| **Human** | a person setting up or running oto | [`README.md`](../README.md) → [`docs/getting_started.md`](getting_started.md) | gate internals, docstrings, implementation plan |
+| **Operator agent (Class B)** | an LLM/agent converging a device library | [`docs/operator_runbook.md`](operator_runbook.md) | developing oto, docstrings, implementation plan |
+| **Developer agent (Class A)** | an LLM/agent changing oto itself | [`AGENTS.md`](../AGENTS.md) → [`docs/invariants.md`](invariants.md) | operator starter files, bring-up procedure |
 
-| Doc | Role |
-|---|---|
-| [`claude.md`](../claude.md) | Entry contract, process guardrails, file-ownership rules. |
-| [`docs/implementation_plan.md`](implementation_plan.md) | Design brief: two-loop architecture. |
-| [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Commit discipline, GPU policy, code-style rules. |
-| [`docs/audit_register.md`](audit_register.md) | Expert-agent audit register. |
+### Human ecosystem
+Vision → setup → bring-up gate → failure modes. No agent-role jargon.
+- [`README.md`](../README.md), [`docs/getting_started.md`](getting_started.md),
+  [`docs/setup.md`](setup.md), [`docs/toolchain_client.md`](toolchain_client.md),
+  [`docs/cli.md`](cli.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md),
+  `LICENSE`, `NOTICE`.
 
-## gfx90c golden case study
+### Operator ecosystem (Class B)
+Bring-up → starter pair → campaign → verification matrix.
+- [`docs/operator_runbook.md`](operator_runbook.md) (contract + matrix),
+  [`docs/operator_campaign.md`](operator_campaign.md) (long-form campaign),
+  [`docs/starter_pair.md`](starter_pair.md), `docs/starter_template.md` /
+  `.json`, `docs/gfx902_starter.md` / `.json` (worked example),
+  `docs/gfx902_blind_convergence.md`, `docs/agent_reference.md`,
+  `docs/harness_runbook.md`, `docs/setup.md` (shared).
 
-`docs/gfx90c_tuning_guide.md`, `docs/gfx90c_results.md`,
-`docs/gfx90c_theoretical_limits.md`, `docs/gfx90c_knowledge_base.md`.
-Their device-independent twins are `docs/results.md`,
-`docs/theoretical_limits.md`, `docs/knowledge_base.md`,
-`docs/potential_configs.md` (templates — copy and fill per device).
+### Developer ecosystem (Class A)
+Invariants → docstrings → implementation plan → harness.
+- [`AGENTS.md`](../AGENTS.md) (Tier 0), [`docs/invariants.md`](invariants.md)
+  (Tier 1, full contract), [`claude.md`](../claude.md) (thin pointer),
+  [`docs/implementation_plan.md`](implementation_plan.md),
+  [`docs/harness_runbook.md`](harness_runbook.md),
+  [`docs/agent_reference.md`](agent_reference.md),
+  [`docs/docstrings.md`](docstrings.md),
+  [`docs/agentic_consult.md`](agentic_consult.md),
+  [`docs/comparability.md`](comparability.md),
+  [`docs/shipped_floor_contract.md`](shipped_floor_contract.md),
+  [`docs/search_philosophy.md`](search_philosophy.md),
+  [`docs/design_language.md`](design_language.md),
+  [`docs/documentation_tooling_options.md`](documentation_tooling_options.md),
+  [`docs/potential_configs.md`](potential_configs.md),
+  [`docs/audit_register.md`](audit_register.md).
+
+### Shared across ecosystems
+- `docs/README.md` (registry), `docs/docs_index.json`, `docs/overview.md` (this
+  file), `docs/cli.md`, `docs/setup.md`, `docs/toolchain_client.md`.
+
+## Golden case study + templates
+`docs/gfx90c_*.md` (golden, do-not-edit) ↔ device-independent twins
+`docs/results.md`, `theoretical_limits.md`, `knowledge_base.md`,
+`potential_configs.md` (templates — copy and fill per device).
 
 ## Full registry
-
-See [`docs/README.md`](README.md) for the complete class-tagged registry of
-every document. Machine-readable: [`docs/docs_index.json`](docs_index.json).
-
-## License
-
-GPL-3.0-or-later — see [`LICENSE`](../LICENSE) and [`NOTICE`](../NOTICE).
-Code: GPL-v3. Docs: CC-BY-SA-4.0.
+[`docs/README.md`](README.md).

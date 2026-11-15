@@ -1,5 +1,9 @@
 # oto — developer operating contract (moved from claude.md)
 
+> **Ecosystem: Developer agent (Class A).** Operator agents read
+> [`docs/operator_runbook.md`](operator_runbook.md); humans read
+> [`docs/getting_started.md`](getting_started.md).
+
 owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d

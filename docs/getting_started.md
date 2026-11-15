@@ -1,4 +1,8 @@
 # Getting started with oto
+
+> **Ecosystem: Human.** Agents pick their class first — operators read
+> [`docs/operator_runbook.md`](operator_runbook.md), developers read
+> [`AGENTS.md`](../AGENTS.md).
 owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d

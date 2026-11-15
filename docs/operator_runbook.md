@@ -1,4 +1,8 @@
 # oto operator runbook — a best-effort Tensile library on an unsupported AMD platform
+
+> **Ecosystem: Operator agent (Class B).** Humans setting up the machine read
+> [`docs/getting_started.md`](getting_started.md); developers read
+> [`AGENTS.md`](../AGENTS.md). Do not mix ecosystems.
 owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d
