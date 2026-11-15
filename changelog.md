@@ -4403,8 +4403,11 @@ the pre-built seed pool.
     renamed `self.generator` throughout; the benchmark chart's device literals are profile-derived.
   - **Release-readiness additions**: pinned split requirements (`requirements.txt` runtime,
     `requirements-dev.txt` suite+lint), `NOTICE` (copyright assertion; LICENSE stays verbatim),
-    `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`, GitHub Actions CI (CPU-only: install, ruff,
-    pytest, split-era verifier), README quick-start + license section, `oto/README.md` regenerated.
+    `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`. A GitHub Actions CI workflow was added
+    in the same sweep, then **removed at the owner's direction (never requested -- the owner
+    confirmed they did not ask for CI/CD)**. The repository has no CI; the suite is
+    self-verified on the machine, and README quick-start + license section + regenerated
+    `oto/README.md` landed in its place.
   Suite green (1084 passed, 8 skipped, 242 subtests, RC=0). `oto verify all` PASSED at HEAD~1 and at
   2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
   owner's API key and the Tensile client build are both still required.
