@@ -4549,3 +4549,21 @@ the pre-built seed pool.
   step is closed (probe now passes) — what remains is `profiles/gfx902.json` (human verification),
   the owner's API key (C4), the gfx902 TTY. `docs/starter_pair.md` BLOCKED list updated accordingly.
   Suite RC=0; `oto verify all` PASSED.
+- **2026-11-15 (54th) — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
+  Every function docstring in `oto/` rewritten to pdoc prose (135 `Args:`/`Returns:`/`Raises:` blocks eliminated;
+  383 missing function docstrings added; private helpers get one line; Sphinx `:func:`/`:data:` roles converted to
+  back-ticks; 22 mixin composition roots stated as dotted paths; `AbIdentityMixin` noted unused). Full suite green
+  throughout (1123 passed / 8 skipped; the 600-line and 60-line guards kept via compaction; one dead `pass` dropped).
+  Verifiers: the split-era check now PASSES at both `2824c2f` and `HEAD~1`; `verify_symbols.py` RENAMES table moved to
+  `drift_manifest.json` (the line-budget ratchet had dropped two real mappings, `ldspad_gate.py`→`ldspad.py` /
+  `occupancy_common.py`→`gate_common.py`, and false-reported whole-module API loss); restored mappings pinned by
+  `tests/test_verifier_renames.py`. `oto check tensile-build` GPU legality probes on gfx90c (M=128): all eight PASS
+  (CC af4em4/af22/base @256/512, ZZ DU8/DU16, trialD1) — `sols=1`, no matrix larger than 512³. `oto doctor` rc=0
+  (21 ok, 2 pre-existing advisory WARNs). Easy-mode `oto setup`: all wizard narration moved to stderr (stdout stays a
+  clean data channel), blank-default prompt artefact fixed, Ctrl-D path verified, UX contract pinned by
+  `tests/test_easy_mode_ux.py`. Docs: README rewritten around the recovery-pipeline vision (blog/grant material);
+  `docs/operator_runbook.md` §19 blind convergence end-to-end (gfx902 worked instance, edge cases E1–E12, dead ends
+  D1–D6); `docs/agentic_consult.md` folded into `docs/invariants.md` §3.6–§3.8 and removed as a standalone file;
+  registry deduplicated; `oto agent index` regenerated; `docs/overview.md` birds-eye fixed; Get Started/usage block
+  satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
+  computed as the deck does) — 281 phases, 0 illegal.

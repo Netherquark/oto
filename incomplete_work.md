@@ -15,19 +15,18 @@ not re-raise closed items without new information.
   `profiles/gfx902.json` cannot be accepted by a human who must sign off a
   device that is not on this box. Class-B flow rehearsed on a synthetic stub
   (`tests/test_class_b_rehearsal.py`, 16 tests); CPU-side toolchain ready
-  (`ISA_TRIPLES` carries gfx902; Tensile client builds). Unblocking needs
-  only the key + the human gate. See `docs/starter_pair.md`.
+  (`ISA_TRIPLES` carries gfx902; Tensile builds and assembles gfx902).
+  Unblocking needs only the key + the human gate. See `docs/starter_pair.md`.
 - **CC:512/256 `AssertFree0/1ElementMultiple=4` A/B — TTY-gated.**
-  GPU legality verified (all 11 probes pass Tensile's
-  `NumElementsToValidate=128` reference on gfx90c); the two AF4/4 rows ship
-  in `phases.yaml`. Paired-widen vs AF2/2 and the pure baseline will be
-  measured when the overnight run resumes (`oto tune` on the owner's TTY).
-  No performance claim exists anywhere until that measurement.
+  GPU legality build probes pass on gfx90c (2026-11-15: af4em4 @256/@512,
+  paired-widen AF22 @256/@512, AF11 baselines, ZZ DU8/DU16 — all sols=1).
+  The paired-widen vs AF4/4 perf A/B will be measured when the overnight run
+  resumes (`oto tune` on the owner's TTY). No performance claim exists
+  anywhere until that measurement.
 - **Acceptance reports / drift-manifest attestation.** Machine-local
-  `acceptance_report.{json,html}` were overwritten in the v1-readiness
-  audit; byte comparison confidence does not exist. The drift manifest
-  stands at its last re-attestation (2026-11-15, 45th entry). Re-attestation
-  is a deliberate on-machine act.
+  `acceptance_report.{json,html}` were overwritten in the v1-readiness audit;
+  byte comparison confidence does not exist. The drift manifest stands at its
+  last re-attestation (2026-11-15). Re-attestation is a deliberate on-machine act.
 - **2 × `oto doctor` warnings (advisory; user's call stands — do not
   silence):** venv-not-active; abandoned run `run_20261029_152402`.
 
@@ -41,12 +40,12 @@ not re-raise closed items without new information.
   library-parity` / `oto library best-effort` on the target silicon.
 - **Tensile client on a fresh machine** — compiled artifact, not committed;
   re-run `scripts/build_tensile_client.sh`.
-- **CC:256 Option B (SGEMM-style adoption)** — not implemented; decision
-  belongs to the user.
-- **LDS boundary probes** — 4 above-budget ZZ tiles + 2 at-budget controls
-  through direct Tensile, pending the client binary.
-- **Any GPU leg other than yolo26 and the D5 CC-256 legality probes** —
-  forbidden without the owner's explicit whitelist.
+- **Nightly `dist-7.15.0a20260728/` tarball extract (8.2 GB)** — installed but
+  unused by the current `.env` (which points at the 1.4 GB python-sdk
+  `_rocm_sdk_core`). Deletion is the owner's call; the tarball itself is
+  already gone.
+- **Any GPU leg other than the 2026-11-15 CC legality probes** — forbidden
+  without the owner's explicit whitelist.
 
 ## How to read this file
 
