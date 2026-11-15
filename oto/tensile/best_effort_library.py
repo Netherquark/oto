@@ -65,10 +65,7 @@ _TENSILE_CANDIDATES = [c for c in dict.fromkeys(_tensile_candidates())
                        if os.path.isdir(os.path.join(c, "Tensile", "bin"))]
 
 def _shipped_cells(profile=None) -> set[tuple[str, str]]:
-    """Shipped cells: ``(family, "SxSxS")`` for every shape in the profile.
-
-    Derived at call time -- never frozen at import.
-    """
+    """Shipped cells: ``(family, "SxSxS")`` for every shape in the profile; derived at call time, never frozen at import."""
     return {(f, f"{s}x{s}x{s}")
             for f, ss in _loader.resolve_profile(profile,).family_shapes.items() for s in ss}
 
@@ -80,10 +77,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 def default_best_library_dest(base_dir: Path) -> Path:
-    """Return the default destination for ``--best-library``.
-
-    Derived from the profile on every call -- never frozen at import.
-    """
+    """Return the default destination for ``--best-library`` (derived from the profile on every call, never frozen at import)."""
     return Path(base_dir) / results_rel("best_effort_library")
 
 
@@ -215,12 +209,7 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
                       kernel_db_path: Path | None = None, profile=None) -> tuple[
         dict[tuple[str, str], dict[str, Any]],
         list[dict[str, Any]], dict[str, Any]]:
-    """Carve the per-cell best config from the corpus; return ``(cell_map, refused, stats)``.
-
-    ``basis`` is the protocol basis (``"family"``/``"any"``/an explicit
-    protocol); ``kernel_db_path`` overrides the corpus location. ``profile``
-    is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
-    """
+    """Carve the best config per cell from the corpus; return ``(cell_map, refused, stats)``. ``kernel_db_path`` overrides the corpus location."""
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
         _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
@@ -286,10 +275,7 @@ def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
 
 
 def _problem_type_state(fam: str, tensile_root: Path | None = None, profile=None) -> dict[str, Any]:
-    """The Tensile problem-type state for `fam` (dtype char from the profile).
-
-    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
-    """
+    """The Tensile problem-type state for `fam` (dtype char from the profile). ``profile`` selects the device (ambient by default)."""
     _ensure_tensile_importable(tensile_root)
     from Tensile.LibraryIO import updateProblemDatatypes
     from Tensile.SolutionStructs import ProblemType
@@ -401,10 +387,7 @@ def emit_logic_yaml(cell_map: dict[tuple[str, str], dict[str, Any]],
                     dest_logic_dir: Path,
                     tensile_root: Path | None = None,
                     codename: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Write the per-family logic YAMLs for `cell_map`; return ``(phases, parity)``.
-
-    `codename` defaults to the ambient profile's codename.
-    """
+    """Write the per-family logic YAMLs for `cell_map`; return ``(phases, parity)``. `codename` defaults to the ambient profile."""
     if codename is None:
         codename = _default_codename()
     dest_logic_dir = Path(dest_logic_dir)
@@ -572,13 +555,7 @@ def build_best_library(base_dir: Path, dest: Path | None = None,
                        tensile_root: Path | None = None,
                        kernel_db_path: Path | None = None,
                        codename: str | None = None) -> dict[str, Any]:
-    """Build the best-effort ``TensileLibrary.dat`` end to end.
-
-    Returns a status dict; ``status`` is ``"partial"`` when the library step
-    failed, any cell was refused, or the parity check failed. ``dest``
-    defaults to the profile-derived best-effort destination; ``codename``
-    defaults to the ambient profile's codename.
-    """
+    """Build the best-effort ``TensileLibrary.dat`` end to end; ``status`` is ``"partial"`` on library failure, cell refusal or parity miss."""
     if codename is None:
         codename = _default_codename()
     base_dir = Path(base_dir)

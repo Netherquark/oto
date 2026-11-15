@@ -41,10 +41,7 @@ class CellStatusMixin:
         all_analytics: list[CellAnalytics],
         red_threshold_pct: float = 50.0, profile=None,
     ) -> dict[str, list[dict[str, Any]]]:
-        """Classify gfx900 contract cells (family x deck shape) for report.
-        RED=MISSING, ORANGE=measured < threshold, GREEN=at/above threshold.
-        ``profile`` -- optional, ambient by default.
-        """
+        """Classify gfx900 contract cells: RED=MISSING, ORANGE=measured < threshold, GREEN=at/above threshold. ``profile`` is an optional ``DeviceProfile`` (ambient by default)."""
         from collections import defaultdict
         measured: dict[str, set[str]] = defaultdict(set)
         best_per_cell: dict[tuple[str, str], float] = {}

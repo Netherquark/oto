@@ -88,4 +88,3 @@ class DeviceProfile:
     def __post_init__(self):
         """Reserved for assembly-gate defaulting; currently a no-op."""
         # assembly_gates defaults derived from features if not explicitly set
-        pass
