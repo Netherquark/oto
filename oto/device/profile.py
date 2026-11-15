@@ -86,5 +86,6 @@ class DeviceProfile:
     realistic_ceilings_reported: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):
+        """Reserved for assembly-gate defaulting; currently a no-op."""
         # assembly_gates defaults derived from features if not explicitly set
         pass

@@ -5,7 +5,7 @@ Owns: the typecode->family resolver (kernel-name parsing), and the canonical
 cell identity helpers (``cell_key``, ``kernel_key``, ``cube_side``,
 ``shipped_cells``, ``shipped_cell_set``) used by every consumer that pairs a
 native candidate with its reference-floor kernel. Profile-aware: the dtype-
-char tables come from :func:`oto.device.loader.current_profile` at call
+char tables come from ``oto.device.loader.current_profile`` at call
 time, never from module globals.
 Does NOT own: any calibrated constant (see ```oto.tensile.gates```), the
 profile dataclass (```oto.device.profile```), or loader/detection.

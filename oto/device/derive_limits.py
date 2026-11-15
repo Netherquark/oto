@@ -61,6 +61,7 @@ def lanes(profile: DeviceProfile) -> int:
 
 
 def _per_channel_bytes(memory_type: str) -> int:
+    """Bytes per channel for DDR/LPDDR memory; refuses HBM and unknown types."""
     m = memory_type.upper()
     if m.startswith(("DDR4", "DDR5")):
         return 8
@@ -101,6 +102,7 @@ def derive_machine_balance(profile: DeviceProfile) -> dict[str, float]:
 
 
 def _round_half_up(x: float) -> int:
+    """Round half up deterministically (no banker's rounding)."""
     return int(x + 0.5)
 
 
@@ -136,6 +138,7 @@ def derive_theoretical_peaks_blas8(profile: DeviceProfile) -> dict[str, int]:
 
 
 def _main() -> None:
+    """Print the derived limits for a profile as JSON (handy for spot checks)."""
     import argparse
     import json
 

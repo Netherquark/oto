@@ -28,8 +28,7 @@ _PROFILES_DIR = Path(__file__).resolve().parents[2] / "profiles"
 
 
 def _check_sanity(data: dict[str, Any], source: str) -> None:
-    """Refuse obviously-unverified profiles (e.g. the starter template left
-    unfilled). Fails loudly rather than tuning against invented numbers."""
+    """Refuse obviously-unverified profiles loudly rather than tune against invented numbers."""
     problems = []
     codename = str(data.get("codename", ""))
     if not codename or codename.startswith("<"):
@@ -50,8 +49,7 @@ def _check_sanity(data: dict[str, Any], source: str) -> None:
 
 
 def _validate_isa(raw_isa, source: str = "<profile>") -> tuple[int, int, int]:
-    """``isa`` is the ISA (major, minor, stepping) tuple. Reject malformed shapes
-    loudly instead of trusting the snapshot."""
+    """Return the ``(major, minor, stepping)`` ISA triple, rejecting malformed shapes loudly."""
     if not isinstance(raw_isa, (list, tuple)) or len(raw_isa) != 3:
         raise ValueError(
             f"{source}: 'isa' must be a 3-element list/tuple of ints "
@@ -65,6 +63,7 @@ def _validate_isa(raw_isa, source: str = "<profile>") -> tuple[int, int, int]:
 
 
 def _to_profile(data: dict[str, Any], source: str = "<profile>") -> DeviceProfile:
+    """Build a frozen ``DeviceProfile`` from raw JSON ``data``, validating as it goes."""
     _check_sanity(data, source)
     raw_isa = data["isa"]
     isa = _validate_isa(raw_isa, source)
@@ -112,6 +111,10 @@ def _to_profile(data: dict[str, Any], source: str = "<profile>") -> DeviceProfil
 
 
 def load_profile(codename: str, profiles_dir: Path | None = None) -> DeviceProfile:
+    """Load and validate ``<profiles_dir>/<codename>.json`` into a ``DeviceProfile``.
+
+    Raises ``FileNotFoundError`` when no profile file exists for ``codename``.
+    """
     d = profiles_dir or _PROFILES_DIR
     path = Path(d) / f"{codename}.json"
     if not path.exists():
@@ -120,6 +123,7 @@ def load_profile(codename: str, profiles_dir: Path | None = None) -> DeviceProfi
 
 
 def _codename_from_text(text: str) -> str | None:
+    """Pull the ``codename:`` token out of a starter's narrative text, or ``None``."""
     import re
     m = re.search(r"codename:\s*(\S+)", text)
     return m.group(1).strip() if m else None
@@ -166,7 +170,7 @@ def load_profile_from_starter(starter_path: Path, profiles_dir: Path | None = No
 
 
 def default_profile():
-    """The default profile used as the default when no device is specified."""
+    """The committed default profile (``gfx90c``), used when nothing overrides it."""
     return load_profile("gfx90c")
 
 
@@ -187,7 +191,7 @@ _CURRENT_PROFILE: DeviceProfile | None = None
 
 
 def current_profile() -> DeviceProfile:
-    """The DeviceProfile this process runs as (cached)."""
+    """This process's profile, resolved once and cached for the life of the process."""
     global _CURRENT_PROFILE
     if _CURRENT_PROFILE is None:
         _CURRENT_PROFILE = _resolve_profile()
@@ -227,7 +231,7 @@ def rebind_profile(profile: DeviceProfile) -> None:
 
 @contextlib.contextmanager
 def bound_profile(profile: DeviceProfile):
-    """Scope :func:`rebind_profile` to the ``with`` block; restore on exit."""
+    """Scope ``rebind_profile`` to the ``with`` block; restore the previous profile on exit."""
     old = current_profile()
     rebind_profile(profile)
     try:
@@ -237,6 +241,7 @@ def bound_profile(profile: DeviceProfile):
 
 
 def _from_override(spec: str) -> DeviceProfile:
+    """Resolve an ``OTO_PROFILE`` override: a path to a JSON file, else a codename."""
     p = Path(spec)
     if p.is_file():
         return _from_json_path(p)
@@ -244,6 +249,7 @@ def _from_override(spec: str) -> DeviceProfile:
 
 
 def _from_json_path(p: Path) -> DeviceProfile:
+    """Load a profile from an explicit JSON path, requiring a ``codename`` key."""
     data = json.loads(p.read_text())
     if "codename" not in data:
         raise ValueError(f"{p} has no 'codename' key")
@@ -251,6 +257,7 @@ def _from_json_path(p: Path) -> DeviceProfile:
 
 
 def _detect() -> str | None:
+    """Auto-detect the codename via rocminfo; ``None`` when unsupported or missing."""
     try:
         from oto.device.device_detect import detect_codename
         code = detect_codename()
@@ -264,6 +271,7 @@ def _detect() -> str | None:
 
 
 def _resolve_profile() -> DeviceProfile:
+    """Pick the process profile: ``OTO_PROFILE`` override, then rocminfo detection, then the committed default."""
     override = os.environ.get(OTO_PROFILE_VAR, "").strip()
     if override:
         return _from_override(override)
