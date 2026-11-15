@@ -13,7 +13,6 @@ import statistics
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import oto.tensile.shipped_floor_manifest as tlib
+from oto.metrics.status_helpers import _parse_ts
 from oto.runners.result_paths import results_rel
 
 DB_REL = Path(results_rel("registry.db"))
@@ -33,64 +33,6 @@ ACTIVE_STATES = ("started", "interrupted")
 
 
 
-def _parse_ts(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value))
-    except ValueError:
-        return None
-
-
-def fmt_duration(minutes: float | None) -> str:
-    """Human duration, coarse on purpose: an ETA to the second is a lie."""
-    if minutes is None or minutes != minutes or minutes == float("inf"):
-        return "unknown"
-    if minutes < 0:
-        return "unknown"
-    if minutes < 1:
-        return f"{minutes * 60:.0f}s"
-    if minutes < 90:
-        return f"{minutes:.0f}m"
-    hours = minutes / 60.0
-    if hours < 48:
-        return f"{int(hours)}h {int(minutes % 60)}m"
-    return f"{int(hours // 24)}d {int(hours % 24)}h"
-
-
-def _jittery(n: int) -> bool:
-    """Too few samples for a stable median."""
-    return n < 3
-
-
-def bucket(status: str, result: str | None) -> str:
-    """Map a record's (status, result.status) onto one display bucket.
-
-    `result.status` is NULL for records that never got that far (Tensile
-    rejected every solution, or the process died), and those are failures, not
-    "unknown" -- counting them as anything else would understate a failed run.
-    """
-    if status == "completed" and result == "success":
-        return "success"
-    if status == "skipped" or (status == "failed" and result == "skipped_by_user"):
-        return "skipped"
-    if status == "failed":
-        return "failed"
-    if status in ("started", "running"):
-        return "active"
-    return "other"
-
-
-
-
-# ---------------------------------------------------------------------------
-# the plan
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# plan
-# ---------------------------------------------------------------------------
 @dataclass
 class RunPlan:
     """What the user asked for. Every field defaults to the --auto defaults.

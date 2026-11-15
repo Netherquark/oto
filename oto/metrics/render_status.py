@@ -42,9 +42,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-# Imported lazily by `main`: the report module imports this one for the
-# render names it re-exports, so a top-level import would be circular.
-from oto.metrics.run_plan import RunPlan, fmt_duration
+from oto.metrics.run_plan import RunPlan
+from oto.metrics.status_helpers import fmt_duration
 
 __all__ = ["LiveStatus", "_PanelStdout", "bar", "render", "render_compact"]
 
