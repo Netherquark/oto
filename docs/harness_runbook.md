@@ -5,7 +5,8 @@ review-interval: 90d
 
 
 > **Scope:** harness machinery guardrails and candidate workflows. For the
-> CPU-only command card, see [`docs/harness_runbook.md`](harness_runbook.md).
+> ecosystem boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
+> [`claude.md`](../claude.md) §5.
 
 Polished, repo-homed home of the candidate-generation machinery. The read-only tools plus
 this runbook give an agent (or a human) the ground truth needed to propose a
