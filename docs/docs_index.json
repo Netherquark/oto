@@ -80,12 +80,6 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "The docstring convention (what a module docstring must contain)",
-      "path": "docs/docstrings.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
       "owns": "Per-family ceilings (gfx90c), the acceptance authority \u2014 gfx90c golden example of `docs/theoretical_limits.md`",
       "path": "docs/gfx90c_theoretical_limits.md"
     },
@@ -250,6 +244,12 @@
       "kind": "Ecosystem",
       "owns": "The dev loop: setup, suite, verifier, GPU policy, commit discipline",
       "path": "CONTRIBUTING.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "The docstring convention: Owns/Does NOT own/Public API, prose-first function docstrings",
+      "path": "docs/docstrings.md"
     }
   ],
   "generated_from": "docs/README.md",

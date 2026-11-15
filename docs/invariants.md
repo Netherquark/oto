@@ -1060,6 +1060,45 @@ conflict factor as a function of `(stride, DepthU, VectorWidth, bpe, LdsPad)`.
 Use it only to **rank and prune** — never to accept. The measurement is the
 ground truth, and a surrogate that disagrees with it is a bug, not a finding.
 
+## §3.6 State machine and resumability (folded from agentic_consult.md)
+
+The consultation is a state machine, not a script: `intake → research → gate →
+carve → synth → dryrun → tty → report → publish`. Each stage writes and reads a
+JSON checkpoint under `<results>/consult/`; a stage that cannot produce its
+checkpoint refuses to advance rather than leaving a half-written artefact
+behind. The ledger is the source of truth; partial progress is resumable by
+construction. M1 (scaffolding `oto/agents/auto_consult.py`), M2 (research
+plumbing over `oto.agents.research_client`), M3 (census bridge), M4 (dry-run
+gate), M5 (TTY driver — the human starts `oto tune`; no automation around the
+GPU), M6 (publish via `oto report --json` → `oto.tools.potential_configs`,
+human reads), M7 (rehearsal suite on a stub device).
+
+## §3.7 Failure modes (folded from agentic_consult.md)
+
+| Failure | Caught by | Outcome |
+|---|---|---|
+| API key absent | M2 | stages no-op; stops at the research gate |
+| Research invents facts | human gate (P3) | unsigned JSON → no profile → no run |
+| Deck illegal | `check candidates` (M4) | refused before TTY |
+| GPU absent | `oto doctor` (A4) | refused before TTY |
+| Agent wanders | deterministic gates + `_writing()` ledger lock | every action is gated |
+| Budget burned | `--budget` hard ceiling | valid terminal: "budget exhausted" |
+| Report lies | `report --json` from the ledger only | impossible by construction |
+
+**What stays human, always:** signing the starter JSON; starting any GPU run;
+adopting rows into `phases.yaml`; claiming performance (numbers live in
+`docs/<codename>_results.md`, written from the ledger).
+
+## §3.8 Open decisions for the owner (folded from agentic_consult.md)
+
+1. Whether M6's publish step may auto-adopt CC-style "AF4/4" rows into the deck
+   at a target visit (today: never — deck changes are per-commit review).
+2. Whether the session gets a `--yes` non-interactive mode at all (today: no —
+   every stage pauses for the human).
+3. Whether `kernel_db` is shared across devices in this program (today:
+   per-device `<results>/analysis/kernel_db.json`; the harness tolerates both,
+   but cross-device sharing is an unmeasured optimisation).
+
 ## Final Rule
 
 Deterministic loop, HW decides, DB remembers. If the agent layer proposes
