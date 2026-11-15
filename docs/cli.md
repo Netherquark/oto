@@ -46,7 +46,7 @@ oto agent index
 Draft <codename>_potential_configs.md (CPU-only census consult)
 
 ```bash
-oto agent consult docs/gfx902_starter.md
+oto agent consult docs/operator/gfx902_starter.md
 oto agent consult --out my_device.md
 ```
 
@@ -66,8 +66,8 @@ Flags:
 Generate device docs (agent-1 + agent-2)
 
 ```bash
-oto agent generate docs/gfx902_starter.md --dry-run
-oto agent generate docs/gfx902_starter.md
+oto agent generate docs/operator/gfx902_starter.md --dry-run
+oto agent generate docs/operator/gfx902_starter.md
 ```
 
 Flags:

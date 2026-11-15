@@ -5,7 +5,7 @@ review-interval: 90d
 
 # Pair: docs/<codename>_starter.md + docs/<codename>_starter.json
 # The JSON half is the profile oto loads; this file is the context an agent
-# (human or AI) gets BEFORE hunting for facts. See docs/starter_pair.md.
+# (human or AI) gets BEFORE hunting for facts. See docs/operator/starter_pair.md.
 
 codename: <codename>
 
@@ -29,20 +29,20 @@ codename: <codename>
 One paragraph per piece, each pointing at its home doc — read all of them
 before touching anything:
 
-- `docs/starter_pair.md` — the pair protocol and who verifies what.
-- `docs/operator_runbook.md` — the end-to-end Class B contract (detect →
+- `docs/operator/starter_pair.md` — the pair protocol and who verifies what.
+- `docs/operator/operator_runbook.md` — the end-to-end Class B contract (detect →
   starter → research → human gate → generate → harness study → TTY run →
   `--best-library`). Read it even if you are only doing docs.
-- `docs/harness_runbook.md` — the **working mineral**: what a completed
+- `docs/developer/harness_runbook.md` — the **working mineral**: what a completed
   gfx90c-style tuning reference library looks like (ceilings, knob domains,
   geometry, M1-M4 mechanisms, failure classes). Aim to reproduce this shape of
   depth for <codename>, not to outdo it.
 - `docs/cli.md` — the `oto` command vocabulary (`oto doctor`, `oto check`,
   `oto agent generate`, `oto agent index`).
-- `docs/gfx902_starter.md` — a filled-in example of THIS file, for a device
+- `docs/operator/gfx902_starter.md` — a filled-in example of THIS file, for a device
   that does not exist yet anywhere except in agent research. Copy its
   structure; fill in *your* device.
-- `docs/gfx90c_theoretical_limits.md` + `docs/gfx90c_tuning_guide.md` — the worked
+- `docs/gfx90c/gfx90c_theoretical_limits.md` + `docs/gfx90c/gfx90c_tuning_guide.md` — the worked
   example of a completed acceptance document and its cookbook sibling. Read
   the structure, not the numbers — your numbers come from the research
   hunt below.
@@ -133,7 +133,7 @@ a profile is a bug, not a feature.
 ## API key
 
 <!-- Name the env var, never the key. The research backend is chosen at run
-     time from the environment (see docs/starter_pair.md); nothing about the
+     time from the environment (see docs/operator/starter_pair.md); nothing about the
      key reaches this file. -->
 
 ```
@@ -142,6 +142,6 @@ export ANTHROPIC_API_KEY=...   # or: OPENAI_API_KEY / OTO_API_KEY
 
 ## Worked example
 
-`docs/gfx902_starter.md` — a filled-in instance of this brief for a device
+`docs/operator/gfx902_starter.md` — a filled-in instance of this brief for a device
 that exists only in agent research. Read it before writing yours; copy its
 section discipline, not its numbers.

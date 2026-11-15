@@ -386,7 +386,7 @@ def _step_next_steps():
     _say("=" * 72)
     _say()
     _say("  Next steps:")
-    _say("   1. Read docs/starter_pair.md and fill docs/<codename>_starter.{md,json}")
+    _say("   1. Read docs/operator/starter_pair.md and fill docs/<codename>_starter.{md,json}")
     _say("   2. Verify the starter pair against first-party sources")
     _say("   3. oto agent consult docs/<codename>_starter.md   # CPU-only deck draft")
     _say("   4. oto doctor   # should report 0 FAIL")

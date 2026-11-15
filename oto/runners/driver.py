@@ -334,7 +334,7 @@ class TensileDriver(
             ("Tensile CLI exists", tensile_bin.is_file()),
             ("Registry DB accessible", self.registry.db_path.exists() or self.registry.results_dir.is_dir()),
             ("phases.yaml accessible", (self.base_dir / "phases.yaml").exists()),
-            # Coverage-parity rule (docs/gfx90c_knowledge_base.md §6.1): the produced
+            # Coverage-parity rule (docs/gfx90c/gfx90c_knowledge_base.md §6.1): the produced
             # TensileLibrary must address exactly the shipped gfx900 cell grid.
             ("TensileLibrary shape/dtype parity vs shipped gfx900", parity_ok),
         ]

@@ -1,6 +1,6 @@
 """Class-B candidate rehearsal — the full pre-GPU journey of an unsupported device.
 
-The Class B path (`docs/operator_runbook.md`) is the gfx902 risk path: if any of
+The Class B path (`docs/operator/operator_runbook.md`) is the gfx902 risk path: if any of
 these invocations crash or return garbage, the first agent run on a new device
 will fail deep inside a six-hour campaign. This suite walks the full chain on a
 stub device pair, exercising exactly the commands a real campaign would issue,

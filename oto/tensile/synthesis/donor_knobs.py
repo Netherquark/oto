@@ -19,7 +19,7 @@ from typing import Any
 #: Values are the Tensile-legal value sets (Common.py) intersected with what
 #: the gates admit. This is the NARROW mutation space.
 #:
-#: 2026-10-16 revisions (docs/gfx90c_tuning_guide.md §13 §0 R6):
+#: 2026-10-16 revisions (docs/gfx90c/gfx90c_tuning_guide.md §13 §0 R6):
 #: * ``StaggerUStride`` (0,64,128,256). Tensile silently raises SUS to a whole
 #:   multiple of DepthU*bpe, so 256 collapses to 64 for DU=16/bpe=4 and most of
 #:   the old (0,256,512) domain was one point. 64/128 are live and already in
@@ -75,7 +75,7 @@ FORWARD_KNOB_DOMAINS: dict[str, tuple[Any, ...]] = {
 #: half Assembly additionally requires ``AssertFree0ElementMultiple >= 2`` for the
 #: atomics on edge tiles (SolutionStructs:3616), and the HH deck ships
 #: ``AF0EM = 1``. See ``<codename>_tuning_guide.md`` §9 ("HH GSU>1 structurally
-#: banned (wide + narrow, test-locked)") and ``docs/potential_configs.md`` pre-rewrite
+#: banned (wide + narrow, test-locked)") and ``docs/gfx90c/potential_configs.md`` pre-rewrite
 #: §"SS is the only GSU-legal family". So this row is a *policy*, not a silicon
 #: fact: lift it the day an HH candidate carries ``AF0EM >= 2``, and the axis
 #: comes back without touching any other family.

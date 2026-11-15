@@ -196,7 +196,7 @@ class SynthesisMixin:
         try:
             pc_path.write_text(potential_configs.generate(profile, self.base_dir))
         except Exception as exc:  # configs doc is additive; never fail the docs
-            pc_path.write_text(f"# docs/potential_configs.md — {profile.codename}\n\n"
+            pc_path.write_text(f"# docs/gfx90c/potential_configs.md — {profile.codename}\n\n"
                                f"Synthesis failed: {exc}\n")
         docs = [tl_path, tc_path, hs_path, pc_path]
         print(f"Generated {', '.join(str(p) for p in docs)}")

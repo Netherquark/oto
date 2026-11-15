@@ -5,15 +5,15 @@ review-interval: 90d
 
 
 > **Scope:** harness machinery guardrails and candidate workflows. For the
-> ecosystem boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
-> [`claude.md`](../claude.md) §5.
+> ecosystem boundary, see [`docs/README.md`](../README.md); for the CPU-only contract, see
+> [`claude.md`](../../claude.md) §5.
 
 Polished, repo-homed home of the candidate-generation machinery. The read-only tools plus
 this runbook give an agent (or a human) the ground truth needed to propose a
 defensible candidate without re-reading the raw corpora. Nothing here ever
 benchmarks or touches a GPU (CPU-only, never benchmarks). For the ecosystem
-boundary, see [`docs/README.md`](README.md); for the CPU-only contract, see
-[`claude.md`](../claude.md) §5.
+boundary, see [`docs/README.md`](../README.md); for the CPU-only contract, see
+[`claude.md`](../../claude.md) §5.
 
 ## Layout
 
@@ -31,18 +31,18 @@ oto/harness/deck_probe.py          # the pre-run sweep: every unmeasured deck ro
 oto/harness/coverage_graph.py      # the coverage graphs: the legal space, what is unexplored, the peaks and the traps
 oto/metrics/report_coverage.py        # the report's problem-space coverage section (reads the figures' hand-off)
 oto/tools/deck_review.py          # the three pre-deck questions (score/legality/flood)
-docs/harness_runbook.md            # this runbook
+docs/developer/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
 gfx90c_results/analysis/cells_resolved.json     # cache (winner map; cell_resolver)
-gfx90c_results/analysis/cells_resolved.full.txt # same, human table (docs/gfx90c_tuning_guide.md §13 §3)
+gfx90c_results/analysis/cells_resolved.full.txt # same, human table (docs/gfx90c/gfx90c_tuning_guide.md §13 §3)
 gfx90c_results/analysis/coverage_map.json      # cache (legal space + coverage; coverage_map)
 ```
 
-Module list and ownership: see [`oto/README.md`](../oto/README.md) for the harness
+Module list and ownership: see [`oto/README.md`](../../oto/README.md) for the harness
 modules (e.g. `oto/harness/*`). Both tools resolve families/shapes/dtype from the
 repo's canonical sources (`oto.device.loader`, `oto.tensile.library_parity`) — they
-can never disagree with the shipped grid (docs/gfx90c_knowledge_base.md §6.1). Cache paths are
+can never disagree with the shipped grid (docs/gfx90c/gfx90c_knowledge_base.md §6.1). Cache paths are
 listed above.
 
 ## The pre-deck questions
@@ -62,7 +62,7 @@ choosing a knob. `--cell FAM:side` lists every geometry the corpus has measured
 on that cell, the row count behind each, and the floor's best; `--family` /
 `--typecode` print the distinct value and best seed-median for every structural
 axis; `--knob` narrows to one. This is the empirical half of
-`docs/gfx90c_tuning_guide.md` §13 §R41 (the axes the corpus has finished with); the
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R41 (the axes the corpus has finished with); the
 mechanism half is the gate. It reads `kernel_db.json` only and writes nothing
 except `--json`. `--typecode HHS`/`HSS` (or the deck spelling `--cell
 HH_HPA:1024`) is how the HPA blocks are read — they share family `HH` but not a
@@ -139,14 +139,14 @@ median, `% vs floor`, and per-cell verdicts:
   by >2% on the same cell (the one place a candidate can still be *proven*
   better without a new run).
 
-Current state: see [`docs/gfx90c_results.md`](../docs/gfx90c_results.md) for the live benchmark ledger and
+Current state: see [`docs/gfx90c/gfx90c_results.md`](../gfx90c/gfx90c_results.md) for the live benchmark ledger and
 published figures (wins/ties/losses and any material findings).
 
 ### 3. Resolve per-cell native-vs-floor winners (full knob surface)
 
 `cell_resolver` turns "regression_matrix says CC:256 is a loss" into the exact
 winning native phase / run / config and the floor kernel to beat — the input
-the per-cell triage (docs/gfx90c_tuning_guide.md §13 §3/§5) and any spoof-steal
+the per-cell triage (docs/gfx90c/gfx90c_tuning_guide.md §13 §3/§5) and any spoof-steal
 (§9: **configure, never copy**) are argued from:
 
 ```bash
@@ -158,7 +158,7 @@ For every acceptance-gradeable cell it reports: verdict, delta %, % of
 realistic ceiling and % of theoretical peak; a **`cfg_gap`** class
 (`identical` / `near` / `retile` / `no-floor`) between the native winner's config
 and the floor's — the mechanical half of the tie taxonomy, whose reading is
-docs/gfx90c_tuning_guide.md §13 §R17; the **native winner** — phase,
+docs/gfx90c/gfx90c_tuning_guide.md §13 §R17; the **native winner** — phase,
 run, and the phase's full structural config, resolved winner-run-first from
 the run dirs' `configs/*.yaml`, then registry `phases.data.config`, then the
 kernel_db structural row; and the **floor's best kernel** for the same cell
@@ -172,7 +172,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 
 1. **Coverage parity (the hard rule).** The produced `tensilelibrary.dat`
    must address exactly the shipped cells (no contraction, no extension). See
-   [`docs/gfx90c_results.md`](../docs/gfx90c_results.md) §12 for the exact cell count and non-cube shapes.
+   [`docs/gfx90c/gfx90c_results.md`](../gfx90c/gfx90c_results.md) §12 for the exact cell count and non-cube shapes.
    After any `phases.yaml` edit:
    ```bash
    python3 -m oto check library-parity --quiet && echo "grid-safe"
@@ -202,7 +202,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
    global-load divisibility rule (`oto.tensile.gates.loads`): above 16384
    elements only 256×128 / 128×256 survive (plus 64×512 at DU8 for the
    16-bit-input families), and CC, DD and ZZ admit none at all —
-   `docs/gfx90c_theoretical_limits.md` §5.1, pinned by
+   `docs/gfx90c/gfx90c_theoretical_limits.md` §5.1, pinned by
    `tests/test_tile_frontier.py`.
 3. **Winner + tie rules.** Never compare best-of-runs to best-of-history; use
    median-of-seeds (`n_seeds >= 3`), tie band ±2% (the shipped-floor legacy
@@ -218,7 +218,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 > libyaml reader every YAML read goes through), `oto.tensile.contraction_patterns` (one
 > spelling, one meaning for the contraction patterns) and
 > `oto.tensile.gates.memo` (the content-keyed cache the gates use) -- are
-> listed in `oto/README.md` and `docs/harness_runbook.md`.
+> listed in `oto/README.md` and `docs/developer/harness_runbook.md`.
 
 The gates are **models** of Tensile. A model that says "legal" while Tensile
 says "0 valid solutions" costs a launch slot and a wasted phase -- the
@@ -265,7 +265,7 @@ Authoritative green-lighted next step (user runs in a TTY): wire the seed
 overlay (`python3 -m oto.harness.candidate_generator`; the overlay is
 gitignored, so this is required), run the CPU-only preflight, then
 `python3 -m oto tune --budget 10 --yes`. The deck rationale and its
-four-outcome reading are in `docs/gfx90c_tuning_guide.md` §13 §R40. After the run, rebuild
+four-outcome reading are in `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R40. After the run, rebuild
 the matrix (`step 1`) and re-check parity (`step 3`).
 
 ## Why medians, not best seeds
@@ -274,7 +274,7 @@ Best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
 41.96 GFlops came from a kernel whose median is 17.67, and the HH:256 floor
 "win" flips sign between bases (best-seed −31% vs median +2.5%). Median-first
 is the standing rule everywhere in this repo (`docs/changelog.md`;
-`docs/gfx90c_tuning_guide.md` §13 §6 states the median-of-seeds basis).
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §6 states the median-of-seeds basis).
 ## Visual/layout regression check (`oto.harness.visual_check`)
 
 After regenerating `acceptance_report.html`, run the visual check to catch
@@ -335,10 +335,10 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 
 | File | Purpose |
 |---|---|
-| `docs/potential_configs.md` | Deck methodology (device-independent); the gfx90c record is `docs/gfx90c_tuning_guide.md` §13 |
-| `docs/gfx90c_tuning_guide.md` §1.1–§1.2, §9.1 | Primary-source knob reference + geometry |
-| `docs/invariants.md` | Stage 0–3 search order + NOT VERIFIED note |
-| (research corpus: deleted — durable facts promoted to this doc + docs/gfx90c_tuning_guide.md + docs/invariants.md) | absorbed |
+| `docs/gfx90c/potential_configs.md` | Deck methodology (device-independent); the gfx90c record is `docs/gfx90c/gfx90c_tuning_guide.md` §13 |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §1.1–§1.2, §9.1 | Primary-source knob reference + geometry |
+| `docs/developer/invariants.md` | Stage 0–3 search order + NOT VERIFIED note |
+| (research corpus: deleted — durable facts promoted to this doc + docs/gfx90c/gfx90c_tuning_guide.md + docs/developer/invariants.md) | absorbed |
 | `oto/device/loader.py` | Device profile access — `resolve_profile(profile=None)` is the choke point for explicit gates/engines (`None` = ambient `current_profile()`), the canonical device view |
 | `oto/device/kernel_vocabulary.py` | Cell/kernel vocabulary (cell_key, cube_side, shipped_cells, ...) |
 | `oto/device/profile.py` | DeviceProfile dataclass (the frozen profile schema) |
@@ -376,7 +376,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 | `tests/test_deck_review.py` | Deck-review scores counter guard |
 | `tests/test_function_length.py` | the 60-line function rule (tests/test_function_length.py) |
 
-## Hardware — gfx90c (reads from `docs/gfx90c_tuning_guide.md` §0–§1.2)
+## Hardware — gfx90c (reads from `docs/gfx90c/gfx90c_tuning_guide.md` §0–§1.2)
 
 - 7 CUs / 28 SIMDs / 448 FP32 lanes / Wave64 / 1800 MHz
 - LDS 64 KiB/CU (2 WG budget at 32 KiB/WG)
@@ -401,7 +401,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 7. **MacroTile area above 16384 is legal only for 256×128 / 128×256** (VW2, or
    VW4 under `AssertFree1ElementMultiple`), plus 64×512 / 512×64 at DU8 for the
    16-bit-input families. CC, DD and ZZ admit **no** legal tile above 16384 at
-   all, so their ORANGE cells are a bar artifact — `docs/gfx90c_theoretical_limits.md`
+   all, so their ORANGE cells are a bar artifact — `docs/gfx90c/gfx90c_theoretical_limits.md`
    §5.1, deck in `candidate_rows._FRONTIER`.
 
 ## Verdict bases (per `oto/metrics/ab_delta.py`)
@@ -415,7 +415,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 
 Report `floor_best` as co-primary alongside `winner`.
 
-## Route status (from `docs/gfx90c_tuning_guide.md` §13 §8–§9)
+## Route status (from `docs/gfx90c/gfx90c_tuning_guide.md` §13 §8–§9)
 
 | route | status | cells |
 |---|---|---|
@@ -458,7 +458,7 @@ delta is measurement environment, and the spread over those cells (17.5
 points) is the band any real win has to clear.
 
 `python3 -m oto.harness.cell_resolver` prints one row per cell with a `cfg_gap`
-class; `docs/gfx90c_tuning_guide.md` §13 §R17 reads it into a route:
+class; `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R17 reads it into a route:
 
 | `cfg_gap` | meaning | lever |
 |---|---|---|
@@ -471,14 +471,14 @@ Before proposing the probe, read the cell's full history:
 `python3 -m oto.harness.corpus_census --cell FAM:side` lists every geometry the
 corpus has measured on that cell, the row count behind each, and the floor's
 best — so a `retile` route cannot re-propose a geometry that already lost, and
-`docs/gfx90c_tuning_guide.md` §13 §R41's closed axes stay closed.
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R41's closed axes stay closed.
 
 ## Do not search
 
 - `MatrixInstruction` / `DirectToLds` — rejected or actively harmful
 - `ThreadTile` width ladders for C/Z — the per-thread accumulator cap (`TT0*TT1*R
   > 128`) makes every wider thread tile illegal
-- **Wider MacroTile for C/Z** — provably closed (`docs/gfx90c_tuning_guide.md` §13 §R27):
+- **Wider MacroTile for C/Z** — provably closed (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R27):
   the workgroup register-file rule (`R*MT0*MT1*LSU < 65536`) caps area at
   `65536/R`, so the widest legal complex tiles are CC `128x64` and ZZ
   `64x64`/`128x32`; a brute force above those areas finds none legal
@@ -488,7 +488,7 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
   (`candidate._non_generative_knob_rejection`): the assembly path cannot emit it
   (`Components/Priority.py` dispatches only 0/1, so `MAC_F32C` raises
   `TypeError`). 0/28 built across every family. The writer still forwards it by
-  contract. See `docs/gfx90c_tuning_guide.md` §13 §R24.
+  contract. See `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24.
 - `MaxOccupancy` assumptions without measurement
 - `WaveSeparateGlobalReadA/B`, `ThreadSeparateGlobalReadA/B`, `1LDSBuffer`,
   `TransposeLDS`, `UnrollMajorLDSA/B`, `LdsBlockSizePerPadA/B`, `DirectToVgprA/B`

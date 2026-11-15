@@ -19,7 +19,7 @@ Layout -- one responsibility per package, named for it:
     `oto.harness`   the analysis harness (kernel_db, regression matrix, ...)
 
 See ``docs/README.md`` for the boundary between this docs ecosystem and the
-docstrings inside the package, and ``docs/docstrings.md`` for the module and
+docstrings inside the package, and ``docs/developer/docstrings.md`` for the module and
 function docstring convention.
 
 Owns: the public API of the project -- the historical flat names, resolved

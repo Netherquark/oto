@@ -1,5 +1,5 @@
 {
-  "_comment": "UNVERIFIED STUB for the gfx902 starter pair. isa is from LLVM's public AMDGPU docs (amdgpu9.02 = gfx902). EVERY other field is ZERO/EMPTY on purpose: the loader refuses profiles that fail the unverified-profile sanity check, so this stub cannot be tuned against until a human verifies each value against first-party sources and removes this _comment. Fill from the agent research (docs/gfx902_starter.md ## Research brief), verify, then promote this file to profiles/gfx902.json.",
+  "_comment": "UNVERIFIED STUB for the gfx902 starter pair. isa is from LLVM's public AMDGPU docs (amdgpu9.02 = gfx902). EVERY other field is ZERO/EMPTY on purpose: the loader refuses profiles that fail the unverified-profile sanity check, so this stub cannot be tuned against until a human verifies each value against first-party sources and removes this _comment. Fill from the agent research (docs/operator/gfx902_starter.md ## Research brief), verify, then promote this file to profiles/gfx902.json.",
 
   "codename": "gfx902",
   "isa": [9, 0, 2],

@@ -76,7 +76,7 @@ python3 -m oto help
 ```
 
 Full walkthrough (setup → bring-up → campaign):
-**[docs/getting_started.md](docs/getting_started.md)**
+**[docs/human/getting_started.md](docs/human/getting_started.md)**
 
 ## Contributing
 
@@ -87,7 +87,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 Birds-eye view of every document in the project:
 **[docs/overview.md](docs/overview.md)**
 (class-tagged registry: [docs/README.md](docs/README.md));
-operator agents converge a library via [docs/operator_runbook.md](docs/operator_runbook.md).
+operator agents converge a library via [docs/operator/operator_runbook.md](docs/operator/operator_runbook.md).
 
 ## License
 

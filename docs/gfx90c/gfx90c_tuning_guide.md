@@ -8,11 +8,11 @@ review-interval: 90d
 
 > Plain words. Hard numbers. Every claim traceable in repo (cite keys below).
 > File formalizes kernel-tuning research: what deck controls, what wins, why
-> "nothing moved", what to try next. Read `docs/gfx90c_theoretical_limits.md`
+> "nothing moved", what to try next. Read `docs/gfx90c/gfx90c_theoretical_limits.md`
 > first — its §5 ceilings = acceptance bar.
-> Cite keys: **L**=docs/gfx90c_theoretical_limits.md, **P**=docs/gfx90c_tuning_guide.md §13 (the absorbed potential_configs.md; off-repo citations resolve via the map in `docs/potential_configs.md` §10),
+> Cite keys: **L**=docs/gfx90c/gfx90c_theoretical_limits.md, **P**=docs/gfx90c/gfx90c_tuning_guide.md §13 (the absorbed potential_configs.md; off-repo citations resolve via the map in `docs/gfx90c/potential_configs.md` §10),
 > **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/loader.py,
-> **D**=docs/invariants.md, **M**=oto/harness/vgpr_measurement.py,
+> **D**=docs/developer/invariants.md, **M**=oto/harness/vgpr_measurement.py,
 > **C**=oto/harness/cell_knob_diff.py. Numbers below = kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.
 > §11 = loop for proposing next candidate.
@@ -26,11 +26,11 @@ review-interval: 90d
 **The gfx90c-specific doc family (split is deliberate, not folded).**
 This file is the bring-up case study — the port's tuning narrative and the full
 history. Three other gfx90c-specific docs stand alongside it, split by topic and
-pinned with in-doc pointers: `docs/gfx90c_knowledge_base.md` (architecture /
-what layer), `docs/gfx90c_results.md` (measured evidence),
-`docs/gfx90c_theoretical_limits.md` (ceilings / the acceptance authority).
-Their device-independent twins are the `docs/knowledge_base.md`,
-`docs/results.md`, `docs/theoretical_limits.md` templates, populated per
+pinned with in-doc pointers: `docs/gfx90c/gfx90c_knowledge_base.md` (architecture /
+what layer), `docs/gfx90c/gfx90c_results.md` (measured evidence),
+`docs/gfx90c/gfx90c_theoretical_limits.md` (ceilings / the acceptance authority).
+Their device-independent twins are the `docs/gfx90c/knowledge_base.md`,
+`docs/gfx90c/results.md`, `docs/gfx90c/theoretical_limits.md` templates, populated per
 device by the agent. The split is deliberate and documented in the changelog;
 it is not a collapse of the case study, and it does not get folded.
 
@@ -52,7 +52,7 @@ Deck controls **geometry + residency**, not the pipe. Large squares already
 pinned to ALU wall (M1). Real headroom = **small cells** (M2: machine idles
 below 25 % residency) and nothing else — **M3 retired**: complex families at
 80-97 % of FMA roof, "shortfall" was 4x unit error in the bar (2026-10-21,
-`docs/gfx90c_theoretical_limits.md` §5.2). Rest is measurement hygiene
+`docs/gfx90c/gfx90c_theoretical_limits.md` §5.2). Rest is measurement hygiene
 (M4: suppressed clock), not tuning.
 
 ## 1. Knob surface — what deck actually controls
@@ -169,7 +169,7 @@ rejections; mechanics in `docs/research/kernel_tuning.md` §4):
 Tensile's own `65536 // NumThreads // max(vgpr, agpr) >= 1`; ThreadTile cancels
 out, so caps MacroTile *area* at `65536/R` — `SS/HH` 65536, `DD` 32768,
 `CC` 16384, `ZZ` 8192. Widest *legal* MacroTile therefore CC `128x64`,
-ZZ `64x64`/`128x32`; wider "headroom" tiles in `docs/gfx90c_tuning_guide.md` §13 §8.2
+ZZ `64x64`/`128x32`; wider "headroom" tiles in `docs/gfx90c/gfx90c_tuning_guide.md` §13 §8.2
 fill file (65536) and unbuildable. Third rule bounds `LocalSplitU > 1`: LDS
 reduction buffer `LSU*MT0*MT1*computeBytes` must stay ≤ 65536
 (`docs/research/kernel_tuning.md` §4, rule 2).
@@ -255,10 +255,10 @@ old `phase_auto_1_hh` rows gone from SS:1024. Unit tests:
 | lever | winner | evidence (all-run kernel_db sweep) |
 |---|---|---|
 | direction | `Ailk_Bjlk` (**NT**) dominates | the only non-NT winners: DD:192 `Alik_Bljk` (TT), the DD/Z:1024 `64x32` TN pocket; the spoof is NT-everywhere too |
-| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range; the area is also legality-bounded — above 16384 elements only 256×128 / 128×256 survive (64×512 / 512×64 at DU8 for 16-bit inputs), and CC/DD/ZZ admit none (`docs/gfx90c_theoretical_limits.md` §5.1) |
+| MacroTile | ∝ 1/element-size: S/H 128 (96 at 256), C/D 64 (32 at 192/256), Z 32 (64x32 at 1024) | one tile serves each family's whole range; the area is also legality-bounded — above 16384 elements only 256×128 / 128×256 survive (64×512 / 512×64 at DU8 for 16-bit inputs), and CC/DD/ZZ admit none (`docs/gfx90c/gfx90c_theoretical_limits.md` §5.1) |
 | VectorWidth | pinned to the 16-B cap: S vw4, H vw8, C vw2, D vw1-2, Z vw1, HPA vw4 | not free; the cap is hardware |
 | DepthU | 8 for S/D/C/Z, 16 for H/HPA | family-locked, not a sweep knob |
-| WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`docs/gfx90c_tuning_guide.md` §13 §R41) | 2 and 3 are untested and decked (§R40) |
+| WorkGroupMapping | 4 at every winner; 1, 8 and −4 all lose to it (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R41) | 2 and 3 are untested and decked (§R40) |
 | GlobalSplitU | 1 at every winner | closed: SS:1024 G1 1135 / G2 936 / G4 740; DD:2048 99 / 95 / 95 (§R41) |
 | register hygiene | real families saturate; the complex families saturate too (80-97 % of the FMA roof) | M1 |
 
@@ -282,11 +282,11 @@ config mutation moves these.** "bunch of ties" = mostly this.
 > no cell clock-corrected. Tie on identical cell = measurement of machine, not
 > kernel; "WIN" on one = environment win. **Read verdict against gap, not band**
 > (`oto.harness.cell_resolver --taxonomy` prints gap next to delta;
-> `docs/gfx90c_tuning_guide.md` §13 §R47.2, §R48.5).
+> `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R47.2, §R48.5).
 
 **M2 — wave quantization on small cells.** 192/256 cubes with sensible tiles
 physically cannot produce ≥ 40 waves (arithmetic per cell in
-`docs/gfx90c_tuning_guide.md` §13 §R48.2 — winners at 53-83 % of own fill-and-waste bound,
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R48.2 — winners at 53-83 % of own fill-and-waste bound,
 cells starved, not badly tuned):
 
 | cell | winner (tt) | waves | waves/SIMD | ~residency |
@@ -309,14 +309,14 @@ charges **2 flops per MAC for every dtype**, complex included
 complex types), while complex MAC *executed* as four real FMAs = 8 BLAS flops.
 Reported complex GFLOPS = **¼ of BLAS-8 value**, plateau compared against
 BLAS-8 roof. Truth: **CC runs at 80-97 % FP32 FMA roof, ZZ at 96-97 % FP64 roof**
-(`docs/gfx90c_theoretical_limits.md` §5.2, three independent checks). No wall to
+(`docs/gfx90c/gfx90c_theoretical_limits.md` §5.2, three independent checks). No wall to
 break; complex cells were **best** cells in corpus, ORANGE list shrank from
 twelve cells to three (`SS:256`, `HH:256`, `CC:192`). 4-real-MAC-per-complex-MAC
 ALU cost irreducible, irrelevant to verdict — ceiling and measurement both in
 same unit.
 
 3M/Karatsuba + split-K routes proposed against this "wall"
-(`docs/gfx90c_tuning_guide.md` §13 §R43 Routes 1-2) struck: at 97 % of roof, 25 %
+(`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R43 Routes 1-2) struck: at 97 % of roof, 25 %
 instruction saving wins nothing. Still true of complex families: GSU>1 legal via
 MultipleBuffer (`SolutionStructs.py:2958-2976/3543-3553`) but atomics cost more
 than wave fill wins (measured: SS:256 GSU 2/4/8 give 40-61 GFLOPS vs 412), Z
@@ -334,7 +334,7 @@ WGM4 300.9, same clock). Verdict rule: judge within-run-relative only; pin sclk
 win was **CC:256** (native 193.8 vs floor 214.0, floor **+10.4 %**) —
 outside the ±2 % tie band. **Superseded 2026-10-15:** the native CC:256 reading
 was depressed by a candidate-pool sweep-order defect (256³ measured immediately
-after 2048³; `docs/gfx90c_results.md` §13.4 / `docs/gfx90c_tuning_guide.md` §13 F1). The clean re-run
+after 2048³; `docs/gfx90c/gfx90c_results.md` §13.4 / `docs/gfx90c/gfx90c_tuning_guide.md` §13 F1). The clean re-run
 `run_20261015_041159` reads CC:256 as **TIE** (native 210.772 vs floor 214.882,
 −0.74 %), leaving no strict floor win. (The pre-fold snapshot read 22 native / 8
 floor; seven of those floor "wins" were inside the ±2 % tie band.)
@@ -399,7 +399,7 @@ false rejections to both populations.** Tests:
 
 > 2026-10-09: for physical per-cell **resident-workgroup** audit ("occupancy ≤3
 > everywhere" question, incl. VGPR-vs-LDS binder split + single-buffer probe),
-> see `docs/gfx90c_tuning_guide.md` §13 §5 +
+> see `docs/gfx90c/gfx90c_tuning_guide.md` §13 §5 +
 > `python3 -m oto.harness.occupancy_bounds`. `occupancy_feasible` gates legality;
 > audit answers residency.
 
@@ -429,9 +429,9 @@ Results (re-measured 2026-10-12):
 Spoof-steal rule (sanctioned): take floor's winning config per cell, adapt for
 gfx90c (16-B cap / LDS budget — gate does this), document, benchmark in TTY. Only
 cell in scope was **CC:256**; 2026-10-15 sweep-order fix first took it to TIE
-(`docs/gfx90c_results.md` §13.4), R8 steal **landed** on 2026-10-18 run:
+(`docs/gfx90c/gfx90c_results.md` §13.4), R8 steal **landed** on 2026-10-18 run:
 `run_20261018_004835` reads CC:256 **WIN (+7.8 %)**. No cell is a LOSS → no
-further steal open (`docs/gfx90c_tuning_guide.md` §13 §R24/§R25).
+further steal open (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24/§R25).
 
 ## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
 
@@ -443,7 +443,7 @@ DepthU, VectorWidth, GlobalLoadVectorWidthA/B) + ±% delta, read from
 `--floor-wins-only`, `--json out.json`. Re-measured 2026-10-12: **30 cells shared;
 29 native / 1 floor** (superseded 2026-10-15 — one floor win CC:256 is sweep-order
 artifact, reads TIE on clean re-run; R8 steal then landed it as **WIN (+7.8 %)**
-on 2026-10-18; see below + `docs/gfx90c_results.md` §14).
+on 2026-10-18; see below + `docs/gfx90c/gfx90c_results.md` §14).
 Findings (same kernel name almost everywhere; deltas are the subtle ones):
 
 - **CC:256 — former floor win (now TIE).** Native
@@ -452,7 +452,7 @@ Findings (same kernel name almost everywhere; deltas are the subtle ones):
   TT 4×4, VW2) **214.0** → floor **+10.4 %** (2026-10-12 db). Delta = **tile area**
   (32×32 → 64×64), not direction — both kernels `Ailk_Bjlk` (NT). Native 193.8
   swept at poisoned 256³ position (256³ immediately after 2048³); after sweep-
-  order fix (`docs/gfx90c_results.md` §13.4) same geometry reads **210.772** vs floor
+  order fix (`docs/gfx90c/gfx90c_results.md` §13.4) same geometry reads **210.772** vs floor
   214.882 = TIE, run `run_20261015_041159`. (Group B; earlier note calling this
   TT-vs-NT direction delta stale.)
 - **SS:512/768/1365/2048** — floor ships `128x128x8/8x8/VW4`; native now ships
@@ -604,7 +604,7 @@ Everything below CPU-only except TTY benchmark; candidate must pass preflight
 Walls (M1) + settled cells skipped. Then read cell's history with
 `python3 -m oto.harness.corpus_census --cell FAM:side`: names every geometry
 already measured there + evidence behind each, so you neither re-propose losing
-geometry nor re-spend closed axis (`docs/gfx90c_tuning_guide.md` §13 §R41).
+geometry nor re-spend closed axis (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R41).
 
 **Step 2 — choose knob (mechanism first).** Match knob to failure mode named
 in §5/§11 mechanism column, not blind sweep:
@@ -735,7 +735,7 @@ MFMA-capable synthetic passes). Full suite 1061 passed at landed state;
 
 ## 13. The bring-up case study — the gfx90c port in full (absorbed, former potential_configs.md)
 
-> **Provenance.** This section is the former `docs/potential_configs.md`, absorbed
+> **Provenance.** This section is the former `docs/gfx90c/potential_configs.md`, absorbed
 > whole with every heading demoted one level. The gfx90c port is the worked
 > example of how oto succeeds on a real target: the deck, the gates, the
 > A/B audits, the regrade, the losses, the ties, the steal, and the run rules —
@@ -744,7 +744,7 @@ MFMA-capable synthetic passes). Full suite 1061 passed at landed state;
 >
 > Every number, table, run id and verdict below is **gfx90c-specific evidence**
 > (see §0a). The device-independent methodology distilled from this port lives
-> in `docs/potential_configs.md` (rewritten as the general brief); do not
+> in `docs/gfx90c/potential_configs.md` (rewritten as the general brief); do not
 > duplicate it here. Former R-numbers are preserved in place, so an
 > off-repo citation of `potential_configs.md §R24` resolves to this section.
 > Earlier superseded rewrites are kept below their "Superseded" markers on
@@ -784,8 +784,8 @@ post-regrade; the ledger trace is §R28; the GCN5 literature map is §R33.
 
 **Owns:** the candidate deck, the routes, the search rules, and the reading of the
 gates. Does not own: ceilings and verdict bars
-(`docs/gfx90c_theoretical_limits.md` §5), measured evidence (`docs/gfx90c_results.md`), hardware
-facts (`docs/gfx90c_theoretical_limits.md` §1–§3), the per-cell winners
+(`docs/gfx90c/gfx90c_theoretical_limits.md` §5), measured evidence (`docs/gfx90c/gfx90c_results.md`), hardware
+facts (`docs/gfx90c/gfx90c_theoretical_limits.md` §1–§3), the per-cell winners
 (`gfx90c_results/analysis/cells_resolved.full.txt`), or the durable Tensile
 mechanics (`docs/research/kernel_tuning.md` §4).
 
@@ -811,7 +811,7 @@ So SS's only large-tile point lost half its residency by construction, and HH's
 kept its residency but ran at VW4/VW2 (8 or 4 B) instead of the winner's VW8
 (16 B, the load cap). **256×128 at VW8 had never been emitted for any family**,
 and the reason is not the deck: it is illegal. `gates/loads.py` refuses it, and
-so does every other large tile — see §5.1 of `docs/gfx90c_theoretical_limits.md` for
+so does every other large tile — see §5.1 of `docs/gfx90c/gfx90c_theoretical_limits.md` for
 the resulting per-family area cap. Above 16384 elements the gate admits exactly
 
 * SS: 256×128 and 128×256 (VW2 outright, VW4 under `AssertFree1ElementMultiple`),
@@ -856,7 +856,7 @@ padding it to 10 h would mean re-measuring the axes §R41 has closed.
 Each row is a knob or an axis that a previous plan expected to pay, and the
 measurement that ends it. Re-emitting any of these costs a night and cannot win.
 The empirical read behind each row is `python3 -m oto.harness.corpus_census`
-(`docs/gfx90c_results.md` §15); re-run it before re-opening one.
+(`docs/gfx90c/gfx90c_results.md` §15); re-run it before re-opening one.
 
 | axis | best found | the number that closes it |
 |---|---|---|
@@ -1497,7 +1497,7 @@ kernel result.
 
 The 2026-10-19 GCN5 GEMM literature review (mechanisms in
 `docs/research/kernel_tuning.md` §3.4/§4/§5/§8.7, `docs/research/complex_gemm_brief.md`
-§5–§11, `docs/invariants.md` §S) proposes an eight-step order. It is **not a
+§5–§11, `docs/developer/invariants.md` §S) proposes an eight-step order. It is **not a
 new plan** — every step is already a route or a probe; this maps it and marks the
 steps this port cannot reach:
 
@@ -1523,11 +1523,11 @@ steps this port cannot reach:
    workspace, StreamK MFMA-gated) → background. **Not reachable.**
 8. **Tuner: legality/resource prune → mechanism-diverse shortlist → (surrogate
    selection) → replicate → statistical tie policy** — the prune + mechanism-diverse
-   shortlist is Stage 0–2 (`docs/invariants.md` §S); **surrogate selection is
+   shortlist is Stage 0–2 (`docs/developer/invariants.md` §S); **surrogate selection is
    declined by policy**. **Partly reachable.**
 
 The one literature finding that lands directly on the current straggler:
-**14–25 configs/cell is a *small* shortlist** (`docs/invariants.md` §S item 7),
+**14–25 configs/cell is a *small* shortlist** (`docs/developer/invariants.md` §S item 7),
 and the near-duplicate failure mode is exactly the ZZ cell's 5 distinct geometries
 (§R28). The steps above therefore re-rank the existing routes by the anomaly's
 expected value; they add no route that §R26–§R30 did not already carry.
@@ -1538,7 +1538,7 @@ gfx90c-specific*, and each is now stated inline in its owner — Origami and the
 grid predictor in `docs/research/kernel_tuning.md` §3.4, the LLVM VGPR-allocation rule in
 §9.3, the MI250X non-temporal and StaggerU scoping in §4, the Stream-K knob names in
 §8.7; the oneMKL/Higham 3M error bound in `docs/research/complex_gemm_brief.md` §5; and
-the AMD warmup/sample methodology in `docs/gfx90c_knowledge_base.md` §8.3. **It changes no
+the AMD warmup/sample methodology in `docs/gfx90c/gfx90c_knowledge_base.md` §8.3. **It changes no
 route** — it converts four open [CHECK]s into cited "closest evidence, not
 gfx90c-specific" statements, so the search is not repeated.
 
@@ -1554,8 +1554,8 @@ that decides which of R15's "virgin axes" are real, the **adaptation routes**
 carry them (R19).
 
 **Owns:** the candidate deck, the routes, the search rules. Does not own:
-ceilings and verdict bars (`docs/gfx90c_theoretical_limits.md` §5), measured evidence
-(`docs/gfx90c_results.md`), hardware facts (`docs/gfx90c_theoretical_limits.md` §1–§3),
+ceilings and verdict bars (`docs/gfx90c/gfx90c_theoretical_limits.md` §5), measured evidence
+(`docs/gfx90c/gfx90c_results.md`), hardware facts (`docs/gfx90c/gfx90c_theoretical_limits.md` §1–§3),
 or the per-cell winners (`gfx90c_results/analysis/cells_resolved.full.txt`).
 
 ---
@@ -1917,8 +1917,8 @@ geometry and conservative on everything else.
 
 ### R12 — gfx90c hardware read (confirmed from existing docs)
 
-From `docs/gfx90c_tuning_guide.md` §1.1 (primary-source legal domains),
-and `docs/gfx90c_theoretical_limits.md` §1:
+From `docs/gfx90c/gfx90c_tuning_guide.md` §1.1 (primary-source legal domains),
+and `docs/gfx90c/gfx90c_theoretical_limits.md` §1:
 
 | property | value | consequence |
 |---|---|---|
@@ -1937,8 +1937,8 @@ and `docs/gfx90c_theoretical_limits.md` §1:
 | Max VGPR | 256/thread | accumulator budget is the binding constraint |
 | Max LDS | 65536 B | LDS capacity binds 61.7% of kernels |
 
-**The 7-CU occupancy cliff** (from `docs/gfx90c_tuning_guide.md` §1.2 and
-`docs/gfx90c_tuning_guide.md` §1.2 (7-CU geometry)):
+**The 7-CU occupancy cliff** (from `docs/gfx90c/gfx90c_tuning_guide.md` §1.2 and
+`docs/gfx90c/gfx90c_tuning_guide.md` §1.2 (7-CU geometry)):
 
 At 256³, a 128×128 macro tile yields 4 workgroups for 7 CUs — **6 of 7 CUs idle**.
 No knob tuning recovers that; the only levers are a smaller MacroTile, more
@@ -2004,7 +2004,7 @@ From the floor census (§R4):
 
 #### Route C (updated) — Wave-quantisation ladder (SS/DD only)
 
-From `docs/gfx90c_tuning_guide.md` §1.2 and the 7-CU cliff analysis:
+From `docs/gfx90c/gfx90c_tuning_guide.md` §1.2 and the 7-CU cliff analysis:
 
 | problem | MT | G (tiles) | G mod 7 | utilisation |
 |---|---|---|---|---|
@@ -2112,9 +2112,9 @@ findings (F1–F5) stand; the revisions below supersede their *numbers*, not the
 mechanisms.
 
 **Owns: the candidate deck, the routes to beat the spoof floor, and the search
-rules.** Does not own: acceptance bars/ceilings/verdicts (`docs/gfx90c_theoretical_limits.md`
-§5), measured evidence (`docs/gfx90c_results.md`), or GCN hardware facts
-(`docs/gfx90c_knowledge_base.md`).
+rules.** Does not own: acceptance bars/ceilings/verdicts (`docs/gfx90c/gfx90c_theoretical_limits.md`
+§5), measured evidence (`docs/gfx90c/gfx90c_results.md`), or GCN hardware facts
+(`docs/gfx90c/gfx90c_knowledge_base.md`).
 
 ---
 
@@ -2230,7 +2230,7 @@ cubes physically cannot fill 7 CUs. Native is 1.1–3.8× the floor on all eleve
 
 #### R3 — gfx90c verified hardware read: 7 CUs, MFMA absent, WGM 8 is wrong.
 
-§1 of `docs/gfx90c_theoretical_limits.md` is the authority and is confirmed by the
+§1 of `docs/gfx90c/gfx90c_theoretical_limits.md` is the authority and is confirmed by the
 research pass: gfx90c = ISA (9,0,12), **7 CUs / 28 SIMDs / 280 wave slots**, Wave64,
 448 FP32 lanes, 1800 MHz, **LDS 64 KiB/CU**, L1 16 KiB/CU, L2 1 MiB, DDR4 UMA
 ~42 GB/s real. Tensile's own `AsmCaps.py` sets `HasMFMA: False` / `HasWMMA: False`
@@ -2345,7 +2345,7 @@ total, ~360 per cell. Their `median/winner` ratios are **18 % (SS:256), 30 %
 (SS:512), 21 % (HH:256), 24 % (CC:256), 26 % (ZZ:128)**. A cell whose median is a
 quarter of its own winner is a cell in which almost everything measured was junk:
 near-duplicate mutants of a config already in the ledger, the same geometry
-re-measured across seven runs, and the sweep-order defect of `docs/gfx90c_results.md` §13.4.
+re-measured across seven runs, and the sweep-order defect of `docs/gfx90c/gfx90c_results.md` §13.4.
 
 That is not a tuning problem, it is an **allocation** problem: the deck spends
 10+ hours producing draws the acceptance basis then cherry-picks. Two changes:
@@ -2446,7 +2446,7 @@ cannot differentiate one cell from another and therefore explains no LOSS. The
 only cell that ever read LOSS (CC 256³, run `run_20261013_214649`) was depressed
 by a candidate-pool sweep-order defect, not by telemetry; the fix and the clean
 re-run (`run_20261015_041159`, 19 W / 19 T / 0 L, CC:256 **TIE**) are in
-`docs/gfx90c_results.md` §13.4. Do not silently widen the band.
+`docs/gfx90c/gfx90c_results.md` §13.4. Do not silently widen the band.
 
 **F2. Two knobs in the deck have only ever held ONE value, across all runs and
 both arms.** `oto/tools/run_census.py` (`--json`), never-exercised-knobs section:
@@ -2465,7 +2465,7 @@ eleven axes are untouched.
 `UseSgprForGRO=-1`, `GlobalLoadVectorWidth=-1`, `InnerUnroll=1`,
 `FractionalLoad=0`. The experiments are the *non-default* values; a sweep value
 equal to the default re-measures the baseline. Verified defaults:
-`docs/gfx90c_knowledge_base.md` §7.1; machine-readable `TENSILE_KNOB_DEFAULTS` in
+`docs/gfx90c/gfx90c_knowledge_base.md` §7.1; machine-readable `TENSILE_KNOB_DEFAULTS` in
 `oto/tensile/family_decks.py`, enforced by `tests/test_knob_sweep.py`.
 
 **F3. The complex families are the two *narrowest* searches in the deck, which
@@ -2509,7 +2509,7 @@ client-reported number (Tensile charges 2 flops per complex MAC, so a reported
 complex GFLOPS is ¼ of its BLAS-8 value). In the client's own unit the bars
 are 279.7 and 24.65, and the corpus's 346.7 / 24.5 are **124 % / 99 % of
 them** -- 86 % and 97 % of the FP32/FP64 FMA roofs
-(`docs/gfx90c_theoretical_limits.md` §5.2). The conclusion is unchanged in *shape*
+(`docs/gfx90c/gfx90c_theoretical_limits.md` §5.2). The conclusion is unchanged in *shape*
 (the complex tile cap is real) and reversed in *sign* (the complex cells are not
 short of headroom; the three small cells are).
 
@@ -2535,7 +2535,7 @@ limits it, and §8 targets that.
 
 Cause codes for the 19 ties, individually:
 
-- **CC:256 TIE** — was a candidate sweep-order defect (`docs/gfx90c_results.md` §13.4), not a
+- **CC:256 TIE** — was a candidate sweep-order defect (`docs/gfx90c/gfx90c_results.md` §13.4), not a
   kernel deficit. Do not add candidates for it.
 - **CC:512 TIE** — real, +3.1%. Winner MT64x64/WGM4+NLCA1; the deck's
   128x128-class tiles were never generated for CC, so this is unexplored space.
@@ -2564,11 +2564,11 @@ wide numbers above are from that model. Three consequences:
    at ≤3 waves/CU. The 48.8% figure the user noticed is *resident workgroups*,
    which is a different axis (a 1024-thread workgroup is 16 waves, so it reads
    as "1 workgroup" while occupying 16 of 40 wave slots). Both numbers are in
-   `docs/gfx90c_theoretical_limits.md` §7.1.
+   `docs/gfx90c/gfx90c_theoretical_limits.md` §7.1.
 2. **LDS capacity, not VGPR, is what caps residency** for 61.7% of kernels —
    which is why the `LDS_BUDGET` entry (§10) matters and why `LdsPad`/
    LDS-layout angles are deprioritised: bandwidth is ~8× oversupplied at
-   TT4x4 FP32 (`docs/gfx90c_knowledge_base.md` §1 rate card), but *capacity* still decides how many
+   TT4x4 FP32 (`docs/gfx90c/gfx90c_knowledge_base.md` §1 rate card), but *capacity* still decides how many
    workgroups fit, and `LdsPad` spends that capacity.
 3. **No kernel spills.** Zero kernels carry a private segment. So there is no
    scratch-spill tax to recover, and `MinVgprNumber`/`MaxVgprNumber` tuning has
@@ -2697,7 +2697,7 @@ because the floor won there and native never generated the tile.
 §F2. **"No winner sets knob X" is not "knob X has never been varied."** Tensile
 fills every absent knob from `defaultBenchmarkCommonParameters`, so several of
 these are already active at a fixed value, and only their *non-default* values are
-experiments. The verified default for each is in `docs/gfx90c_knowledge_base.md` §7.1;
+experiments. The verified default for each is in `docs/gfx90c/gfx90c_knowledge_base.md` §7.1;
 `TENSILE_KNOB_DEFAULTS` in `oto/tensile/family_decks.py` is the machine-readable copy, and
 `tests/test_knob_sweep.py` refuses a sweep row that offers no non-default value.
 Concretely, per family, with the reason:
@@ -2707,7 +2707,7 @@ Concretely, per family, with the reason:
 | `NumLoadsCoalescedA/B` | C, Z | default 1; one phase in the entire corpus sets NLCA. |
 | `UseSgprForGRO` | Z | default `-1` (auto). Z is VGPR-bound at TT2x2 (63 VGPR); moving GRO offsets to SGPR buys VGPR. Requires `BufferLoad=1`, which is the default. |
 | `PrefetchGlobalRead` | S, C | default 1. The corpus has both `None` and explicit `False`; the experiments are 0 and 2, with 1 as the control. |
-| `AggressivePerfMode` | all | default 1. Mode 2 is *described as* a 2-waves/SIMD LDS cap, but the explicit branch is unconfirmed at the pinned commit (corpus3 Q-E ii) — the row tests whether mode 2 differs at all; `docs/gfx90c_theoretical_limits.md` §7 puts the corpus median at 8 waves/CU = 2 waves/SIMD, so a real cap would be a free experiment in that direction. |
+| `AggressivePerfMode` | all | default 1. Mode 2 is *described as* a 2-waves/SIMD LDS cap, but the explicit branch is unconfirmed at the pinned commit (corpus3 Q-E ii) — the row tests whether mode 2 differs at all; `docs/gfx90c/gfx90c_theoretical_limits.md` §7 puts the corpus median at 8 waves/CU = 2 waves/SIMD, so a real cap would be a free experiment in that direction. |
 | `MaxOccupancy` | all | default 40 (uncapped). Lower values pad per-workgroup LDS to `DeviceLDS // N` (floor) — a pure occupancy clamp. |
 | `LocalSplitU` | S, H at small k | default 1. Splits the MTA M extent across waves without a reduction kernel. `validate_config` accepts it for every family, so it is legal for complex on this gate. |
 | `FractionalLoad` | S, C at 2048 | default 0; the only knob that changes the load shape for the non-divisible tails. |
@@ -2797,7 +2797,7 @@ entry. Listed so it is not re-proposed as a knob.
 
 Ceasing: **ThreadTile** width ladders for C and Z (F3/F5 — the accumulator cap
 makes every wider tile illegal, so they are pure rejects); `LdsPad`/LDS-layout
-work (`docs/gfx90c_knowledge_base.md` §1 rate card — bandwidth ~8× oversupplied, and LDS *capacity*
+work (`docs/gfx90c/gfx90c_knowledge_base.md` §1 rate card — bandwidth ~8× oversupplied, and LDS *capacity*
 is better spent on residency); any `-mllvm -amdgpu-*` or compiler-flag proposal
 (no-op: Tensile emits ISA text to the assembler for ~93% of the shipped
 library); `MaxOccupancy`/`AggressivePerfMode` *assumptions* without a
@@ -2856,7 +2856,7 @@ Two hard results worth stating plainly:
 Two caveats that are **not** in this matrix:
 
 - **`BufferLoad` is not a deck entry.** Its Tensile default is already `True`
-  (`docs/gfx90c_knowledge_base.md` §7.1), so `BufferLoad=True` re-measures the baseline. It
+  (`docs/gfx90c/gfx90c_knowledge_base.md` §7.1), so `BufferLoad=True` re-measures the baseline. It
   was removed from `KNOB_SWEEPS` on 2026-10-14.
 - **`GlobalLoadVectorWidth` is no longer a deck entry (§9 D4, resolved 2026-10-14).**
   The gate models Tensile's *whole* rule, not just its first half: `GLVW !=
@@ -2912,7 +2912,7 @@ measured occupancy + GFLOP/s join), `oto.harness.cell_resolver` (per-cell
 winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
 `run_20261013_214649`.
-Architecture/ridge facts: `docs/gfx90c_knowledge_base.md`, `docs/gfx90c_theoretical_limits.md`.
+Architecture/ridge facts: `docs/gfx90c/gfx90c_knowledge_base.md`, `docs/gfx90c/gfx90c_theoretical_limits.md`.
 Anti-transfer: arXiv:2505.03780, arXiv:2507.15277 (`docs/research/kernel_tuning.md` §6).
 
 ---
@@ -2931,7 +2931,7 @@ for this cell. Do not close it by widening a band; the verdict logic is not ours
 to change.
 
 **D2 — `BYTES_PER_ELEMENT["Z"]` vs `LDS_BUDGET`** (full record and measurement in
-`docs/gfx90c_theoretical_limits.md` §6.1). Tensile's complexDouble is `'reg': 4` so
+`docs/gfx90c/gfx90c_theoretical_limits.md` §6.1). Tensile's complexDouble is `'reg': 4` so
 `numBytes() = 16`, and the same module already has `FAMILY_BYTES_PER_ELEMENT
 ["ZZ"] = 16` — three tables in one file say 16, one says 8, and ZZ is the only
 family where the gate's byte count is half of Tensile's element width.
@@ -2987,7 +2987,7 @@ changes, so they own tiles instead of rows (emitted unchanged, tagged
 `_trialD<n>`; `generate_decision_trial_phases`):
 - **D1** — CC `64x64x8/4x4/VW2` (the steal geometry) at `192`/`256`, the shallow
   cells CC:256 owns. The candidate re-measures; the sweep-order fix
-  (`docs/gfx90c_results.md` §13.4) and the clean re-run close it.
+  (`docs/gfx90c/gfx90c_results.md` §13.4) and the clean re-run close it.
 - **D2** — ZZ `64x64x16/4x4/VW1` (the LDS-boundary tile). A ZZ VW2 "differentiator"
   row was decked and withdrawn the same day: Tensile's own `numBytes()` for
   complexDouble is 16, so `2 × 16 > 16` and Tensile refuses the phase at solution
@@ -3034,7 +3034,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    (`power_dpm_force_performance_level` = `manual`, then `pp_dpm_sclk`), 25%
    warmup, L2 flush between repeats for memory-bound shapes, log median clock +
    temperature per phase, and interleave a reference kernel to detect drift.
-   Full protocol: `docs/gfx90c_knowledge_base.md` §8.3. Without this the run repeats the F1
+   Full protocol: `docs/gfx90c/gfx90c_knowledge_base.md` §8.3. Without this the run repeats the F1
    artifact.
 5. **Budget split** — the never-varied knobs (§8.1) are the high-yield spend;
    tile ladders (§8.2) are the second; Route E is a separate work item and gets
@@ -3047,15 +3047,15 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    APM 1-vs-2 is read through the LDS allocation diff first (cap unconfirmed).
 
 The pass-3 brief (Q-A…Q-F) is folded; residual follow-ups are §9.4 of
-`docs/research/kernel_tuning.md` and the protocol deltas are `docs/gfx90c_knowledge_base.md`
-§8.3. The prompts themselves are archived at `archive/` (untracked on disk; see §18 of `docs/operator_runbook.md`).
+`docs/research/kernel_tuning.md` and the protocol deltas are `docs/gfx90c/gfx90c_knowledge_base.md`
+§8.3. The prompts themselves are archived at `archive/` (untracked on disk; see §18 of `docs/operator/operator_runbook.md`).
 
 ---
 
 ### 11. The 10 h+ overnight run — runbook (2026-10-16)
 
 Everything below is CPU-verified. Real benchmarking happens in the USER's TTY,
-never from this GNOME session (`docs/gfx90c_tuning_guide.md` §10.1).
+never from this GNOME session (`docs/gfx90c/gfx90c_tuning_guide.md` §10.1).
 
 #### 11.1 The honest scoreboard first
 
@@ -3199,7 +3199,7 @@ The 18 ties are inside the ±16.45 % measurement band (§R36) and CC/ZZ sit at
 10–31 % of their §5 bars. This section decomposes the laundry list into five
 straggler classes, traces each through the database, and states the root cause
 and the remaining lever. Nothing below re-derives hardware; it cites
-`docs/gfx90c_theoretical_limits.md` (L), `docs/gfx90c_tuning_guide.md` (G),
+`docs/gfx90c/gfx90c_theoretical_limits.md` (L), `docs/gfx90c/gfx90c_tuning_guide.md` (G),
 `docs/research/kernel_tuning.md`, and the live corpus (`corpus_census`, `oto/tools/run_census.py`).
 
 #### R42.1 — The five classes
@@ -3219,12 +3219,12 @@ and the remaining lever. Nothing below re-derives hardware; it cites
 `65536 / weight` with weight 4 (CC) / 8 (ZZ), so the largest legal tiles are
 CC 128×64 (8192 elements) and ZZ 64×64 (4096 elements) — not the 16384–65536
 elements the §5 bars assume. Every forwarded knob has already been probed on
-those geometries at 0.83–0.98 of base (`docs/gfx90c_tuning_guide.md` §13 §R37/§R41), so
+those geometries at 0.83–0.98 of base (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R37/§R41), so
 the gap is **not** a missing knob on the existing tile — it is the tile area
 itself, which legality forbids.
 
 **What was tried (trace).**
-- CC: 17 distinct (MT,TT,VW) triples measured (`docs/gfx90c_results.md` §13.3); best
+- CC: 17 distinct (MT,TT,VW) triples measured (`docs/gfx90c/gfx90c_results.md` §13.3); best
   346.7 @ 512³ at 64×64/4×4. Pads (LdsPadA/B {1,2,4}) measured 0.95–1.0 of
   base; PGR=0 measured 0.98; WGM8 measured 1.03; GLVW=1 measured 0.97; LSU=2
   measured 1.0 (§R37). No single knob moves CC by more than 5 %.
@@ -3245,7 +3245,7 @@ being a tuning-failure signal.
 #### R42.3 — Class B: small-cell residency
 
 **Root cause.** A 256³ cube with a 128×128 tile produces 4 waves/SIMD at most;
-the machine idles below 25 % residency (`docs/gfx90c_tuning_guide.md` §5 M2). The gap
+the machine idles below 25 % residency (`docs/gfx90c/gfx90c_tuning_guide.md` §5 M2). The gap
 between SS:256 (412) and SS:1024 (1135) **is** the residency gap.
 
 **What was tried.** Smaller tiles (96×96/6×6, 64×64) measured 744–1039 GFLOPS on
@@ -3484,7 +3484,7 @@ the batch spec for the next run.
    is *executed* as four real FMAs = 8 BLAS flops, so a reported complex GFLOPS
    is 1/4 of its BLAS-8 value, and the report divided every complex utilisation
    by four. The truth: **CC runs at 80-97 % of the FMA roof and ZZ at 96-97 %**
-   (three independent checks in `docs/gfx90c_theoretical_limits.md` §5.2). The
+   (three independent checks in `docs/gfx90c/gfx90c_theoretical_limits.md` §5.2). The
    ORANGE list shrinks from **12 cells to 3**: `SS:256`, `HH:256`, `CC:192`.
    §R42.2 (Class A) and §R43 Routes 1-3 (3M/Karatsuba, non-atomic split-K) are
    **struck**: they were answers to a mis-scaled bar.
@@ -3676,7 +3676,7 @@ configurations that already exist in the corpus.
 
 ### R48 — the three remaining ORANGE cells, triaged (2026-10-21)
 
-With the complex accounting corrected (§R47, `docs/gfx90c_theoretical_limits.md`
+With the complex accounting corrected (§R47, `docs/gfx90c/gfx90c_theoretical_limits.md`
 §5.2), the ORANGE list is **three cells**: `SS:256` (36.8 % of the ceiling),
 `HH:256` (31.0 %) and `CC:192` (42.3 %). This section triages each one, with
 the arithmetic that says how much is actually reachable and which config gets
@@ -4200,18 +4200,18 @@ replace the stale mixed-basis colours wholesale.
 > These are attempt1's findings — the port mechanism, the peak-table
 > correction, the measurement envelope, the hang playbook — and where a later
 > measurement supersedes an attempt1 number, the live docs win
-> (`docs/gfx90c_theoretical_limits.md`, §4/§6 above, `docs/gfx90c_results.md`).
+> (`docs/gfx90c/gfx90c_theoretical_limits.md`, §4/§6 above, `docs/gfx90c/gfx90c_results.md`).
 > This history is kept because the port paid for it in GPU-hours.
 
 ## INSIGHTS_CAVEMAN_ULTRA.md — prior-campaign full autopsy
 #### What actually happened across 9 days (2026-09-04 → 2026-09-13), what was really learned, and what attempt2 must know before it spends another GPU-minute.
 
 > Plain words, hard numbers. Everything here is traceable in the live repo before
-> archive: `run_gfx90c_suite.sh`, `docs/gfx90c_results.md`, `docs/potential_configs.md`,
+> archive: `run_gfx90c_suite.sh`, `docs/gfx90c/gfx90c_results.md`, `docs/gfx90c/potential_configs.md`,
 > `proposed_fixes.md`, `changes_kb.md`, `docs/incomplete_work.md`, `gfx90c_common.py`,
 > `auto_retire.py`, `gfx90c_results/experiment_db.jsonl`,
 > `gfx90c_results/benchmark_registry.jsonl`, `gfx90c_runs/run_*`. Cite keys:
-> **R**=docs/gfx90c_results.md, **PC**=docs/potential_configs.md, **PF**=proposed_fixes.md,
+> **R**=docs/gfx90c/gfx90c_results.md, **PC**=docs/gfx90c/potential_configs.md, **PF**=proposed_fixes.md,
 > **CK**=changes_kb.md, **IW**=docs/incomplete_work.md, **GC**=gfx90c_common.py,
 > **AR**=auto_retire.py, **S**=run_gfx90c_suite.sh.
 
@@ -4406,7 +4406,7 @@ Raw best-of-runs: 8 improved / 3 regressed / 38 noise — **wholly inside the th
 **Prior campaign's auto-retire output (must be revisited):** all three `action=retire` records came from one invocation `auto_retire:20260913_014131` — phase12 fp`387d25771a37e5de` dominated_by `132fa9a088a462df` (5 trusted cells), phase5 fp`286b940a045eee32` by `9673dab626748627` (4), phase6 fp`1570d91a6f069d11` by `d4a675effb0e31b7` (3). Given 77% winner instability and the ±23-31% envelope, a **one-campaign retirement is premature by construction**: require ≥2 *independent runs* per trusted shared cell + CV/quality gates, and treat "independent" as different-run-date evidence, not just different adjacent rows. (This was the plan; it did not yet land. **Attempt2 must.**)
 
 #### 6.5 Doc-grade discipline that made this analyzable
-- Ownership split (**CL**): KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/`docs/gfx90c_results.md`=data, AL*=narrative. Cross-referenced; stale prose is marked SUPERSEDED where remembered.
+- Ownership split (**CL**): KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/`docs/gfx90c/gfx90c_results.md`=data, AL*=narrative. Cross-referenced; stale prose is marked SUPERSEDED where remembered.
 - **"Never delete benchmark data"** law (S:113-118): old data = the comparison baseline; registry+DB immutable append-only; a violating session is a project-blocking error.
 - Phase numbers are reserved (gaps 13-15, 30) and **block order == PHASE_MANIFEST is asserted at every start** (S phase-order self-check) so the file can't silently drift from the intended order.
 - flock on every shared jsonl/csv append (advisory pre-autonomy safety).
@@ -4485,7 +4485,7 @@ Unmodified client: `terminate ... invalid_argument ... stoi` → `ResultFileRepo
 
 ---
 
-#### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=docs/gfx90c_results.md, PC=docs/potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=docs/incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
+#### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=docs/gfx90c/gfx90c_results.md, PC=docs/gfx90c/potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=docs/incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
 
 ---
 
@@ -4504,7 +4504,7 @@ Unmodified client: `terminate ... invalid_argument ... stoi` → `ResultFileRepo
 - **0** sanity gates (10 `[OK]`); **1** baseline (removed at v5); **2** fp32; **3** fp16; **4** GEMV; **5–7** fp32/transpose variants; **9** bf16; **10** fp64; **11** int8; **12** aux; **13–15** (existed in 0–15 era, removed); **16** candA sgemm; **17** candA hgemm; **18** candB GEMV-deeper; **19** candD occupancy; **20** candC run; **21** candF batched/short-K; **22** candE bf16; **23** candE fp64; **24** candE int8; **25** candC re-run; **26** seed-repeat; **27** transpose-ext; **28** synthesis; **29** ceiling %-of-peak; **30** reserved; **31** prepend for synthesis harvest.
 
 #### A.3 Doc-ownership split (the CL scheme, baked into the suite's `changes_kb`/`incomplete_work`)
-KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/docs/gfx90c_results.md=data, AL*=narrative. The three "thou-shalt" laws: never delete benchmark data (S:113-118); append-only registry+DB; phase-number reservation + order self-check at every suite start.
+KB=baseline, CK=delta/history, IP=plan, PC=hypotheses/consultations, PF=bug history, RE/docs/gfx90c/gfx90c_results.md=data, AL*=narrative. The three "thou-shalt" laws: never delete benchmark data (S:113-118); append-only registry+DB; phase-number reservation + order self-check at every suite start.
 
 ---
 
@@ -4598,12 +4598,12 @@ disk in `archive/` and are no longer tracked. Resolution record:
 
 | raw pass | folded into | what it carries |
 |---|---|---|
-| `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §§1–9 + `docs/gfx90c_theoretical_limits.md` §5 (roofs) | ridge/roofline tables, wave-quantization 7-CU study, autotuning-method census |
-| `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §3.4, §4, §8, §9.3; `docs/gfx90c_tuning_guide.md` §1.1–§1.2; `docs/gfx90c_theoretical_limits.md` §7 | UseSgprForGRO conditional; stagger mechanism; `MaxOccupancy` LDS-floor rule; `AggressivePerfMode=2` unverified |
-| `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus3.pass3_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §8.1; this guide §1.1 | DirectToLds 4-byte rule (illegal for CC/ZZ/DD); SIA 2/3 rejected non-MI; `StoreRemapVectorWidth` dead; `ScheduleIterAlg` 0/1 only; WGM = traversal block, not CU count; DepthU divisibility rules |
-| `docs/operator_runbook.md` §18 (`archive/RESEARCH_PROMPT3.pass3_20261014.md`, untracked) | the research-prompt workflow (see `docs/operator_runbook.md` §18) and `docs/research/kernel_tuning.md` fold record | the audit-question method: `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` evidence labels |
-| `docs/gfx90c_tuning_guide.md` §13 (`archive/potential_configs.pre_rewrite_20261014.md`, superseded) | fully superseded — every rewrite is preserved earlier in this §13 | the 2026-10-10 state of this document |
-| `research_prompt_v2.txt` (on disk, archived) | the file:line coupling-audit method (Round 2 of the research-prompt discipline, `docs/operator_runbook.md` §18) |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §§1–9 + `docs/gfx90c/gfx90c_theoretical_limits.md` §5 (roofs) | ridge/roofline tables, wave-quantization 7-CU study, autotuning-method census |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §3.4, §4, §8, §9.3; `docs/gfx90c/gfx90c_tuning_guide.md` §1.1–§1.2; `docs/gfx90c/gfx90c_theoretical_limits.md` §7 | UseSgprForGRO conditional; stagger mechanism; `MaxOccupancy` LDS-floor rule; `AggressivePerfMode=2` unverified |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §15 (`archive/corpus3.pass3_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §8.1; this guide §1.1 | DirectToLds 4-byte rule (illegal for CC/ZZ/DD); SIA 2/3 rejected non-MI; `StoreRemapVectorWidth` dead; `ScheduleIterAlg` 0/1 only; WGM = traversal block, not CU count; DepthU divisibility rules |
+| `docs/operator/operator_runbook.md` §18 (`archive/RESEARCH_PROMPT3.pass3_20261014.md`, untracked) | the research-prompt workflow (see `docs/operator/operator_runbook.md` §18) and `docs/research/kernel_tuning.md` fold record | the audit-question method: `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` evidence labels |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §13 (`archive/potential_configs.pre_rewrite_20261014.md`, superseded) | fully superseded — every rewrite is preserved earlier in this §13 | the 2026-10-10 state of this document |
+| `research_prompt_v2.txt` (on disk, archived) | the file:line coupling-audit method (Round 2 of the research-prompt discipline, `docs/operator/operator_runbook.md` §18) |
 
 
 ## §16. The gfx90c campaign, compressed (caveman full)

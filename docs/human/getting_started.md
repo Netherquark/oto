@@ -1,14 +1,14 @@
 # Getting started with oto
 
 > **Ecosystem: Human.** Agents pick their class first — operators read
-> [`docs/operator_runbook.md`](operator_runbook.md), developers read
-> [`AGENTS.md`](../AGENTS.md).
+> [`docs/operator/operator_runbook.md`](../operator/operator_runbook.md), developers read
+> [`AGENTS.md`](../../AGENTS.md).
 owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d
 
 The full guide to bringing oto up on a box. For the birds-eye view, see
-[`docs/overview.md`](overview.md). For the philosophy, see [`README.md`](../README.md).
+[`docs/overview.md`](../overview.md). For the philosophy, see [`README.md`](../README.md).
 
 ## 1. Prerequisites
 
@@ -95,19 +95,19 @@ python3 -m oto agent consult docs/<codename>_starter.md
 
 Stage A (CPU-only, no key) is complete. Stage B (starter pair + human
 verification gate) and Stage D (GPU, TTY) are the next human steps;
-see [`docs/starter_pair.md`](starter_pair.md).
+see [`docs/operator/starter_pair.md`](../operator/starter_pair.md).
 
 ## 8. Bring-up procedure and failure modes
 
-Stage A–D protocol: [`docs/starter_pair.md`](starter_pair.md).
+Stage A–D protocol: [`docs/operator/starter_pair.md`](../operator/starter_pair.md).
 Verification matrix and failure modes:
-[`docs/operator_runbook.md`](operator_runbook.md) §7–§9.
+[`docs/operator/operator_runbook.md`](../operator/operator_runbook.md) §7–§9.
 Blind/uninformed convergence on gfx902:
-[`docs/starter_pair.md`](starter_pair.md).
+[`docs/operator/starter_pair.md`](../operator/starter_pair.md).
 
 ## 9. CLI command reference
 
-See [`docs/cli.md`](cli.md). Easiest entry point:
+See [`docs/cli.md`](../cli.md). Easiest entry point:
 
 ```bash
 python3 -m oto help

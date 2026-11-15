@@ -1,8 +1,8 @@
 # oto operator runbook — a best-effort Tensile library on an unsupported AMD platform
 
 > **Ecosystem: Operator agent (Class B).** Humans setting up the machine read
-> [`docs/getting_started.md`](getting_started.md); developers read
-> [`AGENTS.md`](../AGENTS.md). Do not mix ecosystems.
+> [`docs/human/getting_started.md`](../human/getting_started.md); developers read
+> [`AGENTS.md`](../../AGENTS.md). Do not mix ecosystems.
 owner: oto maintainer
 last-reviewed: 2026-11-15
 review-interval: 90d
@@ -11,13 +11,13 @@ review-interval: 90d
 **Class B document.** Read this if you are an agent operating oto against a
 GPU oto has never seen, or a human supervising that agent. If you are a
 coding agent working **on** oto, you are in the wrong file — read
-`claude.md` and [`docs/README.md`](README.md) first.
+`claude.md` and [`docs/README.md`](../README.md) first.
 
 This runbook is the contract for the *best-effort* deliverable: a native
 Tensile library for a target AMD GPU that AMD does not ship one for, produced
 with oto, verified as far as honestly possible **without** inventing hardware
 facts and **without** running the GPU in a display session. It is not a
-recipe for the full convergence campaign (that is `docs/invariants.md`'s
+recipe for the full convergence campaign (that is `docs/developer/invariants.md`'s
 job on the reference target), and it never overrides `claude.md`.
 
 ## 0.1 Hard rule — Class B agents are READ-ONLY on the oto codebase
@@ -28,7 +28,7 @@ shims**. Its only writes are:
 - `profiles/<codename>.json` (via the starter pair)
 - `docs/<codename>_starter.md` / `docs/<codename>_starter.json`
 - generated device docs (`<codename>_theoretical_limits.md`, `<codename>_tuning_context.md`,
-  `<codename>_harness_study.md`, `<codename>_docs/potential_configs.md`)
+  `<codename>_harness_study.md`, `<codename>_docs/gfx90c/potential_configs.md`)
 - run artifacts under `<codename>_results/` and `<codename>_runs/`
 
 If a Class B agent encounters a bug in oto itself, it must **stop and report**
@@ -73,14 +73,14 @@ the arithmetic in the starter file.
 
 ## 2. The starter pair (mandatory for a new platform)
 
-Read [`docs/starter_pair.md`](starter_pair.md) — the protocol. In short:
+Read [`docs/operator/starter_pair.md`](starter_pair.md) — the protocol. In short:
 
 - `docs/<codename>_starter.md` — narrative half: target, why, open questions.
 - `docs/<codename>_starter.json` — machine half: every profile field.
 - The loader enforces **codename sync** across the pair and refuses
   placeholder/zeroed profiles. A stub you have not filled is a stub you
   cannot tune against — that is the intended failure mode, not a bug.
-- [`docs/gfx902_starter.md`](gfx902_starter.md) + [`docs/gfx902_starter.json`](gfx902_starter.json)
+- [`docs/operator/gfx902_starter.md`](gfx902_starter.md) + [`docs/operator/gfx902_starter.json`](gfx902_starter.json)
   are the worked example: public identity facts only (LLVM
   `amdgpu9.02` ↔ gfx902; public tables list RAVEN / GCN 5 family), every
   silicon fact zeroed, load-refusal covered by a test.
@@ -88,8 +88,8 @@ Read [`docs/starter_pair.md`](starter_pair.md) — the protocol. In short:
 To start:
 
 ```bash
-cp docs/starter_template.md docs/<codename>_starter.md
-cp docs/starter_template.json docs/<codename>_starter.json
+cp docs/operator/starter_template.md docs/<codename>_starter.md
+cp docs/operator/starter_template.json docs/<codename>_starter.json
 ```
 
 Fill the `.md` first (target narrative + research brief). Leave the `.json`
@@ -113,14 +113,14 @@ python3 -m oto agent generate docs/<codename>_starter.md
 The agent writes `docs/<codename>_theoretical_limits.md` and
 `docs/<codename>_tuning_context.md` with research sections marked
 **UNVERIFIED**, plus `docs/<codename>_harness_study.md` and
-`docs/<codename>_docs/potential_configs.md` (both CPU-only; see §6). Without a
+`docs/<codename>_docs/gfx90c/potential_configs.md` (both CPU-only; see §6). Without a
 key, research is a clean no-op and the docs carry the starter text only.
 If the target already has `profiles/<codename>.json` and its docs exist, no
 agent run is needed; just run `oto doctor` to confirm the profile loads.
 
 For the automated consult — one command from starter to a gate-checked
 `potential_configs.md` draft (no key required; CPU-only) — see
-[`docs/invariants.md`](invariants.md) and run `oto agent consult`.
+[`docs/developer/invariants.md`](../developer/invariants.md) and run `oto agent consult`.
 
 **Agent research is advisory. It is never the source of record for silicon
 facts.** See §4.
@@ -159,7 +159,7 @@ Best-effort still starts with measurement. In the user's TTY:
    whatever the runs on that device produced. 30 minutes to boot the corpus;
    days to converge.
 3. The convergence ledger is append-only; conflicts/verdicts follow the
-   acceptance framework in `docs/gfx90c_theoretical_limits.md` — **for the
+   acceptance framework in `docs/gfx90c/gfx90c_theoretical_limits.md` — **for the
    reference target only**. On a new platform, like-for-like against a
    shipped floor may not exist (there may be no reference library to beat):
    then acceptance is functional correctness + gate compliance, and you
@@ -180,13 +180,13 @@ python3 -m oto.harness.candidate_generator --dry-run               # candidate p
 - `docs/<codename>_harness_study.md` — corpus census (runs, floor vs native
   rows), TARGET_CELLS coverage, native winners per cell, and 16 round-robin
   proposals annotated by the CPU gates. **CPU-checked ≠ benchmarked.**
-- `docs/<codename>_docs/potential_configs.md` — ceilings + corpus + acceptance
+- `docs/<codename>_docs/gfx90c/potential_configs.md` — ceilings + corpus + acceptance
   summary synthesised from the same inputs.
 
 On a fresh device these degrade gracefully ("no kernel_db.json") and the
 proposals still generate and gate-check. Analysis guides for each tool:
-[`docs/harness_runbook.md`](harness_runbook.md); CPU-only command card:
-[`docs/harness_runbook.md`](harness_runbook.md).
+[`docs/developer/harness_runbook.md`](../developer/harness_runbook.md); CPU-only command card:
+[`docs/developer/harness_runbook.md`](../developer/harness_runbook.md).
 
 ## 7. Verification matrix — what "done" means for best-effort
 
@@ -205,7 +205,7 @@ consultations at defined triggers.
 | Anti-alias scan | oto's built-in post-build check | no foreign-arch tokens found |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or failures triaged and recorded) |
 | Functional check **(TTY)** | PyTorch loads the library; GEMM vs reference on random inputs | outputs match reference within dtype tolerance |
-| Verification record | `docs/incomplete_work.md` + `docs/gfx90c_results.md` updated | gaps recorded, none hidden |
+| Verification record | `docs/incomplete_work.md` + `docs/gfx90c/gfx90c_results.md` updated | gaps recorded, none hidden |
 
 Functional match is the acceptance bar that exists on every platform.
 Performance claims are reported as measured, never extrapolated.
@@ -220,7 +220,7 @@ Performance claims are reported as measured, never extrapolated.
 | Corpus missing on first run | Expected; `harness-study` reports "no kernel_db.json". Start with `oto library best-effort` for the floor-less build. |
 | Gates reject every proposal | The generator is profile-driven; a rejection storm means the profile is off (clock/LDS/ISA), not that the deck is wrong. Re-verify §4. |
 | ROCm reports the arch as unsupported | Stop. Record the blocker in `docs/incomplete_work.md`. Do not widen `gates/` to force it through. |
-| You want to relax the 60-line / 600-line / pyflakes / ruff / py_compile / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/harness_runbook.md` guardrails. |
+| You want to relax the 60-line / 600-line / pyflakes / ruff / py_compile / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/developer/harness_runbook.md` guardrails. |
 
 ## 9. What you must never do
 
@@ -229,14 +229,14 @@ Performance claims are reported as measured, never extrapolated.
   a doc read better.
 - Invent CU counts, clocks, peaks, or instruction support for any GPU.
 - Run benchmarks or builds outside the user's TTY.
-- Delete or truncate `docs/incomplete_work.md`, `docs/gfx90c_results.md`, or the append-only
+- Delete or truncate `docs/incomplete_work.md`, `docs/gfx90c/gfx90c_results.md`, or the append-only
   ledger.
 - Commit `command.txt`, API keys, or session context files.
 
 ## 10. Reading order (class B)
 
-`claude.md` (shared invariants only) → this file → [`operator_runbook.md`](operator_runbook.md) (the tuning campaign; §18 is the research-prompt discipline for commissioning research passes) → [`docs/README.md`](README.md) (the registry) →
-[`docs/starter_pair.md`](starter_pair.md) → [`docs/harness_runbook.md`](harness_runbook.md) →
+`claude.md` (shared invariants only) → this file → [`operator_runbook.md`](operator_runbook.md) (the tuning campaign; §18 is the research-prompt discipline for commissioning research passes) → [`docs/README.md`](../README.md) (the registry) →
+[`docs/operator/starter_pair.md`](starter_pair.md) → [`docs/developer/harness_runbook.md`](../developer/harness_runbook.md) →
 `docs/README.md` (the file-ownership and contract boundary) → the module
 docstring of anything you edit.
 
@@ -429,7 +429,7 @@ your starter, per starter path):
 3. `<codename>_harness_study.md` — corpus census (what has been tried
    before, per-cell coverage, floor vs native on this part — if a floor is
    present; if not, this is simply small).
-4. `<codename>_docs/potential_configs.md` — the synthesis of candidate seeds
+4. `<codename>_docs/gfx90c/potential_configs.md` — the synthesis of candidate seeds
    across the whole 38-cell matrix: families × shapes with initial tile
    proposals and a ranked list of first probes.
 
@@ -547,8 +547,8 @@ python3 -m oto check candidates                          # will the gates accept
 ```
 
 If the census says this axis is exhausted, skip it — the proof is usually in
-`docs/gfx90c_tuning_guide.md` §13 in the §R-corpus history (per-axis findings; map in `docs/potential_configs.md` §10) or
-`docs/gfx90c_results.md` §9 (straggler classes). If you cannot locate a measurement, the
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 in the §R-corpus history (per-axis findings; map in `docs/gfx90c/potential_configs.md` §10) or
+`docs/gfx90c/gfx90c_results.md` §9 (straggler classes). If you cannot locate a measurement, the
 axis is probably still unprobed and a NARROW draw is honest evidence on its
 behalf.
 
@@ -650,7 +650,7 @@ to do about it. This catalogue is why campaigns converge, not why they fail.
 
 | class | detect | strategy | exit |
 |---|---|---|---|
-| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `docs/gfx90c_results.md` line |
+| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `docs/gfx90c/gfx90c_results.md` line |
 | **R**—residency-starved | waves/SIMD ≤ 30 % | smaller tiles / `GlobalSplitU` (SS only) | within-run win |
 | **C**—complex accounting artefact | complex GEMM ~4× below derived roof | none — re-read in BLAS-8 units; verify via wall-clock vs roof time | doc cite |
 | **K**—clock confound | `clock_coverage < threshold` | re-run TTY; judge within-run only | stronger batch |
@@ -847,7 +847,7 @@ When a floor library is in hand:
    they stole the GPU.
 2. **You are not the developer.** You do not edit `oto/` or any `.md`; you do
    not touch profiles directly; developer docs and the developer's register
-   (`docs/incomplete_work.md`, `docs/changelog.md`, `docs/gfx90c_results.md`) belong to the developer.
+   (`docs/incomplete_work.md`, `docs/changelog.md`, `docs/gfx90c/gfx90c_results.md`) belong to the developer.
    Find something relevant? Write it into `<codename>_results/bugs.md`; stop
    there. The developer (a human, or a different agent with explicit
    authority) handles it.
@@ -913,7 +913,7 @@ When a floor library is in hand:
 - `.env` and `.env.example`;
 - `phases.yaml` and every authored overlay YAML file — you never edit
   the deck directly; the tool verbs emit rows onto the overlay safely;
-- `docs/incomplete_work.md`, `docs/changelog.md`, and `docs/gfx90c_results.md` — the developer's
+- `docs/incomplete_work.md`, `docs/changelog.md`, and `docs/gfx90c/gfx90c_results.md` — the developer's
   register; if you found something truly relevant, write it in
   `<codename>_results/bugs.md` — the developer decides whether it lands.
 
@@ -1052,8 +1052,8 @@ Before the first GPU minute on this block: write the hypothesis, the
 mechanism (M1 ceiling saturation / M2 wave quantisation / M3 issue-rate /
 M4 measurement), the confidence, and what observation would refute it.
 Back it with the mechanism-diverse shortlist rule — 14–25 configs/cell —
-and the mechanism names from `docs/invariants.md` and
-`docs/gfx90c_tuning_guide.md` (§13 §R33, §R41). Predictions that cannot
+and the mechanism names from `docs/developer/invariants.md` and
+`docs/gfx90c/gfx90c_tuning_guide.md` (§13 §R33, §R41). Predictions that cannot
 fail are not predictions.
 
 ### 18.7 Do-not-cite lists
@@ -1085,8 +1085,8 @@ them, in the deliverable.
 
 The raw research rounds this section is distilled from: `archive/corpus*.md`,
 `context*.md` (untracked, on disk only). Their durable outputs are folded into
-the owners (`docs/research/kernel_tuning.md`, `docs/invariants.md`,
-`docs/gfx90c_tuning_guide.md` §13); the raw files carry evidence, not verdicts.
+the owners (`docs/research/kernel_tuning.md`, `docs/developer/invariants.md`,
+`docs/gfx90c/gfx90c_tuning_guide.md` §13); the raw files carry evidence, not verdicts.
 
 ## §19. Blind convergence on a never-seen target — the end-to-end campaign (worked on gfx902)
 

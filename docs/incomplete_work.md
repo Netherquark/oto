@@ -16,7 +16,7 @@ not re-raise closed items without new information.
   device that is not on this box. Class-B flow rehearsed on a synthetic stub
   (`tests/test_class_b_rehearsal.py`, 16 tests); CPU-side toolchain ready
   (`ISA_TRIPLES` carries gfx902; Tensile builds and assembles gfx902).
-  Unblocking needs only the key + the human gate. See `docs/starter_pair.md`.
+  Unblocking needs only the key + the human gate. See `docs/operator/starter_pair.md`.
 - **CC:512/256 `AssertFree0/1ElementMultiple=4` A/B — TTY-gated.**
   GPU legality build probes pass on gfx90c (2026-11-15: af4em4 @256/@512,
   paired-widen AF22 @256/@512, AF11 baselines, ZZ DU8/DU16 — all sols=1).

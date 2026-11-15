@@ -7,7 +7,7 @@ review-interval: 90d
 > **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
 
 > **gfx90c-specific.** The generic per-device knowledge-base template
-> lives in `docs/knowledge_base.md`; this file is the gfx90c golden
+> lives in `docs/gfx90c/knowledge_base.md`; this file is the gfx90c golden
 > example of how to derive one.
 
 > Status: **APPROVED (2026-09-13)**.
@@ -15,7 +15,7 @@ review-interval: 90d
 **Era note (2026-11-15).** This file is the port's architecture snapshot as approved
 2026-09-13 (its mechanism section was updated 2026-09-19). The **toolchain moved
 on 2026-11-14** — the live baseline is the rocm-libraries nightly SDK, not the
-v4.44 `develop_deprecated` tree this snapshot documents (`docs/gfx90c_tuning_guide.md`
+v4.44 `develop_deprecated` tree this snapshot documents (`docs/gfx90c/gfx90c_tuning_guide.md`
 §12 has the current baseline). This file is kept append-only by the data-preservation
 law (§10): stale sections are annotated, never rewritten. Where a table was owned by
 another doc, that doc now holds the only copy and this file points at it.
@@ -116,7 +116,7 @@ python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
 This project's driver source (outside that tree, still **calls into** it):
 
 - `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
-  `docs/invariants.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
+  `docs/developer/invariants.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
   `oto/metrics/acceptance_report.py`, `oto/metrics/benchmark_analytics.py`, `oto/metrics/cell_policy.py`, `oto/tensile/candidate.py`, `oto/ledger/convergence_agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/shipped_floor.py` (gfx900 dat parser +
   reference-floor chain).
@@ -250,7 +250,7 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 ## 6. Shipped gfx900 Footprint
 
-> The replication goal (see `docs/invariants.md`): **28 frozen family libraries, 2,285
+> The replication goal (see `docs/developer/invariants.md`): **28 frozen family libraries, 2,285
 > distinct shipped kernels** — zero of which are loadable on gfx90c today. That absence is the gap:
 > replicate this footprint and produce a `tensilelibrary` that performs all of these
 > functions natively on gfx90c (performing better than gfx900 spoofing). No more, no
@@ -258,7 +258,7 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 28 families = 7 dtype families × 4 contraction patterns (section 5).
 
-Kernel counts per family — canonical table in `docs/invariants.md` §2
+Kernel counts per family — canonical table in `docs/developer/invariants.md` §2
 (same total 2,285; the earlier 3,066 was per-file token counting). This file does
 not restate the split, so it cannot drift.
 
@@ -323,11 +323,11 @@ reported separately, never counted as coverage.
 
 Operational ordering: **coverage first**. Lever selection is subordinate to covering
 every function of the 28-family footprint (section 6). The levers below are the
-measured truths (frozen prior conclusions in `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
+measured truths (frozen prior conclusions in `docs/gfx90c/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
 §5.1) that make coverage cheap and correct on gfx90c.
 
 Rate card (peaks @ 1800 MHz) — canonical table lives in
-`docs/gfx90c_theoretical_limits.md` §5 and is derived per call from
+`docs/gfx90c/gfx90c_theoretical_limits.md` §5 and is derived per call from
 `oto.device.loader.current_profile().peak_gflops` (`oto.device.derive_limits`);
 this file does not restate the numbers. The single rule that matters here:
 **BF16 and INT8 are single-rate on this part (no dp4a), FP64 runs 1/16** — the
@@ -396,7 +396,7 @@ value.
 
 ### 7.2 The never-exercised levers, mechanism-verified but unmeasured
 
-From `corpus2.md` (pass 2; raw text `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked)), which is
+From `corpus2.md` (pass 2; raw text `docs/gfx90c/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked)), which is
 source-inspection of upstream Tensile, **not** a gfx90c measurement. Treat the
 mechanisms as verified and any speedup as unmeasured.
 
@@ -439,7 +439,7 @@ mechanisms as verified and any speedup as unmeasured.
 - **`LocalSplitU`** is `WorkGroup[2]` and splits the summation dimension *inside* a
   workgroup; it does **not** multiply the output grid (`GlobalSplitU` does). A
   TensileLite dtype guard might exclude complex, but the project's own
-  `validate_config` accepts it for every family (`docs/gfx90c_tuning_guide.md` §13 §8.1), so
+  `validate_config` accepts it for every family (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §8.1), so
   the local gate at `e8a8999e` is the authority.
 - **`GlobalLoadVectorWidth` ≠ `VectorWidth` and ≠ 1** is rejected by Tensile
   (`SolutionStructs.py:4584-4596`, "must be == VectorWidth … or == 1") **only when**
@@ -453,7 +453,7 @@ mechanisms as verified and any speedup as unmeasured.
   refuses (`failurelogs.txt`; reference-rerun hashes `7f866dcf` / `a0edeb30`). So
   widening is **not** a free lever — unpaired it is a refusal or a no-op, and the one
   realizable widen is the CC-only pair `GLVW=2 + AssertFree0ElementMultiple=2`
-  (`docs/gfx90c_tuning_guide.md` §13 §8.1, §9 D4) — swept as a trial row since 2026-10-14.
+  (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §8.1, §9 D4) — swept as a trial row since 2026-10-14.
   Local writer/ISA wins over any general statement.
 
 ---
@@ -537,7 +537,7 @@ easy to get wrong:
   the Tensile Table verbatim — with `LDS_BUDGET` unchanged (16384). For ZZ the
   wall is `(MT0+MT1)*DepthU <= 1024`; the D2/D3 decision trials (64x64x16,
   128x32x8, 32x128x8) are refused by the gate by design. **See
-  `docs/gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ LDS byte count.**
+  `docs/gfx90c/gfx90c_theoretical_limits.md` §6.1 before quoting a ZZ LDS byte count.**
 - §8.1's "complex types are 8 B" refers to the **global-load** element width
   under the `GLVW x bytes <= 16` cap — a different quantity on a different path.
   Both can be true at once; they are not a contradiction.
@@ -549,12 +549,12 @@ hold one workgroup. Run `python3 -m oto check candidates` to sweep a deck; it ex
 1 on any illegal config, so legality is provable **before** a GPU run. That error
 is now *caught*: it is the workgroup register-file rule modelled below
 (`occupancy_feasible`), so a phase that carries it is refused at preflight rather
-than dying on the GPU — see `claude.md` §2.2 / §5 and `docs/gfx90c_tuning_guide.md` §13
+than dying on the GPU — see `claude.md` §2.2 / §5 and `docs/gfx90c/gfx90c_tuning_guide.md` §13
 §R24. Gate semantics live in `oto/tensile/gates/*` (each gate module documents
 itself).
 
 **The occupancy rule (corrected — two constraints, not one).** The full
-current reading lives in `docs/gfx90c_tuning_guide.md` §6 (this file carries
+current reading lives in `docs/gfx90c/gfx90c_tuning_guide.md` §6 (this file carries
 the mechanism, the measurement trail and the Z-quantisation consequences; the
 harness metrics gates in `oto/tensile/gates/*` are normative). The *per-thread*
 constraint is on **ThreadTile**: a thread holds `TT0 x TT1` accumulators, each
@@ -596,7 +596,7 @@ different machine than a warm one, and two arms measured at different
 temperatures are not comparable. The floor arm has no telemetry at all, so no
 cross-arm clock correction is possible. (The sole LOSS in
 `run_20261013_214649` was first read as this failure, but it was a candidate
-sweep-order defect — `docs/gfx90c_results.md` §13.4 — and the clean re-run reads CC:256 as
+sweep-order defect — `docs/gfx90c/gfx90c_results.md` §13.4 — and the clean re-run reads CC:256 as
 TIE.)
 
 Steps, all operator-side (TTY):
@@ -681,7 +681,7 @@ defect, not a shortcut. Each names what was actually found, if anything.
 Full detail, including what each source *does* say, is in `docs/research/kernel_tuning.md`
 §9 — same list, kept in one place, with a per-row "what is actually known" and one
 entry resolved (AMD's shipped library is **not** uniformly small-tiled). The
-pass-1 sweep's own record of the same list is `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked)
+pass-1 sweep's own record of the same list is `docs/gfx90c/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked)
 §4; cite §9, not the archive.
 
 ## 9. Reporting Toolchain
@@ -743,7 +743,7 @@ Flags: `--live on|off` (default on), `--live-interval SECONDS` (default 15).
 
 This is the module docstring of `oto/metrics/render_status.py`.
 
-Acceptance ceilings: per-family bars come from `docs/gfx90c_theoretical_limits.md`
+Acceptance ceilings: per-family bars come from `docs/gfx90c/gfx90c_theoretical_limits.md`
 (§5), derived from rocminfo + first-party ISA verification — do not use the raw PEAK
 table here when scoring "approach the theoretical limit".
 
@@ -782,7 +782,7 @@ Every stream of benchmark evidence, past and future:
   never "migrated in place". Readers may ingest them into SQLite as **new** `records`
   rows (copy-forward), never truncate the jsonl. The canonical **live** ledger is
   `gfx90c_results/registry.db`; no jsonl ledger currently exists there.
-- `docs/gfx90c_results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
+- `docs/gfx90c/gfx90c_results.md` — its `<!-- DERIVED:* -->` blocks *and* its hand prose.
 - `acceptance_report.json` + `acceptance_report.html` (in `gfx90c_results/`) — regenerated from data, never hand-repaired.
 - Corrupt jsonl records from the frozen set remain **in place** (triage: readers
   must tolerate and mark, never repair the file by deleting the row).
@@ -820,8 +820,8 @@ overwrite, or rewrite **benchmark evidence**.
 
 - `oto/metrics/acceptance_report.py` `write_report()` writes `acceptance_report.json` and its `.html`
   dashboard wholesale from the registry data.
-- Legacy `make_results_md.py`-style `docs/gfx90c_results.md` `<!-- DERIVED:* -->` marker-block
-  regeneration no longer exists; `docs/gfx90c_results.md` hand prose is append-only.
+- Legacy `make_results_md.py`-style `docs/gfx90c/gfx90c_results.md` `<!-- DERIVED:* -->` marker-block
+  regeneration no longer exists; `docs/gfx90c/gfx90c_results.md` hand prose is append-only.
 - The single peak authority is `oto.device.loader.current_profile().peak_gflops` (see section 7); derived
   prose that contradicts it is regenerated, not hand-patched.
 
@@ -865,6 +865,6 @@ overwrite, or rewrite **benchmark evidence**.
 
 ---
 
-Related documents: `docs/changelog.md` (the evolution narrative), `docs/gfx90c_theoretical_limits.md`
-(ceiling authority), `docs/invariants.md` (footprint contract), `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
-/ `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked) (frozen prior conclusions).
+Related documents: `docs/changelog.md` (the evolution narrative), `docs/gfx90c/gfx90c_theoretical_limits.md`
+(ceiling authority), `docs/developer/invariants.md` (footprint contract), `docs/gfx90c/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
+/ `docs/gfx90c/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked) (frozen prior conclusions).

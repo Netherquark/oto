@@ -1,8 +1,8 @@
 # oto — developer operating contract (moved from claude.md)
 
 > **Ecosystem: Developer agent (Class A).** Operator agents read
-> [`docs/operator_runbook.md`](operator_runbook.md); humans read
-> [`docs/getting_started.md`](getting_started.md).
+> [`docs/operator/operator_runbook.md`](../operator/operator_runbook.md); humans read
+> [`docs/human/getting_started.md`](../human/getting_started.md).
 
 owner: oto maintainer
 last-reviewed: 2026-11-15
@@ -20,7 +20,7 @@ review-interval: 90d
 **Two agent classes run this repo.** (A) **Coding agents** improving oto itself:
 this file is your entry — read §2 next. (B) **Operator agents** using oto to
 produce a best-effort Tensile library for an *unsupported* AMD platform: your
-entry is [`docs/operator_runbook.md`](docs/operator_runbook.md), not this
+entry is [`docs/operator/operator_runbook.md`](../operator/operator_runbook.md), not this
 file — though §2.0 below and the `docs/README.md` boundary apply to you
 unchanged. (A) optimises the codebase; (B) optimises a device library. Don't
 blend them: this file's campaign framing (gfx90c convergence, the shipped-floor
@@ -90,7 +90,7 @@ number is a WIN, a TIE, a ceiling, or a peak.
 
 1. **Do not redefine, re-derive or second-guess** the tie band, the verdict
    thresholds, the realistic ceilings, or the theoretical peaks. Their owner is
-   `docs/gfx90c_theoretical_limits.md`; the machine-readable form is `profiles/gfx90c.json`.
+   `docs/gfx90c/gfx90c_theoretical_limits.md`; the machine-readable form is `profiles/gfx90c.json`.
    Apply them.
 2. **Never present an alternative acceptance framework as a finding.** If you
    believe one is wrong, it goes in the owner MD as a dated, evidence-backed
@@ -213,7 +213,7 @@ there is no size at which it becomes safe. Exhaustively banned: no `Tensile`, no
 program, no `hipDeviceProp_t`/`rocminfo`-style device query written for this
 purpose, no `amdgpu_top` sampling under load, no FMA/latency/bandwidth
 microbenchmark of any size. **Everything the agent needs to know about the device
-is already in `docs/gfx90c_theoretical_limits.md` §1–§3 and `oto/device/loader.py`.**
+is already in `docs/gfx90c/gfx90c_theoretical_limits.md` §1–§3 and `oto/device/loader.py`.**
 Full Tensile benchmark runs are also not the agent's to launch: only in a TTY, and
 only when the USER runs them. Agent work is CPU-only — code, DB and docs, plus the
 repo's own CPU-only tools (`python3 -m oto check candidates`, `python3 -m oto stats`,
@@ -226,14 +226,14 @@ For every substantive task:
 
 1. Read `README.md` for repository-level orientation.
 2. Read `claude.md` (this file) for the operating contract.
-3. Read `docs/invariants.md` for the **current executable plan**.
-4. Read `docs/invariants.md` for the shipped-footprint → native-gfx90c replication contract.
-5. Read `docs/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
-6. Read `docs/gfx90c_knowledge_base.md` for the baseline repo/code architecture.
+3. Read `docs/developer/invariants.md` for the **current executable plan**.
+4. Read `docs/developer/invariants.md` for the shipped-footprint → native-gfx90c replication contract.
+5. Read `docs/gfx90c/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
+6. Read `docs/gfx90c/gfx90c_knowledge_base.md` for the baseline repo/code architecture.
 7. Read `docs/changelog.md` for what changed and why (oto evolution).
-8. Read `docs/potential_configs.md` for the deck methodology; the gfx90c worked example lives in `docs/gfx90c_tuning_guide.md` §13.
-9. Read `docs/gfx90c_results.md` for measured evidence (the oto ledger).
-11. Read `docs/gfx90c_tuning_guide.md` §14 (the frozen prior-campaign record; the archive left git) ONLY when
+8. Read `docs/gfx90c/potential_configs.md` for the deck methodology; the gfx90c worked example lives in `docs/gfx90c/gfx90c_tuning_guide.md` §13.
+9. Read `docs/gfx90c/gfx90c_results.md` for measured evidence (the oto ledger).
+11. Read `docs/gfx90c/gfx90c_tuning_guide.md` §14 (the frozen prior-campaign record; the archive left git) ONLY when
     you need the frozen prior measured conclusions (bests, verdicts, levers).
     These are the sole sanctioned prior material; do not reference other prior
     working docs.
@@ -259,7 +259,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 | Carve a best-effort gfx90c `TensileLibrary.dat` (+ `.co`) from the full kernel DB, CPU-only | `python3 -m oto library best-effort` (default `gfx90c_results/best_effort_library/`; `--dest DEST`, `--protocol-basis any` for across-all-runs winners; honours `TENSILE_ROOT`/`ROCM_PATH` from `.env`) |
 | What is the *legal* geometry space per cell, what has been measured inside it, and which legal geometry is untried but sits next to a fast one? (the numbers, then the picture) | `python3 -m oto.harness.coverage_map` (`--family SS`, `--cell SS:256`, `--top 12`, `--json out.json`) and `python3 -m oto.harness.coverage_graph` (writes `gfx90c_results/analysis/coverage/*.svg` + an index page) |
 | Is a deck / candidate list Tensile-legal? (4 gates, exits 1 if not) | `python3 -m oto check candidates` (`--family ZZ`, `--deck other.yaml`; a seed overlay is accepted too) |
-| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `docs/gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
+| Where did a phase fail, and what does that error mean? | the phase's `2_BenchmarkData` + `logs/`, then `python3 -m oto.harness.failure_triage` (the reason census) + `docs/gfx90c/gfx90c_tuning_guide.md` §5 (the M1–M5 mechanisms) |
 | **Measured** occupancy of what Tensile actually emitted, joined to its GFLOP/s | `python3 -m oto.harness.asm_occupancy` (`--by gflops\|vgpr\|waves\|count`, `--dtype ZZ`, `--binder`, `--check-calibration`) |
 | **Predicted** resident-workgroup bounds of a `kernel_db` row | `python3 -m oto.harness.occupancy_bounds` (`--side floor`, `--lds-factor 2`) |
 | Emit the never-varied-knob deck (winner tile x one knob change) | `python3 -m oto.tensile.knob_sweep` (`--families CC ZZ`, `--shapes 256x256x256`, `--emit --baseline --trials`) |
@@ -275,7 +275,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 only with `--emit`; that keeps the read-only contract of stage 2 intact while
 still giving deck generation a one-line entry point. It exists because
 `oto stats` proves `GlobalSplitU` and `StaggerU` have only ever held one value
-each — see `docs/gfx90c_tuning_guide.md` §13 §8 for the deck it emits and §8.1 for the
+each — see `docs/gfx90c/gfx90c_tuning_guide.md` §13 §8 for the deck it emits and §8.1 for the
 measured legality matrix behind it.
 
 `oto.tools.deck_review` is the pre-deck gate for **candidate generation** and the
@@ -284,7 +284,7 @@ the acceptance report's basis is *best per-kernel median* — an order statistic
 so the arm that draws more kernels has the higher expected max; read `median`
 and `floor_best`, not `winner`. `legality` exists because a refused draw costs
 one of the mutator's five draws per iteration. All three are CPU-only and
-read-only; `docs/harness_runbook.md` explains what each one is for.
+read-only; `docs/developer/harness_runbook.md` explains what each one is for.
 
 The two occupancy tools answer different questions and are not interchangeable:
 `asm_occupancy` reads the emitted `.s` (`amdhsa_next_free_vgpr`,
@@ -296,13 +296,13 @@ are measurement-vs-model; corrections to the second are model-vs-model.
 the AMD/ORNL GFX9 table and exits 1 if it stops fitting — run it before
 trusting any occupancy number in this repo.
 
-`docs/gfx90c_knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
+`docs/gfx90c/gfx90c_knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
 (multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
 A phase that dies with `Generating kernel source resulted in error 4` is the
 **workgroup register-file rule** (`R*MT0*MT1*LocalSplitU >= 65536`): the
 accumulators alone fill the 64K file with no VGPR left for operands, so a config
 that carries it is now refused before it launches
-(`oto.tensile.gates.occupancy.occupancy_feasible`; `docs/gfx90c_tuning_guide.md` §13 §R24
+(`oto.tensile.gates.occupancy.occupancy_feasible`; `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24
 rule 1 / §R27). The gate census must show 0 false rejections — the same rule
 refuses 40 of the corpus's empty phases and 0 of its built ones.
 
@@ -311,25 +311,25 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 | File | Sole purpose |
 |---|---|
 | `claude.md` | Entry contract, routing, authority rules, safety/process guardrails |
-| `docs/gfx90c_knowledge_base.md` | Baseline repository/codebase knowledge at the captured state |
-| `docs/invariants.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
-| `docs/invariants.md` | Shipped gfx900 footprint → native gfx90c replication contract |
-| `docs/gfx90c_theoretical_limits.md` | Per-family theoretical & realistic ceilings — the acceptance authority |
-| `docs/potential_configs.md` | Deck methodology (device-independent); the gfx90c record lives in `docs/gfx90c_tuning_guide.md` §13 |
-| `docs/gfx90c_results.md` | Experimental data, parsed results, comparisons, conclusions |
-| `docs/invariants.md` | Tuning/search philosophy (agentic; the model never decides a verdict), hardware truth |
+| `docs/gfx90c/gfx90c_knowledge_base.md` | Baseline repository/codebase knowledge at the captured state |
+| `docs/developer/invariants.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
+| `docs/developer/invariants.md` | Shipped gfx900 footprint → native gfx90c replication contract |
+| `docs/gfx90c/gfx90c_theoretical_limits.md` | Per-family theoretical & realistic ceilings — the acceptance authority |
+| `docs/gfx90c/potential_configs.md` | Deck methodology (device-independent); the gfx90c record lives in `docs/gfx90c/gfx90c_tuning_guide.md` §13 |
+| `docs/gfx90c/gfx90c_results.md` | Experimental data, parsed results, comparisons, conclusions |
+| `docs/developer/invariants.md` | Tuning/search philosophy (agentic; the model never decides a verdict), hardware truth |
 
 | `docs/incomplete_work.md` | Open-work register (status-keyed) |
-| `docs/audit_register.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
-| `docs/gfx90c_tuning_guide.md` §14 | Frozen prior conclusions (read-only reference; results only) |
+| `docs/developer/audit_register.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
+| `docs/gfx90c/gfx90c_tuning_guide.md` §14 | Frozen prior conclusions (read-only reference; results only) |
 | `README.md` | General repository orientation |
 | `docs/changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
 | `docs/README.md` | The boundary between the MD docs ecosystem and the docstrings |
-| `docs/docstrings.md` | The module/function docstring convention (owns/does-not-own/public API) |
+| `docs/developer/docstrings.md` | The module/function docstring convention (owns/does-not-own/public API) |
 
-| `docs/design_language.md` | Design-language spec for the HTML acceptance report |
-| `docs/harness_runbook.md` | Harness runbook (moved from `oto/harness/README.md`) |
-| `docs/gfx90c_tuning_guide.md` | Live tuning guidance for gfx90c (current fact only) |
+| `docs/developer/design_language.md` | Design-language spec for the HTML acceptance report |
+| `docs/developer/harness_runbook.md` | Harness runbook (moved from `oto/harness/README.md`) |
+| `docs/gfx90c/gfx90c_tuning_guide.md` | Live tuning guidance for gfx90c (current fact only) |
 | `docs/research/kernel_tuning.md` | Live research notes on kernel tuning (current fact only) |
 | `docs/research/complex_gemm_brief.md` | Live research brief on complex GEMM (current fact only) |
 
@@ -345,7 +345,7 @@ There are two, and they are not interchangeable:
   project. Lifespan: months. Stated in `docs/README.md`.
 * **Docstrings** (inside `oto/**/*.py`) — lower-level context for a maintainer
   reading *one module*. Author: whoever last touched that function. Lifespan:
-  days. Convention in `docs/docstrings.md`.
+  days. Convention in `docs/developer/docstrings.md`.
 
 The test is in `docs/README.md`: **if the fact would still be true after the code
 were rewritten in another language, it belongs in an MD. If it is a fact about
@@ -372,12 +372,12 @@ factual state**:
 → historical agent logs
 → old summaries/assumptions.
 
-- `docs/invariants.md` = authoritative for **what is planned next**.
-- `docs/gfx90c_results.md` = authoritative for **what experiments showed**.
-- `docs/potential_configs.md` = authoritative for the **deck methodology** (device-independent); `docs/gfx90c_tuning_guide.md` §13 is the **gfx90c record**.
-- `docs/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
-- `docs/invariants.md` = authoritative for **what footprint to replicate**.
-- `docs/changelog.md` / `docs/gfx90c_knowledge_base.md` = history / baseline (single evolution log).
+- `docs/developer/invariants.md` = authoritative for **what is planned next**.
+- `docs/gfx90c/gfx90c_results.md` = authoritative for **what experiments showed**.
+- `docs/gfx90c/potential_configs.md` = authoritative for the **deck methodology** (device-independent); `docs/gfx90c/gfx90c_tuning_guide.md` §13 is the **gfx90c record**.
+- `docs/gfx90c/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
+- `docs/developer/invariants.md` = authoritative for **what footprint to replicate**.
+- `docs/changelog.md` / `docs/gfx90c/gfx90c_knowledge_base.md` = history / baseline (single evolution log).
 
 Never turn "planned", "proposed", "observed", or "historically true" into
 "currently true" without evidence.
@@ -415,7 +415,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   validation. Correctness gates performance claims.
 - Avoid redundant experiments; check the registry before adding equivalent work.
 - Preserve experiment provenance and historical results. Benchmark data is NEVER
-  deleted; all data streams are append-only (canonical law: `docs/gfx90c_knowledge_base.md` §10).
+  deleted; all data streams are append-only (canonical law: `docs/gfx90c/gfx90c_knowledge_base.md` §10).
 - **Ask before deleting/replacing files or materially changing existing experiments.**
 - Do not overwrite existing tests/results merely to make a cleaner implementation.
 - Do not silently retire/revive/rename/reinterpret phases; the driver's
@@ -448,7 +448,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   3. `dtype_weight x MT0 x MT1 x LocalSplitU < 65536` — the *workgroup register
      file* (Tensile error 4). ThreadTile cancels, so this caps MacroTile **area**
      at `65536/weight` and is what makes the widest legal complex tiles CC
-     `128x64` / ZZ `64x64`/`128x32` (docs/gfx90c_tuning_guide.md §13 §R24/§R27).
+     `128x64` / ZZ `64x64`/`128x32` (docs/gfx90c/gfx90c_tuning_guide.md §13 §R24/§R27).
   4. `LocalSplitU x MT0 x MT1 x computeBytes <= 65536` — the LDS reduction buffer
      (only when `LocalSplitU > 1`; Tensile `MaxLDS`, `SolutionStructs:4108,4334`).
   None is a tuning knob and none may be relaxed to admit a candidate: the
@@ -522,10 +522,10 @@ change is explicitly intended; record rationale in the owning document.
 After changing code: run the narrowest useful validation first, and keep the
 tree-walking guards green (`test_pyflakes` / `test_ruff` / `test_py_compile` /
 `test_function_length` / `test_file_length` — `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q`); then required
-acceptance checks from `docs/invariants.md`; update `docs/gfx90c_results.md` from actual
+acceptance checks from `docs/developer/invariants.md`; update `docs/gfx90c/gfx90c_results.md` from actual
 generated data, not hand-edited conclusions; update `docs/changelog.md` only for durable
 state changes; update the per-device docs for candidate outcomes (and the methodology if a rule changed); bug disposition
-lives in `docs/invariants.md` (Triaged fixes section).
+lives in `docs/developer/invariants.md` (Triaged fixes section).
 
 ## 7. Experiment loop
 
@@ -542,8 +542,8 @@ checks are demonstrated and remaining gaps are stated.
   codebase — by any name or description — must never reappear in code, configs,
   or docs. Zero occurrences, always.
 - **History has exactly two sanctioned homes:** `docs/changelog.md` (append-only) and
-  the frozen `prior_*` files. Live docs (this file, `docs/invariants.md`,
-  `docs/potential_configs.md`, `knowledge_base*`, `docs/gfx90c_results.md`, `docs/invariants.md`,
+  the frozen `prior_*` files. Live docs (this file, `docs/developer/invariants.md`,
+  `docs/gfx90c/potential_configs.md`, `knowledge_base*`, `docs/gfx90c/gfx90c_results.md`, `docs/developer/invariants.md`,
   `README.md`, `oto/device/loader.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
 - **`todo.txt` is a USER-ONLY file** (restated here).
@@ -561,17 +561,17 @@ checks are demonstrated and remaining gaps are stated.
 
 ## 9. Task routing
 
-- "What is this repo?" → `docs/gfx90c_knowledge_base.md`
+- "What is this repo?" → `docs/gfx90c/gfx90c_knowledge_base.md`
 - "What changed / why?" → `docs/changelog.md`
-- "What's next?" → `docs/invariants.md`
-- "What footprint do we replicate?" → `docs/invariants.md`
-- "What are the ceilings / acceptance bars?" → `docs/gfx90c_theoretical_limits.md`
-- "What candidates?" → `docs/potential_configs.md` (methodology) / `docs/gfx90c_tuning_guide.md` §13 (record)
-- "What bug / fix status?" → `docs/invariants.md` (Triaged fixes section)
-- "What did runs prove?" → `docs/gfx90c_results.md`
-- "How does the driver work?" → `docs/invariants.md` (The Driver Architecture)
-- "What is the search strategy?" → `docs/invariants.md` (agentic tuning context)
-- "What are the frozen prior conclusions?" → `docs/gfx90c_tuning_guide.md` §14 (measured results only), then verify against current sources.
+- "What's next?" → `docs/developer/invariants.md`
+- "What footprint do we replicate?" → `docs/developer/invariants.md`
+- "What are the ceilings / acceptance bars?" → `docs/gfx90c/gfx90c_theoretical_limits.md`
+- "What candidates?" → `docs/gfx90c/potential_configs.md` (methodology) / `docs/gfx90c/gfx90c_tuning_guide.md` §13 (record)
+- "What bug / fix status?" → `docs/developer/invariants.md` (Triaged fixes section)
+- "What did runs prove?" → `docs/gfx90c/gfx90c_results.md`
+- "How does the driver work?" → `docs/developer/invariants.md` (The Driver Architecture)
+- "What is the search strategy?" → `docs/developer/invariants.md` (agentic tuning context)
+- "What are the frozen prior conclusions?" → `docs/gfx90c/gfx90c_tuning_guide.md` §14 (measured results only), then verify against current sources.
 
 ## 10. Final response discipline
 
@@ -594,10 +594,10 @@ Produce an optimal Tensile library for the gfx90c iGPU in Ryzen 5 5650U
 AMD never shipped. Two standing bars:
 
 1. **Footprint parity** — the 38 (family, shape) cells in
-   `docs/invariants.md` must each carry a native gfx90c kernel; the
+   `docs/developer/invariants.md` must each carry a native gfx90c kernel; the
    floor is the reference library.
 2. **Approach the theoretical limit** — the per-family roofs in
-   `docs/gfx90c_theoretical_limits.md`. Verdicts compare against that authority,
+   `docs/gfx90c/gfx90c_theoretical_limits.md`. Verdicts compare against that authority,
    medial-of-seeds + clock-normalised.
 
 ## How oto is built — two loops, one rule
@@ -608,7 +608,7 @@ policy → harvest / mutate ≤2 knobs / tie. Given the deck, the driver is
 repeatable: a config either benches green or refuses, and no probabilistic
 gate, heuristic tuner, or model sits inside it. Correctness is decided by
 Tensile's builds and the hardware, never by a model; verdicts are computed
-from medians-of-seeds by policy code. `docs/invariants.md` is the
+from medians-of-seeds by policy code. `docs/developer/invariants.md` is the
 contract for this loop, and the LLM has no role in it.
 
 **The outer layer (which configs go on the deck) is LLM-assisted and ships
@@ -619,10 +619,10 @@ today.** The `oto/agents` package carries exactly this layer:
   the tuning context, with directed prompts that require ISA-manual citations.
 - **oto agent consult** (`oto/agents/census_consult.py`, shipped) ingests a
   starter file + a device profile + the local corpus and emits
-  `<codename>_docs/potential_configs.md` with gate-legal rows, corpus priors,
+  `<codename>_docs/gfx90c/potential_configs.md` with gate-legal rows, corpus priors,
   rejection taxa, and a TTY to-do list — CPU-only.
 - The directed research corpus (`oto agent generate`) is LLM-drafted, draft
-  only; `docs/invariants.md` marks precisely which parts are *shipped*
+  only; `docs/developer/invariants.md` marks precisely which parts are *shipped*
   vs *design* (the GPU proof, `OTO_AGENT_ALL`, `--full`, `--trials-per-family`
   have no code).
 
@@ -656,7 +656,7 @@ review, plus the deterministic driver for everything measured).
 - Retirement is the evidence-gated single Tier-2 path
   (`oto/metrics/cell_policy.check_retirement_eligibility`); the floor is never
   a retirement signal.
-- The accepted ceiling set lives in `docs/gfx90c_theoretical_limits.md`; the
+- The accepted ceiling set lives in `docs/gfx90c/gfx90c_theoretical_limits.md`; the
   acceptance report carries those ceilings alongside verdicts.
 
 ---
@@ -700,7 +700,7 @@ not speculative; it is a codification.
 
 1. **Floor discovery from the installed TensileLibrary** — the shipped gfx900
    manifest gave 2,285 kernels across 28 families; the *footprint contract*
-   (`docs/invariants.md`) cut to 1,027 candidate rows from the
+   (`docs/developer/invariants.md`) cut to 1,027 candidate rows from the
    floor's own winning config captures. In launchable form the deck was
    ~493 numeric measurements + ~60 builder probes. The lesson: the floor's
    winners are the *easiest-to-vet* starting candidates — the vendor already
@@ -914,7 +914,7 @@ campaign.
 | `oto/harness/deck_probe.py` | optional probe stage (not yet wired to the consult) |
 | `oto/runners/library_build.py` | `--with-docs` path also emits agent-1/agent-2 docs beside the consult |
 | `tests/test_census_consult.py` | the acceptance test (synthetic profile, zero GPU) |
-| `docs/operator_runbook.md` | a pointer to this file as the Class B entry for new-device docs |
+| `docs/operator/operator_runbook.md` | a pointer to this file as the Class B entry for new-device docs |
 
 ---
 
@@ -941,7 +941,7 @@ campaign.
  from `oto agent consult`; either way the loop below is deterministic)
 
 shipped gfx900 footprint (28 families, 4 patterns)
-    ↓ translate decks (docs/invariants.md) — never copy ISA900 kernels
+    ↓ translate decks (docs/developer/invariants.md) — never copy ISA900 kernels
 native gfx90c family phases
     ↓ correctness (compiler + client + anti-alias)
 HW benchmark (median-of-seeds, ruler-adjusted)
@@ -1002,7 +1002,7 @@ The `Core Strategy` above says *that* the loop mutates ≤2 knobs; it does not s
 *which* knobs first. This section does, and it is the one place that owns the
 ordering. It is the conclusion of the external autotuning literature applied to
 7 CUs / 64 KiB LDS / 1 MiB L2 / no MFMA; the per-knob legal domains live in
-`docs/gfx90c_tuning_guide.md` §1.1 and the virgin axes in §9.1.
+`docs/gfx90c/gfx90c_tuning_guide.md` §1.1 and the virgin axes in §9.1.
 
 **Stage 0 — analytic pre-filter, zero GPU cost.** A draw that fails any of these
 is a guaranteed refusal, and every refusal costs one of the mutator's five draws
@@ -1150,7 +1150,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
    repo: **14–25 configs/cell is a *small shortlist*** — sensible after strong legality/resource
    pruning, risky when the candidates are near-duplicates. The corpus's ZZ cell (5 distinct
    geometries, and the family furthest from ceiling) is the near-duplicate end of that scale
-   (`docs/gfx90c_tuning_guide.md` §13 §R28/§R33).
+   (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R28/§R33).
 8. **Surrogate / Bayesian / bandit selection is published for GPU kernels** (rough, discrete,
    constrained spaces, expensive evaluations — Willemsen et al.; KernelTuner's multiple
    optimisers; Ansor's learned cost model). It is **explicitly OUT of this project's contract**:
@@ -1162,7 +1162,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
 9. **Per-shape tuning is established practice, not a guaranteed gain.** CLBlast tunes on the
    actual dimensions; Triton uses shape-keyed autotune. Specialise only where grid quantisation,
    edge waste, K length or cache reuse differ materially (gfx90c: the small-shape band,
-   `docs/gfx90c_tuning_guide.md` §13 §R29); keep the family-wide config as baseline/fallback and retain a
+   `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R29); keep the family-wide config as baseline/fallback and retain a
    specialisation only when the gain repeats outside the tie band.
 
 **Cost model (cheap, no GPU).** Predicted time ≈ `max(flops/peak, bytes/bw) + LDS_conflict_penalty`,
@@ -1235,7 +1235,7 @@ emit per-family tile decks from:
 1. the mapped gfx900 top-tiles above (translated, never copied: `_ISA900_` kernels are
    not runnable), and
 2. the measured frozen prior winners (below) — the only datapoints
-   already gfx90c-native (frozen prior conclusions, per `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)).
+   already gfx90c-native (frozen prior conclusions, per `docs/gfx90c/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)).
 
 The spoof floor for A/B is the **shipped footprint itself**: `oto bench`
 benchmarks every shipped kernel once (ScheduleName `vega10`, at the family deck shapes
@@ -1261,7 +1261,7 @@ Expected coverage denominators now come from that pinned manifest, not this (his
 | Grid underfill fix | GSU only when grid underfills 7 CUs: 256³→GSU8, 512³→GSU2, 128x128x2048→GSU1 |
 | Label-only (ignore) | `ScheduleName: "isa"` vs `"vega10"` — verdict G, no measured effect |
 
-Ruler/floor numbers (single-rate; ceiling authority `docs/gfx90c_theoretical_limits.md`):
+Ruler/floor numbers (single-rate; ceiling authority `docs/gfx90c/gfx90c_theoretical_limits.md`):
 FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
 
 ## 4. Enforcement (how the contract is kept)
@@ -1272,14 +1272,14 @@ FP32 1613, FP16 3226, BF16 1613, INT8 1613, FP64 101.
   *policy* choice, not a measured fact: the corpus-measured noise floor is ±27.8%
   (repeat CV p90, `ab_audit.repeat_dispersion`), so a ±5% tie band reports
   sub-noise differences as if they were parity. `ab_audit.py` grades at ±27.8%.
-  See `docs/gfx90c_results.md` §12.3.
+  See `docs/gfx90c/gfx90c_results.md` §12.3.
 - Peaks are never a signal; gfx900 spoof is a floor; `SPOOF floor is never re-rolled`
   (dedicated `gfx900_ref_*` chain; `--resume` only, no partial re-runs).
 - **Retire only on sampling-gated evidence** (≥2 independent runs/cell + CV gates),
   never on a single N=1 run.
 - No re-sweep of already-failed cells (potential_configs verdicts carried).
 
-## 5. Concrete next actions (registered in docs/invariants.md Steps 3-6)
+## 5. Concrete next actions (registered in docs/developer/invariants.md Steps 3-6)
 
 1. Emit native family decks in `phases.yaml` (Step 3).
 2. Deterministic `--auto` loop drives coverage + convergence (Step 4).

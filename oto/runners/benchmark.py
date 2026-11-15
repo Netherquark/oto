@@ -92,7 +92,7 @@ profile=None,
             f"Tensile client not found: expected {driver.tensile_root}/build/client/"
             "tensile-client or an OTO_TENSILE_CLIENT override. Tensile would read the "
             "config, build the launcher, and die deep inside every phase; fail before "
-            "the campaign instead. Build the client (see docs/operator_runbook.md) or "
+            "the campaign instead. Build the client (see docs/operator/operator_runbook.md) or "
             "set OTO_TENSILE_CLIENT to an existing tensile-client.")
 
     cmd = [

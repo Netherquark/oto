@@ -35,7 +35,7 @@ _TIE_ADAPT: list[tuple[str, str, str, str, int, int,
     ]),
     # SS LSU=2: the winner tile is *illegal* at LSU 2 -- the reduction buffer
     # 2*128*128*4 B = 131072 B exceeds the 65536 per-CU LDS ceiling
-    # (docs/gfx90c_tuning_guide.md §13 §R24) -- so the wave-fill probe runs on the widest
+    # (docs/gfx90c/gfx90c_tuning_guide.md §13 §R24) -- so the wave-fill probe runs on the widest
     # LEGAL LSU-2 tile instead: M and DepthU kept, N halved to sit exactly on
     # the reduction cap, VW2 because a 4-wide load does not divide the 8x4
     # operand access.
@@ -90,7 +90,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _variants in _TIE_ADAPT:
                            "note": "2026-10-17 tie-adapt: " + _note})
 
 
-# --- the never-co-varied forwarded axes (docs/potential_configs.md rewrite 7 §R37) --
+# --- the never-co-varied forwarded axes (docs/gfx90c/potential_configs.md rewrite 7 §R37) --
 #
 # §R37 is why these exist. The 2026-10-18 run left 18 cells inside the report's
 # +/-5% tie band; the `_TIE_ADAPT` batch above had already probed NonTemporalA/B,
@@ -522,7 +522,7 @@ for _fam, _tile, _tt, _vw, _du in _R47_SMALL_CELLS:
                 f"unmeasured thread tile ({_tt})"})
 
 # 2026-10-21 R48 -- the three cells that are really behind, aimed by the
-# fill/waste arithmetic (docs/potential_configs.md R48).
+# fill/waste arithmetic (docs/gfx90c/potential_configs.md R48).
 #
 # The graded number on a small cell is NOT the kernel's quality: the SAME
 # binary that scores 412 at SS:256 scores 981 at SS:4096. What the cell costs

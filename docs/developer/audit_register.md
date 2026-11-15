@@ -11,7 +11,7 @@ outside the deterministic convergence loop) to review the repo and records the
 findings here. The review targets **memory leaks, race conditions, logical bugs,
 data-integrity errors, deadlocks, resource leaks, error-path bugs, and other
 correctness defects** in the codebase. Findings are recorded back into this file
-(§0), triaged, and feed fixes in `docs/invariants.md` (Triaged fixes) and
+(§0), triaged, and feed fixes in `docs/developer/invariants.md` (Triaged fixes) and
 `docs/changelog.md`.
 
 Hard lines (mirror `claude.md` guardrails):
@@ -55,13 +55,13 @@ How to run an audit:
 3. Agent reports each finding as an exact `file:line` with repro/evidence; new
    entries are appended to the register. Existing entries are never edited in
    place — only their status cell is annotated.
-4. User triages: **Accepted** → fix specified in `docs/invariants.md`
+4. User triages: **Accepted** → fix specified in `docs/developer/invariants.md`
    Triaged fixes; **Rejected** → rationale recorded; **Pending** → left for the
    next audit pass.
 
 ## 1. Sources
 
-Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked).
+Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `docs/gfx90c/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked).
 
 | Finding | Prior status | oto posture |
 |---|---|---|
@@ -83,7 +83,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   with `"`, `\`, or embedded newline corrupted live records; 2/1283 already
   broken).
 - **No fork-lock:** single-writer process; SQLite WAL mode; INSERT-only `records`
-  table with `json.dumps` payload (`docs/gfx90c_knowledge_base.md` §10.2). No sibling `.lock`
+  table with `json.dumps` payload (`docs/gfx90c/gfx90c_knowledge_base.md` §10.2). No sibling `.lock`
   files, no fd-9 `flock(1)` dance, no retry state machines.
 - **No inferred missing controls:** missing (dt,cls) ruler or un-gated telemetry
   window → "not computable / unadjusted", never 1.0 fabrication and never a
@@ -148,7 +148,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   is visible, and the kill guards above.
 - **Occupancy cap (T9):** VGPR pressure + grid underfill limits achieved
   utilization to ~69–77% of pipe — the performance objective to raise, not a
-  hazard (docs/gfx90c_theoretical_limits.md §7).
+  hazard (docs/gfx90c/gfx90c_theoretical_limits.md §7).
 
 ## 5. Acceptance criteria unchanged
 

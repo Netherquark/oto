@@ -1,5 +1,5 @@
 """Coverage-parity rule: the produced TensileLibrary must map EXACTLY to the
-shipped gfx900 library in (shape, dtype) cells (docs/gfx90c_knowledge_base.md §6.1).
+shipped gfx900 library in (shape, dtype) cells (docs/gfx90c/gfx90c_knowledge_base.md §6.1).
 
 Two clauses:
 

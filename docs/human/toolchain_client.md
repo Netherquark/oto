@@ -104,7 +104,7 @@ FAILs is the bar, and it's what this repo's docs assert.
 
 ## See also
 
-`docs/operator_runbook.md` — the operator SOP; `docs/invariants.md`;
+`docs/operator/operator_runbook.md` — the operator SOP; `docs/developer/invariants.md`;
 `.env.example` — the layout reference for each key.
 
 
@@ -112,7 +112,7 @@ FAILs is the bar, and it's what this repo's docs assert.
 
 
 
-See `docs/toolchain_client.md` for the toolchain contract and the client-build
+See `docs/human/toolchain_client.md` for the toolchain contract and the client-build
 troubleshooting table. The most common failure modes:
 
 - `No complete ROCm SDK found` → install TheRock nightly or pass

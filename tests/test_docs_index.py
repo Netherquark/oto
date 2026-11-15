@@ -20,7 +20,7 @@ def test_agent_classes_have_entries():
     assert "A" in AGENT_CLASSES
     assert "B" in AGENT_CLASSES
     assert AGENT_CLASSES["A"]["entry"] == "claude.md"
-    assert AGENT_CLASSES["B"]["entry"] == "docs/operator_runbook.md"
+    assert AGENT_CLASSES["B"]["entry"] == "docs/operator/operator_runbook.md"
 
 
 def test_doc_for_class_a_returns_dev_and_shared():

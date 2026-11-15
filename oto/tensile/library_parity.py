@@ -11,7 +11,7 @@ install-time refusal (`oto.tools.consolidate_install`).
 Public API: phase_family, phase_cells, phases_cells, load_pipeline_phases,
 parity_report. (The CLI ``main`` lives in `oto.checks.library_parity`.)
 
-The rule, canonically stated in ``docs/gfx90c_knowledge_base.md`` §6.1:
+The rule, canonically stated in ``docs/gfx90c/gfx90c_knowledge_base.md`` §6.1:
 
   * **no contraction** -- every shipped cell must have at least one device phase;
   * **no extension** -- no phase may address a cell outside the shipped grid.

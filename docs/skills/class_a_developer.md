@@ -4,7 +4,7 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 
-**Entry**: `docs/skills/caveman.md` (token efficiency, optional) → `claude.md` → `docs/harness_runbook.md` → `docs/docstrings.md`
+**Entry**: `docs/skills/caveman.md` (token efficiency, optional) → `claude.md` → `docs/developer/harness_runbook.md` → `docs/developer/docstrings.md`
 
 ## What you do
 - Work ON the oto codebase (fix bugs, add features, refactor)
@@ -13,16 +13,16 @@ review-interval: 90d
 
 ## What you read
 - `claude.md` (entry contract, invariants, guardrails)
-- `docs/harness_runbook.md` (harness quick reference)
-- `docs/docstrings.md` (docstring convention)
-- `docs/harness_runbook.md` (harness guardrails)
-- `docs/invariants.md` (live plan)
+- `docs/developer/harness_runbook.md` (harness quick reference)
+- `docs/developer/docstrings.md` (docstring convention)
+- `docs/developer/harness_runbook.md` (harness guardrails)
+- `docs/developer/invariants.md` (live plan)
 - `docs/changelog.md` (what landed)
 - `docs/incomplete_work.md` (open register)
 
 ## What you never need
 - Operator starter files (`docs/starter_*.md`)
-- `docs/operator_runbook.md` as a procedure
+- `docs/operator/operator_runbook.md` as a procedure
 - GPU runs (user-TTY-only)
 
 ## Tools you use

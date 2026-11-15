@@ -239,7 +239,7 @@ and NOT the experimental data (that is `results.md`).
   `gfx90c_tuning_guide.md`; stale `oto.runners.stage_cli` invocations mapped to the
   current `oto <cmd>` vocabulary; `docs/comparability.md` command example for
   `regression_matrix` (`--side` never existed; `--any-protocol` is the flag);
-  `docs/docstrings.md` doc verifier path corrected after the evergreen rewrite;
+  `docs/developer/docstrings.md` doc verifier path corrected after the evergreen rewrite;
   `oto/README.md` regenerate. `peaks.py` was deleted (no import site left in the
   code) — the profile table is now only `profiles/gfx90c.json` plus
   `oto/device/{loader,profile,vocabulary}.py`.
@@ -263,7 +263,7 @@ and NOT the experimental data (that is `results.md`).
   byte-compile walk) and the two CLI-UX smoke tests, which the rework
   re-asserted against the final renderer (`tests/test_docs_cli.py`,
   `tests/test_cli_smoke.py`). Also absorbed the stale `plans/verify_all.py`
-  citation in `docs/docstrings.md` (now cites `oto/tools/verifiers/verify_all.py`;
+  citation in `docs/developer/docstrings.md` (now cites `oto/tools/verifiers/verify_all.py`;
   b4d1c87). This closes the re-run caveat in the 15th entry. Nothing in this
   entry was pushed.
 - **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
@@ -295,8 +295,8 @@ and NOT the experimental data (that is `results.md`).
   undefined-name rebind `from oto.metrics.ab_audit import _registry_records`
   was re-sourced to `oto.metrics.ab_records`). The docs ecosystem documents
   the gates alongside pyflakes and the 60-line function rule (`docs/README.md`
-  §The quality gates, `docs/agent_reference.md`, `docs/harness_runbook.md`,
-  `docs/operator_runbook.md`, `claude.md`); the two-class boundary is
+  §The quality gates, `docs/agent_reference.md`, `docs/developer/harness_runbook.md`,
+  `docs/operator/operator_runbook.md`, `claude.md`); the two-class boundary is
   unchanged. Full-suite re-verification on this loaded machine was infeasible
   at integration time; the four tree-walking guard suites pass and the gates
   are the standing commit battery now.
@@ -813,7 +813,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_corpus_census.py` on a synthetic database (median basis, geometry
   collapse, placeholder/zero skip, cube-cell filter, HPA alias resolution,
   CLI/JSON paths). Registered
-  in `claude.md` §2.2, `docs/harness_runbook.md` (the census is question 0
+  in `claude.md` §2.2, `docs/developer/harness_runbook.md` (the census is question 0
   before `deck_review`) and `docs/agent_reference.md`; `oto/README.md`
   regenerated.
 
@@ -1038,7 +1038,7 @@ and NOT the experimental data (that is `results.md`).
   `path.py:attr`) probes a rule that is not in the gate yet. Live (ours):
   `workgroup_file` 0 false rejections / 40 caught, `lds_reduction` 0/13, `apm2`
   0/28, `nt_budget` 1/26. Registered in `oto/README.md`, `claude.md` §2.2/§5,
-  `docs/harness_runbook.md`, `docs/agent_reference.md`; the `nt_budget` finding
+  `docs/developer/harness_runbook.md`, `docs/agent_reference.md`; the `nt_budget` finding
   folded into `kernel_tuning_research.md` §4.
 - **2026-10-18 — the unparseable-tile crash fixed; `occupancy_feasible`
   decomposed.** Two robustness gaps left by the gate closure above, both pinned
@@ -3884,7 +3884,7 @@ in the gate, not the tile choice.
 
 ## 2026-10-12 — Docs whittling: `oto/harness/README.md` history archived
 
-`oto/harness/README.md` was moved to `docs/harness_runbook.md` (it is now inside the
+`oto/harness/README.md` was moved to `docs/developer/harness_runbook.md` (it is now inside the
 documented ecosystem directory). Its `/tmp`-prototyping history and stale counts were
 archived here.
 
@@ -3892,10 +3892,10 @@ archived here.
 
 ## Historical note from L1–8 /tmp context (trimmed for changelog)
 
-This content was preserved from the former harness runbook that referenced `/tmp` prototyping history. The original runbook has been relocated to `docs/harness_runbook.md`; CPU-only/benchmarking contract and the ecosystem map are referenced there and in `claude.md`.
+This content was preserved from the former harness runbook that referenced `/tmp` prototyping history. The original runbook has been relocated to `docs/developer/harness_runbook.md`; CPU-only/benchmarking contract and the ecosystem map are referenced there and in `claude.md`.
 
 - CPU-only, never benchmarks: see `claude.md` §5 (Non-negotiable project guardrails) for the operational constraint.
-- Ecosystem: see `docs/README.md` for the MD-docs-vs-docstrings boundary; layout and ownership now point at `oto/README.md` and `docs/harness_runbook.md`.
+- Ecosystem: see `docs/README.md` for the MD-docs-vs-docstrings boundary; layout and ownership now point at `oto/README.md` and `docs/developer/harness_runbook.md`.
 
 ## 2026-10-12 — docs restoration after the whittling (and one gate-harness fix)
 
@@ -3990,7 +3990,7 @@ the pre-built seed pool.
   structure. Preflight: `generate_candidates --dry-run` 1089, `check_candidates
   --quiet` 0 illegal, full suite 922 passed / 8 skipped.
 
-- **2026-11-13 — the docs ecosystem gets two agent classes and a registry test.** All owner docs are now class-tagged (`dev` / `operator` / `shared`) in the `docs/README.md` registry: class A (developer agents working on oto) routes to `claude.md`; class B (operator agents producing a best-effort library for an unsupported AMD platform) routes to the new `docs/operator_runbook.md` — preconditions → detect → starter pair → agent research → human verification gate → docs synthesis (the `<codename>_*.md` artefacts) → CPU-only harness study → TTY benchmark → `--best-library` → verification matrix and failure table. `claude.md` §1 and `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now fails when a tracked Markdown file is unregistered, when a registry glob matches no tracked file, or when a registry row lacks a class tag. Registered this round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`, and the starter-pair docs. Removed stale `plans/verify_*.py` registry row (no such tracked files). Also landed the harness toolkit for class A/B use (`oto/agents/harness_tools.py`: corpus census with floor/native split + TARGET_CELLS coverage, round-robin candidate proposals, CPU-gate verification, `build_harness_study`) wired into `--generate-device-docs`, which now also writes `<codename>_harness_study.md` and `<codename>_potential_configs.md`.
+- **2026-11-13 — the docs ecosystem gets two agent classes and a registry test.** All owner docs are now class-tagged (`dev` / `operator` / `shared`) in the `docs/README.md` registry: class A (developer agents working on oto) routes to `claude.md`; class B (operator agents producing a best-effort library for an unsupported AMD platform) routes to the new `docs/operator/operator_runbook.md` — preconditions → detect → starter pair → agent research → human verification gate → docs synthesis (the `<codename>_*.md` artefacts) → CPU-only harness study → TTY benchmark → `--best-library` → verification matrix and failure table. `claude.md` §1 and `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now fails when a tracked Markdown file is unregistered, when a registry glob matches no tracked file, or when a registry row lacks a class tag. Registered this round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`, and the starter-pair docs. Removed stale `plans/verify_*.py` registry row (no such tracked files). Also landed the harness toolkit for class A/B use (`oto/agents/harness_tools.py`: corpus census with floor/native split + TARGET_CELLS coverage, round-robin candidate proposals, CPU-gate verification, `build_harness_study`) wired into `--generate-device-docs`, which now also writes `<codename>_harness_study.md` and `<codename>_potential_configs.md`.
 
 - **2026-11-13 — the CLI front door (`oto`) lands (Phase 1–4 of the CLI UX rework).**
   Replaced the multi-mechanism root shim with a single verb-first front: subcommands
@@ -4287,16 +4287,16 @@ the pre-built seed pool.
   one-shot plans (MASTER_PLAN, RENAME_AND_DOC_CLEANUP, CLI_UX_REWORK,
   REFACTOR_2_UNIVERSAL_GPU, AGENTIC_POTENTIAL_CONFIGS, test_optimization) are
   deleted — their durable content was folded into `incomplete_work.md`,
-  `claude.md`, `docs/operator_runbook.md` and this log before removal. The
+  `claude.md`, `docs/operator/operator_runbook.md` and this log before removal. The
   docs/root layout was flattened to a single `docs/` home:
   `mapping.md -> docs/shipped_floor_contract.md`,
-  `results.md -> docs/results.md`, `knowledge_base.md -> docs/knowledge_base.md`,
+  `results.md -> docs/gfx90c/results.md`, `knowledge_base.md -> docs/gfx90c/knowledge_base.md`,
   `gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md`,
   `implementation_plan.md` (kept, not deleted: self-contained driver
-  architecture + triaged fixes), `potential_configs.md -> docs/potential_configs.md`,
+  architecture + triaged fixes), `potential_configs.md -> docs/gfx90c/potential_configs.md`,
   `tensile_tuning_context.md -> docs/search_philosophy.md`,
   `kernel_tuning_research.md` + `complex_gemm_research_brief.md` -> `docs/research/`,
-  `adversarial_review.md -> docs/audit_register.md`;
+  `adversarial_review.md -> docs/developer/audit_register.md`;
   `implementation_plan.md` and all references re-pointed; `context.md` /
   `context_raw.md` were untracked owner scratch and are out of scope. `prior_*`
   moved to `archive/`. Module renames across `oto/` (34) and `tests/` (13):
@@ -4416,19 +4416,19 @@ the pre-built seed pool.
   2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
   owner's API key and the Tensile client build are both still required.
 - **2026-11-15 (46th) — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
-  docs/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
+  docs/gfx90c/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
   the A/B audits, the like-for-like regrade, the steal, the stop-list, the overnight runbook). Its entire
   content — every measured number, table, run id, verdict and superseded rewrite — now lives in
-  `docs/gfx90c_tuning_guide.md` §13 (all R-numbers preserved; bring-up case study for agents imitating a
+  `docs/gfx90c/gfx90c_tuning_guide.md` §13 (all R-numbers preserved; bring-up case study for agents imitating a
   new-target port). The doc itself is rewritten as the device-independent methodology: what a deck is, the
   zero-calibration gate method (accumulator / register-file / LDS / load-divisibility / oracle), the
   like-for-like measurement rules (protocol parity, tie-band policy, rank-1 medians, sweep order), the
   literature-mapped experiment order, the ledger-trace reading, the overnight protocol, and the porting
-  checklist. A full resolution table (`docs/potential_configs.md` §10) maps every former §-pointer so
+  checklist. A full resolution table (`docs/gfx90c/potential_configs.md` §10) maps every former §-pointer so
   historical citations stay resolvable; non-R section references across docs, comments and tests were
-  re-pointed mechanically to `docs/gfx90c_tuning_guide.md` §13. Registry (`docs/README.md`), generated index
+  re-pointed mechanically to `docs/gfx90c/gfx90c_tuning_guide.md` §13. Registry (`docs/README.md`), generated index
   (`docs/docs_index.json`, via `oto agent index`), `docs/agent_reference.md`, `docs/README.md`,
-  `README.md`, `claude.md`, `docs/gfx90c_theoretical_limits.md`, `docs/knowledge_base.md`,
+  `README.md`, `claude.md`, `docs/gfx90c/gfx90c_theoretical_limits.md`, `docs/gfx90c/knowledge_base.md`,
   `docs/operator_campaign.md` and `docs/research/kernel_tuning.md` updated to the new split. No instrument,
   gate, verdict or deck row changed. The commit history of both files was studied first (65 commits on
   potential_configs.md; the 2026-10-12 whittle/restore cycle preserved). Suite RC=0.
@@ -4439,14 +4439,14 @@ the pre-built seed pool.
     (two loops, one rule; gfx902 blocked on the API key is stated, not hidden); the README architecture
     flowchart gains the agent layer and states the acceptance path is deterministic; `docs/search_philosophy.md`
     retitled (agentic tuning context; deterministic acceptance path; no surrogate in the loop; the model
-    never decides); `claude.md` and `docs/audit_register.md` updated likewise; `oto/__init__.py` docstring's
+    never decides); `claude.md` and `docs/developer/audit_register.md` updated likewise; `oto/__init__.py` docstring's
     opening line corrected; `oto/tools/potential_configs.py` citation updated.
 - **2026-11-15 (47th) — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
   Per owner direction, `archive/` is no longer tracked in git (its content stays on disk, ignored via the
   standing `archive/` rule); nothing was deleted. The archive's markdown was studied first:
   - **The prior-campaign autopsy** (attempt1, 2026-09-04 → 09-13: the 9-file patch failure, the 3-entry
     shim port, the peak-table correction, the ±23–31 % A/B envelope, the GPU-hang playbook, the
-    winner-instability autopsy) is absorbed verbatim into `docs/gfx90c_tuning_guide.md` §14; the research
+    winner-instability autopsy) is absorbed verbatim into `docs/gfx90c/gfx90c_tuning_guide.md` §14; the research
     passes' audit trail is recorded as §15 (corpus.pass1–3, RESEARCH_PROMPT3, the pre-rewrite deck snapshot).
   - **The research-prompt discipline** — the multi-round, evidence-labelled, prohibition-guarded research
     workflow the campaign developed (one deliverable scoped exhaustively; three rounds: broad census →
@@ -4454,17 +4454,17 @@ the pre-built seed pool.
     prohibitions; adoption matrices; pre-registered mechanism-tagged predictions; do-not-cite lists) — is
     written into `docs/operator_campaign.md` §18 as the procedure the operator agent follows when the docs
     cannot answer a question it must settle. Pinned in `docs/skills/class_b_operator.md` and
-    `docs/operator_runbook.md` §10.
+    `docs/operator/operator_runbook.md` §10.
   - **`.gitignore`**: `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `dist/`, `.mypy_cache/`, `.tox/` added.
   - The guide now carries the complete bring-up history: current method (§0–§12), the port case study (§13),
     the prior-campaign autopsy (§13.4), and the audit trail (§13.5). Suite RC=0.
 - **2026-11-15 (48th) — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
-  Same treatment as the potential_configs fold: `docs/results.md` was historically gfx90c-specific evidence. It is now
-  `docs/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/results.md` is a
+  Same treatment as the potential_configs fold: `docs/gfx90c/results.md` was historically gfx90c-specific evidence. It is now
+  `docs/gfx90c/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/gfx90c/results.md` is a
   device-independent placeholder the agent populates per device — required sections (scoreboard with protocol+band,
   per-cell verdicts, gate census, straggler classes, clock/thermal discipline), the like-for-like admission rule,
-  median-of-seeds, and the TTY-only rule. `docs/gfx90c_theoretical_limits.md` was already gfx90c-named; the new
-  `docs/theoretical_limits.md` is its device-independent twin — ISA identity by probe, peak derivation from
+  median-of-seeds, and the TTY-only rule. `docs/gfx90c/gfx90c_theoretical_limits.md` was already gfx90c-named; the new
+  `docs/gfx90c/theoretical_limits.md` is its device-independent twin — ISA identity by probe, peak derivation from
   lanes×clock×throughput, the family table and the acceptance bar — referring to the gfx90c doc only as a golden
   worked example, never as a source of numbers. Cross-pointers added in both gfx90c files; all ecosystem
   references re-pointed (20 files); registry rows renamed + two template rows added; `docs/docs_index.json`
@@ -4473,12 +4473,12 @@ the pre-built seed pool.
   C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
   anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
   pointers; nothing actioned, nothing claimed.
-- **2026-11-15 (50th) — docs/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
-  `docs/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
+- **2026-11-15 (50th) — docs/gfx90c/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
+  `docs/gfx90c/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
   Oct-2 overhaul accrual; the Oct-12 whittle/restore cycle that moved module-docstring facts into the code and
   deleted `knowledge_base_final.md`; the Oct-14 corpus3 fold (+184 lines: the @e8a8999e defaults table and the
   never-used-levers analysis, marked mechanism-verified/gain-unmeasured); the Oct-19 GCN5 literature folds). It is
-  now `docs/gfx90c_knowledge_base.md` (content unchanged, in-file pointer added), and the new `docs/knowledge_base.md`
+  now `docs/gfx90c/gfx90c_knowledge_base.md` (content unchanged, in-file pointer added), and the new `docs/gfx90c/knowledge_base.md`
   is a device-independent template — required sections (What Is Tensile → Port mechanism → GlobalParameters →
   Solution space → Footprint → Kernel levers source-audited → Measurement science → Preservation law → Glossary),
   how the agent populates it (probe → pin evidence → derive, never inherit → 0 unlabeled claims), and the same
@@ -4489,9 +4489,9 @@ the pre-built seed pool.
   accrual → the Oct-12 whittle/restore cycle (module-docstring facts moved into code; `knowledge_base_final.md` deleted)
   → Oct-14 corpus3 fold (+184 lines: `@e8a8999e` defaults table + the never-used-levers analysis, marked
   mechanism-verified/gain-unmeasured) → Oct-18 gate formalisation → Oct-19 GCN5 literature folds → Nov mechanical sweeps.
-  The file is now `docs/gfx90c_knowledge_base.md`; new device-independent `docs/knowledge_base.md` template (WHAT layer;
+  The file is now `docs/gfx90c/gfx90c_knowledge_base.md`; new device-independent `docs/gfx90c/knowledge_base.md` template (WHAT layer;
   populated per device by the agent). Mining: era note (toolchain moved to nightly 2026-11-14), §6 footprint table delegated
-  to `docs/shipped_floor_contract.md` §2 (single source), §7 rate card delegated to `docs/gfx90c_theoretical_limits.md`
+  to `docs/shipped_floor_contract.md` §2 (single source), §7 rate card delegated to `docs/gfx90c/gfx90c_theoretical_limits.md`
   §5 + `oto.device.derive_limits` (single source of peaks), §8.2 now points at the gate modules as normative.
   **Item 5 closed:** gfx90c-specific residue is absorbed or triaged — §6/§7/§8.2 delegated to their owners, §8.1/§8.3/§8.4/§7.1/§7.2
   are the KB's own canonical content (kept, pointed), and the four gfx90c-specific docs are split deliberately, NOT folded into
@@ -4500,13 +4500,13 @@ the pre-built seed pool.
 - **2026-11-15 (52nd) — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
   `oto/device/tensile_isa.py` `ISA_TRIPLES` now carries `gfx902 -> (9, 0, 0x02)` (public LLVM ISA-version
   fact; not a measurement) so the CPU-only build proof can pin Tensile for gfx902 instead of refusing by
-  default. Rehearsal tests updated (16/16 green); `docs/starter_pair.md` BLOCKED list updated — remaining:
+  default. Rehearsal tests updated (16/16 green); `docs/operator/starter_pair.md` BLOCKED list updated — remaining:
   profile + human verification + gfx902 silicon + the owner's API key, nothing else. The Tensile benchmark
   client is built for gfx90c from ROCm/rocm-libraries `next-cmake` against the extracted TheRock
   7.15.0a20260728 SDK (the venv HIP include shadows the nightly's hip headers; the full dist was used as
   CMAKE_PREFIX_PATH with its amd_smi). The client landed at `build/client/tensile-client` and `oto doctor`
   reports the row OK (21 ok, 0 FAIL); no `.env` change needed (doctor finds it at TENSILE_ROOT).
-  Toolchain/client contract formalised as `docs/toolchain_client.md` + `scripts/build_tensile_client.sh`
+  Toolchain/client contract formalised as `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh`
   (CPU-only, fail-closed, parameterised by `--rocm-prefix`/`--targets`; tested in tests/test_build_tensile_client.py).
   The CPU-only `oto check tensile-build --arch gfx902` probe fails honestly inside Tensile itself —
   `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023`; the pinned checkout
@@ -4520,7 +4520,7 @@ the pre-built seed pool.
     into the `AcceptanceReport` model (`oto/metrics/report_models.py`) and writes `protocol_fallback` into
     `acceptance_report.json`. Locked by `tests/test_report_protocol_fallback.py` (2/2); attested in
     `drift_manifest.json` (ast_equivalence); `oto verify all` PASSED.
-  - Audit checklist (`docs/audit_register.md` §3) fully closed, every item with evidence:
+  - Audit checklist (`docs/developer/audit_register.md` §3) fully closed, every item with evidence:
     phases.yaml order is execution order — `tests/test_manifest_order.py`; the complete `should_run` gate
     matrix — `tests/test_policy_should_run.py` (scope hit/miss, tier-1, tier-2, tier-1 precedence,
     empty→RUN, identical-fp skip); single-writer SQLite + `json.dumps` verified line by line; telemetry
@@ -4543,11 +4543,11 @@ the pre-built seed pool.
   benchmark client builds from `next-cmake` against the full TheRock 7.15 SDK (the venv's `include/hip`
   shadows the nightly headers; use the dist prefix) and is installed at
   `<TENSILE_ROOT>/build/client/tensile-client` — `oto doctor` reports the row OK (21 ok, 0 FAIL).
-  `docs/toolchain_client.md` + `scripts/build_tensile_client.sh` formalise the contract
+  `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh` formalise the contract
   (`--rocm-prefix`/`--targets`/`--tensile-root`/`--amd-smi-dir`; fail-closed; tested in
   `tests/test_build_tensile_client.py`, 7 tests). `incomplete_work.md` updated: the gfx902 Tensile-port
   step is closed (probe now passes) — what remains is `profiles/gfx902.json` (human verification),
-  the owner's API key (C4), the gfx902 TTY. `docs/starter_pair.md` BLOCKED list updated accordingly.
+  the owner's API key (C4), the gfx902 TTY. `docs/operator/starter_pair.md` BLOCKED list updated accordingly.
   Suite RC=0; `oto verify all` PASSED.
 - **2026-11-15 (54th) — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
   Every function docstring in `oto/` rewritten to pdoc prose (135 `Args:`/`Returns:`/`Raises:` blocks eliminated;
@@ -4562,8 +4562,8 @@ the pre-built seed pool.
   (21 ok, 2 pre-existing advisory WARNs). Easy-mode `oto setup`: all wizard narration moved to stderr (stdout stays a
   clean data channel), blank-default prompt artefact fixed, Ctrl-D path verified, UX contract pinned by
   `tests/test_easy_mode_ux.py`. Docs: README rewritten around the recovery-pipeline vision (blog/grant material);
-  `docs/operator_runbook.md` §19 blind convergence end-to-end (gfx902 worked instance, edge cases E1–E12, dead ends
-  D1–D6); `docs/agentic_consult.md` folded into `docs/invariants.md` §3.6–§3.8 and removed as a standalone file;
+  `docs/operator/operator_runbook.md` §19 blind convergence end-to-end (gfx902 worked instance, edge cases E1–E12, dead ends
+  D1–D6); `docs/agentic_consult.md` folded into `docs/developer/invariants.md` §3.6–§3.8 and removed as a standalone file;
   registry deduplicated; `oto agent index` regenerated; `docs/overview.md` birds-eye fixed; Get Started/usage block
   satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
   computed as the deck does) — 281 phases, 0 illegal.

@@ -163,7 +163,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
         # family is data-movement bound long before it is ALU bound: the
         # lever is tile size and LDS padding, not width (VW2 = 16 B is
         # already the cap).
-        # ---- 2026-10-14 additions (docs/gfx90c_tuning_guide.md §13 §8.2): the two
+        # ---- 2026-10-14 additions (docs/gfx90c/gfx90c_tuning_guide.md §13 §8.2): the two
         # legal-and-never-generated corners. The accumulator cap
         # (ACCVGPR_BUDGET = 128) forbids TT6x6 and TT8x8, so the only way to
         # raise CC's arithmetic intensity is a BIGGER MacroTile at the same
@@ -190,7 +190,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
             # to prove that rather than assume it.
             {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
-            # ---- 2026-10-18 (docs/gfx90c_tuning_guide.md §13 §R24): the widest LEGAL CC
+            # ---- 2026-10-18 (docs/gfx90c/gfx90c_tuning_guide.md §13 §R24): the widest LEGAL CC
             # MacroTile. The 2026-10-14 rows here were wrong. 128x128x8 at
             # 8x4 *and* 4x8 makes R*MTarea = 4*16384 = 65536 accumulator VGPRs
             # across the workgroup, so the accumulators alone fill the 64K file
@@ -271,7 +271,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
 # generator (`generate_knob_sweep_phases`), not for a duplicated block per
 # family.
 #
-# Legality: `docs/gfx90c_tuning_guide.md` §13 §8.1 records which of these survive
+# Legality: `docs/gfx90c/gfx90c_tuning_guide.md` §13 §8.1 records which of these survive
 # `validate_config` per family (111 of 133). The generator relies on the append
 # boundary to refuse the rest, so an illegal row costs a rejection and not a
 # crashed run -- but the table below is already pruned to the rows that pass on
@@ -398,7 +398,7 @@ DECISION_TRIAL_TILES: list[dict[str, Any]] = [
 #: One knob change applied on top of a KNOB_SWEEP_BASES tile. `families` lists
 #: the families this row is legal for; the generator skips it elsewhere rather
 #: than emitting a candidate that the append boundary will refuse. Measured
-#: legality per family is in docs/gfx90c_tuning_guide.md §13 §8.1.
+#: legality per family is in docs/gfx90c/gfx90c_tuning_guide.md §13 §8.1.
 KNOB_SWEEPS: list[dict[str, Any]] = [
     # ---- Addressing / issue slots: the knobs that spend non-FMA issue slots.
     # Complex is issue-bound, not bandwidth-bound (§5 of the deck), so this
@@ -456,7 +456,7 @@ KNOB_SWEEPS: list[dict[str, Any]] = [
                "but this row does not sweep.",
     },
     # ---- Load coalescing. NLCA is gated by VectorWidth through NumLoads, so
-    # each row carries the width it was validated at; docs/potential_configs.md
+    # each row carries the width it was validated at; docs/gfx90c/potential_configs.md
     # §8.1 found NLCA=2 legal at CC vw1, SS vw1/vw2, HH vw2, and nowhere else.
     {
         "knob": "NumLoadsCoalescedA",
@@ -488,10 +488,10 @@ KNOB_SWEEPS: list[dict[str, Any]] = [
     # phase costs a full subprocess and returns nothing -- no tile property
     # predicts it, which is why it is a deck decision and not a gate. The
     # "2 waves/SIMD LDS cap" the old row proposed to probe stays unconfirmed
-    # (`docs/gfx90c_knowledge_base.md` §Q-E ii); it is not a reason to ship dead phases.
+    # (`docs/gfx90c/gfx90c_knowledge_base.md` §Q-E ii); it is not a reason to ship dead phases.
     # ---- K splitting. Legal only for SS and DD on this gate:
     # `Assembly class: GlobalSplitU=2 on complex C: illegal`, and the same for
-    # every half family. Route C in docs/potential_configs.md therefore applies to
+    # every half family. Route C in docs/gfx90c/potential_configs.md therefore applies to
     # SS and DD only.
     {
         "knob": "GlobalSplitU",

@@ -220,7 +220,7 @@ PARENTS = {
 class TestDrawsAreJointlyLegal(unittest.TestCase):
     """Every draw is gate-clean *before* it is offered, not filtered after.
 
-    Triage of the campaign ledger (docs/gfx90c_tuning_guide.md §13 §R23): every candidate
+    Triage of the campaign ledger (docs/gfx90c/gfx90c_tuning_guide.md §13 §R23): every candidate
     the launch boundary ever refused was a *joint* violation -- a forward-knob
     value that is legal on its own but not beside the rest of the tile
     (GlobalLoadVectorWidth outside {VectorWidth, 1}, an LDS-budget overrun, an

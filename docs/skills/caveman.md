@@ -36,7 +36,7 @@ Intensity levels: `lite`, `full` (default), `ultra`, `wenyan-lite`,
 - **Never compress code or command lines.** `python3 -m oto tune --budget 10`
   is not "py tune 10"; commands are exact.
 - **Error strings are sacred.** Quote them verbatim, even under ultra.
-- **The data-preservation law (`docs/gfx90c_knowledge_base.md` §10) is never
+- **The data-preservation law (`docs/gfx90c/gfx90c_knowledge_base.md` §10) is never
   compressed.** It is a contract, not prose.
 
 ## Auto-Clarity
@@ -64,7 +64,7 @@ Code/commits/PRs: write normal (never caveman commits). "stop caveman" or
 ## What you never need
 
 - Anything about developing oto (routers, gate internals, test suite semantics)
-- `docs/invariants.md` (dev loop, not your own)
+- `docs/developer/invariants.md` (dev loop, not your own)
 
 ## Hard rules
 

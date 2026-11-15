@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for numeric ProblemSizes / shape ordering.
 
-The bug these lock down (`docs/gfx90c_results.md` 13.4): a candidate phase's shapes were
+The bug these lock down (`docs/gfx90c/gfx90c_results.md` 13.4): a candidate phase's shapes were
 sorted as *strings*, so the CC slot emitted ``1024, 192, 2048, 256, 512`` instead
 of the deck's ``192, 256, 512, 1024, 2048``. Tensile runs a phase's ProblemSizes
 in list order and each size's median absorbs the clock the previous size left, so

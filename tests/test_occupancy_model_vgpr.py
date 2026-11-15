@@ -315,7 +315,7 @@ class TestLocalSplitUThreadCount(unittest.TestCase):
         and only folds ``LocalSplitU`` in when WorkGroup is absent, so the two
         keys together are a silent no-op: the deck's own steal rows carried
         ``WorkGroup: [16,16,1]`` beside ``LocalSplitU: 2`` and benchmarked at
-        LSU 1 (docs/gfx90c_tuning_guide.md §13 §R23). The gate reads the emitted value."""
+        LSU 1 (docs/gfx90c/gfx90c_tuning_guide.md §13 §R23). The gate reads the emitted value."""
         ok, why = validate_tensile_loads(
             cfg("S", "128x128x8", "8x8", VectorWidth=4,
                 WorkGroup=[16, 16, 1], LocalSplitU=2))

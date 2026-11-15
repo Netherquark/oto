@@ -34,7 +34,7 @@ def _knob_section() -> list[str]:
         "| StoreCInUnroll / UnrollMajorLDS | Compute epilog | classic path only |",
         "| WorkGroupMapping | row/col mapping | miso row/col heuristics |",
         "",
-        "See `docs/gfx90c_tuning_guide.md` for the portability notes from one worked example;"
+        "See `docs/gfx90c/gfx90c_tuning_guide.md` for the portability notes from one worked example;"
         "its rules are gfx90c-specific and **do not transport to another ISA family without checking**."
         "",
     ]

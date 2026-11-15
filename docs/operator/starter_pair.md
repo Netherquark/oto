@@ -61,7 +61,7 @@ is a manual copy made by the human.
 
 - The benchmark client must exist on the host first — it is compiled once,
   CPU-only: `scripts/build_tensile_client.sh --rocm-prefix <ROCM_PREFIX>
-  --tensile-root <TENSILE_ROOT>` (contract: `docs/toolchain_client.md`;
+  --tensile-root <TENSILE_ROOT>` (contract: `docs/human/toolchain_client.md`;
   `oto doctor` reports `Tensile client OK` when it lands).
 - `oto tune` — needs the device's GPU. This step is *never* run in a desktop
   session; it is for a TTY on the target machine.
@@ -149,13 +149,13 @@ agent-researched profile that ships unverified is a bug, not a feature.
 For this repo, the worked example is the gfx90c family — see `profiles/gfx90c.json`
 and the docs here. New devices follow the same Stage A–D walk.
 
-`docs/gfx902_starter.md` + `docs/gfx902_starter.json` are a stub for a device
+`docs/operator/gfx902_starter.md` + `docs/operator/gfx902_starter.json` are a stub for a device
 oto has neither measured nor validated; they exercise the unverified-refusal path.
-See `docs/starter_template.md` for a blank template example.
+See `docs/operator/starter_template.md` for a blank template example.
 
 ## Minimal recipe
 
-1. Copy `docs/starter_template.md` and `docs/starter_template.json` to
+1. Copy `docs/operator/starter_template.md` and `docs/operator/starter_template.json` to
    `docs/<codename>_starter.{md,json}`.
 2. Fill the markdown (what you want from the device, known quirks).
 3. Fill the JSON with values you can verify, or leave a stub and research:
@@ -202,7 +202,7 @@ See `docs/starter_template.md` for a blank template example.
    D   tune / report / parity              — TTY-driven, GPU-required
                                              (client built once, CPU-only:
                                               scripts/build_tensile_client.sh;
-                                              see docs/toolchain_client.md)
+                                              see docs/human/toolchain_client.md)
 ```
 
 A new device is ready when Stage A passes on its stub and the silicon is
@@ -240,7 +240,7 @@ verified to behave. Everything between is a human's call.
 python3 -m oto setup --yes          # or `oto setup` for the guided walk
 python3 -m oto doctor               # honest status; 0 FAIL required
 python3 -m oto check candidates --quiet
-python3 -m oto agent consult docs/gfx902_starter.md
+python3 -m oto agent consult docs/operator/gfx902_starter.md
 python3 -m oto agent index
 python3 -m pytest -q
 ```
@@ -248,7 +248,7 @@ python3 -m pytest -q
 Edge cases:
 - `oto doctor` reports FAIL on the Tensile client → build it first:
   `scripts/build_tensile_client.sh --rocm-prefix <ROCM> --tensile-root <TENSILE>`.
-  The client needs a *full* SDK (see `docs/toolchain_client.md`); a python-sdk
+  The client needs a *full* SDK (see `docs/human/toolchain_client.md`); a python-sdk
   venv's partial `include/hip` shadows nightly headers with `/usr`'s ROCm 6.
 - `setup` finds no complete SDK → install TheRock nightly or pass
   `--rocm-prefix`. Never point at a partial venv.
@@ -288,8 +288,8 @@ basics but not GPU internals can accept them all.
 ## 4. Stage B — write the starter pair and (optionally) research
 
 ```bash
-cp docs/starter_template.md docs/gfx902_starter.md
-cp docs/starter_template.json docs/gfx902_starter.json
+cp docs/operator/starter_template.md docs/operator/gfx902_starter.md
+cp docs/operator/starter_template.json docs/operator/gfx902_starter.json
 ```
 
 Fill the `.md` first (target narrative + research brief). Leave the `.json`
@@ -301,7 +301,7 @@ Optional, needs an API key (never commit one):
 
 ```bash
 export ANTHROPIC_API_KEY=...   # or OPENAI_API_KEY / OTO_API_KEY
-python3 -m oto agent generate docs/gfx902_starter.md
+python3 -m oto agent generate docs/operator/gfx902_starter.md
 ```
 
 Without a key, research is a clean no-op and the docs carry the starter text
@@ -321,10 +321,10 @@ python3 -m oto.harness.candidate_generator --dry-run
 
 1. Check every value against first-party sources: AMD ISA reference, ROCm
    release notes / support matrix, SKU spec sheet.
-2. Fill `docs/gfx902_starter.json` with verified values, delete its
+2. Fill `docs/operator/gfx902_starter.json` with verified values, delete its
    `_comment`, set `**UNVERIFIED**`-tagged items to verified replacements (or
    keep the tag if still open).
-3. Promote: copy `docs/gfx902_starter.json` → `profiles/gfx902.json`.
+3. Promote: copy `docs/operator/gfx902_starter.json` → `profiles/gfx902.json`.
 4. Sanity-load:
    ```bash
    python3 -c "from oto.device.loader import load_profile; print(load_profile('gfx902'))"
@@ -365,7 +365,7 @@ Interactive controls during every phase (including cooldown sleep):
 ## 7. Edge cases, failure modes, retries, recovery
 
 Generic failure modes and the honest response are in
-[`docs/operator_runbook.md`](operator_runbook.md) §8; the table below lists
+[`docs/operator/operator_runbook.md`](operator_runbook.md) §8; the table below lists
 gfx902-specific additions.
 
 | Symptom | Cause | Response |
@@ -381,7 +381,7 @@ gfx902-specific additions.
 | Kernel ring timeout / DE crash | Memory/register pressure on the APU | Record the case; reduce occupancy; do not widen gates. Thermal cooldown between runs. |
 | Thermal instability | Mobile APU frequency/power | Use the repeat-and-cooldown policy; do not skip cooldowns. |
 | Abandoned run in registry | Append-only ledger | Leave it; `oto check db` keeps reporting it. Do not edit the ledger. |
-| Want to relax 60-line/600-line/pyflakes/ruff/py_compile/ledger rules | Temptation | No. See `claude.md` §2.0 and `docs/harness_runbook.md`. |
+| Want to relax 60-line/600-line/pyflakes/ruff/py_compile/ledger rules | Temptation | No. See `claude.md` §2.0 and `docs/developer/harness_runbook.md`. |
 
 ## 8. Dead ends (documented, do not re-raise without new info)
 
@@ -436,9 +436,9 @@ Performance claims are reported as measured, never extrapolated.
 
 ## 12. Reading order (class B, gfx902)
 
-`claude.md` (§2.0 only) → `docs/operator_runbook.md` →
-`docs/operator_runbook.md` → `docs/starter_pair.md` →
-`docs/harness_runbook.md` → this file → `docs/gfx902_starter.md` → the module
+`claude.md` (§2.0 only) → `docs/operator/operator_runbook.md` →
+`docs/operator/operator_runbook.md` → `docs/operator/starter_pair.md` →
+`docs/developer/harness_runbook.md` → this file → `docs/operator/gfx902_starter.md` → the module
 docstring of anything you edit.
 
 ## 13. Token efficiency (optional)

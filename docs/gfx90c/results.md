@@ -11,7 +11,7 @@ review-interval: 90d
 > agent on a new target has run real benchmarks and fills it in honestly.
 > Until then it says only what belongs here and how it gets here.
 >
-> The gfx90c port's measured record lives in `docs/gfx90c_results.md` — consult
+> The gfx90c port's measured record lives in `docs/gfx90c/gfx90c_results.md` — consult
 > it as a golden reference / worked example **only if needed**, and never copy
 > its numbers as evidence for another device; those numbers belong to that
 > machine, that library, that day. Reproduce, don't transplant.
@@ -21,9 +21,9 @@ review-interval: 90d
 This is the per-port home of measured A/B evidence: scoreboard, per-cell
 verdicts, gate census, the clock discipline behind the numbers. It is *not* the
 ceiling authority (that is `docs/<codename>_theoretical_limits.md`, filled the
-same way from the generic `docs/theoretical_limits.md` template), and it is *not*
-the candidate deck (`docs/potential_configs.md`'s worked example is the gfx90c
-case study in `docs/gfx90c_tuning_guide.md` §13).
+same way from the generic `docs/gfx90c/theoretical_limits.md` template), and it is *not*
+the candidate deck (`docs/gfx90c/potential_configs.md`'s worked example is the gfx90c
+case study in `docs/gfx90c/gfx90c_tuning_guide.md` §13).
 
 ## 2. How the agent populates it — the order is load-bearing
 
@@ -34,7 +34,7 @@ case study in `docs/gfx90c_tuning_guide.md` §13).
 3. Re-read coverage and triage:
    `python3 -m oto.harness.cell_resolver --taxonomy`
 4. Read the like-for-like report — both arms under the **same protocol**
-   (`oto report --json` / `oto report --html`; see `docs/gfx90c_results.md` for
+   (`oto report --json` / `oto report --html`; see `docs/gfx90c/gfx90c_results.md` for
    the admission rule). State the tie band you used and the measured
    reproducibility band beside it; a verdict without both is not a verdict.
 5. Fill in §3 below. Delete nothing that was true; append; supersede with new
@@ -53,7 +53,7 @@ case study in `docs/gfx90c_tuning_guide.md` §13).
 - **Straggler classes** — which cells are stuck, why (typed, with the number
   that shows it), and what work each class requires.
 - **Clock/thermal discipline** — telemetry coverage, sclk-ruler medians, the
-  sweep-order defect check (`docs/gfx90c_results.md` §13.4 documents the
+  sweep-order defect check (`docs/gfx90c/gfx90c_results.md` §13.4 documents the
   2026-10-15 instance of this bug).
 
 ## 4. Hard rules for whoever fills this in
@@ -72,5 +72,5 @@ case study in `docs/gfx90c_tuning_guide.md` §13).
 
 It stays empty by default. Empty means "no device has been measured and this
 file was never filled in", nothing more. The gfx90c golden example:
-`docs/gfx90c_results.md`. Instructions for a new target: `docs/starter_pair.md`,
-then the operator campaign (`docs/operator_runbook.md`).
+`docs/gfx90c/gfx90c_results.md`. Instructions for a new target: `docs/operator/starter_pair.md`,
+then the operator campaign (`docs/operator/operator_runbook.md`).

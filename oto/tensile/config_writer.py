@@ -510,7 +510,7 @@ def write_phase_config(driver, path: Path,
     # Last-mile guard. Tensile executes ProblemSizes in list order and each
     # size's median absorbs the clock state the previous size left
     # (`claude.md` 2.0.3), so a producer that scrambles the order silently
-    # changes the measurement (the CC:256 "one loser", `docs/gfx90c_results.md` 13.4). The
+    # changes the measurement (the CC:256 "one loser", `docs/gfx90c/gfx90c_results.md` 13.4). The
     # deck, FAMILY_SHAPES and TARGET_CELLS are numerically ascending; re-impose
     # that canonically here so no producer can put a poisoned sweep on the GPU.
     shapes = ordered_shapes(phase.get("shapes", ["1024x1024x1024"]))

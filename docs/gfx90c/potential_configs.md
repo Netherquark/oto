@@ -10,7 +10,7 @@ review-interval: 90d
 > deck, a gate set and an overnight run. This file is deliberately
 > architecture-agnostic: no peak, budget, or cell verdict is written here.
 > The worked example — every measured number, table, run id and verdict — is
-> the gfx90c port, preserved whole in `docs/gfx90c_tuning_guide.md` §13
+> the gfx90c port, preserved whole in `docs/gfx90c/gfx90c_tuning_guide.md` §13
 > (absorbed from this file's predecessor, which lived here through 2026-10 and
 > was the port's working document). Read that section to see how the procedure
 > lands on a real part; read this one to know how to run the procedure itself.
@@ -23,7 +23,7 @@ review-interval: 90d
 One row per (family, pattern, shape, tile, knob-set) candidate configuration.
 The deck is the *allowed set*, nothing more. It is not a search strategy
 (that is the routes and the ledger), it is not legality rationale (that is the
-gates), and it is not evidence (that is `docs/gfx90c_results.md`). The deck only
+gates), and it is not evidence (that is `docs/gfx90c/gfx90c_results.md`). The deck only
 reaches Tensile knobs the launch boundary actually forwards — a row carrying an
 unforwarded knob silently measures the base tile under a name that claims
 otherwise (see `oto/tensile/config_writer.py` `NOT_FORWARDED_KNOBS`).
@@ -46,7 +46,7 @@ synthesise (generator)  →  gate (CPU, preflight)  →  measure (GPU, TTY)  →
   non-zero on any).
 - **Gate** with `oto check candidates` (deck) and `oto check candidates --floor`
   (the shipped floor manifest). The gate set is calibrated against Tensile's
-  own verdicts — method in §3.6, worked example `docs/gfx90c_tuning_guide.md` §13 §R24.
+  own verdicts — method in §3.6, worked example `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24.
 - **Measure** in a TTY session only; the overnight procedure is §8.
 - **Grade** with the like-for-like rule of §4 against the locked floor.
 - **Re-tune** by rebuilding the kernel DB (`oto.harness.kernel_db --rebuild`),
@@ -58,7 +58,7 @@ synthesise (generator)  →  gate (CPU, preflight)  →  measure (GPU, TTY)  →
 Every rule here was **calibrated, not assumed**: for each rule, the corpus was
 re-scored and the rule counted its misses (built but refused) and false
 rejections (refused but built). The gate set ships only when both populations
-are 0 (worked example: `docs/gfx90c_tuning_guide.md` §13 §R24/§R23). On a new
+are 0 (worked example: `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24/§R23). On a new
 target, expect every rule to need re-calibration.
 
 ### 3.1 Per-thread accumulator budget
@@ -81,7 +81,7 @@ weight × MT0 × MT1 × LocalSplitU >= 65536  →  refuse
 
 is a sound lower bound independent of the measured VGPR total (ThreadTile
 cancels out). Use `>=`, not `>`: a set that exactly fills the file leaves no
-room for operands or addresses. (Worked example: `docs/gfx90c_tuning_guide.md` §13 §R24 rule 1, §R27.)
+room for operands or addresses. (Worked example: `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R24 rule 1, §R27.)
 
 ### 3.3 LDS tile budget
 
@@ -156,7 +156,7 @@ never widen a band to close a verdict.
 
 Map the literature's order before spending GPU time. Suggested sequence
 (mechanisms: `docs/research/kernel_tuning.md`, `docs/research/complex_gemm_brief.md`,
-`docs/invariants.md`):
+`docs/developer/invariants.md`):
 
 1. Small-shape band first — it is where a floor tuned for a big part loses by
    20–100 % and the gains are cheapest.
@@ -223,7 +223,7 @@ place with the date and the deciding party; the old record is never deleted.
 ## 10. Where everything went (former §-pointers)
 
 The previous content of this file — the gfx90c working document, rewrites 1–8 —
-was absorbed whole into `docs/gfx90c_tuning_guide.md` §13 with all R-numbers
+was absorbed whole into `docs/gfx90c/gfx90c_tuning_guide.md` §13 with all R-numbers
 preserved. `§14` (the prior-campaign autopsy) and `§15` (the corpus-pass audit
 trail) are new sections folded in from `archive/` after the archive left git.
 Resolution table for off-repo citations (git history, code comment

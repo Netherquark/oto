@@ -2,7 +2,7 @@
 """test_function_length.py — no function in oto/**/*.py spans more than 60 lines.
 
 The 60-line rule is a hard acceptance criterion of this repository (see
-``docs/gfx90c_knowledge_base.md`` and the guard's own history); this is its executable
+``docs/gfx90c/gfx90c_knowledge_base.md`` and the guard's own history); this is its executable
 form, so a regression fails the suite instead of shipping. The file-level
 criterion (no tracked file over 600 lines) is a sibling guard and is asserted
 repo-wide by ``tests/test_file_length.py``.

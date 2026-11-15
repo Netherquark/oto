@@ -1,6 +1,6 @@
 """Module docstring convention guard: every oto module carries the three clauses.
 
-The convention is documented in docs/docstrings.md. pdoc renders these clauses
+The convention is documented in docs/developer/docstrings.md. pdoc renders these clauses
 as prose; this test keeps them present so the generated reference is useful.
 """
 from __future__ import annotations

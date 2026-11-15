@@ -59,4 +59,4 @@ def test_class_b_entry_routed_everywhere():
     claude = (ROOT / "claude.md").read_text()
     readme = (ROOT / "README.md").read_text()
     for text in (registry, claude, readme):
-        assert "docs/operator_runbook.md" in text
+        assert "docs/operator/operator_runbook.md" in text

@@ -5,7 +5,7 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 > Identity: coding agents improving oto itself (Class A). Operator agents
-> producing a device library read `docs/operator_runbook.md` instead.
+> producing a device library read `docs/operator/operator_runbook.md` instead.
 
 ## Identity
 oto is an agentic GEMM-kernel tuning suite for AMD GPUs. Deterministic
@@ -40,8 +40,8 @@ machine version. Do **not** create new `.md` files without a registry row.
 
 ## Reading order
 1. This file
-2. `docs/invariants.md` (full operating contract, moved from claude.md)
+2. `docs/developer/invariants.md` (full operating contract, moved from claude.md)
 3. `docs/README.md` (registry)
 4. The owner MD for your task
 
-No feature designs here; see `docs/invariants.md`.
+No feature designs here; see `docs/developer/invariants.md`.

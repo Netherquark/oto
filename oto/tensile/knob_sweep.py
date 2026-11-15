@@ -44,7 +44,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     """Build the knob-sweep CLI parser."""
     ap = argparse.ArgumentParser(
         description="Emit each family's winner tile crossed with the knobs "
-                    "the corpus never explicitly set (docs/gfx90c_tuning_guide.md §13 §8.1).",
+                    "the corpus never explicitly set (docs/gfx90c/gfx90c_tuning_guide.md §13 §8.1).",
         epilog="CPU only. Writes phases.yaml; never launches a kernel.")
     ap.add_argument("--families", nargs="+", default=None,
                     choices=sorted(KNOB_SWEEP_BASES),

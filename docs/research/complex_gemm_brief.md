@@ -12,7 +12,7 @@ Wave64, 64 KiB LDS/CU, FP64 1/16, **no matrix cores / no dp4a / no packed-BF16**
 [LLVM AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html)). All external claims are
 URL-linked; the first-party gfx90c measurements in §6 come from this repo's
 registry, with the live config-resolved per-cell winners in
-`docs/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c_results.md`.
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c/gfx90c_results.md`.
 
 ## 1. Tensile's complex MAC is exactly four real FMAs
 - `MAC_F32C_Plain` emits **four `_v_mac_f32`** per complex MAC: `Cr += Ar·Br`,
@@ -103,8 +103,8 @@ real counterpart. The "÷4" applies to *complex-MAC throughput*, not to BLAS-8 G
 ## 6. Measured gfx90c complex GEMM (first-party, this repo)
 From the project registry (`gfx90c_results/registry.db`; this is a first-party
 snapshot — the live config-resolved per-cell winners are in
-`docs/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c_results.md`, and the per-family theoretical
-ceiling authority is `docs/gfx90c_theoretical_limits.md`):
+`docs/gfx90c/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c/gfx90c_results.md`, and the per-family theoretical
+ceiling authority is `docs/gfx90c/gfx90c_theoretical_limits.md`):
 CGEMM best **353.6 / median 264.4 GFLOPS**; ZGEMM best **22.5 / median 17.4 GFLOPS** —
 about **16–22%** of the 1613/101 ceilings, versus the same deck's real-family results
 (SGEMM peak 1283.5 ≈ 80%; DGEMM 99.0 ≈ 98%). The complex deck is still undertuned and
@@ -150,7 +150,7 @@ half) and `V_MAD_MIX_F32` (mixed-width) but not `V_PK_FMA_F32`, and
   ([arXiv:2508.03984](https://arxiv.org/html/2508.03984v2));
 - (c) **occupancy/register tiling** — the demonstrated gfx90c bottleneck, the same
   GSU/WGM/MT/TT levers that lift real GEMMs, are the realistic route from ~20% toward the
-  ~69–80% real-family bar (local analysis: `docs/gfx90c_theoretical_limits.md` §7).
+  ~69–80% real-family bar (local analysis: `docs/gfx90c/gfx90c_theoretical_limits.md` §7).
   **The register-blocking reference is a trampoline, not an answer:** BLIS
   establishes register-resident output microtiles and operand reuse, but its CPU
   tile dimensions do not prescribe GPU thread tiles, and **no published rule proves
@@ -219,7 +219,7 @@ ceiling and its levers are concurrency and independent work, not arithmetic tric
   a reference, not a literature-proven optimum; sweep adjacent legal tiles and
   inspect spills **[CHECK] no published gfx90c FP64 optimal tile found**. Upstream
   `vega10`/`vega20` non-MFMA rank-1 solutions are *implementation* evidence — the
-  donors of `docs/gfx90c_tuning_guide.md` §13 §6 Route A — not a published optimum.
+  donors of `docs/gfx90c/gfx90c_tuning_guide.md` §13 §6 Route A — not a published optimum.
 - **Complex-double is a standard tuning target, not a solved one.** CLBlast
   supports precision `6464` (complex-double) with its own tunable GEMM parameters
   ([CLBlast](https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md)), and
@@ -245,7 +245,7 @@ ceiling and its levers are concurrency and independent work, not arithmetic tric
   results (~346.7 / ~24.5 reported) are therefore **124 % / 99 % of their
   bars** -- the complex families are at 80-97 % of the FMA roof, and the
   "~25 % of the ceiling" reading was the unit error corrected on 2026-10-21
-  (`docs/gfx90c_theoretical_limits.md` §5.2). **The headroom is not in the complex
+  (`docs/gfx90c/gfx90c_theoretical_limits.md` §5.2). **The headroom is not in the complex
   families at all**; it is in the three small cells (SS:256, HH:256, CC:192).
 - Split choice: fused **4M** per MAC; consider **3M** only for large-K GEMMs where the
   O(N²) combine is negligible and the three real GEMMs run near their own efficiency.

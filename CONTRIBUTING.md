@@ -50,7 +50,7 @@ own commit.
 | `oto/**/*.py` | module docstring; `docs/cli.md` if flags/help change |
 | `docs/*.md` | `docs/README.md` registry row + `oto agent index` |
 | `tests/` | keep suite green |
-| `AGENTS.md` / `docs/invariants.md` | keep Tier-0 ≤ 60 lines |
+| `AGENTS.md` / `docs/developer/invariants.md` | keep Tier-0 ≤ 60 lines |
 
 Do not create new `.md` files without a registry row; edit the existing doc
 for that surface.

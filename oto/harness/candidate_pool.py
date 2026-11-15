@@ -61,7 +61,7 @@ def _shape_list(sides: tuple[int, ...]) -> list[str]:
     state the previous size left (``claude.md`` 2.0.3). The deck, ``_loader.current_profile().family_shapes``
     and ``TARGET_CELLS`` are numerically ascending, so a candidate must match --
     a string sort would emit ``1024, 192, 2048, 256, 512`` and poison 256^3
-    (`docs/gfx90c_results.md` 13.4).
+    (`docs/gfx90c/gfx90c_results.md` 13.4).
     """
     return ordered_shapes(f"{s}x{s}x{s}" for s in sides)
 

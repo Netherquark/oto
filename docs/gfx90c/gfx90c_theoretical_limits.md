@@ -7,7 +7,7 @@ review-interval: 90d
 > **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
 
 > **gfx90c-specific.** The generic per-device ceilings/limits template
-> lives in `docs/theoretical_limits.md`; this file is the gfx90c golden
+> lives in `docs/gfx90c/theoretical_limits.md`; this file is the gfx90c golden
 > example of how to derive them.
 
 > Authoritative acceptance-reference for "as close to the gfx90c theoretical limit as
@@ -35,8 +35,8 @@ review-interval: 90d
 
 ## 0. How this file is used
 
-- **Acceptance sourcing:** every oto family ceiling in `docs/gfx90c_tuning_guide.md` §13 /
-  `docs/invariants.md` / `docs/invariants.md` derives from the per-family ceilings in §5 —
+- **Acceptance sourcing:** every oto family ceiling in `docs/gfx90c/gfx90c_tuning_guide.md` §13 /
+  `docs/developer/invariants.md` / `docs/developer/invariants.md` derives from the per-family ceilings in §5 —
   the same way `oto.device.loader.current_profile().peak_gflops` is the single peak authority. Squaring a
   family's best median against its §5 ceiling is how "approach the theoretical limit"
   is scored, per (datatype, bound_class).
@@ -268,7 +268,7 @@ accumulator footprint is what runs the register file out, so CC's widest legal
 tile is 128×64 and ZZ's is 64×64), but the cap is not a *shortfall*: those
 tiles already run at 80-97 % of the pipe. The ORANGE cells are the three
 small ones — `SS:256`, `HH:256`, `CC:192` — and they are starved by wave
-quantisation, not by a bad kernel (`docs/gfx90c_tuning_guide.md` §13 §R48).
+quantisation, not by a bad kernel (`docs/gfx90c/gfx90c_tuning_guide.md` §13 §R48).
 
 ### 5.2 The complex families are at the roof, not at 20% (2026-10-21 correction)
 
@@ -304,10 +304,10 @@ Consequences, all of which the code now carries:
   `HH:256` (31.0%) and `CC:192` (29.3% of the roof). CC:256 and every ZZ cell
   are GREEN.
 - **CC and ZZ are not a tuning problem.** The 3M/Karatsuba and split-K routes
-  in `docs/gfx90c_tuning_guide.md` §13 §R43 were proposed against the 20% reading; at
+  in `docs/gfx90c/gfx90c_tuning_guide.md` §13 §R43 were proposed against the 20% reading; at
   80-97% of the roof there is at most 3-20% to win, and 3M's 25% instruction
   saving cannot be cashed in. Both are struck (§R47).
-- The **"CC cannot allocate a big tile"** argument in `docs/gfx90c_tuning_guide.md` §13
+- The **"CC cannot allocate a big tile"** argument in `docs/gfx90c/gfx90c_tuning_guide.md` §13
   §R42.2 is true and irrelevant: the tile cap is real (128×64 is the widest
   legal CC tile), but the bar it was compared against was 4× too big.
 - The fix is one table: `oto.device.loader.current_profile().reported_to_blas8` (CC/ZZ = 4.0) with
@@ -380,7 +380,7 @@ always conservative; it is now conservative in the measured-element direction).
 docs/incomplete_work.md is closed by this decision: the gate refuses ~67/229
 corpus ZZ kernels at the chosen reading — accepted deterministically. The D2/D3
 boundary evidence was gathered Tensile-verbatim on 2026-11-14 (see changelog).
-*Scope:* this is the **LDS-tile** width only. `docs/gfx90c_knowledge_base.md` §8.1's "complex
+*Scope:* this is the **LDS-tile** width only. `docs/gfx90c/gfx90c_knowledge_base.md` §8.1's "complex
 types are 8 B" is the **global-load** element width under the `GLVW x bytes <= 16`
 cap — a different quantity on a different path. Both can be true at once.
 Reproduce with `python3 -m oto.harness.asm_occupancy --dtype Z --by gflops`
@@ -412,7 +412,7 @@ capping occupancy to ~2 waves/SIMD. **This occupancy cap — NOT the raw pipe �
 measured source of the 69–77% ceilings.** L2 (1 MB) holds a 128×128×128-K fp32 tile's
 working set, so large squares are unambiguously ALU-side. Therefore "go as close to
 the theoretical limit as possible" = **raise achieved CU occupancy with right-sized
-GSU/WGM/MT/TT** (see `docs/invariants.md` and `docs/gfx90c_tuning_guide.md` §13),
+GSU/WGM/MT/TT** (see `docs/developer/invariants.md` and `docs/gfx90c/gfx90c_tuning_guide.md` §13),
 and 3-KD this file with measured oto cells.
 
 ### 7.1 Measured, not inferred — and LDS binds more often than VGPR
@@ -451,4 +451,4 @@ Per family (median waves/CU, max measured GFLOP/s):
 The ALU-peak ordering (Z < D < C < S < H) tracks the family's flop-per-byte
 machine balance, not its occupancy — H runs the most *and* the fastest, because
 its 2-byte elements make it the only family whose ridge sits above its bandwidth
-ceiling. That is the whole argument for H-family work in `docs/gfx90c_tuning_guide.md` §13.
+ceiling. That is the whole argument for H-family work in `docs/gfx90c/gfx90c_tuning_guide.md` §13.

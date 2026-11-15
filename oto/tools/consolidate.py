@@ -108,7 +108,7 @@ def cmd_all(args, profile=None) -> int:
     print(f"  registry  : rows {dbres['before']} -> {dbres['after']}  "
           f"integrity={dbres['integrity']}")
 
-    # Coverage-parity rule (docs/gfx90c_knowledge_base.md §6.1): the consolidated deck
+    # Coverage-parity rule (docs/gfx90c/gfx90c_knowledge_base.md §6.1): the consolidated deck
     # (which becomes the produced TensileLibrary) must address exactly the
     # shipped gfx900 cell grid. Refuse to install a deck that diverges.
     pr = parity_report(sel["phases"])
@@ -124,7 +124,7 @@ def cmd_all(args, profile=None) -> int:
     if not parity_ok:
         print("REFUSED to install: consolidated deck breaks TensileLibrary "
               "coverage parity vs the shipped gfx900 grid "
-              "(docs/gfx90c_knowledge_base.md §6.1). Fix the deck, then re-run --commit.")
+              "(docs/gfx90c/gfx90c_knowledge_base.md §6.1). Fix the deck, then re-run --commit.")
         return 1
     install(base, stage, sel, lock, dbres, stamp, profile=profile,)
     print(f"installed. live floor = {lock['run_id']}")

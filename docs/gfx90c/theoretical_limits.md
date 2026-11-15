@@ -12,7 +12,7 @@ review-interval: 90d
 > source + measurement. Until then it says what belongs here and how it
 > gets here.
 >
-> The gfx90c port's derived ceilings live in `docs/gfx90c_theoretical_limits.md` —
+> The gfx90c port's derived ceilings live in `docs/gfx90c/gfx90c_theoretical_limits.md` —
 > consult it as a golden reference / worked example **only if needed**, and
 > never copy its numbers as the ceilings for another device. Ceilings are
 > derived, not inherited; this whole file exists so that no agent treats one
@@ -38,7 +38,7 @@ For every dtype family the port uses, derive:
 - unit width (scalar CL per cycle vs dual-issue packed paths),
 - the 16-byte/vector-cap and the matrix-instruction presence/absence,
 - complex/ceil availability (BLAS-8 accounting: one complex MAC = 4 real FMAs
-  = 8 BLAS flops; the ÷4 trap is documented in `docs/gfx90c_theoretical_limits.md`).
+  = 8 BLAS flops; the ÷4 trap is documented in `docs/gfx90c/gfx90c_theoretical_limits.md`).
 
 Every peak needs the hardware basis stated (lanes/CU, CUs, wavefront, clocks),
 not a number from another part.
@@ -76,6 +76,6 @@ which peaks, which tie band, how verdicts are computed, and which band
   (read: X)` beats a guess.
 - **The ceiling is not the floor.** Verdicts compare native vs floor (and vs
   the roofs); this file supplies the roof, not the verdict.
-- **gfx90c worked example**: `docs/gfx90c_theoretical_limits.md` (per-family
+- **gfx90c worked example**: `docs/gfx90c/gfx90c_theoretical_limits.md` (per-family
   ceilings, the gate census, the calibration method — read it only as a worked
   example of *how to derive*, never as a source of numbers).

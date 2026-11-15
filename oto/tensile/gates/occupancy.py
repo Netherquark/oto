@@ -55,7 +55,7 @@ per-thread accumulator count TT0*TT1*weight against the 256 VGPR/thread ISA
 limit; the MacroTile-area term belongs to the *separate* workgroup-file rule
 above, whose threshold (65536, not 32768) and boundary (>=, not >) are what that
 old model got wrong. Calibration table now lives in `oto.tensile.gates.vgpr_model`;
-post-mortem in docs/potential_configs.md.
+post-mortem in docs/gfx90c/potential_configs.md.
 Public API: occupancy_feasible, ldspad_feasible (re-exported),
 occupancy_workgroups_per_cu, dtype_char, tile_dims (shared; see
 ```oto.tensile.gates.gate_common```), refuses_workgroup_register_file,
@@ -290,7 +290,7 @@ def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]
     All three are corpus-calibrated with 0 false rejections. An earlier version
     modelled MacroTile *area* at ``<= 65536/2`` instead and was wrong in both
     directions (it passed the 8 ZZ TT8x4 phases that died 116 times each); the
-    post-mortem is in ``docs/potential_configs.md``.
+    post-mortem is in ``docs/gfx90c/potential_configs.md``.
 
     Accepts a Tensile solution dict. Returns ``(True, "")`` when the config is
     launchable, else ``(False, reason)``. No readable tile dims ->

@@ -11,7 +11,7 @@ review-interval: 90d
 > target has audited *that* target and pinned its sources — an FFI-populated
 > doc, not a paste of the gfx90c one.
 >
-> The gfx90c port's knowledge base lives in `docs/gfx90c_knowledge_base.md` —
+> The gfx90c port's knowledge base lives in `docs/gfx90c/gfx90c_knowledge_base.md` —
 > consult it as a golden reference / worked example **only if needed**, and
 > never copy its numbers as architecture truth for another device. The KB
 > exists so that no agent treats one part's port mechanism, ISA, or
@@ -26,7 +26,7 @@ contains architecture truth for one target, not measurements (those live in the
 device's `results.md`), not plans (those live in `docs/incomplete_work.md` / the
 changelog), not history (that lives in `docs/changelog.md`).
 
-## 2. The golden example — `docs/gfx90c_knowledge_base.md`
+## 2. The golden example — `docs/gfx90c/gfx90c_knowledge_base.md`
 
 That file is the gfx90c port's WHAT-layer, built over months of live work:
 the Tensile model, the topology, the 3-entry native port shim, the footprint
@@ -43,7 +43,7 @@ it as license to transplant a number.
 2. **Repository topology** — the pinned tree(s): Tensile checkout, hash,
    branch, local patch (if any) — as *this* target ports it.
 3. **The port mechanism** — the *minimal* bookkeeping the port needs (for
-   gfx90c it was three entries, not nine — read `docs/gfx90c_knowledge_base.md`
+   gfx90c it was three entries, not nine — read `docs/gfx90c/gfx90c_knowledge_base.md`
    §3 as the case for minimalism).
 4. **GlobalParameters & problem semantics** — what the knobs mean.
 5. **Solution space** — the kernel-name token vocabulary for this library.
@@ -95,7 +95,7 @@ it as license to transplant a number.
 ## 6. When this file is empty
 
 It stays empty by default — empty means the port's WHAT-layer was never
-derived. The gfx90c golden example: `docs/gfx90c_knowledge_base.md`. Context
-for a new target: `docs/starter_pair.md`, then `oto agent consult` for a
-scaffold, then the campaign (`docs/operator_runbook.md`) — research per
-`docs/operator_runbook.md` §18.
+derived. The gfx90c golden example: `docs/gfx90c/gfx90c_knowledge_base.md`. Context
+for a new target: `docs/operator/starter_pair.md`, then `oto agent consult` for a
+scaffold, then the campaign (`docs/operator/operator_runbook.md`) — research per
+`docs/operator/operator_runbook.md` §18.

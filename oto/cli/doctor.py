@@ -161,7 +161,7 @@ def _tensile_client_check() -> Check:
                  f"expected {root}/build/client/tensile-client (or "
                  f"OTO_TENSILE_CLIENT). Build it once with "
                  f"scripts/build_tensile_client.sh --rocm-prefix <ROCM_PREFIX> "
-                 f"(docs/toolchain_client.md), or pass OTO_TENSILE_CLIENT to an "
+                 f"(docs/human/toolchain_client.md), or pass OTO_TENSILE_CLIENT to an "
                  f"existing build.")
 
 

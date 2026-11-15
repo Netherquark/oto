@@ -82,7 +82,7 @@ def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]
   time a cell is re-triaged, and a number transcribed into a docstring is wrong
   the moment that happens. Cite the *date and decision* instead. This is the
   `claude.md` section 5 rule; it applies to docstrings exactly as to MDs.
-* **Benchmark results.** Those are `docs/gfx90c_results.md`'s job; a docstring that quotes a
+* **Benchmark results.** Those are `docs/gfx90c/gfx90c_results.md`'s job; a docstring that quotes a
   number from one run is a changelog entry in the wrong file.
 * **A reference to deleted machinery.** Anything removed from the codebase must
   not reappear in code, configs or docs, in any wording.

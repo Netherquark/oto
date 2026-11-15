@@ -341,15 +341,15 @@ def _add_agent(sub: Any) -> None:
                                    "  oto agent index")
     asub = p.add_subparsers(dest="agent_cmd", help="Agent operation")
     g = _add(asub, "generate", "Generate device docs (agent-1 + agent-2)",
-             "  oto agent generate docs/gfx902_starter.md --dry-run\n"
-             "  oto agent generate docs/gfx902_starter.md",
+             "  oto agent generate docs/operator/gfx902_starter.md --dry-run\n"
+             "  oto agent generate docs/operator/gfx902_starter.md",
              mutating=True)
     g.add_argument("starter", nargs="?", help="Starter Markdown file")
     add_dry_run_flag(g)
     _add(asub, "index", "Regenerate docs/docs_index.json",
          "  oto agent index", mutating=True)
     c = _add(asub, "consult", "Draft <codename>_potential_configs.md (CPU-only census consult)",
-             "  oto agent consult docs/gfx902_starter.md\n"
+             "  oto agent consult docs/operator/gfx902_starter.md\n"
              "  oto agent consult --out my_device.md",
              mutating=True)
     c.add_argument("starter", nargs="?", help="Starter Markdown file (default: ambient profile)")

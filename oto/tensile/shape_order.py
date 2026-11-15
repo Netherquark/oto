@@ -12,7 +12,7 @@ measured out of order is therefore not a weaker kernel, it is a *different
 measurement*. Sorting the shape **strings** gave the lexicographic order
 ``1024, 192, 2048, 256, 512``, which put 256^3 immediately after the slowest
 2048^3 kernel, throttled it to ~1/3 clock and collapsed its median
-(~55 vs ~210 GFLOPS) -- the CC:256 "one loser" (`docs/gfx90c_results.md` 13.4). The deck
+(~55 vs ~210 GFLOPS) -- the CC:256 "one loser" (`docs/gfx90c/gfx90c_results.md` 13.4). The deck
 (``phases.yaml``), ``FAMILY_SHAPES`` and ``TARGET_CELLS`` are all numerically
 ascending, so every producer and every writer must agree on that order.
 

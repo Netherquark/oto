@@ -169,12 +169,12 @@ def test_gfx902_unverified_stub_refuses_to_load():
     """The committed gfx902 stub carries identity only (codename + ISA from
     LLVM's public docs); every silicon fact is zeroed, so the loader must
     refuse it until a human verifies and fills it."""
-    md = Path(__file__).resolve().parent.parent / "docs" / "gfx902_starter.md"
+    md = Path(__file__).resolve().parent.parent / "docs" / "operator" / "gfx902_starter.md"
     with pytest.raises(ValueError, match="unverified profile"):
         load_profile_from_starter(md)
 
 
 def test_starter_template_refuses_to_load():
-    md = Path(__file__).resolve().parent.parent / "docs" / "starter_template.md"
+    md = Path(__file__).resolve().parent.parent / "docs" / "operator" / "starter_template.md"
     with pytest.raises(ValueError, match="unverified profile"):
         load_profile_from_starter(md)
