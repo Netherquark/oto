@@ -56,6 +56,7 @@ from oto.checks.tensile_build_probe import (
 # Driver: one subprocess per phase (Tensile is heavy global state).
 # --------------------------------------------------------------------------
 def _worker(args: argparse.Namespace) -> int:
+    """Probe one phase's build in a subprocess; exit 0 on success."""
     if args.arch is None:
         args.arch = _default_arch()
     _init_tensile(arch=args.arch)
@@ -176,6 +177,7 @@ def run_phase(pid: str, cfg_path: Path, outdir: Path, arch: str, timeout: int) -
 
 # --------------------------------------------------------------------------
 def select_phases(args: argparse.Namespace) -> list[dict[str, Any]]:
+    """The deck rows matching ``--phase-id``/``--family`` (all of them when unset)."""
     base = Path(args.base_dir).resolve() if args.base_dir else REPO
     deck = yamlio.load_yaml(base / "phases.yaml") or []
     if args.phase_id:
@@ -193,6 +195,7 @@ def select_phases(args: argparse.Namespace) -> list[dict[str, Any]]:
 
 def print_progress(row: dict[str, Any], i: int, total: int, outdir: Path,
                    passed: int, failed: int) -> None:
+    """Print one phase's build result line."""
     regs = [r for r in row["results"] if r.get("vgprs") is not None]
     vg = max((r["vgprs"] for r in regs), default=None)
     ag = max((r.get("accvgprs") or 0 for r in regs), default=None)
@@ -274,6 +277,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Build every selected phase's Tensile kernel and report the verdicts (CLI entry)."""
     args = _build_arg_parser().parse_args()
 
     if args._worker:

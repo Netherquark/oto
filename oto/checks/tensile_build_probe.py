@@ -65,6 +65,7 @@ def _pin_isa(arch: str) -> None:
 
 
 def _init_tensile(arch: str | None = None) -> None:
+    """Put the Tensile checkout on ``sys.path`` and pin the ISA triple."""
     if arch is None:
         arch = _default_arch()
     tensile_root = _require_tensile_root()
@@ -326,6 +327,7 @@ def _kernel_label(kern: Any) -> str:
 
 
 def _pool(ko: Any, name: str) -> int | None:
+    """The size of a register-pool attribute on a Tensile kernel object."""
     pool = getattr(ko, name, None)
     size = getattr(pool, "size", None)
     if callable(size):

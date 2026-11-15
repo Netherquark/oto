@@ -41,6 +41,7 @@ DEFAULT_BASE = Path(__file__).resolve().parents[2]
 
 
 def _load_manifests(args) -> list:
+    """The phase list to check: explicit ``--phases``, else deck + overlays."""
     if args.phases:
         return yamlio.load_yaml(Path(args.phases)) or []
 
@@ -61,7 +62,10 @@ def _load_manifests(args) -> list:
 
 
 def _fmt_cells(cells, profile=None) -> str:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Format missing/extra cells for the report.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     grid = shipped_cells()
     from oto.device import loader as _loader
     parts = []
@@ -73,6 +77,7 @@ def _fmt_cells(cells, profile=None) -> str:
 
 
 def main() -> int:
+    """Check the deck's coverage parity against the shipped grid (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=DEFAULT_BASE)

@@ -24,10 +24,12 @@ from oto.runners.result_paths import results_dir as _results_dir
 
 
 def _base(args) -> Path:
+    """The base directory the audit reads."""
     return args.base_dir
 
 
 def _load_labels(db: Path) -> tuple[list[str], int]:
+    """The ids of records with auto/Unknown labels, and the total record count."""
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
         bad: list[str] = []
@@ -45,7 +47,7 @@ def _load_labels(db: Path) -> tuple[list[str], int]:
 
 
 def main(profile=None) -> int:
-    """CLI: inspect the registry DB for label contamination. ``profile`` selects the device; ambient by default."""
+    """Inspect the registry DB for label contamination (CLI entry). ``profile`` selects the device; ambient by default."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base-dir", "--base", type=Path, default=Path("."),
                     help="repo root")

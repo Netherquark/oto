@@ -60,6 +60,7 @@ from oto.tensile.shipped_floor_manifest import shipped_kernel_config
 
 
 def _divisibility(gen, cfg):
+    """Run the divisibility gate through the candidate generator."""
     return gen.validate_config(cfg)
 
 
@@ -78,7 +79,8 @@ def _occupancy_margin(cfg, profile=None) -> str:
     much of the file one workgroup's threads consume). Near-boundary configs —
     the ones that PASS today and die tomorrow when Tensile grows one
     instruction — show up here as high pressure %, not just pass/fail.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     wg = occupancy_workgroups_per_cu(cfg, profile=profile,)
     if wg <= 0:
@@ -98,6 +100,7 @@ def _occupancy_margin(cfg, profile=None) -> str:
 
 
 def _fams(cfg) -> str:
+    """The phase's uppercased ``FamilyLabel``."""
     return str(cfg.get("FamilyLabel") or "").upper()
 
 
@@ -108,7 +111,7 @@ def _reason_key(why: str) -> str:
 
 
 def check_config(gen, cfg) -> list[tuple[str, str]]:
-    """Return [(gate, reason)] for every failing gate. Empty == legal."""
+    """The ``(gate, reason)`` pairs for every failing gate; an empty list means the config is legal."""
     out = []
     seen: set[str] = set()
     for name, fn in GATES:
@@ -122,6 +125,7 @@ def check_config(gen, cfg) -> list[tuple[str, str]]:
 
 
 def _gate_of(why: str) -> str:
+    """Which gate an occupancy-wrapped divisibility verdict reports as (divisibility vs occupancy)."""
     return "occupancy" if why.startswith("Occupancy limit: ") else "divisibility"
 
 
@@ -171,6 +175,7 @@ def load_deck(path: Path) -> list:
 
 
 def main() -> int:
+    """Check the deck against the CPU legality gates (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--deck", type=Path, default=BASE / "phases.yaml")
