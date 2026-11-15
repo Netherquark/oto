@@ -1,187 +1,4 @@
 {
-  "description": "Crowdsource-verified intentional drift between the working tree and any ref the evergreen verifier checks. Keys are symbol/artifact identifiers, never commit hashes: an entry permits this exact difference, with the reason recorded. Anything unlisted fails loudly.",
-  "method_equivalence": [
-    {
-      "key": "_ab_records_from_csv",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_ab_records_from_registry",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_apply_cooldown",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_chain_phase_sets",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_clock_coverage",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_compute_execution_timing",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_compute_family_timing",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_current_arm",
-      "reason": "Device-independence arc: the run arm is classified from the CURRENT profile's spoof_reference instead of the literal 'gfx900_ref' substring, so a profile with another spoof floor classifies correctly; byte-identical behaviour on gfx90c/gfx900. Attested 2026-11-15."
-    },
-    {
-      "key": "_ensure_telemetry",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_fmt_minutes",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_get_tensile_env",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_latest_reference_run",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_analytics_from_registry",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_analytics_from_run",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_run_overlay",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_sclk_by_phase",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_seed_overlay",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_load_telemetry_by_phase",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_merge_overlay_entries",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_named_cell_stamps",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_native_analytics_all_runs",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_native_arm_provenance",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_native_records_all_runs",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_native_run_dirs",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_read_key",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_reference_floor_runs",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_reference_remaining",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_resolve_proposal_outcome",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_retire_stable_candidates",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_reusable_phase_keys",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_run_span_minutes",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_run_stamp",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_sclk_map",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_sclk_reference",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_signal_handler",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_stamp_str",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_start_live_status",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_stop_live_status",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_tee_stream",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_telemetry_rows",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_thermal_map",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "_thermal_summary",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "load_phases_manifest",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "regenerate_report",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    },
-    {
-      "key": "run_preflight",
-      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
-    }
-  ],
   "ast_equivalence": [
     {
       "key": "ab_audit.py::arm_record_sets",
@@ -820,33 +637,285 @@
       "reason": "F-REPORT-4 closure (2026-11-15): additive defaulted kwarg 'protocol_fallback: bool = False' threaded exactly like the profile=None sweep, so a degenerate like-for-like analytics path marks itself in the report payload instead of silently emitting a clean all-zero grid. Re-verified: suite RC=0 (1098 passed, test_report_protocol_fallback 2/2); oto verify all otherwise green. Attested 2026-11-15."
     }
   ],
+  "config_writer": [],
+  "description": "Crowdsource-verified intentional drift between the working tree and any ref the evergreen verifier checks. Keys are symbol/artifact identifiers, never commit hashes: an entry permits this exact difference, with the reason recorded. Anything unlisted fails loudly.",
   "gate_differential": [
     {
-      "key": "validate_tensile_loads",
       "base": "2824c2f",
+      "key": "validate_tensile_loads",
       "reason": "Loads gate closure + D4.2 illegal-config refusal after the split (commits 6196379/82f0e8b/31e661f/ee9c479): the pre-split gate accepted configs Tensile refuses; HEAD refuses them."
     },
     {
-      "key": "assembly_class_valid",
       "base": "2824c2f",
+      "key": "assembly_class_valid",
       "reason": "Assembly-class tightening in the split-era legality closure (commit 31e661f): illegal C/Z geometries now refused."
     },
     {
-      "key": "occupancy_feasible",
       "base": "2824c2f",
+      "key": "occupancy_feasible",
       "reason": "Workgroup register-file rule in the legality gate closure (commit 31e661f): R*MT0*MT1*LSU >= 65536 triggers Tensile error 4; replaced the structurally-wrong area model."
     },
     {
-      "key": "occupancy_wg",
       "base": "2824c2f",
+      "key": "occupancy_wg",
       "reason": "Same occupancy-gate tightening: workgroups-per-CU 0 where the old bounded model returned a positive number."
     },
     {
-      "key": "ldspad_feasible",
       "base": "2824c2f",
+      "key": "ldspad_feasible",
       "reason": "LDS-pad / swizzle rules hardened in the legality gate closure (commit 31e661f)."
     }
   ],
-  "config_writer": [],
+  "method_equivalence": [
+    {
+      "key": "_ab_records_from_csv",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_ab_records_from_registry",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_apply_cooldown",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_chain_phase_sets",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_clock_coverage",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_compute_execution_timing",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_compute_family_timing",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_current_arm",
+      "reason": "Device-independence arc: the run arm is classified from the CURRENT profile's spoof_reference instead of the literal 'gfx900_ref' substring, so a profile with another spoof floor classifies correctly; byte-identical behaviour on gfx90c/gfx900. Attested 2026-11-15."
+    },
+    {
+      "key": "_ensure_telemetry",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_fmt_minutes",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_get_tensile_env",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_latest_reference_run",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_analytics_from_registry",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_analytics_from_run",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_run_overlay",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_sclk_by_phase",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_seed_overlay",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_load_telemetry_by_phase",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_merge_overlay_entries",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_named_cell_stamps",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_native_analytics_all_runs",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_native_arm_provenance",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_native_records_all_runs",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_native_run_dirs",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_read_key",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_reference_floor_runs",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_reference_remaining",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_resolve_proposal_outcome",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_retire_stable_candidates",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_reusable_phase_keys",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_run_span_minutes",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_run_stamp",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_sclk_map",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_sclk_reference",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_signal_handler",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_stamp_str",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_start_live_status",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_stop_live_status",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_tee_stream",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_telemetry_rows",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_thermal_map",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "_thermal_summary",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "load_phases_manifest",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "regenerate_report",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "run_preflight",
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    }
+  ],
+  "renames": {
+    "oto/_map.py": "oto/readme_gen.py",
+    "oto/_version.py": "oto/version.py",
+    "oto/agents/harness_tools.py": "oto/agents/agent_tools.py",
+    "oto/agents/meta.py": "oto/agents/meta_agent.py",
+    "oto/agents/orchestrator.py": "oto/agents/meta_agent.py",
+    "oto/agents/research.py": "oto/agents/research_client.py",
+    "oto/checks/candidates.py": "oto/checks/deck_legality.py",
+    "oto/checks/db.py": "oto/checks/registry_audit.py",
+    "oto/checks/retirement.py": "oto/checks/stability_retirement.py",
+    "oto/cli/docs.py": "oto/cli/help_command.py",
+    "oto/cli/flags.py": "oto/cli/global_flags.py",
+    "oto/device/derive.py": "oto/device/derive_limits.py",
+    "oto/device/detect.py": "oto/device/device_detect.py",
+    "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py",
+    "oto/docs_index.py": "oto/docs_index_writer.py",
+    "oto/harness/_rows_core.py": "oto/harness/rows_ladders.py",
+    "oto/harness/_rows_frontier.py": "oto/harness/rows_frontier.py",
+    "oto/harness/_rows_smallcells.py": "oto/harness/rows_smallcells.py",
+    "oto/harness/deck_check.py": "oto/harness/deck_probe.py",
+    "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
+    "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py",
+    "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py",
+    "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py",
+    "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py",
+    "oto/inventory.py": "oto/readme_gen.py",
+    "oto/ledger/agent.py": "oto/ledger/convergence_agent.py",
+    "oto/ledger/agent_mutate.py": "oto/ledger/agent_mutation.py",
+    "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
+    "oto/ledger/queries.py": "oto/ledger/registry_queries.py",
+    "oto/metrics/_status_common.py": "oto/metrics/status_helpers.py",
+    "oto/metrics/analytics.py": "oto/metrics/benchmark_analytics.py",
+    "oto/metrics/coverage.py": "oto/metrics/cell_coverage.py",
+    "oto/metrics/policy.py": "oto/metrics/cell_policy.py",
+    "oto/metrics/protocol.py": "oto/metrics/measurement_protocol.py",
+    "oto/metrics/read_thermals.py": "oto/metrics/thermal_telemetry.py",
+    "oto/metrics/report.py": "oto/metrics/acceptance_report.py",
+    "oto/metrics/report_build.py": "oto/metrics/build_status.py",
+    "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
+    "oto/metrics/status_common.py": "oto/metrics/status_helpers.py",
+    "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py",
+    "oto/runners/auto.py": "oto/runners/convergence_loop.py",
+    "oto/runners/cli.py": "oto/runners/stage_cli.py",
+    "oto/runners/clocks.py": "oto/runners/clock_telemetry.py",
+    "oto/runners/flags.py": "oto/runners/stage_flags.py",
+    "oto/runners/paths.py": "oto/runners/result_paths.py",
+    "oto/runners/phases.py": "oto/runners/phase_runner.py",
+    "oto/runners/reference.py": "oto/runners/reference_floor.py",
+    "oto/runners/reporting.py": "oto/runners/acceptance_reporting.py",
+    "oto/runners/synthesis.py": "oto/runners/library_build.py",
+    "oto/tensile/best_library.py": "oto/tensile/best_effort_library.py",
+    "oto/tensile/decks.py": "oto/tensile/family_decks.py",
+    "oto/tensile/gates/ldspad_gate.py": "oto/tensile/gates/ldspad.py",
+    "oto/tensile/gates/occupancy_common.py": "oto/tensile/gates/gate_common.py",
+    "oto/tensile/library.py": "oto/tensile/shipped_floor_manifest.py",
+    "oto/tensile/patterns.py": "oto/tensile/contraction_patterns.py",
+    "oto/tensile/shipped_library.py": "oto/tensile/shipped_floor.py",
+    "oto/tensile/shipped_manifest.py": "oto/tensile/shipped_floor_manifest.py",
+    "oto/tensile/synthesis/db.py": "oto/tensile/synthesis/donor_mutator.py",
+    "oto/tensile/synthesis/db_knobs.py": "oto/tensile/synthesis/donor_knobs.py",
+    "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py",
+    "oto/tensile/synthesis/manifest.py": "oto/tensile/synthesis/pipeline_manifest.py",
+    "oto/tools/all_runs.py": "oto/tools/run_census.py",
+    "oto/tools/allruns.py": "oto/tools/run_census.py",
+    "oto/tools/chart.py": "oto/tools/benchmark_chart.py",
+    "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
+    "oto/tools/verify_run.py": "oto/tools/corpus_audit.py",
+    "oto/yamlio.py": "oto/yaml_cached.py"
+  },
   "report_html": []
 }

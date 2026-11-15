@@ -440,30 +440,26 @@ def _print_report(all_missing: list[str], all_differs: list[str],
 #: path). The post-split equivalence check follows these so a rename does not
 #: read as a wholesale public-API loss. Maintained alongside the rename work;
 #: every entry must correspond to a real git mv.
-RENAMES: dict[str, str] = {
-    "oto/_map.py": "oto/readme_gen.py", "oto/inventory.py": "oto/readme_gen.py", "oto/_version.py": "oto/version.py",
-    "oto/yamlio.py": "oto/yaml_cached.py", "oto/docs_index.py": "oto/docs_index_writer.py", "oto/agents/harness_tools.py": "oto/agents/agent_tools.py",
-    "oto/agents/meta.py": "oto/agents/meta_agent.py", "oto/agents/orchestrator.py": "oto/agents/meta_agent.py", "oto/agents/research.py": "oto/agents/research_client.py",
-    "oto/checks/candidates.py": "oto/checks/deck_legality.py", "oto/checks/db.py": "oto/checks/registry_audit.py", "oto/checks/retirement.py": "oto/checks/stability_retirement.py",
-    "oto/cli/docs.py": "oto/cli/help_command.py", "oto/cli/flags.py": "oto/cli/global_flags.py", "oto/device/derive.py": "oto/device/derive_limits.py",
-    "oto/device/detect.py": "oto/device/device_detect.py", "oto/device/vocabulary.py": "oto/device/kernel_vocabulary.py", "oto/harness/_rows_core.py": "oto/harness/rows_ladders.py",
-    "oto/harness/_rows_frontier.py": "oto/harness/rows_frontier.py", "oto/harness/_rows_smallcells.py": "oto/harness/rows_smallcells.py", "oto/harness/deck_check.py": "oto/harness/deck_probe.py",
-    "oto/harness/tensile_oracle.py": "oto/harness/tensile_probe.py", "oto/harness/occupancy_audit.py": "oto/harness/occupancy_bounds.py", "oto/harness/generate_candidates.py": "oto/harness/candidate_generator.py",
-    "oto/harness/measure_vgprs.py": "oto/harness/vgpr_measurement.py", "oto/harness/resolve_cells.py": "oto/harness/cell_resolver.py", "oto/ledger/agent.py": "oto/ledger/convergence_agent.py",
-    "oto/ledger/agent_mutate.py": "oto/ledger/agent_mutation.py", "oto/ledger/queries.py": "oto/ledger/registry_queries.py", "oto/ledger/proposals.py": "oto/ledger/registry_proposals.py",
-    "oto/metrics/policy.py": "oto/metrics/cell_policy.py", "oto/metrics/report_build.py": "oto/metrics/build_status.py", "oto/metrics/report_figures.py": "oto/metrics/report_coverage.py",
-    "oto/metrics/_status_common.py": "oto/metrics/status_helpers.py", "oto/metrics/status_common.py": "oto/metrics/status_helpers.py", "oto/metrics/analytics.py": "oto/metrics/benchmark_analytics.py",
-    "oto/metrics/coverage.py": "oto/metrics/cell_coverage.py", "oto/metrics/protocol.py": "oto/metrics/measurement_protocol.py", "oto/metrics/read_thermals.py": "oto/metrics/thermal_telemetry.py",
-    "oto/metrics/report.py": "oto/metrics/acceptance_report.py", "oto/tensile/library.py": "oto/tensile/shipped_floor_manifest.py", "oto/tensile/shipped_library.py": "oto/tensile/shipped_floor.py",
-    "oto/tensile/shipped_manifest.py": "oto/tensile/shipped_floor_manifest.py", "oto/tensile/best_library.py": "oto/tensile/best_effort_library.py", "oto/tensile/decks.py": "oto/tensile/family_decks.py",
-    "oto/tensile/patterns.py": "oto/tensile/contraction_patterns.py", "oto/tensile/synthesis/db.py": "oto/tensile/synthesis/donor_mutator.py", "oto/tensile/synthesis/db_knobs.py": "oto/tensile/synthesis/donor_knobs.py",
-    "oto/tensile/synthesis/db_patterns.py": "oto/tensile/synthesis/donor_patterns.py", "oto/tensile/synthesis/manifest.py": "oto/tensile/synthesis/pipeline_manifest.py", "oto/runners/cli.py": "oto/runners/stage_cli.py",
-    "oto/runners/flags.py": "oto/runners/stage_flags.py", "oto/runners/synthesis.py": "oto/runners/library_build.py", "oto/runners/reference.py": "oto/runners/reference_floor.py",
-    "oto/runners/analytics_loaders.py": "oto/runners/corpus_loaders.py", "oto/runners/auto.py": "oto/runners/convergence_loop.py", "oto/runners/clocks.py": "oto/runners/clock_telemetry.py",
-    "oto/runners/paths.py": "oto/runners/result_paths.py", "oto/runners/phases.py": "oto/runners/phase_runner.py", "oto/runners/reporting.py": "oto/runners/acceptance_reporting.py",
-    "oto/tools/allruns.py": "oto/tools/run_census.py", "oto/tools/all_runs.py": "oto/tools/run_census.py", "oto/tools/potential_configs_gen.py": "oto/tools/potential_configs.py",
-    "oto/tools/verify_run.py": "oto/tools/corpus_audit.py", "oto/tools/chart.py": "oto/tools/benchmark_chart.py",
-}
+# old path -> new path for every rename the split introduced. Lives in
+# drift_manifest.json (not here): the line-length ratchet forced two real
+# mappings out of this file once already and the comparison silently reported
+# whole-module API loss until they were restored (18444bd). One home, outside
+# the line budget.
+def _load_renames() -> dict[str, str]:
+    import json
+
+    path = Path(__file__).resolve().parent / "drift_manifest.json"
+    with path.open() as f:
+        doc = json.load(f)
+    renames = doc.get("renames")
+    if not isinstance(renames, dict) or not renames:
+        raise SystemExit(
+            f"{path}: drift_manifest 'renames' is missing or malformed; "
+            "the symbol-equivalence check cannot run without it")
+    return renames
+
+
+RENAMES: dict[str, str] = _load_renames()
 
 def _head_path_for(rel, old_syms, all_missing):
     """Resolve the HEAD path for a ref file, following RENAMES; None if gone."""

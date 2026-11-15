@@ -6,10 +6,7 @@ A tuple reaching `registry.update_run_status` voids the whole floor (SQLite
 refuses to bind tuples) and leaves the run `started`. This pins the call
 contract: `update_run_status` must receive a plain ``str`` run_id.
 """
-from pathlib import Path
 from unittest import mock
-
-import pytest
 
 from oto.runners.driver import TensileDriver
 
