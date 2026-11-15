@@ -1,6 +1,6 @@
 # Class B — Operator Agent Skill
 
-**Entry**: `docs/operator_runbook.md` → `docs/starter_pair.md` → `docs/starter_template.md` → `docs/operator_campaign.md` (the tuning campaign)
+**Entry**: `docs/skills/caveman.md` (token-efficient style, optional) → `docs/operator_runbook.md` → `docs/starter_pair.md` → `docs/starter_template.md` → `docs/operator_campaign.md` (the tuning campaign)
 
 ## What you do
 - Use oto to produce a best-effort Tensile library for an unsupported AMD platform
@@ -10,6 +10,7 @@
 - If the docs cannot answer a question you must settle, commission a research pass in the shape of `docs/operator_campaign.md` §18 (research-prompt discipline)
 
 ## What you read
+- `docs/skills/caveman.md` (token-efficient communication style; optional, user-triggered)
 - `docs/operator_runbook.md` (the contract)
 - `docs/starter_pair.md` (starter protocol)
 - `docs/starter_template.md` (template)
@@ -33,6 +34,21 @@
 - `oto library best-effort` (CPU-only carve)
 - `oto check candidates` (deck linter)
 - `oto verify all` (evergreen equivalence verifiers)
+
+## Communication style
+- Default: normal. Switch to caveman on user request (`/caveman`, "be brief", "less tokens").
+- Under caveman: verdicts, numbers, run ids, error strings, commands, evidence
+  tags, and the data-preservation law stay verbatim; only narration compresses.
+
+## Communication style
+- Default: normal. Switch to caveman on user request (`/caveman`, "be brief", "less tokens").
+- Under caveman: verdicts, numbers, run ids, error strings, commands, evidence
+  tags, and the data-preservation law stay verbatim; only narration compresses.
+
+## Communication style
+- Default: normal. Switch to caveman on user request (`/caveman`, "be brief", "less tokens").
+- Under caveman: verdicts, numbers, run ids, error strings, commands, evidence
+  tags, and the data-preservation law stay verbatim; only narration compresses.
 
 ## Hard rules (READ-ONLY on oto codebase)
 1. **NEVER modify any file under `oto/`, `tests/`, or root shims**

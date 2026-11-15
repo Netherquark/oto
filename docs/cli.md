@@ -484,6 +484,37 @@ Flags:
 - `--live-interval` (default: `30.0`) — Seconds between live status repaints (default: 30)
 - `--tensile-root` — Override TENSILE_ROOT for this command
 
+### `oto setup`
+
+Easy-mode onboarding: prepare oto for a new device
+
+```bash
+oto setup
+oto setup --yes --convergence-mode blind
+oto setup --dry-run
+```
+
+Flags:
+
+- `--base` — Project base directory (default: current directory)
+- `-q`, `--quiet` — Suppress narration; errors still go to stderr
+- `-v`, `--verbose` — Show the command being run and full tracebacks on failure
+- `--no-input` — Never prompt; take documented defaults or fail
+- `--no-color` — Disable ANSI colour (also honours NO_COLOR)
+- `--yes`, `-y` — Non-interactive: take defaults, never prompt
+- `--dry-run` — Print the plan and the .env it would write; no writes
+- `--force` — Overwrite an existing .env
+- `--convergence-mode` {blind,informed} — Convergence mode (default: blind)
+- `--spoof` — Spoof (reference floor) GPU codename (informed mode)
+- `--rocm-prefix` — ROCM install prefix (auto-detected if omitted)
+- `--tensile-root` — Tensile checkout root (auto-detected if omitted)
+- `--gpu-targets` — GPU targets for the client build (comma list)
+- `--jobs` (default: `4`) — Parallel build jobs
+- `--skip-build` — Do not build the Tensile client
+- `--build-client` (default: `True`) — Build the Tensile client if missing (default: on)
+- `--write-env` — Write the .env file (default: ask)
+- `--codename` (default: `gfx90c`) — Target codename written into .env hints (default: gfx90c)
+
 ### `oto stats`
 
 Cross-run best config per cell

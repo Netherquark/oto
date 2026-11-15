@@ -110,6 +110,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``runners/corpus_loaders.py`` — Corpus readers: how the driver loads measurements from every run.
 * ``runners/driver.py`` — The driver composition root: identity, toolchain, and wiring.
 * ``runners/library_build.py`` — the synthesis/build stage: emit the per-family library logic and build it with TensileCreateLibrary.
+* ``runners/onboarding.py`` — Easy-mode onboarding: walk a human through preparing oto for a first run.
 * ``runners/phase_runner.py`` — The phase runner: manifest merge, policy filter, identical-fp skip bypass.
 * ``runners/reference_floor.py`` — The gfx900 reference floor: build, resume, and recall.
 * ``runners/result_paths.py`` — Shared path conventions for the driver.

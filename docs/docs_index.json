@@ -207,6 +207,12 @@
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "Per-class agent skill definitions (Class A developer, Class B operator)",
+      "path": "docs/skills/caveman.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Per-class agent skill definitions (Class A developer, Class B operator)",
       "path": "docs/skills/class_a_developer.md"
     },
     {
@@ -242,8 +248,14 @@
     {
       "class": "operator",
       "kind": "Ecosystem",
-      "owns": "Easy-mode onboarding: questions + auto-detect + .env + client build + doctor",
-      "path": "docs/setup.md"
+      "owns": "Full guide: prerequisites, setup, bring-up, failure modes",
+      "path": "docs/getting_started.md"
+    },
+    {
+      "class": "shared",
+      "kind": "Ecosystem",
+      "owns": "Birds-eye view of the project documentation",
+      "path": "docs/overview.md"
     },
     {
       "class": "operator",
@@ -283,6 +295,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 38,
+  "total": 40,
   "version": 1
 }

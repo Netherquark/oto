@@ -1,6 +1,6 @@
 # Class A — Developer Agent Skill
 
-**Entry**: `claude.md` → `docs/agent_reference.md` → `docs/docstrings.md`
+**Entry**: `docs/skills/caveman.md` (optional) → `claude.md` → `docs/agent_reference.md` → `docs/docstrings.md`
 
 ## What you do
 - Work ON the oto codebase (fix bugs, add features, refactor)

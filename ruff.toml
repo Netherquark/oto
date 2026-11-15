@@ -35,6 +35,15 @@
 # E702: multi-statement lines; pre-existing idiom in small inline helpers.
 #
 # To reproduce:  python3 -m ruff check --config ruff.toml
+exclude = [
+  "vendor/",
+  "archive/",
+  "gfx90c_results/",
+  "gfx90c_runs/",
+  "logs/",
+  "backups/",
+]
+
 [lint]
 select = ["E", "F", "W", "B", "UP", "I", "C4", "RUF", "N", "A", "PIE", "RSE", "FURB", "RET", "PERF"]
 ignore = ["E501", "E402", "E702"]
