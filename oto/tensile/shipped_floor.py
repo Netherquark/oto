@@ -37,12 +37,15 @@ CONTRACTION_PATTERNS = ["Ailk_Bjlk", "Ailk_Bljk", "Alik_Bjlk", "Alik_Bljk"]
 
 
 def _resolve_rocm() -> str:
-    """Resolve the ROCm prefix for the rocBLAS ``.dat`` search (env first).
+    """Resolve the ROCm prefix for the rocBLAS ``.dat`` search.
 
-    The GPU compile machinery is ROCM_PATH-mandatory (oto.runners.toolchain);
-    this helper is only about locating pre-shipped library artifacts, so the
-    hipconfig/PATH probe stays as a best-effort fallback for distros that
-    install rocBLAS outside ROCM_PATH.
+    Primary source is the user's ``ROCM_PATH`` (the same value that drives
+    the toolchain). There is no `/opt/rocm` fallback here: a shipped-floor
+    search that silently found a different install than the toolchain would
+    produce a floor that does not match the library it is being compared
+    against. The hipconfig probe stays only as a best-effort cross-check when
+    ``ROCM_PATH`` is unset; if it returns nothing, the search is empty and
+    the caller reports the gap instead of guessing.
     """
     prefix = os.environ.get("ROCM_PATH", "").strip()
     if prefix and Path(prefix).is_dir():
@@ -57,8 +60,6 @@ def _resolve_rocm() -> str:
                     return m.group(1).strip()
         except (OSError, subprocess.TimeoutExpired):
             pass
-    if Path("/opt/rocm").is_dir():
-        return "/opt/rocm"
     return ""
 
 
@@ -84,9 +85,14 @@ def _all_rocm_prefixes() -> list[str]:
     """
     primary = _resolve_rocm()
     prefixes = {p for p in [primary] if p}
-    for extra_cand in ["/opt/rocm", *sorted(__import__("glob").glob("/opt/rocm-*"))]:
-        if Path(extra_cand).is_dir():
-            prefixes.add(extra_cand)
+    # Secondary installs (e.g. a second ROCm holding a family the primary
+    # dropped) are opt-in: comma-separated list in ROCM_EXTRA_PREFIXES. There
+    # is no implicit /opt/rocm glob — that would re-introduce a path guess.
+    extra_env = os.environ.get("ROCM_EXTRA_PREFIXES", "").strip()
+    if extra_env:
+        for cand in (c.strip() for c in extra_env.split(",")):
+            if cand and Path(cand).is_dir():
+                prefixes.add(cand)
     return sorted(prefixes, key=lambda p: (p == primary, p), reverse=True)
 
 

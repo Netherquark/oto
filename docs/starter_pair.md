@@ -71,9 +71,16 @@ is a manual copy made by the human.
   until the owner's API key + a human verification of every value.
 - No gfx902 silicon on this host to run Stage D on. Nothing else is blocked.
 
-(Already unblocked: `oto/device/tensile_isa.py:ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)`
-— the public LLVM ISA-version fact — so the CPU-only build proof can pin the ISA for
-gfx902 instead of refusing by default.)
+**CPU-side pipeline — READY (verified 2026-11-15):**
+- `oto/device/tensile_isa.py:ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)` (public LLVM ISA-version fact).
+- Tensile-side gfx902 support landed in the rocm-libraries checkout (commit 386e90e) —
+  3 entries: `SupportedISA` gains `(9,0,2)`, `architectureMap["gfx902"] = "vega10"`,
+  `AsmCaps[(9,0,2)]` (derived byte-identical to gfx90c's entry via the nightly clang).
+- `oto check tensile-build --arch gfx902` passes end-to-end: CC (MT=64x32x16, TT=4x2)
+  and ZZ (MT=32x32x16, TT=2x2, sols=1, vgpr≤71) both build; LLVM assembles gfx902
+  v_fma_f64 and correctly refuses gfx902 MFMA.
+- Tensile client builds (`scripts/build_tensile_client.sh`); `oto doctor` reports 21 ok / 0 FAIL.
+- The remaining blockers: profile + human verification + gfx902 silicon + the owner's API key.
 
 **UNPROVEN (no claim, ever):** every assumption about gfx902's behavior in
 Tensile — legal accepted knob sets, matrix legality, perf. Nothing in the repo

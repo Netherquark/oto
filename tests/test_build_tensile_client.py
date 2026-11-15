@@ -7,10 +7,7 @@ failure path must be a loud, actionable exit, never a silent fallback.
 
 import os
 import subprocess
-import sys
 from pathlib import Path
-
-import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "build_tensile_client.sh"

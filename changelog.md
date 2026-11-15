@@ -4510,3 +4510,38 @@ the pre-built seed pool.
   MFMA. What remains for the gfx902 bring-up is enumerated in `incomplete_work.md` (Open items):
   the owner's 3-entry Tensile patch (SupportedISA + architectureMap + AsmCaps, the gfx90c precedent),
   the human-verified `profiles/gfx902.json`, the API key, the TTY.
+- **2026-11-15 (53rd) — v1 release prep: every actionable item finished; the audit checklist is closed.**
+  - F-REPORT-4 closed: `_report_inputs` detects the degenerate like-for-like path (no analytics anywhere → the
+    unfiltered per-run walk as loud fallback), marks it `protocol_fallback=True`, threads it through `_report_payload`
+    into the `AcceptanceReport` model (`oto/metrics/report_models.py`) and writes `protocol_fallback` into
+    `acceptance_report.json`. Locked by `tests/test_report_protocol_fallback.py` (2/2); attested in
+    `drift_manifest.json` (ast_equivalence); `oto verify all` PASSED.
+  - Audit checklist (`docs/audit_register.md` §3) fully closed, every item with evidence:
+    phases.yaml order is execution order — `tests/test_manifest_order.py`; the complete `should_run` gate
+    matrix — `tests/test_policy_should_run.py` (scope hit/miss, tier-1, tier-2, tier-1 precedence,
+    empty→RUN, identical-fp skip); single-writer SQLite + `json.dumps` verified line by line; telemetry
+    header-in-file tolerated-and-reported; peaks only in the profile loader (`oto.device.peaks` gone);
+    detached+killable GPU phases (setsid/kill/quit paths); `--phase-timeout` default 3600 s finite.
+  - Synthesis blind-union exposure annotated honestly (admission gate = agent.harvest LCB; best-effort carve
+    native→fallback→floor chain with provenance); no code change — the gate is deliberate and recorded.
+  - `incomplete_work.md`: F-REPORT-4 removed (closed); every remaining item is an owner gate (API key, GPU TTY,
+    human verification, owner word) — documented, marked owner-gated, never re-raised.
+  - Docs registry unchanged: no new doc added; no doc deleted; every registry row still matches a tracked file.
+- **2026-11-15 (53rd) — gfx902 pipeline readiness, CPU-side, complete.**
+  `oto/device/tensile_isa.py`: `ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)` (public LLVM ISA fact; not a
+  measurement) so the CPU-only build proof pins Tensile for gfx902. The 3-entry Tensile-side patch landed
+  in the rocm-libraries checkout (commit 386e90e): `SupportedISA` gains `(9, 0, 2)`,
+  `architectureMap["gfx902"] = "vega10"`, `AsmCaps[(9, 0, 2)]` (derived via Tensile's own
+  `GetAsmCaps()` against the TheRock nightly amdclang++ v23.0.0git — derived-vs-cached byte-identical to
+  gfx90c's entry). `oto check tensile-build --arch gfx902` passes end-to-end: CC
+  (MT=64x32x16/TT=4x2) and ZZ (MT=32x32x16/TT=2x2, `sols=1 vgpr<=71`). LLVM assembles gfx902
+  `v_fma_f64` and refuses gfx902 MFMA (`instruction not supported on this GPU (gfx902)`). The Tensile
+  benchmark client builds from `next-cmake` against the full TheRock 7.15 SDK (the venv's `include/hip`
+  shadows the nightly headers; use the dist prefix) and is installed at
+  `<TENSILE_ROOT>/build/client/tensile-client` — `oto doctor` reports the row OK (21 ok, 0 FAIL).
+  `docs/toolchain_client.md` + `scripts/build_tensile_client.sh` formalise the contract
+  (`--rocm-prefix`/`--targets`/`--tensile-root`/`--amd-smi-dir`; fail-closed; tested in
+  `tests/test_build_tensile_client.py`, 7 tests). `incomplete_work.md` updated: the gfx902 Tensile-port
+  step is closed (probe now passes) — what remains is `profiles/gfx902.json` (human verification),
+  the owner's API key (C4), the gfx902 TTY. `docs/starter_pair.md` BLOCKED list updated accordingly.
+  Suite RC=0; `oto verify all` PASSED.

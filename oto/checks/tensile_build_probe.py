@@ -69,7 +69,13 @@ def _init_tensile(arch: str | None = None) -> None:
         arch = _default_arch()
     tensile_root = _require_tensile_root()
     sys.path.insert(0, str(tensile_root))
-    os.environ.setdefault("ROCM_PATH", "/usr")
+    if not os.environ.get("ROCM_PATH"):
+        raise SystemExit(
+            "ROCM_PATH is not set. Point it at your ROCm install in the "
+            "repo-root .env (e.g. ROCM_PATH=/opt/rocm or "
+            ".../rocm-nightly-venv/lib/python3.14/site-packages/"
+            "_rocm_sdk_core), export it, or pass it inline. There is no "
+            "fallback.")
 
     from Tensile import Common
     from Tensile.Utilities.Toolchain import ToolchainDefaults, validateToolchain

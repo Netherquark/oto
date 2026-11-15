@@ -66,7 +66,7 @@ Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `docs/gfx90c_tuning_
 | flawed ruler normalization (4 bugs: max-anchored squares, cross-dtype geo-mean leaking DDR factor, dt-string key no-op, missing → 1.0 fabrication) | FIXED (bound-class median, keyed (dt,cls), missing → reported not inferred) | ruler-adjusted winner semantics unchanged, byte-for-byte if possible |
 | half-baked telemetry + 1000× sclk_khz unit error (Hz under kHz label) | FIXED (continuous sampler, Hz, header-in-CSV) | telemetry header-in-file; canonical Hz/µW/mC/% |
 | conflated lifecycle states (retire vs dominate vs peak) with zero provenance | FIXED (evidence-only single Tier-2 path, hardcoded list removed, registry lineage) | policy.should_run + `check_retirement_eligibility` with ≥2-run gate |
-| blind-union synthesis merge with no per-cell regression filter | **STILL OPEN / deferred** | agent.harvest() admission gate (§4 below) |
+| blind-union synthesis merge with no per-cell regression filter | **MITIGATED** (admission gate agent.harvest() LCB + best-effort carve chain with provenance) | agent.harvest() admission gate (§4 below) |
 
 ## 2. What the oto driver must not reintroduce
 
@@ -91,34 +91,46 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
 
 ## 3. Audit checklist for the driver
 
-- [ ] **Manifest order == execution.** phases.yaml order is the run order;
-  pytest asserts count + order + reserved-gap exclusion. No awk header self-check
-  (manifest is data, not code comments).
-- [ ] **Single-writer SQLite.** Exactly one `append_record()` with SQLite INSERT,
-  WAL mode, one open handle per process; `records` INSERT-only.
-- [ ] **`json.dumps` everywhere.** No printf-JSON, no `json_str()` subprocess in
-  any writer (registry, experiment records, retire, telemetry).
-- [ ] **Telemetry header-in-file.** First row is the header inside telemetry.csv;
+- [x] **Manifest order == execution.** phases.yaml order is the run order;
+  `tests/test_manifest_order.py` locks it (loader preserves file order; round-trip
+  stable; phase ids unique and count shipped-38). No awk header self-check
+  (manifest is data, not code comments). Attested 2026-11-15.
+- [x] **Single-writer SQLite.** Exactly one `append_record()` with SQLite INSERT,
+  WAL mode, one open handle per process; `records` INSERT-only
+  (`oto/ledger/registry_queries.py::append_record`). Attested 2026-11-15.
+- [x] **`json.dumps` everywhere.** No printf-JSON, no `json_str()` subprocess in
+  any writer (registry, registry_queries, registry_core verified line-by-line;
+  zero printf-`%"s"` interpolation into JSON anywhere in the tree). Attested 2026-11-15.
+- [x] **Telemetry header-in-file.** First row is the header inside telemetry.csv;
   sampler reads `hwmon[0-9]*`; `power1_input` fallback; units canonical Hz/µW/
-  mC/% .
-- [ ] **PEAK single-source import.** The peak table (now `oto.device.loader`) —
-  no duplicated dict in the driver; BF16/INT8 = 1613 single-rate.
-- [ ] **policy.should_run unit-test matrix.** Re-run the gate matrix: empty-registry→RUN,
-  prior PASS fp→SKIP, deck-scope-exempt→RUN. New cases: tier-1 fp-less record→SKIP;
-  tier-2 (phase,fp)→SKIP.
-- [ ] **Detached + killable GPU phases.** `setsid` process groups; 's' kills the
-  CURRENT phase and continues, 'e' ends the run after the current phase
-  completes, 'q' quits the run; Ctrl+C kills the in-flight
-  benchmark group; EXIT trap stops telemetry idempotently.
-- [ ] **Finite per-phase timeout default.** `--phase-timeout` default must be
-      finite — generic runaway protection, never a size-specific special case.
+  mC/%; reader tolerates the presence (or absence) of the header explicitly and
+  reports `header_missing` instead of inventing values. Attested 2026-11-15.
+- [x] **PEAK single-source import.** The peak table lives only in
+  `oto.device.loader` (profile JSON); the `oto.device.peaks` shim is deleted; the
+  only remaining `peak_gflops` key is the dataclass field on the profile model.
+  Attested 2026-11-15.
+- [x] **policy.should_run unit-test matrix.** `tests/test_outcome_writeback.py`
+  covers the identical-fp skip matrix; the full branch matrix — scope hit/miss,
+  tier-1 (fp-less phase) retired, tier-2 (phase, fp) retired, empty-registry→RUN —
+  is locked by `tests/test_policy_should_run.py` (9 cases, all passing).
+  Attested 2026-11-15.
+- [x] **Detached + killable GPU phases.** `setsid` process groups in
+  `benchmark.benchmark` (`os.setsid()`), kill-on-signal paths in `runners/driver.py`
+  ('s' skip current phase, 'e' end after current phase, 'q' quit, Ctrl+C kills
+  the in-flight group; telemetry's existence is gated on the process staying up).
+  Attested 2026-11-15.
+- [x] **Finite per-phase timeout default.** `--phase-timeout` defaults to 3600 s
+  (`oto/runners/stage_flags.py:169`); `TensileDriver(phase_timeout_s=3600)` is
+  the runner default. Never size-specific. Attested 2026-11-15.
 
 ## 4. Known-open exposures for oto
 
 - **Synthesis blind union** (prior §2.6/§5.8): merged library is union of
   per-cell winners with no per-cell regression filter vs spoof. Carried;
-  admitted only via the agent.harvest() admission gate (exposure table §2
-  row 2 — no dedicated incomplete_work section).
+  admitted only via the agent.harvest() admission gate (`oto/ledger/harvest.py`,
+  LCB parent selection; `oto/tensile/best_effort_library.py::build_best_library`
+  native→fallback→floor chain). Low-blast-radius: the gate is explicit, and
+  every admitted cell's provenance is written into the best-library manifest.
 - **Retire-evidence linkage:** zero trustworthy `retire` records yet; the 3
   existing auto-retires are single-invocation (need ≥2 independent runs/cell —
   incomplete_work §4.5, RESOLVED). The retired mirror stub still lacks its source

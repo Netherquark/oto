@@ -454,13 +454,29 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
         env["HIP_DEVICE_LIB_PATH"] = os.environ.get("HIP_DEVICE_LIB_PATH") or own_bitcode
         env["ROCM_DEVICE_LIB_PATH"] = os.environ.get("ROCM_DEVICE_LIB_PATH") or own_bitcode
     else:
-        for cand in ("/usr/lib64/rocm/llvm/lib/clang", "/opt/rocm/llvm/lib/clang"):
-            if os.path.isdir(cand):
-                for ver in sorted(os.listdir(cand), reverse=True):
-                    bc = os.path.join(cand, ver, "amdgcn", "bitcode")
-                    if os.path.isdir(bc):
-                        env.setdefault("HIP_DEVICE_LIB_PATH", bc)
-                        env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
+        # No hard-coded ROCm paths: derive the bitcode dir from ROCM_PATH /
+        # HIP_PATH (or an explicit HIP_DEVICE_LIB_PATH). The only fallback is
+        # a one-level search under the user's own prefix, never /usr or /opt.
+        for base in (env.get("HIP_DEVICE_LIB_PATH", ""),
+                     env.get("ROCM_DEVICE_LIB_PATH", ""),
+                     os.path.join(rocm_for_libs, "lib", "llvm", "amdgcn", "bitcode")):
+            if base and os.path.isdir(base):
+                env.setdefault("HIP_DEVICE_LIB_PATH", base)
+                env.setdefault("ROCM_DEVICE_LIB_PATH", base)
+                break
+        else:
+            # last resort: search one level under the prefix for amdgcn/bitcode
+            for root in (rocm_for_libs,):
+                if not root or not os.path.isdir(root):
+                    continue
+                for dirpath, dirnames, _ in os.walk(root):
+                    if "bitcode" in dirnames:
+                        bc = os.path.join(dirpath, "bitcode")
+                        if os.path.isdir(bc) and "amdgcn" in dirpath:
+                            env.setdefault("HIP_DEVICE_LIB_PATH", bc)
+                            env.setdefault("ROCM_DEVICE_LIB_PATH", bc)
+                            break
+                    if "bitcode" in dirnames and "amdgcn" in dirpath:
                         break
     # user-provided ROCm: ensure its own headers are on the include path so the
     # compiler does not fall back to a mismatched system /usr/include/hip.

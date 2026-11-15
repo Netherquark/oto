@@ -814,6 +814,10 @@
     {
       "key": "verify_run.py::telemetry",
       "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
+    },
+    {
+      "key": "oto/metrics/acceptance_report.py::AcceptanceReporter.generate_acceptance_report signature changed",
+      "reason": "F-REPORT-4 closure (2026-11-15): additive defaulted kwarg 'protocol_fallback: bool = False' threaded exactly like the profile=None sweep, so a degenerate like-for-like analytics path marks itself in the report payload instead of silently emitting a clean all-zero grid. Re-verified: suite RC=0 (1098 passed, test_report_protocol_fallback 2/2); oto verify all otherwise green. Attested 2026-11-15."
     }
   ],
   "gate_differential": [

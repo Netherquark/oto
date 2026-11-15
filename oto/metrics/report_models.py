@@ -111,4 +111,9 @@ class AcceptanceReport:
     # so the report must say so rather than letting its verdicts read as final.
     reference_floor_status: str = "not attempted"
     reference_floor_authoritative: bool = True
+    # Provenance of the analytics input. True when no like-for-like (protocol
+    # == the report's basis) corpus exists and the numbers fell back to the
+    # unfiltered per-run walk — caller-side contract: never silently read as
+    # clean coverage when nothing measured exists anywhere.
+    protocol_fallback: bool = False
 

@@ -127,7 +127,7 @@ Report `floor_best` as co-primary alongside `winner`.
 | A: spoof-steal (CC:256) | decked, 52 rows in PLAN_BATCH | CC:256 |
 | B: 14 never-varied knobs | decked in KNOB_SWEEPS | all families |
 | C: wave-quantisation ladder | legal only for SS/DD | SS, DD small shapes |
-| D: LDS-capacity ladder for Z | pending | ZZ all |
+| D: LDS-capacity ladder for Z | decked (at-budget ladder; D2/D3 trials retired 2026-11-14) | ZZ all |
 | E: split-complex (3 real GEMMs) | separate work item | CC, ZZ |
 | F: persistent fixed grid | conceptual only | all |
 

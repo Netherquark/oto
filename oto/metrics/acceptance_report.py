@@ -74,6 +74,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         native_arm: dict[str, Any] | None = None,
         reference_floor_status: str = "not attempted",
         reference_floor_authoritative: bool = True,
+        protocol_fallback: bool = False,
     profile=None,
     ) -> AcceptanceReport:
         """Generate final acceptance report.
@@ -115,6 +116,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             native_arm=native_arm,
             reference_floor_status=reference_floor_status,
             reference_floor_authoritative=reference_floor_authoritative,
+            protocol_fallback=protocol_fallback,
         )
 
     def _load_shipped_manifest(self) -> dict[str, Any]:
@@ -346,6 +348,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
             "family_timing": report.family_timing,
             "reference_run_id": report.reference_run_id,
             "native_arm": report.native_arm,
+            "protocol_fallback": report.protocol_fallback,
             "shipped_manifest": {
                 "total_shipped_kernels": (report.shipped_manifest or {}).get("total_shipped_kernels", 0,),
                 "expected_kernels": (report.shipped_manifest or {}).get("expected_kernels", {},),

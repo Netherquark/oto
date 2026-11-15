@@ -347,15 +347,20 @@ class ReportingMixin:
         """
         all_analytics = self._native_analytics_all_runs(
             protocol_basis=protocol_basis)
-        if not all_analytics:
+        degenerate = not all_analytics
+        if degenerate:
             # Degenerate: nothing measured anywhere. Say so loudly rather
             # than emitting a clean-looking all-zero grid.
+            print(f"[report] WARNING: no like-for-like analytics under "
+                  f"protocol {protocol_basis!r} anywhere; falling back to the "
+                  f"unfiltered per-run walk — report provenance will mark "
+                  f"protocol_fallback=True.")
             all_analytics = (self._load_analytics_from_run(self.run_dir)
                              or self._load_analytics_from_registry(run_id))
         cell_status = self.analytics.classify_cell_status(all_analytics)
         family_timing = self._merged_family_timing(run_id)
         execution_timing = self._compute_execution_timing(run_id, family_timing)
-        return all_analytics, cell_status, family_timing, execution_timing
+        return all_analytics, cell_status, family_timing, execution_timing, degenerate
 
     def _merged_family_timing(self, run_id: Path):
         """Candidate-run timing merged with every reference chain run's timing.
@@ -430,7 +435,7 @@ class ReportingMixin:
 
     def _report_payload(self, run_id: str, ab_verdicts, native_arm,
                         all_analytics, cell_status, family_timing,
-                        execution_timing) -> Any:
+                        execution_timing, degenerate=False) -> Any:
         """Assemble the reporter's payload dataclass for one report."""
         return self.reporter.generate_acceptance_report(
             run_id=run_id,
@@ -446,6 +451,7 @@ class ReportingMixin:
                 self, "_reference_floor_status", "not attempted"),
             reference_floor_authoritative=getattr(
                 self, "_reference_floor_authoritative", True),
+            protocol_fallback=degenerate,
         )
 
     def generate_acceptance_report(self, run_dir: Path | None = None, run_id: str | None = None,
@@ -481,7 +487,7 @@ class ReportingMixin:
                 print("Report generation: no run_id available")
                 return None
 
-            all_analytics, cell_status, family_timing, execution_timing = \
+            all_analytics, cell_status, family_timing, execution_timing, degenerate = \
                 self._report_inputs(run_id, protocol_basis=protocol_basis)
 
             # Must precede provenance: this is what populates _native_arm_records.
@@ -492,7 +498,7 @@ class ReportingMixin:
 
             report = self._report_payload(
                 run_id, ab_verdicts, native_arm, all_analytics, cell_status,
-                family_timing, execution_timing)
+                family_timing, execution_timing, degenerate)
             return self._emit_report(run_id, run_dir, report, ab_verdicts,
                                      native_arm, all_analytics,
                                      cell_status["red"])

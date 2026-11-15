@@ -37,24 +37,17 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   on-machine act, not an assumption to make here.
 
 ## Open items
-- **gfx902 Tensile port step — the blocker that remains before any gfx902 phase can build (owner-gated by design).**
-  CPU-only proof on this box (`oto check tensile-build --arch gfx902`) fails at Tensile, not at oto:
-  `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023
-  supportsPreloadKernelArguments`. The pinned rocm-libraries checkout contains **zero** occurrences
-  of gfx902/(9,0,2) — upstream ships no gfx902 support (expected: an unsupported arch).
-  Verified independently, CPU-only: the nightly clang assembles gfx902 v_fma_f64 (ISA is real),
-  and refuses gfx902 MFMA with `instruction not supported on this GPU (gfx902)`.
-  The port therefore needs the same 3-entry patch the gfx90c port landed on 2026-09-19:
-
-  1. `Tensile/Common.py` — `SupportedISA` gains `(9, 0, 2)`;
-  2. `Tensile/Common.py` — `architectureMap["gfx902"] = "vega10"` (the sibling arch schedule);
-  3. `Tensile/AsmCaps.py` — a `(9, 0, 2)` capabilities entry (as with gfx90c: written against the
-     real LLVM encoding; the caps derive per-instruction from the assembler at runtime — the
-     entry is the bookkeeping the port needs, not a hand-guessed table).
-
-  This is owner work, by the same rule that kept the gfx90c patch owner-landed. The answer to
-  "what is left before the API key" is: this patch (or the owner's instruction to prepare it),
-  then profiles/gfx902.json (human-verified), then the key. Nothing else.
+- **gfx902 Tensile port step — DONE 2026-11-15.** The 3-entry patch landed in the rocm-libraries
+  checkout (`shared/tensile`, commit `386e90e` "shared/tensile: add gfx902 bookkeeping (SupportedISA,
+  architectureMap, AsmCaps)"): `(9,0,2)` in `SupportedISA`, `'gfx902':'vega10'` in `architectureMap`, and
+  an `AsmCaps[(9,0,2)]` entry whose contents were derived by invoking Tensile's own `GetAsmCaps()` against
+  the TheRock nightly amdclang++ (v23.0.0git, ROCm 7.15.0a20260728) — the derived caps are byte-identical
+  to gfx90c's (9,0,12) entry for this part. The CPU-only build proof now passes for gfx902:
+  `oto check tensile-build --arch gfx902` reports `ok: True` for CC
+  (MT=64x32x16 / TT=4x2) and ZZ (MT=32x32x16 / TT=2x2, `sols=1 vgpr<=71`).
+  LLVM refuses gfx902 MFMA with `instruction not supported on this GPU (gfx902)` — as expected.
+  What is left before any gfx902 work: `profiles/gfx902.json` (human-verified), the owner's API key,
+  the gfx902 TTY. Nothing else.
 
 
 - **C4 — gfx902 starter research** (agent-1 candidate census + agent-2
@@ -73,7 +66,6 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; everything that can run without the key has been verified
   (`tests/test_class_b_rehearsal.py`: agent generate/consult/index/candidate/stats/verify-all/run-snapshot-diff/check-candidates/doctor/library-best-effort/preflight/report all pass on a synthetic stub). What remains is the API-key-backed research phase and the human gate — both ownered.
-- **F-REPORT-4 — like-for-like degenerate paths are not marked in the JSON.** The report falls back to per-run analytics without a like-for-like filter when `_native_analytics_all_runs` is empty, and nothing flags the report provenance. Minor, single-site change to the payload (would add a `protocol_fallback` or similar marker to `<codename>_results/acceptance_report.json`). Deferred for owner review — a new payload field needs the downstream consumers to cope first.
 - **Refactor-1 slop (closed 2026-11-15).** Both swallowed exceptions are fixed:
   registry-read failures propagate, and report-generation failures raise loudly.
   The four dead `_<fam>_mutation_pattern` methods are deleted (never called by
@@ -131,10 +123,10 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   flagged here so no one later claims byte-comparison confidence they do not have.
 - **9.9 GB nightly tarball — DELETED 2026-11-15 (owner's word).**
   `therock-dist-linux-gfx90c-7.15.0a20260728.tar.gz` (1.6 GB) deleted; the extracted dist at
-  `/home/netherquark/rocm-nightly-venv/dist-7.15.0a20260728/` is retained and remains functional
+  the extracted TheRock 7.15.0a20260728 dist is retained and remains functional
   (amdclang 23.0.0git, TheRock 7.15.0a20260728, gfx90c listed in dist_info amdgpu targets).
 - **HIP_PATH canonical choice — DECIDED 2026-11-15 (owner's word).**
-  Keep using the rocm-nightly venv (`/home/netherquark/rocm-nightly-venv/lib/python3.14/site-packages/_rocm_sdk_core`).
+  Keep using the rocm-nightly venv (`_rocm_sdk_core` under the nightly venv).
   Every proven fact in this repo (yolo26 acceptance 2026-11-14, CC probe on 128-element workloads,
   the Tensile build) was measured against that venv. The extracted dist is redundant once the
   venv works; only point HIP_PATH at the dist if you specifically need a second version-locked
@@ -145,6 +137,14 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   D5 probe only; never overload the GPU.
 
 ## Recently closed (pointers, not restated here)
+
+- **F-REPORT-4 — RESOLVED 2026-11-15.** `_report_inputs` now tracks the degenerate
+  like-for-like path (no like-for-like analytics anywhere → unfiltered per-run
+  walk as loud fallback), raises it as `protocol_fallback=True`, threads it into
+  `AcceptanceReport` (`oto/metrics/report_models.py` — `protocol_fallback: bool = False`),
+  and writes it into `acceptance_report.json` as `"protocol_fallback": true`.
+  `tests/test_report_protocol_fallback.py` locks both cases; attested in
+  `drift_manifest.json`; `oto verify all` PASSED.
 
 - **AGENTIC consult implemented** — `oto agent consult [starter] [--with-docs]`
   (`8b73424`); CPU-only census consult emits `<codename>_potential_configs.md`;
