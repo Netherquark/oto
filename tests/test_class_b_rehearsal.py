@@ -201,3 +201,48 @@ def test_full_agent_flow_against_synthetic_second_device():
     assert "testbed902" in body
     from oto.device.loader import load_profile as _reload
     assert _reload("gfx90c")  # restore for any later test in this process
+
+
+def test_unknown_arch_reports_actionable_error():
+    """The gfx902-era breakage mode: Tensile's ISA table has no gfx902 entry,
+    so the build proof must refuse with an actionable message — never silently
+    run without pinning the ISA. This test is what the C4/C7.1 work will
+    convert into a real-table-entry pass once the profile is verified."""
+    from oto.device.tensile_isa import ISA_TRIPLES, isa_triple
+
+    assert ISA_TRIPLES and len(ISA_TRIPLES) >= 3, "table must carry gfx900/gfx90c/gfx906"
+    assert isa_triple("gfx900") == (9, 0, 0x00)
+    assert isa_triple("gfx906") == (9, 0, 0x06)
+
+    # gfx902 is the superseding tag — any
+    # YA instance of isa-triple for it is still none; that fact is what
+    # C4/C7.1 have to close.
+    assert isa_triple("gfx902") is None
+
+
+def test_tensile_isa_table_no_loose_triples():
+    """Records the known-good table; any silent edit to it should scream."""
+    from oto.device.tensile_isa import ISA_TRIPLES
+
+    assert ISA_TRIPLES["gfx900"] == (9, 0, 0x00)
+    assert ISA_TRIPLES["gfx90c"] == (9, 0, 0x0C)
+    assert ISA_TRIPLES["gfx906"] == (9, 0, 0x06)
+
+
+def test_agent_consult_on_empty_directory():
+    """Consult on a base directory with NO kernel_db.json: priors=0, still writes the doc."""
+    import tempfile
+    from pathlib import Path
+    import dataclasses
+    from oto.device.loader import load_profile
+    from oto.agents.census_consult import consult
+
+    base = load_profile("gfx90c")
+    synth = dataclasses.replace(base, codename="testbed902")
+
+    with tempfile.TemporaryDirectory() as td:
+        # Explicit profile; base_dir has NO configs, NO kernel_db, NO corpus.
+        result = consult(synth, base_dir=Path(td))
+        assert result["status"] == "success"
+        assert result["priors"] == 0
+        assert Path(result["out"]).exists()

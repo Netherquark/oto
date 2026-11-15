@@ -105,8 +105,14 @@ def _init_tensile(arch: str | None = None) -> None:
 
     from oto.device.tensile_isa import isa_triple
     isa = isa_triple(arch)
-    if isa is not None:
-        Common2.globalParameters["CurrentISA"] = isa
+    if isa is None:
+        raise SystemExit(
+            f"Tensile's ISA table has no entry for {arch!r} (known: gfx900, "
+            "gfx90c, gfx906). The build proof would run without pinning the "
+            "ISA and prove nothing about this arch -- refusing rather than "
+            "guessing. Add an entry to oto/device/tensile_isa.py:ISA_TRIPLES "
+            f"once the Tensile-side triple for {arch!r} is confirmed.")
+    Common2.globalParameters["CurrentISA"] = isa
 
 
 def _require_tensile_root(explicit: str | None = None) -> Path:
