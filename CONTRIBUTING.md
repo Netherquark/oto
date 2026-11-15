@@ -28,13 +28,6 @@ own commit.
   `docs/cli.md` is pinned byte-identically to the parser output and the test
   suite enforces it.
 
-## GPU policy (hard rule)
-
-No GPU legs outside the owner's explicit whitelist (`claude.md`), and no GPU
-perf claims without a TTY session on the target box. CPU-only proofs are
-expected and preferred wherever they exist (`oto check candidates`,
-`oto verify all`, the legality probes). Never overload the GPU.
-
 ## Commit discipline
 
 - One concern per commit; imperative subject lines.
