@@ -43,7 +43,8 @@ MAX_ENTRIES = 50_000
 #: than replaying a verdict reached under this one. Kept small on purpose --
 #: the gates consume exactly these.
 _PROFILE_FINGERPRINT_FIELDS = (
-    "codename", "vgpr_per_cu", "global_load_byte_cap", "lds_per_cu_kb", "has_mfma",
+    "codename", "isa", "vgpr_per_cu", "global_load_byte_cap", "lds_per_cu_kb",
+    "has_mfma", "has_dp4a", "has_packed_bf16", "assembly_gates",
 )
 
 
