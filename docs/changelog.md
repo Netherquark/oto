@@ -7,11 +7,253 @@ review-interval: 90d
 The SINGLE changelog/evolution log for the project. One fact, one canonical home:
 milestone + rationale entries land here; they are never re-created elsewhere.
 Prior-campaign conclusions are sourced (never copied) from the two sanctioned
-prior MDs: `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
+prior MDs: `docs/research/kernel_tuning.md`.
 
 This file records project milestones and the prior-campaign → attempt2 evolution
-narrative, NOT the active implementation state (that is `implementation_plan.md`)
-and NOT the experimental data (that is `results.md`).
+narrative, NOT the active implementation state (that is `docs/developer/invariants.md`)
+and NOT the experimental data (that is `docs/gfx90c/results.md`).
+
+Chronological, newest first, grouped by month. Sessions are numbered `Nth` in
+the day they happened — kept verbatim (referenced from other docs; never
+renumbered). Entries with no provable date are labelled `Undated` and live in
+the tail section in their original order. Sections that are context/record
+rather than change entries are grouped at the end.
+
+## November 2026
+
+- **2026-11-15 (45th) — the production-readiness sweep: every audit finding fixed honestly, and the box declared honestly not ready.**
+  The v1-readiness audit (A.md/B2.md) findings were fixed, in priority order, one concern per commit:
+  - **Reference floor crash**: `_create_reference_run_dir` returned a 4-tuple bound into the sqlite `run_id`
+    — every `--gfx900-reference` run died after the GPU work with a ProgrammingError. The caller now
+    unpacks the tuple, the run row is stamped, and the pre-existing run dirs are restored in `finally`.
+  - **`oto check db` honours integrity**: `--json` reports the real `PRAGMA integrity_check` and exits 1
+    on corruption (it hardcoded `integrity: true` and exit 0); the human path exits 1 on failure too.
+  - **The mutation arm cannot bypass the ledger guard silently**: `bypass_identical_skip` is honoured
+    only when the ledger backs the bypass (agent present + outcome signal), never unconditionally.
+  - **DB synthesis arm reachable again**: `convergence_agent` imported `db_mutator` from a nonexistent
+    top-level module behind `except Exception: None`; it now imports the real module path and warns on stderr.
+  - **`idx_cell_key`** is created by the schema (`_EXPRESSION_INDEX_DDL`), so a fresh DB has it.
+  - **Native-subject selection is profile-aware**: `latest_run_id(arm="native")` excludes the *current
+    profile's* spoof prefix (LIKE-escaped, parameter-bound), not only `gfx900_ref_%`; smoke floors are
+    never recalled for promotion (`latest_reference_run_id` filters `meta.smoke`); the remaining
+    `LIKE` interpolations across registry_queries / shipped_floor_manifest / run_plan / auto_prompt are
+    parameter-bound (`like_escape`, shared). **Every** `startswith("gfx900_ref")` / `"gfx900_ref_locked_"`
+    site across the harness/agents/metrics (kernel_db, occupancy_bounds, corpus_census, cell_knob_diff,
+    cell_resolver, regression_matrix, gate_calibration, driver._current_arm, consolidate_floor.locked_run_id)
+    now resolves the profile's spoof_reference through `oto.device.loader.spoof_prefix` — a gfx906-floor
+    profile no longer misclassifies the floor as native anywhere in the pipeline.
+  - **The driver honours OTO_PROFILE**: an explicit OTO_PROFILE binding wins over rocminfo detection
+    (documented resolution order), so a gfx902 session is not silently run as gfx90c; the process-wide
+    rebind failure prints to stderr instead of vanishing.
+  - **Toolchain compilers**: the client-build compiler defaults follow the ROCm tree (llvm-bin amdclang
+    preferred, matching Tensile's native default) with explicit `TENSILE_CXX_COMPILER`/`TENSILE_C_COMPILER`
+    overrides (bare names pass through verbatim; bad paths are hard errors); `hipcc` is selected only
+    when the tree ships no clang. `.env.example` documents both.
+  - **`--prebuilt-client` is honest**: `OTO_TENSILE_CLIENT` pointing at a missing path is a hard error;
+    the default is also verified — the campaign raises before any phase instead of failing inside every
+    Tensile subprocess. `oto doctor` gained a "Tensile client" row that FAILs on this box today
+    (the client is genuinely not built here; the fix is the one-time next-cmake build, not a code edit).
+  - **`oto candidate --json` mirrors the text view**: `phases` is the deck (280), with `seed_overlay`
+    (1146) and `manifest` (1426) as distinct fields instead of a merged-only count.
+  - **CLI housekeeping forced by the 600-line file guard**: adapter helpers extracted to
+    `oto/cli/_adapter.py`, the verify adapters to `oto/cli/verify_cmds.py`; `commands.py` keeps its
+    stated public API (`dispatch`, `show_help`, `write_completions`).
+  - **`oto verify all --base-ref REF`** passes a base ref through to the verifier (previously
+    `--base` was swallowed by the global flag and the verifier silently ran HEAD~1).
+  - **Comparator/verifier repairs**: split-era MOVES pointed at renamed paths (`oto/checks/db.py`,
+    `oto/ledger/queries.py`, `oto/ledger/proposals.py`); `harness/occupancy_bounds.py` MOVES source
+    corrected to `harness/occupancy_audit.py`; `verify_methods.py` NEW list follows renames; the
+    config-writer accepted classes now cover exactly the documented emitter deltas
+    (`+ Architecture:` echo, `NumElementsToValidate: 0 -> 128`) and their composition with the
+    already-accepted knob classes); 21 manifest attestations added for the
+    mechanical Refactor-2 evolution signatures; `oto verify all` returns 5/5 OK at both HEAD and 2824c2f.
+  - **Slop retired**: accept-report generation failures raise loudly (calls cannot tell a dry run from
+    a bug otherwise); the dead per-family `_<fam>_mutation_pattern` methods deleted; `self.scheduler`
+    renamed `self.generator` throughout; the benchmark chart's device literals are profile-derived.
+  - **Release-readiness additions**: pinned split requirements (`requirements.txt` runtime,
+    `requirements-dev.txt` suite+lint), `NOTICE` (copyright assertion; LICENSE stays verbatim),
+    `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`. A GitHub Actions CI workflow was added
+    in the same sweep, then **removed at the owner's direction (never requested -- the owner
+    confirmed they did not ask for CI/CD)**. The repository has no CI; the suite is
+    self-verified on the machine, and README quick-start + license section + regenerated
+    `oto/README.md` landed in its place.
+  Suite green (1084 passed, 8 skipped, 242 subtests, RC=0). `oto verify all` PASSED at HEAD~1 and at
+  2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
+  owner's API key and the Tensile client build are both still required.
+
+- **2026-11-15 (46th) — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
+  docs/gfx90c/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
+  the A/B audits, the like-for-like regrade, the steal, the stop-list, the overnight runbook). Its entire
+  content — every measured number, table, run id, verdict and superseded rewrite — now lives in
+  `docs/gfx90c/gfx90c_tuning_guide.md` §13 (all R-numbers preserved; bring-up case study for agents imitating a
+  new-target port). The doc itself is rewritten as the device-independent methodology: what a deck is, the
+  zero-calibration gate method (accumulator / register-file / LDS / load-divisibility / oracle), the
+  like-for-like measurement rules (protocol parity, tie-band policy, rank-1 medians, sweep order), the
+  literature-mapped experiment order, the ledger-trace reading, the overnight protocol, and the porting
+  checklist. A full resolution table (`docs/gfx90c/potential_configs.md` §10) maps every former §-pointer so
+  historical citations stay resolvable; non-R section references across docs, comments and tests were
+  re-pointed mechanically to `docs/gfx90c/gfx90c_tuning_guide.md` §13. Registry (`docs/README.md`), generated index
+  (`docs/docs_index.json`, via `oto agent index`), `docs/agent_reference.md`, `docs/README.md`,
+  `README.md`, `claude.md`, `docs/gfx90c/gfx90c_theoretical_limits.md`, `docs/gfx90c/knowledge_base.md`,
+  `docs/operator_campaign.md` and `docs/research/kernel_tuning.md` updated to the new split. No instrument,
+  gate, verdict or deck row changed. The commit history of both files was studied first (65 commits on
+  potential_configs.md; the 2026-10-12 whittle/restore cycle preserved). Suite RC=0.
+  - **The agentic framing, applied everywhere (same concern).** Stale pre-agent-era claims that oto is
+    "not LLM-in-the-loop" / "AI-free" / "one-shot deterministic convergence" were corrected: the agent
+    layer is LLM-assisted and ships today (`oto agent consult`, agent-1/agent-2, directed prompts;
+    proposes, never decides). `docs/implementation_plan.md` rewritten as the honest design brief
+    (two loops, one rule; gfx902 blocked on the API key is stated, not hidden); the README architecture
+    flowchart gains the agent layer and states the acceptance path is deterministic; `docs/search_philosophy.md`
+    retitled (agentic tuning context; deterministic acceptance path; no surrogate in the loop; the model
+    never decides); `claude.md` and `docs/developer/audit_register.md` updated likewise; `oto/__init__.py` docstring's
+    opening line corrected; `oto/tools/potential_configs.py` citation updated.
+
+- **2026-11-15 (47th) — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
+  Per owner direction, `archive/` is no longer tracked in git (its content stays on disk, ignored via the
+  standing `archive/` rule); nothing was deleted. The archive's markdown was studied first:
+  - **The prior-campaign autopsy** (attempt1, 2026-09-04 → 09-13: the 9-file patch failure, the 3-entry
+    shim port, the peak-table correction, the ±23–31 % A/B envelope, the GPU-hang playbook, the
+    winner-instability autopsy) is absorbed verbatim into `docs/gfx90c/gfx90c_tuning_guide.md` §14; the research
+    passes' audit trail is recorded as §15 (corpus.pass1–3, RESEARCH_PROMPT3, the pre-rewrite deck snapshot).
+  - **The research-prompt discipline** — the multi-round, evidence-labelled, prohibition-guarded research
+    workflow the campaign developed (one deliverable scoped exhaustively; three rounds: broad census →
+    line-level coupling audit → docs triage; `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` labels; hard
+    prohibitions; adoption matrices; pre-registered mechanism-tagged predictions; do-not-cite lists) — is
+    written into `docs/operator_campaign.md` §18 as the procedure the operator agent follows when the docs
+    cannot answer a question it must settle. Pinned in `docs/skills/class_b_operator.md` and
+    `docs/operator/operator_runbook.md` §10.
+  - **`.gitignore`**: `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `dist/`, `.mypy_cache/`, `.tox/` added.
+  - The guide now carries the complete bring-up history: current method (§0–§12), the port case study (§13),
+    the prior-campaign autopsy (§13.4), and the audit trail (§13.5). Suite RC=0.
+
+- **2026-11-15 (48th) — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
+  Same treatment as the potential_configs fold: `docs/gfx90c/results.md` was historically gfx90c-specific evidence. It is now
+  `docs/gfx90c/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/gfx90c/results.md` is a
+  device-independent placeholder the agent populates per device — required sections (scoreboard with protocol+band,
+  per-cell verdicts, gate census, straggler classes, clock/thermal discipline), the like-for-like admission rule,
+  median-of-seeds, and the TTY-only rule. `docs/gfx90c/gfx90c_theoretical_limits.md` was already gfx90c-named; the new
+  `docs/gfx90c/theoretical_limits.md` is its device-independent twin — ISA identity by probe, peak derivation from
+  lanes×clock×throughput, the family table and the acceptance bar — referring to the gfx90c doc only as a golden
+  worked example, never as a source of numbers. Cross-pointers added in both gfx90c files; all ecosystem
+  references re-pointed (20 files); registry rows renamed + two template rows added; `docs/docs_index.json`
+  regenerated; no numbers, instruments or verdicts changed. Suite RC=0; `oto verify all` PASSED.
+
+- **2026-11-15 (49th) — owner-gated blocked items consolidated in `incomplete_work.md`.**
+  C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
+  anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
+  pointers; nothing actioned, nothing claimed.
+
+- **2026-11-15 (50th) — docs/gfx90c/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
+  `docs/gfx90c/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
+  Oct-2 overhaul accrual; the Oct-12 whittle/restore cycle that moved module-docstring facts into the code and
+  deleted `knowledge_base_final.md`; the Oct-14 corpus3 fold (+184 lines: the @e8a8999e defaults table and the
+  never-used-levers analysis, marked mechanism-verified/gain-unmeasured); the Oct-19 GCN5 literature folds). It is
+  now `docs/gfx90c/gfx90c_knowledge_base.md` (content unchanged, in-file pointer added), and the new `docs/gfx90c/knowledge_base.md`
+  is a device-independent template — required sections (What Is Tensile → Port mechanism → GlobalParameters →
+  Solution space → Footprint → Kernel levers source-audited → Measurement science → Preservation law → Glossary),
+  how the agent populates it (probe → pin evidence → derive, never inherit → 0 unlabeled claims), and the same
+  hard rules as the results/limits templates: the gfx90c file is the golden example, never a source of numbers.
+  22 files re-pointed; registry rows updated; docs/docs_index.json regenerated. Suite RC=0; `oto verify all` PASSED.
+
+- **2026-11-15 (51st) — knowledge_base.md mined and generalised twin created; the gfx90c doc family of four is settled.**
+  Full git history studied (27 commits; 454 → 858–866 lines): born 2026-09-19 (the port's WHAT-layer) → Oct-2 overhaul
+  accrual → the Oct-12 whittle/restore cycle (module-docstring facts moved into code; `knowledge_base_final.md` deleted)
+  → Oct-14 corpus3 fold (+184 lines: `@e8a8999e` defaults table + the never-used-levers analysis, marked
+  mechanism-verified/gain-unmeasured) → Oct-18 gate formalisation → Oct-19 GCN5 literature folds → Nov mechanical sweeps.
+  The file is now `docs/gfx90c/gfx90c_knowledge_base.md`; new device-independent `docs/gfx90c/knowledge_base.md` template (WHAT layer;
+  populated per device by the agent). Mining: era note (toolchain moved to nightly 2026-11-14), §6 footprint table delegated
+  to `docs/shipped_floor_contract.md` §2 (single source), §7 rate card delegated to `docs/gfx90c/gfx90c_theoretical_limits.md`
+  §5 + `oto.device.derive_limits` (single source of peaks), §8.2 now points at the gate modules as normative.
+  **Item 5 closed:** gfx90c-specific residue is absorbed or triaged — §6/§7/§8.2 delegated to their owners, §8.1/§8.3/§8.4/§7.1/§7.2
+  are the KB's own canonical content (kept, pointed), and the four gfx90c-specific docs are split deliberately, NOT folded into
+  the guide (documented in the guide §0a): bring-up case study + three golden examples. 22 files re-pointed; registry/index synced;
+  suite RC=0; `oto verify all` PASSED.
+
+- **2026-11-15 (52nd) — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
+  `oto/device/tensile_isa.py` `ISA_TRIPLES` now carries `gfx902 -> (9, 0, 0x02)` (public LLVM ISA-version
+  fact; not a measurement) so the CPU-only build proof can pin Tensile for gfx902 instead of refusing by
+  default. Rehearsal tests updated (16/16 green); `docs/operator/starter_pair.md` BLOCKED list updated — remaining:
+  profile + human verification + gfx902 silicon + the owner's API key, nothing else. The Tensile benchmark
+  client is built for gfx90c from ROCm/rocm-libraries `next-cmake` against the extracted TheRock
+  7.15.0a20260728 SDK (the venv HIP include shadows the nightly's hip headers; the full dist was used as
+  CMAKE_PREFIX_PATH with its amd_smi). The client landed at `build/client/tensile-client` and `oto doctor`
+  reports the row OK (21 ok, 0 FAIL); no `.env` change needed (doctor finds it at TENSILE_ROOT).
+  Toolchain/client contract formalised as `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh`
+  (CPU-only, fail-closed, parameterised by `--rocm-prefix`/`--targets`; tested in tests/test_build_tensile_client.py).
+  The CPU-only `oto check tensile-build --arch gfx902` probe fails honestly inside Tensile itself —
+  `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023`; the pinned checkout
+  contains no gfx902 anywhere; the nightly clang assembles gfx902 v_fma_f64 and correctly refuses gfx902
+  MFMA. What remains for the gfx902 bring-up is enumerated in `incomplete_work.md` (Open items):
+  the owner's 3-entry Tensile patch (SupportedISA + architectureMap + AsmCaps, the gfx90c precedent),
+  the human-verified `profiles/gfx902.json`, the API key, the TTY.
+
+- **2026-11-15 (53rd) — v1 release prep: every actionable item finished; the audit checklist is closed.**
+  - F-REPORT-4 closed: `_report_inputs` detects the degenerate like-for-like path (no analytics anywhere → the
+    unfiltered per-run walk as loud fallback), marks it `protocol_fallback=True`, threads it through `_report_payload`
+    into the `AcceptanceReport` model (`oto/metrics/report_models.py`) and writes `protocol_fallback` into
+    `acceptance_report.json`. Locked by `tests/test_report_protocol_fallback.py` (2/2); attested in
+    `drift_manifest.json` (ast_equivalence); `oto verify all` PASSED.
+  - Audit checklist (`docs/developer/audit_register.md` §3) fully closed, every item with evidence:
+    phases.yaml order is execution order — `tests/test_manifest_order.py`; the complete `should_run` gate
+    matrix — `tests/test_policy_should_run.py` (scope hit/miss, tier-1, tier-2, tier-1 precedence,
+    empty→RUN, identical-fp skip); single-writer SQLite + `json.dumps` verified line by line; telemetry
+    header-in-file tolerated-and-reported; peaks only in the profile loader (`oto.device.peaks` gone);
+    detached+killable GPU phases (setsid/kill/quit paths); `--phase-timeout` default 3600 s finite.
+  - Synthesis blind-union exposure annotated honestly (admission gate = agent.harvest LCB; best-effort carve
+    native→fallback→floor chain with provenance); no code change — the gate is deliberate and recorded.
+  - `incomplete_work.md`: F-REPORT-4 removed (closed); every remaining item is an owner gate (API key, GPU TTY,
+    human verification, owner word) — documented, marked owner-gated, never re-raised.
+  - Docs registry unchanged: no new doc added; no doc deleted; every registry row still matches a tracked file.
+
+- **2026-11-15 (53rd) — gfx902 pipeline readiness, CPU-side, complete.**
+  `oto/device/tensile_isa.py`: `ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)` (public LLVM ISA fact; not a
+  measurement) so the CPU-only build proof pins Tensile for gfx902. The 3-entry Tensile-side patch landed
+  in the rocm-libraries checkout (commit 386e90e): `SupportedISA` gains `(9, 0, 2)`,
+  `architectureMap["gfx902"] = "vega10"`, `AsmCaps[(9, 0, 2)]` (derived via Tensile's own
+  `GetAsmCaps()` against the TheRock nightly amdclang++ v23.0.0git — derived-vs-cached byte-identical to
+  gfx90c's entry). `oto check tensile-build --arch gfx902` passes end-to-end: CC
+  (MT=64x32x16/TT=4x2) and ZZ (MT=32x32x16/TT=2x2, `sols=1 vgpr<=71`). LLVM assembles gfx902
+  `v_fma_f64` and refuses gfx902 MFMA (`instruction not supported on this GPU (gfx902)`). The Tensile
+  benchmark client builds from `next-cmake` against the full TheRock 7.15 SDK (the venv's `include/hip`
+  shadows the nightly headers; use the dist prefix) and is installed at
+  `<TENSILE_ROOT>/build/client/tensile-client` — `oto doctor` reports the row OK (21 ok, 0 FAIL).
+  `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh` formalise the contract
+  (`--rocm-prefix`/`--targets`/`--tensile-root`/`--amd-smi-dir`; fail-closed; tested in
+  `tests/test_build_tensile_client.py`, 7 tests). `incomplete_work.md` updated: the gfx902 Tensile-port
+  step is closed (probe now passes) — what remains is `profiles/gfx902.json` (human verification),
+  the owner's API key (C4), the gfx902 TTY. `docs/operator/starter_pair.md` BLOCKED list updated accordingly.
+  Suite RC=0; `oto verify all` PASSED.
+
+- **2026-11-15 (54th) — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
+  Every function docstring in `oto/` rewritten to pdoc prose (135 `Args:`/`Returns:`/`Raises:` blocks eliminated;
+  383 missing function docstrings added; private helpers get one line; Sphinx `:func:`/`:data:` roles converted to
+  back-ticks; 22 mixin composition roots stated as dotted paths; `AbIdentityMixin` noted unused). Full suite green
+  throughout (1123 passed / 8 skipped; the 600-line and 60-line guards kept via compaction; one dead `pass` dropped).
+  Verifiers: the split-era check now PASSES at both `2824c2f` and `HEAD~1`; `verify_symbols.py` RENAMES table moved to
+  `drift_manifest.json` (the line-budget ratchet had dropped two real mappings, `ldspad_gate.py`→`ldspad.py` /
+  `occupancy_common.py`→`gate_common.py`, and false-reported whole-module API loss); restored mappings pinned by
+  `tests/test_verifier_renames.py`. `oto check tensile-build` CPU-only build proofs on gfx90c: all eight PASS
+  (CC af4em4/af22/base @256/512, ZZ DU8/DU16, trialD1) — `sols=1`; these are compilation verdicts, not GPU
+  dispatches (benchmark runs are the owner's TTY). `oto doctor` rc=0
+  (21 ok, 2 pre-existing advisory WARNs). Easy-mode `oto setup`: all wizard narration moved to stderr (stdout stays a
+  clean data channel), blank-default prompt artefact fixed, Ctrl-D path verified, UX contract pinned by
+  `tests/test_easy_mode_ux.py`. Docs: README rewritten around the recovery-pipeline vision (blog/grant material);
+  `docs/operator/operator_runbook.md` §19 blind convergence end-to-end (gfx902 worked instance, edge cases E1–E12, dead ends
+  D1–D6); `docs/agentic_consult.md` folded into `docs/developer/invariants.md` §3.6–§3.8 and removed as a standalone file;
+  registry deduplicated; `oto agent index` regenerated; `docs/overview.md` birds-eye fixed; Get Started/usage block
+  satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
+  computed as the deck does) — 281 phases, 0 illegal.
+
+- **2026-11-15 (55th) — docs ecosystem reorganised into subfolders + changelog/incomplete_work folded into docs/.**
+  `changelog.md` → `docs/changelog.md`, `incomplete_work.md` → `docs/incomplete_work.md` (evolution log + open
+  register live with the rest of the docs now; every reference in code, tests, docs and configs swept to the new
+  paths). The flat `docs/` directory split into subject folders: `docs/human/` (people), `docs/operator/`
+  (Class B bring-up: runbook, starter pair, gfx902 starter), `docs/developer/` (Class A: invariants, harness
+  runbook, docstrings convention, audit register, design language), `docs/gfx90c/` (the gfx90c golden case study +
+  device-independent templates), `docs/research/` (unchanged), `docs/skills/` (unchanged); `docs/README.md`,
+  `docs/overview.md`, `docs/cli.md` stay at top level with `docs/changelog.md` and `docs/incomplete_work.md`.
+  Registry regenerated; all in-tree references swept (`grep` old paths → 0 hits outside logs/ backups); all
+  markdown link targets resolve; `oto agent index` regenerated; docs test battery green.
 
 - **2026-11-14 (25th) — CC:256/512 4-assert GPU legality PASSED; TensileClient 7.x quirks recorded.**
   GPU verification of the CC:256 (256³) and CC:512 (512³) `AF0EM=4/AF1EM=4` (SGEMM-ethos,
@@ -54,6 +296,7 @@ and NOT the experimental data (that is `results.md`).
   errors the 6.4.4 `dist` client produced (`__AMDGCN_WAVEFRONT_SIZE` underflow in the
   `v6.4` headers against a v7.15 SDK LLVM) are not reproducible once the SDK prefix
   takes precedence.
+
 - **2026-11-14 (24th) — `docs/work_archive_2026-11-14.md` consolidated and deleted; its contents folded into the ecosystem.**
   Verifier bringup (archived 5.4): the gate differential found two real defects —
   three copies of `parse_tensile_shape` had drifted (the candidate-version copy dropped the
@@ -74,6 +317,7 @@ and NOT the experimental data (that is `results.md`).
   T1=127 / T2=1,881 held / T3=277 / T0=0) now lives in `results.md` §9.1. The verifier split-era attestations
   (`drift_manifest.json`) replace the frozen `REFACTOR_BASE=2824c2f` requirement; `verify_all.py --base REF`
   parameterised across all five checks. Archive deleted; git holds the pre-fold snapshot.
+
 - **2026-11-14 (23rd) — yolo26 acceptance re-verified on the nightly stack; CC D5 trial decked; Tensile-client SIGSEGV found.**
   Ran yolo26 (`webcam.py`, person 0.87, frame written) against the new
   TensileLibrary (`best_effort_library_rocmlibs`, built 2026-11-13 with the super-repo
@@ -92,6 +336,7 @@ and NOT the experimental data (that is `results.md`).
   run fine; the crash is client-binary-specific, not config-specific. The client build is
   not in the repo; no GPU-legality verdict for CC AF4/4 yet. LDS/ZZ retirement and the
   toolchain mandate for ROCM_PATH landed earlier this session (21st–22nd).
+
 - **2026-11-14 (22nd) — Tensile validation turned on (`NumElementsToValidate = 128`).**
   `oto.tensile.config_writer` emitted `NumElementsToValidate: 0` — the owner rejected that as
   a must-not-stand copout: validation is the correctness gate for headless GPU runs. Every
@@ -101,6 +346,7 @@ and NOT the experimental data (that is `results.md`).
   never to be set to 0 again. Cost is a few sampled elements of C vs a host contraction per
   problem — negligible next to any benchmark. `ctest`/build proof workers see the same
   GlobalParameters; no test pins the old 0.
+
 - **2026-11-14 (21st) — LDS gate option A adopted; ZZ boundary evidence gathered.**
   Owner decision on the §6.1 DECISION REQUIRED: `BYTES_PER_ELEMENT["Z"]` is now Tensile's
   own `DataType.numBytes()` (= 16), and `LDS_BUDGET` stays at 16384. The table is no longer a
@@ -119,6 +365,7 @@ and NOT the experimental data (that is `results.md`).
   `rocm-nightly-venv/dist-7.15.0a20260728/`). `test_occupancy_model_lds.py` pins
   `BYTES_PER_ELEMENT["Z"] == 16` and the unchanged budget identity; sweep/ladder tests and
   `test_cell_attribution.py` updated to the decided policy.
+
 - **2026-11-14 (20th) — Dead-reference sweep across docstrings; preflight marker restored.**
   Three full passes over every docstring (`oto/` + `tests/`), verifying each backtick-quoted
   and Sphinx-role identifier and each dotted `oto.*` token against the present tree (module
@@ -147,6 +394,452 @@ and NOT the experimental data (that is `results.md`).
   `verify_method_equivalence.py` evidence pointers updated to the `test_phase1_*` successors
   (split 4b9fcb4). No semantic/gates/runner changes; all edits are docstring/citation text
   plus the conftest marker list.
+
+- **2026-11-14 — Verifier orchestrator import fix + machine-literal sweep;
+  suite RC=0 re-verified.** `verify_all.py` spawned its children as scripts, so
+  `import oto` died in every child (sys.path[0] = `oto/tools/verifiers`) — the
+  same failure class as the tensile-build worker. Fixed by putting the repo root
+  on the children's PYTHONPATH (no equivalence logic touched). After the fix:
+  **gate differential OK, config writer OK** — the latter had been dead on
+  import for this whole session's runs. Method equivalence still FAILs on 45
+  body-drifted driver methods (intentional Refactor-2 device-independence
+  rewiring), report html FAILs on the intentional `gfx90c Port Acceptance
+  Dashboard` → device-title rebrand (the only rendered diff beyond refutable
+  functionally-identical sections), and AST equivalence FAILs on
+  signature-style drift (`Optional[X]` → `X | None`) plus
+  `scheduler.py::ldspad_feasible`, which moved to `oto/tensile/gates/ldspad_gate.py`
+  (re-exported via `gates/occupancy.py`) — i.e. a MOVES-table row, not code.
+  All three fail against the frozen `REFACTOR_BASE=2824c2f` pin; making them
+  green needs a drift manifest or a re-pin — a decision for the owner, not a
+  mechanical fix. Also swept the last machine-specific Tensile fallbacks
+  (`best_library.py`, `tensile_probe.py`, `tests/occupancy_gate_common.py` —
+  now env/.env only) and the PYTHONPATH of children in verify_all. Machine-
+  literal grep (`/home/`, `/usr/lib64`, `/opt/rocm`) shows only conventional
+  system-path heuristics and the verifier's frozen legacy references remain.
+  Full suite re-run after the changes (zz_suite26): **RC=0 — 1047 passed, 8
+  skipped, 242 subtests, ~214 s**. `oto doctor` on the landed tree: 13 ok / 2
+  warnings (venv-not-active notice; started-but-unfinished run_20261029_152402
+  — left for the owner) / 0 failure(s); registry integrity ok (46,703 records,
+  44 runs, no label contamination); deck parity 38/38; docs index 37.
+
+- **2026-11-14 (17th) — Verifier evergreened; CLI source surface consolidated.**
+  All five equivalence checks now take `--base REF` (default `HEAD~1`; nothing
+  in the tree pins a fixed commit) and nothing about the split era is hidden:
+  `verify_all.py --base 2824c2f` and `oto verify all --base HEAD~1` both report
+  ALL EQUIVALENCE CHECKS PASSED. Shared machinery
+  (`oto/tools/verifiers/_evergreen.py`): `ref_worktree()` detaches a throwaway
+  worktree of the ref in a temp dir (the worker module is copied in);
+  `probe()` runs a Python probe in that tree; `drift_manifest.json` holds the
+  explicit attestations for this check's intentional divergences and anything
+  unattested exits 1. Two long-broken verifier habits were found and fixed:
+  `verify_gate_differential` printed ALL EQUAL unconditionally (its final
+  `fails` list was bound to an empty value before any check ran — verdict
+  flips and text diffs were never counted) and `verify_config_writer`
+  silently dropped 5,997 reference phases on every invocation (`f.read()` on a
+  Path raised TypeError, swallowed by a bare except). Both fixed; full matrix
+  green on both refs. C2.5–C2.9 completed the same day (see entries just
+  above). Doc consolidation: the 1,007-line `incomplete_work.md` was split —
+  completed work stayed as pointers in `docs/work_archive_2026-11-14.md`,
+  and the file now carries only open items. Verified: suite RC=0
+  (1049 passed, 8 skipped, 242 subtests; zz_suite31).
+
+- **2026-11-14 (18th) — Full docs ecosystem sync pass: every prose doc reviewed
+  against the code.** A repo-wide read-through of each tracked `.md` found and
+  fixed: stale test-file references after the occupancy/phase1 splits
+  (`tests/test_occupancy_gate.py` -> `test_occupancy_model_lds.py` /
+  `test_occupancy_model_vgpr.py`; `tests/test_phase1_integration.py` ->
+  `tests/test_phase1_readonly_gpu.py`); remaining `port_tensile.py` invocations
+  in `implementation_plan.md` and `potential_configs.md`; stale references to
+  `oto/device/peaks.py` (now `oto/device/loader.py` / `vocabulary.py`) in
+  `knowledge_base.md`, `mapping.md`, `adversarial_review.md`, `claude.md`,
+  `gfx90c_tuning_guide.md`; stale `oto.runners.stage_cli` invocations mapped to the
+  current `oto <cmd>` vocabulary; `docs/comparability.md` command example for
+  `regression_matrix` (`--side` never existed; `--any-protocol` is the flag);
+  `docs/developer/docstrings.md` doc verifier path corrected after the evergreen rewrite;
+  `oto/README.md` regenerate. `peaks.py` was deleted (no import site left in the
+  code) — the profile table is now only `profiles/gfx90c.json` plus
+  `oto/device/{loader,profile,vocabulary}.py`.
+  Suite: 1049 passed, RC=0 (zz_suite32).
+  Nothing pushed; registry untouched, GPU unused this session.
+
+- **2026-11-14 (19th) — Docs final-sync of prose corpus.** Remaining prose docs
+  (`implementation_plan.md`, `potential_configs.md`, `results.md`,
+  `kernel_tuning_research.md`, `gfx90c_tuning_guide.md`) normalised to the
+  current CLI/test names: bare `python3 check_candidates.py` / `all_runs.py` ->
+  `oto check candidates` / `python3 -m oto.tools.all_runs`; split-out test files
+  (`tests/test_occupancy_gate.py`, `tests/test_phase1_integration.py`) cited by
+  current names; `oto/README.md` regenerated; `docs/docs_index.json` refreshed
+  (`oto agent index`). No code changes. Suite RC=0; docs registry + index green.
+
+- **2026-11-14 — explicit DeviceProfile threading, end to end (the C2.5–C2.9 close, for real).**
+  Every profile-consuming function in the package now takes an explicit
+  `profile=None` kwarg resolved through the new `oto.device.loader.resolve_profile`
+  choke point (explicit always wins; `None` = ambient `current_profile()`).
+  Internal call sites thread the caller's profile instead of silently
+  re-resolving ambient; import-time frozen captures (`FAMILY_TO_DTYPE`,
+  `_DEFAULT_CELLS`, `SHIPPED_CELLS`) are now lazy derivations or `__getattr__`
+  shims. Implementation was AST-verified at every step: Stage 1 added the kwargs
+  (144 functions), Stage 2b threaded call sites with *qualified* resolution
+  (from-imports, package re-exports, `self.` methods — never bare attribute-name
+  matching, which had corrupted `dict.get`-style calls), and an AST fixer
+  collapsed duplicated positional+keyword `profile` passes. Stage-2's failure
+  modes were caught by the parse gate and the suite (`dict.get` TypeError), and
+  rolled back cleanly before being re-done qualified. Gates now route through
+  `resolve_profile` uniformly; `_store_knobs_feasible`'s docstring-swallowing
+  bug (profile resolved *before* the docstring) fixed en route. New
+  `tests/test_explicit_profile_threading.py` proves the explicit path: gfx90c
+  refuses complex GSU>1 (no MFMA), a fabricated MFMA-capable *synthetic test
+  profile* (codename `synthetictest`, has_mfma=True — never gfx90c, never a
+  shipped profile) passes it, and `validate_config` threads the explicit
+  profile into every gate it calls.
+  The verifier's ast-equivalence check now recognises the Refactor 2 signature
+  shape evergreen (a signature delta of exactly one trailing defaulted
+  `profile=None` is the expected shape, base-agnostic; anything else still
+  fails loudly) — `oto verify all` at HEAD: ALL EQUIVALENCE CHECKS PASSED.
+  Suite green at every commit step: 1061 passed, 8 skipped, 242 subtests.
+  Commits `e5ebdc4` (choke point + gate retrofit), `ae99b75` (the sweep, 81
+  files), `0807157` (threading test), `a7500ea` (verifier). Follow-through:
+  every function whose signature carries the `profile` kwarg (178) documents
+  it in its docstring — the documented functions gained the kwarg line, the
+  docstringless functions gained a one-line docstring, single-line docstrings
+  were expanded in place, and the required-`profile` agent entry points are
+  documented as required, not "optional ambient" (an injected claim caught
+  and corrected).
+
+
+- **2026-11-14 (27th) — the operator campaign playbook lands (`docs/operator_campaign.md`).**
+  The convergence prompt that produced the gfx90c work is formalised as the
+  standing, persistent procedure for Class B operators running a multi-session
+  tuning campaign after the best-effort library exists. Content: the two hard
+  display-session rules (GPU only in the user's TTY; CPU gates are not
+  measurement); the persistent operating model (state lives in the ledger /
+  kernel_db / acceptance report / deck overlay, never in context); the
+  session-start checklist (`oto doctor`, `oto verify all`, `kernel_db --rebuild`,
+  `resolve_cells --taxonomy`); Phase 1 corpus study with the exact tools and the
+  like-for-like/clock-coverage/typecode attribution rules; Phase 2 straggler
+  decomposition (W walls, R residency, C complex accounting, K clock confounds,
+  D depressed-cell/sweep-order, F floor-steal-with-documented-tweak, N virgin
+  axes — detect / route / closing evidence each); Phase 3 candidate routes in
+  priority order (machine-driven narrow/wide via `oto tune` + the DB mutator,
+  targeted DECISION_TRIAL_TILES rows, documented floor steals, virgin axes);
+  Phase 4 consultation triggers (T1 verdict flip, T2 three batches without a
+  band move, T3 CPU-unexplainable anomaly, T4 hardware-fact consequence,
+  T5 campaign complete) with a self-contained payload protocol — never spend a
+  consultation on a question a CPU tool answers; Phase 5 the per-batch
+  autonomous loop (rebuild → report → census → triage → deck → next batch);
+  Phase 6 the 10+ h overnight run. Registered in `docs/README.md` (Class B);
+  `operator_runbook.md` and `skills/class_b_operator.md` now route the campaign
+  there; `docs_index.json` regenerated; registry + index tests green.
+
+
+- **2026-11-14 (28th) — CC:256/512 AF0EM=4/AF1EM=4 ADOPTED (owner decision, Option B).**
+  The two Tensile-recipe rows (`_af4em4`: `mt64x64x8 / tt4x4 / VW2 / GLVW2/2 /
+  WGM4 / AssertFree0ElementMultiple=4 / AssertFree1ElementMultiple=4`) ship in
+  `phases.yaml` as first-class CC rows (deck 279 → 280; CC 47 → 48); the D5
+  pilot row graduated and left `DECISION_TRIAL_TILES` (only D1 remains, with
+  D2/D3 already retired 2026-11-14). `oto check candidates`: 280 checked,
+  0 illegal. GPU legality carried over: both rows are the same config already
+  validated with `NumElementsToValidate=128` on silicon at both shapes. fp for
+  the 256 row is unchanged (`ca20ec…`); the 512 row is new (`75c7e5ce…`).
+  What adoption does NOT claim: faster. The AF4/4 rows are reference-deck now;
+  the A/B against AF2/2 (paired-widen) and AF1 (base) is the overnight runs'
+  job; bars do not move without TTY measurement. Rationale: the vendor recipe
+  (sgemm_large_square_nt.yaml, AF0/1EM=4) is the default the vendor ships
+  for f32 free dims; 6 gates passed, GPU-validated, zero new machinery; A was
+  the "unproven unless measured" option, B the "adopt proven-legal, measure in
+  the campaign" option; owner chose B. Commit: phases.yaml rows, decks.py
+  DECISION_TRIAL_TILES (D5 removed with the adoption record),
+  tests/test_knob_sweep.py docstring + assert, knob_sweep CLI help string.
+
+
+- **2026-11-14 (29th) — operator_campaign.md rewritten after deep history study.**
+  Full re-derivation from primary sources: backrocm git history (FOSS United
+  grant, Jul 2026; attempt1 ~9.2K LoC shell suite, ruler math broken four ways,
+  retirement conflation, telemetry gaps), attempt2 (the draft run and the
+  append-only import decision), the ROCm reference corpus (ROCm/AMD
+  vis-à-vis GPUs research diaries, CDNA/Vega first-party papers) and the full
+  oto commit graph (2026-09-17 → 2026-11-14). The doc now carries the
+  genealogy explicitly, the neurosymbolic division of labour (neural proposals
+  enter only via the symbolic gates + Tensile reference validator), the
+  persistent session protocol (state on disk — kernel_db / acceptance report /
+  resolve_cells / registry — read before any work), the exact corpus-study
+  commands, the straggler class catalogue (W/R/C/K/D/F/N/H with detection and
+  closing evidence), candidate routes in priority order (machine loop,
+  targeted trial rows, documented floor steal, virgin axes, profile-rung
+  Class A), and the consultation triggers T1-T5 with a self-contained payload
+  contract. No fact in the doc is remembered; every date and claim was
+  checked against the tree.
+
+
+- **2026-11-14 (30th) — operator_campaign.md rewritten with full provenance.**
+  Every constraint in the doc now carries its origin: the FOSS United grant
+  (Jul 2026, method not product), attempt1 (~9.2K LoC shell; ruler math broken
+  four ways; retirement conflation), attempt2 (draft acceptance gate rejected,
+  floor itself retained), the oto birth (2026-09-17), Refactor 1 (package
+  split), the 2026-10 failures that made this curriculum (ComplexFloat/complexDouble
+  Z=8 gate miss, StaggerU inverted, LocalSplitU shadowed by explicit WorkGroup,
+  TransposeLDS unreachable, sweep-order depressed CC:256, complex bar 4x scale,
+  arm-size order-statistics artifact), rocm-libraries/nightly port, Refactor 2
+  (device profiles, NumElementsToValidate=128, explicit profile threading) and
+  the CC AF4/4 Option-B adoption. The doc now spells the bounded operating
+  model: corpus study with concrete commands, the class catalogue with
+  detection and closing evidence (W/R/C/K/D/F/N/H), candidate routes in
+  priority order (machine loop; targeted DECISION_TRIAL_TILES; documented floor
+  steal — worst cells only, every knob documented, no byte copies,
+  gate + oracle + TTY or it did not happen), consultation triggers T1-T5 with a
+  self-contained payload contract, and the post-batch autonomous refinement
+  loop. No fact remembered; every claim checked against the tree or the two
+  reference checkouts (backrocm, ROCm/).
+
+
+- **2026-11-14 (31st) — the test suite is hardware-adaptive.** The triage of
+  `test_explicit_profile_threading.py` flagging a misread of a fabricated
+  `has_mfma=True` probe (`synthetictest`) surfaced three real defects, all
+  fixed: (1) the probe fixture is renamed `probe_test` with a module-level
+  note spelling out that it is a synthetic ISA (9,9,99) fragment, not a
+  description of any target silicon; (2) the three ambient-codename tests now
+  assert the loader's invariant (`DEFAULT_CODENAME == "gfx90c"`, explicit
+  always wins, bounded rebinds restore the prior ambient) instead of assuming
+  the ambient *is* gfx90c — a gfx902 box no longer trips these; (3) every test
+  that reads the live, gitignored campaign outputs (kernel_db.json,
+  phases.seed.overlay.yaml, acceptance_report.json, reference_rerun_manifest)
+  now skips cleanly when those artifacts are absent — a fresh gfx902 checkout
+  stays green minus the gfx90c-acceptance anchors, and the deliberate ones
+  (load_profile("gfx90c") anchors + best-library carve tests, which require
+  the corpus) skip with a reason instead of failing, so a gfx902 checkout
+  fails loudly nowhere; every skip reason says "run the tuning campaign
+  first". ruff clean; suite runs unchanged against this machine's corpus.
+
+
+- **2026-11-14 (32nd) — tracked tree stops referencing machine-local scratch.**
+  `oto/tools/verifiers/ verify_ast_equivalence.py`, `verify_gate_differential.py`,
+  `verify_report_html.py` and `_verdicts_worker.py` wrote candidate-side byte
+  artefacts into a hardcoded `/tmp/opencode/`; the evergreen verifier now
+  materialises scratch under `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")`
+  via a new `oto.tools.verifiers._evergreen.scratch_dir()` (process-lifetime,
+  atexit-cleaned), and the worker that executes inside a *ref worktree* builds
+  its own `tempfile.mkdtemp` (it must stay oto-free).
+  `oto/tensile/best_library.py` no longer silently prepends a system clang
+  (`/usr/lib64/rocm/llvm/bin`) to `PATH` when the user did not set
+  `ROCM_LLVM_BIN` — the LLVM bindir is derived from the user's own
+  `ROCM_PATH` (wheel layout `lib/llvm/bin`, tarball layout `llvm/bin`).
+  `logs/oto-error.log` (a tracked live log containing this machine's absolute
+  paths) is untracked; `logs/` is now gitignored — never commit logs.
+  Verifiers: ALL EQUIVALENCE CHECKS PASSED; ruff clean; suite 1061 passed.
+
+
+- **2026-11-14 (33rd) — tests fully path-portable; tracked tree scrubbed of
+  machine-local paths.** Every test that referenced the historical
+  `gfx90c_runs/` / `gfx90c_results/` names now resolves them from the profile
+  via `oto.runners.paths` (`runs_rel`/`results_rel`), so the suite runs
+  unchanged on any codename with a matching profile. No tracked test or
+  source file references `/tmp/` or any machine path; the evergreen verifier's
+  candidate-side artefacts now materialise under
+  `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")` owned by
+  `oto.tools.verifiers._evergreen` (atexit-cleaned), the gate-differential
+  worker (which executes inside a REF worktree) builds its own scratch
+  inline. `logs/oto-error.log` untracked. Suite 1062 passed, 8 skipped;
+  `oto verify all` ALL EQUIVALENCE CHECKS PASSED; ruff clean.
+
+
+- **2026-11-14 (34th) — deterministic limits derivation; operator campaign doc is self-contained.**
+  New `oto/device/derive.py`: ALU peaks derived from profile hardware facts
+  by one formula (lanes = num_cus x simds_per_cu x lanes_per_simd; FP32 =
+  2 x lanes x fGHz; FP16 fast_F16 = 2 x FP32; FP64 = FP32 / 16; complex
+  families inherit their lane class), with `python3 -m oto.device.derive`
+  printing them on demand — agent-1's `_peak_table` emits derivation-by-loop
+  matches from `oto.device.derive` so the limits doc can never drift from the
+  formula. `tests/test_derive.py` locks it in (10 tests, exact-int equality
+  against both `peak_gflops` and `theoretical_peaks_blas8`). Docs ecosystem:
+  `docs/operator_campaign.md` rewritten fully self-contained — no
+  requirements on reading git history; the doc spells the two development
+  models (informed = a spoof reference exists, floor-steal protocol;
+  blind = unsupported silicon, derive everything from scratch and propose
+  the matrix from gh facts); the operator is a first-class runner, not a
+  human-supervised process; GPU legs remain TTY-only; walls stay walls.
+  gfx90c_theoretical_limits §2 now points directly at the derivation so the
+  doc can never silently disagree with the formula.
+
+
+- **2026-11-14 (35th) — operator_campaign.md is now self-contained; the operator agent holds the GPU.**
+  The first re-draft was wrong on three counts, all fixed in this entry: (1) it
+  shipped no content copyable from the project's own history without pointing
+  the agent at git logs it does not have; (2) it stripped the GPU from the
+  operator agent as if the operator were a GUI-session worker — the operator is
+  the TTY runner and benchmarks are its job; (3) the 38-cell matrix is now
+  carried verbatim in the doc so the agent never needs a second file to know
+  the target list. The doc is now: preflight → starter file → `oto doctor` →
+  `oto agent generate` → `oto library best-effort` → `oto tune` →
+  `oto report --json`, with §5 branching into two development models
+  (informed convergence with a spoof floor; blind convergence with derived roofs
+  and no floor at all) and §11 decomposing every tie/loss into its class
+  catalogue with an exit condition. The runbook breaks TTY/bench semantics only
+  for the GPU-loss guard: the loop aborts rather than burn a night on a dead
+  GPU. Initial framing fixed the agent class boundary instead of conflating
+  it with display-session workers.
+
+
+- **2026-11-14 (36th) — the toolchain contract is closed: explicit env, never a silent skip.**
+  `oto/runners/toolchain.py`: the resolver accepted a ROCM_LLVM_BIN/ROCM_BIN/
+  TENSILE_ASSEMBLER set to a nonexistent path and silently fell back to the
+  derived layout — a user who typo'd their path got a working site built
+  against the system tree instead of the one they asked for, with zero
+  signal. Every explicit value now raises with the bad path spelled out;
+  the derived layout is probed in order and reported; HIP_DEVICE_LIB_PATH is
+  derived from the user's ROCM_PATH (lib/llvm/amdgcn/bitcode or the old RPM
+  layout), never defaults to a system tree. `oto doctor` prints the full
+  resolved dashboard: every path variable with existence, plus the exact
+  assembler version line and the Tensile bin/Tensile version line; a broken
+  .env reports the broken key with its bad value, no fallback. `.env`
+  pins HIP_PATH=ROCM_PATH (explicit, removes ambiguity) and ROCM_VERSION
+  for the nightly build; `.env.example` now states the contract in line 1:
+  nothing falls back to /usr, /usr/lib64, or /opt/rocm unless you write it
+  there yourself.
+
+
+- **2026-11-14 (37th) — operator_campaign.md gains §9A: the candidate-generation strategies in one place.**
+  The operator reference the three generation strategies scattered implicitly
+  through §9 (`oto tune`) and §11 (the straggler-class catalogue) and never named
+  the fourth — EXPLORE — nor why they were ever proven to win. New §9A names all
+  five (NARROW / WIDE / DIRECTION / EXPLORE / STEAL), cites concrete corpus
+  wins for each (the DD:192/256/512 +267 %/+20 %/+7 %; the CC:256 pad blind
+  spot every GCN5 perf yaml shares; the CC/ZZ firm caps at 16384/8192 elements;
+  the R8 CC:256 steal as the only "take the floor verbatim" example the corpus
+  has ever validated). Hierarchy documented: NARROW first on the cheapest
+  gradient, WIDE for geometry hops, DIRECTION informed-mode fastest path,
+  EXPLORE for census-marked virgin axes, STEAL only with a documented
+  floor-steal protocol (§12) and never for winning cells. Reading order for any
+  cell: census → taxonomy → gate candidates. No other sections changed.
+
+
+- **2026-11-14 (38th) — operator_campaign.md gains §11A: the corpus's own lessons, distilled.**
+  After a full walk of the potential_configs.md diff history (26 commits that
+  touch the file: verdict-flip re-annots, like-for-like regrades, the 2026-10-15
+  ordering fix that reversed "THE ONE LOSER" CC:256 (it was a deck-order
+  defect, not a kernel deficit), 18 re-analyses of the straggler list, the
+  2026-10-10 complex-accounting correction (Tensile's client charges 2 flops
+  per MAC — complex GEMM is reported at 1/4 its BLAS-8 GFLOPS), the floor-steal
+  record (the one steal the corpus endorses, §R25: `MacroTile 64x64 / WorkGroup
+  16x16x1 / GLVW 2/2 verbatim, everything else re-swept; verbatim copies count
+  as nothing), and the 2026-10-21 R47 re-derivation that shrank the ORANGE
+  list from 12 to 3 by streaming every claim through the corpus census), nine
+  lessons are now stated in the operator doc, each tied to its source evidence
+  as a rule of thumb: identical-config deltas are environment noise (±17.5%,
+  never chased), like-for-like is the only graded basis, complex GEMM reads at
+  80-97% of the roof, Tensile's refusal is the silicon not the bug, sweep
+  order is causal (the 2026-10-15 lesson), structural locality beats byte
+  copying, informed-mode steals are documented-retunes not verbatim copies,
+  dead axes and silent placebos were a real failure class, gates are silicon
+  facts not suggestions. One heading previously swallowed by an edit was
+  restored; docs_index regenerated; docs tests green.
+
+
+- **2026-11-14 (39th) — the corpus lessons are now device-general (§11A).**
+  The nine lessons §11A shipped in the prior commit were gfx90c-shaped: L1
+  tied the noise band to this device's clock telemetry; L2 quoted this-device's
+  412-vs-98 GFLOPS family/single read; L3 was the complex-GEMM correction; L4
+  named gfx9-specific gate outputs; L5 named this repo's shape-order fix; L6
+  named gfx900 floor geometry; L7 named this repo's 2026-10-16 steal record;
+  L8 named this repo's emitter-forwarding bug; L9 named this repo's gate
+  calibration contract. All nine are rewritten to stand on any GPU this
+  project supports (and any other GCN5-class APU the operator lands on);
+  illustrative numbers retained with explicit "device this methodology was
+  built on" framing. Device invariants explicitly stay in profiles/*.json
+  where they belong.
+
+
+- **2026-11-14 (40th) — operator_campaign.md locks the boundary: read-only by contract.**
+  The original convergence prompt is now anchored to a self-contained class-B
+  protocol with sharper territory lines than any prior pass: §0 now spells
+  "You are not the developer" — no edits to `oto/`, any `.md`, profiles/,
+  `phases.yaml`, `.env` or the registry (read-only via `mode=ro`); §15 is the
+  absolute list of writable paths (campaign artifacts in `<codename>_results/`,
+  report JSON, kernel_db via the `oto.harness.kernel_db` verb, overlay only via
+  `oto.harness.generate_candidates`, bugs.md for any defect, never anything
+  developer-owned); §13 gains rules binding the agent to §16 consultation
+  doctrine (consult only when one of five lift gates fires; never freestyle chat;
+  never consult mid-cut; answer-artifact-tagged stops); §16 is the full
+  consultation schedule. §17 carries the 38-cell matrix verbatim. Two sloppy
+  constructions from the earlier §13 rewrite fixed.
+
+
+- **2026-11-14 (41st) — plans/ is gone; the tree is smaller by design.** The remaining
+  one-shot plans (MASTER_PLAN, RENAME_AND_DOC_CLEANUP, CLI_UX_REWORK,
+  REFACTOR_2_UNIVERSAL_GPU, AGENTIC_POTENTIAL_CONFIGS, test_optimization) are
+  deleted — their durable content was folded into `incomplete_work.md`,
+  `claude.md`, `docs/operator/operator_runbook.md` and this log before removal. The
+  docs/root layout was flattened to a single `docs/` home:
+  `mapping.md -> docs/shipped_floor_contract.md`,
+  `results.md -> docs/gfx90c/results.md`, `knowledge_base.md -> docs/gfx90c/knowledge_base.md`,
+  `gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md`,
+  `implementation_plan.md` (kept, not deleted: self-contained driver
+  architecture + triaged fixes), `potential_configs.md -> docs/gfx90c/potential_configs.md`,
+  `tensile_tuning_context.md -> docs/search_philosophy.md`,
+  `kernel_tuning_research.md` + `complex_gemm_research_brief.md` -> `docs/research/`,
+  `adversarial_review.md -> docs/developer/audit_register.md`;
+  `implementation_plan.md` and all references re-pointed; `context.md` /
+  `context_raw.md` were untracked owner scratch and are out of scope. `prior_*`
+  moved to `archive/`. Module renames across `oto/` (34) and `tests/` (13):
+  `metrics/{analytics->benchmark_analytics, coverage->cell_coverage,
+  protocol->measurement_protocol, read_thermals->thermal_telemetry,
+  report->acceptance_report, status_common->status_helpers}`,
+  `runners/{auto->convergence_loop, clocks->clock_telemetry, paths->result_paths,
+  phases->phase_runner, reporting->acceptance_reporting}`,
+  `device/{derive->derive_limits, detect->device_detect, vocabulary->kernel_vocabulary}`,
+  `ledger/{agent->convergence_agent, agent_mutate->agent_mutation}`,
+  `harness/{generate_candidates->candidate_generator, measure_vgprs->vgpr_measurement,
+  resolve_cells->cell_resolver}`,
+  `tensile/{best_library->best_effort_library, decks->family_decks, patterns->contraction_patterns,
+  shipped_library->shipped_floor, shipped_manifest->shipped_floor_manifest, synthesis/manifest->pipeline_manifest}`,
+  `tools/{allruns->run_census, chart->benchmark_chart}`,
+  `checks/retirement->stability_retirement`, `cli/docs->help_command`,
+  `agents/{orchestrator->meta_agent, research->research_client}`,
+  `oto/{yamlio->yaml_cached, inventory->readme_gen, docs_index->docs_index_writer}`.
+  Verifier RENAMES rebuilt (old->new only, no identity keys). `gfx90c_vs_spoof.png`
+  (generated artifact) removed. Suite green, verifier green, ruff clean.
+
+
+- **2026-11-14 (42nd) — the CLI front is folded into the documentation ecosystem.**
+  `docs/cli.md` is pinned to the live parser (`tests/test_docs_cli.py`);
+  the migration table it carries maps the retired shims to the `oto <verb>`
+  spellings; `oto <verb>` is now the only invocation shape the Class B
+  operators see, and the Class A agents use the same. `PYTHONPATH=.`
+  prefixes dropped from the operator campaign (every `python3 -m oto`
+  invocation runs from the repo root, where the package is importable as-is);
+  `docs/README.md` registry updated; README's file map displays current
+  module names; the `oto` `--json` contract verified to emit JSON only on
+  stdout with narration on stderr or /dev/null. `oto stats` and
+  `oto check candidates --json` confirmed: one document on stdout, the
+  per-line scan log on stderr. Suite green; verifier PASSED.
+
+
+- **2026-11-14 (43rd) — `oto agent consult` lands; every one-shot plan in git history is now accounted for.**
+  Plans resurrected from `git log --all -- plans/`: Refactor 1 (codebase org), Refactor 2
+  (Universal GPU), CLI UX rework (front door, implemented), test optimization (9x suite speed-up),
+  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (both executed earlier this arc), MASTER_PLAN
+  (open items folded into incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS (the one unexecuted
+  plan). The last is now implemented as `oto agent consult [starter] [--with-docs]`: a CPU-only
+  consult that emits `<codename>_potential_configs.md` — device identity from the profile,
+  practical ceilings, a structurally-illegal rejection-taxa list, corpus priors from the local
+  `kernel_db.json` (reference-device measurements, never claimed as this part's numbers),
+  gate-checked ladder rows per family (refusals shown so they cannot sneak into a deck), and a
+  TTY to-do list with zero measurements and no claims until the GPU runs. Synthetic-profile tests
+  pass; no GPU required. Bug fixed en route: generate_device_docs crashed with FileNotFoundError
+  when the `<codename>_docs/` directory did not exist. Suite green; verifier PASSED; ruff clean.
+
+
+- **2026-11-14 (44th) — production-readiness audit: the plans archaeology is complete and the last unexecuted plan shipped.**
+  Resurrected every one-shot plan from `git log --all -- plans/` and accounted for each:
+  Refactor 1 (org), Refactor 2 (Universal GPU), CLI front door, test optimisation (9x faster suite),
+  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (executed earlier), MASTER_PLAN (open items folded into
+  incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS — implemented as `oto agent consult [starter]`
+  in 8b73424. Repo state at audit: suite green (1081 passed + 8 skipped), `oto verify all` PASSED at
+  HEAD and 2824c2f, ruff clean, functions ≤ 60 lines / files ≤ 600 lines, docs registry fresh, no
+  machine-local paths in tracked files, no .pyc/artifact files tracked, no stale module references
+  outside changelog/archive, Class A/B docs current, `oto doctor` clean. The 44th entry closes the
+  arc begun 2026-11-13 with the CLI front door and the 2026-11-14 doc restructure.
+
+
 - **2026-11-13 (15th) — Repo scour: build-proof restored end-to-end; docs/tests
   migrated off the deleted root shim.** A repo-wide pending-work audit found the
   CPU-only Tensile build proof fully broken since the CLI rework's Phase 2 deleted
@@ -181,78 +874,7 @@ and NOT the experimental data (that is `results.md`).
   its removed behavior; none are caused by the four commits above. Re-run after
   the rework lands; the smoke tests asserting the pre-rework UX should be
   re-asserted against the final renderer.
-- **2026-11-14 — Verifier orchestrator import fix + machine-literal sweep;
-  suite RC=0 re-verified.** `verify_all.py` spawned its children as scripts, so
-  `import oto` died in every child (sys.path[0] = `oto/tools/verifiers`) — the
-  same failure class as the tensile-build worker. Fixed by putting the repo root
-  on the children's PYTHONPATH (no equivalence logic touched). After the fix:
-  **gate differential OK, config writer OK** — the latter had been dead on
-  import for this whole session's runs. Method equivalence still FAILs on 45
-  body-drifted driver methods (intentional Refactor-2 device-independence
-  rewiring), report html FAILs on the intentional `gfx90c Port Acceptance
-  Dashboard` → device-title rebrand (the only rendered diff beyond refutable
-  functionally-identical sections), and AST equivalence FAILs on
-  signature-style drift (`Optional[X]` → `X | None`) plus
-  `scheduler.py::ldspad_feasible`, which moved to `oto/tensile/gates/ldspad_gate.py`
-  (re-exported via `gates/occupancy.py`) — i.e. a MOVES-table row, not code.
-  All three fail against the frozen `REFACTOR_BASE=2824c2f` pin; making them
-  green needs a drift manifest or a re-pin — a decision for the owner, not a
-  mechanical fix. Also swept the last machine-specific Tensile fallbacks
-  (`best_library.py`, `tensile_probe.py`, `tests/occupancy_gate_common.py` —
-  now env/.env only) and the PYTHONPATH of children in verify_all. Machine-
-  literal grep (`/home/`, `/usr/lib64`, `/opt/rocm`) shows only conventional
-  system-path heuristics and the verifier's frozen legacy references remain.
-  Full suite re-run after the changes (zz_suite26): **RC=0 — 1047 passed, 8
-  skipped, 242 subtests, ~214 s**. `oto doctor` on the landed tree: 13 ok / 2
-  warnings (venv-not-active notice; started-but-unfinished run_20261029_152402
-  — left for the owner) / 0 failure(s); registry integrity ok (46,703 records,
-  44 runs, no label contamination); deck parity 38/38; docs index 37.
-- **2026-11-14 (17th) — Verifier evergreened; CLI source surface consolidated.**
-  All five equivalence checks now take `--base REF` (default `HEAD~1`; nothing
-  in the tree pins a fixed commit) and nothing about the split era is hidden:
-  `verify_all.py --base 2824c2f` and `oto verify all --base HEAD~1` both report
-  ALL EQUIVALENCE CHECKS PASSED. Shared machinery
-  (`oto/tools/verifiers/_evergreen.py`): `ref_worktree()` detaches a throwaway
-  worktree of the ref in a temp dir (the worker module is copied in);
-  `probe()` runs a Python probe in that tree; `drift_manifest.json` holds the
-  explicit attestations for this check's intentional divergences and anything
-  unattested exits 1. Two long-broken verifier habits were found and fixed:
-  `verify_gate_differential` printed ALL EQUAL unconditionally (its final
-  `fails` list was bound to an empty value before any check ran — verdict
-  flips and text diffs were never counted) and `verify_config_writer`
-  silently dropped 5,997 reference phases on every invocation (`f.read()` on a
-  Path raised TypeError, swallowed by a bare except). Both fixed; full matrix
-  green on both refs. C2.5–C2.9 completed the same day (see entries just
-  above). Doc consolidation: the 1,007-line `incomplete_work.md` was split —
-  completed work stayed as pointers in `docs/work_archive_2026-11-14.md`,
-  and the file now carries only open items. Verified: suite RC=0
-  (1049 passed, 8 skipped, 242 subtests; zz_suite31).
-- **2026-11-14 (18th) — Full docs ecosystem sync pass: every prose doc reviewed
-  against the code.** A repo-wide read-through of each tracked `.md` found and
-  fixed: stale test-file references after the occupancy/phase1 splits
-  (`tests/test_occupancy_gate.py` -> `test_occupancy_model_lds.py` /
-  `test_occupancy_model_vgpr.py`; `tests/test_phase1_integration.py` ->
-  `tests/test_phase1_readonly_gpu.py`); remaining `port_tensile.py` invocations
-  in `implementation_plan.md` and `potential_configs.md`; stale references to
-  `oto/device/peaks.py` (now `oto/device/loader.py` / `vocabulary.py`) in
-  `knowledge_base.md`, `mapping.md`, `adversarial_review.md`, `claude.md`,
-  `gfx90c_tuning_guide.md`; stale `oto.runners.stage_cli` invocations mapped to the
-  current `oto <cmd>` vocabulary; `docs/comparability.md` command example for
-  `regression_matrix` (`--side` never existed; `--any-protocol` is the flag);
-  `docs/developer/docstrings.md` doc verifier path corrected after the evergreen rewrite;
-  `oto/README.md` regenerate. `peaks.py` was deleted (no import site left in the
-  code) — the profile table is now only `profiles/gfx90c.json` plus
-  `oto/device/{loader,profile,vocabulary}.py`.
-  Suite: 1049 passed, RC=0 (zz_suite32).
-  Nothing pushed; registry untouched, GPU unused this session.
-- **2026-11-14 (19th) — Docs final-sync of prose corpus.** Remaining prose docs
-  (`implementation_plan.md`, `potential_configs.md`, `results.md`,
-  `kernel_tuning_research.md`, `gfx90c_tuning_guide.md`) normalised to the
-  current CLI/test names: bare `python3 check_candidates.py` / `all_runs.py` ->
-  `oto check candidates` / `python3 -m oto.tools.all_runs`; split-out test files
-  (`tests/test_occupancy_gate.py`, `tests/test_phase1_integration.py`) cited by
-  current names; `oto/README.md` regenerated; `docs/docs_index.json` refreshed
-  (`oto agent index`). No code changes. Suite RC=0; docs registry + index green.
+
 - **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8
@@ -266,6 +888,7 @@ and NOT the experimental data (that is `results.md`).
   citation in `docs/developer/docstrings.md` (now cites `oto/tools/verifiers/verify_all.py`;
   b4d1c87). This closes the re-run caveat in the 15th entry. Nothing in this
   entry was pushed.
+
 - **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
   ran end-to-end against the rocm-libraries Tensile build on gfx90c: torch
   `2.12.0+rocm7.15.0a20260728`, `ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library`,
@@ -276,6 +899,7 @@ and NOT the experimental data (that is `results.md`).
   criterion satisfied. Remaining: C4 (needs API key), CLI UX implementation (needs
   the 5 answers in plans/CLI_UX_REWORK.md §7), C2.5–C2.9 explicit signature
   threading (deliberately deferred — mechanism equivalent).
+
 - **2026-11-13 (13th) — ruff + py_compile gates integrated; docs ecosystem
   updated.** The repo is clean under a pinned, substantive ruff rule set
   (`ruff.toml`: pycodestyle, pyflakes, bugbear, pyupgrade, import sorting,
@@ -300,6 +924,7 @@ and NOT the experimental data (that is `results.md`).
   unchanged. Full-suite re-verification on this loaded machine was infeasible
   at integration time; the four tree-walking guard suites pass and the gates
   are the standing commit battery now.
+
 
 - **2026-11-13 (14th) — profile seam made load-bearing; spoof floor and
   potential_configs parameterised.** After the gate integration (13th), the
@@ -341,6 +966,27 @@ and NOT the experimental data (that is `results.md`).
   test_comparability — all green; two heavy files still verifying in
   background.
 
+
+- **2026-11-13 — the docs ecosystem gets two agent classes and a registry test.** All owner docs are now class-tagged (`dev` / `operator` / `shared`) in the `docs/README.md` registry: class A (developer agents working on oto) routes to `claude.md`; class B (operator agents producing a best-effort library for an unsupported AMD platform) routes to the new `docs/operator/operator_runbook.md` — preconditions → detect → starter pair → agent research → human verification gate → docs synthesis (the `<codename>_*.md` artefacts) → CPU-only harness study → TTY benchmark → `--best-library` → verification matrix and failure table. `claude.md` §1 and `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now fails when a tracked Markdown file is unregistered, when a registry glob matches no tracked file, or when a registry row lacks a class tag. Registered this round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`, and the starter-pair docs. Removed stale `plans/verify_*.py` registry row (no such tracked files). Also landed the harness toolkit for class A/B use (`oto/agents/harness_tools.py`: corpus census with floor/native split + TARGET_CELLS coverage, round-robin candidate proposals, CPU-gate verification, `build_harness_study`) wired into `--generate-device-docs`, which now also writes `<codename>_harness_study.md` and `<codename>_potential_configs.md`.
+
+
+- **2026-11-13 — the CLI front door (`oto`) lands (Phase 1–4 of the CLI UX rework).**
+  Replaced the multi-mechanism root shim with a single verb-first front: subcommands
+  (`tune`, `run`, `bench`, `status`, `report`, `doctor`, `preflight`, `candidate`,
+  `retirement`, `analytics`, `synthesis`, `verify`, `check`, `library`, `agent`,
+  `consolidate`, `stats`, `chart`, `version`, `help`, `completion`), global flags
+  (`--base`, `-q/--quiet`, `-v/--verbose`, `--no-input`, `--no-color`, `-n/--dry-run`,
+  `-y/--yes`, `--live {on,off}`, read-only `--json`). Root `oto.py` deleted; `bin/oto`
+  over `python3 -m oto` is the repo-local entry. `oto doctor` (toolchain/GPU/registry/
+  corpus/docs), `oto check db|retirement`, `oto verify all --json`, `oto chart`,
+  `oto candidate --json`, generated `docs/cli.md` (single source of truth) all wired.
+  Full suite green: 1044 passed / 8 skipped / 242 subtests; ruff + py_compile + pyflakes
+  + function/file-length + interactive-keys gates clean; no new failures vs the pre-existing
+  `verify_all` baseline.
+
+
+## October 2026
+
 - **2026-10-29 (12th) — best-effort build fixed on system ROCm; default
   destination made explicit.** `_tensile_env` no longer prepends
   compiler-default system includes (`/usr/include`, `/usr/local/include`) to
@@ -359,6 +1005,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_best_library.py`). `library_path` now points at the directory
   that actually contains `TensileLibrary.dat`.
 
+
 - **2026-10-28 (11th) — user-provided ROCm + rocm-libraries super-repo
   support.** `oto.runners.toolchain.resolve_tensile_root` now discovers Tensile
   under `projects/Tensile`, `shared/Tensile`, or `Tensile/` of a
@@ -370,6 +1017,7 @@ and NOT the experimental data (that is `results.md`).
   user-supplied ROCm 7.x (TheRock or system) is used as-is; the 6.4.4
   codegen path remains the verified baseline. New tests: none added (existing
   `test_best_library` + `test_interactive_keys` cover the surface).
+
 
 - **2026-10-27 (10th) — best-effort gfx90c TensileLibrary.dat generator
   (`--best-library`).** New CPU-only command carving the winner set from the
@@ -390,6 +1038,7 @@ and NOT the experimental data (that is `results.md`).
   [DEST]`, handler `_stage_best_library`; tests in `tests/test_best_library.py`
   (6 cases). Function-length AC preserved (all helpers ≤60 lines).
 
+
 - **2026-10-24 (9th) — the coverage maps re-read on the like-for-like census;
   one genuine hole found and filled with R50d (4 rows, appended after the
   R50 batch).** The §R57 study (see `potential_configs.md` §R57) crosses the
@@ -406,6 +1055,7 @@ and NOT the experimental data (that is `results.md`).
   family-span shapes so §R56.3-A stamps them family). Verify: dry-run
   pool 1141 → 1145, would-append exactly 4, zero refusals; full preflight
   177 passed.
+
 
 - **2026-10-23 (8th) — the like-for-like rule is in the code: §R56.3-A
   resolved, the acceptance report grades one protocol at a time, and the
@@ -445,6 +1095,7 @@ and NOT the experimental data (that is `results.md`).
   (classifier over the corpus's real forms) + like-for-like verdict tests in
   `tests/test_ab_audit.py`; preflight 177 passed.
 
+
 - **2026-10-23 (7th) — like-for-like regrade: three graded wins were protocol
   artefacts; the R50 batch is committed and the gate is differential-perfect.**
   The 2026-10-22 acceptance regraded every cell on the like-for-like basis —
@@ -478,6 +1129,27 @@ and NOT the experimental data (that is `results.md`).
   empty), and error-4 / GLVW%pv / unknown-knob classes all predate their
   rules.
 
+
+- **2026-10-23 — the acceptance report refactor: two hidden submenus removed,
+  redundant layers collapsed, visual/layout checks added.** The Family matrix
+  replaced its per-size caret/nested-table with an always-visible hierarchical
+  table (`<tbody class="family-group">` per family, `<tr class="size-row">`
+  indented underneath) — 42 size rows are now scannable without a control. The
+  Problem-space coverage collapsed three parallel representations (summary
+  table + 7 family `<details>` + 38 figure captions) into one grouped table
+  (`<tbody class="coverage-group">` with `<tr class="group-row">` subtotals
+  and `<tr class="coverage-row">` cells) and one appendix
+  (`<details class="figure-appendix">` with `<h3 class="figure-family-title">`
+  per family). Removed: `JS_ROW_EXPAND` script, `.row-toggle` button,
+  `.family-detail` / `.size-table` / `.figure-group` CSS, the broken
+  `\x15B8` caret escape, and the duplicate `Best measured` column from the
+  coverage table (performance belongs in the Family matrix). Added:
+  `oto.harness.visual_check` (playwright-based desktop/mobile viewport test),
+  `tests/test_visual_check.py`, and a section-note explaining each table's
+  structure. Preflight: `generate_candidates --dry-run` 1089, `check_candidates
+  --quiet` 0 illegal, full suite 922 passed / 8 skipped.
+
+
 - **2026-10-22 (6th) — the deck check's first refusal: `TransposeLDS` is
   unreachable on gfx90c, and three "virgin axes" were never virgin.** The
   pre-run sweep (70 of 401 rows) asked Tensile about a Z 32x32 phase carrying
@@ -506,6 +1178,7 @@ and NOT the experimental data (that is `results.md`).
   the deck check has not yet asked Tensile about the geometries the next run
   is aimed at.
 
+
 - **2026-10-22 (5th) — the doc sweep: every stale conclusion now points at
   its correction.** The /tmp probes are gone (their capabilities are
   `oto.harness.tensile_probe` and `oto.harness.deck_probe`), and the docs
@@ -518,6 +1191,7 @@ and NOT the experimental data (that is `results.md`).
   the delta spans 17.5 points, so a tie there is a measurement of the
   machine), §10's sizing rule and the mutator's behaviour are current, and
   `potential_configs.md` §R2 is marked superseded beside F5.
+
 
 - **2026-10-22 (4th) — the /tmp probing machinery is now the harness, and
   the launch backstop lost a rule.** The four throwaway probes written in
@@ -546,6 +1220,7 @@ and NOT the experimental data (that is `results.md`).
   §16 (the corrected reading: **three** ORANGE cells, not twelve) and
   `potential_configs.md` §R42's finding F5 is marked superseded.
 
+
 - **2026-10-22 (3rd) — the deck is sized for the 10 h run, and there is a
   tool that proves the new candidates build.** Two facts the previous state
   hid: the overlay's unmeasured work was **114 phases (2.5 h)**, and the
@@ -563,6 +1238,7 @@ and NOT the experimental data (that is `results.md`).
   the 8 error-4 phases of the 2026-10-20 run before they cost a launch slot
   each. It is CPU-only, resumable (it records the rows it probed), and it
   never launches anything.
+
 
 - **2026-10-22 (2nd) — the acceptance report carries the coverage figures.**
   A new **Problem-space coverage** section sits under the A/B table: the legal
@@ -588,6 +1264,7 @@ and NOT the experimental data (that is `results.md`).
   the legal space is the same for every cell of a family, so summing it across
   cells would divide one cell's measurement count by the family's whole space.
 
+
 - **2026-10-22 — the coverage graphs: the problem space as a 2D picture.**
   `oto.harness.coverage_graph` draws, for every contract cell, the legal
   geometry space projected onto (macro-tile area x accumulators per thread),
@@ -605,6 +1282,7 @@ and NOT the experimental data (that is `results.md`).
   was fixed on the way (the corpus tells HHS from HSS by typecode alone, so a
   cell map keyed on the row's family showed them as 100 % unexplored).
   Pinned by `tests/test_coverage_graph.py`.
+
 
 - **2026-10-21 (8th) — the legality oracle, and the three ORANGE cells
   triaged.** `oto.harness.tensile_probe` is the /tmp probing machinery
@@ -636,6 +1314,7 @@ and NOT the experimental data (that is `results.md`).
   M3 ("the complex throughput wall") is retired -- it was the unit error --
   and the theoretical limits' ORANGE consequence is corrected.
 
+
 - **2026-10-21 (7th) — the test suite is 9x faster, and the five failures
   it was carrying were a mutator that had stopped searching.** `plans/
   test_optimization.md` is executed: the dominant cost was **YAML parsing**,
@@ -663,6 +1342,7 @@ and NOT the experimental data (that is `results.md`).
   narrows the tree-walking guards to the changed files. The live run panel
   also gained the per-tier bars and a repaint when a phase lands.
 
+
 - **2026-10-21 (6th) — the straggler list re-derived, the deck aimed at what
   is actually behind, and the coverage map.** `potential_configs.md` §R47 is
   the corrected reading of the corpus, and it changes the plan: (1) **CC and ZZ
@@ -686,6 +1366,7 @@ and NOT the experimental data (that is `results.md`).
   the launch gate refuses (15 of them, including the 12 SS frontier rows that
   died with error 4 in the 2026-10-20 run): 804 rows, 0 illegal.
 
+
 - **2026-10-21 (5th) — three silent placebos and one contradictory knob.**
   (a) **TransposeLDS was declared forwarded but never emitted** -- the writer's
   fork surface had no entry for it, so the 5 R45 rows probing it would have
@@ -704,6 +1385,7 @@ and NOT the experimental data (that is `results.md`).
   refuses a genuine contradiction. The writer's fork-surface test
   (`tests/test_writer_forwards_sweep_knobs.py`) had been failing on
   `declared-not-emitted=['TransposeLDS']` since the knob was declared.
+
 
 - **2026-10-21 (4th) — the missing error-4 rule, and the frontier control
   that was never legal.** Tensile's error 4 is
@@ -725,6 +1407,7 @@ and NOT the experimental data (that is `results.md`).
   than 64 VGPRs/thread, so the control is impossible on this part. The HH
   control survives (H 8x4 emits 57).
 
+
 - **2026-10-21 (3rd) — the "no-swizzle" arm was dead on arrival: the gate
   read Tensile's FORCE as a reject.** `SolutionStructs:3334-3336` *forces*
   `StaggerUMapping = 0` and `StaggerUStride = 0` when `StaggerU == 0`; the
@@ -737,6 +1420,7 @@ and NOT the experimental data (that is `results.md`).
   deck and the 764-row overlay now pass the launch gate 284/284 and 764/764
   (was 270/284 and 750/764). The test that pinned the wrong behaviour
   (`tests/test_cell_attribution.py`) now pins Tensile's rule.
+
 
 - **2026-10-21 (2nd) — the complex families were being scored against a 4×
   bar (accounting fix).** Tensile's client charges **2 flops per MAC for every
@@ -758,12 +1442,14 @@ and NOT the experimental data (that is `results.md`).
   mis-scaled bar; `gfx90c_theoretical_limits.md` gains §5.2 with the three
   independent checks (client `TotalFlops`, wall-clock vs roof time, occupancy).
 
+
 - **2026-10-21 (cont.) — FractionalLoad + TransposeLDS wired.** Both were in
   `NOT_FORWARDED_KNOBS`; they are now forwarded and probed (10 rows) on the
   winner geometries. `db_knobs` gains `FractionalLoad (0,1,2)` and
   `TransposeLDS (-1,0,1)`. The remaining coupled knobs (`1LDSBuffer`,
   `DepthULdsDivisor`) need `ScheduleInnerAccuracy` forwarding and are documented
   as pending in §R44.
+
 
 - **2026-10-21 — virgin-knob batch and straggler analysis.** `potential_configs.md`
   gains §R42 (five straggler classes: complex memory/occupancy, small-cell
@@ -779,6 +1465,7 @@ and NOT the experimental data (that is `results.md`).
   gates PrefetchGlobalRead=2 against a doubled LDS footprint. Pinned by
   `tests/test_generate_candidates.py` (gate-clean over PLAN_BATCH) and
   `tests/test_occupancy_gate.py`.
+
 
 - **2026-10-20 — the preflight can check the launch set, not just the deck.**
   `check_candidates.py --deck` accepted only a bare phase list, so pointing it
@@ -798,6 +1485,7 @@ and NOT the experimental data (that is `results.md`).
   preflight-only (or `--stage 1`) invocation read-only; the ledger records only
   real runs. Pinned by
   `tests/test_interactive_keys.py::TestPreflightNeedsNoRunDir`.
+
 
 - **2026-10-20 — the corpus history is now a tool, and it corrected one stale
   frontier number.** Candidate generation kept re-deriving "has this cell, at
@@ -824,6 +1512,7 @@ and NOT the experimental data (that is `results.md`).
   bests (1447.0 / 1441.2), and the section states that no HPA 256×128 row has
   been measured yet — the §R40 frontier deck carries it. The durable readings
   are `results.md` §15.
+
 
 - **2026-10-20 — the geometry axis the deck never reached: legality, not
   preference, kept every tile small.** The 18 ties survived §R37's knob sweep
@@ -864,6 +1553,7 @@ and NOT the experimental data (that is `results.md`).
   row that loses a cell to its own assertion must now say so in its note. New
   test file only, no new module, so `claude.md` §2.2 and the runbook §-list are
   unchanged; `docs/agent_reference.md` gains the test row.
+
 - **2026-10-19 — the GPU-loss guard no longer aborts a healthy run.** The
   guard added to stop the void run (`cf18277`) counted *any* phase that wrote
   no CSV, which is the wrong signal: `run_20261018_004835` opened with three
@@ -888,6 +1578,7 @@ and NOT the experimental data (that is `results.md`).
   result resets; a refused tile does not count; a deck shorter than the
   threshold still completes). No new module, so `claude.md` §2.2 / runbook /
   agent-reference rows are unchanged.
+
 - **2026-10-19 — the void run is purged from every live store.** The lesson of
   `run_20261019_002432` is already frozen (the GPU-loss guard, next entry); the
   run itself was pure noise and is gone: 1111 `records` and its `runs` row
@@ -903,6 +1594,7 @@ and NOT the experimental data (that is `results.md`).
   own report, a 412-entry manifest) is kept out of the tree at
   `gfx90c_results/purge_backup_20261019_155626/` — the run id lives on only in
   this log and in §R34, as history.
+
 - **2026-10-19 — the virgin axes are re-decked, and one of them is closed by
   proof.** `potential_configs.md` rewrite 7 (§R34–§R39) carries the two-cause
   diagnosis of the "zero improvement" night, the honest 18-cell tie table, and
@@ -920,6 +1612,7 @@ and NOT the experimental data (that is `results.md`).
   recorded: `LocalSplitU` is in neither `FORWARDED_KNOBS` nor
   `NOT_FORWARDED_KNOBS`, so the two `LocalSplitU: 2` rows in `_TIE_ADAPT` are
   silent no-ops — the fourth instance of the placebo class.
+
 - **2026-10-19 — the mutation arm can finally see the cells it exists to fix.**
   Every one of `run_20261018_004835`'s 412 candidates went to a cell that was
   already *below* its family ceiling -- 155 to SS:256, 67 to CC:192, 41 to
@@ -943,6 +1636,7 @@ and NOT the experimental data (that is `results.md`).
   winner is settled; an unreadable floor keeps the old rule; a below-ceiling cell
   never pays for the corpus-wide scan) and
   `tests/test_ab_audit.py::TestCellsNotBeatingFloor`.
+
 - **2026-10-19 — the overnight run can no longer burn a night on a lost GPU.**
   `run_20261019_002432` measured *nothing*: after its first phase the device
   disappeared from HIP and 413 of 414 clients aborted in
@@ -962,6 +1656,7 @@ and NOT the experimental data (that is `results.md`).
   a single measured phase resets the streak; a refused tile does not count; a
   deck shorter than the threshold still completes). No new module, so
   `claude.md` §2.2 / runbook / agent-reference rows are unchanged.
+
 - **2026-10-19 — the fourteen residual literature questions folded; the second raw
   file retired.** `gfx90c_gcn5_gemm_residual_14q_caveman_full.md` (the `/caveman full`
   answer pass over the questions the first review left open) is gone. Every verdict is
@@ -986,6 +1681,7 @@ and NOT the experimental data (that is `results.md`).
     turns four open `[CHECK]`s into cited "closest evidence" statements and **changes
     no route**. No new module, so `claude.md` §2.2 / runbook / agent-reference rows are
     unchanged.
+
 - **2026-10-19 — the GCN5 GEMM literature review folded, section by section, into
   its owners; the raw file retired.** `gfx90c_gcn5_gemm_literature_caveman_full.md`
   (a `/caveman full` external pass over rasterisation/wave quantisation, complex and
@@ -1025,6 +1721,7 @@ and NOT the experimental data (that is `results.md`).
     (the fold is docs-only), so `claude.md` §2.2 / runbook / agent-reference rows are
     unchanged. The review's `[CHECK]`/`[Transfer only]` labels are preserved
     verbatim in the owners.
+
 - **2026-10-18 — the rule-calibration probe, formalised from the throwaway
   `/tmp` scripts.** `oto/harness/rule_calibration.py` applies any candidate
   rule — a `config -> Optional[bool]` predicate — to the corpus and reports the
@@ -1040,6 +1737,7 @@ and NOT the experimental data (that is `results.md`).
   0/28, `nt_budget` 1/26. Registered in `oto/README.md`, `claude.md` §2.2/§5,
   `docs/developer/harness_runbook.md`, `docs/agent_reference.md`; the `nt_budget` finding
   folded into `kernel_tuning_research.md` §4.
+
 - **2026-10-18 — the unparseable-tile crash fixed; `occupancy_feasible`
   decomposed.** Two robustness gaps left by the gate closure above, both pinned
   by tests:
@@ -1058,6 +1756,7 @@ and NOT the experimental data (that is `results.md`).
     `_lds_reduction_check`, and the model narrative into their docstrings. No
     behaviour change: the census is unchanged (3349 phases / 3217 built / 132
     refused, 0 misses, 0 false rejections) and the focused gate suite is green.
+
 
 - **2026-10-18 — the legality gate is closed, and the tile axes now have
   provable ceilings.** Three calibrated rules retire every remaining native
@@ -1115,6 +1814,7 @@ and NOT the experimental data (that is `results.md`).
     the two mechanics promoted into `kernel_tuning_research.md` §4; the ceiling
     table added to `gfx90c_tuning_guide.md` §1.1.
 
+
 - **2026-10-18 — the /tmp calibration and triage machinery formalised into the
   harness.** The two CPU-only scripts that backed the §R23 triage (the gate-vs-
   corpus agreement census and the empty-phase reason census) are now modules, so
@@ -1146,6 +1846,7 @@ and NOT the experimental data (that is `results.md`).
   * Tests: `tests/test_gate_calibration.py` and
     `tests/test_failure_triage.py` pin the reconstruction, the confusion matrix
     and the reason-mining mechanism on synthetic corpora.
+
 - **2026-10-17 — every failed candidate triaged; two live gate misses closed and
   the dead axes pruned out of the deck.** Three sources, all read CPU-only: the
   ledger's rejected proposals, every run directory's empty phases, and the two
@@ -1193,6 +1894,7 @@ and NOT the experimental data (that is `results.md`).
     per-family destination element size) and the NumThreads-aware VGPR budget
     (needs a config-exact VGPR table; without one it false-rejects a measured
     kernel — the overreach that killed the previous VGPR model).
+
 - **2026-10-17 — the straggler trace is formalized into the harness: `cfg_gap`
   in `resolve_cells`, the forwarding surface declared as data in `config_writer`,
   and the legality census given the device-truth domain.** The one-off `/tmp`
@@ -1227,6 +1929,7 @@ and NOT the experimental data (that is `results.md`).
     (the file was retired on the fold); `docs/agent_reference.md` gains the
     straggler-read table, the unreachable-axis stop entry, the declared
     forwarding surface and a repo-local post-run path.
+
 - **2026-10-15 — "THE ONE LOSER" (CC:256) triaged to a candidate-pool
   sweep-order bug, not a kernel deficit; fixed at the producer.** The last
   tracked LOSS cell (CC:256, −8.7 %, `run_20261013_214649`) was not a tuning
@@ -1263,6 +1966,7 @@ and NOT the experimental data (that is `results.md`).
   changed; the floor-telemetry `DECISION REQUIRED` is superseded as a closure
   path for this cell. Docs re-pointed: `results.md` §13.4, `potential_configs.md`
   F1/§2/§9-D1/§10-D1, `gfx90c_tuning_guide.md` §5/§7/§8.
+
 - **2026-10-14 — writer forwarded every sweep knob (run-blocking fix found while
   folding corpus3).** `oto/tensile/config_writer.py::_fork_params` is the only
   path by which candidate knobs reach Tensile (`BenchmarkCommonParameters`
@@ -1278,6 +1982,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_writer_forwards_sweep_knobs.py` (19: every `KNOB_SWEEPS` value key
   round-trips into `ForkParameters`). The 310-phase manifest was emitted after
   the fix; `check_candidates.py` + `test_tensile_params.py` pass over it.
+
 - **2026-10-14 — decision trials decked: paired CC widen swept, baseline control,
   D1/D2/D3 trial tiles.** Per the user's "add candidates as trials" instruction,
   every open decision now owns run candidates and the 10h run decides:
@@ -1297,6 +2002,7 @@ and NOT the experimental data (that is `results.md`).
   trials = 268, 0 refusals. Tests: `tests/test_knob_sweep.py` 19→26, incl.
   `test_no_emitted_candidate_passes_only_the_lenient_gate`.
   Emit: `python3 -m oto.tensile.knob_sweep --emit --baseline --trials`.
+
 - **2026-10-14 — the harness load gate now models Tensile's shift-ptr `GLVW` rule (the 2026-09-19 "fix (pending)").**
   `loads.validate_tensile_loads` derives `GlobalLoadVectorWidth` but used to ignore
   an explicit `GlobalLoadVectorWidthA/B`, so a `GLVW=2` config passed on a
@@ -1315,6 +2021,184 @@ and NOT the experimental data (that is `results.md`).
   `GLVW=2 + AssertFree0ElementMultiple=2` (swept as a trial later the same day —
   see the entry above). Tests:
   `tests/test_occupancy_gate.py::TestGlobalLoadVectorWidthRule` (7).
+
+- **2026-10-12 — Docs whittling: history archived out of the live docs.**
+  Executed the ARCHIVE half of `docs/audit.md` (§1.4, §1.5, §1.6, §1.12,
+  §2.1, §2.4, §4). The removed narrative is preserved verbatim below; the live
+  docs now state current fact only. Trimmed copies whose canonical home already
+  exists were marked as duplicates rather than reproduced twice:
+  `tensile_tuning_context.md` owns the Objective/strategy/philosophy paragraphs;
+  `mapping.md` owns the footprint; `oto.metrics.ab_delta` (module docstring,
+  `_collect`, `_stat`) owns the A/B aggregation bases and clock rules;
+  `oto.tensile.gates.occupancy.occupancy_feasible` owns the occupancy model;
+  `oto.tensile.config_writer` owns the launch-boundary gate and the 121-config rc=1
+  bucket. No code was changed.
+
+  Reference repairs made because kept sections pointed at moved anchors: the plan
+  banner's "self-contained" claim; the plan's `Hplan.10` and "status banner above
+  Option H" pointers; the plan's Next Move pointer to `incomplete_work.md` §4.9.
+
+  ### implementation_plan.md
+
+  **implementation_plan.md — Objective (pre-trim)**
+  **Objective**
+
+  Produce native `gfx90c` Tensile libraries covering the shipped 28-family × 4-pattern
+  footprint (2,285 distinct shipped gfx900 kernels = 7 dtype/op families × 4 contraction
+  patterns; the earlier 3,066 was per-file token counting, see `mapping.md`), converging
+  per-cell so that each cell's ruler-adjusted median-of-seeds
+  winner **beats the gfx900-spoof floor** (ties at ±5% = parity, and parity alone is not
+  the win the campaign is here for). ±5% is the standing success bar, but it is
+  narrower than the measured repeat noise (CV p90 27.8%, `results.md` §12.3), so a
+  ±5% "parity" is not evidence of indistinguishability — grade with `ab_audit.py`
+  (±27.8%) when the claim matters. and lands as close to the `gfx90c_theoretical_limits.md`
+  ceiling for its (family, bound_class) as the machine will give. The whole campaign is
+  driven by `port_tensile.py --auto` (deterministic harvest → mutate ≤2 knobs → re-run).
+
+  Stated goal (from `tensiles_in_system_rocm.txt`): replicate and produce a
+  `tensilelibrary` that performs all of the shipped functions for gfx90c, performing
+  **better** than gfx900 spoofing. No more, no less.
+
+
+  **implementation_plan.md — Core Strategy phase counts (pre-trim)**
+  shipped `gfx900` footprint (28 families, 4 patterns = 418 phases:
+  SS 105 · DD 44 · HH 40 · HH_HPA 20 · HS_HPA 20 · CC 32 · ZZ 40 · legacy auto 117
+  — re-derived 2026-09-27: 410 + 8 legal ZZ replacements after the occupancy gate,
+  see `changelog.md`)
+
+  **implementation_plan.md — AI Must Not Decide (duplicate of tensile_tuning_context.md)**
+  **AI Must Not Decide**
+
+  `gfx90c identity / ISA legality / AsmCaps / compiler flags / runtime support /
+  correctness / measurement / accepted performance` — including in the manual-LLM
+  contingency. The model only proposes candidate *parameter vectors*; Tensile generates,
+  the compiler validates, the hardware decides, the DB remembers.
+
+
+  **implementation_plan.md — Correctness Gate (duplicate of tensile_tuning_context.md)**
+  **Correctness Gate**
+
+  Always: generate → correctness → benchmark. Never: benchmark → fast → maybe correct.
+  Wrong kernel = failed candidate. The validator must reject known-invalid configs
+  (no `AssertSizeMultiple: [1]`, no `SIA>1`, no Fp16AltImpl, LDS ≤ 64 KB/CU).
+
+
+  **implementation_plan.md — Reward Hacking (duplicate of tensile_tuning_context.md)**
+  **Reward Hacking**
+
+  Independent benchmark + fresh inputs + correctness validation + repeat runs + guard
+  checks + dtype-specific tolerance. Evaluator stays outside model control. No
+  max-of-seeds; median-of-seeds is the statistic.
+
+
+  **implementation_plan.md — Frozen baseline (pre-trim)**
+  **A. Frozen baseline (conclusions sourced from `prior_INSIGHTS_CAVEMAN_ULTRA.md`)**
+  - Port mechanics **DONE**: pristine Tensile + minimal in-tree gfx90c support
+    (3 bookkeeping entries in `Tensile/{Common,AsmCaps}.py`); Phase-0 gates 10/10
+    [OK]; anti-alias 0 gfx900 leak; synthesis PASS.
+  - Performance = **parity, not wins** on the only same-run pair (0 / 11 / 0 at ±5%).
+    Candidate suite A–G gave **5W/10T/6L** over 21 shared cells.
+  - 6 genuinely-new problem cells were produced. Best measurements: FP32 1118.7 @1024³,
+    FP16 2492.1 @4096³, BF16 1108.5 @2048³, FP64 98.6 @1024³, INT8 881.2 @2048³.
+
+
+  **implementation_plan.md — Replicated footprint (pre-trim)**
+  **B. The replicated footprint (mapping contract, see `mapping.md`)**
+  28 frozen families = 7 dtype/op sets × 4 contraction patterns:
+  `{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` × `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`
+  = **2,285 distinct shipped kernels** (459+ distinct size-keys; the old 3,066 was
+  per-file token counting — see `mapping.md`). No gfx90c library ships anywhere today.
+  Reproduce the family matrix natively; per-family tile decks come from the mapped
+  gfx900 top-tiles + the measured prior winners (frozen conclusions); do NOT chase the
+  1,980-key size tables (defensive mesh, not a tuning result).
+
+
+  **implementation_plan.md — Technical findings 2026-09-19 (pre-trim)**
+  **Technical findings (2026-09-19)**
+
+
+- **2026-10-12 — Docs whittling: `oto/harness/README.md` history archived.**
+  `oto/harness/README.md` was moved to `docs/developer/harness_runbook.md` (it is now inside the
+  documented ecosystem directory). Its `/tmp`-prototyping history and stale counts were
+  archived here.
+
+  # Archived from oto/harness/README.md (moved 2026-10-12)
+
+
+- **2026-10-12 — docs restoration after the whittling (and one gate-harness fix).**
+  The whittling pass (`7ef4213`) cut load-bearing detail from the human- and
+  agent-facing docs and replaced it with pointers. This restores it, merging the
+  pre-whittling content with the refactored structure:
+
+  - `README.md` — rebuilt as a self-contained high-level repo overview: a repo
+    layout tree, full root-entry-point + per-package module tables, the complete
+    validation-tool command set, the `.env` table, and the docs index (no longer a
+    pointer chain). All internal links verified to resolve.
+  - `gfx90c_tuning_guide.md`, `kernel_tuning_research.md`,
+    `gfx90c_theoretical_limits.md`, `complex_gemm_research_brief.md`,
+    `potential_configs.md`, `knowledge_base.md` — restored to their pre-whittling
+    substance as self-contained starter documents for the tuning agent (knob
+    mechanics + forwarding surface, measured regime tables, the three byte tables,
+    complex-MAC accounting, the occupancy model, mutation strategies, and open
+    research directions). Only provably-wrong facts were corrected (e.g. the
+    `ZZ` byte width is `16`, not `8`; the occupancy rule is `accVGPR = TT0·TT1·weight`).
+  - Cross-references re-pointed to the current section numbering — the
+    pre-2026-10-10 `potential_configs.md` `§13.x` / `§14.x` / `§8.6` citations no
+    longer resolved.
+  - `oto/harness/occupancy_bounds.py` now imports `VGPR_PER_CU` from
+    `oto/tensile/gates/vgpr_model.py` instead of re-declaring it (Refactor-1
+    acceptance criterion 6: no device-constant scatter).
+
+
+- **2026-10-12 — off-grid probe tier removed (candidate pool is now strictly in-grid).**
+  The generator's only contract-violating arm was the **off-grid probe tier**
+  (`PROBE_CELLS`: SS 32/64/128, DD 128, forced DepthU 4, `graded: false`): those
+  rows addressed (shape, dtype) cells the shipped gfx900 library does not carry,
+  so they could never ship under the no-contraction / no-extension contract
+  (`tests/test_library_parity.py`). Per the "no candidates that don't adhere to
+  the contract at all" decision, the tier is deleted outright:
+
+  - `oto/harness/candidate_rows.py` — `PROBE_CELLS` removed.
+  - `oto/harness/candidate_pool.py` — the probe loop, the second (`probe_pool`)
+    sink, the `graded` flag and the `sink`/`graded` params on `_offer` are gone;
+    every emitted row is in-grid.
+  - `oto/harness/candidate_overlay.py` — `_write_overlay` no longer takes probe
+    rows or `--with-probes`; the timestamped mirror carries only `phases`.
+  - `oto/harness/generate_candidates.py` — `--with-probes` and the `PROBE_CELLS`
+    re-export removed.
+  - Tests rewritten (`tests/test_generate_candidates.py`): the probe-specific
+    cases are replaced by a hard invariant — every generated row addresses a
+    shipped-grid cell — and `_write_overlay` counts only newly-scheduled rows.
+  - Docs: the `PROBE_CELLS` entry (tuning guide), the A6 off-grid row and the
+    §10.3 "mirror only" note (`potential_configs.md`) now state the exclusion.
+
+  The legacy in-grid `probe_N1..N5` seed rows and `probe_*` run-dir globs are
+  unaffected (they are inside the grid).
+
+
+- **2026-10-12 — seed-pool cap removed (`--max-fp` default = no cap); duplicate CLI deleted.**
+  `--max-fp` defaulted to a hand-picked `300` with no derivation, and the same
+  `main()` (argparse + body) existed in **two** modules — `generate_candidates.py`
+  *and* `candidate_overlay.py`. The cap silently dropped 58 of the 358 rows the
+  builders emit (`_round_robin_prune`). It never limited the `--auto` convergence
+  loop (that is `--budget` iterations / `--mutation-budget` knobs); it only capped
+  the pre-built seed pool.
+
+  - `--max-fp` now defaults to **no cap**: `_round_robin_prune` takes
+    `Optional[int]` and returns the pool unchanged when the cap is `None`. The
+    whole emitted in-grid pool is seeded; `--max-fp N` remains as an explicit
+    opt-in throttle.
+  - The duplicate CLI is gone: `candidate_overlay.py` keeps only the overlay I/O
+    (`_write_overlay` / `_prune_candidates_from_seed` / `_round_robin_prune` /
+    `_summarise`); `generate_candidates.py` is the single CLI.
+  - Also dropped the now-impossible `"probe"` priority key in `_round_robin_prune`
+    and the pre-split leftover imports in `candidate_overlay.py`.
+  - Tests: added a no-cap no-op case. Focused suite
+    (`test_generate_candidates.py` + `test_library_parity.py`): 38 passed.
+  - The dry run now reports the full pool (would append the rows the old cap had
+    been dropping); `--max-fp 300` reproduces the old behaviour exactly.
+
+
 - **2026-10-10 — kernel_db auto-refresh on run completion (mutations always read fresh).**
   `kernel_db.json` is now rebuilt automatically whenever a run reaches a
   data-producing terminal status, so candidate generation / regression_matrix /
@@ -1335,6 +2219,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_registry_kernel_db_auto.py` (status semantics, stale-run cleanup,
   opt-outs, read-only guard, failure-swallow).
 
+
 - **2026-10-10 — agentic harness: `harness/resolve_cells.py` formalised (repo-homed).**
   The per-cell winner resolver that generated potential_configs.md §2's evidence
   table was polished out of `/tmp/opencode/resolve_cells.py` + verdicts dump and
@@ -1352,6 +2237,7 @@ and NOT the experimental data (that is `results.md`).
   `tests/test_resolve_cells.py` guards deck parity, report agreement, winner
   resolution and HPA-floor tolerance. potential_configs.md's "evidence machinery
   in /tmp until formalised" note now points at the repo-homed tool + caches.
+
 
 - **2026-10-10 — potential_configs.md comprehensive rewrite: BLAS-8 complex frame, resolver-final winners, priority re-sequence.**
   The candidate-deck document was rewritten end-to-end (old 1429-line version
@@ -1379,6 +2265,7 @@ and NOT the experimental data (that is `results.md`).
   escalation. Any later doc quoting "81–96% of an ALU wall" for CC/ZZ, "WGM8 is
   the CC lever", "≈378 split", the ÷4 ceilings, or an "8 native runs" corpus is
   stale — see the rewrite's §1/§2/§3.
+
 - **2026-10-10 — Overnight-run triage: report crash + false "HPA above ceiling".**
   Fixes from the first post-overnight triage after the DB-hooked overnight run
   (`run_20261009_205427`, ~7 h 41 m, 351 phases + 5 swizzle probes): (1) **report
@@ -1398,6 +2285,7 @@ and NOT the experimental data (that is `results.md`).
   the harness writes no main log by design (`logs/telemetry.csv` + per-phase
   logs only); `command.txt` now shows the piped invocation
   (`… --live off | tee overnight_$(date +%Y%m%d_%H%M).log`).
+
 - **2026-10-09 (night #2) — DB-hooked mutator overhaul, Group C swizzle complete, 10+ h overnight sizing, proposal rewrite.**
   The Option H mutator overhaul landed: `db_mutator.py` hooks synthesis to
   `kernel_db.json`, emitting wide + narrow + direction mutants for every active
@@ -1417,6 +2305,7 @@ and NOT the experimental data (that is `results.md`).
   the stubby manifest-only sampler. The `proposal.md` addendum (Option H2) and
   `gfx90c_tuning_guide.md` §9/§10 have been updated accordingly. Seed overlay
   rebuilt: prune 277 → archive → regenerate 295 rows (5 curated + 290 in-grid).
+
 - **2026-10-09 — Cross-contamination eliminated, measurement hygiene + Group C land, tuning cookbook formalized.**
   Closes `potential_configs.md` §13.2/§13.4 Groups C+D and the entire CPU-only queue
   (`implementation_plan.md`): (1) **typecode-first cell attribution** — root cause of §13.2 was
@@ -1458,6 +2347,7 @@ and NOT the experimental data (that is `results.md`).
   open until those probes land in a TTY run. Suite: **669 passed / 1 skipped / 27 subtests**
   (full run, 540.97 s).
 
+
 - **2026-10-09 (night) — beat-the-spoof batch implemented + decked; overnight-ready pool regenerated.**
   Implements `potential_configs.md` §14.5 items 1–5 as *emitted* candidates so the overnight
   `--auto` run benchmarks every decided config in one pass. (1) **Generator fixes** — SS wide tier
@@ -1487,6 +2377,7 @@ and NOT the experimental data (that is `results.md`).
   ecosystem (§14.6 pointers + §8.6 citation already aligned). Suite: **675 passed / 1 skipped /
   27 subtests** (full run, 720.67 s).
 
+
 - **2026-10-09 (evening) — beat-the-spoof analysis pass: verdict anatomy, occupancy audit, all-around plan.**
   (1) **Native-vs-floor verdict anatomy** (`harness/cell_knob_diff.py` on the rebuild): the |Δ| ≤ 2 %
   band tally is **17 native / 8 tie / 5 loss** — SS:512 (+3.8), SS:1365 (+3.2), HH:1024 (+4.0),
@@ -1508,6 +2399,7 @@ and NOT the experimental data (that is `results.md`).
   (4) **Web-research pass** landed `kernel_tuning_research.md` (GCN5/gfx90c model, LDS bank math,
   occupancy theory, Tensile knobs, complex-GEMM incl. split-complex, SOTA cross-SKU porting — all
   URL-cited), cross-referenced from §14.6.
+
 
 - **2026-10-08 — overnight-run deep triage: why the ceiling "didn't move" (potential_configs.md §13).**
   `run_20261008_030033` (6h 9m, PROVISIONAL FLOOR, 22 WIN / 15 TIE / 1 LOSS) dissected per
@@ -1537,6 +2429,7 @@ and NOT the experimental data (that is `results.md`).
   ceiling-model caveat (derived ceilings don't subtract the complex codegen cap → permanent
   orange regardless of deck). Doc-only change; no code touched.
 
+
 - **2026-10-08 — Generated seed candidate pool (proposal D4) implemented + triage of the short run.**
   Triage of `run_20261008_005217` (~22 min, 16 phases, 0 proposals): the executed command was the
   manual one-shot `--stage 3` (`command.txt:19`), not the overnight `--auto` loop (`command.txt:53`);
@@ -1560,6 +2453,7 @@ and NOT the experimental data (that is `results.md`).
   (`probe_*` globs ×3, dtype-from-config, `_write_phase_config` forwarding of LdsPadA/B,
   AssertFree0ElementMultiple, StaggerUStride, StoreCInUnroll) are still unimplemented.
 
+
 - **2026-10-08 — Coverage-parity rule formalised + ad-hoc /tmp machinery integrated as `harness/`.**
   The produced `tensilelibrary.dat` must map EXACTLY to the shipped gfx900 grid in (shape, dtype)
   cells — no contraction, no extension — canonicalised once in `knowledge_base.md` §6.1, with
@@ -1574,6 +2468,7 @@ and NOT the experimental data (that is `results.md`).
   finding** — HH_HPA:4096's stranded iteration-9 overlay winner (`phase_auto_1_hh_hpa_2048x2048x2048_4`,
   −4.0% at the median) to be shipped as probe N7. Verified vs the full deck: parity CLI PASS 38/38,
   `kernel_db.json` row-for-row identical to the published §12 corpus.
+
 - **2026-10-07 — D1 deck bootstrap implemented; all-run regression list = 0 material median regressions (dtype view; 1 per-family carry-over, in the body).**
   The 11 provenance winners from §8.4 + the seed overlay's proven rows (CC 192/256, HH_HPA 512,
   HS_HPA 512, and the `phase_auto_{0,2}_*` rows) are appended to `phases.yaml` — deck now **40 rows** —
@@ -1602,6 +2497,7 @@ and NOT the experimental data (that is `results.md`).
   H:256 "LOSS" reconciled as a basis flip: floor `MT128x128/8x8/VW2/DU8` best-seed 303.6 has median
   171.3 (below the deck's 206.5); by median the deck wins +2.5%, by tail it "loses −31%". Occupancy:
   45/45 deck+seed rows pass `occupancy_feasible` (wg/CU 512–8192, register-file metric).
+
 - **2026-10-07 — Persistent seed overlay (D2b) lands; mutation arm no longer self-cancels.**
   A 2026-10-07 auto run executed *zero* phases: the deck's 29 rows are all `identical_fp_already_passed`,
   the mutation arm only harvests winners from the current run's CSVs, so 0 measurements → empty
@@ -1619,6 +2515,7 @@ and NOT the experimental data (that is `results.md`).
   never re-fires every iteration — verified 16/16 + curated each executed exactly once across 3
   iterations in a stubbed-executor harness. Four tests added; full suite 585 passed, 1 skipped,
   27 subtests.
+
 - **2026-10-06 — `legal_slow` is reference-derived, and the Phase-4 legal rate hit 100%.**
   The legality verdict is now measured the way the gfx900/spoof reference actually ran:
   `ab_audit.cell_deltas()` exposes the spoiled reference median per cell, and
@@ -1650,6 +2547,7 @@ and NOT the experimental data (that is `results.md`).
 
   The overnight command now exists: `python3 port_tensile.py --auto --yes --budget 10
   --mutation-budget 2 --live off` (appended to `command.txt`).
+
 
 - **2026-10-06** — **Option H Phase 4 landed: coverage-guided synthesis, graded candidates.**
   New `synthesis.py`, plus the agent/mutator wiring to use it. `Hplan.6`'s four items: coverage
@@ -1684,6 +2582,7 @@ and NOT the experimental data (that is `results.md`).
   and the sweep lives in phase data.** Coverage joins on `(family, shape)`, so storing the
   sweep's first shape would re-file the candidate into a different cell and quietly corrupt
   every coverage join.
+
 
 - **2026-10-06** — **Option H Phase 1 integration closed: the ledger now actually runs.**
   Phase 1 shipped every piece of Hplan.3 and reached a run with none of them wired. Each gap
@@ -1721,6 +2620,7 @@ and NOT the experimental data (that is `results.md`).
   New `tests/test_phase1_integration.py` (53 cases) drives the driver's loop rather than the
   helpers, since testing the helpers in isolation passes even when the loop calls neither.
 
+
 - **2026-10-05** — **Option H Phase 3 landed: cell coverage, three distinct states, and LCB
   parent selection.** New `coverage.py` reports per `(family, shape)` evidence (distinct
   fingerprints, `min_n`, median, spread) and classifies each cell as `explore`,
@@ -1757,6 +2657,7 @@ and NOT the experimental data (that is `results.md`).
   read is stubbed back to `None`. Also added explicit `target_cells`, so a cell that
   was targeted but never proposed for is reported as `explore` rather than vanishing.
 
+
 - **2026-10-05** — **Option H Phase 2 landed: manifest-derived legality prior, measured live
   at 35.7% -> 85.3% legal.** New `legality.py` replaces the ≤2-knob lattice in
   `agent.mutate_and_feed` with a prior that draws knob values only from what Tensile ships
@@ -1783,6 +2684,7 @@ and NOT the experimental data (that is `results.md`).
   loads had to become one atomic group, and the base had to be a complete shipped vector
   rather than the partial deck config.
 
+
 - **2026-10-05** — **Option H Phase 1 landed: append-only `proposals` ledger, outcome
   classification, and a mutation arm that stops writing to `phases.yaml`.** New `mutator.py`
   (classifier, novelty, negative cache, per-run overlay); `registry.py` gains the `proposals`
@@ -1802,6 +2704,7 @@ and NOT the experimental data (that is `results.md`).
   not its generator. No GPU work, no full Tensile benchmark, `phases.yaml` untouched, and the
   live `registry.db` byte-identical after the run (verified by sha256). Suite: 317 tests,
   1 skipped, exit 0.
+
 
 - **2026-10-05** — **RETRACTED: the "mutants produced zero GFlops" finding was an artefact
   of the wrong CSV column.** `proposal.md` §H.1.2a reported 2,480 mutant benchmark rows with
@@ -1823,6 +2726,7 @@ and NOT the experimental data (that is `results.md`).
   §H.0, §H.1.2a, D3/D6, §H.3, §H.3.4, §H.3.8, §H.4, §H.7.10-11, §H.8 and §H.11 has been
   corrected in place; the original figures are quoted only inside the correction notices.
 
+
 - **2026-10-05** — **`--auto` cannot express "no mutations".** Found while formalising
   the Option H mutator plan. Three independent traps: `--mutation-budget 0` still emits
   single-knob mutants (the budget gates only the two-knob block in
@@ -1836,6 +2740,7 @@ and NOT the experimental data (that is `results.md`).
   **withdrawn** — `--auto` semantics stay as they are. The overpromising flag text is
   still wrong and Option H fixes the underlying width problem in `scheduler.mutate_winner`
   by construction rather than by flag (`implementation_plan.md` §Option H, `Hplan.10`).
+
 
 - **2026-10-05** — **`s`/`e`/`q` were dead while phases were skipped, and stdin had
   two competing readers.** A phase that policy skips (identical `fp` already
@@ -1868,6 +2773,7 @@ and NOT the experimental data (that is `results.md`).
   Covered by `tests/test_interactive_keys.py` (12 tests). The regression is
   load-bearing: reverting the skip branch to a bare `continue` fails 3 of them.
 
+
 - **2026-10-05** — **`verify_run.py`: the append-only law finally has a checker.**
   Verifying the trial needed shell one-liners in `/tmp`, which is the same
   scratch-the-answer-away pattern `run_status.py` was built to end. The law
@@ -1895,6 +2801,7 @@ and NOT the experimental data (that is `results.md`).
     dry-running the tool's own suggestion back through `port_tensile`.
   Covered by `tests/test_verify_run.py` (18 tests); the failure paths get as much
   attention as the happy one, since a checker that cannot fail is worse than none.
+
 
 - **2026-10-05** — **First native run on the locked deck: `run_20261005_170141`.
   It validated phase-resolved telemetry, confirmed the ZZ fix end to end, and
@@ -1929,6 +2836,7 @@ and NOT the experimental data (that is `results.md`).
   - *What a cheap run still cannot do:* settle form-vs-thermal. That needs the
     same kernel in both invocation forms on the same cell, which is the exact
     comparison the certainty tiers refuse to grade. Plumbed, not answered.
+
 
 - **2026-10-05** — **The "~2× invocation-form swing" is real, and grading no longer
   depends on it.** The long-standing caveat — identical config at 658.2 GFLOPS
@@ -1967,6 +2875,7 @@ and NOT the experimental data (that is `results.md`).
   column. `telemetry.py` now samples at 10 Hz with per-phase attribution, making
   the form-vs-thermal question answerable by measurement for the first time.
 
+
 - **2026-10-05** — **Measurement paths made non-destructive, and the ZZ width
   bug was found a second time in a second place.** A sweep for write paths that
   could destroy prior measurements turned up four, plus a duplicate of the same
@@ -1995,6 +2904,14 @@ and NOT the experimental data (that is `results.md`).
     `telemetry.<n>.csv` sidecar on mismatch.
   Regression coverage for all of the above lives in
   `tests/test_measurement_integrity.py` (17 tests); the full suite is 211 tests.
+
+
+- **2026-10-05 — Native arm flushed from registry; `run_status` default-head fix.**
+  ### Native registry rows removed (user-authorised, backed up first)
+
+  The live registry was flushed of **native** rows only, so the deck would measure every
+  candidate instead of skipping all 29 as `identical_fp_already_passed`.
+
 
 - **2026-10-03** — **Corpus consolidated; the gfx900 floor is locked, the deck is
   reduced to 29 phases, and the legality gate no longer ships dead ZZ configs.**
@@ -2035,6 +2952,7 @@ and NOT the experimental data (that is `results.md`).
   preserved, since its configs are deck priors. Nothing was deleted; 25
   empty/no-record phantom run dirs were moved aside and their registry rows left
   in place.
+
 - **2026-10-02** — `family_timing` was computed on every report and then
   **never written** — the whole per-family cost block was dropped on the floor.
   The report now carries an `execution_timing` block (native run wall clock,
@@ -2043,6 +2961,7 @@ and NOT the experimental data (that is `results.md`).
   on purpose: the floor is a 3-run chain, so one combined "runtime" would
   understate it. Measured on the current corpus: native `1d 19h 39m`, chain
   `3d 20h 34m`.
+
 - **2026-10-02** — `run_status.py` wired into the TTY via `LiveStatus`, on by
   default (`--live off` to disable, `--live-interval` to tune). A background
   thread repaints a compact panel so it keeps advancing while a phase blocks,
@@ -2052,942 +2971,110 @@ and NOT the experimental data (that is `results.md`).
   not an `Exception` — so the first run of a fresh tree would have died in the
   panel's first frame; the panel now catches `BaseException`.
 
-## [Acceptance best-vs-best default + telemetry-adjusted bases] 2026-09-27
-
-- **All-zero acceptance report FIXED (arm-scope asymmetry).** The spoof arm resolved
-  across the whole gfx900 reference chain (1,881 completed cells) while the native arm
-  read only the reported run. `run_20260926_201835` executed 8 non-duplicate phases
-  (402 were `identical_fp_already_passed`) and all 8 died on
-  `Generating kernel source resulted in error 4` = `overflowedResources == 4` =
-  **Occupancy limit** in the ZZ/double assembly writer → 0 native cells → every family
-  `measured_cells=0`, `per_cell_verdicts=[]`, all 38 deck cells RED/MISSING at 0.0.
-  The zeros were deterministic, not random.
-- **Native arm is now whole-db.** `port_tensile._native_records_all_runs()` aggregates
-  every `gfx90c_runs/run_*` dir's CSVs plus every registry `benchmark_result` row
-  (deduped on phase/fingerprint/GFLOPS), each stamped with `source_run`;
-  `_native_analytics_all_runs()` does the same for coverage/RED/ORANGE. Winners —
-  including prior older winner runs — are picked across all history, matching how the
-  spoof arm already worked. `gfx900_ref_*` is never admitted as native.
-- **Delta-semantics bug FIXED (columns did not reconcile with the percentage).**
-  `delta_pct` was computed from the cell's **max raw sample** on both arms while the
-  report's "Best native median" / "Spoof median" columns displayed **medians**, so the
-  displayed ratio never matched the printed delta (CC 192: displayed 31.4 vs 31.5 =
-  −0.3%, reported −6.1% from underlying 40.49 vs 43.12). All statistics are now
-  **per-kernel-median-first** so one lucky seed cannot decide a verdict, and the
-  default `best_median` is exactly `native_best_median / spoof_median - 1` — the deck
-  winner's per-kernel median vs the floor's median of per-kernel medians, term for
-  term with the two displayed columns.
-- **Kernel medians are keyed by source run.** The same `(phase_id, fingerprint)`
-  benchmarked by two runs was pooled into a single "kernel median", averaging across
-  runs; it is now one median per (run, phase, fingerprint).
-- **Rendered columns can no longer disagree with the delta (second delta bug).** The
-  two A/B columns were hard-wired to "Best native median" / "Spoof median" regardless of
-  the basis in use, so switching basis silently re-broke the guarantee fixed above. They
-  now render `native_value` / `spoof_value` — the operands actually divided — under
-  basis-aware headers (`report._BASIS_HEADERS`). Verified 0 mismatches in JSON and in all
-  38 HTML rows (residual ≤0.44pp = 1-decimal display rounding).
-- **Default comparison basis is now `winner` = BEST vs BEST** (both arms' best
-  per-kernel median), the drop-in-replacement question: replacing shipped kernel X with
-  native X' compares the two arms' best candidates. `winner_clock` / `median_clock` add
-  telemetry adjustment; `floor_best`, `strict`, `best_median`, `median`, `throttle`,
-  `best` remain selectable. All statistics are per-kernel-median-first, so "best" means
-  the best *kernel* over its seeds, never the single luckiest seed.
-- **Telemetry-adjusted bases implemented and independently verified.** Each kernel's
-  median is scaled by `sclk_ref / sclk_measured` from its own phase's sustained clock,
-  with ONE shared corpus-wide `sclk_ref` (1800 MHz) so neither arm is rescaled in its
-  own favour. Per-phase clock comes from `logs/telemetry.csv` (busy-filtered median,
-  >= 3 samples, idle floor excluded). Verified against an independent recompute from the
-  raw benchmark CSVs + telemetry: 38/38 cells match on both the raw best and its
-  normalized twin.
-- **Two guards stop the clock adjustment from producing confident nonsense.**
-  (1) A phase whose only busy samples sit at the 400 MHz idle clock is dropped, not
-  scaled — scaling it 4.5x let a 20.7 GFLOPS kernel "win" a cell at 93.0 GFLOPS;
-  genuinely throttled phases (0.9-1.2 GHz) are kept. (2) `CLOCK_MIN_COVERAGE = 0.5`
-  gate, applied SYMMETRICALLY: a clock-adjusted best is only comparable if drawn from
-  the same population as the unadjusted best, and at 9% coverage (CC cells) the eligible
-  subset's max sat 52-67% low, flipping CC to native wins. Below the gate both arms fall
-  back together to the unadjusted twin (`winner_clock` -> `winner`) and report
-  `clock_adjusted: false`.
-- **The native arm has no clock data, so `*_clock` is honestly inert today.**
-  `run_20260919_213727` (4,896 of 6,790 native records) has no telemetry file;
-  `run_20260920_235815` has 458 all-idle rows and predates `phase_id` tagging. Native
-  clock coverage is 0.000 on all 38 cells, so every `*_clock` run degrades to its
-  unadjusted twin with a printed warning. The spoof arm is well covered (mean 0.74,
-  1,719 tagged phases), so the machinery is real but cannot be applied symmetrically
-  until native is re-benchmarked with the phase-tagging sampler. Adjusting only the
-  spoof arm would deflate the floor and flatter the deck.
-- **Winner provenance in the report.** `analytics.compute_native_vs_spoof_delta` now
-  reports `native_winner_run`/`native_winner_phase`/`native_runs`/`n_native_runs` per
-  cell; `ABVerdict` + the JSON/HTML carry them, and the HTML provenance line states the
-  native arm scope. An empty native arm now prints a loud warning and the summary says
-  so, instead of rendering a clean-looking all-zero grid.
-- **Measured result on the new default (best vs best): 14 WIN / 10 TIE / 14 LOSS.**
-  Native arm = 6,790 cells from 2 runs (`run_20260919_213727`, `run_20260920_235815`);
-  coverage **100% of deck cells in all 7 families** (was 0%), **0 RED / 13 ORANGE /
-  25 GREEN**. Losses are modest and cluster at large shapes (HH:4096 −14.5%,
-  HH:2048 −14.6%, SS:2048 −15.1%); wins are large (HH:256 +272%, SS:256 +227%,
-  HH_HPA:512 +188%) but are partly a pool-size artifact, since the floor's best is a max
-  over ~303 kernels/cell vs the deck's ~75. On stricter bases the deck fares worse:
-  `floor_best` 3/7/28, `strict` (per-cell dominance) **0/0/38**, `median` 23/7/8.
-  `overall_pass=False`.
-  **Caveat:** the basis is pool-size biased against the deck — the floor averages 303
-  candidate kernels per cell vs the deck's 75 (larger in 35/38 cells), so a `max` over
-  the floor is biased upward. Part of the 28 losses is that asymmetry, not kernel
-  quality. The decisive artifact remains a per-fingerprint pairing (native X' vs shipped
-  X), which per-cell rollups cannot express. Per-cell numbers in `results.md` §10.
-- **Reference floor chain complete.** `gfx900_ref_20260926_201843_resume`: 1,212
-  targeted, 808 completed, 404 failed → chain **1,881 completed / 404 unique failed =
-  2,285 decided, 0 undecided**. 116 base failures retried and failed again; 288 new.
-- **Open (not fixed here).** `_write_phase_config` still returns early on the
-  assembly-class gate without writing the config, so `execute_phase` launches Tensile
-  against a missing path — the 121 rc=1 bucket. Reference-deck generation should
-  pre-filter those configs. Tracked in `implementation_plan.md`.
-
-## [Named workload cells + reference-floor A/B fix + HPA case-sensitivity] 2026-09-26
-
-- **A/B floor binding bug FIXED (`ccd7fed`).** `port_tensile.py` `_compute_ab_verdicts`
-  bound the spoof floor from the wrong tuple slot (`ref_records, _ = _ab_records_from_csv(
-  ref_dir, force_arm="spoof")` puts all records in the second element), silently dropping
-  the floor → "0 WIN / 0 TIE / 0 LOSS" reports. Corrected; the same run now yields
-  **30 per-cell verdicts (18 WIN / 9 TIE / 3 LOSS)**.
-- **Workload-cell naming (fix.md applied, `ccd7fed`).** Every measured row is stamped
-  `arm` + `cell_key` (`"<FAMILY>:<SHAPE>"`) + `kernel_key` via `gfx90c_common`
-  `cell_key()`/`kernel_key()`/`shape_side()`; `analytics.compute_native_vs_spoof_delta`
-  now pairs by workload cell `(family, dtype, shape)` on BOTH arms (best-of-cell median,
-  ±5% tie) instead of spoof-per-fingerprint vs native-per-cell.
-- **Live DB stamped (`ccd7fed`).** `gfx90c_results/registry.db` backfilled — 3,369
-  measured rows carry `cell_key`/`arm`/`kernel_key`; pre-backfill backup at
-  `backups/2026-09-26_impl/registry.db`. Added `idx_cell_key` index — NOTE:
-  `registry.py` does not create it, so a fresh DB lacks the index.
-- **HPA case-sensitivity FIXED (`58245c8`).** `_write_phase_config` matched
-  `"HPA"/"HS_HPA"` case-sensitively, so lowercase agent mutants (`mutate_hh_hpa_…`,
-  `mutate_hs_hpa_…`) ran as plain FP16 without `HighPrecisionAccumulate`/
-  `DestDataType`. Now uppercases + consults `FamilyLabel` (consistent with
-  `assembly_class_valid`); `agent.mutate_and_feed` stamps `FamilyLabel` on mutants.
-  Verified against all 6 label shapes (deck / reference / mutant). Closes the
-  round-2 HS_HPA pending item: HS_HPA 16 cells run at MT64x64x16 with the
-  `GLVW==VW-or-1` mirror predicate.
-- **Analytics cleanup (`58245c8`).** `analytics.py` dropped unused
-  `cell_key`/`kernel_key` imports.
-- **Corrections to earlier entries (append-only).** The "Shim removed:" bullet's
-  "deleted" claim is technically inaccurate — `tensile_gfx90c_port/` source is gone
-  from git, but shim-era `__pycache__` `.pyc` residue remains on disk (untracked;
-  scheduled for cleanup). The bottom "Upstream baseline" section's "pristine HEAD,
-  shim-only" wording is fully superseded by the native 2-file `Common.py` +
-  `AsmCaps.py` patch entry.
-
-## [Graceful gfx900-reference resume + completeness gate] 2026-09-26
-
-- **Reference runs are now resumable.** `tensile_library.reference_chain()`
-  returns the newest completed, non-smoke `gfx900_ref_*` run plus its
-  `resume_of` ancestors as one logical floor; `port_tensile` `--gfx900-reference
-  --resume` creates `gfx900_ref_<ts>_resume` targeting ONLY the base deck's
-  phases with no completed verdict (unattempted + failed-again once), reusing
-  the completed base phases as-is (`_chain_phase_sets()` distinguishes
-  completed vs decided). A/B verdicts (`_compute_ab_verdicts`) and family
-  timings now recall the WHOLE chain, not the newest run alone, so cells split
-  across base and resume are never lost.
-- **`--auto` completeness gate.** If a completed reference run exists but the
-  deck has undecided phases, `run_auto` now resumes it first and refuses to
-  proceed with ANY tuning until `_reference_remaining() == 0` (every shipped
-  phase has a verdict — completed, or enumerated-invalid `failed`). Previously
-  a truncated (47%) run was silently recalled as the floor and the remaining
-  ~1096 phases were permanently dropped. `--gfx900-reference --resume` alone
-  returns `noop` when the deck is already complete.
-
-## [Run-wide telemetry + gpu_busy_percent path + peak-table reconciliation] 2026-09-25
-
-- **Telemetry is now run-wide, not per-phase.** `telemetry.py` `TelemetrySampler`
-  gained `set_phase()` + a `phase_id` column and a restart-safe `start()` (header
-  written only when missing; never truncates). `port_tensile.TensileDriver` keeps
-  one sampler per run dir via `_ensure_telemetry()`, tagging every row with the
-  active phase in `execute_phase` and clearing the tag in its `finally`. Previously
-  each phase created a fresh sampler whose `start()` truncated `telemetry.csv`, so
-  a ~9.5h run kept only the last (~46s, itself an idle failed-at-compile ZZ phase)
-  window — the root cause of "telemetry only measured for ~40 seconds".
-  `run_gfx900_reference` stops the sampler on its run-dir swap. `report.py` reads
-  the CSV by column name (`csv.DictReader`), so the extra column is transparent.
-- **gpu_busy_percent path hardened.** Primary discovery now requires the candidate
-  card dir to actually expose `gpu_busy_percent` (rejects connector dirs like
-  `card1-DP-1/device`, which symlink to the card node and have no busy file); the
-  `/sys/class/hwmon` fallback no longer appends `/device` (double-suffix never
-  resolved → busy would always read 0 if the fallback ever fired), and a sampler
-  that cannot find the busy file prints a one-time warning instead of silently
-  logging zeros. The surviving run's busy=0 was *correct* data — its last phase
-  failed during compilation (GPU never woke; sclk pinned 400 MHz).
-- **Peak/ceiling tables reconciled** (`gfx90c_common.py` is the single authority;
-  `gfx90c_theoretical_limits.md` §5 now quotes its exact values). Added the missing
-  BF16 `1109` and INT8 `881` entries to `REALISTIC_CEILINGS`; §5 updates 1119→1118.7
-  (SS/CC/HH_HPA/HS_HPA), ~98→98.6 (ZZ); §2.1 notes `PEAK_GFLOPS['FP64']` stores the
-  rounded 101 (vs derived 100.8). Removed the stale "(replaced by …)" comment in
-  `gfx90c_common.py`.
-
-## [Shipped-dat gfx900 reference floor + red/orange cell semantics] 2026-09-25
-
-- **New `tensile_library.py`.** Parses the system ROCm `TensileLibrary_*_gfx900.dat`
-  binaries directly (msgpack length-prefixed solution names, marker-canonicalized
-  `Cijk_...`), unions every installed ROCm prefix (`/usr` + `/opt/rocm`), emits one
-  spoof phase per shipped kernel with its MT/WG/VW/DepthU/GSU knobs, and pins the
-  result once at `gfx90c_results/gfx900_shipped_manifest.json` (pin-on-first-load,
-  `refresh=True` re-scans). Live expected counts: SS 959, DD 96, HH 223, CC 64,
-  ZZ 26, HH_HPA 424, HS_HPA 493 → **2,285** distinct shipped kernels (the old 3,066
-  was per-file token counting). Config generation validated on all families
-  (2,164/2,285 assembly-legal under the class gate).
-- **One-time reference run (`--gfx900-reference`).** Benchmarks every shipped
-  gfx900 kernel once (ScheduleName `vega10`, `FAMILY_SHAPES` deck) into a dedicated
-  `gfx900_ref_*` run; later A/B `_compute_ab_verdicts` *recalls* it forever instead
-  of re-running per-run baselines. The 8 hand-authored `*_baseline_*` phases were
-  removed from `phases.yaml`; `run_auto` now just checks the reference run exists.
-- **RED = MISSING, ORANGE = <50%.** `analytics.classify_cell_status` classifies each
-  gfx900 contract cell `(family, deck-shape)` from `FAMILY_SHAPES` (38 cells):
-  RED if unmeasured this run, ORANGE if best measured candidate is below the
-  family realistic ceiling threshold, else GREEN. `report.py` gate/summary/JSON/HTML
-  reworked to these semantics, with per-family coverage denominators now derived
-  from the pinned manifest and the reference-run provenance embedded in the report.
-- **Perf fix.** `_ab_records_from_csv` re-parsed the 9k-line `phases.yaml` per CSV
-  (hundreds of parses per report); it now builds a phase-id → phase dict once
-  (~120s → ~1s per report regeneration).
-
-## [Cruft audit + convergence contract + CLI stage dispatch] 2026-09-25
-
-- **Convergence contract fixed (`agent.converged()`).** Removed the `iteration < 10`
-  bypass; budget exhaustion is now a STOP that returns `converged=False` (never
-  reported as a pass), and a CV ≤ 15% per-cell stability gate was added via the new
-  `CellAnalytics.cv` field. Criteria: no below-ceiling cells, ≥3 configs/cell, ≥2
-  independent runs/cell.
-- **Mutation family loss fixed (`agent.mutate_and_feed`).** Winners now harvest their
-  `.family` token, mutation derives the Tensile DataType from `FAMILY_DTYPE_CHAR`
-  instead of raw dtype char, so HH / HH_HPA / HS_HPA winners no longer silently fall
-  back to FP32. Harvest/emit now carry `is_below_ceiling`; agent construction dropped
-  the unused `max_iterations`/`red_threshold_pct` kwargs (driver updated).
-- **Single-path retirement.** Removed dead `classify_retirement_tier`,
-  `apply_d2_4_protection`, `classify_tie`, `should_repeat`, `classify_stability`
-  (policy.py) and registry `append_records`/`get_run_info`/`get_latest_run_dir`/
-  `has_phase_passed`; retirement is the single Tier-2 path via
-  `check_retirement_eligibility` + `should_run`/`is_config_retired`.
-- **`--stage 1-7` dispatch + bugs.** `create_run` now recognizes stage `"7"` (the old
-  `"report" in args.stage` never matched the number, minting stray runs); read-only
-  stages 2/4/5/7 no longer create runs; stages 1-5 have explicit handlers (preflight /
-  candidate plan / benchmark / retirement sweep / analytics summary).
-- **`--force` no longer a no-op.** Wired as `opt_in_identical_skip=False` through
-  `run_auto` (flag was previously parsed but never read).
-- **RED semantics rename.** `is_red` → `is_below_ceiling` (report RED = missing
-  contract cell stays untouched); `Red` → `below_ceiling` in harvest/convergence.
-- **Coverage metric fixed.** `_compute_family_coverage` denominator is now the
-  contract deck (`FAMILY_SHAPES[family]`, coverage = deck cells measured); the
-  shipped-kernel footprint moves to informational `footprint_pct` in the report.
-- **Centralized maps.** `REALISTIC_CEILINGS` (SS 1118.7 / DD 98.6 / HH 2461.0 /
-  ZZ 98.6 / CC 1118.7 / HH_HPA 1118.7 / HS_HPA 1118.7) and `FAMILY_DTYPE_CHAR` are
-  now both canonical in `gfx90c_common.py`; `tensile_library.py`, `analytics.py`,
-  `scheduler.py`, `report.py`, `agent.py` import them (family decks use
-  `MAX_WAVES_PER_CU` instead of a hardcoded 40).
-- **Dead code / imports / state removed.** Local unreferenced `TelemetrySampler`
-  class + `termios`/`tty`/`Set`/`PEAK_GFLOPS` imports in `port_tensile.py`;
-  `MANIFEST_KEY`/`expected_kernels_from_manifest` (tensile_library.py);
-  `persist_analytics`, `THEORETICAL_PEAKS`/`DDR_ROOFLINE_GBPS` deps (analytics.py);
-  `compute_ab_verdict`, `_family_to_dtype`/`mapping_path` (report.py);
-  `classify_bound_class` (scheduler.py); orphan
-  `tools/__pycache__/merge_draft_gfx90c.cpython-314.pyc`.
-- **Regression caught & fixed during the audit.** `_KNOWN_FAMILIES` (analytics) lost
-  its lowercasing when re-derived from `FAMILY_DTYPE_CHAR`, breaking every
-  `extract_family_from_phase_id` match, and the `dtype_to_family` fallback collapsed
-  the ambiguous `'H'` char to `HS_HPA`. Both fixed (lowercase prefix set; first-wins
-  char map → `'H'` = HH). Regenerated report identical to baseline: `Acceptance FAIL:
-  0 WIN / 0 TIE / 0 LOSS, 0 RED (missing) / 15 ORANGE (<50% ceiling)`.
-- **Docs sweep.** Replaced stale 3,066 pip-count references with the live 2,285
-  manifest split in `implementation_plan.md`, `knowledge_base.md`,
-  `knowledge_base_final.md`, `incomplete_work.md`; updated RED-list/RED-cell
-  terminology and dead-helper mechanism claims; expanded the `gfx90c_common.py`
-  single-source-of-truth row.
-
-## [Assembly-class gate + 295-phase deck + draft-merge tooling] 2026-09-20
-
-- **Class-based Assembly gate (`scheduler.assembly_class_valid`).** Faithful to
-  the Tensile SolutionStructs rejects reproduced from the 24 draft-run failures:
-  GSU>1 on complex, GSU>1 on half+f32-accum (HPA), GSU>1 on half without
-  `AssertFree0ElementMultiple>=2`, and `DepthU * BytesPerElement > StaggerUStride`
-  (complex DU>=32) are all illegal on gfx90c (no MFMA). Wired at BOTH seams:
-  `scheduler.validate_config` (mirror gate) and `port_tensile._write_phase_config`
-  (autoskip — illegal cells never written to the Tensile deck). Class-based, so
-  ANY future same-class cell is caught pre-run, not just the 24 triaged. The
-  loky/semlock ValueError from the draft re-runs was benign stderr noise
-  (joblib>=1.5.2 is cosmetic only); the 24 were solution-validity rejects.
-- **331 → 295 phases.** Regenerated `phases.yaml` through the new gate: the 36
-  GSU-2/4/8 cells on HH/HH_HPA/HS_HPA dropped (HH 56→40, HH_HPA 32→20,
-  HS_HPA 28→20). 0 illegal cells, 0 fp/phase_id dups, 0 validate_config fails.
-- **CASE3 merge tool (`tools/merge_draft_gfx90c.py`).** Append-only import of the
-  draft run's 4962 benchmark records under the MAIN fp scheme (FamilyLabel-tagged;
-  draft target_id fps were NOT portable). `.bak`-first on both registries, no
-  dedup/deletion/id-reuse, retirement left to the codebase's 3-tier gate
-  (policy.py:240). Dry-run reports exactly 2 retirement-eligible fps — the two
-  A/B baselines (48 samples each, 2 independent runs); everything else needs a
-  2nd shell from our deck. run2 added nothing new beyond the baseline 2nd shells
-  + 6 auto SS@1024 cells (3 samples each, single run — reference only).
-- **CASE3 import applied (run1 only).** `--runs run1` (default), run2 skipped per
-  decision — its only value was the baseline 2nd shells, and the codebase gate
-  can reach retirement later with 2 independent runs. Executed 2026-09-20: 445
-  phase entries (baseline baselines_ss_native/spoof + 443 wide cells) + **4896
-  benchmark records** appended from run_20260919_213727. Registers run1 in the
-  `runs` table (completed). Backups: `backups/main_registry.db.bak` +
-  `backups/draft_registry.db.bak` (draft DB untouched — read-only). Retirement
-  gate re-run post-import: 0 forced retirements (no fp has ≥2 runs yet —
-  baselines are single-run in main, eligible only after their 2nd shell).
-  Note: first apply attempt had a phase-dedup bug that dropped the per-sample
-  records after the 1st per phase (4896→445); fixed (dedup phases only, records
-  always appended) and re-applied cleanly from pristine main DB. Backups use
-  distinct `main_`/`draft_` tags (initial name collision would clobber main's .bak).
-- **WIN/LOSS classification from merged run1** (`potential_configs.md` §6.2–§6.5).
-  Empirical per-cell class vs our carried incumbents: **24 WIN cells** (draft
-  best-median beats incumbent — hh 1024³ +99%, hh 2048³ +85%, hs_hpa 2048³ +70%,
-  dd 512³ +68%, ss 1024³ +66%, cc 512³ +65% top margins) and **5 LOSS cells**
-  (cc 256³ −23%, hh_hpa 1024³ −21%, ss 2048³ −17%, zz all RED ~23% of 98.6
-  ceiling, ss 256³ parity). Next-run policy: WINs get a 2≥-shell then ≤2-knob
-  mutations (per-cell table §6.2); LOSSes never re-run their fp — replaced by
-  fresh structural candidates proposed in §6.3 (MT128/TT8/DUs/GSU-1, class-gated).
-  Spend order §6.5: WIN shells → WIN mutations → new-wide-for-LOSS → GSU-1@4096 SS.
-- **Next-increment proposal (`potential_configs.md` §6).** Wider-for-LOSS (CC/ZZ
-  structural, HS_HPA admitted parms, SS GSU-1@4096), narrower-for-WIN (DD closed,
-  SS/HH no double-spend), 2≥-shell-first spend order, strategy-scoped retirement.
-
-## [Wide gfx90c candidate deck (331 phases) + --auto baseline-anchored one-command integration] 2026-09-20
-
-- **Wide deck replaces the 304-phase manifest.** `phases.yaml` regenerated from
-  `/tmp/opencode/gen_wide_deck.py`: 331 phases (SS 105, HH 56, DD 44, HH_HPA 32,
-  CC 32, ZZ 32, HS_HPA 28, + 2 ss A/B baselines), every config passing the
-  scheduler mirror (`validate_config` + `_validate_tensile_loads` GLVW guard) and
-  per-shape M/N≥MT, K≥DepthU exact-size blockers — 0 invalid of 331.
-  Structure: one phase per (family × contraction-pattern × config) bundling ALL
-  family shapes, plus shape-matched underfill-GSU phases (small squares only, so
-  GSU2/8 is not misapplied to large ALU squares) and DDR/GEMV phases.
-- **fp-collision fix:** prior HH_HPA vs HS_HPA phases shared identical configs →
-  identical sha256 fp → policy `has_fp_passed` identical-fp skip would drop the
-  second family on re-runs. New deck keeps `FamilyLabel` (SS/HH_HPA/HS_HPA) in the
-  fp input; all 331 phase_id/fp/config triples are unique.
-- **Anchored `--auto`:** `run_auto` now runs Phase-0 preflight (non-fatal), then
-  the spoof/native baseline A/B pair first as the anchor, then all manifest phases
-  in order, then the convergent harvest/mutate loop — single overnight command.
-- **A/B verdict pipeline fixed (was producing 0 verdicts):** completed/recovery
-  records now carry `schedule_name`/`dtype`/`shapes`/`num_benchmarks` so arms
-  resolve; `run_ab_test` now sources per-cell medians from `2_BenchmarkData` CSVs
-  (which hold GFLOPS) grouped by arm instead of from registry records (which never
-  carried GFLOPS). Verified with a fabricated 1:1 native/spoof cell set (WIN).
-- **Accounting + telemetry fixes:** `phases_executed` counts only real executions
-  (interrupted/skipped-by-user excluded) and reports `phases_skipped`; inline
-  buggy sampler replaced by `telemetry.py`'s `/sys/class/drm/cardN/device`
-  discovery (old `hwmon_dir.parent.parent` resolved to `/sys/class`).
-- **Breaking CLI:** `--phases` removed (was an alias for `--targets`; the historic
-  numeric `--phases 1 31 25` matched nothing). Use `--targets` explicitly.
-
-## [HS_HPA fixes applied: manifest re-parameterized + scheduler mirror models the GLVW guard] 2026-09-19
-
-- **Fix 1 (manifest):** the 16 `hs_hpa` phases in `phases.yaml` are re-parameterized
-  from the rejected MT64x64x8/TT4x4/VW4 deck to the guard-legal MT64x64x16/TT4x4/VW4/
-  DU16 parameterization (admitted `1/1 after SolutionStructs`, assembles for gfx90c).
-  The accepted deck previously logged `Your parameters resulted in 0 valid solutions`
-  on every pass (12 signalled, 0 valid); with Fix 1 all 16 `hs_hpa` cells are guard-legal.
-- **Fix 2 (scheduler mirror):** `_validate_tensile_loads` (scheduler.py) now models the
-  stock-Tensile non-MI assembly `GLVW==VW-or-1` predicate (`SolutionStructs.py:4583-4596`)
-  that rejected the old deck — the mirror no longer pre-validates decks the guard rejects.
-  Verified by 6 unit tests + a 304/304 phases.yaml sweep.
-- Resolves the "Fix (pending)" bullet in the prior HS_HPA root-cause entry above.
-
-## [Legacy-silence clauses enforced] 2026-09-19
-
-- `claude.md` §8.1 written: removed machinery is **never** named in code or docs;
-  history's only sanctioned homes are `changelog.md` + frozen `prior_*`; `todo.txt`
-  is **USER-ONLY** (agent never reads/touches it).
-- Scrub pass: `implementation_plan.md` stale references to removed launcher
-  machinery reworded (entrypoint-only wording); live docs grep-clean.
-
-## [HS_HPA rejection root-caused: Tensile GLVW==VW-or-1 generator guard; guard-legal configs found] 2026-09-19
-
-- **Exact rejection isolated** (driver scratch `/tmp/opencode/e2e_hpa` +
-  `PrintSolutionRejectionReason`): stock Tensile non-MI assembly guard
-  `GlobalLoadVectorWidth{X} must be == VectorWidth or == 1`
-  (`SolutionStructs.py:4583-4596`; source comment: "Restrict GRVW/VW combos so
-  shift-ptr logic will work"). Fires when `setGlobalLoadVectorWidth`
-  (`:2010-2047`) pv-reduces GLVW 4→2 for 64x64x8/TT4x4/VW4 tabs
-  (totalElements 512 < NumThreads·GLVW = 1024, pv=2). The predicate is
-  **isa-independent** (rejects gfx900 identically) — a generator/representation
-  restriction, NOT a gfx90c HW/ISA limit and NOT an assembler failure.
-- **Same HS_HPA intent admitted by stock Tensile on native gfx90c:**
-  - MT64x64x16/TT4x4/VW4/DU16 → `1/1 after SolutionStructs`; gfx90c kernel
-    assembles (`Kernels.so-000-gfx90c.hsaco`, `TensileLibrary_gfx90c.co`).
-  - MT64x64x8/TT4x4/VW2/DU8 → `1/1 after SolutionStructs` and `1/1 after
-    KernelWriter`.
-- The 0-solution HS_HPA registry records are a parameterization collision with a
-  Tensile generator guard (not a hardware incapacity); HS_HPA tuning resumes on the
-  two guard-legal parameterizations.
-- **Fix (pending):** scheduler `_validate_tensile_loads` lacks the `GLVW==VW-or-1`
-  predicate under which the 64x64x8 deck fails — add it to the mirror.
-  **Done 2026-10-14** on the harness gate (`loads.validate_tensile_loads`), with the
-  `bufferLoad` / `GuaranteeNoPartialA` condition and explicit-`GLVW` reading the
-  original note omitted — see the top entry.
-- Docs updated: `potential_configs.md` §4 + §5.3 item 7, `implementation_plan.md`
-  technical findings.
-
-## [Native .env + toolchain resolution (industry standard) — custom chains removed] 2026-09-19
-
-- **`.env` loading → `python-dotenv` `load_dotenv()`** (industry standard; never
-  overrides live env). The hand-rolled `_load_dotenv` parser and the
-  `*_CANDIDATES`/`_first_existing_*` probe chains are gone from
-  `port_tensile.py`; `requirements.txt` adds `python-dotenv`.
-- **ROCm discovery → native tools only:** `hipconfig` (ROCM_PATH/HIP_PATH/
-  HIP_CLANG_PATH) + `shutil.which` for binaries on PATH. `.env` and README §6
-  slimmed to `TENSILE_ROOT` + optional overrides; no candidate chains.
-- **Guardrail added to `claude.md` §5:** never re-invent known-solved problems —
-  OS/stdlib/industry-standard library wins (`.env`→python-dotenv,
-  discovery→`hipconfig`+`shutil.which`, locks/DB→stdlib, CLI→`argparse`).
-- **Validated:** Phase-0 preflight 4/4 and a suite-exact ActiveE2E
-  (`phase_ss_Ailk_Bjlk_256x256x256_mt96x96x16_tt6x6`, rc=0, Actual Solutions 1/1,
-  `TensileLibrary_gfx90c.co` + `Kernels.so-000-gfx90c.hsaco`) with the native
-  resolution (scratch `/tmp/opencode/e2e_b`, isolated).
-
-## [Docs ecosystem governance: shim & legacy-suite silence, todo.txt user-only] 2026-09-19
-
-- **Rule codified in `claude.md` §8.1:** the import-time shim no longer exists and
-  is never mentioned in code, docs, or prose; its history lives only in this
-  changelog and the frozen `prior_*` files. The prior-campaign shell suite
-  (`run_gfx90c_suite.sh`) is referenced only inside `prior_*`.
-- **`todo.txt` is a user-only file:** the agent never reads, writes, or touches it.
-- **`claude.md` native-support wording aligned** to "2-file minimal Tensile patch"
-  (`Tensile/Common.py` + `Tensile/AsmCaps.py`).
-
-## [Distro-agnostic ROCm toolchain resolution] 2026-09-19
-
-- **`.env` fleshed out for both install styles:** ROCm paths are now probed via
-  `*_CANDIDATES` ':'-chains (`ROCM_PREFIX_*`, `ROCM_BIN_*`,
-  `ROCM_LLVM_BIN_*`, `TENSILE_ASSEMBLER_*`, `TENSILE_ASSEMBLER_FALLBACK_*`);
-  first existing entry wins, so AMD-installer (`/opt/rocm`) and Fedora-RPM
-  (`/usr/bin` + `/usr/lib64/rocm`) hosts both work from one `.env`.
-- **`port_tensile.py`:** new `_first_existing_dir` / `_first_existing_file` /
-  `_resolve_rocm_paths()` used by `_get_tensile_env` (PATH injection + subprocess
-  `ROCM_PATH`/`HIP_PATH`) and the `--assembler` selection. Explicit env values
-  still win when they point at existing paths; stale values fall back to the chain.
-  Verified on live host plus synthetic AMD-only and Fedora-only scenarios
-  (`/tmp/opencode/test_rocm_probe.py`).
-- **README §6 rewritten** for the candidate-chain schema + fixed the residual
-  "28-family coverage metrics" wording on the `report.py` row.
-
-## [Repo relocation & report/driver hygiene] 2026-09-19
-
-- **`file:///` references removed:** docs previously pointed at the dead
-  `GPU/backrocm/porting_tensile/attempt2` path; README links now relative.
-- **Hardcoded locations → `.env`:** `port_tensile.py` loads `TENSILE_ROOT`,
-  `ROCM_*`, `HIP_*`, `TENSILE_ASSEMBLER(_FALLBACK)` from `.env` (shell env >
-  `.env` > defaults). `.env` created in repo root.
-- **Early-quit key `'e'`:** ends the run cleanly after the current phase /
-  iteration (run stays `completed`, metadata `end_after_iteration: true`).
-- **Verbose logs:** Tensile stdout/stderr are teed live to console (prefixed
-  `[tensile]`) and to `logs/.../stdout.log`/`stderr.log`; `TENSILE_VERBOSE=1`
-  appends `--verbose` (Tensile PrintLevel 3).
-- **Acceptance report HTML de-hardcoded:** Problem space / coverage matrix /
-  telemetry sections are now data-derived (cell analytics, registry
-  started→completed timing, `logs/telemetry.csv` medians/peaks). Fabricated
-  VRAM / SCLK / MCLK / GPU-busy rows dropped (sensors unavailable on this APU).
-- **Report dtype fix:** `extract_dtype_from_phase_id` now uses the token family
-  parser (was a regex that returned `'unknown'` for `phase_ss_spoof_baseline_vega10`);
-  `'auto'` family mapped to `'S'`. The 67 red cells previously logged as
-  dtype `unknown` now resolve to real dtypes.
-
-## [Native gfx90c support replaces the import-time shim] 2026-09-19
-
-- **Root cause of the shim:** Tensile's `populateCapabilities` runs before config
-  merge, so a config-parse-time ISA injection is too late; 2026-08–09 proved the only
-  shim-compatible hook was import time (`tensile_gfx90c_port/sitecustomize.py` on
-  `PYTHONPATH`, 3 injections: `SupportedISA`, `architectureMap`, `getCapabilitiesCache`
-  seeded from gfx90 just so gfx90c was not probed-and-rejected).
-- **Replaced by real in-tree support** on Tensile latest `develop_deprecated` HEAD
-  (verified equal to `origin/develop_deprecated`, `e8a8999e`): 3 minimal bookkeeping
-  entries in `Tensile/Common.py` (`SupportedISA` `(9,0,12)`; `architectureMap`
-  `gfx90c`/`:xnack+`/`:xnack-`) plus `Tensile/AsmCaps.py`, a first-class `(9,0,12)`
-  capability entry written from scratch from LLVM `FeatureISAVersion9_0_C`
-  (`HasMadMixInsts`; no MFMA / dot / dl-insts / VOP2-fmac / WMMA / kernarg-preload).
-  No cloning or deriving from any other ISA.
-- **Validated:** written caps == real assembler-derived gfx90c caps (0 mismatches,
-  ROCm 6.4); roundtrip `gfxName((9,0,12))`/`gfxArch('gfx90c')`; `GetArchCaps((9,0,12))`
-  needs no change. End-to-end with the driver's own known-good config from
-  `phases.yaml` (`phase_ss_Ailk_Bjlk_256x256x256_mt64x64x16_tt4x4_3`): native
-  `# Detected GPU 0: gfx90c`, "Actual Solutions: 1 / 1", kernel built, loaded
-  `TensileLibrary_gfx90c.co` / `Kernels.so-000-gfx90c.hsaco`, benchmarked 434 GFlops
-  @ 256³, exit 0.
-- **Shim removed:** `tensile_gfx90c_port/` deleted; `port_tensile.py`
-  `_get_tensile_env`/`run_preflight` stripped of shim wiring and `TENSILE_REPO_ROOT`;
-  grep-clean across driver modules. Phase-0 preflight passes 4/4 shim-free.
-- **Docs updated** (knowledge_base §2/§3, README preflight, mapping, claude.md tree
-  + PYTHONPATH, implementation_plan) to describe native support. The "pristine HEAD,
-  shim-only" wording in the `Upstream baseline` section above is **superseded** by
-  this entry.
-
-## [Phases.yaml Fixes, Telemetry v2 & Client/Bench Split PoC] 2026-09-14
-
-- **`phases.yaml` — 48 Invalid Entries Repaired:** Reconciled NLCA and DepthU divisibility rules via in-place fixes (NLCA 3→1 ×46, DepthU 4→16 ×2); verified all 230 contraction entries pass `_validate_tensile_loads`. Archived backup at `archive/phases_20260914_prefix.yaml`.
-- **`telemetry.py` — Minimal Non-Root Sysfs Telemetry:** Extracted sampler into dedicated clean module reading world-readable sysfs (`0644`), correctly resolving `mclk_hz` via `pp_dpm_mclk` parsing (resolving dead 0 mclk bug) and supporting APUs (`power1_input` fallback).
-- **Client/Bench Split PoC:** Verified Tensile `--prebuilt-client` mechanism in `/tmp`, eliminating redundant per-phase CMake host client rebuilds.
-
----
-
-
-- **`port_tensile.py` — Completion Record Recovery:** Added `end_record_logged` flag + finally-block recovery logging. If Tensile phase completes successfully but normal logging path is interrupted (e.g., Ctrl+C during final processing), the finally block ensures completion record is persisted to registry.
-- **Root Cause:** Run 213103 completed phase (PASS in stdout.log, CSVs generated) but only "started" record existed in DB — no "completed" record. Normal logging path may have been interrupted before `append_record()` call.
-- **Fix Mechanism:** Flag tracks successful `append_record()` call; finally block checks if result exists but flag is False, then logs completion record with appropriate status.
-
----
-
-## [Immediate Keypress Listeners + MacroTile Format Fix] 2026-09-13
-
-- **`port_tensile.py` — Raw Mode Keypress Listeners:** Added `tty.setraw()` to both cooldown and phase execution key listeners for immediate 's'/'q' detection without requiring Enter press. Terminal settings restored in finally blocks.
-- **`port_tensile.py` — MacroTile Format Fix:** Corrected Tensile MacroTile schema from invalid `[[M0, M1, DepthU]]` to valid `[[M0, M1]]` format. DepthU now emitted as separate ForkParameter. Fixes "Invalid parameter value: MacroTile = [64, 64, 8]" error causing CC/DD phase failures.
-- **Root Cause:** Tensile expects 2D array for MacroTile dimensions only; DepthU is a separate parameter, not third array element.
-
----
-
-## [Report Generation Coverage Fix for Failed Phases] 2026-09-13
-
-- **`report.py` — Family Coverage Detection:** Enhanced `_compute_family_coverage()` dtype matching to properly detect family-specific cells (CC/DD/ZZ) when phases fail during execution, ensuring accurate coverage statistics even when benchmark CSVs are missing due to configuration errors.
-- **Root Cause:** Previous implementation only matched dtype (FP64/FP32) but not family names (CC/DD), causing coverage reports to show 0 cells for CC/DD families despite phase execution attempts.
-- **Impact:** Reports now correctly reflect attempted phase execution even when Tensile configuration errors prevent CSV generation.
-
----
-
-## [Multi-Threaded Compilation, MacroTile Schema Fix, Cooldown Key Controls & Immediate Reporting] 2026-09-13
-
-- **`port_tensile.py` — Multi-Threaded Clang Compilation:** Set `CpuThreads` dynamically based on available CPU cores (`min(os.cpu_count(), 16)` instead of forced single-thread `1`), accelerating clang assembly build times.
-- **`port_tensile.py` — MacroTile Tensile Schema Fix:** Corrected `ForkParameters` emission from invalid `MacroTile0`/`MacroTile1` keys to valid Tensile top-level list `MacroTile: [[M0, M1, DepthU]]` (resolving the `Invalid parameter name: MacroTile0` error in CC/DD runs).
-- **`port_tensile.py` — MacroTile0/MacroTile1 Removal:** Added explicit removal of deprecated `MacroTile0`/`MacroTile1` keys from `fork_params` before YAML emission, ensuring Tensile only receives valid `MacroTile: [[M0, M1, DepthU]]` format.
-- **`port_tensile.py` — Real-Time Cooldown Key Listeners:** Updated `_apply_cooldown()` to listen for `'s'` (skip cooldown immediately) and `'q'` (gracefully quit run) during thermal sleep.
-- **`port_tensile.py` — Immediate Report Generation on Quit:** Ensured `acceptance_report.json` and `acceptance_report.html` are automatically generated and written to `gfx90c_results/` even on early termination via `'q'` or interruption.
-- **`README.md` — Usage Documentation:** Added complete documentation for keyboard controls (`s`, `q`), semantic CLI filters (`--family`, `--pattern`, `--shape`), and HTML visual dashboard inspection.
-
----
-
-## [HTML Dashboard Generator Porting & Integration] 2026-09-13
-
-- **`report.py` — Automated HTML Dashboard:** Ported and unified the attempt1 analytics dashboard generator (`make_report.py`) directly into `AcceptanceReporter.write_html_report()`.
-- **Key Features:** Emits dependency-free, responsive dark-mode HTML dashboard (`gfx90c_results/acceptance_report.html`) containing 28-family footprint progress, realistic GEMM ceiling progress bars, per-cell A/B head-to-head comparison cards, and RED-list tracker.
-- **Verification:** Tested in `/tmp` POC then integrated into `report.py` and validated with live data.
-
----
-
-## [Complete 7-Stage Driver Transition & Semantic Target Interface] 2026-09-13
-
-- **`port_tensile.py` — Semantic Target Filtering:** Replaced arbitrary numeric phase arguments with first-class semantic CLI flags: `--family` (`{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}`), `--pattern` (`{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`), `--shape`, `--stage` (`1..7`), and `--targets`.
-- **`phases.yaml` — 28 Native Families Populated:** Manifest completely populated with 228 clean targets spanning all 28 mathematical contraction families with anchor problem shapes.
-- **Dry-run validation:** Added `--dry-run` to query and verify target matching without triggering GPU execution.
-
----
-
-## [Tensile YAML Generator Fix, Candidate Tile Validation & CSV Resilience] 2026-09-13
-
-- **`port_tensile.py` — `_write_phase_config` fixed:** Corrected `TransposeA`/`TransposeB` derivation from contraction pattern labels (`Ailk_Bljk` $\to$ NN/FF, `Ailk_Bjlk` $\to$ NT/FT, `Alik_Bljk` $\to$ TN/TF, `Alik_Bjlk` $\to$ TT/TT); fixed `MacroTile0`/`MacroTile1` mapping from string representation; calculated `WorkGroup` dynamic tile ratios; enabled `HighPrecisionAccumulate` and mixed precision `DestDataType`/`ComputeDataType` for HPA families.
-- **`scheduler.py` — candidate tile divisibility & workgroup validation:** Added validation check in `validate_config` ensuring `MacroTile` dimensions are strictly divisible by `ThreadTile` dimensions (`MacroTile0 % ThreadTile0 == 0`) and workgroup thread count is a multiple of 64 within $[64, 1024]$.
-- **`analytics.py` — CSV header whitespace resilience:** Updated `load_benchmark_csv` with whitespace-stripped fieldname parsing and robust per-kernel GFlops metric extraction for space-padded Tensile CSVs.
-- **Verification:** Unit tests passing 100%; benchmark CSV parser validated against 96 real kernel measurements (`run_144805`, `run_150517`, `run_151227`) showing peak 928.0 GFlops at $1365^3$.
-
----
-
-## [Ctrl+C signal handler + stale-run cleanup + run status fix] 2026-09-13
-
-- **`port_tensile.py` — Ctrl+C signal handler fixed:** `_signal_handler` now calls
-  `sys.exit(130)` after killing the child process group via `os.killpg`. Previously the
-  handler only set `_stop_requested=True`; the driver continued running normally after
-  killing the subprocess instead of terminating. Exit code 130 = standard shell Ctrl+C.
-  Run status is written to registry as `interrupted` before exit.
-- **`registry.py` — `cleanup_stale_runs()` added:** bulk-UPDATE of any `status=started`
-  rows to `interrupted` on driver init. Cleans up 3 orphaned runs from this session
-  (run_140507, run_141220, run_143006 all set to `interrupted`). Non-destructive: only
-  updates status column, does not touch records.
-- **`port_tensile.py` — run status semantics:** `run_phases()` now marks run as
-  `interrupted` if `_stop_requested` is True at completion, instead of always writing
-  `completed`. The `run_auto()` path unchanged (it also sets `_stop_requested` on budget
-  exhaustion, which is expected termination — status remains `completed`).
-- **Root cause of HipClangVersion failures clarified:** `ValueError: invalid literal for
-  int() with base 10: '<unknown>'` in runs 143115–144714 was a pre-symlink race: the
-  `/opt/rocm/share/hip/version` symlink did not exist at run time. Symlink was created
-  during the session; run_144805 succeeds with `HipClangVersion=6.4.43484`. Code not
-  modified; environment is now stable.
-
----
-
-## [attempt2 driver full remediation & adversarial review fixes] 2026-09-13
-
-- **Full adversarial review remediation across the driver ecosystem:**
-  - `port_tensile.py`: Fixed Stage 7 A/B test logic error (no longer passing identical datasets for native and spoof arms); added background continuous sysfs telemetry sampler (`TelemetrySampler` reading `hwmon[0-9]*`, logging canonical `Hz/µW/mC/%` with header-in-CSV); added interactive non-blocking `'s'` skip and `'q'` quit key listeners during phase execution; replaced Stage 6 stub with real YAML logic generator, `TensileCreateLibrary` runner, anti-alias scanner (0 gfx900/vega10 leaks), and 3,066 kernel regression check; eliminated subprocess pipe buffer deadlocks by logging to disk.
-  - `scheduler.py`: Corrected GEMM LDS memory estimation to `(M*K + N*K) * elem_size * NLCA / 1024.0`; made `parse_tensile_shape` robust to batch (`_B16`) and explicit K (`_K4096`) shapes; improved wave-based CU occupancy estimation.
-  - `agent.py`: Upgraded `converged()` to enforce the full 4-condition convergence standard (≥2 independent runs, ≥3 configs tested, ≤1% movement, and no RED cells); replaced hardcoded FP32 candidate reconstruction fallback with family-aware defaults.
-  - `registry.py`: Protected `append_phase()` with `INSERT OR IGNORE` and transaction deduplication to avoid SQLite uniqueness conflicts.
-- **Verification:** Unit tests and module import validations pass 100%.
-
----
-
-## [attempt2 spec drift cleanup + Tensile bulk purge] 2026-09-13
-
-**Spec drifts fixed (SD-1 through SD-7) — all imports now correct:**
-- `port_tensile.py`: removed `import fcntl`; fixed docstring (flock→sqlite3 INSERT);
-  `AppendOnlyRegistry` → `SQLiteRegistry`; `CandidateGenerator` now receives registry;
-  `_extract_phase_number` uses regex `phase_(\d+)` (not naive split); `import re` added.
-- `agent.py`: `from scheduler_fixed import` → `from scheduler import`.
-- `report.py`: `from policy_fixed import` → `from policy import`.
-- `scheduler.py`: `registry` param now optional (`=None`); `append_to_phases` raises
-  `RuntimeError` if called without registry instead of silent crash.
-- `analytics.py`: stale `fcntl.flock` docstring updated to `sqlite3 records INSERT`.
-- All 7 modules import cleanly; `port_tensile.py --help` passes.
-
-**Bulk cleanup — 35.5 GB freed from Tensile working dir:**
-- `gfx90c_runs/` (34 GB), `gfx90c_results/` (1.5 GB), `build_tmp/` (75 MB) deleted.
-- attempt1 SHA256-verified as complete frozen backup before deletion. Untouched.
-- `/tmp/opencode/` retained by user request; purged on next reboot.
-
-**Source of truth confirmed:** PEAK_GFLOPS values match between Tensile and attempt2 mirrors.
-
----
-
-## [attempt2 persistence: SQLite approved] 2026-09-13
-
-- **Approved change:** ledger write path is stdlib `sqlite3`
-  (`gfx90c_results/registry.db`, WAL). `records` = INSERT-only `json.dumps`
-  payloads. Replaces `fcntl.flock` + JSONL **as the write path**.
-- **Unchanged:** append-only evidence law (`knowledge_base.md` §10); `phases.yaml`
-  remains the data-only manifest; harvest still appends YAML rows; stats pipeline
-  still consumes run-dir CSV (jsonl export optional until pipeline reads SQLite);
-  legacy jsonl files stay on disk, never rewritten.
-- **`runs` table:** operational checkpoint (status UPDATE allowed). Not evidence.
-- **Retracted:** previous `[attempt2 v1 fixes implementation]` block. That entry
-  claimed policy/scheduler/report/agent/driver "fixes" had landed. They had not
-  (broken imports, Tensile stub, harvest inverted, RED vs 50% PEAK, YAML
-  abolished in the "fixed" driver). Unapproved drifts live in
-  `incomplete_work.md` §4.9 / `adversarial_review.md` §6. Do not treat
-  `/tmp/opencode/*_fixed.py` as the spec.
-
-## [attempt2 stage approval] 2026-09-13
-
-- **All 7 driver stages approved by user:** Stage 1 (Manifest & Phase Execution), Stage 2 (Candidate Generation), Stage 3 (Benchmark Execution), Stage 4 (Adaptive Repeat / Convergence), Stage 5 (Analytics & Append-Only Registry), Stage 6 (Synthesis / Build), Stage 7 (Acceptance A/B & Final Report).
-- **ASCII flowchart added to implementation_plan.md:** Visual representation of stage flow and convergence loops, including the convergence check loop (harvest → mutate ≤2 knobs → loop back to Stage 2) and --auto mode budget-controlled loop.
-- **Stage specs now authoritative:** implementation_plan.md Driver Architecture section is the single source for all stage mechanics, scope, key files, and convergence logic.
-
-## [attempt2 consolidation] 2026-09-13
-
-- **Stage specs consolidated into implementation_plan.md:** Previous agent's Stage 4/6/7 functional specs (adaptive repeat/convergence, synthesis/build, acceptance A/B) integrated into Driver Architecture section. Stage 5 (analytics/registry) mechanics added. D2.4 decision recorded: 3 premature auto-retire records (p12 387d2577, p5 286b940a, p6 1570d91a) stay as ordinary rows awaiting ≥2-run corroboration, never marked as verdicts.
-- **Core strategy and AI constraints added to implementation_plan.md:** One-shot deterministic convergence flow, AI Must Not Decide rules, Correctness Gate, Reward Hacking prevention, Manual-LLM contingency (user-invoked, add-only, ≤5 candidates). Content consolidated from separate tuning context MD.
-- **README.md streamlined:** Removed duplicated hardware/target specifications (now in knowledge_base.md only). Kept orientation, philosophy, goal statement, and file locations.
-- **todo.txt removed:** Task list content already in scratch.md; eliminated redundancy.
-- **benchmark-retirement-sensor-logging-fixes.json retained:** 19MB session log kept for reference (user declined deletion).
-- **tensile_tuning_context.md retained:** Tuning philosophy content consolidated into implementation_plan.md; original file kept for reference (user declined deletion).
-
-## [attempt2 init] 2026-09-13
-
-- New ecosystem folder created at `porting_tensile/attempt2/`; prior-campaign
-  conclusions absorbed into `prior_INSIGHTS_CAVEMAN_ULTRA.md` /
-  `prior_RESEARCH_ARCHIVE.md` (the ONLY sanctioned prior material, appended no-data-
-  deletion).
-- **One-shot deterministic convergence contract** authored: no LLM consultation in
-  the loop; deterministic harvest → mutate ≤2 knobs → re-run until convergence.
-  The ONLY exception is the user manually invoking an LLM to ADD candidate configs
-  — add-only, out-of-band, never in the loop.
-- **Contract sharpened (2026-09-13, user directive):** attempt2 exists to **beat the
-  gfx900 spoof baseline across the entire shipped kernel suite** AND approach the
-  gfx90c theoretical limit as closely as possible. The theoretical limit is fixed by
-  `gfx90c_theoretical_limits.md` (rocminfo + first-party cross-checked; see that file).
-- **Driver architecture folded into `implementation_plan.md`** (single self-contained
-  plan): `port_tensile.py` + `phases.yaml` manifest, `json.dumps` state,
-  `fcntl.flock` locking, `argparse`, single-source PEAK.
-- **Every code change PoC'd in `/tmp/opencode/` until fully functional** before it
-  lands anywhere near the live driver (enforced in `implementation_plan.md`).
-- **No `changes_kb.md`** — absorbed here. **No `proposed_fixes.md` / `refactor_suite.md`
-  / `CHANGELOG.md` / agent-log MDs** — absorbed into `implementation_plan.md` /
-  `changelog.md`. Ecosystem is the lean single-owner set registered in `claude.md`.
-- Peak table corrected everywhere to single-rate **1613** for BF16 and INT8 (NO
-  RDNA-style 3226 assumption); single source `gfx90c_common.PEAK_GFLOPS`.
-- `PHASE_TIMEOUT_S` default planned as finite (runaway protection), not unbounded.
-- Interactive single-phase kill ('s' skip / 'q' quit — one phase, not the whole run)
-  planned for the driver.
-- Stats/HTML pipeline retained and carried forward (`all_runs_dataset.py` →
-  `make_results_md.py` → `make_report.py` → `gfx90c_report.html`).
-
-## Prior campaign 2026-09-04 .. 2026-09-13 (frozen conclusions)
-
-- Port mechanics proven YES: 3-injection shim, Phase-0 gates 10/10, anti-alias
-  0 gfx900 leak, synthesis PASS.
-- Performance = **parity, not wins** on the only same-run head-to-head
-  (0 win / 11 tie / 0 loss at ±5% vs the gfx900 spoof).
-- Candidate suite A–G brought to **5W / 10T / 6L** over 21 shared cells
-  (B GEMV 32/64×4096 +8.1/+13.6% & +17.8/+21.3%; D 2048³ +14.1/+20.1%; E int8 1024³
-  +18.3%; A sgemm 2048³ stable; F = 3 new cells; C crashed every run until the
-  `[{}]` fix).
-- Only 6 genuinely-new problem cells produced; ~40% of prior runtime went to
-  re-benchmarking known shapes.
-- Best measured: FP32 1118.7 @1024³, FP16 2492.1 @4096³, BF16 1108.5 @2048³,
-  INT8 881.2 @2048³, FP64 98.6 @1024³ (98% of the 101 pipe — saturated).
-- Four ruler bugs found and fixed; three-tier retirement scheme in place;
-  telemetry fixed to the sysfs contract; toolchain-stderr fix landed (the single most
-  impactful prior change).
-- Summary only here — the full conclusion detail lives in
-  `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
-
----
-
-## Prior-campaign evolution (the WHY layer)
-
-### The port mechanism flipped
-
-- Baseline started as a **9-file in-tree patch**; worked, but forked-the-tree drift.
-  Replaced by the **3-injection Python shim**
-  (`tensile_gfx90c_port/sitecustomize.py` on `PYTHONPATH`): tree stays pristine, the
-  whole delta is one import-time file. The shim is the ONLY port mechanism.
-
-### Suite evolution (driver generations)
-
-- The driver suite iterated through several generations during the prior campaign;
-  the last shell generation is frozen and inherited as the attempt2 baseline for
-  migration parity (new driver paradigm — the attempt2 python driver replaces it).
-
-### Ruler bugs (all four closed prior)
-
-- Ruler normalization was wrong in four ways: max-anchored squares, cross-dtype
-  geo-mean leaking the DDR factor, a dtype-string key no-op, and missing rulers
-  fabricated as 1.0. Fixed to bound-class medians, `(dt,cls)` keyed, missing →
-  **reported, never inferred**. The ruler/throttle discipline only became trustworthy
-  once all four were closed.
-
-### Retirement
-
-- Three-tier retirement introduced. Tier-1 = identical-fp skip (default on; opts out
-  via a config flag; `--phases` scoped). Tier-2 = dominance retirement by
-  `auto_retire.py` (attempt2 gates on ≥2 independent runs/cell after a premature
-  3-record emission). Tier-3 = peak/spoof never retires anything.
-
-### Telemetry
-
-- Fixed to the sysfs contract; `logs/telemetry.csv` carries its header in-file
-  (self-describing; canonical Hz/µW/mC/%, `hwmon[0-9]*`, `power1_input` →
-  `power1_average` fallback). Continuous whole-run sampler, 2 s cadence.
-
-### The single most impactful fix
-
-- **Toolchain stderr fix** — the single most impactful change of the prior campaign:
-  tool stderr kept out of machine-readable outputs made the append-only result stream
-  trustworthy. Every downstream pipeline depends on it.
-
----
-
-## 2026-09-28 — Occupancy preflight gate; ZZ dead tiles replaced
-
-**Why.** All 8 executed native ZZ phases (`run_20260926_201835`) ended
-`Generating kernel source resulted in error 4` = `overflowedResources == 4`
-= Tensile's *Occupancy limit* (register-file exhaustion, `KernelWriterAssembly.py:15422`),
-not a launch failure and not the benign "error 3". They died because the
-legality preflight **could not detect this class of failure at all**:
-`_estimate_occupancy` inferred the thread count from `ThreadTile` via a
-`64 // tt` heuristic, ignored `MacroTile` entirely, and never counted VGPRs —
-so it returned ≥ 1 for every config and never fired.
-
-**What changed.**
-
-- `scheduler.py`: added `VGPR_PER_ELEMENT`, `VGPR_BUDGET`, `_tile_dims`,
-  `_dtype_char`, `occupancy_workgroups_per_cu`, `occupancy_feasible`.
-  `validate_config` and `_estimate_occupancy` both delegate to the one model, so
-  there is a single source of truth. The gate **fails closed** on a dtype with no
-  VGPR weight: a low guess (S=1) would re-admit a failure that a high guess (Z=8)
-  catches.
-- `phases.yaml`: 410 → 418. Removed the 8 dead phases (`MT 128x64x8/8x4` and
-  `MT 64x128x8/4x8` × 4 contraction patterns); added 16 legal ones:
-  `128x32x8/8x4` and `32x128x8/2x8` as same-aspect replacements, plus `64x64x8/4x2`
-  (thread count never varied for ZZ) and `128x32x16/8x4` (deeper K). Phase IDs and
-  SHA-256 fingerprints regenerated; uniqueness asserted. The pre-fix deck is kept at
-  `archive/phases.yaml.pre-occupancy-gate.bak` as regression evidence.
-- New `check_candidates.py`: sweeps any deck through the 4 gates
-  (divisibility, assembly-class, LDS, occupancy), exits 1 on any illegal config,
-  so an illegal deck can be caught before a GPU run instead of mid-run.
-- New `all_runs.py`: all-runs pattern analysis over the whole DB, driving oto's own
-  loaders (`_native_records_all_runs`, `_ab_records_from_csv`,
-  `compute_native_vs_spoof_delta` winner semantics) so it cannot drift from the
-  pipeline that produced the ledger.
-- New `test_occupancy_gate.py`: 18 tests, incl. the calibration matrix, the
-  ThreadTile-cancels identity, fail-closed dtype behaviour, the shipped deck being
-  legal, and the pre-fix deck still failing exactly 8.
-
-**Verification (CPU only, no Tensile launch, no GPU).** 18/18 tests pass;
-`check_candidates.py` reports 0 illegal across all 418 shipped phases and exactly 8
-illegal against the archived pre-fix deck.
-
-**Honest limits.** The weights are **calibrated, not derived**: `R=8` for ZZ is the
-smallest value reproducing every observed outcome, and the gate demands 2× headroom
-because the raw accumulator-only count predicts `numWorkGroupsPerCU == 1` for the
-tile that actually died (pinned in `test_raw_tensile_model_would_have_missed_the_failure`).
-It reproduces all 9 observed cases and has zero false positives over 410 phases, but
-it is a model, not a register allocator. ZZ is now **legal but unbenchmarked** — the
-next step for the family is a TTY run, not more code.
-
----
-
-## 2026-10-05 — Native arm flushed from registry; `run_status` default-head fix
-
-### Native registry rows removed (user-authorised, backed up first)
-
-The live registry was flushed of **native** rows only, so the deck would measure every
-candidate instead of skipping all 29 as `identical_fp_already_passed`.
-
-- **Backup (verified before the write):** `gfx90c_results/backups/registry.db.pre-native-flush.20261005_182448`
-  — `PRAGMA integrity_check: ok`, 42 runs / 49,540 records / 612 phases, byte-identical
-  row counts to origin. All 33 native runs are recoverable from it.
-- **Deleted:** 35,729 records + 33 run rows (`run_*`). **Untouched:** all 9
-  `gfx900_ref_*` floor runs (13,811 records), including `gfx900_ref_locked_52149f315d`
-  with its 2,194 pooled phase records. `phases` (612 `draft_*` catalog rows) kept —
-  it is a config catalogue, not measurements, and `should_run` never reads it.
-- **Result:** `should_run` now returns approved for **29/29** deck phases under
-  *default* policy; `reference_chain()` still resolves to the locked floor.
-  `--force` is no longer required.
-
-**Scope was chosen from evidence, not assumption.** Floor runs also carry `fp` and
-`completed` records, so a native-only flush would not have worked had any deck
-fingerprint been decided by a reference run. Checked first: **0 of 29** were
-floor-decided, all 29 were native-only. There were also **0 `retire` records**, which
-`is_phase_retired`/`is_config_retired` consult, so no second gate remained.
-
-**Nothing was actually lost.** `ab_audit.py` reads `2_BenchmarkData` CSVs from disk,
-not the registry, and still reports the identical 8 WIN / 30 TIE verdict against the
-same 6 on-disk `run_*` directories. Only registry rows were removed.
-
-### `run_status.py` default head: a closed interrupted run was outranking the floor
-
-The default view headlined `gfx900_ref_20260928_155422_resume` — **interrupted, and
-closed 8 days earlier** — while skipping the floor locked 5 days later. Every tier
-count and ETA it printed came from the wrong corpus; a 25 h ETA derived from it was
-wrong. `reference_chain()` (what `--auto` actually gates on) was never affected.
-
-Cause: `ACTIVE_STATES = ("started", "interrupted")` treats *any* interrupted run as
-active, and the selection took the newest-first match, so the scan walked past the
-completed floor.
-
-Fix — in flight is decided by `completed_at`, not the status label: prefer (1) a run
-with no `completed_at` (live, resumable), then (2) the newest **completed** chain, then
-(3) the newest finished-but-interrupted run.
-
-The status label alone was the wrong axis: `test_chain_follows_resume_of` pins the
-contract that an interrupted run which *never closed* stays at the head. Both
-directions are now pinned by new tests, and the fix was verified load-bearing (reverting
-it fails `test_closed_interrupted_run_does_not_outrank_newer_floor`).
-
-**Verification.** `test_run_status`: 41/41. Full suite: **247 tests, OK (skipped=1)**.
-
----
-
-## Session / consultation record
-
-- **Prior campaign consumed 3 of 6 in-session LLM consultations.**
-- **attempt2 consumes 0 by design.** The deterministic pipeline replaces the
-  prior candidate-sweep loop entirely; a consultation would only be sanctioned to
-  break a coverage deadlock — as a USER-invoked, add-only candidate injection (single
-  canned prompt, ≤5 recipe mutations constrained to known-valid gfx90c knobs, dropped
-  into `phases.yaml`). Never automatic; never in the loop.
-
-## Upstream baseline
-
-- The live Tensile repo remains at pristine HEAD, read-only, only the gfx90c shim
-  applied. No upstream release entries are mirrored here.
-
-## 2026-10-12 — Docs whittling: history archived out of the live docs
-
-Executed the ARCHIVE half of `docs/audit.md` (§1.4, §1.5, §1.6, §1.12,
-§2.1, §2.4, §4). The removed narrative is preserved verbatim below; the live
-docs now state current fact only. Trimmed copies whose canonical home already
-exists were marked as duplicates rather than reproduced twice:
-`tensile_tuning_context.md` owns the Objective/strategy/philosophy paragraphs;
-`mapping.md` owns the footprint; `oto.metrics.ab_delta` (module docstring,
-`_collect`, `_stat`) owns the A/B aggregation bases and clock rules;
-`oto.tensile.gates.occupancy.occupancy_feasible` owns the occupancy model;
-`oto.tensile.config_writer` owns the launch-boundary gate and the 121-config rc=1
-bucket. No code was changed.
-
-Reference repairs made because kept sections pointed at moved anchors: the plan
-banner's "self-contained" claim; the plan's `Hplan.10` and "status banner above
-Option H" pointers; the plan's Next Move pointer to `incomplete_work.md` §4.9.
-
-### implementation_plan.md
-
-**implementation_plan.md — Objective (pre-trim)**
-**Objective**
-
-Produce native `gfx90c` Tensile libraries covering the shipped 28-family × 4-pattern
-footprint (2,285 distinct shipped gfx900 kernels = 7 dtype/op families × 4 contraction
-patterns; the earlier 3,066 was per-file token counting, see `mapping.md`), converging
-per-cell so that each cell's ruler-adjusted median-of-seeds
-winner **beats the gfx900-spoof floor** (ties at ±5% = parity, and parity alone is not
-the win the campaign is here for). ±5% is the standing success bar, but it is
-narrower than the measured repeat noise (CV p90 27.8%, `results.md` §12.3), so a
-±5% "parity" is not evidence of indistinguishability — grade with `ab_audit.py`
-(±27.8%) when the claim matters. and lands as close to the `gfx90c_theoretical_limits.md`
-ceiling for its (family, bound_class) as the machine will give. The whole campaign is
-driven by `port_tensile.py --auto` (deterministic harvest → mutate ≤2 knobs → re-run).
-
-Stated goal (from `tensiles_in_system_rocm.txt`): replicate and produce a
-`tensilelibrary` that performs all of the shipped functions for gfx90c, performing
-**better** than gfx900 spoofing. No more, no less.
-
-
-**implementation_plan.md — Core Strategy phase counts (pre-trim)**
-shipped `gfx900` footprint (28 families, 4 patterns = 418 phases:
-SS 105 · DD 44 · HH 40 · HH_HPA 20 · HS_HPA 20 · CC 32 · ZZ 40 · legacy auto 117
-— re-derived 2026-09-27: 410 + 8 legal ZZ replacements after the occupancy gate,
-see `changelog.md`)
-
-**implementation_plan.md — AI Must Not Decide (duplicate of tensile_tuning_context.md)**
-**AI Must Not Decide**
-
-`gfx90c identity / ISA legality / AsmCaps / compiler flags / runtime support /
-correctness / measurement / accepted performance` — including in the manual-LLM
-contingency. The model only proposes candidate *parameter vectors*; Tensile generates,
-the compiler validates, the hardware decides, the DB remembers.
-
-
-**implementation_plan.md — Correctness Gate (duplicate of tensile_tuning_context.md)**
-**Correctness Gate**
-
-Always: generate → correctness → benchmark. Never: benchmark → fast → maybe correct.
-Wrong kernel = failed candidate. The validator must reject known-invalid configs
-(no `AssertSizeMultiple: [1]`, no `SIA>1`, no Fp16AltImpl, LDS ≤ 64 KB/CU).
-
-
-**implementation_plan.md — Reward Hacking (duplicate of tensile_tuning_context.md)**
-**Reward Hacking**
-
-Independent benchmark + fresh inputs + correctness validation + repeat runs + guard
-checks + dtype-specific tolerance. Evaluator stays outside model control. No
-max-of-seeds; median-of-seeds is the statistic.
-
-
-**implementation_plan.md — Frozen baseline (pre-trim)**
-**A. Frozen baseline (conclusions sourced from `prior_INSIGHTS_CAVEMAN_ULTRA.md`)**
-- Port mechanics **DONE**: pristine Tensile + minimal in-tree gfx90c support
-  (3 bookkeeping entries in `Tensile/{Common,AsmCaps}.py`); Phase-0 gates 10/10
-  [OK]; anti-alias 0 gfx900 leak; synthesis PASS.
-- Performance = **parity, not wins** on the only same-run pair (0 / 11 / 0 at ±5%).
-  Candidate suite A–G gave **5W/10T/6L** over 21 shared cells.
-- 6 genuinely-new problem cells were produced. Best measurements: FP32 1118.7 @1024³,
-  FP16 2492.1 @4096³, BF16 1108.5 @2048³, FP64 98.6 @1024³, INT8 881.2 @2048³.
-
-
-**implementation_plan.md — Replicated footprint (pre-trim)**
-**B. The replicated footprint (mapping contract, see `mapping.md`)**
-28 frozen families = 7 dtype/op sets × 4 contraction patterns:
-`{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}` × `{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`
-= **2,285 distinct shipped kernels** (459+ distinct size-keys; the old 3,066 was
-per-file token counting — see `mapping.md`). No gfx90c library ships anywhere today.
-Reproduce the family matrix natively; per-family tile decks come from the mapped
-gfx900 top-tiles + the measured prior winners (frozen conclusions); do NOT chase the
-1,980-key size tables (defensive mesh, not a tuning result).
-
-
-**implementation_plan.md — Technical findings 2026-09-19 (pre-trim)**
-**Technical findings (2026-09-19)**
-
-- **HS_HPA rejection root-caused.** Guard trace (`PrintSolutionRejectionReason`) +
-  source audit (`potential_configs.md` §4): the rejection is stock-Tensile's non-MI
-  assembly `GLVW==VW-or-1` generator guard (`SolutionStructs.py:4583-4596`),
-  triggered by the pv-reduction in `setGlobalLoadVectorWidth` (`:2010-2047`) —
-  isa-independent, not a gfx90c HW/ISA limit, not an assembler failure.
-  Guard-legal HS_HPA parameterizations (MT64x64x16/TT4x4/VW4; MT64x64x8/TT4x4/VW2)
-  are admitted 1/1 and assemble for gfx90c. HS_HPA tuning resumes on them.
+
+## September 2026
+
+- **2026-09-28 — Occupancy preflight gate; ZZ dead tiles replaced.**
+  **Why.** All 8 executed native ZZ phases (`run_20260926_201835`) ended
+  `Generating kernel source resulted in error 4` = `overflowedResources == 4`
+  = Tensile's *Occupancy limit* (register-file exhaustion, `KernelWriterAssembly.py:15422`),
+  not a launch failure and not the benign "error 3". They died because the
+  legality preflight **could not detect this class of failure at all**:
+  `_estimate_occupancy` inferred the thread count from `ThreadTile` via a
+  `64 // tt` heuristic, ignored `MacroTile` entirely, and never counted VGPRs —
+  so it returned ≥ 1 for every config and never fired.
+
+  **What changed.**
+
+  - `scheduler.py`: added `VGPR_PER_ELEMENT`, `VGPR_BUDGET`, `_tile_dims`,
+    `_dtype_char`, `occupancy_workgroups_per_cu`, `occupancy_feasible`.
+    `validate_config` and `_estimate_occupancy` both delegate to the one model, so
+    there is a single source of truth. The gate **fails closed** on a dtype with no
+    VGPR weight: a low guess (S=1) would re-admit a failure that a high guess (Z=8)
+    catches.
+  - `phases.yaml`: 410 → 418. Removed the 8 dead phases (`MT 128x64x8/8x4` and
+    `MT 64x128x8/4x8` × 4 contraction patterns); added 16 legal ones:
+    `128x32x8/8x4` and `32x128x8/2x8` as same-aspect replacements, plus `64x64x8/4x2`
+    (thread count never varied for ZZ) and `128x32x16/8x4` (deeper K). Phase IDs and
+    SHA-256 fingerprints regenerated; uniqueness asserted. The pre-fix deck is kept at
+    `archive/phases.yaml.pre-occupancy-gate.bak` as regression evidence.
+  - New `check_candidates.py`: sweeps any deck through the 4 gates
+    (divisibility, assembly-class, LDS, occupancy), exits 1 on any illegal config,
+    so an illegal deck can be caught before a GPU run instead of mid-run.
+  - New `all_runs.py`: all-runs pattern analysis over the whole DB, driving oto's own
+    loaders (`_native_records_all_runs`, `_ab_records_from_csv`,
+    `compute_native_vs_spoof_delta` winner semantics) so it cannot drift from the
+    pipeline that produced the ledger.
+  - New `test_occupancy_gate.py`: 18 tests, incl. the calibration matrix, the
+    ThreadTile-cancels identity, fail-closed dtype behaviour, the shipped deck being
+    legal, and the pre-fix deck still failing exactly 8.
+
+  **Verification (CPU only, no Tensile launch, no GPU).** 18/18 tests pass;
+  `check_candidates.py` reports 0 illegal across all 418 shipped phases and exactly 8
+  illegal against the archived pre-fix deck.
+
+  **Honest limits.** The weights are **calibrated, not derived**: `R=8` for ZZ is the
+  smallest value reproducing every observed outcome, and the gate demands 2× headroom
+  because the raw accumulator-only count predicts `numWorkGroupsPerCU == 1` for the
+  tile that actually died (pinned in `test_raw_tensile_model_would_have_missed_the_failure`).
+  It reproduces all 9 observed cases and has zero false positives over 410 phases, but
+  it is a model, not a register allocator. ZZ is now **legal but unbenchmarked** — the
+  next step for the family is a TTY run, not more code.
+
+
+- **2026-09-27 — Acceptance best-vs-best default + telemetry-adjusted bases.**
+
+
+- **2026-09-26 — Named workload cells + reference-floor A/B fix + HPA case-sensitivity.**
+
+
+- **2026-09-26 — Graceful gfx900-reference resume + completeness gate.**
+
+
+- **2026-09-25 — Run-wide telemetry + gpu_busy_percent path + peak-table reconciliation.**
+
+
+- **2026-09-25 — Shipped-dat gfx900 reference floor + red/orange cell semantics.**
+
+
+- **2026-09-25 — Cruft audit + convergence contract + CLI stage dispatch.**
+
+
+- **2026-09-20 — Assembly-class gate + 295-phase deck + draft-merge tooling.**
+
+
+- **2026-09-20 — Wide gfx90c candidate deck (331 phases) + --auto baseline-anchored one-command integration.**
+
+
+- **2026-09-19 — HS_HPA fixes applied: manifest re-parameterized + scheduler mirror models the GLVW guard.**
+
+
+- **2026-09-19 — Legacy-silence clauses enforced.**
+  - `claude.md` §8.1 written: removed machinery is **never** named in code or docs;
+    history's only sanctioned homes are `changelog.md` + frozen `prior_*`; `todo.txt`
+    is **USER-ONLY** (agent never reads/touches it).
+  - Scrub pass: `implementation_plan.md` stale references to removed launcher
+    machinery reworded (entrypoint-only wording); live docs grep-clean.
+
+
+- **2026-09-19 — HS_HPA rejection root-caused: Tensile GLVW==VW-or-1 generator guard; guard-legal configs found.**
+
+
+- **2026-09-19 — Native .env + toolchain resolution (industry standard) — custom chains removed.**
+
+
+- **2026-09-19 — Docs ecosystem governance: shim & legacy-suite silence, todo.txt user-only.**
+
+
+- **2026-09-19 — Distro-agnostic ROCm toolchain resolution.**
+
+
+- **2026-09-19 — Repo relocation & report/driver hygiene.**
+
+
+- **2026-09-19 — Native gfx90c support replaces the import-time shim.**
+
+
 - **Scheduler mirror gap — FIXED (2026-09-19):** `_validate_tensile_loads` now models
   the `GLVW==VW-or-1` predicate (scheduler.py `_validate_tensile_loads`), which the
   64x64x8 deck previously violated; 6 unit tests + 410/410 manifest sweep pass.
@@ -3131,14 +3218,845 @@ The driver uses only existing solvers:
 
 **implementation_plan.md — Design spec §5 (pre-trim)**
 **5. Phase 5 / 6 / `--auto` mapping**
+
+- **2026-09-14 — Phases.yaml Fixes, Telemetry v2 & Client/Bench Split PoC.**
+
+
+- **2026-09-13 — Immediate Keypress Listeners + MacroTile Format Fix.**
+
+
+- **2026-09-13 — Report Generation Coverage Fix for Failed Phases.**
+
+
+- **2026-09-13 — Multi-Threaded Compilation, MacroTile Schema Fix, Cooldown Key Controls & Immediate Reporting.**
+
+
+- **2026-09-13 — HTML Dashboard Generator Porting & Integration.**
+
+
+- **2026-09-13 — Complete 7-Stage Driver Transition & Semantic Target Interface.**
+
+
+- **2026-09-13 — Tensile YAML Generator Fix, Candidate Tile Validation & CSV Resilience.**
+
+
+- **2026-09-13 — Ctrl+C signal handler + stale-run cleanup + run status fix.**
+
+
+- **2026-09-13 — attempt2 driver full remediation & adversarial review fixes.**
+
+
+- **2026-09-13 — attempt2 spec drift cleanup + Tensile bulk purge.**
+  **Spec drifts fixed (SD-1 through SD-7) — all imports now correct:**
+  - `port_tensile.py`: removed `import fcntl`; fixed docstring (flock→sqlite3 INSERT);
+    `AppendOnlyRegistry` → `SQLiteRegistry`; `CandidateGenerator` now receives registry;
+    `_extract_phase_number` uses regex `phase_(\d+)` (not naive split); `import re` added.
+  - `agent.py`: `from scheduler_fixed import` → `from scheduler import`.
+  - `report.py`: `from policy_fixed import` → `from policy import`.
+  - `scheduler.py`: `registry` param now optional (`=None`); `append_to_phases` raises
+    `RuntimeError` if called without registry instead of silent crash.
+  - `analytics.py`: stale `fcntl.flock` docstring updated to `sqlite3 records INSERT`.
+  - All 7 modules import cleanly; `port_tensile.py --help` passes.
+
+  **Bulk cleanup — 35.5 GB freed from Tensile working dir:**
+  - `gfx90c_runs/` (34 GB), `gfx90c_results/` (1.5 GB), `build_tmp/` (75 MB) deleted.
+  - attempt1 SHA256-verified as complete frozen backup before deletion. Untouched.
+  - `/tmp/opencode/` retained by user request; purged on next reboot.
+
+  **Source of truth confirmed:** PEAK_GFLOPS values match between Tensile and attempt2 mirrors.
+
+
+- **2026-09-13 — attempt2 persistence: SQLite approved.**
+
+
+- **2026-09-13 — attempt2 stage approval.**
+
+
+- **2026-09-13 — attempt2 consolidation.**
+
+
+- **2026-09-13 — attempt2 init.**
+  - New ecosystem folder created at `porting_tensile/attempt2/`; prior-campaign
+    conclusions absorbed into `prior_INSIGHTS_CAVEMAN_ULTRA.md` /
+    `prior_RESEARCH_ARCHIVE.md` (the ONLY sanctioned prior material, appended no-data-
+    deletion).
+
+
+- **Contract sharpened (2026-09-13, user directive):** attempt2 exists to **beat the
+  gfx900 spoof baseline across the entire shipped kernel suite** AND approach the
+  gfx90c theoretical limit as closely as possible. The theoretical limit is fixed by
+  `gfx90c_theoretical_limits.md` (rocminfo + first-party cross-checked; see that file).
+
+## Undated history — attempt2 → oto build-out (undated by construction; original order preserved)
+
+- **All-zero acceptance report FIXED (arm-scope asymmetry).** The spoof arm resolved
+  across the whole gfx900 reference chain (1,881 completed cells) while the native arm
+  read only the reported run. `run_20260926_201835` executed 8 non-duplicate phases
+  (402 were `identical_fp_already_passed`) and all 8 died on
+  `Generating kernel source resulted in error 4` = `overflowedResources == 4` =
+  **Occupancy limit** in the ZZ/double assembly writer → 0 native cells → every family
+  `measured_cells=0`, `per_cell_verdicts=[]`, all 38 deck cells RED/MISSING at 0.0.
+  The zeros were deterministic, not random.
+
+- **Native arm is now whole-db.** `port_tensile._native_records_all_runs()` aggregates
+  every `gfx90c_runs/run_*` dir's CSVs plus every registry `benchmark_result` row
+  (deduped on phase/fingerprint/GFLOPS), each stamped with `source_run`;
+  `_native_analytics_all_runs()` does the same for coverage/RED/ORANGE. Winners —
+  including prior older winner runs — are picked across all history, matching how the
+  spoof arm already worked. `gfx900_ref_*` is never admitted as native.
+
+- **Delta-semantics bug FIXED (columns did not reconcile with the percentage).**
+  `delta_pct` was computed from the cell's **max raw sample** on both arms while the
+  report's "Best native median" / "Spoof median" columns displayed **medians**, so the
+  displayed ratio never matched the printed delta (CC 192: displayed 31.4 vs 31.5 =
+  −0.3%, reported −6.1% from underlying 40.49 vs 43.12). All statistics are now
+  **per-kernel-median-first** so one lucky seed cannot decide a verdict, and the
+  default `best_median` is exactly `native_best_median / spoof_median - 1` — the deck
+  winner's per-kernel median vs the floor's median of per-kernel medians, term for
+  term with the two displayed columns.
+
+- **Kernel medians are keyed by source run.** The same `(phase_id, fingerprint)`
+  benchmarked by two runs was pooled into a single "kernel median", averaging across
+  runs; it is now one median per (run, phase, fingerprint).
+
+- **Rendered columns can no longer disagree with the delta (second delta bug).** The
+  two A/B columns were hard-wired to "Best native median" / "Spoof median" regardless of
+  the basis in use, so switching basis silently re-broke the guarantee fixed above. They
+  now render `native_value` / `spoof_value` — the operands actually divided — under
+  basis-aware headers (`report._BASIS_HEADERS`). Verified 0 mismatches in JSON and in all
+  38 HTML rows (residual ≤0.44pp = 1-decimal display rounding).
+
+- **Default comparison basis is now `winner` = BEST vs BEST** (both arms' best
+  per-kernel median), the drop-in-replacement question: replacing shipped kernel X with
+  native X' compares the two arms' best candidates. `winner_clock` / `median_clock` add
+  telemetry adjustment; `floor_best`, `strict`, `best_median`, `median`, `throttle`,
+  `best` remain selectable. All statistics are per-kernel-median-first, so "best" means
+  the best *kernel* over its seeds, never the single luckiest seed.
+
+- **Telemetry-adjusted bases implemented and independently verified.** Each kernel's
+  median is scaled by `sclk_ref / sclk_measured` from its own phase's sustained clock,
+  with ONE shared corpus-wide `sclk_ref` (1800 MHz) so neither arm is rescaled in its
+  own favour. Per-phase clock comes from `logs/telemetry.csv` (busy-filtered median,
+  >= 3 samples, idle floor excluded). Verified against an independent recompute from the
+  raw benchmark CSVs + telemetry: 38/38 cells match on both the raw best and its
+  normalized twin.
+
+- **Two guards stop the clock adjustment from producing confident nonsense.**
+  (1) A phase whose only busy samples sit at the 400 MHz idle clock is dropped, not
+  scaled — scaling it 4.5x let a 20.7 GFLOPS kernel "win" a cell at 93.0 GFLOPS;
+  genuinely throttled phases (0.9-1.2 GHz) are kept. (2) `CLOCK_MIN_COVERAGE = 0.5`
+  gate, applied SYMMETRICALLY: a clock-adjusted best is only comparable if drawn from
+  the same population as the unadjusted best, and at 9% coverage (CC cells) the eligible
+  subset's max sat 52-67% low, flipping CC to native wins. Below the gate both arms fall
+  back together to the unadjusted twin (`winner_clock` -> `winner`) and report
+  `clock_adjusted: false`.
+
+- **The native arm has no clock data, so `*_clock` is honestly inert today.**
+  `run_20260919_213727` (4,896 of 6,790 native records) has no telemetry file;
+  `run_20260920_235815` has 458 all-idle rows and predates `phase_id` tagging. Native
+  clock coverage is 0.000 on all 38 cells, so every `*_clock` run degrades to its
+  unadjusted twin with a printed warning. The spoof arm is well covered (mean 0.74,
+  1,719 tagged phases), so the machinery is real but cannot be applied symmetrically
+  until native is re-benchmarked with the phase-tagging sampler. Adjusting only the
+  spoof arm would deflate the floor and flatter the deck.
+
+- **Winner provenance in the report.** `analytics.compute_native_vs_spoof_delta` now
+  reports `native_winner_run`/`native_winner_phase`/`native_runs`/`n_native_runs` per
+  cell; `ABVerdict` + the JSON/HTML carry them, and the HTML provenance line states the
+  native arm scope. An empty native arm now prints a loud warning and the summary says
+  so, instead of rendering a clean-looking all-zero grid.
+
+- **Measured result on the new default (best vs best): 14 WIN / 10 TIE / 14 LOSS.**
+  Native arm = 6,790 cells from 2 runs (`run_20260919_213727`, `run_20260920_235815`);
+  coverage **100% of deck cells in all 7 families** (was 0%), **0 RED / 13 ORANGE /
+  25 GREEN**. Losses are modest and cluster at large shapes (HH:4096 −14.5%,
+  HH:2048 −14.6%, SS:2048 −15.1%); wins are large (HH:256 +272%, SS:256 +227%,
+  HH_HPA:512 +188%) but are partly a pool-size artifact, since the floor's best is a max
+  over ~303 kernels/cell vs the deck's ~75. On stricter bases the deck fares worse:
+  `floor_best` 3/7/28, `strict` (per-cell dominance) **0/0/38**, `median` 23/7/8.
+  `overall_pass=False`.
+  **Caveat:** the basis is pool-size biased against the deck — the floor averages 303
+  candidate kernels per cell vs the deck's 75 (larger in 35/38 cells), so a `max` over
+  the floor is biased upward. Part of the 28 losses is that asymmetry, not kernel
+  quality. The decisive artifact remains a per-fingerprint pairing (native X' vs shipped
+  X), which per-cell rollups cannot express. Per-cell numbers in `results.md` §10.
+
+- **Reference floor chain complete.** `gfx900_ref_20260926_201843_resume`: 1,212
+  targeted, 808 completed, 404 failed → chain **1,881 completed / 404 unique failed =
+  2,285 decided, 0 undecided**. 116 base failures retried and failed again; 288 new.
+
+- **Open (not fixed here).** `_write_phase_config` still returns early on the
+  assembly-class gate without writing the config, so `execute_phase` launches Tensile
+  against a missing path — the 121 rc=1 bucket. Reference-deck generation should
+  pre-filter those configs. Tracked in `implementation_plan.md`.
+
+
+- **A/B floor binding bug FIXED (`ccd7fed`).** `port_tensile.py` `_compute_ab_verdicts`
+  bound the spoof floor from the wrong tuple slot (`ref_records, _ = _ab_records_from_csv(
+  ref_dir, force_arm="spoof")` puts all records in the second element), silently dropping
+  the floor → "0 WIN / 0 TIE / 0 LOSS" reports. Corrected; the same run now yields
+  **30 per-cell verdicts (18 WIN / 9 TIE / 3 LOSS)**.
+
+- **Workload-cell naming (fix.md applied, `ccd7fed`).** Every measured row is stamped
+  `arm` + `cell_key` (`"<FAMILY>:<SHAPE>"`) + `kernel_key` via `gfx90c_common`
+  `cell_key()`/`kernel_key()`/`shape_side()`; `analytics.compute_native_vs_spoof_delta`
+  now pairs by workload cell `(family, dtype, shape)` on BOTH arms (best-of-cell median,
+  ±5% tie) instead of spoof-per-fingerprint vs native-per-cell.
+
+- **Live DB stamped (`ccd7fed`).** `gfx90c_results/registry.db` backfilled — 3,369
+  measured rows carry `cell_key`/`arm`/`kernel_key`; pre-backfill backup at
+  `backups/2026-09-26_impl/registry.db`. Added `idx_cell_key` index — NOTE:
+  `registry.py` does not create it, so a fresh DB lacks the index.
+
+- **HPA case-sensitivity FIXED (`58245c8`).** `_write_phase_config` matched
+  `"HPA"/"HS_HPA"` case-sensitively, so lowercase agent mutants (`mutate_hh_hpa_…`,
+  `mutate_hs_hpa_…`) ran as plain FP16 without `HighPrecisionAccumulate`/
+  `DestDataType`. Now uppercases + consults `FamilyLabel` (consistent with
+  `assembly_class_valid`); `agent.mutate_and_feed` stamps `FamilyLabel` on mutants.
+  Verified against all 6 label shapes (deck / reference / mutant). Closes the
+  round-2 HS_HPA pending item: HS_HPA 16 cells run at MT64x64x16 with the
+  `GLVW==VW-or-1` mirror predicate.
+
+- **Analytics cleanup (`58245c8`).** `analytics.py` dropped unused
+  `cell_key`/`kernel_key` imports.
+
+- **Corrections to earlier entries (append-only).** The "Shim removed:" bullet's
+  "deleted" claim is technically inaccurate — `tensile_gfx90c_port/` source is gone
+  from git, but shim-era `__pycache__` `.pyc` residue remains on disk (untracked;
+  scheduled for cleanup). The bottom "Upstream baseline" section's "pristine HEAD,
+  shim-only" wording is fully superseded by the native 2-file `Common.py` +
+  `AsmCaps.py` patch entry.
+
+
+- **Reference runs are now resumable.** `tensile_library.reference_chain()`
+  returns the newest completed, non-smoke `gfx900_ref_*` run plus its
+  `resume_of` ancestors as one logical floor; `port_tensile` `--gfx900-reference
+  --resume` creates `gfx900_ref_<ts>_resume` targeting ONLY the base deck's
+  phases with no completed verdict (unattempted + failed-again once), reusing
+  the completed base phases as-is (`_chain_phase_sets()` distinguishes
+  completed vs decided). A/B verdicts (`_compute_ab_verdicts`) and family
+  timings now recall the WHOLE chain, not the newest run alone, so cells split
+  across base and resume are never lost.
+
+- **`--auto` completeness gate.** If a completed reference run exists but the
+  deck has undecided phases, `run_auto` now resumes it first and refuses to
+  proceed with ANY tuning until `_reference_remaining() == 0` (every shipped
+  phase has a verdict — completed, or enumerated-invalid `failed`). Previously
+  a truncated (47%) run was silently recalled as the floor and the remaining
+  ~1096 phases were permanently dropped. `--gfx900-reference --resume` alone
+  returns `noop` when the deck is already complete.
+
+
+- **Telemetry is now run-wide, not per-phase.** `telemetry.py` `TelemetrySampler`
+  gained `set_phase()` + a `phase_id` column and a restart-safe `start()` (header
+  written only when missing; never truncates). `port_tensile.TensileDriver` keeps
+  one sampler per run dir via `_ensure_telemetry()`, tagging every row with the
+  active phase in `execute_phase` and clearing the tag in its `finally`. Previously
+  each phase created a fresh sampler whose `start()` truncated `telemetry.csv`, so
+  a ~9.5h run kept only the last (~46s, itself an idle failed-at-compile ZZ phase)
+  window — the root cause of "telemetry only measured for ~40 seconds".
+  `run_gfx900_reference` stops the sampler on its run-dir swap. `report.py` reads
+  the CSV by column name (`csv.DictReader`), so the extra column is transparent.
+
+- **gpu_busy_percent path hardened.** Primary discovery now requires the candidate
+  card dir to actually expose `gpu_busy_percent` (rejects connector dirs like
+  `card1-DP-1/device`, which symlink to the card node and have no busy file); the
+  `/sys/class/hwmon` fallback no longer appends `/device` (double-suffix never
+  resolved → busy would always read 0 if the fallback ever fired), and a sampler
+  that cannot find the busy file prints a one-time warning instead of silently
+  logging zeros. The surviving run's busy=0 was *correct* data — its last phase
+  failed during compilation (GPU never woke; sclk pinned 400 MHz).
+
+- **Peak/ceiling tables reconciled** (`gfx90c_common.py` is the single authority;
+  `gfx90c_theoretical_limits.md` §5 now quotes its exact values). Added the missing
+  BF16 `1109` and INT8 `881` entries to `REALISTIC_CEILINGS`; §5 updates 1119→1118.7
+  (SS/CC/HH_HPA/HS_HPA), ~98→98.6 (ZZ); §2.1 notes `PEAK_GFLOPS['FP64']` stores the
+  rounded 101 (vs derived 100.8). Removed the stale "(replaced by …)" comment in
+  `gfx90c_common.py`.
+
+
+- **New `tensile_library.py`.** Parses the system ROCm `TensileLibrary_*_gfx900.dat`
+  binaries directly (msgpack length-prefixed solution names, marker-canonicalized
+  `Cijk_...`), unions every installed ROCm prefix (`/usr` + `/opt/rocm`), emits one
+  spoof phase per shipped kernel with its MT/WG/VW/DepthU/GSU knobs, and pins the
+  result once at `gfx90c_results/gfx900_shipped_manifest.json` (pin-on-first-load,
+  `refresh=True` re-scans). Live expected counts: SS 959, DD 96, HH 223, CC 64,
+  ZZ 26, HH_HPA 424, HS_HPA 493 → **2,285** distinct shipped kernels (the old 3,066
+  was per-file token counting). Config generation validated on all families
+  (2,164/2,285 assembly-legal under the class gate).
+
+- **One-time reference run (`--gfx900-reference`).** Benchmarks every shipped
+  gfx900 kernel once (ScheduleName `vega10`, `FAMILY_SHAPES` deck) into a dedicated
+  `gfx900_ref_*` run; later A/B `_compute_ab_verdicts` *recalls* it forever instead
+  of re-running per-run baselines. The 8 hand-authored `*_baseline_*` phases were
+  removed from `phases.yaml`; `run_auto` now just checks the reference run exists.
+
+- **RED = MISSING, ORANGE = <50%.** `analytics.classify_cell_status` classifies each
+  gfx900 contract cell `(family, deck-shape)` from `FAMILY_SHAPES` (38 cells):
+  RED if unmeasured this run, ORANGE if best measured candidate is below the
+  family realistic ceiling threshold, else GREEN. `report.py` gate/summary/JSON/HTML
+  reworked to these semantics, with per-family coverage denominators now derived
+  from the pinned manifest and the reference-run provenance embedded in the report.
+
+- **Perf fix.** `_ab_records_from_csv` re-parsed the 9k-line `phases.yaml` per CSV
+  (hundreds of parses per report); it now builds a phase-id → phase dict once
+  (~120s → ~1s per report regeneration).
+
+
+- **Convergence contract fixed (`agent.converged()`).** Removed the `iteration < 10`
+  bypass; budget exhaustion is now a STOP that returns `converged=False` (never
+  reported as a pass), and a CV ≤ 15% per-cell stability gate was added via the new
+  `CellAnalytics.cv` field. Criteria: no below-ceiling cells, ≥3 configs/cell, ≥2
+  independent runs/cell.
+
+- **Mutation family loss fixed (`agent.mutate_and_feed`).** Winners now harvest their
+  `.family` token, mutation derives the Tensile DataType from `FAMILY_DTYPE_CHAR`
+  instead of raw dtype char, so HH / HH_HPA / HS_HPA winners no longer silently fall
+  back to FP32. Harvest/emit now carry `is_below_ceiling`; agent construction dropped
+  the unused `max_iterations`/`red_threshold_pct` kwargs (driver updated).
+
+- **Single-path retirement.** Removed dead `classify_retirement_tier`,
+  `apply_d2_4_protection`, `classify_tie`, `should_repeat`, `classify_stability`
+  (policy.py) and registry `append_records`/`get_run_info`/`get_latest_run_dir`/
+  `has_phase_passed`; retirement is the single Tier-2 path via
+  `check_retirement_eligibility` + `should_run`/`is_config_retired`.
+
+- **`--stage 1-7` dispatch + bugs.** `create_run` now recognizes stage `"7"` (the old
+  `"report" in args.stage` never matched the number, minting stray runs); read-only
+  stages 2/4/5/7 no longer create runs; stages 1-5 have explicit handlers (preflight /
+  candidate plan / benchmark / retirement sweep / analytics summary).
+
+- **`--force` no longer a no-op.** Wired as `opt_in_identical_skip=False` through
+  `run_auto` (flag was previously parsed but never read).
+
+- **RED semantics rename.** `is_red` → `is_below_ceiling` (report RED = missing
+  contract cell stays untouched); `Red` → `below_ceiling` in harvest/convergence.
+
+- **Coverage metric fixed.** `_compute_family_coverage` denominator is now the
+  contract deck (`FAMILY_SHAPES[family]`, coverage = deck cells measured); the
+  shipped-kernel footprint moves to informational `footprint_pct` in the report.
+
+- **Centralized maps.** `REALISTIC_CEILINGS` (SS 1118.7 / DD 98.6 / HH 2461.0 /
+  ZZ 98.6 / CC 1118.7 / HH_HPA 1118.7 / HS_HPA 1118.7) and `FAMILY_DTYPE_CHAR` are
+  now both canonical in `gfx90c_common.py`; `tensile_library.py`, `analytics.py`,
+  `scheduler.py`, `report.py`, `agent.py` import them (family decks use
+  `MAX_WAVES_PER_CU` instead of a hardcoded 40).
+
+- **Dead code / imports / state removed.** Local unreferenced `TelemetrySampler`
+  class + `termios`/`tty`/`Set`/`PEAK_GFLOPS` imports in `port_tensile.py`;
+  `MANIFEST_KEY`/`expected_kernels_from_manifest` (tensile_library.py);
+  `persist_analytics`, `THEORETICAL_PEAKS`/`DDR_ROOFLINE_GBPS` deps (analytics.py);
+  `compute_ab_verdict`, `_family_to_dtype`/`mapping_path` (report.py);
+  `classify_bound_class` (scheduler.py); orphan
+  `tools/__pycache__/merge_draft_gfx90c.cpython-314.pyc`.
+
+- **Regression caught & fixed during the audit.** `_KNOWN_FAMILIES` (analytics) lost
+  its lowercasing when re-derived from `FAMILY_DTYPE_CHAR`, breaking every
+  `extract_family_from_phase_id` match, and the `dtype_to_family` fallback collapsed
+  the ambiguous `'H'` char to `HS_HPA`. Both fixed (lowercase prefix set; first-wins
+  char map → `'H'` = HH). Regenerated report identical to baseline: `Acceptance FAIL:
+  0 WIN / 0 TIE / 0 LOSS, 0 RED (missing) / 15 ORANGE (<50% ceiling)`.
+
+- **Docs sweep.** Replaced stale 3,066 pip-count references with the live 2,285
+  manifest split in `implementation_plan.md`, `knowledge_base.md`,
+  `knowledge_base_final.md`, `incomplete_work.md`; updated RED-list/RED-cell
+  terminology and dead-helper mechanism claims; expanded the `gfx90c_common.py`
+  single-source-of-truth row.
+
+
+- **Class-based Assembly gate (`scheduler.assembly_class_valid`).** Faithful to
+  the Tensile SolutionStructs rejects reproduced from the 24 draft-run failures:
+  GSU>1 on complex, GSU>1 on half+f32-accum (HPA), GSU>1 on half without
+  `AssertFree0ElementMultiple>=2`, and `DepthU * BytesPerElement > StaggerUStride`
+  (complex DU>=32) are all illegal on gfx90c (no MFMA). Wired at BOTH seams:
+  `scheduler.validate_config` (mirror gate) and `port_tensile._write_phase_config`
+  (autoskip — illegal cells never written to the Tensile deck). Class-based, so
+  ANY future same-class cell is caught pre-run, not just the 24 triaged. The
+  loky/semlock ValueError from the draft re-runs was benign stderr noise
+  (joblib>=1.5.2 is cosmetic only); the 24 were solution-validity rejects.
+
+- **331 → 295 phases.** Regenerated `phases.yaml` through the new gate: the 36
+  GSU-2/4/8 cells on HH/HH_HPA/HS_HPA dropped (HH 56→40, HH_HPA 32→20,
+  HS_HPA 28→20). 0 illegal cells, 0 fp/phase_id dups, 0 validate_config fails.
+
+- **CASE3 merge tool (`tools/merge_draft_gfx90c.py`).** Append-only import of the
+  draft run's 4962 benchmark records under the MAIN fp scheme (FamilyLabel-tagged;
+  draft target_id fps were NOT portable). `.bak`-first on both registries, no
+  dedup/deletion/id-reuse, retirement left to the codebase's 3-tier gate
+  (policy.py:240). Dry-run reports exactly 2 retirement-eligible fps — the two
+  A/B baselines (48 samples each, 2 independent runs); everything else needs a
+  2nd shell from our deck. run2 added nothing new beyond the baseline 2nd shells
+  + 6 auto SS@1024 cells (3 samples each, single run — reference only).
+
+- **CASE3 import applied (run1 only).** `--runs run1` (default), run2 skipped per
+  decision — its only value was the baseline 2nd shells, and the codebase gate
+  can reach retirement later with 2 independent runs. Executed 2026-09-20: 445
+  phase entries (baseline baselines_ss_native/spoof + 443 wide cells) + **4896
+  benchmark records** appended from run_20260919_213727. Registers run1 in the
+  `runs` table (completed). Backups: `backups/main_registry.db.bak` +
+  `backups/draft_registry.db.bak` (draft DB untouched — read-only). Retirement
+  gate re-run post-import: 0 forced retirements (no fp has ≥2 runs yet —
+  baselines are single-run in main, eligible only after their 2nd shell).
+  Note: first apply attempt had a phase-dedup bug that dropped the per-sample
+  records after the 1st per phase (4896→445); fixed (dedup phases only, records
+  always appended) and re-applied cleanly from pristine main DB. Backups use
+  distinct `main_`/`draft_` tags (initial name collision would clobber main's .bak).
+
+- **WIN/LOSS classification from merged run1** (`potential_configs.md` §6.2–§6.5).
+  Empirical per-cell class vs our carried incumbents: **24 WIN cells** (draft
+  best-median beats incumbent — hh 1024³ +99%, hh 2048³ +85%, hs_hpa 2048³ +70%,
+  dd 512³ +68%, ss 1024³ +66%, cc 512³ +65% top margins) and **5 LOSS cells**
+  (cc 256³ −23%, hh_hpa 1024³ −21%, ss 2048³ −17%, zz all RED ~23% of 98.6
+  ceiling, ss 256³ parity). Next-run policy: WINs get a 2≥-shell then ≤2-knob
+  mutations (per-cell table §6.2); LOSSes never re-run their fp — replaced by
+  fresh structural candidates proposed in §6.3 (MT128/TT8/DUs/GSU-1, class-gated).
+  Spend order §6.5: WIN shells → WIN mutations → new-wide-for-LOSS → GSU-1@4096 SS.
+
+- **Next-increment proposal (`potential_configs.md` §6).** Wider-for-LOSS (CC/ZZ
+  structural, HS_HPA admitted parms, SS GSU-1@4096), narrower-for-WIN (DD closed,
+  SS/HH no double-spend), 2≥-shell-first spend order, strategy-scoped retirement.
+
+
+- **Wide deck replaces the 304-phase manifest.** `phases.yaml` regenerated from
+  `/tmp/opencode/gen_wide_deck.py`: 331 phases (SS 105, HH 56, DD 44, HH_HPA 32,
+  CC 32, ZZ 32, HS_HPA 28, + 2 ss A/B baselines), every config passing the
+  scheduler mirror (`validate_config` + `_validate_tensile_loads` GLVW guard) and
+  per-shape M/N≥MT, K≥DepthU exact-size blockers — 0 invalid of 331.
+  Structure: one phase per (family × contraction-pattern × config) bundling ALL
+  family shapes, plus shape-matched underfill-GSU phases (small squares only, so
+  GSU2/8 is not misapplied to large ALU squares) and DDR/GEMV phases.
+
+- **fp-collision fix:** prior HH_HPA vs HS_HPA phases shared identical configs →
+  identical sha256 fp → policy `has_fp_passed` identical-fp skip would drop the
+  second family on re-runs. New deck keeps `FamilyLabel` (SS/HH_HPA/HS_HPA) in the
+  fp input; all 331 phase_id/fp/config triples are unique.
+
+- **Anchored `--auto`:** `run_auto` now runs Phase-0 preflight (non-fatal), then
+  the spoof/native baseline A/B pair first as the anchor, then all manifest phases
+  in order, then the convergent harvest/mutate loop — single overnight command.
+
+- **A/B verdict pipeline fixed (was producing 0 verdicts):** completed/recovery
+  records now carry `schedule_name`/`dtype`/`shapes`/`num_benchmarks` so arms
+  resolve; `run_ab_test` now sources per-cell medians from `2_BenchmarkData` CSVs
+  (which hold GFLOPS) grouped by arm instead of from registry records (which never
+  carried GFLOPS). Verified with a fabricated 1:1 native/spoof cell set (WIN).
+
+- **Accounting + telemetry fixes:** `phases_executed` counts only real executions
+  (interrupted/skipped-by-user excluded) and reports `phases_skipped`; inline
+  buggy sampler replaced by `telemetry.py`'s `/sys/class/drm/cardN/device`
+  discovery (old `hwmon_dir.parent.parent` resolved to `/sys/class`).
+
+- **Breaking CLI:** `--phases` removed (was an alias for `--targets`; the historic
+  numeric `--phases 1 31 25` matched nothing). Use `--targets` explicitly.
+
+
+- **Fix 1 (manifest):** the 16 `hs_hpa` phases in `phases.yaml` are re-parameterized
+  from the rejected MT64x64x8/TT4x4/VW4 deck to the guard-legal MT64x64x16/TT4x4/VW4/
+  DU16 parameterization (admitted `1/1 after SolutionStructs`, assembles for gfx90c).
+  The accepted deck previously logged `Your parameters resulted in 0 valid solutions`
+  on every pass (12 signalled, 0 valid); with Fix 1 all 16 `hs_hpa` cells are guard-legal.
+
+- **Fix 2 (scheduler mirror):** `_validate_tensile_loads` (scheduler.py) now models the
+  stock-Tensile non-MI assembly `GLVW==VW-or-1` predicate (`SolutionStructs.py:4583-4596`)
+  that rejected the old deck — the mirror no longer pre-validates decks the guard rejects.
+  Verified by 6 unit tests + a 304/304 phases.yaml sweep.
+- Resolves the "Fix (pending)" bullet in the prior HS_HPA root-cause entry above.
+
+
+- **Exact rejection isolated** (driver scratch `/tmp/opencode/e2e_hpa` +
+  `PrintSolutionRejectionReason`): stock Tensile non-MI assembly guard
+  `GlobalLoadVectorWidth{X} must be == VectorWidth or == 1`
+  (`SolutionStructs.py:4583-4596`; source comment: "Restrict GRVW/VW combos so
+  shift-ptr logic will work"). Fires when `setGlobalLoadVectorWidth`
+  (`:2010-2047`) pv-reduces GLVW 4→2 for 64x64x8/TT4x4/VW4 tabs
+  (totalElements 512 < NumThreads·GLVW = 1024, pv=2). The predicate is
+  **isa-independent** (rejects gfx900 identically) — a generator/representation
+  restriction, NOT a gfx90c HW/ISA limit and NOT an assembler failure.
+
+- **Same HS_HPA intent admitted by stock Tensile on native gfx90c:**
+  - MT64x64x16/TT4x4/VW4/DU16 → `1/1 after SolutionStructs`; gfx90c kernel
+    assembles (`Kernels.so-000-gfx90c.hsaco`, `TensileLibrary_gfx90c.co`).
+  - MT64x64x8/TT4x4/VW2/DU8 → `1/1 after SolutionStructs` and `1/1 after
+    KernelWriter`.
+- The 0-solution HS_HPA registry records are a parameterization collision with a
+  Tensile generator guard (not a hardware incapacity); HS_HPA tuning resumes on the
+  two guard-legal parameterizations.
+
+- **Fix (pending):** scheduler `_validate_tensile_loads` lacks the `GLVW==VW-or-1`
+  predicate under which the 64x64x8 deck fails — add it to the mirror.
+  **Done 2026-10-14** on the harness gate (`loads.validate_tensile_loads`), with the
+  `bufferLoad` / `GuaranteeNoPartialA` condition and explicit-`GLVW` reading the
+  original note omitted — see the top entry.
+- Docs updated: `potential_configs.md` §4 + §5.3 item 7, `implementation_plan.md`
+  technical findings.
+
+
+- **`.env` loading → `python-dotenv` `load_dotenv()`** (industry standard; never
+  overrides live env). The hand-rolled `_load_dotenv` parser and the
+  `*_CANDIDATES`/`_first_existing_*` probe chains are gone from
+  `port_tensile.py`; `requirements.txt` adds `python-dotenv`.
+
+- **ROCm discovery → native tools only:** `hipconfig` (ROCM_PATH/HIP_PATH/
+  HIP_CLANG_PATH) + `shutil.which` for binaries on PATH. `.env` and README §6
+  slimmed to `TENSILE_ROOT` + optional overrides; no candidate chains.
+
+- **Guardrail added to `claude.md` §5:** never re-invent known-solved problems —
+  OS/stdlib/industry-standard library wins (`.env`→python-dotenv,
+  discovery→`hipconfig`+`shutil.which`, locks/DB→stdlib, CLI→`argparse`).
+
+- **Validated:** Phase-0 preflight 4/4 and a suite-exact ActiveE2E
+  (`phase_ss_Ailk_Bjlk_256x256x256_mt96x96x16_tt6x6`, rc=0, Actual Solutions 1/1,
+  `TensileLibrary_gfx90c.co` + `Kernels.so-000-gfx90c.hsaco`) with the native
+  resolution (scratch `/tmp/opencode/e2e_b`, isolated).
+
+
+- **Rule codified in `claude.md` §8.1:** the import-time shim no longer exists and
+  is never mentioned in code, docs, or prose; its history lives only in this
+  changelog and the frozen `prior_*` files. The prior-campaign shell suite
+  (`run_gfx90c_suite.sh`) is referenced only inside `prior_*`.
+
+- **`todo.txt` is a user-only file:** the agent never reads, writes, or touches it.
+
+- **`claude.md` native-support wording aligned** to "2-file minimal Tensile patch"
+  (`Tensile/Common.py` + `Tensile/AsmCaps.py`).
+
+
+- **`.env` fleshed out for both install styles:** ROCm paths are now probed via
+  `*_CANDIDATES` ':'-chains (`ROCM_PREFIX_*`, `ROCM_BIN_*`,
+  `ROCM_LLVM_BIN_*`, `TENSILE_ASSEMBLER_*`, `TENSILE_ASSEMBLER_FALLBACK_*`);
+  first existing entry wins, so AMD-installer (`/opt/rocm`) and Fedora-RPM
+  (`/usr/bin` + `/usr/lib64/rocm`) hosts both work from one `.env`.
+
+- **`port_tensile.py`:** new `_first_existing_dir` / `_first_existing_file` /
+  `_resolve_rocm_paths()` used by `_get_tensile_env` (PATH injection + subprocess
+  `ROCM_PATH`/`HIP_PATH`) and the `--assembler` selection. Explicit env values
+  still win when they point at existing paths; stale values fall back to the chain.
+  Verified on live host plus synthetic AMD-only and Fedora-only scenarios
+  (`/tmp/opencode/test_rocm_probe.py`).
+
+- **README §6 rewritten** for the candidate-chain schema + fixed the residual
+  "28-family coverage metrics" wording on the `report.py` row.
+
+
+- **`file:///` references removed:** docs previously pointed at the dead
+  `GPU/backrocm/porting_tensile/attempt2` path; README links now relative.
+
+- **Hardcoded locations → `.env`:** `port_tensile.py` loads `TENSILE_ROOT`,
+  `ROCM_*`, `HIP_*`, `TENSILE_ASSEMBLER(_FALLBACK)` from `.env` (shell env >
+  `.env` > defaults). `.env` created in repo root.
+
+- **Early-quit key `'e'`:** ends the run cleanly after the current phase /
+  iteration (run stays `completed`, metadata `end_after_iteration: true`).
+
+- **Verbose logs:** Tensile stdout/stderr are teed live to console (prefixed
+  `[tensile]`) and to `logs/.../stdout.log`/`stderr.log`; `TENSILE_VERBOSE=1`
+  appends `--verbose` (Tensile PrintLevel 3).
+
+- **Acceptance report HTML de-hardcoded:** Problem space / coverage matrix /
+  telemetry sections are now data-derived (cell analytics, registry
+  started→completed timing, `logs/telemetry.csv` medians/peaks). Fabricated
+  VRAM / SCLK / MCLK / GPU-busy rows dropped (sensors unavailable on this APU).
+
+- **Report dtype fix:** `extract_dtype_from_phase_id` now uses the token family
+  parser (was a regex that returned `'unknown'` for `phase_ss_spoof_baseline_vega10`);
+  `'auto'` family mapped to `'S'`. The 67 red cells previously logged as
+  dtype `unknown` now resolve to real dtypes.
+
+
+- **Root cause of the shim:** Tensile's `populateCapabilities` runs before config
+  merge, so a config-parse-time ISA injection is too late; 2026-08–09 proved the only
+  shim-compatible hook was import time (`tensile_gfx90c_port/sitecustomize.py` on
+  `PYTHONPATH`, 3 injections: `SupportedISA`, `architectureMap`, `getCapabilitiesCache`
+  seeded from gfx90 just so gfx90c was not probed-and-rejected).
+
+- **Replaced by real in-tree support** on Tensile latest `develop_deprecated` HEAD
+  (verified equal to `origin/develop_deprecated`, `e8a8999e`): 3 minimal bookkeeping
+  entries in `Tensile/Common.py` (`SupportedISA` `(9,0,12)`; `architectureMap`
+  `gfx90c`/`:xnack+`/`:xnack-`) plus `Tensile/AsmCaps.py`, a first-class `(9,0,12)`
+  capability entry written from scratch from LLVM `FeatureISAVersion9_0_C`
+  (`HasMadMixInsts`; no MFMA / dot / dl-insts / VOP2-fmac / WMMA / kernarg-preload).
+  No cloning or deriving from any other ISA.
+
+- **Validated:** written caps == real assembler-derived gfx90c caps (0 mismatches,
+  ROCm 6.4); roundtrip `gfxName((9,0,12))`/`gfxArch('gfx90c')`; `GetArchCaps((9,0,12))`
+  needs no change. End-to-end with the driver's own known-good config from
+  `phases.yaml` (`phase_ss_Ailk_Bjlk_256x256x256_mt64x64x16_tt4x4_3`): native
+  `# Detected GPU 0: gfx90c`, "Actual Solutions: 1 / 1", kernel built, loaded
+  `TensileLibrary_gfx90c.co` / `Kernels.so-000-gfx90c.hsaco`, benchmarked 434 GFlops
+  @ 256³, exit 0.
+
+- **Shim removed:** `tensile_gfx90c_port/` deleted; `port_tensile.py`
+  `_get_tensile_env`/`run_preflight` stripped of shim wiring and `TENSILE_REPO_ROOT`;
+  grep-clean across driver modules. Phase-0 preflight passes 4/4 shim-free.
+
+- **Docs updated** (knowledge_base §2/§3, README preflight, mapping, claude.md tree
+  + PYTHONPATH, implementation_plan) to describe native support. The "pristine HEAD,
+  shim-only" wording in the `Upstream baseline` section above is **superseded** by
+  this entry.
+
+
+- **`phases.yaml` — 48 Invalid Entries Repaired:** Reconciled NLCA and DepthU divisibility rules via in-place fixes (NLCA 3→1 ×46, DepthU 4→16 ×2); verified all 230 contraction entries pass `_validate_tensile_loads`. Archived backup at `archive/phases_20260914_prefix.yaml`.
+
+- **`telemetry.py` — Minimal Non-Root Sysfs Telemetry:** Extracted sampler into dedicated clean module reading world-readable sysfs (`0644`), correctly resolving `mclk_hz` via `pp_dpm_mclk` parsing (resolving dead 0 mclk bug) and supporting APUs (`power1_input` fallback).
+
+- **Client/Bench Split PoC:** Verified Tensile `--prebuilt-client` mechanism in `/tmp`, eliminating redundant per-phase CMake host client rebuilds.
+
+---
+
+
+
+- **`port_tensile.py` — Completion Record Recovery:** Added `end_record_logged` flag + finally-block recovery logging. If Tensile phase completes successfully but normal logging path is interrupted (e.g., Ctrl+C during final processing), the finally block ensures completion record is persisted to registry.
+
+- **Root Cause:** Run 213103 completed phase (PASS in stdout.log, CSVs generated) but only "started" record existed in DB — no "completed" record. Normal logging path may have been interrupted before `append_record()` call.
+
+- **Fix Mechanism:** Flag tracks successful `append_record()` call; finally block checks if result exists but flag is False, then logs completion record with appropriate status.
+
+---
+
+
+- **`port_tensile.py` — Raw Mode Keypress Listeners:** Added `tty.setraw()` to both cooldown and phase execution key listeners for immediate 's'/'q' detection without requiring Enter press. Terminal settings restored in finally blocks.
+
+- **`port_tensile.py` — MacroTile Format Fix:** Corrected Tensile MacroTile schema from invalid `[[M0, M1, DepthU]]` to valid `[[M0, M1]]` format. DepthU now emitted as separate ForkParameter. Fixes "Invalid parameter value: MacroTile = [64, 64, 8]" error causing CC/DD phase failures.
+
+- **Root Cause:** Tensile expects 2D array for MacroTile dimensions only; DepthU is a separate parameter, not third array element.
+
+---
+
+
+- **`report.py` — Family Coverage Detection:** Enhanced `_compute_family_coverage()` dtype matching to properly detect family-specific cells (CC/DD/ZZ) when phases fail during execution, ensuring accurate coverage statistics even when benchmark CSVs are missing due to configuration errors.
+
+- **Root Cause:** Previous implementation only matched dtype (FP64/FP32) but not family names (CC/DD), causing coverage reports to show 0 cells for CC/DD families despite phase execution attempts.
+
+- **Impact:** Reports now correctly reflect attempted phase execution even when Tensile configuration errors prevent CSV generation.
+
+---
+
+
+- **`port_tensile.py` — Multi-Threaded Clang Compilation:** Set `CpuThreads` dynamically based on available CPU cores (`min(os.cpu_count(), 16)` instead of forced single-thread `1`), accelerating clang assembly build times.
+
+- **`port_tensile.py` — MacroTile Tensile Schema Fix:** Corrected `ForkParameters` emission from invalid `MacroTile0`/`MacroTile1` keys to valid Tensile top-level list `MacroTile: [[M0, M1, DepthU]]` (resolving the `Invalid parameter name: MacroTile0` error in CC/DD runs).
+
+- **`port_tensile.py` — MacroTile0/MacroTile1 Removal:** Added explicit removal of deprecated `MacroTile0`/`MacroTile1` keys from `fork_params` before YAML emission, ensuring Tensile only receives valid `MacroTile: [[M0, M1, DepthU]]` format.
+
+- **`port_tensile.py` — Real-Time Cooldown Key Listeners:** Updated `_apply_cooldown()` to listen for `'s'` (skip cooldown immediately) and `'q'` (gracefully quit run) during thermal sleep.
+
+- **`port_tensile.py` — Immediate Report Generation on Quit:** Ensured `acceptance_report.json` and `acceptance_report.html` are automatically generated and written to `gfx90c_results/` even on early termination via `'q'` or interruption.
+
+- **`README.md` — Usage Documentation:** Added complete documentation for keyboard controls (`s`, `q`), semantic CLI filters (`--family`, `--pattern`, `--shape`), and HTML visual dashboard inspection.
+
+---
+
+
+- **`report.py` — Automated HTML Dashboard:** Ported and unified the attempt1 analytics dashboard generator (`make_report.py`) directly into `AcceptanceReporter.write_html_report()`.
+
+- **Key Features:** Emits dependency-free, responsive dark-mode HTML dashboard (`gfx90c_results/acceptance_report.html`) containing 28-family footprint progress, realistic GEMM ceiling progress bars, per-cell A/B head-to-head comparison cards, and RED-list tracker.
+
+- **Verification:** Tested in `/tmp` POC then integrated into `report.py` and validated with live data.
+
+---
+
+
+- **`port_tensile.py` — Semantic Target Filtering:** Replaced arbitrary numeric phase arguments with first-class semantic CLI flags: `--family` (`{CC, DD, ZZ, HH, HH_HPA, HS_HPA, SS}`), `--pattern` (`{Ailk_Bjlk, Ailk_Bljk, Alik_Bjlk, Alik_Bljk}`), `--shape`, `--stage` (`1..7`), and `--targets`.
+
+- **`phases.yaml` — 28 Native Families Populated:** Manifest completely populated with 228 clean targets spanning all 28 mathematical contraction families with anchor problem shapes.
+
+- **Dry-run validation:** Added `--dry-run` to query and verify target matching without triggering GPU execution.
+
+---
+
+
+- **`port_tensile.py` — `_write_phase_config` fixed:** Corrected `TransposeA`/`TransposeB` derivation from contraction pattern labels (`Ailk_Bljk` $\to$ NN/FF, `Ailk_Bjlk` $\to$ NT/FT, `Alik_Bljk` $\to$ TN/TF, `Alik_Bjlk` $\to$ TT/TT); fixed `MacroTile0`/`MacroTile1` mapping from string representation; calculated `WorkGroup` dynamic tile ratios; enabled `HighPrecisionAccumulate` and mixed precision `DestDataType`/`ComputeDataType` for HPA families.
+
+- **`scheduler.py` — candidate tile divisibility & workgroup validation:** Added validation check in `validate_config` ensuring `MacroTile` dimensions are strictly divisible by `ThreadTile` dimensions (`MacroTile0 % ThreadTile0 == 0`) and workgroup thread count is a multiple of 64 within $[64, 1024]$.
+
+- **`analytics.py` — CSV header whitespace resilience:** Updated `load_benchmark_csv` with whitespace-stripped fieldname parsing and robust per-kernel GFlops metric extraction for space-padded Tensile CSVs.
+
+- **Verification:** Unit tests passing 100%; benchmark CSV parser validated against 96 real kernel measurements (`run_144805`, `run_150517`, `run_151227`) showing peak 928.0 GFlops at $1365^3$.
+
+---
+
+
+- **`port_tensile.py` — Ctrl+C signal handler fixed:** `_signal_handler` now calls
+  `sys.exit(130)` after killing the child process group via `os.killpg`. Previously the
+  handler only set `_stop_requested=True`; the driver continued running normally after
+  killing the subprocess instead of terminating. Exit code 130 = standard shell Ctrl+C.
+  Run status is written to registry as `interrupted` before exit.
+
+- **`registry.py` — `cleanup_stale_runs()` added:** bulk-UPDATE of any `status=started`
+  rows to `interrupted` on driver init. Cleans up 3 orphaned runs from this session
+  (run_140507, run_141220, run_143006 all set to `interrupted`). Non-destructive: only
+  updates status column, does not touch records.
+
+- **`port_tensile.py` — run status semantics:** `run_phases()` now marks run as
+  `interrupted` if `_stop_requested` is True at completion, instead of always writing
+  `completed`. The `run_auto()` path unchanged (it also sets `_stop_requested` on budget
+  exhaustion, which is expected termination — status remains `completed`).
+
+- **Root cause of HipClangVersion failures clarified:** `ValueError: invalid literal for
+  int() with base 10: '<unknown>'` in runs 143115–144714 was a pre-symlink race: the
+  `/opt/rocm/share/hip/version` symlink did not exist at run time. Symlink was created
+  during the session; run_144805 succeeds with `HipClangVersion=6.4.43484`. Code not
+  modified; environment is now stable.
+
+---
+
+
+- **Full adversarial review remediation across the driver ecosystem:**
+  - `port_tensile.py`: Fixed Stage 7 A/B test logic error (no longer passing identical datasets for native and spoof arms); added background continuous sysfs telemetry sampler (`TelemetrySampler` reading `hwmon[0-9]*`, logging canonical `Hz/µW/mC/%` with header-in-CSV); added interactive non-blocking `'s'` skip and `'q'` quit key listeners during phase execution; replaced Stage 6 stub with real YAML logic generator, `TensileCreateLibrary` runner, anti-alias scanner (0 gfx900/vega10 leaks), and 3,066 kernel regression check; eliminated subprocess pipe buffer deadlocks by logging to disk.
+  - `scheduler.py`: Corrected GEMM LDS memory estimation to `(M*K + N*K) * elem_size * NLCA / 1024.0`; made `parse_tensile_shape` robust to batch (`_B16`) and explicit K (`_K4096`) shapes; improved wave-based CU occupancy estimation.
+  - `agent.py`: Upgraded `converged()` to enforce the full 4-condition convergence standard (≥2 independent runs, ≥3 configs tested, ≤1% movement, and no RED cells); replaced hardcoded FP32 candidate reconstruction fallback with family-aware defaults.
+  - `registry.py`: Protected `append_phase()` with `INSERT OR IGNORE` and transaction deduplication to avoid SQLite uniqueness conflicts.
+
+- **Verification:** Unit tests and module import validations pass 100%.
+
+---
+
+
+- **Approved change:** ledger write path is stdlib `sqlite3`
+  (`gfx90c_results/registry.db`, WAL). `records` = INSERT-only `json.dumps`
+  payloads. Replaces `fcntl.flock` + JSONL **as the write path**.
+
+- **Unchanged:** append-only evidence law (`knowledge_base.md` §10); `phases.yaml`
+  remains the data-only manifest; harvest still appends YAML rows; stats pipeline
+  still consumes run-dir CSV (jsonl export optional until pipeline reads SQLite);
+  legacy jsonl files stay on disk, never rewritten.
+
+- **`runs` table:** operational checkpoint (status UPDATE allowed). Not evidence.
+
+- **Retracted:** previous `[attempt2 v1 fixes implementation]` block. That entry
+  claimed policy/scheduler/report/agent/driver "fixes" had landed. They had not
+  (broken imports, Tensile stub, harvest inverted, RED vs 50% PEAK, YAML
+  abolished in the "fixed" driver). Unapproved drifts live in
+  `incomplete_work.md` §4.9 / `adversarial_review.md` §6. Do not treat
+  `/tmp/opencode/*_fixed.py` as the spec.
+
+
+- **All 7 driver stages approved by user:** Stage 1 (Manifest & Phase Execution), Stage 2 (Candidate Generation), Stage 3 (Benchmark Execution), Stage 4 (Adaptive Repeat / Convergence), Stage 5 (Analytics & Append-Only Registry), Stage 6 (Synthesis / Build), Stage 7 (Acceptance A/B & Final Report).
+
+- **ASCII flowchart added to implementation_plan.md:** Visual representation of stage flow and convergence loops, including the convergence check loop (harvest → mutate ≤2 knobs → loop back to Stage 2) and --auto mode budget-controlled loop.
+
+- **Stage specs now authoritative:** implementation_plan.md Driver Architecture section is the single source for all stage mechanics, scope, key files, and convergence logic.
+
+
+- **Stage specs consolidated into implementation_plan.md:** Previous agent's Stage 4/6/7 functional specs (adaptive repeat/convergence, synthesis/build, acceptance A/B) integrated into Driver Architecture section. Stage 5 (analytics/registry) mechanics added. D2.4 decision recorded: 3 premature auto-retire records (p12 387d2577, p5 286b940a, p6 1570d91a) stay as ordinary rows awaiting ≥2-run corroboration, never marked as verdicts.
+
+- **Core strategy and AI constraints added to implementation_plan.md:** One-shot deterministic convergence flow, AI Must Not Decide rules, Correctness Gate, Reward Hacking prevention, Manual-LLM contingency (user-invoked, add-only, ≤5 candidates). Content consolidated from separate tuning context MD.
+
+- **README.md streamlined:** Removed duplicated hardware/target specifications (now in knowledge_base.md only). Kept orientation, philosophy, goal statement, and file locations.
+
+- **todo.txt removed:** Task list content already in scratch.md; eliminated redundancy.
+
+- **benchmark-retirement-sensor-logging-fixes.json retained:** 19MB session log kept for reference (user declined deletion).
+
+- **tensile_tuning_context.md retained:** Tuning philosophy content consolidated into implementation_plan.md; original file kept for reference (user declined deletion).
+
+
+- **One-shot deterministic convergence contract** authored: no LLM consultation in
+  the loop; deterministic harvest → mutate ≤2 knobs → re-run until convergence.
+  The ONLY exception is the user manually invoking an LLM to ADD candidate configs
+  — add-only, out-of-band, never in the loop.
+
+- **Driver architecture folded into `implementation_plan.md`** (single self-contained
+  plan): `port_tensile.py` + `phases.yaml` manifest, `json.dumps` state,
+  `fcntl.flock` locking, `argparse`, single-source PEAK.
+
+- **Every code change PoC'd in `/tmp/opencode/` until fully functional** before it
+  lands anywhere near the live driver (enforced in `implementation_plan.md`).
+
+- **No `changes_kb.md`** — absorbed here. **No `proposed_fixes.md` / `refactor_suite.md`
+  / `CHANGELOG.md` / agent-log MDs** — absorbed into `implementation_plan.md` /
+  `changelog.md`. Ecosystem is the lean single-owner set registered in `claude.md`.
+- Peak table corrected everywhere to single-rate **1613** for BF16 and INT8 (NO
+  RDNA-style 3226 assumption); single source `gfx90c_common.PEAK_GFLOPS`.
+- `PHASE_TIMEOUT_S` default planned as finite (runaway protection), not unbounded.
+- Interactive single-phase kill ('s' skip / 'q' quit — one phase, not the whole run)
+  planned for the driver.
+- Stats/HTML pipeline retained and carried forward (`all_runs_dataset.py` →
+  `make_results_md.py` → `make_report.py` → `gfx90c_report.html`).
+
+
+- **Toolchain stderr fix** — the single most impactful change of the prior campaign:
+  tool stderr kept out of machine-readable outputs made the append-only result stream
+  trustworthy. Every downstream pipeline depends on it.
+
+---
+
+
+- **Backup (verified before the write):** `gfx90c_results/backups/registry.db.pre-native-flush.20261005_182448`
+  — `PRAGMA integrity_check: ok`, 42 runs / 49,540 records / 612 phases, byte-identical
+  row counts to origin. All 33 native runs are recoverable from it.
+
+- **Deleted:** 35,729 records + 33 run rows (`run_*`). **Untouched:** all 9
+  `gfx900_ref_*` floor runs (13,811 records), including `gfx900_ref_locked_52149f315d`
+  with its 2,194 pooled phase records. `phases` (612 `draft_*` catalog rows) kept —
+  it is a config catalogue, not measurements, and `should_run` never reads it.
+
+- **Result:** `should_run` now returns approved for **29/29** deck phases under
+  *default* policy; `reference_chain()` still resolves to the locked floor.
+  `--force` is no longer required.
+
+**Scope was chosen from evidence, not assumption.** Floor runs also carry `fp` and
+`completed` records, so a native-only flush would not have worked had any deck
+fingerprint been decided by a reference run. Checked first: **0 of 29** were
+floor-decided, all 29 were native-only. There were also **0 `retire` records**, which
+`is_phase_retired`/`is_config_retired` consult, so no second gate remained.
+
+**Nothing was actually lost.** `ab_audit.py` reads `2_BenchmarkData` CSVs from disk,
+not the registry, and still reports the identical 8 WIN / 30 TIE verdict against the
+same 6 on-disk `run_*` directories. Only registry rows were removed.
+
+### `run_status.py` default head: a closed interrupted run was outranking the floor
+
+The default view headlined `gfx900_ref_20260928_155422_resume` — **interrupted, and
+closed 8 days earlier** — while skipping the floor locked 5 days later. Every tier
+count and ETA it printed came from the wrong corpus; a 25 h ETA derived from it was
+wrong. `reference_chain()` (what `--auto` actually gates on) was never affected.
+
+Cause: `ACTIVE_STATES = ("started", "interrupted")` treats *any* interrupted run as
+active, and the selection took the newest-first match, so the scan walked past the
+completed floor.
+
+Fix — in flight is decided by `completed_at`, not the status label: prefer (1) a run
+with no `completed_at` (live, resumable), then (2) the newest **completed** chain, then
+(3) the newest finished-but-interrupted run.
+
+The status label alone was the wrong axis: `test_chain_follows_resume_of` pins the
+contract that an interrupted run which *never closed* stays at the head. Both
+directions are now pinned by new tests, and the fix was verified load-bearing (reverting
+it fails `test_closed_interrupted_run_does_not_outrank_newer_floor`).
+
+**Verification.** `test_run_status`: 41/41. Full suite: **247 tests, OK (skipped=1)**.
+
+---
+
+
+- **Prior campaign consumed 3 of 6 in-session LLM consultations.**
+
+- **attempt2 consumes 0 by design.** The deterministic pipeline replaces the
+  prior candidate-sweep loop entirely; a consultation would only be sanctioned to
+  break a coverage deadlock — as a USER-invoked, add-only candidate injection (single
+  canned prompt, ≤5 recipe mutations constrained to known-valid gfx90c knobs, dropped
+  into `phases.yaml`). Never automatic; never in the loop.
+
+
+- **HS_HPA rejection root-caused.** Guard trace (`PrintSolutionRejectionReason`) +
+  source audit (`potential_configs.md` §4): the rejection is stock-Tensile's non-MI
+  assembly `GLVW==VW-or-1` generator guard (`SolutionStructs.py:4583-4596`),
+  triggered by the pv-reduction in `setGlobalLoadVectorWidth` (`:2010-2047`) —
+  isa-independent, not a gfx90c HW/ISA limit, not an assembler failure.
+  Guard-legal HS_HPA parameterizations (MT64x64x16/TT4x4/VW4; MT64x64x8/TT4x4/VW2)
+  are admitted 1/1 and assemble for gfx90c. HS_HPA tuning resumes on them.
+
 - **Agent harvest/accept round-N candidates** (`agent.harvest()`): cells with native
   median ≥ spoof median (ruler-adjusted) → incumbent; RED/non-converged cells →
   `candidates.spawn_neighbours(winner, ≤2 knobs, occupancy-aware)` appended to
   `phases.yaml`.
+
 - **Convergence + retirement finalize** (`agent.converged()`): no below-ceiling cells,
   ≥3 configs/cell, ≥2 runs/cell, CV ≤ 15% → write tier-2 retirement records (≥2
   independent runs/cell gating) and stop. Budget exhaustion returns converged=False and
   a FAIL readout, not a pass.
+
 - **`--auto`**: `for _ in range(budget): run(manifest); write_report; if
   agent.converged(): break; agent.feed(manifest)`.
 
@@ -3253,6 +4171,7 @@ the route portfolio is measurement-bound (`potential_configs.md` §8.2).
 Full write-up: `gfx90c_tuning_guide.md` (the tuning cookbook).
 
 **Known hazards — must never regress**
+
 - **APU wedge at sustained 2048³-style benchmarks** (HW-Exception, exit 134). Rule:
   cooldown + detached+killable GPU processes; no untimed marathon cells.
 
@@ -3555,6 +4474,7 @@ into the sampler would mean re-implementing the assertion, so they were left the
 
 **Design points worth stating, because each is a place the obvious version is wrong:**
 
+
 - **The band is read, never written** — and was initially *not read at all*. The
   first `coverage.measured_band_pct()` called `ab_audit.reproducible_band` with one
   argument for a two-argument function, and its `except Exception` turned the
@@ -3568,24 +4488,30 @@ into the sampler would mean re-implementing the assertion, so they were left the
   The test that let this through was `assertTrue(value is None or value > 0)`,
   which passes for a function that always raises; it is now four assertions that
   all fail when the read is stubbed back to `None`.
+
 - **Explicit target cells.** `coverage_cells(..., target_cells=...)` emits a cell
   that was targeted but never proposed for, so it can be reported as `STATE_EXPLORE`.
   Deriving cells only from proposals made "we never looked" and "not on the list"
   the same absence — the conflation §H.1.2a is about.
+
 - **`min_n` is the *worst* measured config in the cell, not the mean.** A cell whose
   best config has eight seeds and whose other config has one is not confidently
   measured; averaging that away is how a noise-level win becomes a verdict.
+
 - **Retirement is checked after evidence exists.** `decide_state` returns `explore` for a
   cell with no decided rows before it can ever return `retired`, so "never tried" is
   never recorded as "tried and failed". `legal_rejected` also does not retire a cell: a
   rejected proposal never ran.
+
 - **`n = 1` degrades the bound to the median rather than faking a variance.** Thin
   evidence is reported as thin (`min_n`, state `replicate`); a one-sample LCB that
   claimed precision would be a second definition of confidence.
+
 - **The seeds travel with `CellAnalytics`** (`analytics.compute_cell_analytics` now
   attaches them). An LCB cannot be recovered from a median, a CV and a count, so parent
   selection would otherwise need a second read of every CSV. Hand-built cells without
   seeds degrade to the median rather than raising.
+
 - **`parent_by="median"` remains reachable**, and `selected_by_lcb` /
   `parent_by` / `parent_score` are recorded on every winner, so a run's parent
   policy is visible afterwards and the two rules can be compared on the same data.
@@ -3602,6 +4528,7 @@ into the sampler would mean re-implementing the assertion, so they were left the
 **Status: landed.** `synthesis.py`; 79 tests in `tests/test_synthesis_phase4.py`. Notable
 decisions, and what forced them:
 
+
 - **Item 2 was already satisfied by Phase 2, and the knob budget is exhausted.**
   `legality.KNOB_GROUPS` covers all eight structural knobs the shipped solutions encode
   (`MacroTile`, `ThreadTile`, `WorkGroup`, `VectorWidth`, `GlobalLoadVectorWidthA/B`,
@@ -3609,10 +4536,12 @@ decisions, and what forced them:
   parsed knob, `grvw`, is deliberately excluded: it is not a Tensile parameter, and
   `BenchmarkStructs` calls `printExit()` on unrecognised names. So "extend beyond the
   lattice's six" is met by covering every legal knob, not by inventing parameters.
+
 - **`TEMPLATE_KEYS` moved to `legality.py`** and is re-exported by `oto/ledger/mutator.py`. It was
   defined in `mutator`, but it names the keys `legality` *assembles*, so the definition
   belongs with the module that produces them; two copies would be two answers to one
   question.
+
 - **The band is resolved lazily via `ConvergenceAgent.band()`, never in `__init__`.**
   `ab_audit.arm_record_sets` constructs an agent to manage phases, and
   `coverage.measured_band_pct` calls `arm_record_sets` — so computing the band at
@@ -3620,18 +4549,23 @@ decisions, and what forced them:
   `TestMeasuredBand` hanging rather than failing; `BandResolutionTests` now pins it. Note
   that a band of 5.0 on an empty corpus is `TIE_BAND_PCT`, the documented shipped floor,
   not an invented measurement.
+
 - **The ledger's single `shape` column keeps the cell identity; the sweep goes in phase
   data.** Coverage joins on `(family, shape)`, so recording the sweep's first shape would
   re-file the candidate into a different cell and make the coverage joins wrong.
+
 - **`retired` cells are skipped, not sampled.** Every candidate in such a cell was
   non-functional; re-drawing the neighbourhood is what the negative cache exists to stop.
+
 - **Two latent bugs were found by the new tests and fixed.** `reconcile_tile` returned
   early on a *missing* `ThreadTile`/`WorkGroup` — the exact case it exists to solve — and
   an unsolved dimension rendered as the literal string `"None"`, which Tensile would
   reject at parameter-parse time rather than at our own check.
+
 - **The lattice fallback is reported, never silent.** A run that quietly falls back looks
   identical to one that did not. `last_emission_stats` now carries `retired_cells`,
   `lattice_fallback_cells`, `ungraded_cells`, `graded_cells`, and `band_pct`.
+
 - **`DepthU` travels with the tile, and crossing pairs are pruned against the shipped
   manifest.** The shipped manifest stores DepthU as the K component of the MacroTile —
   Tensile's `128x32x16` *is* "MacroTile 128x32 at DepthU 16" — so moving DepthU on its own
@@ -3882,13 +4816,79 @@ in the gate, not the tile choice.
 - Integrated non-blocking `select.select()` listener in `_apply_cooldown()` so `'s'` skips cooldown sleep and `'q'` quits immediately.
 - Ensured `acceptance_report.json` and `acceptance_report.html` are generated and persisted to `gfx90c_results/` even on early termination via `'q'` or interruption.
 
-## 2026-10-12 — Docs whittling: `oto/harness/README.md` history archived
 
-`oto/harness/README.md` was moved to `docs/developer/harness_runbook.md` (it is now inside the
-documented ecosystem directory). Its `/tmp`-prototyping history and stale counts were
-archived here.
+## Context and process notes (not change entries)
 
-# Archived from oto/harness/README.md (moved 2026-10-12)
+## Prior campaign 2026-09-04 .. 2026-09-13 (frozen conclusions)
+
+- Port mechanics proven YES: 3-injection shim, Phase-0 gates 10/10, anti-alias
+  0 gfx900 leak, synthesis PASS.
+- Performance = **parity, not wins** on the only same-run head-to-head
+  (0 win / 11 tie / 0 loss at ±5% vs the gfx900 spoof).
+- Candidate suite A–G brought to **5W / 10T / 6L** over 21 shared cells
+  (B GEMV 32/64×4096 +8.1/+13.6% & +17.8/+21.3%; D 2048³ +14.1/+20.1%; E int8 1024³
+  +18.3%; A sgemm 2048³ stable; F = 3 new cells; C crashed every run until the
+  `[{}]` fix).
+- Only 6 genuinely-new problem cells produced; ~40% of prior runtime went to
+  re-benchmarking known shapes.
+- Best measured: FP32 1118.7 @1024³, FP16 2492.1 @4096³, BF16 1108.5 @2048³,
+  INT8 881.2 @2048³, FP64 98.6 @1024³ (98% of the 101 pipe — saturated).
+- Four ruler bugs found and fixed; three-tier retirement scheme in place;
+  telemetry fixed to the sysfs contract; toolchain-stderr fix landed (the single most
+  impactful prior change).
+- Summary only here — the full conclusion detail lives in
+  `prior_INSIGHTS_CAVEMAN_ULTRA.md` / `prior_RESEARCH_ARCHIVE.md`.
+
+---
+
+
+## Prior-campaign evolution (the WHY layer)
+
+### The port mechanism flipped
+
+- Baseline started as a **9-file in-tree patch**; worked, but forked-the-tree drift.
+  Replaced by the **3-injection Python shim**
+  (`tensile_gfx90c_port/sitecustomize.py` on `PYTHONPATH`): tree stays pristine, the
+  whole delta is one import-time file. The shim is the ONLY port mechanism.
+
+### Suite evolution (driver generations)
+
+- The driver suite iterated through several generations during the prior campaign;
+  the last shell generation is frozen and inherited as the attempt2 baseline for
+  migration parity (new driver paradigm — the attempt2 python driver replaces it).
+
+### Ruler bugs (all four closed prior)
+
+- Ruler normalization was wrong in four ways: max-anchored squares, cross-dtype
+  geo-mean leaking the DDR factor, a dtype-string key no-op, and missing rulers
+  fabricated as 1.0. Fixed to bound-class medians, `(dt,cls)` keyed, missing →
+  **reported, never inferred**. The ruler/throttle discipline only became trustworthy
+  once all four were closed.
+
+### Retirement
+
+- Three-tier retirement introduced. Tier-1 = identical-fp skip (default on; opts out
+  via a config flag; `--phases` scoped). Tier-2 = dominance retirement by
+  `auto_retire.py` (attempt2 gates on ≥2 independent runs/cell after a premature
+  3-record emission). Tier-3 = peak/spoof never retires anything.
+
+### Telemetry
+
+- Fixed to the sysfs contract; `logs/telemetry.csv` carries its header in-file
+  (self-describing; canonical Hz/µW/mC/%, `hwmon[0-9]*`, `power1_input` →
+  `power1_average` fallback). Continuous whole-run sampler, 2 s cadence.
+
+### The single most impactful fix
+
+
+## Session / consultation record
+
+
+## Upstream baseline
+
+- The live Tensile repo remains at pristine HEAD, read-only, only the gfx90c shim
+  applied. No upstream release entries are mirrored here.
+
 
 ## Historical note from L1–8 /tmp context (trimmed for changelog)
 
@@ -3897,684 +4897,4 @@ This content was preserved from the former harness runbook that referenced `/tmp
 - CPU-only, never benchmarks: see `claude.md` §5 (Non-negotiable project guardrails) for the operational constraint.
 - Ecosystem: see `docs/README.md` for the MD-docs-vs-docstrings boundary; layout and ownership now point at `oto/README.md` and `docs/developer/harness_runbook.md`.
 
-## 2026-10-12 — docs restoration after the whittling (and one gate-harness fix)
 
-The whittling pass (`7ef4213`) cut load-bearing detail from the human- and
-agent-facing docs and replaced it with pointers. This restores it, merging the
-pre-whittling content with the refactored structure:
-
-- `README.md` — rebuilt as a self-contained high-level repo overview: a repo
-  layout tree, full root-entry-point + per-package module tables, the complete
-  validation-tool command set, the `.env` table, and the docs index (no longer a
-  pointer chain). All internal links verified to resolve.
-- `gfx90c_tuning_guide.md`, `kernel_tuning_research.md`,
-  `gfx90c_theoretical_limits.md`, `complex_gemm_research_brief.md`,
-  `potential_configs.md`, `knowledge_base.md` — restored to their pre-whittling
-  substance as self-contained starter documents for the tuning agent (knob
-  mechanics + forwarding surface, measured regime tables, the three byte tables,
-  complex-MAC accounting, the occupancy model, mutation strategies, and open
-  research directions). Only provably-wrong facts were corrected (e.g. the
-  `ZZ` byte width is `16`, not `8`; the occupancy rule is `accVGPR = TT0·TT1·weight`).
-- Cross-references re-pointed to the current section numbering — the
-  pre-2026-10-10 `potential_configs.md` `§13.x` / `§14.x` / `§8.6` citations no
-  longer resolved.
-- `oto/harness/occupancy_bounds.py` now imports `VGPR_PER_CU` from
-  `oto/tensile/gates/vgpr_model.py` instead of re-declaring it (Refactor-1
-  acceptance criterion 6: no device-constant scatter).
-
-## 2026-10-12 — off-grid probe tier removed (candidate pool is now strictly in-grid)
-
-The generator's only contract-violating arm was the **off-grid probe tier**
-(`PROBE_CELLS`: SS 32/64/128, DD 128, forced DepthU 4, `graded: false`): those
-rows addressed (shape, dtype) cells the shipped gfx900 library does not carry,
-so they could never ship under the no-contraction / no-extension contract
-(`tests/test_library_parity.py`). Per the "no candidates that don't adhere to
-the contract at all" decision, the tier is deleted outright:
-
-- `oto/harness/candidate_rows.py` — `PROBE_CELLS` removed.
-- `oto/harness/candidate_pool.py` — the probe loop, the second (`probe_pool`)
-  sink, the `graded` flag and the `sink`/`graded` params on `_offer` are gone;
-  every emitted row is in-grid.
-- `oto/harness/candidate_overlay.py` — `_write_overlay` no longer takes probe
-  rows or `--with-probes`; the timestamped mirror carries only `phases`.
-- `oto/harness/generate_candidates.py` — `--with-probes` and the `PROBE_CELLS`
-  re-export removed.
-- Tests rewritten (`tests/test_generate_candidates.py`): the probe-specific
-  cases are replaced by a hard invariant — every generated row addresses a
-  shipped-grid cell — and `_write_overlay` counts only newly-scheduled rows.
-- Docs: the `PROBE_CELLS` entry (tuning guide), the A6 off-grid row and the
-  §10.3 "mirror only" note (`potential_configs.md`) now state the exclusion.
-
-The legacy in-grid `probe_N1..N5` seed rows and `probe_*` run-dir globs are
-unaffected (they are inside the grid).
-
-## 2026-10-12 — seed-pool cap removed (`--max-fp` default = no cap); duplicate CLI deleted
-
-`--max-fp` defaulted to a hand-picked `300` with no derivation, and the same
-`main()` (argparse + body) existed in **two** modules — `generate_candidates.py`
-*and* `candidate_overlay.py`. The cap silently dropped 58 of the 358 rows the
-builders emit (`_round_robin_prune`). It never limited the `--auto` convergence
-loop (that is `--budget` iterations / `--mutation-budget` knobs); it only capped
-the pre-built seed pool.
-
-- `--max-fp` now defaults to **no cap**: `_round_robin_prune` takes
-  `Optional[int]` and returns the pool unchanged when the cap is `None`. The
-  whole emitted in-grid pool is seeded; `--max-fp N` remains as an explicit
-  opt-in throttle.
-- The duplicate CLI is gone: `candidate_overlay.py` keeps only the overlay I/O
-  (`_write_overlay` / `_prune_candidates_from_seed` / `_round_robin_prune` /
-  `_summarise`); `generate_candidates.py` is the single CLI.
-- Also dropped the now-impossible `"probe"` priority key in `_round_robin_prune`
-  and the pre-split leftover imports in `candidate_overlay.py`.
-- Tests: added a no-cap no-op case. Focused suite
-  (`test_generate_candidates.py` + `test_library_parity.py`): 38 passed.
-- The dry run now reports the full pool (would append the rows the old cap had
-  been dropping); `--max-fp 300` reproduces the old behaviour exactly.
-
-- **2026-10-23 — the acceptance report refactor: two hidden submenus removed,
-  redundant layers collapsed, visual/layout checks added.** The Family matrix
-  replaced its per-size caret/nested-table with an always-visible hierarchical
-  table (`<tbody class="family-group">` per family, `<tr class="size-row">`
-  indented underneath) — 42 size rows are now scannable without a control. The
-  Problem-space coverage collapsed three parallel representations (summary
-  table + 7 family `<details>` + 38 figure captions) into one grouped table
-  (`<tbody class="coverage-group">` with `<tr class="group-row">` subtotals
-  and `<tr class="coverage-row">` cells) and one appendix
-  (`<details class="figure-appendix">` with `<h3 class="figure-family-title">`
-  per family). Removed: `JS_ROW_EXPAND` script, `.row-toggle` button,
-  `.family-detail` / `.size-table` / `.figure-group` CSS, the broken
-  `\x15B8` caret escape, and the duplicate `Best measured` column from the
-  coverage table (performance belongs in the Family matrix). Added:
-  `oto.harness.visual_check` (playwright-based desktop/mobile viewport test),
-  `tests/test_visual_check.py`, and a section-note explaining each table's
-  structure. Preflight: `generate_candidates --dry-run` 1089, `check_candidates
-  --quiet` 0 illegal, full suite 922 passed / 8 skipped.
-
-- **2026-11-13 — the docs ecosystem gets two agent classes and a registry test.** All owner docs are now class-tagged (`dev` / `operator` / `shared`) in the `docs/README.md` registry: class A (developer agents working on oto) routes to `claude.md`; class B (operator agents producing a best-effort library for an unsupported AMD platform) routes to the new `docs/operator/operator_runbook.md` — preconditions → detect → starter pair → agent research → human verification gate → docs synthesis (the `<codename>_*.md` artefacts) → CPU-only harness study → TTY benchmark → `--best-library` → verification matrix and failure table. `claude.md` §1 and `README.md` §7 carry the same routing. `tests/test_docs_registry.py` now fails when a tracked Markdown file is unregistered, when a registry glob matches no tracked file, or when a registry row lacks a class tag. Registered this round: `archive/*.md`, `plans/test_optimization.md`, `oto/README.md`, and the starter-pair docs. Removed stale `plans/verify_*.py` registry row (no such tracked files). Also landed the harness toolkit for class A/B use (`oto/agents/harness_tools.py`: corpus census with floor/native split + TARGET_CELLS coverage, round-robin candidate proposals, CPU-gate verification, `build_harness_study`) wired into `--generate-device-docs`, which now also writes `<codename>_harness_study.md` and `<codename>_potential_configs.md`.
-
-- **2026-11-13 — the CLI front door (`oto`) lands (Phase 1–4 of the CLI UX rework).**
-  Replaced the multi-mechanism root shim with a single verb-first front: subcommands
-  (`tune`, `run`, `bench`, `status`, `report`, `doctor`, `preflight`, `candidate`,
-  `retirement`, `analytics`, `synthesis`, `verify`, `check`, `library`, `agent`,
-  `consolidate`, `stats`, `chart`, `version`, `help`, `completion`), global flags
-  (`--base`, `-q/--quiet`, `-v/--verbose`, `--no-input`, `--no-color`, `-n/--dry-run`,
-  `-y/--yes`, `--live {on,off}`, read-only `--json`). Root `oto.py` deleted; `bin/oto`
-  over `python3 -m oto` is the repo-local entry. `oto doctor` (toolchain/GPU/registry/
-  corpus/docs), `oto check db|retirement`, `oto verify all --json`, `oto chart`,
-  `oto candidate --json`, generated `docs/cli.md` (single source of truth) all wired.
-  Full suite green: 1044 passed / 8 skipped / 242 subtests; ruff + py_compile + pyflakes
-  + function/file-length + interactive-keys gates clean; no new failures vs the pre-existing
-  `verify_all` baseline.
-
-- **2026-11-14 — explicit DeviceProfile threading, end to end (the C2.5–C2.9 close, for real).**
-  Every profile-consuming function in the package now takes an explicit
-  `profile=None` kwarg resolved through the new `oto.device.loader.resolve_profile`
-  choke point (explicit always wins; `None` = ambient `current_profile()`).
-  Internal call sites thread the caller's profile instead of silently
-  re-resolving ambient; import-time frozen captures (`FAMILY_TO_DTYPE`,
-  `_DEFAULT_CELLS`, `SHIPPED_CELLS`) are now lazy derivations or `__getattr__`
-  shims. Implementation was AST-verified at every step: Stage 1 added the kwargs
-  (144 functions), Stage 2b threaded call sites with *qualified* resolution
-  (from-imports, package re-exports, `self.` methods — never bare attribute-name
-  matching, which had corrupted `dict.get`-style calls), and an AST fixer
-  collapsed duplicated positional+keyword `profile` passes. Stage-2's failure
-  modes were caught by the parse gate and the suite (`dict.get` TypeError), and
-  rolled back cleanly before being re-done qualified. Gates now route through
-  `resolve_profile` uniformly; `_store_knobs_feasible`'s docstring-swallowing
-  bug (profile resolved *before* the docstring) fixed en route. New
-  `tests/test_explicit_profile_threading.py` proves the explicit path: gfx90c
-  refuses complex GSU>1 (no MFMA), a fabricated MFMA-capable *synthetic test
-  profile* (codename `synthetictest`, has_mfma=True — never gfx90c, never a
-  shipped profile) passes it, and `validate_config` threads the explicit
-  profile into every gate it calls.
-  The verifier's ast-equivalence check now recognises the Refactor 2 signature
-  shape evergreen (a signature delta of exactly one trailing defaulted
-  `profile=None` is the expected shape, base-agnostic; anything else still
-  fails loudly) — `oto verify all` at HEAD: ALL EQUIVALENCE CHECKS PASSED.
-  Suite green at every commit step: 1061 passed, 8 skipped, 242 subtests.
-  Commits `e5ebdc4` (choke point + gate retrofit), `ae99b75` (the sweep, 81
-  files), `0807157` (threading test), `a7500ea` (verifier). Follow-through:
-  every function whose signature carries the `profile` kwarg (178) documents
-  it in its docstring — the documented functions gained the kwarg line, the
-  docstringless functions gained a one-line docstring, single-line docstrings
-  were expanded in place, and the required-`profile` agent entry points are
-  documented as required, not "optional ambient" (an injected claim caught
-  and corrected).
-
-- **2026-11-14 (27th) — the operator campaign playbook lands (`docs/operator_campaign.md`).**
-  The convergence prompt that produced the gfx90c work is formalised as the
-  standing, persistent procedure for Class B operators running a multi-session
-  tuning campaign after the best-effort library exists. Content: the two hard
-  display-session rules (GPU only in the user's TTY; CPU gates are not
-  measurement); the persistent operating model (state lives in the ledger /
-  kernel_db / acceptance report / deck overlay, never in context); the
-  session-start checklist (`oto doctor`, `oto verify all`, `kernel_db --rebuild`,
-  `resolve_cells --taxonomy`); Phase 1 corpus study with the exact tools and the
-  like-for-like/clock-coverage/typecode attribution rules; Phase 2 straggler
-  decomposition (W walls, R residency, C complex accounting, K clock confounds,
-  D depressed-cell/sweep-order, F floor-steal-with-documented-tweak, N virgin
-  axes — detect / route / closing evidence each); Phase 3 candidate routes in
-  priority order (machine-driven narrow/wide via `oto tune` + the DB mutator,
-  targeted DECISION_TRIAL_TILES rows, documented floor steals, virgin axes);
-  Phase 4 consultation triggers (T1 verdict flip, T2 three batches without a
-  band move, T3 CPU-unexplainable anomaly, T4 hardware-fact consequence,
-  T5 campaign complete) with a self-contained payload protocol — never spend a
-  consultation on a question a CPU tool answers; Phase 5 the per-batch
-  autonomous loop (rebuild → report → census → triage → deck → next batch);
-  Phase 6 the 10+ h overnight run. Registered in `docs/README.md` (Class B);
-  `operator_runbook.md` and `skills/class_b_operator.md` now route the campaign
-  there; `docs_index.json` regenerated; registry + index tests green.
-
-- **2026-11-14 (28th) — CC:256/512 AF0EM=4/AF1EM=4 ADOPTED (owner decision, Option B).**
-  The two Tensile-recipe rows (`_af4em4`: `mt64x64x8 / tt4x4 / VW2 / GLVW2/2 /
-  WGM4 / AssertFree0ElementMultiple=4 / AssertFree1ElementMultiple=4`) ship in
-  `phases.yaml` as first-class CC rows (deck 279 → 280; CC 47 → 48); the D5
-  pilot row graduated and left `DECISION_TRIAL_TILES` (only D1 remains, with
-  D2/D3 already retired 2026-11-14). `oto check candidates`: 280 checked,
-  0 illegal. GPU legality carried over: both rows are the same config already
-  validated with `NumElementsToValidate=128` on silicon at both shapes. fp for
-  the 256 row is unchanged (`ca20ec…`); the 512 row is new (`75c7e5ce…`).
-  What adoption does NOT claim: faster. The AF4/4 rows are reference-deck now;
-  the A/B against AF2/2 (paired-widen) and AF1 (base) is the overnight runs'
-  job; bars do not move without TTY measurement. Rationale: the vendor recipe
-  (sgemm_large_square_nt.yaml, AF0/1EM=4) is the default the vendor ships
-  for f32 free dims; 6 gates passed, GPU-validated, zero new machinery; A was
-  the "unproven unless measured" option, B the "adopt proven-legal, measure in
-  the campaign" option; owner chose B. Commit: phases.yaml rows, decks.py
-  DECISION_TRIAL_TILES (D5 removed with the adoption record),
-  tests/test_knob_sweep.py docstring + assert, knob_sweep CLI help string.
-
-- **2026-11-14 (29th) — operator_campaign.md rewritten after deep history study.**
-  Full re-derivation from primary sources: backrocm git history (FOSS United
-  grant, Jul 2026; attempt1 ~9.2K LoC shell suite, ruler math broken four ways,
-  retirement conflation, telemetry gaps), attempt2 (the draft run and the
-  append-only import decision), the ROCm reference corpus (ROCm/AMD
-  vis-à-vis GPUs research diaries, CDNA/Vega first-party papers) and the full
-  oto commit graph (2026-09-17 → 2026-11-14). The doc now carries the
-  genealogy explicitly, the neurosymbolic division of labour (neural proposals
-  enter only via the symbolic gates + Tensile reference validator), the
-  persistent session protocol (state on disk — kernel_db / acceptance report /
-  resolve_cells / registry — read before any work), the exact corpus-study
-  commands, the straggler class catalogue (W/R/C/K/D/F/N/H with detection and
-  closing evidence), candidate routes in priority order (machine loop,
-  targeted trial rows, documented floor steal, virgin axes, profile-rung
-  Class A), and the consultation triggers T1-T5 with a self-contained payload
-  contract. No fact in the doc is remembered; every date and claim was
-  checked against the tree.
-
-- **2026-11-14 (30th) — operator_campaign.md rewritten with full provenance.**
-  Every constraint in the doc now carries its origin: the FOSS United grant
-  (Jul 2026, method not product), attempt1 (~9.2K LoC shell; ruler math broken
-  four ways; retirement conflation), attempt2 (draft acceptance gate rejected,
-  floor itself retained), the oto birth (2026-09-17), Refactor 1 (package
-  split), the 2026-10 failures that made this curriculum (ComplexFloat/complexDouble
-  Z=8 gate miss, StaggerU inverted, LocalSplitU shadowed by explicit WorkGroup,
-  TransposeLDS unreachable, sweep-order depressed CC:256, complex bar 4x scale,
-  arm-size order-statistics artifact), rocm-libraries/nightly port, Refactor 2
-  (device profiles, NumElementsToValidate=128, explicit profile threading) and
-  the CC AF4/4 Option-B adoption. The doc now spells the bounded operating
-  model: corpus study with concrete commands, the class catalogue with
-  detection and closing evidence (W/R/C/K/D/F/N/H), candidate routes in
-  priority order (machine loop; targeted DECISION_TRIAL_TILES; documented floor
-  steal — worst cells only, every knob documented, no byte copies,
-  gate + oracle + TTY or it did not happen), consultation triggers T1-T5 with a
-  self-contained payload contract, and the post-batch autonomous refinement
-  loop. No fact remembered; every claim checked against the tree or the two
-  reference checkouts (backrocm, ROCm/).
-
-- **2026-11-14 (31st) — the test suite is hardware-adaptive.** The triage of
-  `test_explicit_profile_threading.py` flagging a misread of a fabricated
-  `has_mfma=True` probe (`synthetictest`) surfaced three real defects, all
-  fixed: (1) the probe fixture is renamed `probe_test` with a module-level
-  note spelling out that it is a synthetic ISA (9,9,99) fragment, not a
-  description of any target silicon; (2) the three ambient-codename tests now
-  assert the loader's invariant (`DEFAULT_CODENAME == "gfx90c"`, explicit
-  always wins, bounded rebinds restore the prior ambient) instead of assuming
-  the ambient *is* gfx90c — a gfx902 box no longer trips these; (3) every test
-  that reads the live, gitignored campaign outputs (kernel_db.json,
-  phases.seed.overlay.yaml, acceptance_report.json, reference_rerun_manifest)
-  now skips cleanly when those artifacts are absent — a fresh gfx902 checkout
-  stays green minus the gfx90c-acceptance anchors, and the deliberate ones
-  (load_profile("gfx90c") anchors + best-library carve tests, which require
-  the corpus) skip with a reason instead of failing, so a gfx902 checkout
-  fails loudly nowhere; every skip reason says "run the tuning campaign
-  first". ruff clean; suite runs unchanged against this machine's corpus.
-
-- **2026-11-14 (32nd) — tracked tree stops referencing machine-local scratch.**
-  `oto/tools/verifiers/ verify_ast_equivalence.py`, `verify_gate_differential.py`,
-  `verify_report_html.py` and `_verdicts_worker.py` wrote candidate-side byte
-  artefacts into a hardcoded `/tmp/opencode/`; the evergreen verifier now
-  materialises scratch under `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")`
-  via a new `oto.tools.verifiers._evergreen.scratch_dir()` (process-lifetime,
-  atexit-cleaned), and the worker that executes inside a *ref worktree* builds
-  its own `tempfile.mkdtemp` (it must stay oto-free).
-  `oto/tensile/best_library.py` no longer silently prepends a system clang
-  (`/usr/lib64/rocm/llvm/bin`) to `PATH` when the user did not set
-  `ROCM_LLVM_BIN` — the LLVM bindir is derived from the user's own
-  `ROCM_PATH` (wheel layout `lib/llvm/bin`, tarball layout `llvm/bin`).
-  `logs/oto-error.log` (a tracked live log containing this machine's absolute
-  paths) is untracked; `logs/` is now gitignored — never commit logs.
-  Verifiers: ALL EQUIVALENCE CHECKS PASSED; ruff clean; suite 1061 passed.
-
-- **2026-11-14 (33rd) — tests fully path-portable; tracked tree scrubbed of
-  machine-local paths.** Every test that referenced the historical
-  `gfx90c_runs/` / `gfx90c_results/` names now resolves them from the profile
-  via `oto.runners.paths` (`runs_rel`/`results_rel`), so the suite runs
-  unchanged on any codename with a matching profile. No tracked test or
-  source file references `/tmp/` or any machine path; the evergreen verifier's
-  candidate-side artefacts now materialise under
-  `tempfile.mkdtemp(prefix="oto_evergreen_scratch_")` owned by
-  `oto.tools.verifiers._evergreen` (atexit-cleaned), the gate-differential
-  worker (which executes inside a REF worktree) builds its own scratch
-  inline. `logs/oto-error.log` untracked. Suite 1062 passed, 8 skipped;
-  `oto verify all` ALL EQUIVALENCE CHECKS PASSED; ruff clean.
-
-- **2026-11-14 (34th) — deterministic limits derivation; operator campaign doc is self-contained.**
-  New `oto/device/derive.py`: ALU peaks derived from profile hardware facts
-  by one formula (lanes = num_cus x simds_per_cu x lanes_per_simd; FP32 =
-  2 x lanes x fGHz; FP16 fast_F16 = 2 x FP32; FP64 = FP32 / 16; complex
-  families inherit their lane class), with `python3 -m oto.device.derive`
-  printing them on demand — agent-1's `_peak_table` emits derivation-by-loop
-  matches from `oto.device.derive` so the limits doc can never drift from the
-  formula. `tests/test_derive.py` locks it in (10 tests, exact-int equality
-  against both `peak_gflops` and `theoretical_peaks_blas8`). Docs ecosystem:
-  `docs/operator_campaign.md` rewritten fully self-contained — no
-  requirements on reading git history; the doc spells the two development
-  models (informed = a spoof reference exists, floor-steal protocol;
-  blind = unsupported silicon, derive everything from scratch and propose
-  the matrix from gh facts); the operator is a first-class runner, not a
-  human-supervised process; GPU legs remain TTY-only; walls stay walls.
-  gfx90c_theoretical_limits §2 now points directly at the derivation so the
-  doc can never silently disagree with the formula.
-
-- **2026-11-14 (35th) — operator_campaign.md is now self-contained; the operator agent holds the GPU.**
-  The first re-draft was wrong on three counts, all fixed in this entry: (1) it
-  shipped no content copyable from the project's own history without pointing
-  the agent at git logs it does not have; (2) it stripped the GPU from the
-  operator agent as if the operator were a GUI-session worker — the operator is
-  the TTY runner and benchmarks are its job; (3) the 38-cell matrix is now
-  carried verbatim in the doc so the agent never needs a second file to know
-  the target list. The doc is now: preflight → starter file → `oto doctor` →
-  `oto agent generate` → `oto library best-effort` → `oto tune` →
-  `oto report --json`, with §5 branching into two development models
-  (informed convergence with a spoof floor; blind convergence with derived roofs
-  and no floor at all) and §11 decomposing every tie/loss into its class
-  catalogue with an exit condition. The runbook breaks TTY/bench semantics only
-  for the GPU-loss guard: the loop aborts rather than burn a night on a dead
-  GPU. Initial framing fixed the agent class boundary instead of conflating
-  it with display-session workers.
-
-- **2026-11-14 (36th) — the toolchain contract is closed: explicit env, never a silent skip.**
-  `oto/runners/toolchain.py`: the resolver accepted a ROCM_LLVM_BIN/ROCM_BIN/
-  TENSILE_ASSEMBLER set to a nonexistent path and silently fell back to the
-  derived layout — a user who typo'd their path got a working site built
-  against the system tree instead of the one they asked for, with zero
-  signal. Every explicit value now raises with the bad path spelled out;
-  the derived layout is probed in order and reported; HIP_DEVICE_LIB_PATH is
-  derived from the user's ROCM_PATH (lib/llvm/amdgcn/bitcode or the old RPM
-  layout), never defaults to a system tree. `oto doctor` prints the full
-  resolved dashboard: every path variable with existence, plus the exact
-  assembler version line and the Tensile bin/Tensile version line; a broken
-  .env reports the broken key with its bad value, no fallback. `.env`
-  pins HIP_PATH=ROCM_PATH (explicit, removes ambiguity) and ROCM_VERSION
-  for the nightly build; `.env.example` now states the contract in line 1:
-  nothing falls back to /usr, /usr/lib64, or /opt/rocm unless you write it
-  there yourself.
-
-- **2026-11-14 (37th) — operator_campaign.md gains §9A: the candidate-generation strategies in one place.**
-  The operator reference the three generation strategies scattered implicitly
-  through §9 (`oto tune`) and §11 (the straggler-class catalogue) and never named
-  the fourth — EXPLORE — nor why they were ever proven to win. New §9A names all
-  five (NARROW / WIDE / DIRECTION / EXPLORE / STEAL), cites concrete corpus
-  wins for each (the DD:192/256/512 +267 %/+20 %/+7 %; the CC:256 pad blind
-  spot every GCN5 perf yaml shares; the CC/ZZ firm caps at 16384/8192 elements;
-  the R8 CC:256 steal as the only "take the floor verbatim" example the corpus
-  has ever validated). Hierarchy documented: NARROW first on the cheapest
-  gradient, WIDE for geometry hops, DIRECTION informed-mode fastest path,
-  EXPLORE for census-marked virgin axes, STEAL only with a documented
-  floor-steal protocol (§12) and never for winning cells. Reading order for any
-  cell: census → taxonomy → gate candidates. No other sections changed.
-
-- **2026-11-14 (38th) — operator_campaign.md gains §11A: the corpus's own lessons, distilled.**
-  After a full walk of the potential_configs.md diff history (26 commits that
-  touch the file: verdict-flip re-annots, like-for-like regrades, the 2026-10-15
-  ordering fix that reversed "THE ONE LOSER" CC:256 (it was a deck-order
-  defect, not a kernel deficit), 18 re-analyses of the straggler list, the
-  2026-10-10 complex-accounting correction (Tensile's client charges 2 flops
-  per MAC — complex GEMM is reported at 1/4 its BLAS-8 GFLOPS), the floor-steal
-  record (the one steal the corpus endorses, §R25: `MacroTile 64x64 / WorkGroup
-  16x16x1 / GLVW 2/2 verbatim, everything else re-swept; verbatim copies count
-  as nothing), and the 2026-10-21 R47 re-derivation that shrank the ORANGE
-  list from 12 to 3 by streaming every claim through the corpus census), nine
-  lessons are now stated in the operator doc, each tied to its source evidence
-  as a rule of thumb: identical-config deltas are environment noise (±17.5%,
-  never chased), like-for-like is the only graded basis, complex GEMM reads at
-  80-97% of the roof, Tensile's refusal is the silicon not the bug, sweep
-  order is causal (the 2026-10-15 lesson), structural locality beats byte
-  copying, informed-mode steals are documented-retunes not verbatim copies,
-  dead axes and silent placebos were a real failure class, gates are silicon
-  facts not suggestions. One heading previously swallowed by an edit was
-  restored; docs_index regenerated; docs tests green.
-
-- **2026-11-14 (39th) — the corpus lessons are now device-general (§11A).**
-  The nine lessons §11A shipped in the prior commit were gfx90c-shaped: L1
-  tied the noise band to this device's clock telemetry; L2 quoted this-device's
-  412-vs-98 GFLOPS family/single read; L3 was the complex-GEMM correction; L4
-  named gfx9-specific gate outputs; L5 named this repo's shape-order fix; L6
-  named gfx900 floor geometry; L7 named this repo's 2026-10-16 steal record;
-  L8 named this repo's emitter-forwarding bug; L9 named this repo's gate
-  calibration contract. All nine are rewritten to stand on any GPU this
-  project supports (and any other GCN5-class APU the operator lands on);
-  illustrative numbers retained with explicit "device this methodology was
-  built on" framing. Device invariants explicitly stay in profiles/*.json
-  where they belong.
-
-- **2026-11-14 (40th) — operator_campaign.md locks the boundary: read-only by contract.**
-  The original convergence prompt is now anchored to a self-contained class-B
-  protocol with sharper territory lines than any prior pass: §0 now spells
-  "You are not the developer" — no edits to `oto/`, any `.md`, profiles/,
-  `phases.yaml`, `.env` or the registry (read-only via `mode=ro`); §15 is the
-  absolute list of writable paths (campaign artifacts in `<codename>_results/`,
-  report JSON, kernel_db via the `oto.harness.kernel_db` verb, overlay only via
-  `oto.harness.generate_candidates`, bugs.md for any defect, never anything
-  developer-owned); §13 gains rules binding the agent to §16 consultation
-  doctrine (consult only when one of five lift gates fires; never freestyle chat;
-  never consult mid-cut; answer-artifact-tagged stops); §16 is the full
-  consultation schedule. §17 carries the 38-cell matrix verbatim. Two sloppy
-  constructions from the earlier §13 rewrite fixed.
-
-- **2026-11-14 (41st) — plans/ is gone; the tree is smaller by design.** The remaining
-  one-shot plans (MASTER_PLAN, RENAME_AND_DOC_CLEANUP, CLI_UX_REWORK,
-  REFACTOR_2_UNIVERSAL_GPU, AGENTIC_POTENTIAL_CONFIGS, test_optimization) are
-  deleted — their durable content was folded into `incomplete_work.md`,
-  `claude.md`, `docs/operator/operator_runbook.md` and this log before removal. The
-  docs/root layout was flattened to a single `docs/` home:
-  `mapping.md -> docs/shipped_floor_contract.md`,
-  `results.md -> docs/gfx90c/results.md`, `knowledge_base.md -> docs/gfx90c/knowledge_base.md`,
-  `gfx90c_theoretical_limits.md`, `gfx90c_tuning_guide.md`,
-  `implementation_plan.md` (kept, not deleted: self-contained driver
-  architecture + triaged fixes), `potential_configs.md -> docs/gfx90c/potential_configs.md`,
-  `tensile_tuning_context.md -> docs/search_philosophy.md`,
-  `kernel_tuning_research.md` + `complex_gemm_research_brief.md` -> `docs/research/`,
-  `adversarial_review.md -> docs/developer/audit_register.md`;
-  `implementation_plan.md` and all references re-pointed; `context.md` /
-  `context_raw.md` were untracked owner scratch and are out of scope. `prior_*`
-  moved to `archive/`. Module renames across `oto/` (34) and `tests/` (13):
-  `metrics/{analytics->benchmark_analytics, coverage->cell_coverage,
-  protocol->measurement_protocol, read_thermals->thermal_telemetry,
-  report->acceptance_report, status_common->status_helpers}`,
-  `runners/{auto->convergence_loop, clocks->clock_telemetry, paths->result_paths,
-  phases->phase_runner, reporting->acceptance_reporting}`,
-  `device/{derive->derive_limits, detect->device_detect, vocabulary->kernel_vocabulary}`,
-  `ledger/{agent->convergence_agent, agent_mutate->agent_mutation}`,
-  `harness/{generate_candidates->candidate_generator, measure_vgprs->vgpr_measurement,
-  resolve_cells->cell_resolver}`,
-  `tensile/{best_library->best_effort_library, decks->family_decks, patterns->contraction_patterns,
-  shipped_library->shipped_floor, shipped_manifest->shipped_floor_manifest, synthesis/manifest->pipeline_manifest}`,
-  `tools/{allruns->run_census, chart->benchmark_chart}`,
-  `checks/retirement->stability_retirement`, `cli/docs->help_command`,
-  `agents/{orchestrator->meta_agent, research->research_client}`,
-  `oto/{yamlio->yaml_cached, inventory->readme_gen, docs_index->docs_index_writer}`.
-  Verifier RENAMES rebuilt (old->new only, no identity keys). `gfx90c_vs_spoof.png`
-  (generated artifact) removed. Suite green, verifier green, ruff clean.
-
-- **2026-11-14 (42nd) — the CLI front is folded into the documentation ecosystem.**
-  `docs/cli.md` is pinned to the live parser (`tests/test_docs_cli.py`);
-  the migration table it carries maps the retired shims to the `oto <verb>`
-  spellings; `oto <verb>` is now the only invocation shape the Class B
-  operators see, and the Class A agents use the same. `PYTHONPATH=.`
-  prefixes dropped from the operator campaign (every `python3 -m oto`
-  invocation runs from the repo root, where the package is importable as-is);
-  `docs/README.md` registry updated; README's file map displays current
-  module names; the `oto` `--json` contract verified to emit JSON only on
-  stdout with narration on stderr or /dev/null. `oto stats` and
-  `oto check candidates --json` confirmed: one document on stdout, the
-  per-line scan log on stderr. Suite green; verifier PASSED.
-
-- **2026-11-14 (43rd) — `oto agent consult` lands; every one-shot plan in git history is now accounted for.**
-  Plans resurrected from `git log --all -- plans/`: Refactor 1 (codebase org), Refactor 2
-  (Universal GPU), CLI UX rework (front door, implemented), test optimization (9x suite speed-up),
-  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (both executed earlier this arc), MASTER_PLAN
-  (open items folded into incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS (the one unexecuted
-  plan). The last is now implemented as `oto agent consult [starter] [--with-docs]`: a CPU-only
-  consult that emits `<codename>_potential_configs.md` — device identity from the profile,
-  practical ceilings, a structurally-illegal rejection-taxa list, corpus priors from the local
-  `kernel_db.json` (reference-device measurements, never claimed as this part's numbers),
-  gate-checked ladder rows per family (refusals shown so they cannot sneak into a deck), and a
-  TTY to-do list with zero measurements and no claims until the GPU runs. Synthetic-profile tests
-  pass; no GPU required. Bug fixed en route: generate_device_docs crashed with FileNotFoundError
-  when the `<codename>_docs/` directory did not exist. Suite green; verifier PASSED; ruff clean.
-
-- **2026-11-14 (44th) — production-readiness audit: the plans archaeology is complete and the last unexecuted plan shipped.**
-  Resurrected every one-shot plan from `git log --all -- plans/` and accounted for each:
-  Refactor 1 (org), Refactor 2 (Universal GPU), CLI front door, test optimisation (9x faster suite),
-  RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (executed earlier), MASTER_PLAN (open items folded into
-  incomplete_work.md), AGENTIC_POTENTIAL_CONFIGS — implemented as `oto agent consult [starter]`
-  in 8b73424. Repo state at audit: suite green (1081 passed + 8 skipped), `oto verify all` PASSED at
-  HEAD and 2824c2f, ruff clean, functions ≤ 60 lines / files ≤ 600 lines, docs registry fresh, no
-  machine-local paths in tracked files, no .pyc/artifact files tracked, no stale module references
-  outside changelog/archive, Class A/B docs current, `oto doctor` clean. The 44th entry closes the
-  arc begun 2026-11-13 with the CLI front door and the 2026-11-14 doc restructure.
-
-- **2026-11-15 (45th) — the production-readiness sweep: every audit finding fixed honestly, and the box declared honestly not ready.**
-  The v1-readiness audit (A.md/B2.md) findings were fixed, in priority order, one concern per commit:
-  - **Reference floor crash**: `_create_reference_run_dir` returned a 4-tuple bound into the sqlite `run_id`
-    — every `--gfx900-reference` run died after the GPU work with a ProgrammingError. The caller now
-    unpacks the tuple, the run row is stamped, and the pre-existing run dirs are restored in `finally`.
-  - **`oto check db` honours integrity**: `--json` reports the real `PRAGMA integrity_check` and exits 1
-    on corruption (it hardcoded `integrity: true` and exit 0); the human path exits 1 on failure too.
-  - **The mutation arm cannot bypass the ledger guard silently**: `bypass_identical_skip` is honoured
-    only when the ledger backs the bypass (agent present + outcome signal), never unconditionally.
-  - **DB synthesis arm reachable again**: `convergence_agent` imported `db_mutator` from a nonexistent
-    top-level module behind `except Exception: None`; it now imports the real module path and warns on stderr.
-  - **`idx_cell_key`** is created by the schema (`_EXPRESSION_INDEX_DDL`), so a fresh DB has it.
-  - **Native-subject selection is profile-aware**: `latest_run_id(arm="native")` excludes the *current
-    profile's* spoof prefix (LIKE-escaped, parameter-bound), not only `gfx900_ref_%`; smoke floors are
-    never recalled for promotion (`latest_reference_run_id` filters `meta.smoke`); the remaining
-    `LIKE` interpolations across registry_queries / shipped_floor_manifest / run_plan / auto_prompt are
-    parameter-bound (`like_escape`, shared). **Every** `startswith("gfx900_ref")` / `"gfx900_ref_locked_"`
-    site across the harness/agents/metrics (kernel_db, occupancy_bounds, corpus_census, cell_knob_diff,
-    cell_resolver, regression_matrix, gate_calibration, driver._current_arm, consolidate_floor.locked_run_id)
-    now resolves the profile's spoof_reference through `oto.device.loader.spoof_prefix` — a gfx906-floor
-    profile no longer misclassifies the floor as native anywhere in the pipeline.
-  - **The driver honours OTO_PROFILE**: an explicit OTO_PROFILE binding wins over rocminfo detection
-    (documented resolution order), so a gfx902 session is not silently run as gfx90c; the process-wide
-    rebind failure prints to stderr instead of vanishing.
-  - **Toolchain compilers**: the client-build compiler defaults follow the ROCm tree (llvm-bin amdclang
-    preferred, matching Tensile's native default) with explicit `TENSILE_CXX_COMPILER`/`TENSILE_C_COMPILER`
-    overrides (bare names pass through verbatim; bad paths are hard errors); `hipcc` is selected only
-    when the tree ships no clang. `.env.example` documents both.
-  - **`--prebuilt-client` is honest**: `OTO_TENSILE_CLIENT` pointing at a missing path is a hard error;
-    the default is also verified — the campaign raises before any phase instead of failing inside every
-    Tensile subprocess. `oto doctor` gained a "Tensile client" row that FAILs on this box today
-    (the client is genuinely not built here; the fix is the one-time next-cmake build, not a code edit).
-  - **`oto candidate --json` mirrors the text view**: `phases` is the deck (280), with `seed_overlay`
-    (1146) and `manifest` (1426) as distinct fields instead of a merged-only count.
-  - **CLI housekeeping forced by the 600-line file guard**: adapter helpers extracted to
-    `oto/cli/_adapter.py`, the verify adapters to `oto/cli/verify_cmds.py`; `commands.py` keeps its
-    stated public API (`dispatch`, `show_help`, `write_completions`).
-  - **`oto verify all --base-ref REF`** passes a base ref through to the verifier (previously
-    `--base` was swallowed by the global flag and the verifier silently ran HEAD~1).
-  - **Comparator/verifier repairs**: split-era MOVES pointed at renamed paths (`oto/checks/db.py`,
-    `oto/ledger/queries.py`, `oto/ledger/proposals.py`); `harness/occupancy_bounds.py` MOVES source
-    corrected to `harness/occupancy_audit.py`; `verify_methods.py` NEW list follows renames; the
-    config-writer accepted classes now cover exactly the documented emitter deltas
-    (`+ Architecture:` echo, `NumElementsToValidate: 0 -> 128`) and their composition with the
-    already-accepted knob classes); 21 manifest attestations added for the
-    mechanical Refactor-2 evolution signatures; `oto verify all` returns 5/5 OK at both HEAD and 2824c2f.
-  - **Slop retired**: accept-report generation failures raise loudly (calls cannot tell a dry run from
-    a bug otherwise); the dead per-family `_<fam>_mutation_pattern` methods deleted; `self.scheduler`
-    renamed `self.generator` throughout; the benchmark chart's device literals are profile-derived.
-  - **Release-readiness additions**: pinned split requirements (`requirements.txt` runtime,
-    `requirements-dev.txt` suite+lint), `NOTICE` (copyright assertion; LICENSE stays verbatim),
-    `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`. A GitHub Actions CI workflow was added
-    in the same sweep, then **removed at the owner's direction (never requested -- the owner
-    confirmed they did not ask for CI/CD)**. The repository has no CI; the suite is
-    self-verified on the machine, and README quick-start + license section + regenerated
-    `oto/README.md` landed in its place.
-  Suite green (1084 passed, 8 skipped, 242 subtests, RC=0). `oto verify all` PASSED at HEAD~1 and at
-  2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
-  owner's API key and the Tensile client build are both still required.
-- **2026-11-15 (46th) — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
-  docs/gfx90c/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
-  the A/B audits, the like-for-like regrade, the steal, the stop-list, the overnight runbook). Its entire
-  content — every measured number, table, run id, verdict and superseded rewrite — now lives in
-  `docs/gfx90c/gfx90c_tuning_guide.md` §13 (all R-numbers preserved; bring-up case study for agents imitating a
-  new-target port). The doc itself is rewritten as the device-independent methodology: what a deck is, the
-  zero-calibration gate method (accumulator / register-file / LDS / load-divisibility / oracle), the
-  like-for-like measurement rules (protocol parity, tie-band policy, rank-1 medians, sweep order), the
-  literature-mapped experiment order, the ledger-trace reading, the overnight protocol, and the porting
-  checklist. A full resolution table (`docs/gfx90c/potential_configs.md` §10) maps every former §-pointer so
-  historical citations stay resolvable; non-R section references across docs, comments and tests were
-  re-pointed mechanically to `docs/gfx90c/gfx90c_tuning_guide.md` §13. Registry (`docs/README.md`), generated index
-  (`docs/docs_index.json`, via `oto agent index`), `docs/agent_reference.md`, `docs/README.md`,
-  `README.md`, `claude.md`, `docs/gfx90c/gfx90c_theoretical_limits.md`, `docs/gfx90c/knowledge_base.md`,
-  `docs/operator_campaign.md` and `docs/research/kernel_tuning.md` updated to the new split. No instrument,
-  gate, verdict or deck row changed. The commit history of both files was studied first (65 commits on
-  potential_configs.md; the 2026-10-12 whittle/restore cycle preserved). Suite RC=0.
-  - **The agentic framing, applied everywhere (same concern).** Stale pre-agent-era claims that oto is
-    "not LLM-in-the-loop" / "AI-free" / "one-shot deterministic convergence" were corrected: the agent
-    layer is LLM-assisted and ships today (`oto agent consult`, agent-1/agent-2, directed prompts;
-    proposes, never decides). `docs/implementation_plan.md` rewritten as the honest design brief
-    (two loops, one rule; gfx902 blocked on the API key is stated, not hidden); the README architecture
-    flowchart gains the agent layer and states the acceptance path is deterministic; `docs/search_philosophy.md`
-    retitled (agentic tuning context; deterministic acceptance path; no surrogate in the loop; the model
-    never decides); `claude.md` and `docs/developer/audit_register.md` updated likewise; `oto/__init__.py` docstring's
-    opening line corrected; `oto/tools/potential_configs.py` citation updated.
-- **2026-11-15 (47th) — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
-  Per owner direction, `archive/` is no longer tracked in git (its content stays on disk, ignored via the
-  standing `archive/` rule); nothing was deleted. The archive's markdown was studied first:
-  - **The prior-campaign autopsy** (attempt1, 2026-09-04 → 09-13: the 9-file patch failure, the 3-entry
-    shim port, the peak-table correction, the ±23–31 % A/B envelope, the GPU-hang playbook, the
-    winner-instability autopsy) is absorbed verbatim into `docs/gfx90c/gfx90c_tuning_guide.md` §14; the research
-    passes' audit trail is recorded as §15 (corpus.pass1–3, RESEARCH_PROMPT3, the pre-rewrite deck snapshot).
-  - **The research-prompt discipline** — the multi-round, evidence-labelled, prohibition-guarded research
-    workflow the campaign developed (one deliverable scoped exhaustively; three rounds: broad census →
-    line-level coupling audit → docs triage; `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` labels; hard
-    prohibitions; adoption matrices; pre-registered mechanism-tagged predictions; do-not-cite lists) — is
-    written into `docs/operator_campaign.md` §18 as the procedure the operator agent follows when the docs
-    cannot answer a question it must settle. Pinned in `docs/skills/class_b_operator.md` and
-    `docs/operator/operator_runbook.md` §10.
-  - **`.gitignore`**: `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `dist/`, `.mypy_cache/`, `.tox/` added.
-  - The guide now carries the complete bring-up history: current method (§0–§12), the port case study (§13),
-    the prior-campaign autopsy (§13.4), and the audit trail (§13.5). Suite RC=0.
-- **2026-11-15 (48th) — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
-  Same treatment as the potential_configs fold: `docs/gfx90c/results.md` was historically gfx90c-specific evidence. It is now
-  `docs/gfx90c/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/gfx90c/results.md` is a
-  device-independent placeholder the agent populates per device — required sections (scoreboard with protocol+band,
-  per-cell verdicts, gate census, straggler classes, clock/thermal discipline), the like-for-like admission rule,
-  median-of-seeds, and the TTY-only rule. `docs/gfx90c/gfx90c_theoretical_limits.md` was already gfx90c-named; the new
-  `docs/gfx90c/theoretical_limits.md` is its device-independent twin — ISA identity by probe, peak derivation from
-  lanes×clock×throughput, the family table and the acceptance bar — referring to the gfx90c doc only as a golden
-  worked example, never as a source of numbers. Cross-pointers added in both gfx90c files; all ecosystem
-  references re-pointed (20 files); registry rows renamed + two template rows added; `docs/docs_index.json`
-  regenerated; no numbers, instruments or verdicts changed. Suite RC=0; `oto verify all` PASSED.
-- **2026-11-15 (49th) — owner-gated blocked items consolidated in `incomplete_work.md`.**
-  C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
-  anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
-  pointers; nothing actioned, nothing claimed.
-- **2026-11-15 (50th) — docs/gfx90c/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
-  `docs/gfx90c/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
-  Oct-2 overhaul accrual; the Oct-12 whittle/restore cycle that moved module-docstring facts into the code and
-  deleted `knowledge_base_final.md`; the Oct-14 corpus3 fold (+184 lines: the @e8a8999e defaults table and the
-  never-used-levers analysis, marked mechanism-verified/gain-unmeasured); the Oct-19 GCN5 literature folds). It is
-  now `docs/gfx90c/gfx90c_knowledge_base.md` (content unchanged, in-file pointer added), and the new `docs/gfx90c/knowledge_base.md`
-  is a device-independent template — required sections (What Is Tensile → Port mechanism → GlobalParameters →
-  Solution space → Footprint → Kernel levers source-audited → Measurement science → Preservation law → Glossary),
-  how the agent populates it (probe → pin evidence → derive, never inherit → 0 unlabeled claims), and the same
-  hard rules as the results/limits templates: the gfx90c file is the golden example, never a source of numbers.
-  22 files re-pointed; registry rows updated; docs/docs_index.json regenerated. Suite RC=0; `oto verify all` PASSED.
-- **2026-11-15 (51st) — knowledge_base.md mined and generalised twin created; the gfx90c doc family of four is settled.**
-  Full git history studied (27 commits; 454 → 858–866 lines): born 2026-09-19 (the port's WHAT-layer) → Oct-2 overhaul
-  accrual → the Oct-12 whittle/restore cycle (module-docstring facts moved into code; `knowledge_base_final.md` deleted)
-  → Oct-14 corpus3 fold (+184 lines: `@e8a8999e` defaults table + the never-used-levers analysis, marked
-  mechanism-verified/gain-unmeasured) → Oct-18 gate formalisation → Oct-19 GCN5 literature folds → Nov mechanical sweeps.
-  The file is now `docs/gfx90c/gfx90c_knowledge_base.md`; new device-independent `docs/gfx90c/knowledge_base.md` template (WHAT layer;
-  populated per device by the agent). Mining: era note (toolchain moved to nightly 2026-11-14), §6 footprint table delegated
-  to `docs/shipped_floor_contract.md` §2 (single source), §7 rate card delegated to `docs/gfx90c/gfx90c_theoretical_limits.md`
-  §5 + `oto.device.derive_limits` (single source of peaks), §8.2 now points at the gate modules as normative.
-  **Item 5 closed:** gfx90c-specific residue is absorbed or triaged — §6/§7/§8.2 delegated to their owners, §8.1/§8.3/§8.4/§7.1/§7.2
-  are the KB's own canonical content (kept, pointed), and the four gfx90c-specific docs are split deliberately, NOT folded into
-  the guide (documented in the guide §0a): bring-up case study + three golden examples. 22 files re-pointed; registry/index synced;
-  suite RC=0; `oto verify all` PASSED.
-- **2026-11-15 (52nd) — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
-  `oto/device/tensile_isa.py` `ISA_TRIPLES` now carries `gfx902 -> (9, 0, 0x02)` (public LLVM ISA-version
-  fact; not a measurement) so the CPU-only build proof can pin Tensile for gfx902 instead of refusing by
-  default. Rehearsal tests updated (16/16 green); `docs/operator/starter_pair.md` BLOCKED list updated — remaining:
-  profile + human verification + gfx902 silicon + the owner's API key, nothing else. The Tensile benchmark
-  client is built for gfx90c from ROCm/rocm-libraries `next-cmake` against the extracted TheRock
-  7.15.0a20260728 SDK (the venv HIP include shadows the nightly's hip headers; the full dist was used as
-  CMAKE_PREFIX_PATH with its amd_smi). The client landed at `build/client/tensile-client` and `oto doctor`
-  reports the row OK (21 ok, 0 FAIL); no `.env` change needed (doctor finds it at TENSILE_ROOT).
-  Toolchain/client contract formalised as `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh`
-  (CPU-only, fail-closed, parameterised by `--rocm-prefix`/`--targets`; tested in tests/test_build_tensile_client.py).
-  The CPU-only `oto check tensile-build --arch gfx902` probe fails honestly inside Tensile itself —
-  `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023`; the pinned checkout
-  contains no gfx902 anywhere; the nightly clang assembles gfx902 v_fma_f64 and correctly refuses gfx902
-  MFMA. What remains for the gfx902 bring-up is enumerated in `incomplete_work.md` (Open items):
-  the owner's 3-entry Tensile patch (SupportedISA + architectureMap + AsmCaps, the gfx90c precedent),
-  the human-verified `profiles/gfx902.json`, the API key, the TTY.
-- **2026-11-15 (53rd) — v1 release prep: every actionable item finished; the audit checklist is closed.**
-  - F-REPORT-4 closed: `_report_inputs` detects the degenerate like-for-like path (no analytics anywhere → the
-    unfiltered per-run walk as loud fallback), marks it `protocol_fallback=True`, threads it through `_report_payload`
-    into the `AcceptanceReport` model (`oto/metrics/report_models.py`) and writes `protocol_fallback` into
-    `acceptance_report.json`. Locked by `tests/test_report_protocol_fallback.py` (2/2); attested in
-    `drift_manifest.json` (ast_equivalence); `oto verify all` PASSED.
-  - Audit checklist (`docs/developer/audit_register.md` §3) fully closed, every item with evidence:
-    phases.yaml order is execution order — `tests/test_manifest_order.py`; the complete `should_run` gate
-    matrix — `tests/test_policy_should_run.py` (scope hit/miss, tier-1, tier-2, tier-1 precedence,
-    empty→RUN, identical-fp skip); single-writer SQLite + `json.dumps` verified line by line; telemetry
-    header-in-file tolerated-and-reported; peaks only in the profile loader (`oto.device.peaks` gone);
-    detached+killable GPU phases (setsid/kill/quit paths); `--phase-timeout` default 3600 s finite.
-  - Synthesis blind-union exposure annotated honestly (admission gate = agent.harvest LCB; best-effort carve
-    native→fallback→floor chain with provenance); no code change — the gate is deliberate and recorded.
-  - `incomplete_work.md`: F-REPORT-4 removed (closed); every remaining item is an owner gate (API key, GPU TTY,
-    human verification, owner word) — documented, marked owner-gated, never re-raised.
-  - Docs registry unchanged: no new doc added; no doc deleted; every registry row still matches a tracked file.
-- **2026-11-15 (53rd) — gfx902 pipeline readiness, CPU-side, complete.**
-  `oto/device/tensile_isa.py`: `ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)` (public LLVM ISA fact; not a
-  measurement) so the CPU-only build proof pins Tensile for gfx902. The 3-entry Tensile-side patch landed
-  in the rocm-libraries checkout (commit 386e90e): `SupportedISA` gains `(9, 0, 2)`,
-  `architectureMap["gfx902"] = "vega10"`, `AsmCaps[(9, 0, 2)]` (derived via Tensile's own
-  `GetAsmCaps()` against the TheRock nightly amdclang++ v23.0.0git — derived-vs-cached byte-identical to
-  gfx90c's entry). `oto check tensile-build --arch gfx902` passes end-to-end: CC
-  (MT=64x32x16/TT=4x2) and ZZ (MT=32x32x16/TT=2x2, `sols=1 vgpr<=71`). LLVM assembles gfx902
-  `v_fma_f64` and refuses gfx902 MFMA (`instruction not supported on this GPU (gfx902)`). The Tensile
-  benchmark client builds from `next-cmake` against the full TheRock 7.15 SDK (the venv's `include/hip`
-  shadows the nightly headers; use the dist prefix) and is installed at
-  `<TENSILE_ROOT>/build/client/tensile-client` — `oto doctor` reports the row OK (21 ok, 0 FAIL).
-  `docs/human/toolchain_client.md` + `scripts/build_tensile_client.sh` formalise the contract
-  (`--rocm-prefix`/`--targets`/`--tensile-root`/`--amd-smi-dir`; fail-closed; tested in
-  `tests/test_build_tensile_client.py`, 7 tests). `incomplete_work.md` updated: the gfx902 Tensile-port
-  step is closed (probe now passes) — what remains is `profiles/gfx902.json` (human verification),
-  the owner's API key (C4), the gfx902 TTY. `docs/operator/starter_pair.md` BLOCKED list updated accordingly.
-  Suite RC=0; `oto verify all` PASSED.
-- **2026-11-15 (54th) — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
-  Every function docstring in `oto/` rewritten to pdoc prose (135 `Args:`/`Returns:`/`Raises:` blocks eliminated;
-  383 missing function docstrings added; private helpers get one line; Sphinx `:func:`/`:data:` roles converted to
-  back-ticks; 22 mixin composition roots stated as dotted paths; `AbIdentityMixin` noted unused). Full suite green
-  throughout (1123 passed / 8 skipped; the 600-line and 60-line guards kept via compaction; one dead `pass` dropped).
-  Verifiers: the split-era check now PASSES at both `2824c2f` and `HEAD~1`; `verify_symbols.py` RENAMES table moved to
-  `drift_manifest.json` (the line-budget ratchet had dropped two real mappings, `ldspad_gate.py`→`ldspad.py` /
-  `occupancy_common.py`→`gate_common.py`, and false-reported whole-module API loss); restored mappings pinned by
-  `tests/test_verifier_renames.py`. `oto check tensile-build` CPU-only build proofs on gfx90c: all eight PASS
-  (CC af4em4/af22/base @256/512, ZZ DU8/DU16, trialD1) — `sols=1`; these are compilation verdicts, not GPU
-  dispatches (benchmark runs are the owner's TTY). `oto doctor` rc=0
-  (21 ok, 2 pre-existing advisory WARNs). Easy-mode `oto setup`: all wizard narration moved to stderr (stdout stays a
-  clean data channel), blank-default prompt artefact fixed, Ctrl-D path verified, UX contract pinned by
-  `tests/test_easy_mode_ux.py`. Docs: README rewritten around the recovery-pipeline vision (blog/grant material);
-  `docs/operator/operator_runbook.md` §19 blind convergence end-to-end (gfx902 worked instance, edge cases E1–E12, dead ends
-  D1–D6); `docs/agentic_consult.md` folded into `docs/developer/invariants.md` §3.6–§3.8 and removed as a standalone file;
-  registry deduplicated; `oto agent index` regenerated; `docs/overview.md` birds-eye fixed; Get Started/usage block
-  satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
-  computed as the deck does) — 281 phases, 0 illegal.
-- **2026-11-15 (55th) — docs ecosystem reorganised into subfolders + changelog/incomplete_work folded into docs/.**
-  `changelog.md` → `docs/changelog.md`, `incomplete_work.md` → `docs/incomplete_work.md` (evolution log + open
-  register live with the rest of the docs now; every reference in code, tests, docs and configs swept to the new
-  paths). The flat `docs/` directory split into subject folders: `docs/human/` (people), `docs/operator/`
-  (Class B bring-up: runbook, starter pair, gfx902 starter), `docs/developer/` (Class A: invariants, harness
-  runbook, docstrings convention, audit register, design language), `docs/gfx90c/` (the gfx90c golden case study +
-  device-independent templates), `docs/research/` (unchanged), `docs/skills/` (unchanged); `docs/README.md`,
-  `docs/overview.md`, `docs/cli.md` stay at top level with `docs/changelog.md` and `docs/incomplete_work.md`.
-  Registry regenerated; all in-tree references swept (`grep` old paths → 0 hits outside logs/ backups); all
-  markdown link targets resolve; `oto agent index` regenerated; docs test battery green.
