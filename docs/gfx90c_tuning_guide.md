@@ -903,7 +903,7 @@ every phase that produced a measurement and in none of the 951 that did not,
 corpus-wide — so the void run's GPU loss still trips it while
 run_20261018_004835's three and run_20261017_092909's five consecutive
 unbuildable tiles do not. Pinned by
-`tests/test_phase1_readonly_gpu.py::GpuLossAbortTests`.
+`tests/test_readonly_reporting.py::GpuLossAbortTests`.
 
 **Cause 2: the mutation arm cannot see the cells it exists to fix.** Of that
 run's 412 candidates, every single one went to a small cell that already beat the
@@ -1103,7 +1103,7 @@ CPU-only, safe under GNOME (the legality proof is `--dry-run`):
 
 ```bash
 python3 -m oto.harness.candidate_generator --dry-run   # 0 drops, 0 strips, 0 refusals
-python3 -m pytest -q tests/test_phase1_readonly_gpu.py tests/test_mutation_arm.py \
+python3 -m pytest -q tests/test_readonly_reporting.py tests/test_mutation_arm.py \
     tests/test_ab_audit.py tests/test_function_length.py tests/test_pyflakes.py
 ```
 
@@ -3418,10 +3418,13 @@ The following illegal/placeholder configs have been observed or are at risk:
    `ASEM % GSU == 0` check to the occupancy gate.
 7. **Z LDS byte count** (§6.1 of theoretical_limits.md) — the gate uses 8 bytes
    where Tensile uses 16. This is the most permissive family gate; correcting it
-   would refuse 67 kernels including the ZZ winner. Decision pending (user).
+   would refuse 67 kernels including the ZZ winner. **Resolved 2026-11-14: Z = 16
+   adopted, `LDS_BUDGET` kept at 16384** (§12.2).
 
-Tests to add: `tests/test_legality_virgin.py` pinning each new gate; extend
-`tests/test_occupancy_model_lds.py` with the new rules.
+Items 1–6 were forward-domain ideas recorded at the time; the gates that landed
+live in `oto/tensile/gates/` with their own tests (`tests/test_profile_gates.py`
+etc.). No `test_legality_virgin.py` was added — the note above predates those
+gates.
 
 ---
 
