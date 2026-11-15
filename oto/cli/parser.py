@@ -86,6 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_checks(sub)
     _add_library(sub)
     _add_agent(sub)
+    _add_setup(sub)
     _add_utility(sub)
     return parser
 
@@ -343,6 +344,35 @@ def _add_agent(sub: Any) -> None:
                    help="Overwrite an existing output file")
     c.add_argument("--with-docs", action="store_true",
                    help="Also generate the agent-1/agent-2 device docs beside the consult output")
+
+
+def _add_setup(sub: Any) -> None:
+    p = _add(sub, "setup", "Easy-mode onboarding: prepare oto for a new device",
+             "  oto setup\n"
+             "  oto setup --yes --convergence-mode blind\n"
+             "  oto setup --dry-run",
+             mutating=True)
+    p.add_argument("--yes", "-y", action="store_true",
+                   help="Non-interactive: take defaults, never prompt")
+    p.add_argument("--dry-run", action="store_true",
+                   help="Print the plan and the .env it would write; no writes")
+    p.add_argument("--force", action="store_true",
+                   help="Overwrite an existing .env")
+    p.add_argument("--convergence-mode", choices=("blind", "informed"),
+                   help="Convergence mode (default: blind)")
+    p.add_argument("--spoof", help="Spoof (reference floor) GPU codename (informed mode)")
+    p.add_argument("--rocm-prefix", help="ROCM install prefix (auto-detected if omitted)")
+    p.add_argument("--tensile-root", help="Tensile checkout root (auto-detected if omitted)")
+    p.add_argument("--gpu-targets", help="GPU targets for the client build (comma list)")
+    p.add_argument("--jobs", type=int, default=4, help="Parallel build jobs")
+    p.add_argument("--skip-build", action="store_true",
+                   help="Do not build the Tensile client")
+    p.add_argument("--build-client", action="store_true", default=True,
+                   help="Build the Tensile client if missing (default: on)")
+    p.add_argument("--write-env", action="store_true",
+                   help="Write the .env file (default: ask)")
+    p.add_argument("--codename", default="gfx90c",
+                   help="Target codename written into .env hints (default: gfx90c)")
 
 
 def _add_utility(sub: Any) -> None:

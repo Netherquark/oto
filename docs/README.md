@@ -108,6 +108,7 @@ Corollaries:
 | `docs/operator_runbook.md` | operator | Ecosystem | **Class B entry** — best-effort library on an unsupported AMD platform, end to end |
 | `docs/operator_campaign.md` | operator | Ecosystem | The persistent autonomous tuning campaign: corpus study → straggler classes → candidate routes → consultation triggers |
 | `docs/starter_pair.md` | operator | Ecosystem | The starter Markdown+JSON pair protocol |
+| `docs/setup.md` | operator | Ecosystem | Easy-mode onboarding: questions + auto-detect + .env + client build + doctor |
 | `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |

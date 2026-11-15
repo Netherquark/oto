@@ -211,6 +211,11 @@ def run_doctor(args: Any) -> int:
     return _run(_adapter.base_dir(args), json_mode=args.json, quiet=args.quiet)
 
 
+def run_setup(args: Any) -> int:
+    from oto.runners.onboarding import run_setup as _run_setup
+    return _run_setup(args)
+
+
 def run_check(args: Any) -> int:
     name = args.check_cmd
     base = str(_adapter.base_dir(args))
@@ -490,6 +495,7 @@ def dispatch(args: Any, parser: Any) -> int:
 
     handlers: dict[str, Callable[[Any], int]] = {
         "tune": run_tune, "run": run_stages, "bench": run_bench,
+        "setup": run_setup,
         "status": run_status, "report": run_report, "doctor": run_doctor,
         "preflight": run_preflight, "candidate": lambda a: run_stage("candidate", a),
         "retirement": lambda a: run_stage("retirement", a),

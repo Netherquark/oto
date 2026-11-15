@@ -242,6 +242,12 @@
     {
       "class": "operator",
       "kind": "Ecosystem",
+      "owns": "Easy-mode onboarding: questions + auto-detect + .env + client build + doctor",
+      "path": "docs/setup.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
       "owns": "Zero-spec pair template the operator copies",
       "path": "docs/starter_template.md"
     },
@@ -277,6 +283,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 37,
+  "total": 38,
   "version": 1
 }
