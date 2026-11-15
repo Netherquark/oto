@@ -46,11 +46,8 @@ _CACHE: dict[tuple[str, int, int], Any] = {}
 def load_yaml_text(text: str) -> Any:
     """Parse YAML text with the fastest safe loader available.
 
-    Args:
-        text: The YAML document.
-
-    Returns:
-        The parsed document (None for an empty document).
+    `text` is the YAML document; returns the parsed document (``None`` for an
+    empty document).
     """
     return yaml.load(text, Loader=_LOADER)
 
@@ -58,11 +55,8 @@ def load_yaml_text(text: str) -> Any:
 def load_yaml(path: str | Path) -> Any:
     """Read and parse a YAML file.
 
-    Args:
-        path: The file to read.
-
-    Returns:
-        The parsed document, or None when the file is empty.
+    `path` is the file to read; returns the parsed document (``None`` when the
+    file is empty).
     """
     return load_yaml_text(Path(path).read_text())
 
@@ -70,12 +64,9 @@ def load_yaml(path: str | Path) -> Any:
 def load_yaml_cached(path: str | Path) -> Any:
     """Read and parse a YAML file, memoised by its content stamp.
 
-    Args:
-        path: The file to read.
-
-    Returns:
-        The parsed document. A file whose size or mtime changed is re-read, so
-        a rewritten deck is never served from a stale cache.
+    `path` is the file to read. Returns the parsed document; a file whose
+    size or mtime changed is re-read, so a rewritten deck is never served
+    from a stale cache.
     """
     p = Path(path)
     try:
@@ -96,9 +87,7 @@ def load_yaml_cached(path: str | Path) -> Any:
 def dump_yaml(payload: Any, path: str | Path) -> None:
     """Write a YAML document the way the project writes them.
 
-    Args:
-        payload: The document to write.
-        path: The file to write it to.
+    `payload` is the document to write; `path` is the file to write it to.
     """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)

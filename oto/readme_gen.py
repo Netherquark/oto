@@ -123,6 +123,7 @@ def render() -> str:
 
 
 def main() -> int:
+    """Regenerate ``oto/README.md`` from the live docstrings (CLI entry)."""
     HERE.joinpath("README.md").write_text(render())
     print(f"wrote {HERE / 'README.md'}")
     return 0
