@@ -1,15 +1,75 @@
 # Adding a device: the Markdown+JSON starter pair
 
-Refactor 2 turns oto into a device-independent port. A new device enters
-through a **starter pair**, never through a code edit:
+Refactor 2 turns oto into a device-independent port. A new device enters through a
+**starter pair**, never through a code edit:
 
 ```
 docs/<codename>_starter.md     narrative: what the device is, what you want
 docs/<codename>_starter.json   facts: the profile oto loads
 ```
 
-The markdown says who the device is; the JSON says what it is. Keeping the two
-in one file would make either the prose or the machine facts unreadable.
+The markdown says who the device is; the JSON says what it is. Keeping the two in one
+file would make either the prose or the machine facts unreadable.
+
+**This file is the master checklist for bringing a device up from zero.** Everything
+on the "what must work" path is tagged **PROVEN**,
+**BLOCKED** (needs the API key / human verification), or **UNPROVEN**
+(silicon-dependent — never assumed). The order below is the order to walk.
+
+## 0. The device-independent bring-up order
+
+Any new device exercises the same gate path. The stages below land in the same order
+regardless of the target part; their contents differ.
+
+### Stage A — pre-flight (no GPU, no key)
+
+| Step | Command | What it proves |
+|---|---|---|
+| A1 | `oto check candidates --quiet` | 280-row deck sane on the ambient profile (280/0 illegal today) |
+| A2 | `oto agent consult` (on a stub pair) | Agent pipeline writes a gate-checked `potential_configs.md` |
+| A3 | `oto agent index` | Docs index (`docs/docs_index.json`) regenerates |
+| A4 | `oto doctor` | Honest status of `.env`/`TENSILE_ROOT`/`ROCM_PATH`/registry |
+| A5 | `python3 -m pytest -q` | Suite is green; rehearsal suite covers the class-B path |
+
+These steps are CPU-only and **already runnable**. If A1–A5 pass on your stub,
+the repo is ready for a new-device campaign; nothing gfx902-specific has been
+added to make that possible.
+
+### Stage B — write the pair and load it
+
+- `docs/<codename>_starter.md` — narrative identity + what you want; it
+  loads as the device identity today.
+- `docs/<codename>_starter.json` — facts. **A zeroed stub refuses to load**
+  (`oto/device/loader.py:load_profile_from_starter` fails loudly). This is the
+  gate.
+- The agent prints a **directed** research prompt (see `oto/agents/context.guided_question`); with an `OTO_API_KEY`/`OPENAI_API_KEY`/`ANTHROPIC_API_KEY` the agent fills an `UNVERIFIED` section — with none, the section is simply absent. The agent never invents facts.
+- The stub also gates anything downstream: **A real-profile** path is not
+  exercisable until the human says "this is an honest gfx902".
+
+### Stage C — human verification gate
+
+A human cross-checks **every** value against first-party sources (AMD ISA
+manual, the SKU spec sheet, the rocminfo dump). Only after the human check does
+the stub populate into a real profile; promotion to `profiles/<codename>.json`
+is a manual copy made by the human.
+
+### Stage D — build on the device itself (TTY only)
+
+- `oto tune` — needs the device's GPU. This step is *never* run in a desktop
+  session; it is for a TTY on the target machine.
+- `oto report` — produces `<codename>_results/acceptance_report.{json,html}`.
+- `oto check library-parity` — the 38/38-style check the reference device has.
+
+**Each step above is expected on a fresh device**; none required code.
+
+**BLOCKED items (true today):**
+- `oto/device/tensile_isa.py:ISA_TRIPLES` — does not carry the gfx902 triple.
+- `profiles/<codename>.json` — no real gfx902 profile on disk.
+- No gfx902 silicon to run Stage D on. Nothing else is blocked.
+
+**UNPROVEN (no claim, ever):** every assumption about gfx902's behavior in
+Tensile — legal accepted knob sets, matrix legality, perf. Nothing in the repo
+may claim silicon-dependent facts until the human check produces numbers.
 
 ## The sync rule
 
@@ -25,10 +85,10 @@ codename: <codename>
 { "codename": "<codename>", ... }
 ```
 
-`oto.device.loader.load_profile_from_starter()` enforces this: a mismatch is
-a hard error, not a warning. Once the values are verified, the JSON half is
-promoted to `profiles/<codename>.json` and oto's `--codename <codename>` path
-works with zero code changes.
+`oto.device.loader.load_profile_from_starter()` enforces this: a mismatch is a hard
+error, not a warning. Once the values are verified, the JSON half is promoted to
+`profiles/<codename>.json` and oto's `--codename <codename>` path works with zero
+code changes.
 
 ## Division of labor
 
@@ -59,29 +119,20 @@ Research is auto-enabled when an API key is visible in the environment:
 the default model; `OTO_API_TIMEOUT` (default 60 s) and
 `OTO_API_MAX_TOKENS` (default 2048) tune the call.
 
-**Everything the agents write under `## Research (UNVERIFIED ...)` is
-unverified.** The research path exists to *gather candidate facts*; it does
-not write the profile. Numbers reach `profiles/<codename>.json` only after a
-human checks them against first-party sources (AMD ISA reference, ROCm
-release notes, the SKU spec sheet). An agent-researched profile that ships
-unverified is a bug, not a feature.
+**Everything the agents write under `## Research (UNVERIFIED ...)` is unverified.**
+The research path exists to *gather candidate facts*; it does not write the profile.
+Numbers reach `profiles/<codename>.json` only after a human checks them against
+first-party sources (AMD ISA reference, ROCm release notes, the SKU spec sheet). An
+agent-researched profile that ships unverified is a bug, not a feature.
 
-## The gfx902 pair (you're verifying on gfx902 next)
+## Stage A–D worked example
 
-`docs/gfx902_starter.md` + `docs/gfx902_starter.json` are the worked
-example in this repo. What is known from public sources:
+For this repo, the worked example is the gfx90c family — see `profiles/gfx90c.json`
+and the docs here. New devices follow the same Stage A–D walk.
 
-- LLVM's AMDGPU docs map `amdgpu9.02` to `gfx902` (xnack- and xnack+
-  encodings exist), i.e. a Vega-ISA part — the GCN 5 family, same ISA
-  lineage the gfx90c tuning work was done on.
-- Public GPU tables list GFX902 as RAVEN (Raven Ridge / Picasso),
-  used in Ryzen 2000/3000(G/GE) APUs.
-
-Everything else — exact SKU CU count, clocks, peaks, family shapes —
-is a **research question for the agents, verified by a human against
-first-party sources**, then transcribed into `profiles/gfx902.json`.
-The shipped `.json` stub deliberately fails the loader's unverified
--profile sanity check, so it cannot be tuned against by accident.
+`docs/gfx902_starter.md` + `docs/gfx902_starter.json` are a stub for a device
+oto has neither measured nor validated; they exercise the unverified-refusal path.
+See `docs/starter_template.md` for a blank template example.
 
 ## Minimal recipe
 
@@ -117,3 +168,20 @@ The shipped `.json` stub deliberately fails the loader's unverified
 * It does not run on a device it cannot see. CPU-only steps (doc generation,
   profile synthesis, gates, tests) are fine anywhere; actual tuning runs belong
   in a TTY on the target machine.
+
+## The bring-up gate, restated
+
+```
+   A1  Deck sanity                         — anywhere, no key
+   A2  Agent consult                       — anywhere, no key
+   A3  Agent index                         — anywhere
+   A4  Doctor reports honestly             — reports what is present
+   A5  pytest green                        — gates every edit
+  ─────  human verification gate  ─────
+   C   VERIFIED profile promoted           — a human decision
+  ─────  device runs in a TTY only ─────
+   D   tune / report / parity              — TTY-driven, GPU-required
+```
+
+A new device is ready when Stage A passes on its stub and the silicon is
+verified to behave. Everything between is a human's call.

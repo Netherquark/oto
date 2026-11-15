@@ -33,8 +33,8 @@ def _knob_section() -> list[str]:
         "| StoreCInUnroll / UnrollMajorLDS | Compute epilog | classic path only |",
         "| WorkGroupMapping | row/col mapping | miso row/col heuristics |",
         "",
-        "See `docs/gfx90c_tuning_guide.md` for the fully-worked GCN (gfx90c) example;",
-        "its rules are gfx90c-specific and **do not transport to another ISA family**.",
+        "See `docs/gfx90c_tuning_guide.md` for the portability notes from one worked example;"
+        "its rules are gfx90c-specific and **do not transport to another ISA family without checking**."
         "",
     ]
 
@@ -51,7 +51,7 @@ def generate(profile: DeviceProfile, theoretical_limits_doc: str = "",
                 f"which families of the shipped Tensile matrix matter for this device, "
                 f"the ISA decisions an autotuner has to make (vector width caps, load-width caps, "
                 f"thread-tile divisibility, GlobalSplitU and AssertFree restrictions, the LDS pinning rules), "
-                f"and how the FP64 1/16 throughput position on GCN shapes the family weights. "
+                f"and how the fast-half-float and FP64 rates for this device shape the family weights (e.g. FP64 = 1/16 on Vega/GCN, 1:2 or 1:1 on RDNA). "
                 f"Deliver per-family: preferred macro-tile shapes, preferred vector width, "
                 f"Papyrus VGPR pressure, and one line on why."))
         except Exception as exc:  # pragma: no cover

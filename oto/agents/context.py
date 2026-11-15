@@ -6,8 +6,8 @@ the shape of what each agent asks for is owned by the agent, this module
 just packages it for the cheap case.
 
 Directed prompts beat open-ended ones: when the profile is known, an agent
-that asks "what is gfx902" gets a 300-word encyclopedia; an agent that asks
-"AMD ISA reference section for gfx902: which CU count do the RAVEN SKUs ship?"
+that asks "what is the device" gets a 300-word encyclopedia; an agent that asks
+"AMD ISA reference section for this ISA: which CU count does the SKU ship?"
 gets an answer a human can verify. The caller decides which form to use;
 this package builds the framing block it shares.
 """

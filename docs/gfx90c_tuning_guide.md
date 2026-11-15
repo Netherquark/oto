@@ -700,3 +700,26 @@ recognises trailing-defaulted-`profile=None` shape evergreen. End-to-end coverag
 `tests/test_explicit_profile_threading.py` (complex GSU>1: gfx90c refuses,
 MFMA-capable synthetic passes). Full suite 1061 passed at landed state;
 `oto verify all`: **ALL EQUIVALENCE CHECKS PASSED**.
+### 12.6 AF2/2 vs AF4/4 A/B and the gfx902 endpoint (2026-11-15, owner decision)
+
+Both arms were accepted on legality alone (gate-passes verified; no
+silicon timing claimed). The A/B against AF2/2 (paired-widen) and the
+AF1 baseline rows is the overnight TTY job; no perf claim has been made
+anywhere in the repo, and no claim will appear until a TTY session
+produces it. The AF4/4 rows shipped 2026-11-14 on the vendor's SGEMM
+recipe alignment, NOT on silicon.
+
+The gfx902 ask is correct framing: the library for the gfx902 endpoint
+does not exist yet, nor does the native-arm corpus on that device. The
+bring-up order is sealed in `docs/starter_pair.md §0 (bring-up order)`:
+
+1. A human-verified profile (`profiles/gfx902.json`), against AMD's ISA
+   reference manual — nothing else.
+2. `oto agent consult docs/gfx902_starter.md --force` produces a candidate
+   deck against the gates (CPU-only, no GPU).
+3. `oto check candidates` — must be 0 illegal.
+4. Benchmark the vf1 deck end-to-end (TTY only).
+
+Currently, the agent-unverified stub refuses to load (by design), no
+gfx902 TensileLibrary exists, and no AF2/2/4/1 perf claim exists in any
+artifact. No claim that does not appear here or in the changelog exists.
