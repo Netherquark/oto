@@ -1,4 +1,5 @@
 """The measured VGPR model: tables and budgets the occupancy gate cites.
+NOTE: Tables are gfx90c-calibrated (measured on this iGPU via the VGPR measurement harness). Another device re-measures; do not reuse wholesale.
 
 Owns: the numbers the register-file gate needs and cannot derive -- the global
 load byte cap, the family bytes-per-element table, the per-dtype VGPR weights,

@@ -48,7 +48,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``tensile/gates/loads.py`` — Classic-path global-load divisibility, and the 16 B load-width cap.
 * ``tensile/gates/memo.py`` — A content-keyed memo for the pure legality gates.
 * ``tensile/gates/occupancy.py`` — Register-file and LDS occupancy gates.
-* ``tensile/gates/vgpr_model.py`` — The measured VGPR model: tables and budgets the occupancy gate cites.
+* ``tensile/gates/vgpr_model.py`` — The measured VGPR model: tables and budgets the occupancy gate cites. NOTE: Tables are gfx90c-calibrated (measured on this iGPU via the VGPR measurement harness). Another device re-measures; do not reuse wholesale.
 
 ### ``tensile/synthesis/``
 

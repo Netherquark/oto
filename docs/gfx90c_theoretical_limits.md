@@ -10,6 +10,19 @@
 > roofline/boundary thresholds (§3) remain first-party-derived and
 > measure-anchored as before.
 
+## 0a. Scope of every floor and ceiling in this file
+
+- Every measured/admitted number in this document (register budgets, LDS budget,
+  7-CU geometry, wave64, fast F16 paths, gfx90c GFLOPS peaks) is **gfx90c-specific**
+  and is *not* an architecture universal. A new device profile (C4/C7.1) re-measures
+  and re-derives; never re-export these constants without device-level evidence.
+- The gate tables in `oto/tensile/gates/vgpr_model.py` are calibrated to the
+  measured gfx90c VGPR model. Their gfx90c scope is intentional; another device
+  must run the VGPR measurement harness (`oto/harness/vgpr_measurement.py`) to
+  rebuild them; the tables are not portable by copy-paste.
+- The `LDS_BUDGET = 16384` bytes decision (Tensile's `Z: reg=4`) is a compute-CU
+  constant of the gfx90c part, not of GCN as a whole. Protect it accordingly.
+
 ## 0. How this file is used
 
 - **Acceptance sourcing:** every oto family ceiling in `docs/potential_configs.md` /
