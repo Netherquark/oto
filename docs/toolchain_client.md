@@ -152,3 +152,27 @@ troubleshooting table. The most common failure modes:
 - oto drives Tensile via `TENSILE_ROOT` (env / `.env` / `--tensile-root`); no hardcoded paths.
   Full SDK required: `<prefix>/include/hip/amd_detail/amd_warp_functions.h` must exist.
 - The client resolves via `--prebuilt-client` (Tensile v4.50.0 dropped `--client-build-path`).
+
+
+## Migration context (folded from context.md / context_raw.md)
+
+- Tensile moved into ROCm/rocm-libraries `shared/tensile/`; use that as
+  `TENSILE_ROOT`. The standalone ROCm/Tensile default branch is frozen at
+  pinned Tensile 4.44.0 — do not clone it expecting current code.
+- Native gfx90c registration is upstream (`SupportedISA` (9,0,12),
+  `architectureMap['gfx90c']='vega10'`, `AsmCaps` (9,0,12)); do not re-add.
+- Non-MFMA assembly generation remains available (`KernelWriterAssembly`,
+  `KernelLanguage: Assembly`).
+- Largest migration blocker: benchmark client CLI changed — `--client-build-path`
+  removed; build `tensile-client` separately and pass `--prebuilt-client`.
+- Toolchain discovery: current Tensile removed `HipConfig`/`supportedHip`; it
+  discovers ROCm version via `ROCM_VERSION` or version files. Logic YAML parsing
+  now requires `ArchitectureName` and validates
+  `architectureMap[ArchitectureName] == ScheduleName`.
+- Library output may now live under `library/<arch>/`.
+- ROCm version premise needs clarification before finalizing Part 2: TheRock
+  nightly stream is ROCm 10.1.0a; ROCm 7.14 nightlies are on legacy indexes.
+- Parameter compatibility is good: 157 `validParameters` names identical between
+  pinned 4.44.0 and current 4.49.0; default benchmark common parameters identical.
+- Local oto audit remains incomplete without the owner's machine; file paths and
+  coupling rows are hypotheses until verified locally.
