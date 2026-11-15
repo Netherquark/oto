@@ -3287,6 +3287,17 @@ The driver uses only existing solvers:
   gfx90c theoretical limit as closely as possible. The theoretical limit is fixed by
   `gfx90c_theoretical_limits.md` (rocminfo + first-party cross-checked; see that file).
 
+- **2026-11-15 (57th) — gfx902 CC-family build proof complete; nightly SDK container cross-verify (oto tooling only).**
+  `oto check tensile-build --arch gfx902 --family CC --jobs 4`: **49 passed, 0 failed,
+  49 total** — every phase `sols=1`, vgpr≤79; CPU-only compile + Tensile
+  solution-construction verdicts (no gfx902 silicon exists on this box; no gfx902 GPU
+  dispatch claimed).
+  Cross-verify of the two nightly SDK containers (both 7.15.0a20260728), scoped to oto:
+  `oto doctor` identical (22 ok / 1 advisory / 0 fail); `oto check tensile-build --phase-id
+  phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_af4em4 --arch gfx90c` PASS in both
+  containers (sols=1, vgpr≤79). Nothing else was verified: no oto GPU performance leg,
+  no runtime A/B, no external project's acceptance flow.
+
 ## Undated history — attempt2 → oto build-out (undated by construction; original order preserved)
 
 - **All-zero acceptance report FIXED (arm-scope asymmetry).** The spoof arm resolved
