@@ -314,7 +314,8 @@ def _add_library(sub: Any) -> None:
              mutating=True)
     b.add_argument("--dest", help="Destination directory")
     b.add_argument("--protocol-basis", choices=("family", "any", "single", "partial"),
-                   default="family", help="Protocol basis for carving")
+                   default=None,
+                   help="Protocol basis for carving (default: 'any', the across-all-runs view)")
     add_dry_run_flag(b)
 
 

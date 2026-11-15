@@ -397,7 +397,7 @@ Flags:
 - `--no-input` — Never prompt; take documented defaults or fail
 - `--no-color` — Disable ANSI colour (also honours NO_COLOR)
 - `--dest` — Destination directory
-- `--protocol-basis` {family,any,single,partial} (default: `family`) — Protocol basis for carving
+- `--protocol-basis` {family,any,single,partial} — Protocol basis for carving (default: 'any', the across-all-runs view)
 - `-n`, `--dry-run` — Show what would happen without executing
 
 ### `oto preflight`

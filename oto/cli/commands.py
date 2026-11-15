@@ -271,7 +271,8 @@ def run_library_best_effort(args: Any) -> int:
     argv = ["--base-dir", str(_adapter.base_dir(args)), "--best-library"]
     if args.dest:
         argv += [args.dest]
-    argv += ["--protocol-basis", args.protocol_basis]
+    if args.protocol_basis:
+        argv += ["--protocol-basis", args.protocol_basis]
     if args.dry_run:
         argv += ["--dry-run"]
     return _adapter._call(argv, cli_main)
