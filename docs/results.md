@@ -1,5 +1,11 @@
 # Benchmark Results: gfx90c (Cezanne-family APU iGPU)
 
+> **Corpus caveat:** the live-ledger sections of this page describe the
+> author's machine's `gfx90c_results/registry.db` — gitignored local state,
+> not a reproducible artifact. A fresh clone has an empty ledger; the frozen
+> prior-derived numbers (sections marked frozen) are the only ones that ever
+> meant something outside this machine.
+
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
 > `archive/prior_insights.md`, also absorbed in `archive/prior_research_archive.md`).
 > This file's hand prose is preserved append-only

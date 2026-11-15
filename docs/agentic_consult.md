@@ -6,6 +6,15 @@ work. Phases 0–2 are implemented (`oto agent consult`); phases 3–4 are the G
 and the gfx902 first-light run, both blocked on budget/key. The spec below is the
 full flow; the gfx90c campaign's method, encoded.
 
+> **Status vs shipped (read once):** what exists today is `oto agent consult [starter] [--with-docs]`
+> and the legacy `oto agent generate`/`oto agent index` verbs — CPU-only consult
+> emitting `<codename>_potential_configs.md` (see `oto/agents/census_consult.py` and
+> `docs/gfx902_starter.md`). Everything marked *design* below is NOT implemented:
+> `OTO_AGENT_ALL`, `--full`, `--trials-per-family`, doctor's `research_key`/`deck_ready`/`probe_complete`
+> checks, `tests/test_research_key.py`, the oracle-filter stage (`oto run_probes`/`--probe`),
+> and the sweep-size guesser have no code. Sections describing them are kept as the design
+> spec and say so inline; they are not a description of current behaviour.
+
 ## §0. The goal, in one sentence
 
 Given a starter file for a GPU that oto has never seen, plus an LLM API key,
@@ -90,9 +99,9 @@ harness=None)` returning a dict of synthesised artifacts (which docs and
 overlay files were written). Owns: the stage order, the dependency graph,
 and the never-return-an-incomplete-result-while-leaving-a-dead-file rule.
 Does NOT own: content generation (agents do), stage semantics, scoring.
-`oto agent generate` becomes this module when `OTO_AGENT_ALL=1` is set or
-`--full` is passed (§§5–8 ship as a single opt-in today; splitting it into
-selectable stages is deliberate).
+*(Design — not implemented.)* `OTO_AGENT_ALL` and `--full` do not exist today;
+this module ships as `oto agent consult`. If this stage ever lands, §§5–8 would be
+a single opt-in today; splitting it into selectable stages is deliberate.
 
 Pipeline:
 
@@ -128,7 +137,7 @@ touching the GPU. Track 0-GPU cost; it delays nothing.
 
 ### §3.3 Stage: funnel size per family
 
-Each family gets a benchmark budget (`--trials-per-family`, default 8,
+*(Design — not implemented; `--trials-per-family` exists nowhere in code.)* Each family gets a benchmark budget (`--trials-per-family`, default 8,
 overridable by a header line in the starter). The sweep pattern ordered by
 expected value is:
 
@@ -168,7 +177,7 @@ output (.dat path + manifest) is appended at §H.
 
 ### §3.5 `oto doctor`
 
-New checks: `research_key` (source: starter|env|missing — never prints the
+*(Design — not implemented; doctor has no `research_key`/`deck_ready`/`probe_complete` rows.)* New checks: `research_key` (source: starter|env|missing — never prints the
 key), `deck_ready`, `probe_complete`. Log file always exists at
 `oto_<phase>.log` under the run dir — gitignored with the rest of runtime
 logs.
@@ -193,9 +202,7 @@ documents" at the top of every generated doc). Keys are never:
 - committed to the repo (the starter files are user-local; the starter parser
   never writes api_key into anything derived).
 
-`oto doctor` reports `research_key: starter|env|absent` and never the value.
-`tests/test_research_key.py` under-covers this forever: it is the test that
-should be impossible to write wrongly.
+*(Design — not implemented.)* Doctor does not report `research_key` today; `tests/test_research_key.py` does not exist. Both are design placeholders.
 
 ## §5. What the operator does
 
@@ -210,7 +217,7 @@ api_key: $MY_KEY
 START
 
 # 2. one command, from repo root, GPU in TTY
-python3 -m oto agent generate my_gpu_starter.md --full
+python3 -m oto agent consult my_gpu_starter.md
 
 # 3. read the report, commit the doc, done
 oto report

@@ -34,8 +34,11 @@ python3 -m pytest -q               # dev suite; needs requirements-dev.txt
 ```
 
 The GPU stages are gated on the owner's whitelist (see `claude.md`); every
-CPU-only command works out of the box. License: GPL-3.0-or-later — see
-[LICENSE](LICENSE) and [NOTICE](NOTICE).
+CPU-only command works out of the box. The intended working-data tree is
+gitignored on purpose (`gfx90c_results/`, `gfx90c_runs/`, `registry.db`), so a
+fresh clone carries an *empty* ledger — its baked-in benchmark corpus is the
+author's, not the repo's. License: GPL-3.0-or-later — see [LICENSE](LICENSE)
+and [NOTICE](NOTICE).
 
 ---
 

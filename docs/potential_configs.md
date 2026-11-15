@@ -3382,7 +3382,7 @@ verdict pairs only same-protocol records on both arms; the pre-basis
 mixed winner and the isolated single-problem reading stay in the payload as
 `native_best_any_protocol` / `native_isolated_best` (nothing previously
 printed disappears). Stamps land in `ab_records`/`ab_delta`/`ab_audit`/
-`ab_band`/`reporting`/`analytics_loaders` (RED/ORANGE basis) /
+`ab_band`/`acceptance_reporting`/`corpus_loaders` (RED/ORANGE basis) /
 `kernel_db` (`n_problems` + `protocol` per row) / `coverage_map`
 (`--protocol`, default family). §56.3-B (per-cell protocol-normalised
 quoting from the R50a iso twins) remains open pending tonight's run.
