@@ -5,8 +5,8 @@ Owns: what an oto run *is* -- the Tensile root and ROCm toolchain resolution, th
 ledger/analytics/mutator/agent wiring, signal handling, the Tensile subprocess
 environment, the preflight check, and the run-wide live status panel.
 ``TensileDriver`` is the composition root: it inherits one mixin per
-responsibility (benchmark.py, phases.py, reference.py, auto.py, reporting.py,
-clocks.py, timing.py, synthesis.py) and owns nothing else.
+responsibility (benchmark.py, phase_runner.py, reference_floor.py, convergence_loop.py,
+acceptance_reporting.py, clock_telemetry.py, timing.py, library_build.py) and owns nothing else.
 Does NOT own: the gates (oto.tensile.gates), the verdict model (oto.metrics), or
 durable state (oto.ledger).
 Public API: TensileDriver, NOT_A_TENSILE_PARAM, _TENSILE_VALID_PARAMS.

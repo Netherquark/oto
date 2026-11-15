@@ -20,8 +20,7 @@ import yaml
 
 import oto.tensile.best_effort_library as bestlib
 import oto.tensile.shipped_floor_manifest as tlib
-from oto.agents import agent_tools as harness_tools
-from oto.agents import meta_agent as agent_meta
+from oto.agents import agent_tools, meta_agent
 from oto.agents.research_client import make_researcher
 from oto.device import loader as _loader
 from oto.tools import potential_configs
@@ -178,8 +177,8 @@ class SynthesisMixin:
             text = ""
         researcher = make_researcher(starter_text=text)
         def harness_fn():
-            return harness_tools.build_harness_study(self.base_dir, profile)
-        result = agent_meta.run(profile, text, research=researcher,
+            return agent_tools.build_harness_study(self.base_dir, profile)
+        result = meta_agent.run(profile, text, research=researcher,
                                 harness=harness_fn)
         # write docs
         out_dir = self.base_dir

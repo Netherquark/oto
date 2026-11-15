@@ -224,7 +224,7 @@ def arm_record_sets(base: Path = BASE, profile=None) -> tuple[list[dict[str, Any
 
     `native` is the whole native corpus (every `run_*` directory plus every
     registry `benchmark_result` row) and `floor` is the recalled gfx900 reference
-    chain, matching how `report.py` scopes its own comparison.
+    chain, matching how `acceptance_report.py` scopes its own comparison.
 
     Factored out so the measured band has exactly one definition: a coverage
     report that recomputed its own inputs from a different subset would grade

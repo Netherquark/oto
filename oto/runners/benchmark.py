@@ -7,7 +7,7 @@ write, ledger records, telemetry tag, launch, timeout/failure recovery) and
 tee, the key poll, the CSV collection). Also the two shared mechanisms those
 need: ``_read_key`` (single owner of stdin) and ``_apply_cooldown``.
 Does NOT own: what makes a config legal (oto.tensile.gates), what a config is
-(oto.tensile.config_writer), or which phases run in what order (phases.py).
+(oto.tensile.config_writer), or which phases run in what order (phase_runner.py).
 Public API: BenchmarkMixin.
 """
 

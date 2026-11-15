@@ -364,8 +364,8 @@ def _main(argv, build_report) -> int:
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="example:\n"
-               "  python3 run_status.py\n"
-               "  python3 run_status.py --plan rerun_illegal=no "
+               "  python3 -m oto.metrics.run_status\n"
+               "  python3 -m oto.metrics.run_status --plan rerun_illegal=no "
                "rerun_underspecified=yes iterations=4 --thermals\n")
     ap.add_argument("--base", default=str(Path(__file__).resolve().parents[2]),
                     help="repository root (default: this file's directory)")

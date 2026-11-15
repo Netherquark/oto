@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""the analytics stage analytics: CSV loading and per-cell aggregation.
+"""The analytics stage: CSV loading and per-cell aggregation.
 
 Owns: ``AnalyticsEngine`` -- the composition root over the family-attribution
 helpers (family_attribution), the A/B delta (ab_delta) and the cell-coverage
@@ -105,7 +105,7 @@ class CellAnalytics:
 
 
 class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
-    """the analytics stage analytics engine."""
+    """The analytics-stage engine."""
 
     def __init__(self, registry, base_dir: Path, profile=None):
         """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""

@@ -2,7 +2,7 @@
 """The run plan and the cost model that prices it.
 
 Owns: ``RunPlan`` (what the user asked for -- reruns, iterations, mutations, deck), ``PhaseCost`` (observed minutes per decided phase, sampled from completed reference runs), ``Estimate`` (ETA/progress) and the two unit counters that turn a plan into a workload.
-Does NOT own: the telemetry it samples (read_thermals), the report it feeds (build_report) or the live panel (render).
+Does NOT own: the telemetry it samples (thermal_telemetry.py), the report it feeds (build_report) or the live panel (render).
 Public API: RunPlan, PhaseCost, Estimate, _reference_unit_count, _tuning_unit_count, ACTIVE_STATES."""
 
 from __future__ import annotations

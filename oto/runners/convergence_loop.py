@@ -4,7 +4,7 @@
 Owns: ``run_auto`` -- preflight, establish or resume the reference floor, then
 iterate (manifest -> run_phases -> retire -> analytics -> converged? ->
 harvest/mutate) until the budget or the convergence verdict ends it.
-Does NOT own: the floor it calls (reference.py), the phases it runs (phases.py),
+Does NOT own: the floor it calls (reference_floor.py), the phases it runs (phase_runner.py),
 or the plan it asks the user for (oto.runners.auto_prompt).
 Public API: AutoMixin.
 """

@@ -8,7 +8,7 @@ reference corpus via the rerun/shipped manifests, folding pre-``phase_key``
 records onto their current key, and the per-tier book-keeping
 (``_tier_rows``). Also the module-level ``DB_REL`` registry path and the
 ``ACTIVE_STATES`` in-flight vocabulary.
-Does NOT own: the estimate/ETA pricing or the report dict (report_build),
+Does NOT own: the estimate/ETA pricing or the report dict (build_status.py),
 the plan itself (oto.metrics.run_plan), or the renderer (render_status).
 """
 

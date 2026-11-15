@@ -4,7 +4,7 @@
 Owns: ``ABVerdict`` (one native-vs-spoof comparison) and ``AcceptanceReport``
 (the whole report's payload). Nothing else in the metrics package defines a
 report payload.
-Does NOT own: any format (report.py computes, report_html.py renders).
+Does NOT own: any format (acceptance_report.py computes, report_html.py renders).
 Public API: ABVerdict, AcceptanceReport.
 
 ``execution_timing`` is three distinct numbers, never collapsed into one

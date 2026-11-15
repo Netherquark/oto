@@ -3,10 +3,10 @@
 
 Owns: ``write_html_report`` and the pure sub-builders it composes -- the A/B
 head-to-head sections, the family coverage matrix (data prep + rendered rows),
-the problem-space coverage section (report_figures) and the document template.
+the problem-space coverage section (report_coverage.py) and the document template.
 Nothing here writes anything but the final file.
 Does NOT own: the report payload (report_models), the section builders
-(report_sections), the coverage figures themselves (report_figures reads
+(report_sections), the coverage figures themselves (report_coverage.py reads
 oto.harness.coverage_graph's hand-off) or the static assets (report_css).
 Public API: HtmlMixin.
 """

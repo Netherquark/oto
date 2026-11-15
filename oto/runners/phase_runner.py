@@ -6,8 +6,8 @@ overlay), ``run_phases`` (target filtering, the ``should_run`` policy gate, the
 identical-fp skip and its two bypasses, the tally, the GPU-loss abort and the
 final run status), and ``_resolve_proposal_outcome`` (writing a measured outcome
 back to the ledger).
-Does NOT own: phase execution (benchmark.py), the reference floor (reference.py)
-or the auto loop (auto.py).
+Does NOT own: phase execution (benchmark.py), the reference floor (reference_floor.py)
+or the auto loop (convergence_loop.py).
 Public API: PhaseMixin.
 """
 

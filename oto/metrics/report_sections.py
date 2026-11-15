@@ -6,7 +6,7 @@ provenance line, the per-aggregation column headers, the gfx900 contract-cell
 grid, the problem-space table, the coverage/execution-time matrix, and the
 telemetry insights table.
 Does NOT own: the report payload (report_models), the verdict compute
-(report.py), or the static assets (report_css).
+(acceptance_report.py), or the static assets (report_css).
 Public API: SectionMixin.
 """
 
