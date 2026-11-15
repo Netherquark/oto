@@ -227,7 +227,7 @@ def audit(base: Path = BASE, band_pct: float | None = None,
     """Classify every cell in both arms.
 
     ``native`` is the whole native corpus and ``floor`` the recalled gfx900
-    reference chain; both come from :func:`arm_record_sets`.
+    reference chain; both come from ``arm_record_sets``.
     ``protocol_basis`` is the like-for-like rule (§R56.3, default "family"):
     the cells classified and graded admit only records stamped with that
     invocation form, on both arms -- the form the floor itself is measured
@@ -320,6 +320,7 @@ def _proposal_coverage(base: Path, band_pct: float | None = None, profile=None) 
         return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
 
 def _fmt_table(rows: list[list[str]], headers: list[str]) -> str:
+    """Format `rows` as a fixed-width console table under `headers`."""
     widths = [max(len(str(r[i])) for r in [headers, *rows]) for i in range(len(headers))]
     line = "  ".join(h.ljust(widths[i]) for i, h in enumerate(headers))
     out = [line, "-" * len(line)]
@@ -353,6 +354,7 @@ def _print_proposal_coverage(cov: dict[str, Any]) -> None:
 
 
 def print_report(result: dict[str, Any]) -> None:
+    """Print the A/B audit's report (band, certainty, per-cell table) to stdout."""
     rb = result["reproducible_band"]
     print(f"floor chain : {result['floor_chain']}")
     print(f"basis       : {result.get('protocol_basis', '?')} "
@@ -411,6 +413,7 @@ def print_report(result: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    """Print the acceptance A/B audit (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=BASE)

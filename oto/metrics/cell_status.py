@@ -65,6 +65,7 @@ class CellStatusMixin:
                 best_per_cell[key] = a.median_gflops
 
         def _entry(fam: str, shape: str, status: str, best: float) -> dict[str, Any]:
+            """One coverage entry row for a cell (status, best median, % of ceiling)."""
             ceiling = _loader.resolve_profile(profile).realistic_ceilings.get(
                 fam, _loader.resolve_profile(profile).peak_gflops.get(_loader.resolve_profile(profile).family_dtypes.get(fam, "FP32",), 1613.0,)
             ,)

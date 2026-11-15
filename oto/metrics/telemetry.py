@@ -20,7 +20,10 @@ HEADER = ("timestamp,sclk_hz,mclk_hz,power_uw,temp_mc,gpu_busy_percent,"
           "vram_used_bytes,vram_total_bytes,phase_id")
 
 class TelemetrySampler:
+    """Background sysfs sampler appending per-phase GPU telemetry CSV rows."""
+
     def __init__(self, log_path: Path, interval_s: float = 0.5):
+        """Bind the sampler to `log_path`; nothing is opened until `start`."""
         self.log_path = Path(log_path)
         self.interval_s = interval_s
         self._stop_event = threading.Event()
@@ -31,6 +34,7 @@ class TelemetrySampler:
         self.device_dir, self.hwmon_dir = self._discover_amdgpu()
 
     def _discover_amdgpu(self):
+        """Locate the amdgpu device and its hwmon dir under /sys."""
         # Primary: /sys/class/drm/cardN/device. Only accept entries that carry
         # the amdgpu driver AND expose gpu_busy_percent, so connector dirs
         # (card1-DP-1/device -> symlink to the card node, no busy file) can
@@ -62,6 +66,7 @@ class TelemetrySampler:
 
     @staticmethod
     def _parse_dpm(path: Path) -> int:
+        """The clock (Hz) of the DPM level marked with ``*`` in `path` (0 when absent)."""
         if not path or not path.is_file():
             return 0
         try:
@@ -76,6 +81,7 @@ class TelemetrySampler:
 
     @staticmethod
     def _read_int(path: Path | None, default: int = 0) -> int:
+        """Read `path` as an int; `default` when it is absent or unparseable."""
         if not path or not path.is_file():
             return default
         try:
@@ -88,6 +94,7 @@ class TelemetrySampler:
         self._current_phase = phase_id or ""
 
     def sample_row(self) -> dict[str, object]:
+        """One telemetry sample as a dict (zeros when there is no device)."""
         now = time.time()
         if not self.device_dir:
             return {"ts": now, "sclk": 0, "mclk": 0, "pwr": 0, "temp": 0, "busy": 0, "vram_u": 0, "vram_t": 0, "phase": ""}
@@ -148,6 +155,7 @@ class TelemetrySampler:
         return p
 
     def start(self):
+        """Open the CSV (appending) and start the sampling thread."""
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         target = self._resolve_log_path()
         if target != self.log_path:
@@ -163,6 +171,7 @@ class TelemetrySampler:
                 f.write(HEADER + "\n")
 
         def _loop(fh):
+            """Sample on ``self.interval_s`` and write rows to `fh`."""
             n = 0
             while not self._stop_event.is_set():
                 row = self.sample_row()
@@ -184,6 +193,7 @@ class TelemetrySampler:
         self._thread.start()
 
     def stop(self):
+        """Stop the sampling thread and close the CSV."""
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=1.0)

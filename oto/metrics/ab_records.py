@@ -197,9 +197,9 @@ _RECORD_SETS_CACHE: dict[tuple[Any, ...], tuple[list[dict[str, Any]],
 def _corpus_stamp(base: Path, profile=None) -> tuple[Any, ...]:
     """A cheap key that changes whenever the corpus changes.
 
-    Returns:
-        (base, run count, newest run mtime, registry size and mtime).
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Returns ``(base, run count, newest run mtime, registry size and mtime)``.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the
+    process's ambient profile.
     """
     runs = [d for d in (_runs_dir(base, _loader.resolve_profile(profile,).codename)).glob("run_*") if d.is_dir()]
     newest = 0.0
@@ -230,7 +230,7 @@ def arm_record_sets(base: Path = BASE, profile=None) -> tuple[list[dict[str, Any
     report that recomputed its own inputs from a different subset would grade
     against a band the audit never used.
 
-    The result is memoised on the corpus stamp (see :func:`_corpus_stamp`):
+    The result is memoised on the corpus stamp (see ``_corpus_stamp``):
     the walk costs ~76 s and every caller wants the same records. The returned
     lists are shared, so a caller must treat them as read-only.
     ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.

@@ -43,6 +43,7 @@ TIE_BAND_PCT = 5.0
 BAND_LO, BAND_HI = 10, 90
 
 def _pct(values: list[float], p: float) -> float:
+    """The `p`-th percentile (nearest-rank) of `values`."""
     return sorted(values)[min(len(values) - 1, int(p / 100.0 * len(values)))]
 
 
@@ -74,6 +75,7 @@ def reproducible_band(native: list[dict[str, Any]],
     than the noise.
     """
     def index(recs):
+        """Group records by pair key."""
         out = defaultdict(list)
         for r in recs:
             out[_pair_key(r)].append(r)
@@ -94,6 +96,7 @@ def reproducible_band(native: list[dict[str, Any]],
         (matched if same_form else mismatched).append(ratio)
 
     def summarise(vals: list[float]) -> dict[str, Any]:
+        """Summarise a list of arm ratios into band stats."""
         if not vals:
             return {"n": 0}
         return {
@@ -157,6 +160,7 @@ def repeat_dispersion(recs: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def verdict(delta_pct: float, band_pct: float = TIE_BAND_PCT) -> str:
+    """WIN / LOSS / TIE for `delta_pct` measured against `band_pct`."""
     if delta_pct > band_pct:
         return "WIN"
     if delta_pct < -band_pct:

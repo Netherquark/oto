@@ -49,6 +49,7 @@ __all__ = ["LiveStatus", "_PanelStdout", "bar", "render", "render_compact"]
 
 
 def bar(pct: float, width: int = 24) -> str:
+    """The progress bar string for `pct` (0-100) drawn at `width` cells."""
     filled = round(width * max(0.0, min(100.0, pct)) / 100.0)
     return "[" + "#" * filled + "." * (width - filled) + "]"
 
@@ -116,6 +117,7 @@ class LiveStatus:
                  plan: RunPlan | None = None, interval: float = 15.0,
                  compact: bool = True, show_thermals: bool = False,
                  stream=None):
+        """Bind the panel to `base` and `run_id`; the thread starts on `start`."""
         self.base = Path(base)
         self.run_id = run_id
         self.plan = plan or RunPlan(rerun_illegal=True)
@@ -144,6 +146,7 @@ class LiveStatus:
         self._painted = 0
 
     def _paint(self) -> None:
+        """Build one frame and write it, erasing the previous frame."""
         if self._stop.is_set():
             return
         try:
@@ -172,11 +175,13 @@ class LiveStatus:
                 self._painted = text.count("\n") + 1
 
     def _loop(self) -> None:
+        """Repaint on the interval until stopped."""
         while not self._stop.wait(self.interval):
             self._paint()
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> LiveStatus:
+        """Begin painting in the background; return `self` for the context-manager use."""
         self._isatty = bool(getattr(self.stream, "isatty", lambda: False)())
         self._thread = threading.Thread(target=self._loop, name="run-status",
                                         daemon=True)
@@ -193,6 +198,7 @@ class LiveStatus:
         self._paint()
 
     def stop(self) -> None:
+        """Stop painting, restore stdout and erase the panel; safe to call twice."""
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
@@ -205,9 +211,11 @@ class LiveStatus:
             self.stream.flush()
 
     def __enter__(self) -> LiveStatus:
+        """Enter the context; same as `start`."""
         return self.start()
 
     def __exit__(self, *exc) -> None:
+        """Exit the context; same as `stop`."""
         self.stop()
 
 
@@ -215,10 +223,12 @@ class _PanelStdout:
     """stdout proxy that lifts the live panel out of the way before writing."""
 
     def __init__(self, real, panel: LiveStatus):
+        """Bind the proxy to the real stdout and the panel."""
         self._real = real
         self._panel = panel
 
     def write(self, text: str) -> int:
+        """Erase the panel, write `text` to the real stdout and return its length."""
         if text:
             with self._panel._lock:
                 self._panel._erase()
@@ -228,12 +238,15 @@ class _PanelStdout:
         return 0
 
     def flush(self) -> None:
+        """Flush the real stdout."""
         self._real.flush()
 
     def isatty(self) -> bool:
+        """Report whether the real stdout is a TTY."""
         return bool(getattr(self._real, "isatty", lambda: False)())
 
     def __getattr__(self, name):
+        """Delegate attribute reads to the real stdout."""
         return getattr(self._real, name)
 
 
@@ -360,6 +373,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _main(argv, build_report) -> int:
+    """The argparse body of the run-status CLI, separated for testing."""
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -386,6 +400,7 @@ def _main(argv, build_report) -> int:
     plan = RunPlan.from_args(args.plan)
 
     def once() -> int:
+        """Render one report frame; return its exit code."""
         try:
             rep = build_report(base, args.run, plan)
         except SystemExit:

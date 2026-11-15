@@ -167,7 +167,7 @@ def classify_count(fam: str,
     count, the CSVs give the shapes. A count cannot prove *which* sides were
     asked for, so a measured superset of the graded cells is the only FAMILY
     proof it can corroborate; everything else follows the same rules as
-    :func:`classify` (1 -> SINGLE, big-but-unproven -> PARTIAL, nothing ->
+    ``classify`` (1 -> SINGLE, big-but-unproven -> PARTIAL, nothing ->
     UNKNOWN).
     """
     cells = gradeable(fam)

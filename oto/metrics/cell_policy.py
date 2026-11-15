@@ -32,11 +32,8 @@ def aggregate_cell(seeds: list[float]) -> CellAggregation:
     """
     Aggregate seed values using N8 median-of-seeds rule (stdlib).
 
-    Args:
-        seeds: List of benchmark results (GFLOPS)
-
-    Returns:
-        CellAggregation with median, max, spread_ratio, cv, top2_gap_pct
+    `seeds` is the list of benchmark results (GFLOPS). Returns a
+    ``CellAggregation`` with median, max, spread_ratio, cv and top2_gap_pct.
     """
     if not seeds:
         raise ValueError("Cannot aggregate empty seed list")
@@ -84,15 +81,11 @@ def should_run(
       3. Tier-2 retirement (phase, fp)
       4. Identical-fp skip (if opt_in_identical_skip)
 
-    Args:
-        phase_id: Target identifier (e.g. "phase_ss_Ailk_Bjlk_1024x1024x1024")
-        fp: Config fingerprint
-        registry: SQLiteRegistry instance
-        phase_scope: Optional list of scoped target IDs
-        opt_in_identical_skip: Whether identical-fp skip is active
-
-    Returns:
-        (should_run_bool, reason_str)
+    `phase_id` is the target identifier (e.g.
+    "phase_ss_Ailk_Bjlk_1024x1024x1024"); `fp` the config fingerprint;
+    `registry` the ``SQLiteRegistry`` instance; `phase_scope` an optional
+    list of scoped target IDs; `opt_in_identical_skip` enables the
+    identical-fp skip. Returns the ``(should_run, reason)`` tuple.
     """
     p_str = str(phase_id).replace("phase_", "")
 
@@ -126,21 +119,17 @@ def check_retirement_eligibility(
     reference_meds: dict[str, float] | None = None
 ) -> tuple[bool, str]:
     """
-    Check if a candidate config can be retired.
+    Eligibility verdict for retiring a candidate config.
 
     Eligibility (strict gate, per informed-convergence scope):
       - ≥3 samples per (phase_id, fp) cell
       - ≥2 independent runs/cell (each run must carry seed data)
       - run-to-run median drift ≤1%
 
-    Args:
-        cell_records: List of benchmark records for this cell across runs
-        reference_meds: Optional dict mapping (phase_id, fp) to reference
-            median; if provided, a cell is only retired when its fingerprint
-            is known to the reference set.
-
-    Returns:
-        (eligible, reason) tuple
+    `cell_records` is the list of benchmark records for this cell across
+    runs; `reference_meds` optionally maps ``(phase_id, fp)`` to its reference
+    median -- when provided, a cell is only retired when its fingerprint is
+    known to the reference set. Returns the ``(eligible, reason)`` tuple.
     """
     per_run_meds: dict[str, list[float]] = {}
     samples = 0

@@ -17,6 +17,7 @@ from typing import Any
 
 
 def _parse_ts(value: Any) -> datetime | None:
+    """Parse an ISO timestamp; ``None`` when absent or malformed."""
     if not value:
         return None
     try:

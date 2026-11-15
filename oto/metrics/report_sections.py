@@ -126,6 +126,7 @@ class SectionMixin:
     }
 
     def _basis_headers(self, agg: str):
+        """The column headers for the comparison rows of basis `agg`."""
         return self._BASIS_HEADERS.get(agg, ("Native value", "Floor value"))
 
     def _cell_status_section(self, report) -> str:
@@ -334,7 +335,7 @@ class SectionMixin:
         return out
 
     def _telemetry_section(self, report, profile=None) -> str:
-        """Telemetry table from telemetry.csv. ``profile`` -- optional, ambient by default."""
+        """The telemetry table for the run; ``profile`` selects the device (ambient by default)."""
         stats = self._load_run_telemetry(report.run_dir)
 
         empty = ("<section class=\"section collapsible\" data-collapsed=\"true\"><h2 class=\"section-title\" tabindex=\"0\" role=\"button\" aria-expanded=\"false\">Telemetry "

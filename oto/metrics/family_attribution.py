@@ -102,6 +102,7 @@ _CONTAMINATION_SEEN: set = set()
 
 def _warn_contamination(stamp: str, typecode: str, resolved: str,
                         phase_id: str) -> None:
+    """Print one contamination warning per (stamp, typecode, resolved) class."""
     key = (stamp, typecode, resolved)
     if key in _CONTAMINATION_SEEN:
         return

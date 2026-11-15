@@ -437,7 +437,7 @@ def _pair_cells(
     identical_fp_already_passed) while the historical winners remain the real
     native candidates — so winners, including older winner runs, are picked
     across the whole record set. Grading and its provenance envelopes come
-    from :func:`_basis_collects`.
+    from ``_basis_collects``.
 
     When a clock basis is asked for but only one arm is clock-covered, NEITHER
     is adjusted (see _clock_basis_values).

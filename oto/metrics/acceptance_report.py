@@ -57,6 +57,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
     """
 
     def __init__(self, base_dir: Path, cooldown_s: int = 30):
+        """Store the repo root and the inter-phase cooldown; nothing is built yet."""
         self.base_dir = Path(base_dir)
         self.cooldown_s = cooldown_s
 
@@ -194,7 +195,10 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         expected_kernels: dict[str, int],
     profile=None,
     ) -> dict[str, Any]:
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """One family's coverage entry: red/orange/green, best median, % of ceiling.
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+        """
         fam_lower = family.lower()
         short = family_to_dtype().get(fam_lower,)
 
@@ -296,6 +300,7 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         red_threshold_pct: float = 50.0,
         execution_timing: dict[str, Any] | None = None
     ) -> str:
+        """The one-paragraph plain-English summary of the run."""
         wins = sum(1 for v in ab_verdicts if v.verdict == "WIN")
         ties = sum(1 for v in ab_verdicts if v.verdict == "TIE")
         losses = sum(1 for v in ab_verdicts if v.verdict == "LOSS")
@@ -326,9 +331,9 @@ class AcceptanceReporter(SectionMixin, HtmlMixin):
         )
 
     def write_report(self, report: AcceptanceReport, output_path: Path | None = None, profile=None) -> None:
-        """Write acceptance report to JSON and HTML files.
+        """Persist the acceptance report to JSON and HTML next to the run directory.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         if output_path is None:
             output_path = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"

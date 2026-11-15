@@ -187,6 +187,7 @@ class HtmlMixin:
     # caller concatenates them in order, so the emitted document is unchanged.
 
     def _document_head(self, report, now: str, provenance: str) -> str:
+        """The document head + shell banner fragment."""
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -222,6 +223,7 @@ class HtmlMixin:
     def _metrics_row(self, report, status_class: str, status_badge: str,
                      red_color: str, timing_metric: str,
                      timing_section: str) -> str:
+        """The headline metrics row fragment."""
         return f"""        <div class="metrics">
             <div class="metric">
                 <div class="metric-label">Overall verdict</div>
@@ -252,6 +254,7 @@ class HtmlMixin:
 """
 
     def _family_matrix_section(self, family_rows: str) -> str:
+        """The family-matrix section fragment."""
         return f"""
         <section class="section collapsible" data-collapsed="true">
             <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
@@ -282,6 +285,7 @@ class HtmlMixin:
 """
 
     def _ab_section(self, verdict_sections: str) -> str:
+        """The A/B head-to-head section fragment."""
         return f"""
         <section class="section collapsible" data-collapsed="true">
             <h2 class="section-title" tabindex="0" role="button" aria-expanded="false">
@@ -299,6 +303,7 @@ class HtmlMixin:
                        section_coverage_matrix: str,
                        section_telemetry: str,
                        section_coverage_figures: str = "") -> str:
+        """The document tail: figures, cell-status, coverage, telemetry and closing tags."""
         return f"""
         {section_coverage_figures}
         {section_cell_status}

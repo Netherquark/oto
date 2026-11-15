@@ -57,6 +57,7 @@ def read_thermals(run_dir: Path) -> dict[str, Any] | None:
         return None
 
     def stat(vals: list[int], scale: float, unit: str) -> str:
+        """A 'min-max (mean, p95)' line for one metric, or ``"n/a"``."""
         if not vals:
             return "n/a"
         s = sorted(vals)

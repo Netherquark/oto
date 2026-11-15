@@ -85,6 +85,7 @@ class CellAnalytics:
         source_run: str = "",
         seeds: list[float] | None = None
     ):
+        """Record one cell's aggregates and its seed values."""
         self.dtype = dtype
         self.shape = shape
         self.config_fp = config_fp
@@ -108,7 +109,10 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     """The analytics-stage engine."""
 
     def __init__(self, registry, base_dir: Path, profile=None):
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """Bind the engine to the registry and repo root; the manifest loads lazily.
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+        """
         self.registry = registry
         self.base_dir = Path(base_dir)
         self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
@@ -128,13 +132,11 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
     def extract_dtype_from_phase_id(self, phase_id: str) -> str:
         """
         Extract dtype from phase_id by looking up in phases.yaml.
-        Falls back to family naming convention if not found.
 
-        Args:
-            phase_id: Phase identifier (e.g., "phase_ss_Ailk_Bjlk_1024x1024x1024")
-
-        Returns:
-            Dtype string (e.g., "S", "D", "H", etc.)
+        `phase_id` is the phase identifier (e.g.,
+        "phase_ss_Ailk_Bjlk_1024x1024x1024"). Returns the dtype string
+        ("S", "D", "H", ...); falls back to the family naming convention when
+        the id is not in the manifest, and ``'unknown'`` when neither works.
         """
         # Look up in phases.yaml first (normalize historical double prefix e.g. phase_phase_ss_...)
         phases = self._load_phases_manifest()
@@ -172,11 +174,8 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         the wrong column is what made a whole mutant population look
         zero-yield when it was not.
 
-        Args:
-            csv_path: Path to 2_BenchmarkData/*.csv or 00_Final.csv
-
-        Returns:
-            Number of data rows (0 for a missing/header-only file)
+        `csv_path` is a path to ``2_BenchmarkData/*.csv`` or ``00_Final.csv``.
+        Returns the number of data rows (0 for a missing/header-only file).
         """
         if not csv_path.exists():
             return 0
@@ -305,12 +304,9 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         """
         Aggregate benchmark records by (dtype, shape, config_fp).
 
-        Args:
-            records: List of benchmark records
-            dtype_override: Optional dtype to use instead of extracting from records
-
-        Returns:
-            Dict mapping (dtype, shape, fp) to list of GFLOPS values
+        `records` is the list of benchmark records; `dtype_override` forces a
+        dtype instead of extracting one from the records. Returns a dict
+        mapping ``(dtype, shape, fp)`` to its list of GFLOPS values.
         """
         cell_map = defaultdict(list)
         for rec in records:
@@ -370,16 +366,15 @@ class AnalyticsEngine(CellStatusMixin, ABDeltaMixin):
         """
         Compute analytics for a single cell vs realistic ceiling.
 
-        Args:
-            dtype: Data type (FP32, FP16, etc. or SS, HH, etc.)
-            shape: Problem shape (e.g., "1024x1024x1024")
-            fp: Config fingerprint
-            seeds: List of GFLOPS seed values
-            ceiling_gflops: Optional ceiling for % calculation
-            red_threshold_pct: Threshold below which ALU compute cell is RED
-            family: Multi-letter family prefix (e.g. 'ss', 'hh_hpa', 'cc')
+        `dtype` is the data type (FP32, FP16, etc. or SS, HH, etc.); `shape`
+        the problem shape (e.g., "1024x1024x1024"); `fp` the config
+        fingerprint; `seeds` the GFLOPS seed values; `ceiling_gflops` an
+        optional ceiling for the % calculation; `red_threshold_pct` the
+        threshold below which an ALU compute cell is RED; `family` the
+        multi-letter family prefix (e.g. 'ss', 'hh_hpa', 'cc').
 
-        Returns: CellAnalytics object. ``profile`` -- optional, ambient by default.
+        Returns a ``CellAnalytics`` object. ``profile`` is an optional
+        ``DeviceProfile``; it defaults to the ambient profile.
         """
         agg = aggregate_cell(seeds)
 

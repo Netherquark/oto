@@ -46,12 +46,9 @@ def coverage_dir(base_dir: Path) -> Path:
 def coverage_rows(base_dir: Path) -> list[dict[str, Any]]:
     """The per-cell coverage rows, or an empty list when they are absent.
 
-    Args:
-        base_dir: The repo root.
-
-    Returns:
-        One dict per cell: family, shape, legal/measured/unexplored counts,
-        the best measured value, the peaks and the traps, and the figure file.
+    `base_dir` is the repo root. Returns one dict per cell: family, shape,
+    legal/measured/unexplored counts, the best measured value, the peaks and
+    the traps, and the figure file.
     """
     path = coverage_dir(base_dir) / DATA_NAME
     if not path.is_file():
@@ -216,14 +213,12 @@ def _coverage_appendix(rows: list[dict[str, Any]], base_dir: Path,
 def coverage_section(base_dir: Path, html_path: Path) -> str:
     """The rendered problem-space coverage section.
 
-    Args:
-        base_dir: The repo root (where the coverage artefacts live).
-        html_path: Where the report is being written (the figures are linked
-            relative to it, so the report works from the run directory too).
+    `base_dir` is the repo root (where the coverage artefacts live);
+    `html_path` is where the report is being written (the figures are linked
+    relative to it, so the report works from the run directory too).
 
-    Returns:
-        The section HTML. When the artefacts are absent it says so and names
-        the command that produces them.
+    Returns the section HTML. When the artefacts are absent it says so and
+    names the command that produces them.
     """
     rows = coverage_rows(base_dir)
     if not rows:

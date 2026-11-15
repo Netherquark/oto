@@ -71,6 +71,7 @@ class RunPlan:
 
     @classmethod
     def from_args(cls, pairs: Sequence[str]) -> RunPlan:
+        """Build a plan from ``KEY=VALUE`` pairs (``--plan`` on the CLI)."""
         plan = cls.from_auto_prompt_defaults()
         for pair in pairs:
             if "=" not in pair:
@@ -119,9 +120,11 @@ class PhaseCost:
     """
 
     def __init__(self, db: Path):
+        """Bind the estimator to a registry database path."""
         self.db = db
 
     def sample(self, min_success: int = 20) -> tuple[float | None, int, list[str]]:
+        """The per-phase minutes, the sample size, and the runs used."""
         if not self.db.exists():
             return None, 0, []
         rates: list[float] = []
@@ -194,16 +197,19 @@ class Estimate:
 
     @property
     def percent(self) -> float | None:
+        """Percentage of the plan's units decided (``None`` when the plan is empty)."""
         if not self.units:
             return None
         return 100.0 * min(self.decided, self.units) / self.units
 
     @property
     def elapsed_minutes(self) -> float:
+        """Minutes already spent on the plan's decided units."""
         return self.done_minutes
 
     @property
     def rate_per_hour(self) -> float | None:
+        """The decided-phase rate per hour (``None`` when it cannot be estimated)."""
         if self.minutes_per_unit and self.minutes_per_unit > 0:
             return 60.0 / self.minutes_per_unit
         if self.done_minutes > 0 and self.decided:
