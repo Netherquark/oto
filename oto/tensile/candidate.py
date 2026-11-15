@@ -330,11 +330,12 @@ def estimate_lds_usage(config: dict[str, Any]) -> float:
     per-workgroup footprint against Tensile's allocator. Two different budgets,
     both enforced.
 
-    NOTE: this dtype table disagrees with
-    :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT` for the complex chars
-    (C 16 there is 8). It is left byte-identical on purpose -- changing it would
-    change which candidates the per-CU ceiling refuses -- and is recorded in
-    incomplete_work.md as a real inconsistency to resolve.
+    The ``dtype_sizes`` table below is the RAW element byte count for A/B
+    tiles (Z = 2xFP32 = 8 B, C = 2xFP64 = 16 B). It is deliberately different
+    from ``oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT``, which is
+    Tensile's per-register assembly accounting (Z = 16 there: reg=4, per
+    6c7cc4e, adopted 2026-11-14). The two tables model different shapes of the
+    same config; do not merge them.
     """
     mt = config.get("MacroTile", "64x64x16")
     dtype = config.get("DataType", "S")
