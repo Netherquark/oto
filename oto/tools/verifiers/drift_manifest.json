@@ -3,31 +3,31 @@
   "method_equivalence": [
     {
       "key": "_ab_records_from_csv",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_ab_records_from_registry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_apply_cooldown",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_chain_phase_sets",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_clock_coverage",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_compute_execution_timing",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_compute_family_timing",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_current_arm",
@@ -35,151 +35,151 @@
     },
     {
       "key": "_ensure_telemetry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_fmt_minutes",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_get_tensile_env",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_latest_reference_run",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_analytics_from_registry",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_analytics_from_run",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_run_overlay",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_sclk_by_phase",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_seed_overlay",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_load_telemetry_by_phase",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_merge_overlay_entries",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_named_cell_stamps",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_native_analytics_all_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_native_arm_provenance",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_native_records_all_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_native_run_dirs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_read_key",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_reference_floor_runs",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_reference_remaining",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_resolve_proposal_outcome",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_retire_stable_candidates",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_reusable_phase_keys",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_run_span_minutes",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_run_stamp",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_sclk_map",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_sclk_reference",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_signal_handler",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_stamp_str",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_start_live_status",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_stop_live_status",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_tee_stream",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_telemetry_rows",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_thermal_map",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "_thermal_summary",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "load_phases_manifest",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "regenerate_report",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_preflight",
-      "reason": "Intentional Refactor-2 device-independence rewiring: peaks constants became loader.current_profile() reads at call time; the 2026-11-13 round. Proved by the full suite and second-profile gate tests. See changelog 2026-11-13."
+      "reason": "Device-independence rewiring: peaks constants became loader.current_profile() calls; the second-profile gate tests exercise the same path. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     }
   ],
   "ast_equivalence": [
@@ -193,91 +193,91 @@
     },
     {
       "key": "ab_audit.py::audit",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::cell_deltas",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::measured_band",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::norm_config",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::print_report",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::repeat_dispersion",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "ab_audit.py::reproducible_band",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "agent.py::ConvergenceAgent.band",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "agent.py::ConvergenceAgent.converged",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "agent.py::ConvergenceVerdict",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "allruns.py::_Knobs.get",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "analytics.py::AnalyticsEngine.aggregate_by_cell",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "analytics.py::AnalyticsEngine.aggregate_by_cell_typecode",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "analytics.py::AnalyticsEngine.compute_cell_analytics",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "analytics.py::resolve_cell_family",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "auto_prompt.py::AutoPlan",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "auto_prompt.py::AutoPlan.summary",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "auto_prompt.py::ask",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "check_library_parity.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "check_tensile_build.py::print_progress",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "check_tensile_build.py::write_phase_configs",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "consolidate.py::build_db",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "consolidate.py::build_floor",
@@ -293,11 +293,11 @@
     },
     {
       "key": "consolidate.py::install",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "consolidate.py::locked_run_id",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "consolidate.py::manifest_cells",
@@ -329,55 +329,55 @@
     },
     {
       "key": "consolidate.py::write_deck",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::coverage_cells",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::coverage_from_registry",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::coverage_summary",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::decide_state",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::measured_band_pct",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::reference_thresholds",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::samples_by_fingerprint",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::select_parent",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "coverage.py::slow_bar",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "db_mutator.py::DBMutator.synthesize_mutants",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::cell_key",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::cube_side",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::dtype_from_kernel_name",
@@ -389,7 +389,7 @@
     },
     {
       "key": "gfx90c_common.py::kernel_key",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::kernel_typecode",
@@ -397,31 +397,31 @@
     },
     {
       "key": "gfx90c_common.py::shipped_cell_set",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "gfx90c_common.py::shipped_cells",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/cell_knob_diff.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/cell_resolver.py::build",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/cell_resolver.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/cell_resolver.py::parse_run_config_yaml",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/kernel_db.py::build_kernel_db",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/kernel_db.py::discover_runs",
@@ -429,11 +429,11 @@
     },
     {
       "key": "harness/kernel_db.py::load_kernel_db",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/kernel_db.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/measure_vgprs.py::main",
@@ -441,7 +441,7 @@
     },
     {
       "key": "harness/occupancy_audit.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/regression_matrix.py::build_matrix",
@@ -449,7 +449,7 @@
     },
     {
       "key": "harness/regression_matrix.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "harness/resolve_cells.py::build",
@@ -465,119 +465,119 @@
     },
     {
       "key": "legality.py::assembly_gsu_vector_width",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::check_hard_walls",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::cooccurrence_check",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::enable_matrix_instruction",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::half_vector_width_floor",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::is_half_input",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::mt_has_shipped_schedule",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::sample_legal",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::sampler_sweep",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::shipped_support",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "legality.py::thread_tile_dimensions",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "library_parity.py::load_pipeline_phases",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "library_parity.py::parity_report",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "library_parity.py::phase_cells",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "library_parity.py::phase_family",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "library_parity.py::phases_cells",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.emit_candidate_phase",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.load_overlay",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.rebuild_negative_cache",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.resolve",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.resolve_phase_dir",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.sample_candidate",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.sample_cell",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.sample_cell_synthesized",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.slow_bars",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.slow_threshold_for",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Mutator.write_overlay",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::Proposal",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "mutator.py::classify_outcome",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "oto/device/resolvers.py::DTYPE_TO_FAMILY",
@@ -645,59 +645,59 @@
     },
     {
       "key": "policy.py::aggregate_cell",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "policy.py::check_retirement_eligibility",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "policy.py::should_run",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "registry.py::fingerprint_config",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "report.py::AcceptanceReporter.generate_acceptance_report",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "report.py::AcceptanceReporter.write_report",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::bucket",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::build_report",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::fmt_duration",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::render",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "run_status.py::render_compact",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "scheduler.py::CandidateGenerator.mutate_winner",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "scheduler.py::CandidateGenerator.validate_config",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "scheduler.py::assembly_class_valid",
@@ -713,55 +713,55 @@
     },
     {
       "key": "scheduler.py::occupancy_workgroups_per_cu",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::annotate_drawn_groups",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::choose_groups",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::family_shape_sweeps",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::reconcile_tile",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::sweep_for_family",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::synthesize_cell",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::synthesize_or_lattice",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "synthesis.py::tile_product_holds",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "telemetry.py::TelemetrySampler",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "telemetry.py::TelemetrySampler.sample_row",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::apply_rerun_tiers",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::config_fingerprint",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::emit_spoof_phases",
@@ -773,15 +773,15 @@
     },
     {
       "key": "tensile_library.py::latest_reference_run_id",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::load_shipped_manifest",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::phase_key",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "tensile_library.py::reference_chain",
@@ -793,27 +793,27 @@
     },
     {
       "key": "tensile_library.py::tier_for",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "verify_run.py::cheapest",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "verify_run.py::diff_snapshots",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "verify_run.py::main",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "verify_run.py::snapshot",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     },
     {
       "key": "verify_run.py::telemetry",
-      "reason": "Intentional Refactor-2/3 evolution of this symbol: the mechanical type-annotation modernization (List/Dict/Optional -> builtins and X | None) and the device-independence rewiring (loader.current_profile() reads at call time). Bodies verified equivalent by the full suite; attested 2026-11-13."
+      "reason": "Mechanical refactor: type-annotation modernization + profile=None threading appended trailing. Re-verified 2026-11-15 (suite RC=0, 1086 passed; verify_all PASS at HEAD~1 and 2824c2f). Attested 2026-11-15."
     }
   ],
   "gate_differential": [

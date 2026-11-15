@@ -79,7 +79,7 @@ counts are never quoted here -- they go wrong the day a file moves.
 * ``metrics/ab_identity.py`` — A/B record identity: how the two arms are made comparable.
 * ``metrics/ab_records.py`` — A/B record loading: the canonical (native, floor) inputs.
 * ``metrics/acceptance_report.py`` — the acceptance-report stage acceptance report: the verdict compute and the JSON writer.
-* ``metrics/benchmark_analytics.py`` — the analytics stage analytics: CSV loading and per-cell aggregation.
+* ``metrics/benchmark_analytics.py`` — The analytics stage: CSV loading and per-cell aggregation.
 * ``metrics/build_status.py`` — The status report builder: state assembly, ETA pricing and the report dict.
 * ``metrics/cell_coverage.py`` — Coverage: cell evidence, cell states, and fitness for parent selection.
 * ``metrics/cell_policy.py`` — Cell policy: aggregation, the should_run gate, and retirement eligibility.
