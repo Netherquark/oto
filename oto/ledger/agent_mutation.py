@@ -5,6 +5,9 @@ Owns: mutating one harvested winner, feeding the mutants to the ledger, and
 recording the emission statistics -- the part of ``ConvergenceAgent`` that
 turns a cell verdict into new candidate phases. Split from :mod:`oto.ledger.convergence_agent`
 so the verdict/band logic and the mutation plumbing each have one home.
+Does NOT own: the harvest/parent-selection (:mod:`oto.ledger.harvest`), the
+verdict band model (:mod:`oto.ledger.convergence_agent`), or candidate emission
+(:mod:`oto.tensile.candidate_emission`).
 Public API: MutateMixin.
 """
 

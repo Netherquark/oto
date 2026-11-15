@@ -5,6 +5,10 @@ the AF/WGM row generators -- the measured-winner blocks appended to
 ``PLAN_BATCH`` after ``rows_ladders`` builds it. Import only after
 ``rows_ladders`` (it mutates ``PLAN_BATCH``). See ``oto.harness.candidate_rows``
 for the consumer-facing re-exports.
+Does NOT own: the deck/seed fingerprint sets (:mod:`oto.harness.candidate_pool`),
+candidate generation (:mod:`oto.harness.candidate_generator`), or the public
+re-exports (:mod:`oto.harness.candidate_rows`).
+Public API: ``PLAN_BATCH`` mutation on import; symbols for internal use.
 """
 
 from __future__ import annotations

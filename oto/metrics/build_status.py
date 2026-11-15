@@ -7,6 +7,7 @@ Owns: ``build_report`` and the assembly helpers it consumes
 ``_build_estimate_dict`` and ``_build_plan_dict``).
 Does NOT own: the registry/corpus read path (``oto.metrics.ledger_state``),
 the plan it prices (``oto.metrics.run_plan``), or the renderer (render_status).
+Public API: build_report.
 """
 
 from __future__ import annotations

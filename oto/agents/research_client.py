@@ -18,6 +18,9 @@ Never writes the key anywhere. Non-200 responses collapse to "" (with a
 status-code-only warning on stderr); research is best-effort by design.
 
 Public API: make_researcher(api_key, starter_text="", endpoint=None).
+
+Does NOT own: the agents that call the researcher (:mod:`oto.agents.theoretical_limits`,
+:mod:`oto.agents.tuning_context`), or the orchestration (:mod:`oto.agents.meta_agent`).
 """
 
 from __future__ import annotations

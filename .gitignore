@@ -118,3 +118,5 @@ dist/
 .mypy_cache/
 .tox/
 logs/
+# pdoc generated site
+docs/_site/

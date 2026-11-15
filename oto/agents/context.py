@@ -10,6 +10,9 @@ that asks "what is the device" gets a 300-word encyclopedia; an agent that asks
 "AMD ISA reference section for this ISA: which CU count does the SKU ship?"
 gets an answer a human can verify. The caller decides which form to use;
 this package builds the framing block it shares.
+Does NOT own: the agents themselves (:mod:`oto.agents.theoretical_limits`,
+:mod:`oto.agents.tuning_context`), or the research call (:mod:`oto.agents.research_client`).
+Public API: profile_summary_block, directed_question.
 """
 
 from __future__ import annotations

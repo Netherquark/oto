@@ -9,6 +9,9 @@ to a mid-run error 4.
 
 Public API: ldspad_feasible.
 Imports the shared tile/dtype helpers from ``oto.tensile.gates.gate_common``.
+Does NOT own: the occupancy model (:mod:`oto.tensile.gates.vgpr_model`), the
+load-side gate (:mod:`oto.tensile.gates.loads`), or the assembly gate
+(:mod:`oto.tensile.gates.assembly`).
 """
 
 from __future__ import annotations

@@ -347,3 +347,22 @@ strictly subsumes it.
 The honest summary: your docstrings are designed to be read in code, not
 parsed; pick a renderer that treats them as readable text and do not let any
 tool coerce them into field lists.
+
+## pdoc rendering (reference site)
+
+pdoc (`pdoc oto`) renders the whole package as a static site directly from the
+live objects. The convention above is pdoc-compatible prose; this section
+records the additions that make the output useful.
+
+- Treat every docstring as **Markdown prose**. `Args:` / `Returns:` tables
+  degrade to literal text, so state arguments and return values in sentences:
+  ``Raises `ValueError` when ...``, ``Returns the *winner* config ...``.
+- Back-tick code symbols (`oto.tensile.gates.vgpr_model`, `validate_config`)
+  so pdoc can cross-link them.
+- Cross-link neighbouring modules with `See :mod:\`oto.harness.candidate_rows\``
+  or ``See `oto.harness.candidate_rows` ``.
+- The three `Owns` / `Does NOT own` / `Public API` clauses are **kept**, in this
+  order, written as sentences (not lists) so the generated page reads naturally.
+- Mixins state their composition root: ``Mixed into ``ConvergenceAgent``.``
+- Private helpers (`_foo`) get a one-line summary only; no `Owns` clauses.
+- `docs/_site/` is gitignored; build with `pdoc oto --output-dir docs/_site`.

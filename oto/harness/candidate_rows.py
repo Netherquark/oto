@@ -13,6 +13,8 @@ rows off it; rows_smallcells hangs its rows off those. Load order:
 Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
 the overlay read/write (``oto.harness.candidate_overlay``), or candidate
  generation (``oto.harness.candidate_generator``).
+Public API: re-exports of the row builders (``PLAN_BATCH`` and the deck
+helpers) for import by the deck generator.
 """
 
 from __future__ import annotations
