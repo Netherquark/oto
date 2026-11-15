@@ -6,7 +6,9 @@ three sibling modules so the historical import paths keep working:
 ``rows_ladders`` (ladders + the PLAN_BATCH literal + the pad encoder),
 ``rows_frontier`` (tie-adapt / frontier winner blocks) and
 ``rows_smallcells`` (small-cell evidence blocks). Import order is fixed and
-load-bearing -- the sibling modules mutate ``PLAN_BATCH`` at import time.
+load-bearing -- rows_ladders defines ``PLAN_BATCH``; rows_frontier hangs its
+rows off it; rows_smallcells hangs its rows off those. Load order:
+``ladders -> frontier -> smallcells``; do not let an import sorter flip it.
 
 Does NOT own: the deck/seed fingerprint sets (``oto.harness.candidate_pool``),
 the overlay read/write (``oto.harness.candidate_overlay``), or candidate
@@ -15,6 +17,9 @@ the overlay read/write (``oto.harness.candidate_overlay``), or candidate
 
 from __future__ import annotations
 
+# ruff: noqa: I001 -- import order here is load-bearing (see docstring).
+from oto.harness import rows_ladders as rows_ladders
+from oto.harness import rows_frontier as rows_frontier
 from oto.harness import rows_smallcells as rows_smallcells
 from oto.harness.rows_frontier import _FRONTIER
 from oto.harness.rows_ladders import (
