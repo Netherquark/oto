@@ -4557,8 +4557,9 @@ the pre-built seed pool.
   Verifiers: the split-era check now PASSES at both `2824c2f` and `HEAD~1`; `verify_symbols.py` RENAMES table moved to
   `drift_manifest.json` (the line-budget ratchet had dropped two real mappings, `ldspad_gate.py`→`ldspad.py` /
   `occupancy_common.py`→`gate_common.py`, and false-reported whole-module API loss); restored mappings pinned by
-  `tests/test_verifier_renames.py`. `oto check tensile-build` GPU legality probes on gfx90c (M=128): all eight PASS
-  (CC af4em4/af22/base @256/512, ZZ DU8/DU16, trialD1) — `sols=1`, no matrix larger than 512³. `oto doctor` rc=0
+  `tests/test_verifier_renames.py`. `oto check tensile-build` CPU-only build proofs on gfx90c: all eight PASS
+  (CC af4em4/af22/base @256/512, ZZ DU8/DU16, trialD1) — `sols=1`; these are compilation verdicts, not GPU
+  dispatches (benchmark runs are the owner's TTY). `oto doctor` rc=0
   (21 ok, 2 pre-existing advisory WARNs). Easy-mode `oto setup`: all wizard narration moved to stderr (stdout stays a
   clean data channel), blank-default prompt artefact fixed, Ctrl-D path verified, UX contract pinned by
   `tests/test_easy_mode_ux.py`. Docs: README rewritten around the recovery-pipeline vision (blog/grant material);
