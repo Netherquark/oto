@@ -135,11 +135,12 @@ python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compil
 OTO_GUARD_FILES=1 python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q
 ```
 
-The full scan stays the CI default on purpose (a guard that only looks at what
-you touched is not a guard). The py_compile gate additionally covers files no
-test imports — an uncompiled-but-tracked script fails here instead of at first
-use. Class B (operator) docs deliberately do not carry this section: an
-operator consumes the library; the gates guard the library's source.
+The full scan stays the pre-commit default on purpose (a guard that only looks
+at what you touched is not a guard); `OTO_GUARD_FILES=1` narrows both scans to
+the files git reports as modified/staged. The py_compile gate also covers files
+no test imports — an uncompiled-but-tracked script fails here instead of at
+first use. Class B (operator) docs deliberately do not carry this section:
+an operator consumes the library; the gates guard the library's source.
 
 ## Reading order for a new coding agent (class A)
 

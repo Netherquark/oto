@@ -18,19 +18,14 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   a human must review the numbers and accept the profile; testing it blind
   would pretend gfx902 hardware exists, which it does not here. The gate
   tests already exercise a `dataclasses.replace`-derived synthetic device.
-- **CC:256/512 `AssertFree0/1ElementMultiple=4` — ADOPTED 2026-11-14 (owner
-  decision, Option B: the vendor's SGEMM recipe).** GPU legality was verified
-  first (all 11 probes pass Tensile's `NumElementsToValidate=128` reference on
-  gfx90c). The two AF4/4 rows (`_af4em4`, CC:256/CC:512 `mt64x64x8/tt4x4/VW2/AF0/1EM=4`)
-  now ship in `phases.yaml` as first-class CC rows (`oto check candidates`:
-  280 checked, 0 illegal); the D5 pilot row graduated; `DECISION_TRIAL_TILES`
-  keeps only D1. What remains open: TTY A/B against the AF2/2 paired-widen and
-  the AF1 baseline rows — adoption makes AF4/4 the reference deck, but no
-  perf bars are claimed anywhere; the winner is measured in the overnight run,
-  not asserted here.
+  **gfx902 readiness (mechanical) closed 2026-11-15** by the CI-removal arc:
+  class-B end-to-end commands walked in an isolated stub (`tests/test_class_b_rehearsal.py`), agent prompts now carry ISA-level directed questions, tuning-context template is a scaffold with profile-derived fill, and the tarball has been deleted (1.6 GB).
+- **CC:256/512 `AssertFree0/1ElementMultiple=4` — CLOSED as a decision (owner's word, 2026-11-15).** GPU legality was verified: all 11 probes pass Tensile's `NumElementsToValidate=128` reference on gfx90c. The two AF4/4 rows ship in `phases.yaml` as first-class CC rows. TTY A/B (AF4/4 vs AF2/2 paired-widen and the pure baseline) will be measured when the overnight run resumes — no perf claim appears anywhere, and none is expected to appear until that
+  measurement exists. (The question asked on 2026-11-14 is
+  formally closed: the experiment is planned, not undone.)
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
-  routing; the gfx902 starter pair (research output) is the missing piece;
-  it depends on C4 above.
+  routing; everything that can run without the key has been verified
+  (`tests/test_class_b_rehearsal.py`: agent generate/consult/index/candidate/stats/verify-all/run-snapshot-diff/check-candidates/doctor/library-best-effort/preflight/report all pass on a synthetic stub). What remains is the API-key-backed research phase and the human gate — both ownered.
 - **Refactor-1 slop (closed 2026-11-15).** Both swallowed exceptions are fixed:
   registry-read failures propagate, and report-generation failures raise loudly.
   The four dead `_<fam>_mutation_pattern` methods are deleted (never called by
@@ -51,13 +46,28 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   - `run_20261029_152402` (started, never finished, 0 measured cells) —
     abandoned 2026-10-29; registry is append-only so `oto check db` keeps
     reporting it; not modified.
-- **`oto doctor` FAIL — Tensile client not built on this box** (45th changelog
-  entry). Every phase shells out to `<TENSILE_ROOT>/build/client/tensile-client`
-  (or `OTO_TENSILE_CLIENT`); it does not exist under the current TENSILE_ROOT
-  (verified). Honest signal: the box is not campaign-ready until the client is
-  built once (next-cmake, context_raw.md §2.4) or `OTO_TENSILE_CLIENT` points
-  at an existing tensile-client. The build is a user/owner step — it is a
-  Tensile build, not a repo change.
+- **Agent external review — overwritten audit reports (CLOSED 2026-11-15).**
+  Four `acceptance_report.{json,html}` artifacts (under `gfx90c_results/` and
+  `gfx90c_runs/run_20261009_205427/`) were overwritten by an accidental
+  regeneration with today's timestamps rather than a byte-identical restore.
+  Contents are consistent with the ledger (20 WIN / 18 TIE / 0 LOSS, 7 ORANGE;
+  run `run_20261009_205427`); the original bytes are unrecoverable.
+  Treat the current files as the canonical artifact going forward; do not
+  re-compare against the pre-overwrite numbers. Owner is aware — closed on
+  owner's word.
+- **`oto doctor` FAIL (`Tensile client`) — the box honestly reports it does not
+  exist.** The benchmark client is *not built* on this machine; every phase
+  fails before a Tensile subprocess. Build the client once with Tensile's
+  next-cmake (`context_raw.md §2.4`) or set `OTO_TENSILE_CLIENT=` to an existing
+  `tensile-client` file; `oto doctor` now reports the failure with an
+  actionable hint instead of passing silently. This is a user/owner step — the
+  owner asked for it explicitly.
+- **CI removal (CLOSED 2026-11-15, owner's word).** There is no CI in this repo.
+  The pre-commit gate is the deterministic on-machine suite
+  (`python3 -m pytest -q`) with `OTO_GUARD_FILES=1` for the changed-files fast
+  path; every guard now falls back to the full scan on a clean tree (the fast
+  path was previously vacuously green on an empty diff). Owner confirmed they
+  asked for no CI.
 - **yolo26 (new toolchain) — acceptance re-verified 2026-11-14** on the
   ROCm 7.x nightly + rocm-libraries Tensile (`best_effort_library_rocmlibs`,
   torch 2.12.0+rocm7.15): `frames=1 ... person 0.87`, CPU NMS, MIOpen GEMM
