@@ -308,7 +308,7 @@ after 2048³; `docs/results.md` §13.4 / `docs/potential_configs.md` F1). The cl
 −0.74 %), leaving no strict floor win. (The pre-fold snapshot read 22 native / 8
 floor; seven of those floor "wins" were inside the ±2 % tie band.)
 
-## 6. Occupancy model vs emitted reality (todo 1 DONE)
+## 6. Occupancy model vs emitted reality
 
 `occupancy_feasible` (`oto/tensile/gates/occupancy.py`) models
 `accVGPR = TT0·TT1·weight` vs per-thread accumulator budget
@@ -334,7 +334,7 @@ absent from corpus exactly because Tensile refused to emit them — model and
 reality agree on every observed outcome. Regression:
 `tests/test_occupancy_model_vgpr.py::TestMeasuredRule::test_corpus_measured_totals_agree_with_gate`.
 
-### 6.1 The two rules the per-thread model was missing (2026-10-18)
+### 6.1 The two rules the per-thread model was missing
 
 `accVGPR <= 128` necessary, **not sufficient**. Two independent *workgroup*-level
 constraints account for every remaining empty phase Tensile ever produced; both
@@ -372,7 +372,7 @@ false rejections to both populations.** Tests:
 > `python3 -m oto.harness.occupancy_bounds`. `occupancy_feasible` gates legality;
 > audit answers residency.
 
-## 7. Floor deck: gate-legality of steal (todo 3 DONE)
+## 7. Floor deck: gate-legality of steal
 
 `python3 -m oto check candidates --floor` sweeps all **6 855** shipped gfx900
 manifest kernels (`gfx90c_results/gfx900_shipped_manifest.json`, 84 `.dat`
@@ -402,7 +402,7 @@ cell in scope was **CC:256**; 2026-10-15 sweep-order fix first took it to TIE
 `run_20261018_004835` reads CC:256 **WIN (+7.8 %)**. No cell is a LOSS → no
 further steal open (`docs/potential_configs.md` §R24/§R25).
 
-## 8. Knob deltas native vs floor — what actually differs (todo 4 DONE)
+## 8. Knob deltas native vs floor — what actually differs
 
 `oto/harness/cell_knob_diff.py` prints per cell both winners' short names,
 their `STRUCTURAL_KNOBS` (MacroTile, ThreadTile, WorkGroup, GlobalSplitU,
