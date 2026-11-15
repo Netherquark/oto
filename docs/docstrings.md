@@ -350,13 +350,16 @@ tool coerce them into field lists.
 
 ## pdoc rendering (reference site)
 
-pdoc (`pdoc oto`) renders the whole package as a static site directly from the
-live objects. The convention above is pdoc-compatible prose; this section
-records the additions that make the output useful.
+pdoc (`pdoc -d google oto`) renders the whole package as a static site directly
+from the live objects. The convention above is pdoc-compatible; this section
+records the additions that make the output useful. Run with `-d google` so the
+existing Google-style `Args:`/`Returns:` blocks render as proper sections
+instead of literal text.
 
-- Treat every docstring as **Markdown prose**. `Args:` / `Returns:` tables
-  degrade to literal text, so state arguments and return values in sentences:
-  ``Raises `ValueError` when ...``, ``Returns the *winner* config ...``.
+- Keep the module-level `Owns` / `Does NOT own` / `Public API` clauses as
+  sentences. Function-level `Args:` / `Returns:` / `Raises:` blocks are kept as
+  Google-style sections (rendered with `pdoc -d google`); state non-obvious
+  raising behaviour in a sentence as well.
 - Back-tick code symbols (`oto.tensile.gates.vgpr_model`, `validate_config`)
   so pdoc can cross-link them.
 - Cross-link neighbouring modules with `See :mod:\`oto.harness.candidate_rows\``
