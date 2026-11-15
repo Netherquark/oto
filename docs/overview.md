@@ -22,18 +22,17 @@ three ecosystems. If a document tries to serve two, it serves neither.
 ### Human ecosystem
 Vision → setup → bring-up gate → failure modes. No agent-role jargon.
 - [`README.md`](../README.md), [`docs/getting_started.md`](getting_started.md),
-  [`docs/getting_started.md`](getting_started.md), [`docs/toolchain_client.md`](toolchain_client.md),
+  [`docs/toolchain_client.md`](toolchain_client.md),
   [`docs/cli.md`](cli.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md),
   `LICENSE`, `NOTICE`.
 
 ### Operator ecosystem (Class B)
 Bring-up → starter pair → campaign → verification matrix.
 - [`docs/operator_runbook.md`](operator_runbook.md) (contract + matrix),
-  [`docs/operator_runbook.md`](operator_runbook.md) (long-form campaign),
   [`docs/starter_pair.md`](starter_pair.md), `docs/starter_template.md` /
   `.json`, `docs/gfx902_starter.md` / `.json` (worked example),
-  `docs/starter_pair.md`, `docs/harness_runbook.md`,
-  `docs/harness_runbook.md`, `docs/getting_started.md` (shared).
+  `docs/harness_runbook.md`,
+  `docs/getting_started.md` (shared).
 
 ### Developer ecosystem (Class A)
 Invariants → docstrings → implementation plan → harness.
