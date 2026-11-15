@@ -64,6 +64,14 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   solver. The old library (`best_effort_library`, ROCm 6.4.4 / Tensile 4.44)
   reproducibly wedges this nightly: `HW Exception by GPU node-1 ... GPU Hang`.
   New library is the working one; the old one is stale against nightly.
+- **Unrecoverable report artifacts (from the v1-readiness audit).** The audit
+  overwrote `gfx90c_results/acceptance_report.{json,html}` and
+  `gfx90c_runs/run_20261009_205427/acceptance_report.{json,html}` while running a
+  "read-only" check whose live-registry path rewrites the live A/B report. No
+  byte-identical restore exists (the audit's regeneration reproduces the same
+  envelope — 20 WIN / 18 TIE / 0 LOSS, 7 ORANGE, 38 cells — but with new
+  timestamps). These files are machine-local (gitignored); no functional impact;
+  flagged here so no one later claims byte-comparison confidence they do not have.
 - **Owner decision — 9.9 GB nightly tarball deletion** (the extracted SDK is in use under `dist-7.15.0a20260728/`); blocked on the owner's word.
 - **HIP_PATH canonical choice** — the ROCm nightly venv vs the extracted `dist-7.15.0a20260728/` SDK; no code blocker, owner confirms.
 
