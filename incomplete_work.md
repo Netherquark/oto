@@ -26,6 +26,7 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 - **Class B end-to-end.** `README.md` §7 + `docs/operator_runbook.md` have the
   routing; everything that can run without the key has been verified
   (`tests/test_class_b_rehearsal.py`: agent generate/consult/index/candidate/stats/verify-all/run-snapshot-diff/check-candidates/doctor/library-best-effort/preflight/report all pass on a synthetic stub). What remains is the API-key-backed research phase and the human gate — both ownered.
+- **F-REPORT-4 — like-for-like degenerate paths are not marked in the JSON.** The report falls back to per-run analytics without a like-for-like filter when `_native_analytics_all_runs` is empty, and nothing flags the report provenance. Minor, single-site change to the payload (would add a `protocol_fallback` or similar marker to `<codename>_results/acceptance_report.json`). Deferred for owner review — a new payload field needs the downstream consumers to cope first.
 - **Refactor-1 slop (closed 2026-11-15).** Both swallowed exceptions are fixed:
   registry-read failures propagate, and report-generation failures raise loudly.
   The four dead `_<fam>_mutation_pattern` methods are deleted (never called by
