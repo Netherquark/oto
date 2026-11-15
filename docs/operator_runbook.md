@@ -38,6 +38,7 @@ picked the wrong class and must switch to Class A (with the user's explicit
 permission).
 
 Enforced by: `oto/docs_index_writer.py` (`AGENT_CLASSES["B"]["never_needs"]` includes
+
 all `oto/**/*.py` paths; `oto/agents/meta_agent.py` runs only CPU-only harness tools
 that write to the run directory, never to `oto/`).
 
@@ -1086,3 +1087,201 @@ The raw research rounds this section is distilled from: `archive/corpus*.md`,
 `context*.md` (untracked, on disk only). Their durable outputs are folded into
 the owners (`docs/research/kernel_tuning.md`, `docs/invariants.md`,
 `docs/gfx90c_tuning_guide.md` §13); the raw files carry evidence, not verdicts.
+
+## §19. Blind convergence on a never-seen target — the end-to-end campaign (worked on gfx902)
+
+### 19.0 What "blind" means here
+
+You have **never seen measurements for this device**. No verified knobs, no
+ceilings, no floor, no shipping Tensile library for its arch. Everything you
+know arrives from: (a) first-party hardware facts you or the human verified,
+(b) CPU-only gate verdicts, (c) your own measurements on the device. Nothing
+else. gfx90c is the *shape* of a finished campaign, never a template of facts —
+every gfx90c number in this repo is gfx90c evidence and does not transfer.
+
+gfx902 is the worked instance throughout this section: Raven Ridge, Vega 8
+(8 CUs), XNACK-enabled, RHEL 9.5 desktop, ROCm via TheRock nightly. No numbers
+for gfx902 exist anywhere until Stage D produces them.
+
+### 19.1 The contract, in one paragraph
+
+The symbolic shell is the law; the agent is inside it. Gates decide what may
+launch. The ledger decides what was measured. The human signs silicon facts.
+The agent never: edits `oto/`, benchmarks without a legal deck, invents a
+number, claims a verdict before measurement, or continues past a failed gate.
+A non-deterministic, unreliable narrator is survivable because acceptance is a
+deterministic function of the ledger — the agent's prose cannot launder a bad
+result into a good one. If you are not sure whether you may act, you may not.
+
+### 19.2 Phase 0 — preflight (anywhere; no key, no GPU)
+
+Walk the deck in order. Any failure → stop, report it, do not work around it.
+
+| # | Command | What it proves |
+|---|---------|----------------|
+| A1 | `oto check candidates --quiet` | deck sane on the ambient profile |
+| A2 | `oto agent consult` on a **stub** pair | agent pipeline emits a gate-checked config doc |
+| A3 | `oto agent index` | `docs/docs_index.json` regenerates, clean |
+| A4 | `oto doctor` | honest status of `.env` / `TENSILE_ROOT` / `ROCM_PATH` / client |
+| A5 | `python3 -m pytest -q` | suite green |
+
+A5 keeps the Class-B rehearsal green; A2 proves the agent path writes through
+the gates rather than around them.
+
+### 19.3 Phase 1 — the starter pair and the human gate
+
+You cannot tune hardware you have not declared. The starter pair is mandatory:
+
+1. `docs/<codename>_starter.md` — identity, what you want, known quirks. You
+   write it; it says who the device is.
+2. `docs/<codename>_starter.json` — facts oto loads. A **zeroed stub refuses to
+   load** (`load_profile_from_starter` raises). The refusal is the gate, not an
+   error to be silenced.
+3. Agent research fills `## Research (UNVERIFIED …)` sections when a key is in
+   the environment. **Those sections are candidates, never facts.**
+4. A human cross-checks **every** value against first-party sources (ISA
+   manual, SKU sheet, `rocminfo`). Only then may the JSON be promoted to
+   `profiles/<codename>.json` — by the human, manually.
+
+On gfx902: `docs/gfx902_starter.{md,json}` exists as the stub. It is a
+zeroed stub by design; `profiles/gfx902.json` does not exist; the human gate
+produces it, or nothing runs.
+
+**Failure → response.** JSON won't load → the fact is missing; put it in the
+stub marked UNVERIFIED and continue research. Values disagree across sources →
+record both, take the first-party one; if none is first-party, STOP and ask.
+Human refuses to sign → the device never gets a profile; the campaign ends here
+honestly.
+
+### 19.4 Phase 2 — bring-up on the device (TTY only; never a desktop session)
+
+Do not proceed past any failure here; each step depends on the last.
+
+1. **Identify the card.** `rocminfo | grep -E 'Name|Marketing Name'` — the
+   expected codename must appear as an agent with `Name: gfx902` (CPU agents
+   have `Vendor Name: CPU`; the GPU is the `BASE_PROFILE`/`FULL_PROFILE` agent
+   whose `Name:` is the arch). Multiple GPUs: the render node with the arch is
+   the target; `oto` selects by codename, not by card index — absence is a
+   hard stop.
+2. **Tensile client exists.** `python3 -m oto doctor` must report
+   `Tensile client OK`. Missing → `scripts/build_tensile_client.sh
+   --rocm-prefix <ROCM_PREFIX> --tensile-root <TENSILE_ROOT>` (CPU-only).
+3. **ISA support probe.** `python3 -m oto check tensile-build --arch <codename>
+   --family CC --jobs 4` (a CC row is a shallow compile). A PASS means Tensile
+   can emit for the arch; a refusal scoped to the arch means support is absent —
+   see D3 below (deliverable downgrades, it does not die).
+4. **Deck sanity on the device profile.** `python3 -m oto check candidates --quiet`
+   with the new profile active (`OTO_PROFILE=<codename>`). 0 illegal or stop.
+5. **First true launch.** `python3 -m oto bench --targets <two gate-legal rows>
+   --native` in the TTY. Expected: phases run, report lands, exit 0. Failure
+   modes of this step are E4–E6 below; do not patch around any of them.
+
+### 19.5 Phase 3 — blind vs informed; is there a floor?
+
+- **Informed** means a shipped library exists for a *neighbouring* arch and you
+  steal it as a reference (gfx90c used gfx900). If the target has none (gfx902
+  today), the campaign is **blind**.
+- **Blind** means: no floor arm, verdicts are `?` against `?`, and the only
+  honest claims are (i) repeatability (rerun dispersion within band),
+  (ii) ceilings vs the profile's own peaks, (iii) regression vs earlier
+  iterations of this same device.
+- The agent must never import a gfx906/gfx90c verdict as a gfx902 fact. A
+  neighbouring-device library can seed **candidate rows**; it can never
+  authorize a verdict.
+
+### 19.6 Phase 4 — the campaign loop (what `oto tune` actually does)
+
+One iteration: harvest winners → reduce the floor of what's to beat → gate →
+emit → run on silicon → classify → ledger → converge-or-continue. Nothing in
+that chain is discretionary. The runner is idempotent per phase (fp identity):
+a crashed phase reruns; a completed phase never does.
+
+Crash/recovery:
+
+- Process dies mid-phase → `oto` records what it can; on restart the run opens
+  a new run dir; the ledger is append-only so nothing is lost.
+- `oto` is killed or the host dies → run rows are reclassified to `interrupted`
+  by `SQLiteRegistry.cleanup_stale_runs()` on next open; reruns resume from the
+  ledger. A phase that produced no CSV is invisible to the corpus; reruns handle it.
+- GPU fault / kernel hang → the phase ends `failed`; the GPU-loss guard in the
+  phase loop aborts after a configurable streak of empty phases; the run closes
+  with the reason recorded. Recovery is a cooldown and a fresh run — never an
+  in-place retry of the same phase.
+- Budget exhausted, no convergence → the honest terminal state is "budget
+  exhausted", not a fake pass. Unconverged is a result; record it, deliver it,
+  stop.
+
+### 19.7 Edge cases and failure modes (detection → response → retry)
+
+| # | Detection | Response | Retry? |
+|---|-----------|----------|--------|
+| E1 | codename absent from `rocminfo` / wrong card | STOP; the device is not here | never without owner |
+| E2 | `KERNEL_DISPATCH` missing / arch unknown to Tensile | STOP; deliverable downgrades to D3 | never |
+| E3 | client missing / mismatch with `TENSILE_ROOT` | rebuild via `scripts/build_tensile_client.sh` (CPU-only) | yes, once |
+| E4 | kernel hangs past the timeout | phase → `failed`; streak guard aborts | rerun fresh; never in-place |
+| E5 | GPU lost mid-run (all phases empty) | abort run; reason recorded | fresh run after cleanup |
+| E6 | Tensile validation prints mismatched elements | kernel wrong; phase → failed; do not bench again | never for that config |
+| E7 | everything refused by the gates (empty deck) | deck defect; report, do not force | never |
+| E8 | NaN / garbage in CSVs | treat as failed phases | rerun once; then drop family |
+| E9 | identical-fp saturation / novelty exhausted | budget exhausted is terminal | stop |
+| E10 | two lanes of the same campaign race | ledger single-writer + unique run dirs | resume the survivor |
+| E11 | disk/log exhaustion | free space; keep all logs | continue |
+| E12 | thermal throttle / clock collapse | read `oto status`; band tightens | rerun same rows |
+
+### 19.8 Dead ends (total stops — no retry, no workaround)
+
+- **D1** No GPU visible / wrong hardware present.
+- **D2** Human gate not passed — profile cannot be created, silicon facts
+  cannot exist.
+- **D3** Tensile lacks the arch class — the deliverable downgrades to "tuned
+  deck + build proof + honest report", never to invented numbers.
+- **D4** Budget exhausted without convergence — valid terminal state.
+- **D5** No ROCm toolchain / no client — nothing runs, ever.
+- **D6** `NumElementsToValidate` failures in-loop — the kernel is wrong; the
+  deck row is refused; do not "make it smaller" to sneak it through.
+
+### 19.9 Why a non-deterministic agent cannot go insane here
+
+Every acceptance path is a pure function of the ledger. The agent proposes; the
+shell disposes. Concretely:
+
+- gates are re-run against the same constants every time (the gate tables are
+  profile data + corpus-calibrated rules; they do not drift with the agent's mood);
+- verdicts come from measured medians of identical fp identity — the same
+  kernel re-measured gives the same verdict;
+- the deck + overlay are validated before launch; a malformed plan is refused
+  before it burns silicon;
+- the agent cannot delete history (append-only ledger, `phases.yaml` is the
+  deck of record, `git` tracks every row);
+- `UNVERIFIED` text never reaches the profile; research output is labelled and
+  the human signs facts;
+- Class B is read-only on `oto/` — a "creative fix" in the wrong tree is
+  impossible by construction.
+
+### 19.10 Hand-off after the run
+
+Deliverables in order:
+1. `acceptance_report.{json,html}` — the honest verdict table (some cells may be `?`);
+2. the library builder output (`TensileCreateLibrary` via `oto library
+   best-effort`) — or the honest D3 downgrade report;
+3. the rebuilt `kernel_db.json` so future sessions inherit every measurement;
+4. the starter cross-links + `docs/<codename>_*.md` generated docs;
+5. `incomplete_work.md` updated: every open item that this run closed moves to
+   `changelog.md`, everything still open stays — nothing else.
+
+### 19.11 A concrete gfx902 day-by-day walk
+
+- **Day 0 (no GPU):** starter pair filled from template; human gate session —
+  every JSON value cross-checked; `profiles/gfx902.json` promoted by the human;
+  `oto doctor` 0 FAIL; `oto check candidates` 0 illegal on the gfx902 profile.
+- **Day 1 (TTY, on the desktop):** client built; `oto check tensile-build --arch gfx902`
+  smoke-passes a CC and a ZZ row; first `oto bench --targets <two gate-legal rows>
+  --native`; `oto report` shows two cells measured.
+- **Day 2–N:** `oto tune` overnight; `oto status` checked mornings; the ledger
+  accumulates; the deck narrows; the ceiling report shows movement per cell.
+- **Exit states:** (a) converged — acceptance report + library carved + docs
+  updated; or (b) budget exhausted — "budget exhausted" verdict, all cells `?`
+  on missing data, deliverable is the ledger + rerun plan; or (c) D2/D3/D5 —
+  the blocker report, with the exact failing step and the exact evidence.
+
+All three are completion. None requires pretending.
