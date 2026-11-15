@@ -108,7 +108,7 @@ def _add_tune(sub: Any) -> None:
     p.add_argument("--resume", action="store_true",
                    help="Resume the reference floor where it stopped")
     p.add_argument("--include-illegal", action="store_true",
-                   help="Re-measure the ILLEGAL reference cells")
+                   help="(no-op; the reference floor always re-measures the illegal tier)")
     p.add_argument("--include-underspecified", action="store_true",
                    help="Re-measure the UNDER-SPECIFIED reference cells")
     p.add_argument("--include-unreproducible", action="store_true",

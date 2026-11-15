@@ -565,7 +565,7 @@ Flags:
 - `--budget` — Convergence iterations
 - `--mutations` — Max mutations per candidate
 - `--resume` — Resume the reference floor where it stopped
-- `--include-illegal` — Re-measure the ILLEGAL reference cells
+- `--include-illegal` — (no-op; the reference floor always re-measures the illegal tier)
 - `--include-underspecified` — Re-measure the UNDER-SPECIFIED reference cells
 - `--include-unreproducible` — Re-attempt the UNREPRODUCIBLE reference cells
 - `-y`, `--yes` — Accept the default plan without prompting

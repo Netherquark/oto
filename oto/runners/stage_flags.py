@@ -142,9 +142,8 @@ def _add_release_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--release-illegal",
         action="store_true",
-        help="Non-interactive equivalent of answering 'yes' to question 1 "
-             "(re-measure the ILLEGAL reference cells). The --auto prompt asks "
-             "interactively; this flag exists for cron/CI."
+        help="(no-op; ILLEGAL reference cells always re-measure — "
+             "this flag is accepted for compatibility only)"
     )
     parser.add_argument(
         "--release-under-specified",
@@ -254,7 +253,7 @@ def _add_run_flags(parser: argparse.ArgumentParser, profile=None) -> None:
         default=None,
         metavar="DEST",
         help=("Carve a best-effort tensile library from the full kernel database "
-              f"(CPU-only). Optional DEST. Defaults to the across-all-runs view; "
+              "(CPU-only). Optional DEST. Defaults to the across-all-runs view; "
               "override with --protocol-basis.")
     )
     parser.add_argument(
