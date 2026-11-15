@@ -51,6 +51,13 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   - `run_20261029_152402` (started, never finished, 0 measured cells) —
     abandoned 2026-10-29; registry is append-only so `oto check db` keeps
     reporting it; not modified.
+- **`oto doctor` FAIL — Tensile client not built on this box** (45th changelog
+  entry). Every phase shells out to `<TENSILE_ROOT>/build/client/tensile-client`
+  (or `OTO_TENSILE_CLIENT`); it does not exist under the current TENSILE_ROOT
+  (verified). Honest signal: the box is not campaign-ready until the client is
+  built once (next-cmake, context_raw.md §2.4) or `OTO_TENSILE_CLIENT` points
+  at an existing tensile-client. The build is a user/owner step — it is a
+  Tensile build, not a repo change.
 - **yolo26 (new toolchain) — acceptance re-verified 2026-11-14** on the
   ROCm 7.x nightly + rocm-libraries Tensile (`best_effort_library_rocmlibs`,
   torch 2.12.0+rocm7.15): `frames=1 ... person 0.87`, CPU NMS, MIOpen GEMM
