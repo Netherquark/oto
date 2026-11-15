@@ -46,14 +46,25 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
     w = 0.38
     bars_n = ax.bar([i - w / 2 for i in x], native, w, label=f"Native {codename} (best)", color="#2563eb", edgecolor="white", linewidth=0.6)
     bars_s = ax.bar([i + w / 2 for i in x], spoof, w, label="gfx900 spoof floor", color="#f97316", edgecolor="white", linewidth=0.6)
+    ymax = max(max(native), max(spoof))
     for b in list(bars_n) + list(bars_s):
         h = b.get_height()
-        ax.annotate(f"{h:.0f}", (b.get_x() + b.get_width() / 2, h), ha="center", va="bottom", fontsize=8, fontweight="bold", color="#111827")
+        label = f"{h:.0f}"
+        if h >= ymax * 0.18:  # tall bar: label inside, clear of the verdict line
+            ax.annotate(label, (b.get_x() + b.get_width() / 2, h * 0.96),
+                        ha="center", va="top", fontsize=8, fontweight="bold",
+                        color="white")
+        else:                  # short bar: label above, verdict moves higher
+            ax.annotate(label, (b.get_x() + b.get_width() / 2, h),
+                        ha="center", va="bottom", fontsize=8,
+                        fontweight="bold", color="#111827")
     for i, (v, d) in enumerate(zip(verdicts, deltas, strict=False)):
-        ymax = max(native[i], spoof[i])
+        top = max(native[i], spoof[i])
         color = "#16a34a" if v == "WIN" else ("#ca8a04" if v == "TIE" else "#dc2626")
         sign = "+" if d >= 0 else ""
-        ax.text(i, ymax * 1.06, f"{v}  {sign}{d:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold", color=color)
+        ax.text(i, top * 1.13 + ymax * 0.02, f"{v}  {sign}{d:.1f}%",
+                ha="center", va="bottom", fontsize=9, fontweight="bold",
+                color=color)
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylabel("GFLOP/s (best per cell)", fontsize=11, fontweight="semibold")
@@ -61,12 +72,12 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
     ax.legend(loc="upper left", frameon=False, fontsize=10)
     ax.grid(axis="y", linestyle=":", alpha=0.4)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, max(max(native), max(spoof)) * 1.22)
+    ax.set_ylim(0, ymax * 1.32)
     wins = sum(1 for v in verdicts if v == "WIN")
     ties = sum(1 for v in verdicts if v == "TIE")
     losses = sum(1 for v in verdicts if v == "LOSS")
     fig.text(0.99, 0.93, f"Native {codename} vs spoof floor (per-cell best)", ha="right", va="top", fontsize=8, family="monospace")
-    fig.text(0.99, 0.01, f"WIN {wins} / TIE {ties} / LOSS {losses}   (cells total)", ha="right", va="bottom", fontsize=9, style="italic", color="#4b5563")
+    fig.text(0.98, 0.01, f"WIN {wins} / TIE {ties} / LOSS {losses} (of per-family best cells)", ha="right", va="bottom", fontsize=8, style="italic", color="#4b5563")
     fig.tight_layout()
     return fig
 

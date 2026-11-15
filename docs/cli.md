@@ -1,6 +1,6 @@
 # oto CLI command reference
 
-Generated from `oto help --json` for oto 26.11.0. Do not hand-edit;
+Generated from `oto help --json` for oto 1.0.0. Do not hand-edit;
 run `oto help --write docs/cli.md` after changing the command tree.
 
 `oto` is the single front door. It is verb-first and noun-scoped: at most

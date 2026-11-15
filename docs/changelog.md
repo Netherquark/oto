@@ -985,6 +985,47 @@ are grouped at the end.
   `verify_all` baseline.
 
 
+- **2026-11-15 — GPU launch path fixed and the six CC candidate rows measured on silicon.**
+  `oto/runners/driver.py::_get_tensile_env` never exported the user-provided ROCm's
+  include directory; Tensile shells out to amdclang++ with no `-I`, so HIP headers
+  silently resolved to `/usr/include/hip` (the system ROCm 6.x headers) against a
+  nightly ROCm 7.15 toolchain — every GPU phase died at compile
+  (`__AMDGCN_WAVEFRONT_SIZE` undeclared). The env now pins `CPLUS_INCLUDE_PATH` /
+  `C_INCLUDE_PATH` to `<ROCM_PATH>/include` (never /usr); pinned by
+  `tests/test_toolchain.py::test_get_tensile_env_points_at_user_include`.
+  Re-run on gfx90c at ≤ 512³: all six CC candidates
+  (af4em4 @256/@512, paired-widen AF22 @256/@512, AF11 trialD1/base)
+  **PASS** — Tensile validation (`NumElementsToValidate=128`) `PASSED`, `clientExit=0`,
+  real per-problem CSVs recorded. Perf medians from this single uncontrolled
+  session are not a tuning verdict; the A/B remains TTY-gated.
+  `phases.yaml` gained the CC:256 paired-widen control row (`...swAssertFree0ElementMultiple2_...`),
+  fingerprinted as the deck does (`e99f3f...`, 281 rows, 0 illegal by `check candidates`).
+
+
+- **2026-11-15 — Easy mode can install the nightly stack on request; deep Tensile discovery.**
+  `oto setup` previously only *discovered* existing SDKs/Tensile checkouts — nothing
+  could be downloaded on request, and the Tensile discovery was a 2-level glob that
+  missed checkouts nested a few segments deep (like `sources/GPU/rocm-libraries/shared/tensile`).
+  Now `--download-rocm python` creates a nightly wheel venv at `--rocm-venv`
+  (index `rocm.nightlies.amd.com/whl-multi-arch/`, the same multi-arch index the
+  nightly dev venv was installed from; `--download-torch` adds torch 2.12.0 /
+  torchvision 0.27.0 / torchaudio 2.11.0 per TheRock #3818), `--download-rocm dnf`
+  prints package guidance (no sudo executed), and `--download-tensile clone` sparse-clones
+  ROCm/rocm-libraries (`shared/tensile`) into `--tensile-dest`. Interactively the wizard
+  asks; non-interactive without the flags installs nothing (prints the opt-in hint).
+  `--dry-run` prints the exact commands and executes nothing — pinned by
+  `tests/test_setup_downloads.py` (4 tests). Discovery is now a bounded-depth walk with
+  hidden/venv/node_modules prune (`/tmp` no longer scanned to avoid test-droppings
+  polluting the pick list; use `--tensile-root` for unusual layouts).
+
+- **2026-11-15 — oto v1.0.0 released.**
+  First tagged release. SemVer under the 1.0.0 stability contract
+  (`docs/developer/release_contract.md`): the CLI tree, exit codes (0/1/2/130),
+  stdout/stderr policy, and machine-readable schemas are contracted; everything
+  else — module internals, numeric verdicts, deck values, doc prose — is not.
+  Release notes to be posted: `docs/developer/release_notes_v1_0_0.md`. Tag
+  `v1.0.0` annotated on the release commit.
+
 ## October 2026
 
 - **2026-10-29 — best-effort build fixed on system ROCm; default
@@ -4910,38 +4951,3 @@ This content was preserved from the former harness runbook that referenced `/tmp
 
 
 
-## November 2026
-
-- **2026-11-15 — GPU launch path fixed and the six CC candidate rows measured on silicon.**
-  `oto/runners/driver.py::_get_tensile_env` never exported the user-provided ROCm's
-  include directory; Tensile shells out to amdclang++ with no `-I`, so HIP headers
-  silently resolved to `/usr/include/hip` (the system ROCm 6.x headers) against a
-  nightly ROCm 7.15 toolchain — every GPU phase died at compile
-  (`__AMDGCN_WAVEFRONT_SIZE` undeclared). The env now pins `CPLUS_INCLUDE_PATH` /
-  `C_INCLUDE_PATH` to `<ROCM_PATH>/include` (never /usr); pinned by
-  `tests/test_toolchain.py::test_get_tensile_env_points_at_user_include`.
-  Re-run on gfx90c at ≤ 512³: all six CC candidates
-  (af4em4 @256/@512, paired-widen AF22 @256/@512, AF11 trialD1/base)
-  **PASS** — Tensile validation (`NumElementsToValidate=128`) `PASSED`, `clientExit=0`,
-  real per-problem CSVs recorded. Perf medians from this single uncontrolled
-  session are not a tuning verdict; the A/B remains TTY-gated.
-  `phases.yaml` gained the CC:256 paired-widen control row (`...swAssertFree0ElementMultiple2_...`),
-  fingerprinted as the deck does (`e99f3f...`, 281 rows, 0 illegal by `check candidates`).
-
-## November 2026
-
-- **2026-11-15 — Easy mode can install the nightly stack on request; deep Tensile discovery.**
-  `oto setup` previously only *discovered* existing SDKs/Tensile checkouts — nothing
-  could be downloaded on request, and the Tensile discovery was a 2-level glob that
-  missed checkouts nested a few segments deep (like `sources/GPU/rocm-libraries/shared/tensile`).
-  Now `--download-rocm python` creates a nightly wheel venv at `--rocm-venv`
-  (index `rocm.nightlies.amd.com/whl-multi-arch/`, the same multi-arch index the
-  nightly dev venv was installed from; `--download-torch` adds torch 2.12.0 /
-  torchvision 0.27.0 / torchaudio 2.11.0 per TheRock #3818), `--download-rocm dnf`
-  prints package guidance (no sudo executed), and `--download-tensile clone` sparse-clones
-  ROCm/rocm-libraries (`shared/tensile`) into `--tensile-dest`. Interactively the wizard
-  asks; non-interactive without the flags installs nothing (prints the opt-in hint).
-  `--dry-run` prints the exact commands and executes nothing — pinned by
-  `tests/test_setup_downloads.py` (4 tests). Discovery is now a bounded-depth walk with
-  hidden/venv/node_modules prune (`/tmp` no longer scanned to avoid test-droppings
-  polluting the pick list; use `--tensile-root` for unusual layouts).

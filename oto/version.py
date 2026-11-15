@@ -6,4 +6,4 @@ pinning (``requirements.txt``).
 Public API: ``__version__``.
 """
 
-__version__ = "26.11.0"
+__version__ = "1.0.0"

@@ -23,6 +23,7 @@ from oto.metrics.measurement_protocol import (
     PARTIAL,
     SINGLE,
     UNKNOWN,
+    admit,
     classify,
     classify_count,
     label,
@@ -117,6 +118,32 @@ class TestAccessors(unittest.TestCase):
         assert label(SINGLE) == "single-problem"
         assert label(PARTIAL) == "partial"
         assert label(None) == "unknown-protocol"
+
+
+class TestAdmit(unittest.TestCase):
+    """admit(): the filter the report/coverage loaders use.
+
+    'any' is the pre-R56.3 unfiltered pairing (must admit every derivable
+    record); like-for-like bases admit exactly their form; falsy admits all.
+    """
+
+    def test_any_admits_every_derivable_protocol(self):
+        assert admit("any", FAMILY)
+        assert admit("any", SINGLE)
+        assert admit("any", PARTIAL)
+
+    def test_any_rejects_unknown(self):
+        assert not admit("any", UNKNOWN)
+
+    def test_exact_bases(self):
+        assert admit(FAMILY, FAMILY)
+        assert not admit(FAMILY, SINGLE)
+        assert admit(SINGLE, SINGLE)
+        assert admit(PARTIAL, PARTIAL)
+
+    def test_falsy_basis_admits_all(self):
+        assert admit("", FAMILY)
+        assert admit(None, UNKNOWN)
 
 
 if __name__ == "__main__":

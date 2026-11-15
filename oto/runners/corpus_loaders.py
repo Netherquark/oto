@@ -21,7 +21,7 @@ from typing import Any
 from oto.device import loader as _loader
 from oto.metrics.benchmark_analytics import CellAnalytics, extract_family_from_phase_id
 from oto.metrics.cell_policy import check_retirement_eligibility
-from oto.metrics.measurement_protocol import classify
+from oto.metrics.measurement_protocol import admit, classify
 from oto.runners.result_paths import runs_dir as _runs_dir
 from oto.tensile.shape_order import ordered_shapes
 
@@ -62,7 +62,7 @@ class CorpusMixin:
                 continue
             measured = {shape for (_d, shape, _f, _fam) in cell_map}
             protocol = classify(phase_family, measured)
-            if protocol_basis and protocol != protocol_basis:
+            if not admit(protocol_basis, protocol):
                 continue
 
             for (cell_dtype, shape, fp, family), seeds in cell_map.items():
@@ -116,7 +116,7 @@ class CorpusMixin:
             # the rows IS the phase's measured set (UNLESS proven otherwise).
             measured = {shape for (_d, shape, _f, _fam) in cell_map}
             protocol = classify(phase_family, measured)
-            if protocol_basis and protocol != protocol_basis:
+            if not admit(protocol_basis, protocol):
                 continue
             for (cell_dtype, shape, fp, family), seeds in cell_map.items():
                 all_analytics.append(self.analytics.compute_cell_analytics(

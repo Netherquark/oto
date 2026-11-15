@@ -32,7 +32,7 @@ Does NOT own: the records it classifies (`oto.metrics.ab_records` builds them),
 the deltas they feed (`oto.metrics.ab_delta`), or the corpus it stamps
 (`oto.harness.kernel_db`).
 Public API: SINGLE, PARTIAL, FAMILY, UNKNOWN, PROTOCOLS, LABEL, label,
-gradeable, classify, classify_count, protocol_of, like_for_like, yaml_count,
+gradeable, classify, classify_count, protocol_of, like_for_like, admit, yaml_count,
 problem_count_text.
 """
 
@@ -194,6 +194,25 @@ def protocol_of(record: dict[str, Any]) -> str:
     """
     p = record.get("protocol")
     return p if p in PROTOCOLS else UNKNOWN
+
+
+ANY = "any"
+
+
+def admit(basis: str | None, protocol: str) -> bool:
+    """Whether ``protocol`` admits into the ``basis`` pool.
+
+    ``basis == "any"`` is the pre-§R56.3 unfiltered pairing the best-library
+    build uses: admit every record whose invocation form was derivable (any
+    non-``UNKNOWN`` protocol), so the unfiltered walk does not regress to an
+    empty corpus. Any other value is an exact match; falsy basis admits
+    everything.
+    """
+    if not basis:
+        return True
+    if basis == ANY:
+        return protocol != UNKNOWN
+    return protocol == basis
 
 
 def like_for_like(native_protocol: str | None,

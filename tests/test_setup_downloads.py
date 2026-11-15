@@ -9,9 +9,7 @@ how to opt in.
 """
 from __future__ import annotations
 
-import sys
 import types
-from pathlib import Path
 
 import pytest
 
@@ -52,8 +50,8 @@ def _args(**over):
 @pytest.fixture
 def empty_box(monkeypatch):
     """Simulate a machine with no ROCm SDK and no Tensile checkout."""
-    monkeypatch.setattr(ob, "_discover_rocm", lambda: [])
-    monkeypatch.setattr(ob, "_discover_tensile", lambda: [])
+    monkeypatch.setattr(ob, "_discover_rocm", list)
+    monkeypatch.setattr(ob, "_discover_tensile", list)
     monkeypatch.setattr(ob, "_interactive", lambda: False)
 
 
