@@ -293,6 +293,7 @@ def _config_from_kernel(name: str, dtype: str,
 
 
 def _short_tag(name: str, k: dict[str, Any]) -> str:
+    """Short filename-safe tag for a config (mt/tt/vw/du/gsu + hash)."""
     import hashlib
     return "mt{}-tt{}-vw{}-du{}-gsu{}-{}".format(
         k.get("m0", 0),

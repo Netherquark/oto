@@ -139,7 +139,7 @@ def _workgroup_vgpr_rejection(ch: str, r: int, mt0: int, mt1: int, lsu: int,
                               nt: int, profile=None) -> str:
     """Reject text for a workgroup whose accumulators alone fill the register file.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     return (
         f"MacroTile {mt0}x{mt1} (LocalSplitU {lsu}, NumThreads {nt}) needs "
@@ -156,7 +156,7 @@ def _occupancy_limit_rejection(ch: str, tt0: int, tt1: int, vgpr: int,
                                nt: int, profile=None) -> str:
     """Reject text for a kernel whose per-thread VGPRs do not fit the file.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     return (
         f"ThreadTile {tt0}x{tt1} emits {vgpr} VGPRs/thread and the workgroup "
@@ -215,12 +215,9 @@ def occupancy_workgroups_per_cu(config: dict[str, Any], profile=None) -> int:
     per-thread cost. 0 means "this config is not launchable", not "zero
     occupancy".
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        Workgroups per CU, or 0 when ``occupancy_feasible`` would refuse it.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts a Tensile solution dict; returns workgroups per CU, or 0 when
+    ``occupancy_feasible`` would refuse it. ``profile`` is an optional
+    ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     dims = tile_dims(config)
     if not dims:
@@ -256,7 +253,8 @@ def _register_file_checks(config: dict[str, Any], dims, ch: str, r: int,
     * the per-thread occupancy limit (the EMITTED VGPRs against
       ``65536 // NumThreads``),
     * the LDS reduction buffer (``LSU*MT0*MT1*computeBytes > 65536``).
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     reason = _local_split_u_contradiction(config)
     if reason:
@@ -283,31 +281,28 @@ def occupancy_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]
       Tensile refuses past 256 VGPRs/thread; on this device, complex (Z), TT 4x4 =
       128 accVGPR passes and TT 8x4 = 256 -> 271 VGPRs FAILs.
     * the workgroup register file -- ``weight*MT0*MT1*LSU >= 65536`` (error 4,
-      see :func:`_workgroup_file_check`); ThreadTile cancels, so it bounds
+      see ``_workgroup_file_check``); ThreadTile cancels, so it bounds
       MacroTile *area*.
     * the LDS reduction buffer -- ``LSU>1`` and
       ``LSU*MT0*MT1*computeBytes > 65536`` (``MaxLDS``, see
-      :func:`_lds_reduction_check`).
+      ``_lds_reduction_check``).
 
     All three are corpus-calibrated with 0 false rejections. An earlier version
     modelled MacroTile *area* at ``<= 65536/2`` instead and was wrong in both
     directions (it passed the 8 ZZ TT8x4 phases that died 116 times each); the
     post-mortem is in ``docs/potential_configs.md``.
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        ``(True, "")`` when the config is launchable, else ``(False, reason)``.
-        No readable tile dims -> ``(True, "")`` ("nothing to model"); other
-        gates own that case.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts a Tensile solution dict. Returns ``(True, "")`` when the config is
+    launchable, else ``(False, reason)``. No readable tile dims ->
+    ``(True, "")`` ("nothing to model"); other gates own that case.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's
+    ambient profile.
     """
     return _occupancy_feasible_impl(config, profile=profile)
 
 
 def _occupancy_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
-    """Body of :func:`occupancy_feasible` with any bound profile applied."""
+    """Body of ``occupancy_feasible`` with any bound profile applied."""
     dims = tile_dims(config)
     if not dims:
         return True, ""                      # nothing to model; other gates own it
@@ -369,7 +364,7 @@ def _workgroup_file_check(dims, mt0, mt1, weight, lsu, ch, profile=None) -> str 
     accumulators are always allocated, so ``weight*MT0*MT1*LSU`` is a sound lower
     bound on the workgroup total and ``>= 65536`` is exactly "no room for one
     workgroup". ThreadTile cancels, so this bounds MacroTile *area*.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     if weight * mt0 * mt1 * lsu >= _profile(profile=profile,).vgpr_per_cu:
         return _workgroup_vgpr_rejection(
@@ -393,7 +388,7 @@ def _occupancy_limit_check(dims, ch, tt0, tt1, lsu, profile=None) -> str | None:
     accumulator total is only 32768 -- half the file, so both accumulator rules
     pass it. The classic path has no arch accumulator registers (``agpr`` is 0),
     so the test is on ``vgpr`` alone.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     nt = num_threads(dims, lsu)
     if nt <= 0:
@@ -431,9 +426,9 @@ def refuses_workgroup_register_file(config: dict[str, Any], profile=None) -> boo
     unmapped dtype -- other gates own that case), else whether
     ``weight*MT0*MT1*LocalSplitU >= 65536``. This is the calibration-facing form
     ```oto.harness.rule_calibration``` probes; it re-uses the same
-    :func:`_workgroup_file_check` ``occupancy_feasible`` enforces, so the two
+    ``_workgroup_file_check`` ``occupancy_feasible`` enforces, so the two
     cannot drift.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     dims = tile_dims(config)
     if not dims:
@@ -461,7 +456,7 @@ def refuses_per_thread_occupancy_limit(config: dict[str, Any], profile=None) -> 
     workgroup has. With the measured table corrected, the rule refuses
     exactly the phases that die: SS 256x128 at tt8x4 (77 VGPRs/thread over
     1024 threads), the 8 phases of run_20261020_214103 that errored out.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     dims = tile_dims(config)
     if not dims:
@@ -482,9 +477,9 @@ def refuses_lds_reduction_buffer(config: dict[str, Any], profile=None) -> bool |
     ``None`` when the config cannot be modelled, else whether Tensile's
     reduction buffer exceeds ``MaxLDS`` (only possible when ``LocalSplitU > 1``):
     ``LSU*MT0*MT1*computeBytes > 65536``. Calibration-facing form of
-    :func:`_lds_reduction_check`, kept on the same code path so the probe and the
+    ``_lds_reduction_check``, kept on the same code path so the probe and the
     gate agree by construction.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     dims = tile_dims(config)
     if not dims:

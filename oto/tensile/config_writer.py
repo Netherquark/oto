@@ -483,19 +483,18 @@ def write_phase_config(driver, path: Path,
                        phase: dict[str, Any]) -> tuple[bool, str]:
     """Write a valid Tensile Top-Level Config (GlobalParameters + BenchmarkProblems).
 
-    Args:
-        driver: The TensileDriver, used for the Tensile parameter snapshot and to
-            locate nothing else -- the writer deliberately reads no other driver
-            state so it can be exercised offline.
-        path: The YAML file to write.
-        phase: One phase dict from the manifest.
+    `driver` is the TensileDriver, used for the Tensile parameter snapshot and
+    to locate nothing else -- the writer deliberately reads no other driver
+    state so it can be exercised offline. `path` is the YAML file to write;
+    `phase` is one phase dict from the manifest.
 
-    Returns:
-        ``(True, "")`` when a config was written, or ``(False, reason)`` when a
-        CPU legality gate refused the phase before any GPU work. Callers MUST
-        honour the False: the caller used to ignore the early return, so rejected
-        phases still launched Tensile against a config that did not exist, and
-        Tensile then failed with its own rejection reason (the GSU/AF0EM gate) -- which looked like a kernel problem and buried the real cause.
+    Returns ``(True, "")`` when a config was written, or ``(False, reason)``
+    when a CPU legality gate refused the phase before any GPU work. Callers
+    MUST honour the False: the caller used to ignore the early return, so
+    rejected phases still launched Tensile against a config that did not
+    exist, and Tensile then failed with its own rejection reason (the
+    GSU/AF0EM gate) -- which looked like a kernel problem and buried the real
+    cause.
     """
     from oto.runners.driver import _TENSILE_VALID_PARAMS, NOT_A_TENSILE_PARAM
 

@@ -57,14 +57,10 @@ SPELLINGS = tuple(sorted(TRANSPOSE_MAP, key=len, reverse=True))
 
 
 def transposes(pattern: str) -> tuple[bool, bool]:
-    """(TransposeA, TransposeB) for a contraction pattern spelling.
+    """Return the ``(TransposeA, TransposeB)`` flags for `pattern`.
 
-    Args:
-        pattern: One of the four spellings (an unknown one falls back to the
-            NT default, which is what the writer does).
-
-    Returns:
-        The two transpose flags.
+    `pattern` is one of the four spellings; an unknown one falls back to the
+    NT default, which is what the writer does.
     """
     return TRANSPOSE_MAP.get(pattern, DEFAULT_TRANSPOSE)
 
@@ -78,26 +74,19 @@ def tlu_flags(pattern: str) -> tuple[bool, bool]:
     In the spelling, "A**i**lk" is k-contiguous (TLUA False) and
     "B**j**lk" is k-contiguous (TLUB True).
 
-    Args:
-        pattern: One of the four spellings.
-
-    Returns:
-        The two layout flags. An unknown spelling falls back to the NT
-        default, as the writer does.
+    `pattern` is one of the four spellings; an unknown one falls back to the
+    NT default, as the writer does.
     """
     return ("Ailk" in pattern, "Bjlk" in pattern)
 
 
 def pattern_of(config: dict[str, Any]) -> str:
-    """The contraction pattern a config (or its phase label) names.
+    """The contraction pattern `config` (or its phase label) names.
 
-    Args:
-        config: A Tensile solution dict. It may carry ``ContractionPattern``
-            directly, or only a label that contains the spelling (the deck's
-            labels do: "CC_Ailk_Bljk_512x512x512_...").
-
-    Returns:
-        The pattern spelling (the NT default when neither names one).
+    Accepts a Tensile solution dict. It may carry ``ContractionPattern``
+    directly, or only a label that contains the spelling (the deck's labels
+    do: "CC_Ailk_Bljk_512x512x512_..."). Returns the pattern spelling, or the
+    NT default when neither names one.
     """
     named = config.get("ContractionPattern")
     if named:

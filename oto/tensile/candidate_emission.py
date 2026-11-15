@@ -29,7 +29,7 @@ from oto.tensile.candidate_config import CandidateConfig
 
 
 class CandidateEmitMixin:
-    """Emission and the append boundary, mixed into CandidateGenerator."""
+    """Emission and the append boundary, mixed into `oto.tensile.candidate.CandidateGenerator`."""
 
 
     def generate_fingerprint(self, config: dict[str, Any]) -> str:
@@ -171,7 +171,10 @@ class CandidateEmitMixin:
         patterns: list[str],
         base_shapes: list[str], profile=None,
     ) -> list[CandidateConfig]:
-        """Generate native family phases for a dtype/op family. ``profile`` -- optional, ambient by default."""
+        """Generate native family phases for a dtype/op family.
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the ambient profile.
+        """
         candidates = []
         family_deck = self.family_decks.get(family, [],)
 
@@ -217,7 +220,7 @@ class CandidateEmitMixin:
     def _build_family_template(self, family: str, pattern: str, shape: str, profile=None) -> dict:
         """Build candidate template for family phases.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
@@ -331,7 +334,7 @@ class CandidateEmitMixin:
                          shapes, include_baseline, profile=None):
         """Emit baseline (unchanged base tile) candidates if requested.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         if not include_baseline:
             return candidates, refused
@@ -368,7 +371,7 @@ class CandidateEmitMixin:
                             sweep, shapes, profile=None):
         """Emit candidates for one sweep's values.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         for value in sweep["values"]:
             knobs = dict(base)
@@ -398,7 +401,7 @@ class CandidateEmitMixin:
     def _build_template(self, family: str, pattern: str, shape: str, profile=None) -> dict[str, Any]:
         """Build candidate template.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
@@ -419,7 +422,7 @@ class CandidateEmitMixin:
         """Emit decision-labelled trial tiles (full tiles, not knob deltas).
         Each DECISION_TRIAL_TILES entry carries its own decision label and
         optionally its own shapes. Tagged _trialD<n> to show which decision.
-        ``profile`` -- optional, ambient by default.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the ambient profile.
         """
         from oto.tensile.family_decks import DECISION_TRIAL_TILES
 

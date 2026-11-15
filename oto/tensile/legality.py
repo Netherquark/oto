@@ -491,9 +491,9 @@ def _draw_legal(base_dir: Path,
                 rng: random.Random,
                 base_config: dict[str, Any] | None = None,
                 groups: int = 2, profile=None) -> tuple[dict[str, Any] | None, str]:
-    """As :func:`sample_legal`, but also return why a draw was discarded.
+    """As ``sample_legal``, but also return why a draw was discarded.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     support = shipped_support(base_dir, family)
     if not support:
@@ -537,7 +537,7 @@ def sampler_sweep(base_dir: Path,
     *not* computed here: the sampler's claim is structural (it cannot emit a
     wall-violating config), and re-running the full assertion over it would
     measure the assertion, not the prior.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     families = list(families or _loader.resolve_profile(profile,).family_dtypes)
     rng = random.Random(seed)

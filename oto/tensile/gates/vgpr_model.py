@@ -77,7 +77,7 @@ LDS_BUDGET = 16384
 #: 16 bytes, refusing ZZ VectorWidth 2 (see docs/gfx90c_tuning_guide.md §13 §R23).
 BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 16}
 #: Tensile's ``globalParameters["MaxLDS"]`` -- the *per-CU* LDS allocator ceiling,
-#: 64 KiB. Distinct from :data:`LDS_BUDGET`, which is the conservative
+#: 64 KiB. Distinct from ``LDS_BUDGET``, which is the conservative
 #: per-workgroup tile proxy of 16 KiB. The two must not be conflated: the tile
 #: proxy is deliberately conservative (it may refuse a config Tensile accepts),
 #: whereas this is the exact number Tensile compares against at
@@ -130,13 +130,9 @@ MEASURED_VGPR_BY_DTYPE = {
 def measured_accvgpr(tt0: int, tt1: int, weight: int) -> int:
     """Accumulator VGPRs per thread for a thread tile and dtype weight.
 
-    Args:
-        tt0, tt1: ThreadTile dimensions.
-        weight: Effective VGPRs per element for the dtype
-            (:data:`VGPR_PER_ELEMENT`).
-
-    Returns:
-        ``tt0 * tt1 * weight``.
+    `tt0`, `tt1` are the ThreadTile dimensions; `weight` is the effective
+    VGPRs per element for the dtype (``VGPR_PER_ELEMENT``). Returns
+    ``tt0 * tt1 * weight``.
     """
     return tt0 * tt1 * weight
 
@@ -151,11 +147,8 @@ def depth_u(config: dict) -> int:
     computes a footprint 16x too small and waves through 128x32x16
     (the two readers are the two places a config can legitimately hide DepthU).
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        The resolved depth, or 0 when neither location holds a positive integer.
+    Accepts a Tensile solution dict and returns the resolved depth, or 0 when
+    neither location holds a positive integer.
     """
     for key in ("DepthU", "depth_u"):
         raw = config.get(key)
@@ -180,13 +173,10 @@ def depth_u(config: dict) -> int:
 def lds_base_bytes(mt0: int, mt1: int, ch: str) -> int:
     """Unpadded LDS footprint of one workgroup's A and B tiles.
 
-    Args:
-        mt0, mt1: MacroTile dimensions.
-        ch: Dtype char (see :data:`BYTES_PER_ELEMENT`).
-
-    Returns:
-        ``(mt0 + mt1) * bytesPerElement``, or 0 for an unknown dtype char so the
-        caller sees "cannot model" rather than a falsely small footprint.
+    `mt0`, `mt1` are the MacroTile dimensions; `ch` is the dtype char (see
+    ``BYTES_PER_ELEMENT``). Returns ``(mt0 + mt1) * bytesPerElement``, or 0 for
+    an unknown dtype char so the caller sees "cannot model" rather than a
+    falsely small footprint.
     """
     bpe = BYTES_PER_ELEMENT.get(ch)
     if bpe is None:
@@ -272,13 +262,10 @@ def local_split_u(config: dict[str, Any]) -> int:
 def num_threads(dims: tuple[int, int, int, int], lsu: int) -> int:
     """NumThreads = (MT0/TT0) * (MT1/TT1) * LocalSplitU (SolutionStructs:1964).
 
-    Args:
-        dims: ``(MT0, MT1, TT0, TT1)`` from :func:`tile_dims`.
-        lsu: LocalSplitU from :func:`local_split_u`.
-
-    Returns:
-        The workgroup's thread count, or 0 when any tile dim is non-positive so
-        the caller fails closed instead of dividing by zero.
+    `dims` is ``(MT0, MT1, TT0, TT1)`` from ``tile_dims``; `lsu` is LocalSplitU
+    from ``local_split_u``. Returns the workgroup's thread count, or 0 when any
+    tile dim is non-positive so the caller fails closed instead of dividing by
+    zero.
     """
     mt0, mt1, tt0, tt1 = dims
     if min(mt0, mt1, tt0, tt1) <= 0:
@@ -299,16 +286,12 @@ def per_thread_vgpr(ch: str, tt0: int, tt1: int) -> int:
     to fit in ``65536 // NumThreads``. The classic (non-MFMA) path has no arch
     accumulator registers, so ``agpr`` is 0 and the test is on ``vgpr`` alone.
 
-    Args:
-        ch: The dtype char ("S", "D", "H", "C", "Z").
-        tt0, tt1: The thread-tile dimensions.
-
-    Returns:
-        The measured per-thread VGPR total when the corpus has one for this
-        (dtype, thread tile), else a conservative upper bound (the
-        accumulators plus the largest operand overhead ever measured for this
-        dtype) so the caller errs toward refusing, never toward admitting an
-        error-4 kernel.
+    `ch` is the dtype char ("S", "D", "H", "C", "Z"); `tt0`, `tt1` are the
+    thread-tile dimensions. Returns the measured per-thread VGPR total when the
+    corpus has one for this (dtype, thread tile), else a conservative upper
+    bound (the accumulators plus the largest operand overhead ever measured for
+    this dtype) so the caller errs toward refusing, never toward admitting an
+    error-4 kernel.
     """
     measured = (MEASURED_VGPR_BY_DTYPE.get(ch) or {}).get((tt0, tt1))
     if measured is not None:

@@ -35,6 +35,7 @@ __all__ = [
 
 
 def _token(part: Any) -> int:
+    """Numeric sort token for a shape part; -1 when unparseable (sorts first)."""
     try:
         return int(part)
     except (TypeError, ValueError):
@@ -86,6 +87,6 @@ def ordered_shapes(shapes: Iterable[Any], *, dedupe: bool = False) -> list[Any]:
 
 
 def is_numerically_ordered(shapes: Iterable[Any]) -> bool:
-    """True when ``shapes`` is already in :func:`ordered_shapes` order."""
+    """True when ``shapes`` is already in ``ordered_shapes`` order."""
     keys = [shape_order_key(s) for s in shapes]
     return keys == sorted(keys)

@@ -71,7 +71,7 @@ def _load_geometry(config: dict[str, Any]) -> tuple[int, int, int, int, int] | N
     Why None is legal input: a config that does not name a tile is not this
     gate's business, and the caller treats it as "nothing to check". A tile that
     is not a numeric ``MxN`` (a placeholder like ``"NONE"``) is unusable the same
-    way and must not raise -- :func:`tile_dims` in the occupancy gate fails
+    way and must not raise -- ``tile_dims`` in the occupancy gate fails
     closed identically.
     """
     mt_clean = (str(config.get("MacroTile", "64x64x64")).upper()
@@ -119,13 +119,10 @@ def _glvw_for(config: dict[str, Any], tc: str, default: int) -> int:
     exactly that shape are the reference-rerun hashes ``7f866dcf`` / ``a0edeb30``
     (tests/test_reference_tiers.py).
 
-    Args:
-        config: A Tensile solution dict.
-        tc: Operand, ``"A"`` or ``"B"``.
-        default: The derived width to fall back to (``max(VW, num_elem_per_reg)``).
-
-    Returns:
-        The width Tensile will use: the explicit value, else ``default``.
+    Accepts a Tensile solution dict; `tc` is the operand (``"A"`` or
+    ``"B"``); `default` is the derived width to fall back to (``max(VW,
+    num_elem_per_reg)``). Returns the width Tensile will use: the explicit
+    value, else ``default``.
     """
     raw = config.get(f"GlobalLoadVectorWidth{tc}")
     if raw is None:
@@ -160,7 +157,7 @@ def _local_split_u(config: dict[str, Any]) -> int:
 
     Thin alias kept for this module's call sites; the reader, its rationale and
     the shadowed-WorkGroup story live in
-    :func:`oto.tensile.gates.vgpr_model.local_split_u` (one home for the fact).
+    ``oto.tensile.gates.vgpr_model.local_split_u`` (one home for the fact).
     """
     return local_split_u(config)
 
@@ -178,6 +175,7 @@ class _Operand:
 
     def __init__(self, tc: str, mt_tc: int, depth_u: int, num_threads: int,
                  glvw: int, vw: int, tlu: bool, config: dict[str, Any]):
+        """Record one operand's load shape; `tc` is ``"A"`` or ``"B"``."""
         self.tc = tc
         self.mt_tc = mt_tc
         self.depth_u = depth_u
@@ -189,18 +187,22 @@ class _Operand:
 
     @property
     def total_elements_coalesced(self) -> int:
+        """Element count along the coalesced dimension."""
         return self.mt_tc if self.tlu else self.depth_u
 
     @property
     def total_elements_perp(self) -> int:
+        """Element count along the perpendicular dimension."""
         return self.depth_u if self.tlu else self.mt_tc
 
     @property
     def total_elements(self) -> int:
+        """The whole operand's element count."""
         return self.total_elements_coalesced * self.total_elements_perp
 
     @property
     def num_thread_grtw(self) -> int:
+        """``NumThreads * glvw`` -- the load-wave size in elements."""
         return self.num_threads * self.glvw
 
     @property
@@ -236,6 +238,7 @@ class _Operand:
 
     @property
     def _num_loads(self) -> int:
+        """The load-wave count as SolutionStructs computes it."""
         if self.total_elements < self.num_thread_grtw:
             return self.total_elements // (self.num_thread_grtw // self._pv)
         return self.total_elements // self.num_thread_grtw
@@ -314,6 +317,7 @@ class _Operand:
         perp = self.total_elements_perp
 
         def satisfied(n: int) -> bool:
+            """True when ``NumLoadsCoalesced=n`` divides every count evenly."""
             nlp = num_loads // n
             return (num_loads % n == 0 and tvc % n == 0
                     and perp % nlp == 0)
@@ -391,15 +395,12 @@ def cap_vector_width(family: str, macro_tile: str, thread_tile: str, profile=Non
     accepts only 2 and 4, and the generator emitted phases that died at config
     fill.
 
-    Args:
-        family: Family label (``SS``/``HH``/...), used for the bytes-per-element
-            bound.
-        macro_tile: MacroTile string, e.g. ``"128x128x8"``.
-        thread_tile: ThreadTile string, e.g. ``"8x8"``.
-
-    Returns:
-        The widest legal VectorWidth (>= 1), or 0 when the family is unknown.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts `family` (a family label such as ``SS``/``HH``, used for the
+    bytes-per-element bound), `macro_tile` (a MacroTile string, e.g.
+    ``"128x128x8"``) and `thread_tile` (a ThreadTile string, e.g.
+    ``"8x8"``). Returns the widest legal VectorWidth (>= 1), or 0 when the
+    family is unknown. ``profile`` is an optional ``DeviceProfile``; it
+    defaults to the process's ambient profile.
     """
     bpe = FAMILY_BYTES_PER_ELEMENT.get(family.upper(),)
     if not bpe:
@@ -428,20 +429,17 @@ def validate_tensile_loads(config: dict[str, Any], profile=None) -> tuple[bool, 
     Only covers non-MI, FractionalLoad=False, Assembly kernel path -- which is
     the only path this device can take (no MFMA).
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        ``(True, "")`` when every operand's classic-path load is legal, else
-        ``(False, reason)`` naming the operand (A/B) and the branch that failed.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts a Tensile solution dict. Returns ``(True, "")`` when every
+    operand's classic-path load is legal, else ``(False, reason)`` naming the
+    operand (A/B) and the branch that failed. ``profile`` is an optional
+    ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     profile = _loader.resolve_profile(profile,)
     return _validate_tensile_loads_impl(config, profile=profile)
 
 
 def _validate_tensile_loads_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
-    """Body of :func:`validate_tensile_loads` with any bound profile applied."""
+    """Body of ``validate_tensile_loads`` with any bound profile applied."""
     geom = _load_geometry(config)
     if geom is None:
         return True, ""

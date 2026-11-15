@@ -16,15 +16,15 @@ The rule, canonically stated in ``docs/gfx90c_knowledge_base.md`` §6.1:
   * **no contraction** -- every shipped cell must have at least one device phase;
   * **no extension** -- no phase may address a cell outside the shipped grid.
 
-* :func:`phase_family` resolves a phase's family. The config ``FamilyLabel`` is
+* ``phase_family`` resolves a phase's family. The config ``FamilyLabel`` is
   canonical; the ``phase_id`` token fallback keeps pre-FamilyLabel rows and
   overlay probes resolvable.
-* :func:`phase_cells` / :func:`phases_cells` give the (family, shape) cells a
+* ``phase_cells`` / ``phases_cells`` give the (family, shape) cells a
   phase / a manifest addresses. Non-cube shapes (GEMV probes such as
   ``32x4096x1``) have no cell by design and are reported separately, never counted
   as cells.
-* :func:`parity_report` is the missing / extra / non-cube report.
-* :func:`load_pipeline_phases` merges deck plus overlays in the same order the
+* ``parity_report`` is the missing / extra / non-cube report.
+* ``load_pipeline_phases`` merges deck plus overlays in the same order the
   driver does, so preflight and the ``oto check library-parity`` command
   measure the same set.
 
@@ -80,7 +80,7 @@ def phase_family(phase: dict[str, Any], profile=None) -> str:
     so HH / HH_HPA / HS_HPA never collapse — see `oto.device.kernel_vocabulary.cell_key`).
     Fall back to a case-insensitive `phase_id` token scan for pre-FamilyLabel
     rows and overlay probes.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     cfg = phase.get("config",)
     if isinstance(cfg, dict):
@@ -97,7 +97,7 @@ def phase_cells(phase: dict[str, Any]) -> set[tuple[str, str]]:
     """The (family, cube-shape) cells one phase addresses, as shipped-grid keys.
 
     Non-cube shapes are not cells and are dropped here (they surface in
-    :func:`parity_report` under ``non_cube_shapes``). A phase whose family
+    ``parity_report`` under ``non_cube_shapes``). A phase whose family
     cannot be resolved contributes nothing and appears in ``unresolved``.
     """
     fam = phase_family(phase)
@@ -112,7 +112,7 @@ def phase_cells(phase: dict[str, Any]) -> set[tuple[str, str]]:
 
 
 def phases_cells(phases: Iterable[dict[str, Any]]) -> set[tuple[str, str]]:
-    """Union of :func:`phase_cells` over a manifest."""
+    """Union of ``phase_cells`` over a manifest."""
     out: set[tuple[str, str]] = set()
     for phase in phases:
         out |= phase_cells(phase)
@@ -166,7 +166,7 @@ def load_pipeline_phases(base_dir: str | None = None,
     so a preflight parity verdict covers the exact manifest a run would build.
     Reads only files, never the registry or a GPU. Pass `run_id` to also fold
     in that run's per-run overlay (phases.<run_id>.overlay.yaml).
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
 
     from pathlib import Path
@@ -194,6 +194,7 @@ def load_pipeline_phases(base_dir: str | None = None,
 
 
 def _read(path: str) -> str:
+    """Read a file as text."""
     with open(path) as f:
         return f.read()
 
@@ -201,6 +202,7 @@ def _read(path: str) -> str:
 def _merge(into: list[dict[str, Any]],
            doc: dict[str, Any] | None,
            src: str) -> None:
+    """Append a manifest's ``phases`` into `into`, skipping existing phase ids."""
     if not isinstance(doc, dict):
         return
     entries = doc.get("phases")

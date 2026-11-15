@@ -34,7 +34,7 @@ from oto.tensile.synthesis.tile_space import TILE_KNOBS
 
 
 class DbPatternsMixin:
-    """Family-generic mutant patterns, mixed into DBMutator."""
+    """Family-generic mutant patterns, mixed into `oto.tensile.synthesis.donor_mutator.DBMutator`."""
 
     def _joint_domain(self, family: str | None, knob: str,
                       parent_config: dict[str, Any]) -> tuple[Any, ...]:

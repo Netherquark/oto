@@ -58,7 +58,7 @@ from .memo import memo_gate
 from .vgpr_model import is_hpa, knob_int
 
 #: Bytes per element for the assembly-class dtype check. Distinct from
-#: :data:`oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT`, which is an LDS
+#: ``oto.tensile.gates.vgpr_model.BYTES_PER_ELEMENT``, which is an LDS
 #: footprint table: a complex double element is 16 bytes here and 8 there,
 #: because the class rule counts the *element* and the LDS rule counts the
 #: *padded row*.
@@ -78,16 +78,13 @@ def assembly_depth_u(config: dict[str, Any]) -> int:
     Why a second reader: this gate is called with deck/shipped configs, which
     always carry the depth in the MacroTile string, whereas the occupancy gates
     also receive scheduler-generated configs that carry it as a key. Both are
-    handled by :func:`oto.tensile.gates.vgpr_model.depth_u`; this variant keeps
+    handled by ``oto.tensile.gates.vgpr_model.depth_u``; this variant keeps
     the Assembly gate's historical default (16) instead of failing closed on an
     unreadable depth, because an unreadable depth here is a *deck* defect that
     the rest of the gates already refuse.
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        The resolved depth, or 16 when it is not explicit and not in the string.
+    Accepts a Tensile solution dict; returns the resolved depth, or 16 when it
+    is not explicit and not in the string.
     """
     if config.get("DepthU") is not None:
         return int(config["DepthU"])
@@ -121,7 +118,7 @@ def _is_hpa(config: dict[str, Any], dtype_upper: str) -> bool:
     """True when the config runs half with an f32 accumulator (HPA class).
 
     Thin alias: the reader (key-or-label, the two places the class is recorded)
-    lives in :func:`oto.tensile.gates.vgpr_model.is_hpa` so this rule and the
+    lives in ``oto.tensile.gates.vgpr_model.is_hpa`` so this rule and the
     compute-byte reader cannot disagree.
     """
     return is_hpa(config)
@@ -138,7 +135,7 @@ def _gsu_rejection(config: dict[str, Any], dtype_upper: str,
       3. GSU > 1 on half Assembly -- legal only if
          AssertFree0ElementMultiple >= 2 (deck ships AF0EM = 1 -> illegal;
          SolutionStructs:3616).
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     prof = _loader.resolve_profile(profile,)
     is_hs_hpa = _is_hpa(config, dtype_upper) and dtype_upper in ("H", "B")
@@ -193,14 +190,11 @@ def assembly_class_valid(config: dict[str, Any],
     validate_config + the config writer). Any cell that falls in an illegal
     class is auto-caught pre-run, never launched on the device.
 
-    Args:
-        config: A Tensile solution dict, normally with ``DataType`` merged in
-            from the phase level (see the config writer's ``gate_config``).
-
-    Returns:
-        ``(True, "")`` when legal, else ``(False, reason)`` citing the Tensile
-        source line that refuses it.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts a Tensile solution dict, normally with ``DataType`` merged in
+    from the phase level (see the config writer's ``gate_config``). Returns
+    ``(True, "")`` when legal, else ``(False, reason)`` citing the Tensile
+    source line that refuses it. ``profile`` is an optional
+    ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     dtype_upper = str(config.get("DataType", "S",)).upper()
     gsu = knob_int(config.get("GlobalSplitU",), 1)

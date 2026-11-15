@@ -117,10 +117,9 @@ class CandidateGenerator(CandidateEmitMixin):
     def __init__(self, base_dir: Path, registry=None):
         """Set up the generator.
 
-        Args:
-            base_dir: Project base directory (phases.yaml lives here).
-            registry: Optional ledger. A caller that only wants the curated
-                deck (dry runs, checks) must not be forced to open the DB.
+        `base_dir` is the project base directory (phases.yaml lives here);
+        `registry` is an optional ledger. A caller that only wants the curated
+        deck (dry runs, checks) must not be forced to open the DB.
         """
         self.base_dir = Path(base_dir)
         self.registry = registry
@@ -149,7 +148,10 @@ class CandidateGenerator(CandidateEmitMixin):
         winner_config: dict[str, Any],
         mutation_budget: int = 2
     ) -> list[dict[str, Any]]:
-        """Mutate winner config by ≤2 knobs (neighbour search). Returns list of mutated configs."""
+        """Neighbour search: every 1-knob mutant, plus 2-knob mutants when `mutation_budget` >= 2.
+
+        Returns the list of mutated configs.
+        """
         return _mutants_from_budget(winner_config, mutation_budget)
 
     # ------------------------------------------------------------------ gates
@@ -170,12 +172,9 @@ class CandidateGenerator(CandidateEmitMixin):
         pad the generator has no opinion about. Adding it here would refuse
         candidates the append boundary used to accept.
 
-        Args:
-            config: A merged template+knobs Tensile solution dict.
-
-        Returns:
-            ``(True, "Valid")`` or ``(False, reason)``.
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        Accepts a merged template+knobs Tensile solution dict. Returns
+        ``(True, "Valid")`` or ``(False, reason)``. ``profile`` is an
+        optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         knob = _illegal_knob(config)
         if knob is not None:
@@ -243,7 +242,7 @@ ILLEGAL_KNOBS = ("SIA", "Fp16AltImpl", "HasMFMA")
 
 
 def _illegal_knob(config: dict[str, Any]) -> str | None:
-    """The first knob in :data:`ILLEGAL_KNOBS` set to a truthy value, if any."""
+    """The first knob in ``ILLEGAL_KNOBS`` set to a truthy value, if any."""
     return next((k for k in ILLEGAL_KNOBS
                  if k in config and config[k] not in (False, 0, None)), None)
 
@@ -273,7 +272,7 @@ def _non_generative_knob_rejection(config: dict[str, Any]) -> str | None:
     deliberately forwards any knob value verbatim (its contract test probes
     APM=2 to prove the forwarding, ``test_writer_forwards_sweep_knobs``), so the
     refusal belongs where candidates are drawn, beside
-    :func:`_assert_size_multiple_disabled`.
+    ``_assert_size_multiple_disabled``.
     """
     apm = config.get("AggressivePerfMode")
     if apm is None:
@@ -326,7 +325,7 @@ def estimate_lds_usage(config: dict[str, Any]) -> float:
     """Estimate LDS usage in KB for a GEMM tile.
 
     Why a separate estimate from the occupancy gate's budget: this is the
-    per-CU LDS ceiling (:data:`_loader.current_profile().lds_per_cu_kb`), while the gate models the
+    per-CU LDS ceiling (``_loader.current_profile().lds_per_cu_kb``), while the gate models the
     per-workgroup footprint against Tensile's allocator. Two different budgets,
     both enforced.
 

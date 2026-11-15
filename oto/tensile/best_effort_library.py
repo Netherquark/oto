@@ -39,6 +39,7 @@ from oto.tensile.synthesis.donor_mutator import DBMutator
 
 
 def _tensile_candidates() -> list[str]:
+    """Candidate Tensile roots from env vars and known super-repo layouts."""
     cands = []
     for var in ("TENSILE_ROOT", "OTO_TENSILE_ROOT"):
         v = os.environ.get(var)
@@ -87,6 +88,7 @@ def default_best_library_dest(base_dir: Path) -> Path:
 
 
 def _expand_tensile_root(root: str) -> list[str]:
+    """Expand a root into every subpath that actually carries ``Tensile/bin``."""
     out = []
     for sub in ("", "projects/Tensile", "shared/Tensile",
                     "shared/tensile"):
@@ -97,6 +99,7 @@ def _expand_tensile_root(root: str) -> list[str]:
 
 
 def _ensure_tensile_importable(tensile_root: Path | None = None) -> None:
+    """Put every plausible Tensile root on ``sys.path`` and import ``Tensile.SolutionStructs``."""
     roots = []
     if tensile_root is not None:
         roots += _expand_tensile_root(str(tensile_root))
@@ -109,6 +112,7 @@ def _ensure_tensile_importable(tensile_root: Path | None = None) -> None:
 
 
 def _best_row(rows: list[dict[str, Any]], basis: str) -> dict[str, Any] | None:
+    """The highest-``gflops_median`` row on the requested protocol ``basis``, or ``None``."""
     eligible = []
     for r in rows:
         p = protocol_of(r)
@@ -124,6 +128,7 @@ def _best_row(rows: list[dict[str, Any]], basis: str) -> dict[str, Any] | None:
 
 def _cell_rows_from_db(db: dict[str, Any], basis: str,
                         spoof_prefix: str = "gfx900") -> dict[tuple[str, str], dict[str, list[dict[str, Any]]]]:
+    """Bucket the corpus rows per shipped cell into native/floor protocol pools."""
     pools: dict[tuple[str, str], dict[str, list[dict[str, Any]]]] = {}
     for run_id, rlist in db.items():
         is_floor = str(run_id).startswith(f"{spoof_prefix}_ref")
@@ -149,7 +154,7 @@ def _cell_rows_from_db(db: dict[str, Any], basis: str,
 
 
 def _carve_one_cell(cell, pool, mut, sched, ldspad_feasible, basis):
-    """Return (info_dict, step_label, refused_flag, refused_entry)."""
+    """Walk the fallback chain for one cell; return ``(config, step, row, refused_entry)``."""
     from oto.tensile.family_decks import FAMILY_DECKS
     fam = cell[0]
     chain = [
@@ -183,6 +188,7 @@ def _carve_one_cell(cell, pool, mut, sched, ldspad_feasible, basis):
 
 
 def _provenance(cell, step, row, basis):
+    """The per-cell provenance record for the chosen fallback-chain step."""
     fam = cell[0]
     prov = {"chain_step": step, "family": fam, "shape": cell[1]}
     if step in ("native_basis", "native_any"):
@@ -209,7 +215,12 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
                       kernel_db_path: Path | None = None, profile=None) -> tuple[
         dict[tuple[str, str], dict[str, Any]],
         list[dict[str, Any]], dict[str, Any]]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Carve the per-cell best config from the corpus; return ``(cell_map, refused, stats)``.
+
+    ``basis`` is the protocol basis (``"family"``/``"any"``/an explicit
+    protocol); ``kernel_db_path`` overrides the corpus location. ``profile``
+    is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     base_dir = Path(base_dir)
     db_path = Path(kernel_db_path) if kernel_db_path else (
         _results_dir(base_dir, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json")
@@ -254,11 +265,13 @@ def cell_solution_map(base_dir: Path, basis: str = "family",
 
 
 def mut_key(cfg: dict[str, Any]) -> str:
+    """Canonical tile key for `cfg`, via the mutator's own key function."""
     return DBMutator(".", None)._tile_key(cfg)
 
 
 def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
         dict[str, list[dict[str, Any]]], dict[str, list[tuple[str, str]]]]:
+    """One config per distinct tile key per family, plus the key-to-cells index."""
     families: dict[str, list[dict[str, Any]]] = {}
     cells_by_key: dict[str, list[tuple[str, str]]] = {}
     for cell, info in cell_map.items():
@@ -273,7 +286,10 @@ def dedupe_configs(cell_map: dict[tuple[str, str], dict[str, Any]]) -> tuple[
 
 
 def _problem_type_state(fam: str, tensile_root: Path | None = None, profile=None) -> dict[str, Any]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The Tensile problem-type state for `fam` (dtype char from the profile).
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     _ensure_tensile_importable(tensile_root)
     from Tensile.LibraryIO import updateProblemDatatypes
     from Tensile.SolutionStructs import ProblemType
@@ -296,6 +312,7 @@ def _problem_type_state(fam: str, tensile_root: Path | None = None, profile=None
 
 
 def _state_sol(cfg: dict[str, Any]) -> dict[str, Any]:
+    """Convert a carved config into the Tensile solution state dict."""
     sol = dict(cfg)
     mt = [int(x) for x in str(cfg["MacroTile"]).split("x")]
     sol["MacroTile"] = mt[:2]
@@ -308,6 +325,7 @@ def _state_sol(cfg: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_one_family(fam, cell_map, families, dest_logic_dir, tensile_root, codename, hint=None):
+    """Write one family's library-logic YAML and return its phase entry."""
     sols = families[fam]
     state_sols = [_state_sol(cfg) for cfg in sols]
 
@@ -383,6 +401,10 @@ def emit_logic_yaml(cell_map: dict[tuple[str, str], dict[str, Any]],
                     dest_logic_dir: Path,
                     tensile_root: Path | None = None,
                     codename: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Write the per-family logic YAMLs for `cell_map`; return ``(phases, parity)``.
+
+    `codename` defaults to the ambient profile's codename.
+    """
     if codename is None:
         codename = _default_codename()
     dest_logic_dir = Path(dest_logic_dir)
@@ -401,6 +423,7 @@ def emit_logic_yaml(cell_map: dict[tuple[str, str], dict[str, Any]],
 
 
 def anti_alias_scan(logic_dir: Path, final_lib_dir: Path) -> tuple[bool, list[str]]:
+    """Scan emitted files for floor-arch leaks (``gfx900``/``vega10``); return ``(passed, leaks)``."""
     anti_alias_passed = True
     leak_files: list[str] = []
     for path in list(Path(logic_dir).glob("*.yaml")) + list(Path(final_lib_dir).glob("*")):
@@ -427,6 +450,7 @@ def _llvm_bin_from_rocm(rocm_for_libs: str) -> str:
 
 
 def _tensile_env(tensile_root: Path) -> dict[str, str]:
+    """Build the subprocess env for Tensile: ``tensile_root`` on PYTHONPATH, ROCm paths resolved."""
     from oto.runners.toolchain import resolve_rocm_paths
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{tensile_root}:{env.get('PYTHONPATH', '')}".strip(":")
@@ -484,11 +508,12 @@ def _tensile_env(tensile_root: Path) -> dict[str, str]:
 
 
 def _default_codename(profile=None) -> str:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The ambient profile's codename (or the passed profile's)."""
     return _loader.resolve_profile(profile,).codename
 
 
 def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
+    """Run ``TensileCreateLibrary --merge-files``; return ``(ran, failed, error)``."""
     if codename is None:
         codename = _default_codename()
     tensile_root = Path(tensile_root)
@@ -519,6 +544,7 @@ def _run_tcl(tensile_root, logic_dir, final_lib_dir, codename=None):
 def _write_best_manifest(dest: Path, basis: str, cell_map, refused, stats, parity,
                          anti_alias_passed, leak_files, tcl_ran, tcl_failed, tcl_error,
                          logic_hint=None) -> None:
+    """Write ``best_effort_library.json`` with the per-cell provenance and gate outcomes."""
     manifest = {
         "basis": basis,
         "cells": len(cell_map),
@@ -546,6 +572,13 @@ def build_best_library(base_dir: Path, dest: Path | None = None,
                        tensile_root: Path | None = None,
                        kernel_db_path: Path | None = None,
                        codename: str | None = None) -> dict[str, Any]:
+    """Build the best-effort ``TensileLibrary.dat`` end to end.
+
+    Returns a status dict; ``status`` is ``"partial"`` when the library step
+    failed, any cell was refused, or the parity check failed. ``dest``
+    defaults to the profile-derived best-effort destination; ``codename``
+    defaults to the ambient profile's codename.
+    """
     if codename is None:
         codename = _default_codename()
     base_dir = Path(base_dir)

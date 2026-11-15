@@ -79,7 +79,10 @@ class DBMutator(DbPatternsMixin):
 
     def __init__(self, base_dir: Path, mutator,
                  kernel_db_path: Path | None = None, profile=None):
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """Store the paths and profile; the DB itself loads lazily on first ``load_db``.
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+        """
         self.base_dir = Path(base_dir)
         self.mutator = mutator
         self.kernel_db_path = Path(kernel_db_path) if kernel_db_path else (
@@ -142,13 +145,17 @@ class DBMutator(DbPatternsMixin):
     # -- gating -----------------------------------------------------------
 
     def _scheduler(self):
+        """The cached candidate generator used for CPU-only validation."""
         if self._sched is None:
             from oto.tensile.candidate import CandidateGenerator
             self._sched = CandidateGenerator(self.base_dir, registry=None)
         return self._sched
 
     def _template(self, family: str, profile=None) -> dict[str, Any]:
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """The problem-type template for `family` (launch defaults for the writer).
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+        """
         return {
             "Architecture": _loader.resolve_profile(profile,).codename,
             "DataType": _loader.resolve_profile(profile,).family_dtype_char.get(family, "S",),
@@ -180,6 +187,7 @@ class DBMutator(DbPatternsMixin):
         seen = {parent_tile}
 
         def _add(entry: dict[str, Any]) -> None:
+            """Normalise a DB row and append it if its tile key is new."""
             # Normalize the DB's parsed knobs to config-format strings/ints,
             # or the gate validates a shape the writer never sees.
             knobs = self._normalize_tile(entry)
@@ -199,6 +207,7 @@ class DBMutator(DbPatternsMixin):
         return out
 
     def _tile_key(self, knobs: dict[str, Any]) -> tuple:
+        """The canonical tile-identity tuple for a config (`TILE_KNOBS` order)."""
         return tuple(str(knobs.get(k)) for k in TILE_KNOBS)
 
     @staticmethod

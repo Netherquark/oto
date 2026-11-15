@@ -49,7 +49,7 @@ _PROFILE_FINGERPRINT_FIELDS = (
 
 
 def _profile_fingerprint(profile=None) -> str:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """A stable string fingerprint of the device facts the legality gates read."""
     try:
         from oto.device import loader as _loader
         p = _loader.resolve_profile(profile)
@@ -59,15 +59,12 @@ def _profile_fingerprint(profile=None) -> str:
 
 
 def config_key(config: dict[str, Any]) -> str:
-    """A stable key for a config dict's *content*.
+    """A stable key for a `config` dict's *content*.
 
-    Args:
-        config: A Tensile solution dict (any JSON-ish mapping).
-
-    Returns:
-        A string that changes whenever any value changes. ``default=str``
-        keeps an exotic value (a tuple, a Path) from raising -- it stringifies
-        instead, which is still content-addressed.
+    Accepts a Tensile solution dict (any JSON-ish mapping) and returns a
+    string that changes whenever any value changes. ``default=str`` keeps an
+    exotic value (a tuple, a Path) from raising -- it stringifies instead,
+    which is still content-addressed.
     """
     return json.dumps(config, sort_keys=True, default=str)
 
@@ -76,19 +73,17 @@ def memo_gate(fn: Callable[[dict[str, Any]], tuple[bool, str]]
                ) -> Callable[[dict[str, Any]], tuple[bool, str]]:
     """Cache a pure ``(config) -> (ok, reason)`` gate by the config's content.
 
-    Args:
-        fn: The gate to memoise. It must be pure: same config, same verdict,
-            always. The three legality gate families are (they read the config
-            and the module's own constants, and nothing else).
-
-    Returns:
-        The cached gate. ``cache_clear()`` empties it (the tests use it to
-        prove the memo does not change a verdict).
+    `fn` is the gate to memoise. It must be pure: same config, same verdict,
+    always. The three legality gate families are (they read the config and
+    the module's own constants, and nothing else). Returns the cached gate;
+    ``cache_clear()`` empties it (the tests use it to prove the memo does not
+    change a verdict).
     """
     cache: dict[str, tuple[bool, str]] = {}
 
     @functools.wraps(fn)
     def wrapper(config: dict[str, Any], *args, **kwargs) -> tuple[bool, str]:
+        """Cached stand-in for `fn`; falls back to a direct call when profile kwargs are passed."""
         # Explicit per-call profile kwargs are not memoised (device state varies).
         if args or kwargs:
             return fn(config, *args, **kwargs)

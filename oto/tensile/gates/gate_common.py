@@ -17,14 +17,11 @@ from typing import Any
 
 
 def tile_dims(config: dict[str, Any]) -> tuple[int, int, int, int] | None:
-    """(MT0, MT1, TT0, TT1) from MacroTile/ThreadTile, or None if unusable.
+    """The ``(MT0, MT1, TT0, TT1)`` dims from MacroTile/ThreadTile, or ``None`` if unusable.
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        The four dims, or None when either key is absent, unparsable or
-        non-positive. Callers treat None as "cannot model" and fail closed.
+    Accepts a Tensile solution dict and returns the four dims, or ``None``
+    when either key is absent, unparsable or non-positive. Callers treat
+    ``None`` as "cannot model" and fail closed.
     """
     mt_raw = config.get("MacroTile")
     tt_raw = config.get("ThreadTile")
@@ -51,12 +48,9 @@ def dtype_char(config: dict[str, Any]) -> str:
     silently admit a config the gate must reject, so an unknown dtype fails
     closed with "".
 
-    Args:
-        config: A Tensile solution dict carrying ``DataType``/``dtype`` or a
-            ``FamilyLabel``/``family_label``.
-
-    Returns:
-        The canonical dtype char (S/D/H/B/I8/C/Z), or "" when unreadable.
+    Accepts a Tensile solution dict carrying ``DataType``/``dtype`` or a
+    ``FamilyLabel``/``family_label``. Returns the canonical dtype char
+    (S/D/H/B/I8/C/Z), or "" when unreadable.
     """
     raw = config.get("DataType", config.get("dtype"))
     if raw is None:

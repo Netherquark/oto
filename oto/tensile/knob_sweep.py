@@ -41,6 +41,7 @@ from oto.tensile.family_decks import KNOB_SWEEP_BASES, KNOB_SWEEPS
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the knob-sweep CLI parser."""
     ap = argparse.ArgumentParser(
         description="Emit each family's winner tile crossed with the knobs "
                     "the corpus never explicitly set (docs/gfx90c_tuning_guide.md §13 §8.1).",
@@ -71,6 +72,7 @@ def _run_dry(
     args: argparse.Namespace,
     shapes: list[str]
 ) -> tuple[list[dict[str, Any]], list[str]]:
+    """Dry-run the sweep; validates without writing the manifest."""
     print("DRY RUN -- nothing written. Pass --emit to append.")
     return _dry_run(gen, args.families or list(KNOB_SWEEP_BASES),
                     args.patterns or ["Ailk_Bljk"], shapes,
@@ -83,6 +85,7 @@ def _run_emit(
     args: argparse.Namespace,
     shapes: list[str]
 ) -> tuple[list[dict[str, Any]], list[str]]:
+    """Append the sweep candidates to the phases manifest."""
     target = Path(args.phases)
     emitted = gen.generate_knob_sweep_phases(
         families=args.families, patterns=args.patterns, base_shapes=shapes,
@@ -98,6 +101,7 @@ def _run_emit(
 def _print_summary(emitted: list[dict[str, Any]],
                    refused: list[str],
                    emit: bool) -> int:
+    """Print the emit summary; exit 1 when no candidate could be emitted."""
     if not emitted:
         print("ERROR: no candidate could be emitted. Check the refusals above.")
         return 1
@@ -112,7 +116,10 @@ def _print_summary(emitted: list[dict[str, Any]],
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Emit knob-sweep deck. argv: args vector. Returns: 0 success, 1 no candidates."""
+    """Emit the knob-sweep deck; exit 0 on success, 1 when nothing could be emitted.
+
+    ``argv`` is the args vector.
+    """
     args = _build_arg_parser().parse_args(argv)
     shapes = args.shapes or ["512x512x512", "1024x1024x1024"]
     gen = CandidateGenerator(Path("."))
@@ -138,7 +145,7 @@ profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit baseline tiles for each family/shape.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     from oto.tensile.family_decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
@@ -172,7 +179,7 @@ profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit sweep tiles for each family/knob/shape.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     from oto.tensile.family_decks import KNOB_SWEEP_BASES
     emitted: list[dict[str, Any]] = []
@@ -217,7 +224,7 @@ profile=None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Emit decision trial tiles.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     from oto.tensile.family_decks import DECISION_TRIAL_TILES
     emitted: list[dict[str, Any]] = []
@@ -250,7 +257,10 @@ def _dry_run(gen: CandidateGenerator, families: list[str],
              patterns: list[str], shapes: list[str],
              include_baseline: bool = False, include_trials: bool = False
              ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Validate sweep combinations without writing manifest. Returns: (emitted, refused)."""
+    """Validate sweep combinations without writing the manifest.
+
+    Returns the ``(emitted, refused)`` pair.
+    """
     emitted: list[dict[str, Any]] = []
     refused: list[str] = []
     if include_baseline:

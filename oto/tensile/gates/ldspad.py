@@ -116,8 +116,8 @@ def _swizzle_feasible(config: dict[str, Any], ku: int,
       * StaggerUStride>0 requires staggerStrideShift = ceil(log2(SUS/(DU*bpe)))
         >= 0, i.e. SUS > 0.5*DepthU*bpeAB (the ":3342" reject). Tensile then
         internally raises SUS to a whole multiple of DepthU*bpe.
-      * Legal domains: SU in :data:`STAGGER_U_DOMAIN`, SUM in
-        :data:`STAGGER_MAPPING_DOMAIN`, SUS in :data:`STAGGER_STRIDE_DOMAIN`.
+      * Legal domains: SU in ``STAGGER_U_DOMAIN``, SUM in
+        ``STAGGER_MAPPING_DOMAIN``, SUS in ``STAGGER_STRIDE_DOMAIN``.
         SU requires BufferLoad==1 and is silently ignored otherwise.
 
     Why this was wrong until 2026-10-21: it read Tensile's FORCE as a reject
@@ -164,7 +164,7 @@ def _store_knobs_feasible(config: dict[str, Any], profile=None) -> tuple[bool, s
     Why only sanity-checks: the half-Assembly GSU rule for AF0EM (>=2) is
     enforced by ``assembly_class_valid``; enforcing a *second* copy here would
     be two homes for one fact.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     profile = _loader.resolve_profile(profile,)
     af0em = config.get("AssertFree0ElementMultiple",)
@@ -225,18 +225,15 @@ def ldspad_feasible(config: dict[str, Any], profile=None) -> tuple[bool, str]:
     Configs that carry none of these keys trivially pass -- the gate exists so
     the FORWARDED value is never what kills a phase silently.
 
-    Args:
-        config: A Tensile solution dict.
-
-    Returns:
-        ``(True, "")`` or ``(False, reason)``.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    Accepts a Tensile solution dict; returns ``(True, "")`` or
+    ``(False, reason)``. ``profile`` is an optional ``DeviceProfile``; it
+    defaults to the process's ambient profile.
     """
     return _ldspad_feasible_impl(config, profile=profile)
 
 
 def _ldspad_feasible_impl(config: dict[str, Any], profile=None) -> tuple[bool, str]:
-    """Body of :func:`ldspad_feasible`; ``profile`` defaults to the ambient one."""
+    """Body of ``ldspad_feasible``; ``profile`` defaults to the ambient one."""
     profile = _loader.resolve_profile(profile,)
     ku = depth_u(config)
     ch = dtype_char(config)
