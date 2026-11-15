@@ -56,6 +56,7 @@ __all__ = [
 
 # --------------------------------------------------------------------------
 def cmd_mine(args) -> int:
+    """Read-only: the best existing phase per cell, printed and optionally JSON-dumped."""
     sel = select_deck(args.base_dir)
     rows = sorted(sel["picks"].values(),
                   key=lambda c: (c["family"], int(c["shape"].split("x")[0])))
@@ -131,6 +132,7 @@ def cmd_all(args, profile=None) -> int:
 
 
 def main() -> int:
+    """The consolidation CLI: mine / all (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.set_defaults(commit=False)

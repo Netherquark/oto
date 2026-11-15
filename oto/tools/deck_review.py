@@ -186,6 +186,7 @@ def _measured_tiles(base: Path, per_family: int, profile=None) -> dict[str, list
     # kernel_db carries no per-tile observation count, so rank on a stable,
     # documented order instead: widest tile first, then deepest, then widest VW.
     def _rank(item: tuple[tuple[str, ...], dict[str, Any]]) -> tuple[int, int, int]:
+        """Stable rank key: widest tile, then deepest, then widest VectorWidth."""
         _, t = item
         digits = "".join(ch for ch in str(t["MacroTile"]) if ch.isdigit())
         return (-(int(digits) if digits else 0), -(int(t["DepthU"] or 0)),
@@ -197,7 +198,7 @@ def _measured_tiles(base: Path, per_family: int, profile=None) -> dict[str, list
 def _family_template(fam: str, profile=None) -> dict[str, Any]:
     """The minimal contract template a draw is applied on top of.
 
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     from oto.tensile.synthesis.donor_knobs import _DEFAULT_PATTERN
     return {
@@ -287,6 +288,7 @@ def _legality(base: Path, families: list[str] | None) -> int:
     gen = CandidateGenerator(base)
 
     def gate(cfg: dict[str, Any]) -> tuple[bool, str]:
+        """Validate one config through the launch gates."""
         ok, why = gen.validate_config(cfg)
         if ok:
             ok, why = ldspad_feasible(cfg)
@@ -327,7 +329,7 @@ def _legality(base: Path, families: list[str] | None) -> int:
 # ----------------------------------------------------------------- flood
 
 def _flood(base: Path, cap: int | None, profile=None) -> int:
-    """Per-cell distinct-config census and top-K cap cost. ``profile`` -- optional, ambient by default."""
+    """Per-cell distinct-config census and top-K cap cost. ``profile`` is an optional ``DeviceProfile``; it defaults to the ambient profile."""
     db_path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "analysis" / "kernel_db.json"
     try:
         db = json.loads(db_path.read_text())
@@ -388,6 +390,7 @@ def _flood(base: Path, cap: int | None, profile=None) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The deck-review CLI: score / legality / flood (CLI entry)."""
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,

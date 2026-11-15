@@ -110,10 +110,12 @@ def _arch_numvalidate_free(diff: list[str]) -> list[str]:
 
 
 def _scalar(line: str) -> str:
+    """The bare value of a ``+``/``-`` YAML line (minus the marker)."""
     return line[1:].strip().lstrip("-").strip()
 
 
 def _value_rewrite(diff: list[str]):
+    """The ``(removed, added)`` scalar pair of a 2-line value-only diff."""
     if len(diff) != 2:
         return None
     removed, added = diff
@@ -123,11 +125,13 @@ def _value_rewrite(diff: list[str]):
 
 
 def _only_bool_spelling(diff: list[str]) -> bool:
+    """True when the diff is only a bool-as-int spelling change."""
     pair = _value_rewrite(diff)
     return pair is not None and pair in BOOL_AS_INT
 
 
 def _only_honoured_local_split_u(diff: list[str], phase_id: object) -> bool:
+    """True when the diff is only LocalSplitU 1->2 on a LocalSplitU phase."""
     if "LocalSplitU" not in str(phase_id):
         return False
     pair = _value_rewrite(diff)
@@ -135,6 +139,7 @@ def _only_honoured_local_split_u(diff: list[str], phase_id: object) -> bool:
 
 
 def _only_adds_of(diff: list[str], allowed) -> bool:
+    """True when the diff only ADDS lines under one of `allowed`'s keys."""
     if not diff:
         return False
     under_key = False
@@ -155,6 +160,7 @@ def _only_adds_of(diff: list[str], allowed) -> bool:
 
 
 def _only_honoured_value_changes(diff: list[str], phase_id: object) -> bool:
+    """True when the diff is only a honoured value change."""
     return _only_bool_spelling(diff) or _only_honoured_local_split_u(diff, phase_id)
 
 
@@ -186,6 +192,7 @@ LIFT = {
 
 
 def lift(src: str) -> str:
+    """Lift the pre-split flat imports of the legacy module to dotted paths."""
     src = re.sub(r"from [A-Za-z0-9_]*_common import", "from oto.device.kernel_vocabulary import", src)
     for old_text, new_text in LIFT.items():
         src = src.replace(old_text, new_text)
@@ -223,6 +230,7 @@ def load_legacy(base: str):
 
 
 def phases_from(path: Path) -> list[dict]:
+    """All phases across ``phases_reference.yaml`` files under `path`."""
     phases = []
     for f in sorted(Path(path).glob("*/phases_reference.yaml")):
         try:
@@ -285,7 +293,10 @@ def render_ref(ref: str, phases: list[dict], tmpdir: Path) -> dict | None:
 
 
 def corpus(root: Path, profile=None) -> list[dict]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """Every phase from the live deck and both reference trees.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     from oto.device import loader as _loader
     from oto.runners.result_paths import results_dir, runs_dir
 
@@ -297,6 +308,7 @@ def corpus(root: Path, profile=None) -> list[dict]:
 
 
 def _legacy_compare(base: str, all_phases: list[dict], workdir: Path) -> int:
+    """Legacy-vs-current config-writer render comparison (pre-split base)."""
     from oto.tensile import config_writer
 
     d = type("_Stub", (), {})()
@@ -358,6 +370,7 @@ def _legacy_compare(base: str, all_phases: list[dict], workdir: Path) -> int:
 
 
 def _head_render(all_phases, workdir):
+    """Render every phase with the current writer; return the render table."""
     from oto.tensile import config_writer
     d = type("_Stub", (), {})()
     cur = {}
@@ -371,6 +384,7 @@ def _head_render(all_phases, workdir):
 
 
 def _post_split_compare(args, all_phases, workdir):
+    """Post-split REF comparison (the structural equivalence check)."""
     print("post-split REF comparison")
     t0 = time.time()
     refv = render_ref(args.base, all_phases, workdir)
@@ -414,6 +428,7 @@ def _post_split_compare(args, all_phases, workdir):
 
 
 def main() -> int:
+    """The config-writer equivalence check (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="REF to compare against; default HEAD~1 (per-commit evergreen); "

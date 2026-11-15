@@ -35,6 +35,7 @@ BASE = _AB_BASE
 _TENSILE_ROOT = Path(os.environ.get("TENSILE_ROOT", "")) if os.environ.get("TENSILE_ROOT") else None
 
 def _median(vals: list[float]) -> float:
+    """Median of `vals` (0.0 when empty)."""
     return statistics.median(vals) if vals else 0.0
 
 
@@ -190,6 +191,7 @@ def _is_legal(phase: dict[str, Any], profile=None) -> tuple[bool, str]:
 def _candidates(deck: list[dict[str, Any]], fam: str, shape: str,
                 idx: dict[tuple[str, str], dict[str, Any]]
                 ) -> list[dict[str, Any]]:
+    """The deck rows for `fam:shape`, each with its measurement stats."""
     out = []
     for p in deck:
         if _fam(str(p.get("phase_id", ""))) != fam.upper():

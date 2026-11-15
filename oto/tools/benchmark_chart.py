@@ -23,11 +23,12 @@ from oto.runners.result_paths import results_dir as _results_dir
 
 
 def _base(args: argparse.Namespace) -> Path:
+    """The base dir to read (``--base`` or the ambient results dir)."""
     return Path(args.base or _results_dir())
 
 
 def make_report(base: Path, profile=None) -> dict[str, Any]:
-    """Render the analysis chart for a run. ``profile`` selects the device; ambient by default."""
+    """Load the acceptance_report.json for `base`; ``profile`` selects the device; ambient by default."""
     path = _results_dir(base, _loader.resolve_profile(profile,).codename) / "acceptance_report.json"
     return json.loads(path.read_text())
 
@@ -71,6 +72,7 @@ def _figure(reps: list[dict[str, Any]], labels: list[str],
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Render the native-vs-spoof best-per-cell chart as a PNG (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default=None, help="project base dir")
     ap.add_argument("--out", default=None, help="output PNG path")

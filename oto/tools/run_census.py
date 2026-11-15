@@ -59,6 +59,7 @@ _DTYPE_CHARS = ("S", "D", "H", "C", "Z", "I8", "B")
 
 
 def _load_dtype_bytes() -> dict:
+    """dtype char -> bytes-per-element from Tensile's tables (16 as the safe fallback)."""
     from oto.tools.consolidate import dtype_bytes
     out = {}
     for ch in _DTYPE_CHARS:
@@ -86,11 +87,12 @@ class _Knobs:
     only a 12-key config snapshot on the record itself."""
 
     def __init__(self, base: Path):
+        """Bind the lookup to `base`; knob dicts are cached per call site."""
         self.base = base
         self._cache: dict[tuple[str, str], dict] = {}
 
     def get(self, run, phase_id, profile=None) -> dict:
-        """Return one row of the phase ledger for the A/B arms view. ``profile`` selects the device; ambient by default."""
+        """The knobs for one (run, phase); YAML first, registry snapshot as fallback. ``profile`` selects the device; ambient by default."""
         key = (str(run), str(phase_id))
         if key in self._cache:
             return self._cache[key]
@@ -130,7 +132,10 @@ def _fam(rec, knobs: _Knobs) -> str:
 
 
 def _load_arms(base: Path, profile=None):
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The driver, the native and floor arms' records and the floor chain ids.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     drv = TensileDriver(base, create_run=False)
     native = drv._native_records_all_runs()
     floor: list[dict] = []
@@ -190,10 +195,12 @@ def _reach(records, arm, knobs: _Knobs):
 
 
 def _fmt(x):
+    """Format a knob value for the table output."""
     return "x".join(map(str, x)) if isinstance(x, (list, tuple)) else str(x)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the run-census CLI parser."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-dir", "--base", type=Path, default=BASE)
@@ -208,6 +215,7 @@ def _filter_by_family(nat, flr, nat_t, flr_t, family):
         return nat, flr, nat_t, flr_t
     want = family.upper()
     def keep(c):
+        """True when cell `c` is in the wanted family."""
         return c[0].upper() == want
     nat = {k: v for k, v in nat.items() if keep(k)}
     flr = {k: v for k, v in flr.items() if keep(k)}
@@ -308,6 +316,7 @@ def _write_all_runs_json(path, ref_ids, native, floor, nat, flr, nat_t, flr_t):
 
 
 def main() -> int:
+    """The run-census CLI: per-cell winners and coverage tables (CLI entry)."""
     args = _build_arg_parser().parse_args()
 
     base = args.base_dir.resolve()

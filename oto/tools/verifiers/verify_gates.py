@@ -33,6 +33,7 @@ ACCEPTED_MESSAGE_REWRITES = (
 
 
 def _verdict(v):
+    """The comparable verdict of a gate result (``None`` for exceptions/None)."""
     if v is None:
         return None
     if isinstance(v, (list, tuple)):
@@ -41,6 +42,7 @@ def _verdict(v):
 
 
 def _message(v):
+    """The message part of a gate result, or ``None``."""
     if isinstance(v, (list, tuple)) and len(v) == 2:
         return v[1]
     return None
@@ -72,12 +74,16 @@ def check(row, out):
 
 
 def _attest(name: str, base: str) -> bool:
+    """True when the gate-differential drift for `name` is attested intentional."""
     from oto.tools.verifiers.ref_worktree import gate_attested
     return gate_attested("gate_differential", base, name)
 
 
 def _compress_shim(profile=None) -> tuple[str, str]:
-    """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+    """The ``OTO_PROFILE_SHIM`` JSON and arch list for the reference probe.
+
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+    """
     import json as _json
 
     from oto.device.loader import resolve_profile
@@ -95,6 +101,7 @@ def _compress_shim(profile=None) -> tuple[str, str]:
 
 def _emit(tree: Path, path: Path, base: str, shim: str, archs: str,
           worker: Path | None = None) -> None:
+    """Render the verdict corpus for `tree` at `path`."""
     from oto.tools.verifiers import ref_worktree
 
     if worker is not None:
@@ -117,6 +124,7 @@ def _emit(tree: Path, path: Path, base: str, shim: str, archs: str,
 
 
 def _compare(cur_path: Path, ref_path: Path, base: str) -> int:
+    """Compare two verdict corpora; exit 0 when the gates agree everywhere."""
     buckets: dict = {"verdict_flipped": [], "text_differs": [],
                      "old_raised": [], "new_raised": []}
     n = 0
@@ -167,6 +175,7 @@ def _compare(cur_path: Path, ref_path: Path, base: str) -> int:
 
 
 def main() -> int:
+    """The gate-differential check (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="ref to compare against (default: HEAD~1 -- the per-commit "

@@ -231,6 +231,7 @@ def telemetry(run_id: str, base: Path = BASE, profile=None) -> dict[str, Any]:
 
 
 def _int(v: Any) -> int:
+    """Parse `v` as an int; 0 when unparseable."""
     try:
         return int(float(v))
     except (TypeError, ValueError):
@@ -252,7 +253,7 @@ def cheapest(family: str | None = None, n: int = 5,
     driver executes the live deck; load_deck is the 1644-phase solution
     universe used for deck *selection*. Recommending from the union produces
     `--targets` the driver cannot resolve, which is worse than no answer.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
     """
     from oto.tools.consolidate import _is_legal
 
@@ -266,6 +267,7 @@ def cheapest(family: str | None = None, n: int = 5,
     want = _loader.resolve_profile(profile,).family_dtype_char.get(family, family,) if family else None
 
     def volume(phase: dict[str, Any]) -> float:
+        """The problem's i*j*k volume (``inf`` when unparseable)."""
         pt = (phase.get("config",) or {}).get("ProblemType", "",)
         try:
             i, j, k = (int(x) for x in pt.split("x"))
@@ -296,14 +298,17 @@ def cheapest(family: str | None = None, n: int = 5,
 # CLI
 # --------------------------------------------------------------------------
 def _load(path: str) -> dict[str, Any]:
+    """Read and parse a snapshot JSON file."""
     return json.loads(Path(path).read_text())
 
 
 def add_json(sub: Any) -> None:
+    """Add the common ``--json`` flag to a subcommand."""
     sub.add_argument("--json", action="store_true", help="machine-readable output")
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the corpus-audit CLI parser."""
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -332,6 +337,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_snapshot(args, base: Path) -> int:
+    """Take a snapshot of the corpus state."""
     snap = snapshot(base)
     text = json.dumps(snap, indent=2, sort_keys=True)
     if args.json:
@@ -349,6 +355,7 @@ def _cmd_snapshot(args, base: Path) -> int:
 
 
 def _cmd_diff(args) -> int:
+    """Compare two snapshots; exit non-zero if data was lost."""
     res = diff_snapshots(_load(args.before), _load(args.after))
     if args.json:
         print(json.dumps(res, indent=2))
@@ -369,6 +376,7 @@ def _cmd_diff(args) -> int:
 
 
 def _cmd_telemetry(args, base: Path) -> int:
+    """Report the telemetry/attribution of one run (rows, clocks, thermals)."""
     res = telemetry(args.run_id, base)
     if args.json:
         print(json.dumps(res, indent=2, default=str))
@@ -395,6 +403,7 @@ def _cmd_telemetry(args, base: Path) -> int:
 
 
 def _cmd_cheapest(args, base: Path) -> int:
+    """List the cheapest legal phases in the live deck for a smoke run."""
     rows = cheapest(args.family, args.n, base)
     if args.json:
         print(json.dumps(rows, indent=2))
@@ -411,6 +420,7 @@ def _cmd_cheapest(args, base: Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The corpus-audit CLI: snapshot/diff/telemetry/cheapest (CLI entry)."""
     args = _build_arg_parser().parse_args(argv)
     base = args.base_dir.resolve()
 

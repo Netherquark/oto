@@ -26,6 +26,7 @@ BASE = _AB_BASE
 
 
 def _stamp() -> str:
+    """A timestamp stamp for archive names."""
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 

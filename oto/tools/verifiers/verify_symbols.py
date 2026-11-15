@@ -217,6 +217,7 @@ def head_text(ref: str, rel: str) -> str:
 def strip(node):
     """An AST node with import statements and its docstring removed."""
     def clean(n):
+        """Remove imports and a leading docstring constant from one node's body."""
         body = getattr(n, "body", None)
         if isinstance(body, list):
             kept = []
@@ -240,7 +241,7 @@ def _threading_shaped(old_sig: str, new_sig: str) -> bool:
     """True when ``new_sig`` is ``old_sig`` plus a trailing ``profile=None``.
 
     Signatures here are the arguments tuple unparsed *without* surrounding
-    parens (see :func:`sig`). Device-independence work makes the device profile
+    parens (see ``sig``). Device-independence work makes the device profile
     an explicit argument on every profile-consuming API, appended as a
     defaulted kwarg -- callers unaware of it bind the ambient profile exactly
     as before. That delta is the expected shape of the sweep, not drift.
@@ -254,6 +255,7 @@ def _threading_shaped(old_sig: str, new_sig: str) -> bool:
 
 
 def sig(node) -> str:
+    """The argument signature of a function node ("" for non-functions)."""
     return (ast.unparse(node.args)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else "")
 
@@ -536,6 +538,7 @@ def _postsplit_check(ref: str) -> int:
 
 
 def main():
+    """The AST-equivalence check (CLI entry)."""
     import argparse
 
     ap = argparse.ArgumentParser(description=__doc__)

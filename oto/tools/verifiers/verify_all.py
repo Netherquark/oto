@@ -35,6 +35,7 @@ ENV["PYTHONPATH"] = str(ROOT) + os.pathsep + ENV.get("PYTHONPATH", "")
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the evergreen check battery against ``--base`` (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--base", default="HEAD~1",

@@ -66,6 +66,7 @@ REF = "HEAD~1"
 
 
 def _corpus(archs):
+    """The cross-product of probes and knobs to apply the table to."""
     cfgs = []
     for dt in ("S", "D", "H", "Z", "C", "I8", "SS", "HH", "ZZ", "HH_HPA", None):
         for mt in ("128x128x8", "64x64x16", "128x32x16", "256x256x8", "32x32x16",
@@ -160,6 +161,7 @@ def _resolve_table(root):
 
 
 def _verdict(fn, cfg):
+    """One gate's verdict on `cfg`, catching exceptions as ``("EXC", name)``."""
     try:
         res = fn(dict(cfg))
     except Exception as e:
@@ -170,6 +172,7 @@ def _verdict(fn, cfg):
 
 
 def emit(out_path: str, ref: str | None = None) -> None:
+    """Emit the verdict corpus for the table at `ref` to `out_path`."""
     global REF
     if ref is not None:
         REF = ref

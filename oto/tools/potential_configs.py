@@ -17,6 +17,7 @@ from oto.runners.result_paths import results_dir as _results_dir
 
 
 def _load_json(path: Path) -> Any:
+    """Read and parse a JSON file; ``None`` on failure."""
     try:
         return json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
@@ -47,7 +48,7 @@ def generate(profile: DeviceProfile, base_dir: Path) -> str:
 
 
 def _floor_prefix(profile: DeviceProfile) -> str:
-    """Generate docs/potential_configs.md for the tuning corpus. ``profile`` is the device to tune."""
+    """The spoof-reference run-id prefix (``<ref>_ref``), or ``_ref_`` when no reference is set."""
     ref = profile.spoof_reference or ""
     return f"{ref}_ref" if ref else "_ref_"
 
@@ -142,6 +143,7 @@ def _anatomy_lines(verdicts: list[dict[str, Any]]) -> list[str]:
 def _attack_plan(verdicts: list[dict[str, Any]]) -> list[str]:
     """The ranked work order: LOSSes by size, then TIEs closest to flipping."""
     def gap(v: dict[str, Any]) -> float:
+        """The cell's delta for ranking (0.0 when absent)."""
         d = v.get("delta_pct")
         return d if isinstance(d, (int, float)) else 0.0
 
@@ -165,6 +167,7 @@ def _attack_plan(verdicts: list[dict[str, Any]]) -> list[str]:
 
 
 def _citations() -> list[str]:
+    """The research-citations footer lines."""
     return ["## Research citations",
             "- Verdicts and ceilings: this run's own kernel_db + acceptance report.",
             "- Like-for-like admission rule (protocol='family'): docs/comparability.md.",

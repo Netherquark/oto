@@ -63,6 +63,7 @@ def ref_worktree(ref: str) -> Path:
         raise EvergreenError(f"git worktree add failed: {result.stderr.strip()}")
 
     def _cleanup():
+        """Remove the worktree and its parent directory, best effort."""
         try:
             subprocess.run(["git", "worktree", "remove", "--force", str(wt)],
                            cwd=ROOT, capture_output=True)
@@ -98,6 +99,7 @@ def probe(tree: Path, code: str, *, env_extra: dict | None = None,
 
 
 def read_tree_file(ref: str, rel: str) -> str | None:
+    """The contents of `rel` at ref `ref` (``None`` when absent)."""
     out = subprocess.run(["git", "show", f"{ref}:{rel}"],
                          cwd=ROOT, capture_output=True, text=True)
     if out.returncode != 0:
@@ -114,6 +116,7 @@ _MANIFEST_PATH = Path(__file__).resolve().parent / "drift_manifest.json"
 
 
 def load_manifest() -> dict:
+    """The drift manifest JSON (empty description when absent/unreadable)."""
     try:
         return _json.loads(_MANIFEST_PATH.read_text())
     except Exception:

@@ -50,6 +50,7 @@ print("ok")
 
 def _cell(family: str, dtype: str, shape: str, native: float, spoof: float,
           verdict: str, coverage: float, i: int) -> dict:
+    """One synthetic verdict cell for the fixture."""
     return {
         "dtype": dtype,
         "shape": shape,
@@ -153,6 +154,7 @@ def _payload_fixture() -> dict:
 
 
 def build_report(payload: dict):
+    """The ``AcceptanceReport`` for a payload snapshot fixture."""
     from oto.metrics.report_models import ABVerdict, AcceptanceReport
 
     ver = [ABVerdict(**{k: v.get(k) for k in ABVerdict.__dataclass_fields__ if k in v})
@@ -167,12 +169,14 @@ def build_report(payload: dict):
 
 
 def _verdicts(payload: dict):
+    """Yield the per-cell verdict dicts from a payload."""
     for v in payload.get("per_cell_verdicts") or []:
         if isinstance(v, dict):
             yield v
 
 
 def render(report, html_path: Path) -> bytes:
+    """Render the report HTML for `report` and return its bytes."""
     from oto.metrics.acceptance_report import AcceptanceReporter
 
     AcceptanceReporter(ROOT).write_html_report(report, html_path)
@@ -180,6 +184,7 @@ def render(report, html_path: Path) -> bytes:
 
 
 def _first_diff(a: bytes, b: bytes) -> int | None:
+    """The first byte offset where `a` and `b` differ."""
     n = min(len(a), len(b))
     for i in range(n):
         if a[i] != b[i]:
@@ -188,6 +193,7 @@ def _first_diff(a: bytes, b: bytes) -> int | None:
 
 
 def _ref_render(ref: str, payload: dict) -> bytes | None:
+    """The report HTML rendered by the reference tree (``None`` when blocked)."""
     from oto.tools.verifiers import ref_worktree
 
     try:
@@ -211,6 +217,7 @@ def _ref_render(ref: str, payload: dict) -> bytes | None:
 
 
 def main() -> int:
+    """The report-render equivalence check (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default=None,
                     help="REF to render the same fixture with; without it "

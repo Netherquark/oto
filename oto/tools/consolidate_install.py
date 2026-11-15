@@ -111,6 +111,7 @@ def phantom_runs(base: Path = BASE, db: Path = LIVE_DB, profile=None) -> list[st
 
 
 def explain_archive(base: Path = BASE) -> str:
+    """The plain-English explanation of what the consolidation archived and why."""
     lines = ["Runs moved out of the live loader path (data preserved under "
              "the archive/superseded-locks directory):"]
     lines.extend(

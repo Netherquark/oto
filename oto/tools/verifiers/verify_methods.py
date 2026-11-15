@@ -121,6 +121,7 @@ def head_source(ref: str) -> str | None:
 
 
 def _strip_imports(node):
+    """Remove import statements from an AST node (and its children) in place."""
     for child in ast.iter_child_nodes(node):
         if isinstance(child.body) if False else False:  # pragma: no cover
             pass
@@ -135,6 +136,7 @@ def _strip_imports(node):
 
 
 def normalise(fn: ast.FunctionDef) -> str:
+    """A function's normalised source (docstring/imports stripped, aliases folded)."""
     fn = ast.parse(ast.unparse(fn)).body[0]
     body = fn.body
     if (body and isinstance(body[0], ast.Expr)
@@ -155,6 +157,7 @@ def normalise(fn: ast.FunctionDef) -> str:
 
 
 def collect(paths):
+    """Index ``name -> [(path, node)]`` over the given files."""
     found = {}
     for rel in paths:
         tree = ast.parse((ROOT / rel).read_text())
@@ -165,6 +168,7 @@ def collect(paths):
 
 
 def main():
+    """The AST-equivalence check (CLI entry)."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="HEAD~1",
                     help="ref to compare against (default: HEAD~1, the evergreen "
