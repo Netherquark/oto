@@ -151,6 +151,8 @@ def changed_python_files() -> list[str]:
     files = []
     for line in out.splitlines():
         path = line[3:].strip()
+        if " -> " in path:  # staged rename: take the destination
+            path = path.split(" -> ", 1)[1]
         if path.endswith(".py"):
             files.append(path)
     return files

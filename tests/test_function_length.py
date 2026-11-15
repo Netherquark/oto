@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """test_function_length.py — no function in oto/**/*.py spans more than 60 lines.
 
-The 60-line rule is a hard acceptance criterion (`incomplete_work.md`); this is its
-executable form, so a regression fails the suite instead of shipping.
+The 60-line rule is a hard acceptance criterion of this repository (see
+``docs/knowledge_base.md`` and the guard's own history); this is its executable
+form, so a regression fails the suite instead of shipping. The file-level
+criterion (no tracked file over 600 lines) is a sibling guard and is asserted
+repo-wide by ``tests/test_file_length.py``.
 
 The measure is the whole ``def .. end_lineno`` span, which is what the
 criterion names. It deliberately does NOT subtract the docstring: the criterion
 is "a function too long to follow", and a 59-code-line function with a 30-line
-docstring is still a screenful to read. The register's *code-only* column is the
-column that should drive which seam to cut; this span is the exit test.
+docstring is still a screenful to read.
 
 A failure here is a signal to decompose, not to raise the limit. If a function
-genuinely cannot be cut, raise the limit in `incomplete_work.md` with the reason
-and update this constant to match — never the other way round.
-
-Only the function criterion is enforced here. The file-level criterion (no file
-over 600 lines) is tracked in the register but is NOT asserted: at the time of
-writing the largest file is already 606 lines, so the test would be red for a
-pre-existing reason, and a guard that is red on arrival is ignored instead of
-obeyed. Amend the register, fix the file, then add the assertion.
+genuinely cannot be cut, raise the limit in this constant with the reason in
+the commit message — never the other way round.
 """
 from __future__ import annotations
 
@@ -65,8 +61,8 @@ def test_no_function_exceeds_the_line_limit(changed_python_files):
     ]
     assert not offenders, (
         f"{len(offenders)} function(s) over {MAX_FUNCTION_LINES} lines "
-        f"(the 60-line rule, incomplete_work.md). Decompose them, or amend the criterion "
-        f"there with a reason:\n"
+        f"(the 60-line rule). Decompose them, or amend the constant "
+        f"here with a reason:\n"
         + "\n".join(f"  {span:4d}  {path}:{lineno}  {name}"
                     for path, name, lineno, span in
                     sorted(offenders, reverse=True))

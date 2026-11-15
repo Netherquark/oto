@@ -190,7 +190,8 @@ def _stage_gfx900_reference(driver, args, stage) -> int | None:
     ref_shapes = args.ref_shapes.split(",") if args.ref_shapes else None
     result = driver.run_gfx900_reference(refresh=args.refresh, limit=args.limit,
                                         ref_shapes=ref_shapes, resume=args.resume,
-                                        release_held=args.release_under_specified)
+                                        release_held=args.release_under_specified,
+                                        release_drop=args.release_unreproducible)
     print(f"gfx900 reference run: {result}")
     return 0 if result.get("status") in ("completed", "noop") else 1
 

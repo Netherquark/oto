@@ -49,11 +49,14 @@ def _changed_files() -> list[str]:
         check=False,
         cwd=REPO,
     ).stdout
-    return [
-        line[3:].strip()
-        for line in out.splitlines()
-        if line[3:].strip().endswith(".py")
-    ]
+    files = []
+    for line in out.splitlines():
+        path = line[3:].strip()
+        if " -> " in path:  # staged rename: take the destination
+            path = path.split(" -> ", 1)[1]
+        if path.endswith(".py"):
+            files.append(path)
+    return files
 
 
 def test_no_file_over_600_lines():
@@ -61,6 +64,10 @@ def test_no_file_over_600_lines():
     if os.environ.get("OTO_GUARD_FILES") == "1":
         changed = set(_changed_files())
         files = [f for f in files if f in changed]
+        if not files:
+            # OTO_GUARD_FILES=1 on a clean tree would check nothing; the full
+            # scan keeps the guard meaningful instead of vacuous.
+            files = _git_files()
 
     over = {}
     for rel in files:

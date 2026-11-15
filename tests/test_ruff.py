@@ -48,11 +48,14 @@ def _changed_python_files() -> list[str]:
         check=False,
         cwd=REPO,
     ).stdout
-    return [
-        line[3:].strip()
-        for line in out.splitlines()
-        if line[3:].strip().endswith(".py")
-    ]
+    files = []
+    for line in out.splitlines():
+        path = line[3:].strip()
+        if " -> " in path:  # staged rename: take the destination
+            path = path.split(" -> ", 1)[1]
+        if path.endswith(".py"):
+            files.append(path)
+    return files
 
 
 def test_ruff_repo_is_clean():
@@ -60,11 +63,10 @@ def test_ruff_repo_is_clean():
     if os.environ.get("OTO_GUARD_FILES") == "1":
         changed = set(_changed_python_files())
         files = [f for f in files if f in changed]
-
-    if not files:
-        # OTO_GUARD_FILES=1 with a clean tree: nothing to check, and that is fine.
-        print("ruff: no Python files in scope (OTO_GUARD_FILES clean tree)")
-        return
+        if not files:
+            # OTO_GUARD_FILES=1 on a clean tree would check nothing; the full
+            # scan keeps the guard meaningful instead of vacuous.
+            files = _ls_py_files()
 
     proc = subprocess.run(
         [

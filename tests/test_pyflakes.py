@@ -61,8 +61,14 @@ def _changed_python_files() -> list:
 
     out = subprocess.run(["git", "status", "--porcelain"],
                          capture_output=True, text=True, check=False).stdout
-    return [line[3:].strip() for line in out.splitlines()
-            if line[3:].strip().endswith(".py")]
+    files = []
+    for line in out.splitlines():
+        path = line[3:].strip()
+        if " -> " in path:  # staged rename: take the destination
+            path = path.split(" -> ", 1)[1]
+        if path.endswith(".py"):
+            files.append(path)
+    return files
 
 
 def test_pyflakes_dangerous_categories_zero():
@@ -73,6 +79,11 @@ def test_pyflakes_dangerous_categories_zero():
         # The fast path: check what you touched, not the whole tree.
         changed = set(_changed_python_files())
         files = [f for f in files if f in changed]
+        if not files:
+            # OTO_GUARD_FILES=1 on a clean tree would check nothing; the full
+            # scan keeps the guard meaningful instead of vacuous.
+            files = list(__import__("subprocess").run(
+                ["git", "ls-files", "*.py"], capture_output=True, text=True).stdout.split())
 
     undefined, redef, local, fstring = _run_pyflakes(files)
 
@@ -81,11 +92,11 @@ def test_pyflakes_dangerous_categories_zero():
     assert local == 0, f"{local} local variable unused warnings remain"
     assert fstring == 0, f"{fstring} empty f-string warnings remain"
 
-    # undefined name: allow 4 false positives in knob_sweep.py (late imports)
-    # but no other genuine undefined names
-    assert undefined <= 4, f"{undefined} undefined name warnings remain (max 4 tolerated for knob_sweep late imports)"
+    # no undefined names tolerated anywhere -- the pre-split tolerance for
+    # knob_sweep.py's "late imports" is stale (0 findings at HEAD).
+    assert undefined == 0, f"{undefined} undefined name warnings remain"
 
     print(
         f"pyflakes safe: redef={redef}, local={local}, fstring={fstring}, "
-        f"undefined={undefined} (4 knob_sweep false positives allowed)"
+        f"undefined={undefined}"
     )

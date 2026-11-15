@@ -96,7 +96,8 @@ def _emit_tree(out: list[str], directory: Path, level: int) -> None:
         _emit_tree(out, nested, level + 1)
 
 
-def main() -> int:
+def render() -> str:
+    """The README content generated from the live docstrings, without writing."""
     out = ["# The ``oto/`` package map\n",
            "\n",
            "Generated. Regenerate with ``python3 -m oto.readme_gen``.\n",
@@ -105,9 +106,6 @@ def main() -> int:
            "only way to make this file stale is to delete the docstring. Line\n",
            "counts are never quoted here -- they go wrong the day a file moves.\n",
            "\n"]
-    # One ``##`` section per package, its modules then its nested sub-packages.
-    # The oto/ root holds __init__.py and _map.py (both in SKIP) plus the
-    # project-wide plumbing modules, which get their own section first.
     root_modules = [path for path in sorted(HERE.glob("*.py"))
                      if path.name not in SKIP]
     if root_modules:
@@ -121,7 +119,11 @@ def main() -> int:
         out.append(f"## {title}\n\n")
         _emit_tree(out, base, level=3)
         out.append("\n")
-    HERE.joinpath("README.md").write_text("".join(out))
+    return "".join(out)
+
+
+def main() -> int:
+    HERE.joinpath("README.md").write_text(render())
     print(f"wrote {HERE / 'README.md'}")
     return 0
 
