@@ -6,7 +6,7 @@ Regression guards for the 38-cell evidence generator (docs/potential_configs.md
 §R25, the per-cell reading — §R26 is the class tracker):
 
   * exactly the shipped deck — (family, shape) equals shipped_cell_set()
-    (docs/knowledge_base.md §6.1), no added/absent cells;
+    (docs/gfx90c_knowledge_base.md §6.1), no added/absent cells;
   * verdicts + native/floor values match acceptance_report.json field-for-field;
   * every cell that has a native winner phase resolves a FULL structural config
     (MacroTile present) from the winner run's configs/*.yaml or the registry —

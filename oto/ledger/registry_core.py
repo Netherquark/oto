@@ -78,7 +78,7 @@ _SCHEMA_DDL = (
     """,
     # Proposals ledger. Append-only: rows are never deleted
     # and never rewritten, and `outcome` only advances pending -> terminal. A
-    # monotonic status column is not a mutation of history (docs/knowledge_base.md
+    # monotonic status column is not a mutation of history (docs/gfx90c_knowledge_base.md
     # §10), which is why the write-back is an UPDATE guarded on
     # outcome='pending' rather than a new row. Created here, alongside the other
     # tables, so a fresh registry has the ledger from birth; existing databases

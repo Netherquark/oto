@@ -13,7 +13,7 @@
 > This ledger inherits the frozen prior conclusions as ceiling bars (sources:
 > `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked), also absorbed in `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked)).
 > This file's hand prose is preserved append-only
-> (`docs/knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/acceptance_report.py`
+> (`docs/gfx90c_knowledge_base.md` §10); live report artifacts are produced by `oto/metrics/acceptance_report.py`
 > (`gfx90c_results/acceptance_report.json/.html`).
 
 ## 1. Run Summary

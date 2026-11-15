@@ -89,7 +89,8 @@ Corollaries:
 | `docs/gfx90c_results.md` | dev | Ecosystem | Measured evidence — the gfx90c golden case study (template: `docs/results.md`) |
 | `docs/results.md` | dev | Ecosystem | Device-independent measured-evidence template — populated by the agent per device |
 | `docs/theoretical_limits.md` | dev | Ecosystem | Device-independent ceilings/limits template — populated by the agent per device |
-| `docs/knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
+| `docs/gfx90c_knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state (gfx90c) — gfx90c golden example of `docs/knowledge_base.md` |
+| `docs/knowledge_base.md` | dev | Ecosystem | Device-independent knowledge-base template — populated by the agent per device |
 | `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | dev | Ecosystem | Open-work register |
 | `docs/gfx90c_tuning_guide.md` §14 | shared | Ecosystem (frozen) | Prior-campaign conclusions, results only (absorbed verbatim; archive left git) |

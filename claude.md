@@ -216,7 +216,7 @@ For every substantive task:
 3. Read `docs/implementation_plan.md` for the **current executable plan**.
 4. Read `docs/shipped_floor_contract.md` for the shipped-footprint → native-gfx90c replication contract.
 5. Read `docs/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
-6. Read `docs/knowledge_base.md` for the baseline repo/code architecture.
+6. Read `docs/gfx90c_knowledge_base.md` for the baseline repo/code architecture.
 7. Read `changelog.md` for what changed and why (oto evolution).
 8. Read `docs/potential_configs.md` for the deck methodology; the gfx90c worked example lives in `docs/gfx90c_tuning_guide.md` §13.
 9. Read `docs/gfx90c_results.md` for measured evidence (the oto ledger).
@@ -283,7 +283,7 @@ are measurement-vs-model; corrections to the second are model-vs-model.
 the AMD/ORNL GFX9 table and exits 1 if it stops fitting — run it before
 trusting any occupancy number in this repo.
 
-`docs/knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
+`docs/gfx90c_knowledge_base.md` §8.1/§8.2 records the parsing traps these tools encode
 (multi-size sweeps, string tiles, complex-is-8-bytes, family from `FamilyLabel`).
 A phase that dies with `Generating kernel source resulted in error 4` is the
 **workgroup register-file rule** (`R*MT0*MT1*LocalSplitU >= 65536`): the
@@ -298,7 +298,7 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 | File | Sole purpose |
 |---|---|
 | `claude.md` | Entry contract, routing, authority rules, safety/process guardrails |
-| `docs/knowledge_base.md` | Baseline repository/codebase knowledge at the captured state |
+| `docs/gfx90c_knowledge_base.md` | Baseline repository/codebase knowledge at the captured state |
 | `docs/implementation_plan.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
 | `docs/shipped_floor_contract.md` | Shipped gfx900 footprint → native gfx90c replication contract |
 | `docs/gfx90c_theoretical_limits.md` | Per-family theoretical & realistic ceilings — the acceptance authority |
@@ -364,7 +364,7 @@ factual state**:
 - `docs/potential_configs.md` = authoritative for the **deck methodology** (device-independent); `docs/gfx90c_tuning_guide.md` §13 is the **gfx90c record**.
 - `docs/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
 - `docs/shipped_floor_contract.md` = authoritative for **what footprint to replicate**.
-- `changelog.md` / `docs/knowledge_base.md` = history / baseline (single evolution log).
+- `changelog.md` / `docs/gfx90c_knowledge_base.md` = history / baseline (single evolution log).
 
 Never turn "planned", "proposed", "observed", or "historically true" into
 "currently true" without evidence.
@@ -402,7 +402,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   validation. Correctness gates performance claims.
 - Avoid redundant experiments; check the registry before adding equivalent work.
 - Preserve experiment provenance and historical results. Benchmark data is NEVER
-  deleted; all data streams are append-only (canonical law: `docs/knowledge_base.md` §10).
+  deleted; all data streams are append-only (canonical law: `docs/gfx90c_knowledge_base.md` §10).
 - **Ask before deleting/replacing files or materially changing existing experiments.**
 - Do not overwrite existing tests/results merely to make a cleaner implementation.
 - Do not silently retire/revive/rename/reinterpret phases; the driver's
@@ -548,7 +548,7 @@ checks are demonstrated and remaining gaps are stated.
 
 ## 9. Task routing
 
-- "What is this repo?" → `docs/knowledge_base.md`
+- "What is this repo?" → `docs/gfx90c_knowledge_base.md`
 - "What changed / why?" → `changelog.md`
 - "What's next?" → `docs/implementation_plan.md`
 - "What footprint do we replicate?" → `docs/shipped_floor_contract.md`

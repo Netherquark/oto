@@ -140,7 +140,13 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Architecture knowledge at the captured state",
+      "owns": "Architecture knowledge at the captured state (gfx90c) \u2014 gfx90c golden example of `docs/knowledge_base.md`",
+      "path": "docs/gfx90c_knowledge_base.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Device-independent knowledge-base template \u2014 populated by the agent per device",
       "path": "docs/knowledge_base.md"
     },
     {
@@ -265,6 +271,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 35,
+  "total": 36,
   "version": 1
 }

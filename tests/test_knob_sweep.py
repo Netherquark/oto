@@ -123,7 +123,7 @@ def test_every_sweep_row_offers_a_non_default_value():
 
     Tensile fills absent knobs from ``defaultBenchmarkCommonParameters``, so a
     winner that "never sets" a knob does not mean the knob is at zero -- see
-    ``TENSILE_KNOB_DEFAULTS`` and ``docs/knowledge_base.md`` §7.1. This is what
+    ``TENSILE_KNOB_DEFAULTS`` and ``docs/gfx90c_knowledge_base.md`` §7.1. This is what
     removed the ``BufferLoad: True`` row (its default is already ``True``).
     """
     from oto.tensile.family_decks import TENSILE_KNOB_DEFAULTS

@@ -5,7 +5,7 @@ Owns: ``AnalyticsEngine`` -- the composition root over the family-attribution
 helpers (family_attribution), the A/B delta (ab_delta) and the cell-coverage
 classification (cell_status), plus the CSV seam itself: reading a benchmark CSV
 (the multi-size sweep trap, the string-tile trap, the
-complex-is-8-bytes trap per docs/knowledge_base.md §8.1) and aggregating rows into
+complex-is-8-bytes trap per docs/gfx90c_knowledge_base.md §8.1) and aggregating rows into
 per-cell seed lists.
 Does NOT own: the verdict threshold (oto.metrics.ab_audit), the report layout
 (oto.metrics.acceptance_report), or the ceiling tables (`oto.device.loader.current_profile()`).

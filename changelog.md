@@ -4469,3 +4469,27 @@ the pre-built seed pool.
   C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
   anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
   pointers; nothing actioned, nothing claimed.
+- **2026-11-15 (50th) — docs/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
+  `docs/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
+  Oct-2 overhaul accrual; the Oct-12 whittle/restore cycle that moved module-docstring facts into the code and
+  deleted `knowledge_base_final.md`; the Oct-14 corpus3 fold (+184 lines: the @e8a8999e defaults table and the
+  never-used-levers analysis, marked mechanism-verified/gain-unmeasured); the Oct-19 GCN5 literature folds). It is
+  now `docs/gfx90c_knowledge_base.md` (content unchanged, in-file pointer added), and the new `docs/knowledge_base.md`
+  is a device-independent template — required sections (What Is Tensile → Port mechanism → GlobalParameters →
+  Solution space → Footprint → Kernel levers source-audited → Measurement science → Preservation law → Glossary),
+  how the agent populates it (probe → pin evidence → derive, never inherit → 0 unlabeled claims), and the same
+  hard rules as the results/limits templates: the gfx90c file is the golden example, never a source of numbers.
+  22 files re-pointed; registry rows updated; docs/docs_index.json regenerated. Suite RC=0; `oto verify all` PASSED.
+- **2026-11-15 (51st) — knowledge_base.md mined and generalised twin created; the gfx90c doc family of four is settled.**
+  Full git history studied (27 commits; 454 → 858–866 lines): born 2026-09-19 (the port's WHAT-layer) → Oct-2 overhaul
+  accrual → the Oct-12 whittle/restore cycle (module-docstring facts moved into code; `knowledge_base_final.md` deleted)
+  → Oct-14 corpus3 fold (+184 lines: `@e8a8999e` defaults table + the never-used-levers analysis, marked
+  mechanism-verified/gain-unmeasured) → Oct-18 gate formalisation → Oct-19 GCN5 literature folds → Nov mechanical sweeps.
+  The file is now `docs/gfx90c_knowledge_base.md`; new device-independent `docs/knowledge_base.md` template (WHAT layer;
+  populated per device by the agent). Mining: era note (toolchain moved to nightly 2026-11-14), §6 footprint table delegated
+  to `docs/shipped_floor_contract.md` §2 (single source), §7 rate card delegated to `docs/gfx90c_theoretical_limits.md`
+  §5 + `oto.device.derive_limits` (single source of peaks), §8.2 now points at the gate modules as normative.
+  **Item 5 closed:** gfx90c-specific residue is absorbed or triaged — §6/§7/§8.2 delegated to their owners, §8.1/§8.3/§8.4/§7.1/§7.2
+  are the KB's own canonical content (kept, pointed), and the four gfx90c-specific docs are split deliberately, NOT folded into
+  the guide (documented in the guide §0a): bring-up case study + three golden examples. 22 files re-pointed; registry/index synced;
+  suite RC=0; `oto verify all` PASSED.

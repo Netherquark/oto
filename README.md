@@ -442,7 +442,7 @@ python3 -m oto check tensile-build --jobs 8 --json > build.json
 python3 -m oto check tensile-build --family ZZ    # just the ZZ family
 python3 -m oto check tensile-build --compare      # cross-check our gate vs Tensile
 
-# Enforce the append-only data law (docs/knowledge_base.md §10). Take a snapshot
+# Enforce the append-only data law (docs/gfx90c_knowledge_base.md §10). Take a snapshot
 # around any run, then diff: a new run dir and more registry rows is clean;
 # anything shrunk, removed, rewritten in place, or any lost row exits non-zero.
 python3 -m oto verify run snapshot --out before.json
@@ -486,7 +486,7 @@ re-triaged).
 | [`docs/research/complex_gemm_brief.md`](docs/research/complex_gemm_brief.md) | The complex/split (CC/ZZ) GEMM research brief. |
 | [`docs/search_philosophy.md`](docs/search_philosophy.md) | Objective, gates, and the agentic guardrails (canonical philosophy). |
 | [`docs/potential_configs.md`](docs/potential_configs.md) | Device-independent deck methodology; the gfx90c worked example lives in [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) §13. |
-| [`docs/knowledge_base.md`](docs/knowledge_base.md) | Core architecture + the append-only data-preservation law (§10). |
+| [`docs/gfx90c_knowledge_base.md`](docs/gfx90c_knowledge_base.md) | Core architecture + the append-only data-preservation law (§10). |
 | [`docs/gfx90c_results.md`](docs/gfx90c_results.md) | The live benchmark ledger and frozen ceiling metrics. |
 | [`incomplete_work.md`](incomplete_work.md) | The open-work register. |
 | [`docs/audit_register.md`](docs/audit_register.md) | The expert-agent audit register and the frozen prior baseline. |

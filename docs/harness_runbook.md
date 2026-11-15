@@ -34,7 +34,7 @@ gfx90c_results/analysis/coverage_map.json      # cache (legal space + coverage; 
 Module list and ownership: see [`oto/README.md`](../oto/README.md) for the harness
 modules (e.g. `oto/harness/*`). Both tools resolve families/shapes/dtype from the
 repo's canonical sources (`oto.device.loader`, `oto.tensile.library_parity`) — they
-can never disagree with the shipped grid (docs/knowledge_base.md §6.1). Cache paths are
+can never disagree with the shipped grid (docs/gfx90c_knowledge_base.md §6.1). Cache paths are
 listed above.
 
 ## The pre-deck questions

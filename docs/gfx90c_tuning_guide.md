@@ -17,6 +17,18 @@
 
 ## 0a. Scope of every floor and ceiling in this file
 
+**The gfx90c-specific doc family (split is deliberate, not folded).**
+This file is the bring-up case study — the port's tuning narrative and the full
+history. Three other gfx90c-specific docs stand alongside it, split by topic and
+pinned with in-doc pointers: `docs/gfx90c_knowledge_base.md` (architecture /
+what layer), `docs/gfx90c_results.md` (measured evidence),
+`docs/gfx90c_theoretical_limits.md` (ceilings / the acceptance authority).
+Their device-independent twins are the `docs/knowledge_base.md`,
+`docs/results.md`, `docs/theoretical_limits.md` templates, populated per
+device by the agent. The split is deliberate and documented in the changelog;
+it is not a collapse of the case study, and it does not get folded.
+
+
 - Every measured/admitted number in this document (register budgets, LDS budget,
   7-CU geometry, wave64, fast F16 paths, gfx90c GFLOPS peaks) is **gfx90c-specific**
   and is *not* an architecture universal. A new device profile (C4/C7.1) re-measures
@@ -1520,7 +1532,7 @@ gfx90c-specific*, and each is now stated inline in its owner — Origami and the
 grid predictor in `docs/research/kernel_tuning.md` §3.4, the LLVM VGPR-allocation rule in
 §9.3, the MI250X non-temporal and StaggerU scoping in §4, the Stream-K knob names in
 §8.7; the oneMKL/Higham 3M error bound in `docs/research/complex_gemm_brief.md` §5; and
-the AMD warmup/sample methodology in `docs/knowledge_base.md` §8.3. **It changes no
+the AMD warmup/sample methodology in `docs/gfx90c_knowledge_base.md` §8.3. **It changes no
 route** — it converts four open [CHECK]s into cited "closest evidence, not
 gfx90c-specific" statements, so the search is not repeated.
 
@@ -2096,7 +2108,7 @@ mechanisms.
 **Owns: the candidate deck, the routes to beat the spoof floor, and the search
 rules.** Does not own: acceptance bars/ceilings/verdicts (`docs/gfx90c_theoretical_limits.md`
 §5), measured evidence (`docs/gfx90c_results.md`), or GCN hardware facts
-(`docs/knowledge_base.md`).
+(`docs/gfx90c_knowledge_base.md`).
 
 ---
 
@@ -2447,7 +2459,7 @@ eleven axes are untouched.
 `UseSgprForGRO=-1`, `GlobalLoadVectorWidth=-1`, `InnerUnroll=1`,
 `FractionalLoad=0`. The experiments are the *non-default* values; a sweep value
 equal to the default re-measures the baseline. Verified defaults:
-`docs/knowledge_base.md` §7.1; machine-readable `TENSILE_KNOB_DEFAULTS` in
+`docs/gfx90c_knowledge_base.md` §7.1; machine-readable `TENSILE_KNOB_DEFAULTS` in
 `oto/tensile/family_decks.py`, enforced by `tests/test_knob_sweep.py`.
 
 **F3. The complex families are the two *narrowest* searches in the deck, which
@@ -2550,7 +2562,7 @@ wide numbers above are from that model. Three consequences:
 2. **LDS capacity, not VGPR, is what caps residency** for 61.7% of kernels —
    which is why the `LDS_BUDGET` entry (§10) matters and why `LdsPad`/
    LDS-layout angles are deprioritised: bandwidth is ~8× oversupplied at
-   TT4x4 FP32 (`docs/knowledge_base.md` §1 rate card), but *capacity* still decides how many
+   TT4x4 FP32 (`docs/gfx90c_knowledge_base.md` §1 rate card), but *capacity* still decides how many
    workgroups fit, and `LdsPad` spends that capacity.
 3. **No kernel spills.** Zero kernels carry a private segment. So there is no
    scratch-spill tax to recover, and `MinVgprNumber`/`MaxVgprNumber` tuning has
@@ -2679,7 +2691,7 @@ because the floor won there and native never generated the tile.
 §F2. **"No winner sets knob X" is not "knob X has never been varied."** Tensile
 fills every absent knob from `defaultBenchmarkCommonParameters`, so several of
 these are already active at a fixed value, and only their *non-default* values are
-experiments. The verified default for each is in `docs/knowledge_base.md` §7.1;
+experiments. The verified default for each is in `docs/gfx90c_knowledge_base.md` §7.1;
 `TENSILE_KNOB_DEFAULTS` in `oto/tensile/family_decks.py` is the machine-readable copy, and
 `tests/test_knob_sweep.py` refuses a sweep row that offers no non-default value.
 Concretely, per family, with the reason:
@@ -2779,7 +2791,7 @@ entry. Listed so it is not re-proposed as a knob.
 
 Ceasing: **ThreadTile** width ladders for C and Z (F3/F5 — the accumulator cap
 makes every wider tile illegal, so they are pure rejects); `LdsPad`/LDS-layout
-work (`docs/knowledge_base.md` §1 rate card — bandwidth ~8× oversupplied, and LDS *capacity*
+work (`docs/gfx90c_knowledge_base.md` §1 rate card — bandwidth ~8× oversupplied, and LDS *capacity*
 is better spent on residency); any `-mllvm -amdgpu-*` or compiler-flag proposal
 (no-op: Tensile emits ISA text to the assembler for ~93% of the shipped
 library); `MaxOccupancy`/`AggressivePerfMode` *assumptions* without a
@@ -2838,7 +2850,7 @@ Two hard results worth stating plainly:
 Two caveats that are **not** in this matrix:
 
 - **`BufferLoad` is not a deck entry.** Its Tensile default is already `True`
-  (`docs/knowledge_base.md` §7.1), so `BufferLoad=True` re-measures the baseline. It
+  (`docs/gfx90c_knowledge_base.md` §7.1), so `BufferLoad=True` re-measures the baseline. It
   was removed from `KNOB_SWEEPS` on 2026-10-14.
 - **`GlobalLoadVectorWidth` is no longer a deck entry (§9 D4, resolved 2026-10-14).**
   The gate models Tensile's *whole* rule, not just its first half: `GLVW !=
@@ -2894,7 +2906,7 @@ measured occupancy + GFLOP/s join), `oto.harness.cell_resolver` (per-cell
 winners), `oto.harness.occupancy_bounds` (predicted residency), `validate_config`
 (§8.1's legality matrix), and `gfx90c_results/acceptance_report.json` run
 `run_20261013_214649`.
-Architecture/ridge facts: `docs/knowledge_base.md`, `docs/gfx90c_theoretical_limits.md`.
+Architecture/ridge facts: `docs/gfx90c_knowledge_base.md`, `docs/gfx90c_theoretical_limits.md`.
 Anti-transfer: arXiv:2505.03780, arXiv:2507.15277 (`docs/research/kernel_tuning.md` §6).
 
 ---
@@ -3016,7 +3028,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    (`power_dpm_force_performance_level` = `manual`, then `pp_dpm_sclk`), 25%
    warmup, L2 flush between repeats for memory-bound shapes, log median clock +
    temperature per phase, and interleave a reference kernel to detect drift.
-   Full protocol: `docs/knowledge_base.md` §8.3. Without this the run repeats the F1
+   Full protocol: `docs/gfx90c_knowledge_base.md` §8.3. Without this the run repeats the F1
    artifact.
 5. **Budget split** — the never-varied knobs (§8.1) are the high-yield spend;
    tile ladders (§8.2) are the second; Route E is a separate work item and gets
@@ -3029,7 +3041,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
    APM 1-vs-2 is read through the LDS allocation diff first (cap unconfirmed).
 
 The pass-3 brief (Q-A…Q-F) is folded; residual follow-ups are §9.4 of
-`docs/research/kernel_tuning.md` and the protocol deltas are `docs/knowledge_base.md`
+`docs/research/kernel_tuning.md` and the protocol deltas are `docs/gfx90c_knowledge_base.md`
 §8.3. The prompts themselves are archived at `archive/` (untracked on disk; see §18 of `docs/operator_campaign.md`).
 
 ---

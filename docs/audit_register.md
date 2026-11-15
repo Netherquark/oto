@@ -79,7 +79,7 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
   with `"`, `\`, or embedded newline corrupted live records; 2/1283 already
   broken).
 - **No fork-lock:** single-writer process; SQLite WAL mode; INSERT-only `records`
-  table with `json.dumps` payload (`docs/knowledge_base.md` §10.2). No sibling `.lock`
+  table with `json.dumps` payload (`docs/gfx90c_knowledge_base.md` §10.2). No sibling `.lock`
   files, no fd-9 `flock(1)` dance, no retry state machines.
 - **No inferred missing controls:** missing (dt,cls) ruler or un-gated telemetry
   window → "not computable / unadjusted", never 1.0 fabrication and never a

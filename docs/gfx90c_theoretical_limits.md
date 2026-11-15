@@ -374,7 +374,7 @@ always conservative; it is now conservative in the measured-element direction).
 incomplete_work.md is closed by this decision: the gate refuses ~67/229
 corpus ZZ kernels at the chosen reading — accepted deterministically. The D2/D3
 boundary evidence was gathered Tensile-verbatim on 2026-11-14 (see changelog).
-*Scope:* this is the **LDS-tile** width only. `docs/knowledge_base.md` §8.1's "complex
+*Scope:* this is the **LDS-tile** width only. `docs/gfx90c_knowledge_base.md` §8.1's "complex
 types are 8 B" is the **global-load** element width under the `GLVW x bytes <= 16`
 cap — a different quantity on a different path. Both can be true at once.
 Reproduce with `python3 -m oto.harness.asm_occupancy --dtype Z --by gflops`

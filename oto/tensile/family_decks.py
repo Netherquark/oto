@@ -488,7 +488,7 @@ KNOB_SWEEPS: list[dict[str, Any]] = [
     # phase costs a full subprocess and returns nothing -- no tile property
     # predicts it, which is why it is a deck decision and not a gate. The
     # "2 waves/SIMD LDS cap" the old row proposed to probe stays unconfirmed
-    # (`docs/knowledge_base.md` §Q-E ii); it is not a reason to ship dead phases.
+    # (`docs/gfx90c_knowledge_base.md` §Q-E ii); it is not a reason to ship dead phases.
     # ---- K splitting. Legal only for SS and DD on this gate:
     # `Assembly class: GlobalSplitU=2 on complex C: illegal`, and the same for
     # every half family. Route C in docs/potential_configs.md therefore applies to

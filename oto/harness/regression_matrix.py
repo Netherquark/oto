@@ -238,7 +238,7 @@ def build_matrix(db_path: str, base_dir: str,
     keys = sorted({f"{f}:{s.split('x')[0]}" for f, s in set(deck_rows) | set(at_rows) | set(floor_rows)})
     result: dict[str, Any] = {
         "meta": {
-            "rule": "docs/knowledge_base.md §6.1 coverage-parity contract",
+            "rule": "docs/gfx90c_knowledge_base.md §6.1 coverage-parity contract",
             "winner": "median-of-seeds primary, best-seed secondary",
             "tie_band_pct": 2.0,
             "runs": sorted(db),
