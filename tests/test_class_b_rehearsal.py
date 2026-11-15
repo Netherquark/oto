@@ -82,8 +82,9 @@ def test_candidate_json_reports_the_deck(stub, tmp_path):
     assert r.returncode == 0
     doc = json.loads(r.stdout)
     assert doc["ok"] is True
-    assert doc["phases"] == 280
-    assert sum(doc["families"].values()) == 280
+    # 2026-11-15: CC:256 paired-widen AF22 control row added (commit fb8acac).
+    assert doc["phases"] == 281
+    assert sum(doc["families"].values()) == 281
 
 
 def test_stats_and_report(stub, tmp_path):
