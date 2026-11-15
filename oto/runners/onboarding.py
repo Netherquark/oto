@@ -108,6 +108,11 @@ def _discover_tensile() -> list[Path]:
     return cands
 
 
+def _say(msg: str = "") -> None:
+    """Wizard narration; stdout stays a clean data channel (GNU convention)."""
+    print(msg, file=sys.stderr)
+
+
 def _ask(prompt: str, default: str = "", choices: list[str] | None = None) -> str:
     """Read one answer, respecting OTO_NO_INPUT and POSIX TTY rules.
 
@@ -117,9 +122,14 @@ def _ask(prompt: str, default: str = "", choices: list[str] | None = None) -> st
     if os.environ.get("OTO_NO_INPUT") or not sys.stdin.isatty():
         return default
     if choices:
-        prompt = f"{prompt} [{'/'.join(choices)}] (default: {default}): "
-    else:
+        if default:
+            prompt = f"{prompt} [{'/'.join(choices)}] (default: {default}): "
+        else:
+            prompt = f"{prompt} [{'/'.join(choices)}]: "
+    elif default:
         prompt = f"{prompt} (default: {default}): "
+    else:
+        prompt = f"{prompt}: "
     try:
         sys.stderr.write(prompt)
         sys.stderr.flush()
@@ -177,7 +187,7 @@ def _build_client(rocm: Path, tensile: Path, targets: str, jobs: int,
            "--jobs", str(jobs)]
     if dry_run:
         cmd.append("--dry-run")
-    print(f"$ {' '.join(cmd)}")
+    _say(f"$ {' '.join(cmd)}")
     if dry_run:
         return 0
     return subprocess.run(cmd, check=False).returncode
@@ -191,9 +201,9 @@ def _step_convergence_mode(args, yes):
     spoof = getattr(args, "spoof", None) or "gfx900"
     if mode == "informed" and not yes:
         spoof = _ask("Spoof (reference floor) GPU codename (community-popular spoof)", "gfx900")
-    print(f"  convergence mode : {mode}" +
+    _say(f"  convergence mode : {mode}" +
           (f"  (spoof: {spoof})" if mode == "informed" else ""))
-    print()
+    _say()
     return mode, spoof
 
 
@@ -216,13 +226,13 @@ def _step_toolchain_prefs(args, yes):
     tensile_pinned = getattr(args, "tensile_pinned", None) or ""
     if not yes and tensile_policy == "pinned":
         tensile_pinned = _ask("Pinned Tensile commit/SHA", tensile_pinned)
-    print(f"  ROCm flavour      : {flavour}")
-    print(f"  ROCm version      : {version_policy}" +
+    _say(f"  ROCm flavour      : {flavour}")
+    _say(f"  ROCm version      : {version_policy}" +
           (f" ({pinned})" if version_policy == "pinned" else ""))
-    print(f"  Tensile version   : {tensile_policy}" +
+    _say(f"  Tensile version   : {tensile_policy}" +
           (f" ({tensile_pinned})" if tensile_policy == "pinned" else ""))
-    print("  HIP/clang version : taken from the chosen SDK's amdclang++ --version")
-    print()
+    _say("  HIP/clang version : taken from the chosen SDK's amdclang++ --version")
+    _say()
     return {
         "flavour": flavour,
         "rocm_version_policy": version_policy,
@@ -237,9 +247,9 @@ def _step_rocm_discovery(args, yes, dry_run):
     rocm_cands = _discover_rocm()
     rocm = None
     if rocm_cands:
-        print("ROCM installs found (full-SDK only):")
+        _say("ROCM installs found (full-SDK only):")
         for i, c in enumerate(rocm_cands, 1):
-            print(f"  [{i}] {c}")
+            _say(f"  [{i}] {c}")
         if yes:
             rocm = rocm_cands[0]
         else:
@@ -249,20 +259,20 @@ def _step_rocm_discovery(args, yes, dry_run):
                     rocm = rocm_cands[int(choice) - 1]
                 except (ValueError, IndexError):
                     rocm = rocm_cands[0]
-        print(f"  ROCm prefix: {rocm or '(none — set ROCM_PATH manually)'}")
-        print()
+        _say(f"  ROCm prefix: {rocm or '(none — set ROCM_PATH manually)'}")
+        _say()
     else:
-        print("No complete ROCm SDK found on this box.")
-        print("  Install TheRock nightly (or ROCm 7.x) and re-run, or pass")
-        print("  --rocm-prefix /path/to/full/sdk.")
-        print()
+        _say("No complete ROCm SDK found on this box.")
+        _say("  Install TheRock nightly (or ROCm 7.x) and re-run, or pass")
+        _say("  --rocm-prefix /path/to/full/sdk.")
+        _say()
         if not yes:
             _ask("Press Enter to continue anyway", "")
     if rocm is None and getattr(args, "rocm_prefix", None):
         rocm = Path(args.rocm_prefix)
     if rocm is not None and not (rocm / "include" / "hip" / "amd_detail" /
                                   "amd_warp_functions.h").is_file():
-        print(f"  WARN: {rocm} does not look like a full SDK (missing "
+        _say(f"  WARN: {rocm} does not look like a full SDK (missing "
               f"include/hip/amd_detail/amd_warp_functions.h). Build may fail.")
     return rocm
 
@@ -272,9 +282,9 @@ def _step_tensile_discovery(args, yes):
     tensile_cands = _discover_tensile()
     tensile = None
     if tensile_cands:
-        print("Tensile checkouts found:")
+        _say("Tensile checkouts found:")
         for i, c in enumerate(tensile_cands, 1):
-            print(f"  [{i}] {c}")
+            _say(f"  [{i}] {c}")
         if yes:
             tensile = tensile_cands[0]
         else:
@@ -284,13 +294,13 @@ def _step_tensile_discovery(args, yes):
                     tensile = tensile_cands[int(choice) - 1]
                 except (ValueError, IndexError):
                     tensile = tensile_cands[0]
-        print(f"  Tensile root: {tensile or '(none)'}")
-        print()
+        _say(f"  Tensile root: {tensile or '(none)'}")
+        _say()
     else:
-        print("No Tensile checkout found under /home or TENSILE_ROOT.")
-        print("  Clone rocm-libraries (shared/tensile) and re-run, or pass")
-        print("  --tensile-root /path/to/rocm-libraries.")
-        print()
+        _say("No Tensile checkout found under /home or TENSILE_ROOT.")
+        _say("  Clone rocm-libraries (shared/tensile) and re-run, or pass")
+        _say("  --tensile-root /path/to/rocm-libraries.")
+        _say()
         if not yes:
             _ask("Press Enter to continue anyway", "")
     if tensile is None and getattr(args, "tensile_root", None):
@@ -303,8 +313,8 @@ def _step_gpu_targets(args, yes):
     targets = getattr(args, "gpu_targets", None) or "gfx90c"
     if not yes:
         targets = _ask("GPU targets for the client build (comma list)", targets)
-    print(f"  GPU targets: {targets}")
-    print()
+    _say(f"  GPU targets: {targets}")
+    _say()
     return targets
 
 
@@ -314,76 +324,76 @@ def _step_client_build(rocm, tensile, targets, args, dry_run):
     if rocm is not None and tensile is not None:
         client = tensile / "build" / "client" / "tensile-client"
         if client.is_file():
-            print(f"  Tensile client already built: {client}")
+            _say(f"  Tensile client already built: {client}")
             client_ok = True
         elif getattr(args, "build_client", True) and not getattr(args, "skip_build", False):
-            print("  Building the Tensile client (CPU-only, 2-5 minutes)...")
+            _say("  Building the Tensile client (CPU-only, 2-5 minutes)...")
             rc = _build_client(rocm, tensile, targets,
                                jobs=getattr(args, "jobs", 4) or 4,
                                dry_run=dry_run)
             client_ok = (rc == 0)
             if not client_ok and not dry_run:
-                print("  !! client build FAILED — see the log above. "
+                _say("  !! client build FAILED — see the log above. "
                       "Fix the toolchain, then re-run `oto setup`.")
         else:
-            print("  (skipping client build; run scripts/build_tensile_client.sh later)")
+            _say("  (skipping client build; run scripts/build_tensile_client.sh later)")
     else:
-        print("  (no ROCm/Tensile prefix — skipping client build)")
-    print()
+        _say("  (no ROCm/Tensile prefix — skipping client build)")
+    _say()
     return client_ok
 
 
 def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=None):
     """Write the repo-root ``.env`` from the discovered prefixes."""
     if rocm is None or tensile is None:
-        print("  skipping .env (no ROCm/Tensile prefix)")
-        print()
+        _say("  skipping .env (no ROCm/Tensile prefix)")
+        _say()
         return
     if dry_run:
-        print("  DRY RUN: would write .env with ROCM_PATH=" + str(rocm) +
+        _say("  DRY RUN: would write .env with ROCM_PATH=" + str(rocm) +
               " TENSILE_ROOT=" + str(tensile))
-        print()
+        _say()
         return
     codename = getattr(args, "codename", "gfx90c")
     if DOTENV.exists() and not getattr(args, "force", False):
         ans = _ask(f".env exists ({DOTENV}). Overwrite?", "no", ["yes", "no"])
         if ans.lower() not in ("yes", "y"):
-            print("  keeping existing .env")
-            print()
+            _say("  keeping existing .env")
+            _say()
             return
     _write_env(rocm, tensile, codename, mode, spoof, targets, prefs=prefs or {})
-    print(f"  wrote {DOTENV}")
-    print()
+    _say(f"  wrote {DOTENV}")
+    _say()
 
 
 def _step_verify(dry_run):
     """Run ``oto doctor`` and the deck sanity check (unless this is a dry run)."""
     if dry_run:
         return
-    print("  Running oto doctor...")
+    _say("  Running oto doctor...")
     subprocess.run([sys.executable, "-m", "oto", "doctor"], check=False)
-    print()
-    print("  Running oto check candidates --quiet (deck sanity)...")
+    _say()
+    _say("  Running oto check candidates --quiet (deck sanity)...")
     subprocess.run([sys.executable, "-m", "oto", "check", "candidates",
                     "--quiet"], check=False)
-    print()
+    _say()
 
 
 def _step_next_steps():
     """Print the post-setup next steps."""
-    print("=" * 72)
-    print("  Setup finished.")
-    print("=" * 72)
-    print()
-    print("  Next steps:")
-    print("   1. Read docs/starter_pair.md and fill docs/<codename>_starter.{md,json}")
-    print("   2. Verify the starter pair against first-party sources")
-    print("   3. oto agent consult docs/<codename>_starter.md   # CPU-only deck draft")
-    print("   4. oto doctor   # should report 0 FAIL")
-    print("   5. (TTY, on the target silicon) oto tune")
-    print()
-    print("  Convenience:  oto setup --yes --convergence-mode blind  (non-interactive)")
-    print("                oto setup --dry-run  (print the plan only)")
+    _say("=" * 72)
+    _say("  Setup finished.")
+    _say("=" * 72)
+    _say()
+    _say("  Next steps:")
+    _say("   1. Read docs/starter_pair.md and fill docs/<codename>_starter.{md,json}")
+    _say("   2. Verify the starter pair against first-party sources")
+    _say("   3. oto agent consult docs/<codename>_starter.md   # CPU-only deck draft")
+    _say("   4. oto doctor   # should report 0 FAIL")
+    _say("   5. (TTY, on the target silicon) oto tune")
+    _say()
+    _say("  Convenience:  oto setup --yes --convergence-mode blind  (non-interactive)")
+    _say("                oto setup --dry-run  (print the plan only)")
 
 
 def run_setup(args: Any) -> int:
@@ -395,11 +405,11 @@ def run_setup(args: Any) -> int:
         sys.stderr.write("oto setup: stdin is not a TTY; pass --yes or --dry-run.\n")
         return 2
 
-    print("=" * 72)
-    print("  oto easy-mode setup")
-    print("  Walks you from a fresh clone to a runnable convergence box.")
-    print("=" * 72)
-    print()
+    _say("=" * 72)
+    _say("  oto easy-mode setup")
+    _say("  Walks you from a fresh clone to a runnable convergence box.")
+    _say("=" * 72)
+    _say()
 
     mode, spoof = _step_convergence_mode(args, yes)
     prefs = _step_toolchain_prefs(args, yes)
