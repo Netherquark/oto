@@ -203,21 +203,23 @@ def test_full_agent_flow_against_synthetic_second_device():
     assert _reload("gfx90c")  # restore for any later test in this process
 
 
-def test_unknown_arch_reports_actionable_error():
-    """The gfx902-era breakage mode: Tensile's ISA table has no gfx902 entry,
-    so the build proof must refuse with an actionable message — never silently
-    run without pinning the ISA. This test is what the C4/C7.1 work will
-    convert into a real-table-entry pass once the profile is verified."""
+def test_tensile_build_probe_pins_and_refuses_unknown_archs():
+    """Tensile's ISA table carries the public gfx9 triples incl. gfx902.
+
+    The build proof pins Tensile's ``CurrentISA`` from ``ISA_TRIPLES`` and
+    refuses unknown arches with an actionable message — never silently run
+    without pinning. Refusals for genuinely unknown arches must name the
+    known set."""
     from oto.device.tensile_isa import ISA_TRIPLES, isa_triple
 
-    assert ISA_TRIPLES and len(ISA_TRIPLES) >= 3, "table must carry gfx900/gfx90c/gfx906"
-    assert isa_triple("gfx900") == (9, 0, 0x00)
-    assert isa_triple("gfx906") == (9, 0, 0x06)
+    assert ISA_TRIPLES["gfx900"] == (9, 0, 0x00)
+    assert ISA_TRIPLES["gfx90c"] == (9, 0, 0x0C)
+    assert ISA_TRIPLES["gfx902"] == (9, 0, 0x02)
+    assert ISA_TRIPLES["gfx906"] == (9, 0, 0x06)
 
-    # gfx902 is the superseding tag — any
-    # YA instance of isa-triple for it is still none; that fact is what
-    # C4/C7.1 have to close.
-    assert isa_triple("gfx902") is None
+    # the refusal path must still work for a genuinely unknown arch
+    assert isa_triple("gfx1000") is None
+    assert isa_triple("") is None
 
 
 def test_tensile_isa_table_no_loose_triples():
@@ -226,6 +228,7 @@ def test_tensile_isa_table_no_loose_triples():
 
     assert ISA_TRIPLES["gfx900"] == (9, 0, 0x00)
     assert ISA_TRIPLES["gfx90c"] == (9, 0, 0x0C)
+    assert ISA_TRIPLES["gfx902"] == (9, 0, 0x02)
     assert ISA_TRIPLES["gfx906"] == (9, 0, 0x06)
 
 

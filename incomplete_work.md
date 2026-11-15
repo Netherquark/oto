@@ -14,12 +14,16 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   for the gfx902 starter cannot run; `profiles/gfx902.json` cannot be accepted by
   a human who must sign off a device that is not on this box. The class-B flow is
   fully rehearsed on a synthetic stub (`tests/test_class_b_rehearsal.py`,
-  16 tests) so that unblocking needs only the key + the human gate. Detail below:
-  "C4" and "C7.1" entries under Open items.
-- **TensileClient not built on this box.** `oto doctor` reports it honestly;
-  every GPU phase dies before a subprocess spawns. Fix is the one-time
-  next-cmake build (`context_raw.md §2.4`) or `OTO_TENSILE_CLIENT=/path/to/tensile-client`.
-  Detail below: the `oto doctor` FAIL entry under Open items.
+  16 tests), the CPU-side toolchain is ready (`ISA_TRIPLES` carries gfx902,
+  `ISA_TRIPLES["gfx902"] == (9, 0, 0x02)`; the Tensile client builds and is OK),
+  so unblocking needs only the key + the human gate. Detail below: "C4" and "C7.1"
+  entries under Open items.
+- **Tensile client — BUILT and verified 2026-11-15.** `oto doctor` now reports
+  `21 ok / 0 failures` for the client row (`build/client/tensile-client` exists and
+  runs `--version`; GPU untouched). Built with `scripts/build_tensile_client.sh`
+  against the full extracted TheRock 7.15.0a20260728 SDK (the venv's `include/hip`
+  shadows nightly headers; the full dist is the only complete prefix on this box).
+  `tests/test_build_tensile_client.py` locks the failure paths.
 - **CC:512/256 `AssertFree0/1ElementMultiple=4` (AF4/4) vs AF2/2 paired-widen — measured nowhere, valid nowhere, claimed nowhere.**
   The A/B is TTY-gated and unscheduled; it happens only when the overnight run resumes
   (`oto tune` on the owner's TTY). Until then no performance claim exists anywhere —
@@ -33,6 +37,25 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   on-machine act, not an assumption to make here.
 
 ## Open items
+- **gfx902 Tensile port step — the blocker that remains before any gfx902 phase can build (owner-gated by design).**
+  CPU-only proof on this box (`oto check tensile-build --arch gfx902`) fails at Tensile, not at oto:
+  `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023
+  supportsPreloadKernelArguments`. The pinned rocm-libraries checkout contains **zero** occurrences
+  of gfx902/(9,0,2) — upstream ships no gfx902 support (expected: an unsupported arch).
+  Verified independently, CPU-only: the nightly clang assembles gfx902 v_fma_f64 (ISA is real),
+  and refuses gfx902 MFMA with `instruction not supported on this GPU (gfx902)`.
+  The port therefore needs the same 3-entry patch the gfx90c port landed on 2026-09-19:
+
+  1. `Tensile/Common.py` — `SupportedISA` gains `(9, 0, 2)`;
+  2. `Tensile/Common.py` — `architectureMap["gfx902"] = "vega10"` (the sibling arch schedule);
+  3. `Tensile/AsmCaps.py` — a `(9, 0, 2)` capabilities entry (as with gfx90c: written against the
+     real LLVM encoding; the caps derive per-instruction from the assembler at runtime — the
+     entry is the bookkeeping the port needs, not a hand-guessed table).
+
+  This is owner work, by the same rule that kept the gfx90c patch owner-landed. The answer to
+  "what is left before the API key" is: this patch (or the owner's instruction to prepare it),
+  then profiles/gfx902.json (human-verified), then the key. Nothing else.
+
 
 - **C4 — gfx902 starter research** (agent-1 candidate census + agent-2
   per-class research report). Blocked on the owner's API key.
@@ -59,10 +82,9 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   changelog 45th entry — no further owner decision needed.
 - **Toolchain honesty (closed 2026-11-15, see 45th changelog entry).**
   `OTO_TENSILE_CLIENT` pointing at a missing path is a hard error; `oto doctor`
-  reports the Tensile client row — on this box it FAILs (the client is genuinely
-  not built; one-time next-cmake build per context_raw.md §2.4, or
-  `OTO_TENSILE_CLIENT=/path/to/tensile-client`). GPU legs other than yolo26 remain
-  whitelist-gated.
+  reports the Tensile client row — it now reads OK (client built 2026-11-15 with
+  `scripts/build_tensile_client.sh`; see the Blocked section above). GPU legs
+  other than yolo26 remain whitelist-gated.
 
 - **2 × `oto doctor` warnings** (advisory; user's earlier call stands —
   do not silence them):
@@ -80,13 +102,13 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   Treat the current files as the canonical artifact going forward; do not
   re-compare against the pre-overwrite numbers. Owner is aware — closed on
   owner's word.
-- **`oto doctor` FAIL (`Tensile client`) — the box honestly reports it does not
-  exist.** The benchmark client is *not built* on this machine; every phase
-  fails before a Tensile subprocess. Build the client once with Tensile's
-  next-cmake (`context_raw.md §2.4`) or set `OTO_TENSILE_CLIENT=` to an existing
-  `tensile-client` file; `oto doctor` now reports the failure with an
-  actionable hint instead of passing silently. This is a user/owner step — the
-  owner asked for it explicitly.
+- **`oto doctor` FAIL (`Tensile client`) — RESOLVED 2026-11-15.** The benchmark
+  client is built and is at
+  `<TENSILE_ROOT>/build/client/tensile-client`; `oto doctor` reports it OK
+  (21 ok, 0 FAIL). Build: `scripts/build_tensile_client.sh
+  --rocm-prefix <full-SDK-prefix> --tensile-root <TENSILE_ROOT>`
+  (contract: `docs/toolchain_client.md`). The client is a compiled artifact and
+  is not committed; a fresh machine re-runs the same script.
 - **CI removal (CLOSED 2026-11-15, owner's word).** There is no CI in this repo.
   The pre-commit gate is the deterministic on-machine suite
   (`python3 -m pytest -q`) with `OTO_GUARD_FILES=1` for the changed-files fast

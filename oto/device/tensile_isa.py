@@ -11,10 +11,13 @@ Public API: ``ISA_TRIPLES``, ``isa_triple``.
 """
 from __future__ import annotations
 
-#: codename -> Tensile ``CurrentISA`` triple.
+#: codename -> Tensile ``CurrentISA`` triple. Device-independent: the triple is
+#: a toolchain fact (LLVM/Tensile ISA version), not a measurement, so new arches
+#: are added from the public ISA-version documentation, never from probing.
 ISA_TRIPLES = {
     "gfx900": (9, 0, 0x00),
     "gfx90c": (9, 0, 0x0C),
+    "gfx902": (9, 0, 0x02),
     "gfx906": (9, 0, 0x06),
 }
 

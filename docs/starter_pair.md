@@ -55,6 +55,10 @@ is a manual copy made by the human.
 
 ### Stage D — build on the device itself (TTY only)
 
+- The benchmark client must exist on the host first — it is compiled once,
+  CPU-only: `scripts/build_tensile_client.sh --rocm-prefix <ROCM_PREFIX>
+  --tensile-root <TENSILE_ROOT>` (contract: `docs/toolchain_client.md`;
+  `oto doctor` reports `Tensile client OK` when it lands).
 - `oto tune` — needs the device's GPU. This step is *never* run in a desktop
   session; it is for a TTY on the target machine.
 - `oto report` — produces `<codename>_results/acceptance_report.{json,html}`.
@@ -62,10 +66,14 @@ is a manual copy made by the human.
 
 **Each step above is expected on a fresh device**; none required code.
 
-**BLOCKED items (true today):**
-- `oto/device/tensile_isa.py:ISA_TRIPLES` — does not carry the gfx902 triple.
-- `profiles/<codename>.json` — no real gfx902 profile on disk.
-- No gfx902 silicon to run Stage D on. Nothing else is blocked.
+**BLOCKED items (true today, 2026-11-15):**
+- `profiles/<codename>.json` — no real gfx902 profile on disk; the stub stays unverified
+  until the owner's API key + a human verification of every value.
+- No gfx902 silicon on this host to run Stage D on. Nothing else is blocked.
+
+(Already unblocked: `oto/device/tensile_isa.py:ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)`
+— the public LLVM ISA-version fact — so the CPU-only build proof can pin the ISA for
+gfx902 instead of refusing by default.)
 
 **UNPROVEN (no claim, ever):** every assumption about gfx902's behavior in
 Tensile — legal accepted knob sets, matrix legality, perf. Nothing in the repo
@@ -181,6 +189,9 @@ See `docs/starter_template.md` for a blank template example.
    C   VERIFIED profile promoted           — a human decision
   ─────  device runs in a TTY only ─────
    D   tune / report / parity              — TTY-driven, GPU-required
+                                             (client built once, CPU-only:
+                                              scripts/build_tensile_client.sh;
+                                              see docs/toolchain_client.md)
 ```
 
 A new device is ready when Stage A passes on its stub and the silicon is

@@ -149,8 +149,10 @@ def _tensile_client_check() -> Check:
         return _ok("toolchain", "Tensile client", str(client))
     return _fail("toolchain", "Tensile client", "not found",
                  f"expected {root}/build/client/tensile-client (or "
-                 f"OTO_TENSILE_CLIENT). Build the client once with Tensile's "
-                 f"next-cmake (context_raw.md §2.4), then re-check.")
+                 f"OTO_TENSILE_CLIENT). Build it once with "
+                 f"scripts/build_tensile_client.sh --rocm-prefix <ROCM_PREFIX> "
+                 f"(docs/toolchain_client.md), or pass OTO_TENSILE_CLIENT to an "
+                 f"existing build.")
 
 
 def _rocm() -> list[Check]:

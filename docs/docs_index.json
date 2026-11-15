@@ -192,6 +192,12 @@
       "path": "docs/agent_reference.md"
     },
     {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "Toolchain + client contract: layout detection, `oto doctor`, `scripts/build_tensile_client.sh`",
+      "path": "docs/toolchain_client.md"
+    },
+    {
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "CLI command reference \u2014 `oto <cmd>` vocabulary, flags, migration table",
@@ -271,6 +277,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 36,
+  "total": 37,
   "version": 1
 }

@@ -4493,3 +4493,20 @@ the pre-built seed pool.
   are the KB's own canonical content (kept, pointed), and the four gfx90c-specific docs are split deliberately, NOT folded into
   the guide (documented in the guide §0a): bring-up case study + three golden examples. 22 files re-pointed; registry/index synced;
   suite RC=0; `oto verify all` PASSED.
+- **2026-11-15 (52nd) — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
+  `oto/device/tensile_isa.py` `ISA_TRIPLES` now carries `gfx902 -> (9, 0, 0x02)` (public LLVM ISA-version
+  fact; not a measurement) so the CPU-only build proof can pin Tensile for gfx902 instead of refusing by
+  default. Rehearsal tests updated (16/16 green); `docs/starter_pair.md` BLOCKED list updated — remaining:
+  profile + human verification + gfx902 silicon + the owner's API key, nothing else. The Tensile benchmark
+  client is built for gfx90c from ROCm/rocm-libraries `next-cmake` against the extracted TheRock
+  7.15.0a20260728 SDK (the venv HIP include shadows the nightly's hip headers; the full dist was used as
+  CMAKE_PREFIX_PATH with its amd_smi). The client landed at `build/client/tensile-client` and `oto doctor`
+  reports the row OK (21 ok, 0 FAIL); no `.env` change needed (doctor finds it at TENSILE_ROOT).
+  Toolchain/client contract formalised as `docs/toolchain_client.md` + `scripts/build_tensile_client.sh`
+  (CPU-only, fail-closed, parameterised by `--rocm-prefix`/`--targets`; tested in tests/test_build_tensile_client.py).
+  The CPU-only `oto check tensile-build --arch gfx902` probe fails honestly inside Tensile itself —
+  `KeyError: globalParameters["AsmCaps"][(9, 0, 2)]` at `SolutionStructs.py:3023`; the pinned checkout
+  contains no gfx902 anywhere; the nightly clang assembles gfx902 v_fma_f64 and correctly refuses gfx902
+  MFMA. What remains for the gfx902 bring-up is enumerated in `incomplete_work.md` (Open items):
+  the owner's 3-entry Tensile patch (SupportedISA + architectureMap + AsmCaps, the gfx90c precedent),
+  the human-verified `profiles/gfx902.json`, the API key, the TTY.
