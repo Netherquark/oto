@@ -65,6 +65,16 @@ python3 -m oto setup --yes   # prep toolchain + .env + client (easy mode)
 python3 -m oto doctor        # honest status of the box
 ```
 
+Then, reading from the same page:
+
+```bash
+python3 -m oto tune             # convergence loop (a TTY on the target GPU)
+python3 -m oto tune --dry-run   # preview without touching anything
+python3 -m oto check candidates --quiet
+python3 -m oto verify all
+python3 -m oto help
+```
+
 Full walkthrough (setup → bring-up → campaign):
 **[docs/getting_started.md](docs/getting_started.md)**
 
@@ -76,7 +86,8 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 Birds-eye view of every document in the project:
 **[docs/overview.md](docs/overview.md)**
-(class-tagged registry: [docs/README.md](docs/README.md))
+(class-tagged registry: [docs/README.md](docs/README.md));
+operator agents converge a library via [docs/operator_runbook.md](docs/operator_runbook.md).
 
 ## License
 
