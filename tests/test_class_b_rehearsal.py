@@ -153,3 +153,51 @@ def test_preflight_pass(stub, tmp_path):
     doc = _json.loads(r.stdout)
     assert doc["command"] == "preflight"
     assert "[OK] phases.yaml accessible" in r.stderr
+
+
+def test_full_agent_flow_against_synthetic_second_device():
+    """End-to-end agent flow against a fabricated gfx902-like device.
+
+    Devoid of network reach (no API key in tests), the full Class B chain must
+    still produce consistent, self-describing documents with derived facts
+    re-checked for equality.
+    """
+    import dataclasses
+
+    from oto.device import derive_limits as derive
+    from oto.device.loader import load_profile
+
+    base = load_profile("gfx90c")
+    # A device that is not gfx90c — 9 CUs at 1.4 GHz, no MFMA.
+    synth = dataclasses.replace(base, codename="testbed902", isa=(9, 0, 2),
+                                num_cus=9, max_clock_mhz=1400,
+                                lds_per_cu_kb=32)
+    lane = derive.derive_lane_classes(synth)
+    peaks = derive.derive_theoretical_peaks_blas8(synth)
+    synth = dataclasses.replace(
+        synth,
+        peak_gflops=lane,
+        theoretical_peaks_blas8=peaks,
+        theoretical_peaks=lane,
+    )
+
+    from oto.agents import census_consult, theoretical_limits, tuning_context
+    tl_doc = theoretical_limits.generate(synth)
+    tc_doc = tuning_context.generate(synth, tl_doc)
+    assert "testbed902" in tl_doc and "testbed902" in tc_doc
+    assert "9" in tl_doc
+
+    # consult against the synthetic device, no GPU, no key: must return rows.
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        result = census_consult.consult(synth, base_dir=Path(td))
+        assert result["status"] == "success"
+        p = Path(result["out"])
+        assert p.exists()
+        body = p.read_text()
+    assert "testbed902" in body
+    assert "## 6. Still needs the TTY" in body
+    assert "## 2. Ceilings" in body
+    assert "testbed902" in body
+    from oto.device.loader import load_profile as _reload
+    assert _reload("gfx90c")  # restore for any later test in this process

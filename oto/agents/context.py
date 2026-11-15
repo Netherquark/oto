@@ -23,12 +23,17 @@ def profile_summary_block(profile: DeviceProfile) -> str:
         f"codename: {profile.codename}\n"
         f"isa: {profile.isa}\n"
         f"num_cus: {profile.num_cus}\n"
+        f"simds_per_cu: {profile.simds_per_cu}\n"
+        f"lanes_per_simd: {profile.lanes_per_simd}\n"
+        f"max_waves_per_cu: {profile.max_waves_per_cu}\n"
         f"max_clock_mhz: {profile.max_clock_mhz}\n"
-        f"wavefront: {profile.wavefront}\n"
         f"lds_per_cu_kb: {profile.lds_per_cu_kb}\n"
+        f"l2_size_kb: {profile.l2_size_kb}\n"
         f"vgpr_per_cu: {profile.vgpr_per_cu}\n"
         f"has_mfma: {profile.has_mfma}\n"
         f"has_dp4a: {profile.has_dp4a}\n"
+        f"has_packed_bf16: {profile.has_packed_bf16}\n"
+        f"global_load_byte_cap: {profile.global_load_byte_cap}\n"
     )
 
 

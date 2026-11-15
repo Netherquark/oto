@@ -22,8 +22,8 @@ def _knob_section() -> list[str]:
         "",
         "| knob | meaning | device-independent rules |",
         "|---|---|---|",
-        "| MacroTile | MT0 × MT1 × DepthU for the LDS tile | MT0 × MT1 × DepthU × BPE ≤ lds_per_cu_kb |",
-        "| ThreadTile | TT0 × TT1 (output per thread) | MacroTile % ThreadTile == 0 (per axis) |",
+        "| MacroTile | MT0 x MT1 x DepthU for the LDS tile | MT0 x MT1 x DepthU x BPE ≤ lds_per_cu_kb |",
+        "| ThreadTile | TT0 x TT1 (output per thread) | MacroTile % ThreadTile == 0 (per axis) |",
         "| VectorWidth | FP vector width per ALU op | VW ≤ asm_path_max; bf16/half 1 or 2; SD=2 for FP64 |",
         "| GlobalSplitU / LocalSplitU / NLCA | LDS split and cache axes | device-dependent (Tensile 3616 for half Assembly) |",
         "| AssertFree0EM / AssertFree1EM | Alignment asserts (vector-load/store) | AssertFree0/1EM ≥ 1; half Assembly ≥ 2 |",
@@ -65,7 +65,7 @@ def generate(profile: DeviceProfile, theoretical_limits_doc: str = "",
         "## 0. Profile",
         f"- codename: {profile.codename}",
         f"- isa: {profile.isa}",
-        f"- families (shapes):",
+        "- families (shapes):",
     ]
     for fam, shapes in sorted(profile.family_shapes.items()):
         parts.append(f"  - {fam}: {shapes}")
