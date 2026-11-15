@@ -13,15 +13,15 @@ This file records project milestones and the prior-campaign → attempt2 evoluti
 narrative, NOT the active implementation state (that is `docs/developer/invariants.md`)
 and NOT the experimental data (that is `docs/gfx90c/results.md`).
 
-Chronological, newest first, grouped by month. Sessions are numbered `Nth` in
-the day they happened — kept verbatim (referenced from other docs; never
-renumbered). Entries with no provable date are labelled `Undated` and live in
-the tail section in their original order. Sections that are context/record
-rather than change entries are grouped at the end.
+Chronological, newest first, grouped by month. Entries carry no session
+counter; the date plus the summary is the whole identifier. Entries with no
+provable date are labelled `Undated` and live in the tail section in their
+original order. Sections that are context/record rather than change entries
+are grouped at the end.
 
 ## November 2026
 
-- **2026-11-15 (45th) — the production-readiness sweep: every audit finding fixed honestly, and the box declared honestly not ready.**
+- **2026-11-15 — the production-readiness sweep: every audit finding fixed honestly, and the box declared honestly not ready.**
   The v1-readiness audit (A.md/B2.md) findings were fixed, in priority order, one concern per commit:
   - **Reference floor crash**: `_create_reference_run_dir` returned a 4-tuple bound into the sqlite `run_id`
     — every `--gfx900-reference` run died after the GPU work with a ProgrammingError. The caller now
@@ -81,7 +81,7 @@ rather than change entries are grouped at the end.
   2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
   owner's API key and the Tensile client build are both still required.
 
-- **2026-11-15 (46th) — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
+- **2026-11-15 — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
   docs/gfx90c/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
   the A/B audits, the like-for-like regrade, the steal, the stop-list, the overnight runbook). Its entire
   content — every measured number, table, run id, verdict and superseded rewrite — now lives in
@@ -108,7 +108,7 @@ rather than change entries are grouped at the end.
     never decides); `claude.md` and `docs/developer/audit_register.md` updated likewise; `oto/__init__.py` docstring's
     opening line corrected; `oto/tools/potential_configs.py` citation updated.
 
-- **2026-11-15 (47th) — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
+- **2026-11-15 — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
   Per owner direction, `archive/` is no longer tracked in git (its content stays on disk, ignored via the
   standing `archive/` rule); nothing was deleted. The archive's markdown was studied first:
   - **The prior-campaign autopsy** (attempt1, 2026-09-04 → 09-13: the 9-file patch failure, the 3-entry
@@ -126,7 +126,7 @@ rather than change entries are grouped at the end.
   - The guide now carries the complete bring-up history: current method (§0–§12), the port case study (§13),
     the prior-campaign autopsy (§13.4), and the audit trail (§13.5). Suite RC=0.
 
-- **2026-11-15 (48th) — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
+- **2026-11-15 — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
   Same treatment as the potential_configs fold: `docs/gfx90c/results.md` was historically gfx90c-specific evidence. It is now
   `docs/gfx90c/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/gfx90c/results.md` is a
   device-independent placeholder the agent populates per device — required sections (scoreboard with protocol+band,
@@ -138,12 +138,12 @@ rather than change entries are grouped at the end.
   references re-pointed (20 files); registry rows renamed + two template rows added; `docs/docs_index.json`
   regenerated; no numbers, instruments or verdicts changed. Suite RC=0; `oto verify all` PASSED.
 
-- **2026-11-15 (49th) — owner-gated blocked items consolidated in `incomplete_work.md`.**
+- **2026-11-15 — owner-gated blocked items consolidated in `incomplete_work.md`.**
   C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
   anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
   pointers; nothing actioned, nothing claimed.
 
-- **2026-11-15 (50th) — docs/gfx90c/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
+- **2026-11-15 — docs/gfx90c/knowledge_base.md split the same way: gfx90c golden case study + device-independent template.**
   `docs/gfx90c/knowledge_base.md` was historically gfx90c-specific (454→866 lines across 27 commits: born 2026-09-19; the
   Oct-2 overhaul accrual; the Oct-12 whittle/restore cycle that moved module-docstring facts into the code and
   deleted `knowledge_base_final.md`; the Oct-14 corpus3 fold (+184 lines: the @e8a8999e defaults table and the
@@ -155,7 +155,7 @@ rather than change entries are grouped at the end.
   hard rules as the results/limits templates: the gfx90c file is the golden example, never a source of numbers.
   22 files re-pointed; registry rows updated; docs/docs_index.json regenerated. Suite RC=0; `oto verify all` PASSED.
 
-- **2026-11-15 (51st) — knowledge_base.md mined and generalised twin created; the gfx90c doc family of four is settled.**
+- **2026-11-15 — knowledge_base.md mined and generalised twin created; the gfx90c doc family of four is settled.**
   Full git history studied (27 commits; 454 → 858–866 lines): born 2026-09-19 (the port's WHAT-layer) → Oct-2 overhaul
   accrual → the Oct-12 whittle/restore cycle (module-docstring facts moved into code; `knowledge_base_final.md` deleted)
   → Oct-14 corpus3 fold (+184 lines: `@e8a8999e` defaults table + the never-used-levers analysis, marked
@@ -169,7 +169,7 @@ rather than change entries are grouped at the end.
   the guide (documented in the guide §0a): bring-up case study + three golden examples. 22 files re-pointed; registry/index synced;
   suite RC=0; `oto verify all` PASSED.
 
-- **2026-11-15 (52nd) — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
+- **2026-11-15 — gfx902 pipeline readiness: ISA triple + Tensile client work (CPU-side).**
   `oto/device/tensile_isa.py` `ISA_TRIPLES` now carries `gfx902 -> (9, 0, 0x02)` (public LLVM ISA-version
   fact; not a measurement) so the CPU-only build proof can pin Tensile for gfx902 instead of refusing by
   default. Rehearsal tests updated (16/16 green); `docs/operator/starter_pair.md` BLOCKED list updated — remaining:
@@ -187,7 +187,7 @@ rather than change entries are grouped at the end.
   the owner's 3-entry Tensile patch (SupportedISA + architectureMap + AsmCaps, the gfx90c precedent),
   the human-verified `profiles/gfx902.json`, the API key, the TTY.
 
-- **2026-11-15 (53rd) — v1 release prep: every actionable item finished; the audit checklist is closed.**
+- **2026-11-15 — v1 release prep: every actionable item finished; the audit checklist is closed.**
   - F-REPORT-4 closed: `_report_inputs` detects the degenerate like-for-like path (no analytics anywhere → the
     unfiltered per-run walk as loud fallback), marks it `protocol_fallback=True`, threads it through `_report_payload`
     into the `AcceptanceReport` model (`oto/metrics/report_models.py`) and writes `protocol_fallback` into
@@ -205,7 +205,7 @@ rather than change entries are grouped at the end.
     human verification, owner word) — documented, marked owner-gated, never re-raised.
   - Docs registry unchanged: no new doc added; no doc deleted; every registry row still matches a tracked file.
 
-- **2026-11-15 (53rd) — gfx902 pipeline readiness, CPU-side, complete.**
+- **2026-11-15 — gfx902 pipeline readiness, CPU-side, complete.**
   `oto/device/tensile_isa.py`: `ISA_TRIPLES` carries `gfx902: (9, 0, 0x02)` (public LLVM ISA fact; not a
   measurement) so the CPU-only build proof pins Tensile for gfx902. The 3-entry Tensile-side patch landed
   in the rocm-libraries checkout (commit 386e90e): `SupportedISA` gains `(9, 0, 2)`,
@@ -224,7 +224,7 @@ rather than change entries are grouped at the end.
   the owner's API key (C4), the gfx902 TTY. `docs/operator/starter_pair.md` BLOCKED list updated accordingly.
   Suite RC=0; `oto verify all` PASSED.
 
-- **2026-11-15 (54th) — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
+- **2026-11-15 — docstring-to-pdoc-prose pass + stale-docs purge + easy-mode UX.**
   Every function docstring in `oto/` rewritten to pdoc prose (135 `Args:`/`Returns:`/`Raises:` blocks eliminated;
   383 missing function docstrings added; private helpers get one line; Sphinx `:func:`/`:data:` roles converted to
   back-ticks; 22 mixin composition roots stated as dotted paths; `AbIdentityMixin` noted unused). Full suite green
@@ -244,7 +244,7 @@ rather than change entries are grouped at the end.
   satisfies the README↔cli.md freshness check. `phases.yaml`: CC:256 paired-widen AF22 control row added (fingerprint
   computed as the deck does) — 281 phases, 0 illegal.
 
-- **2026-11-15 (55th) — docs ecosystem reorganised into subfolders + changelog/incomplete_work folded into docs/.**
+- **2026-11-15 — docs ecosystem reorganised into subfolders + changelog/incomplete_work folded into docs/.**
   `changelog.md` → `docs/changelog.md`, `incomplete_work.md` → `docs/incomplete_work.md` (evolution log + open
   register live with the rest of the docs now; every reference in code, tests, docs and configs swept to the new
   paths). The flat `docs/` directory split into subject folders: `docs/human/` (people), `docs/operator/`
@@ -255,7 +255,7 @@ rather than change entries are grouped at the end.
   Registry regenerated; all in-tree references swept (`grep` old paths → 0 hits outside logs/ backups); all
   markdown link targets resolve; `oto agent index` regenerated; docs test battery green.
 
-- **2026-11-14 (25th) — CC:256/512 4-assert GPU legality PASSED; TensileClient 7.x quirks recorded.**
+- **2026-11-14 — CC:256/512 4-assert GPU legality PASSED; TensileClient 7.x quirks recorded.**
   GPU verification of the CC:256 (256³) and CC:512 (512³) `AF0EM=4/AF1EM=4` (SGEMM-ethos,
   `Tensile/Perf/sgemm_large_square_nt.yaml`) rows: Tensile's own reference validator
   (`NumElementsToValidate=128`, the writer default since the 22nd) **passes** on gfx90c
@@ -297,7 +297,7 @@ rather than change entries are grouped at the end.
   `v6.4` headers against a v7.15 SDK LLVM) are not reproducible once the SDK prefix
   takes precedence.
 
-- **2026-11-14 (24th) — `docs/work_archive_2026-11-14.md` consolidated and deleted; its contents folded into the ecosystem.**
+- **2026-11-14 — `docs/work_archive_2026-11-14.md` consolidated and deleted; its contents folded into the ecosystem.**
   Verifier bringup (archived 5.4): the gate differential found two real defects —
   three copies of `parse_tensile_shape` had drifted (the candidate-version copy dropped the
   `_B16` batch suffix and returned `ValueError` where the original returned the default cube), so both failing
@@ -309,8 +309,8 @@ rather than change entries are grouped at the end.
   Refactor-1 slop register status today: (a) still open — swallowed registry-read / report-generation exceptions
   in `oto/runners/reporting.py`, the four dead `_<family>_mutation_pattern` methods in `db_patterns.py`,
   the `self.scheduler` legacy alias — tracked in `incomplete_work.md`; (b) closed — hardcoded Tensile fallbacks
-  deleted (15th), `oto/ledger/registry_core.py` dead `SQLiteRegistry` stub and shadowed module docstring removed
-  (15th), unused-import debt closed by the pyflakes gate, corpus-count docstrings swept to date-and-decision phrasing,
+  deleted (2026-11-13 repo-scour entry), `oto/ledger/registry_core.py` dead `SQLiteRegistry` stub and shadowed module docstring removed
+  (2026-11-13 repo-scour entry), unused-import debt closed by the pyflakes gate, corpus-count docstrings swept to date-and-decision phrasing,
   `oto/_map.py` dead root branch removed, `AMDY_TO_DTYPE`/`DEFAULT_ITERATIONS` shadow copies eliminated, and
   `TEMPLATE_KEYS` and `FAMILY_DTYPE_CHAR` now owned by `oto.tensile.legality` / `oto.tensile.candidate`, and
   `db.py`'s duplicate `FAMILY_TO_DTYPE` reduced to a re-export. The floor reconstruction (tiers
@@ -318,7 +318,7 @@ rather than change entries are grouped at the end.
   (`drift_manifest.json`) replace the frozen `REFACTOR_BASE=2824c2f` requirement; `verify_all.py --base REF`
   parameterised across all five checks. Archive deleted; git holds the pre-fold snapshot.
 
-- **2026-11-14 (23rd) — yolo26 acceptance re-verified on the nightly stack; CC D5 trial decked; Tensile-client SIGSEGV found.**
+- **2026-11-14 — yolo26 acceptance re-verified on the nightly stack; CC D5 trial decked; Tensile-client SIGSEGV found.**
   Ran yolo26 (`webcam.py`, person 0.87, frame written) against the new
   TensileLibrary (`best_effort_library_rocmlibs`, built 2026-11-13 with the super-repo
   Tensile `d950c74` + nightly `_rocm_sdk_core`) — it works. The old
@@ -337,7 +337,7 @@ rather than change entries are grouped at the end.
   not in the repo; no GPU-legality verdict for CC AF4/4 yet. LDS/ZZ retirement and the
   toolchain mandate for ROCM_PATH landed earlier this session (21st–22nd).
 
-- **2026-11-14 (22nd) — Tensile validation turned on (`NumElementsToValidate = 128`).**
+- **2026-11-14 — Tensile validation turned on (`NumElementsToValidate = 128`).**
   `oto.tensile.config_writer` emitted `NumElementsToValidate: 0` — the owner rejected that as
   a must-not-stand copout: validation is the correctness gate for headless GPU runs. Every
   benchmarked kernel is now checked against Tensile's own scalar CPU reference on every run;
@@ -347,7 +347,7 @@ rather than change entries are grouped at the end.
   problem — negligible next to any benchmark. `ctest`/build proof workers see the same
   GlobalParameters; no test pins the old 0.
 
-- **2026-11-14 (21st) — LDS gate option A adopted; ZZ boundary evidence gathered.**
+- **2026-11-14 — LDS gate option A adopted; ZZ boundary evidence gathered.**
   Owner decision on the §6.1 DECISION REQUIRED: `BYTES_PER_ELEMENT["Z"]` is now Tensile's
   own `DataType.numBytes()` (= 16), and `LDS_BUDGET` stays at 16384. The table is no longer a
   calibrated proxy but a measured fact; §6.1 records the outcome and the cost (67/229 corpus
@@ -366,7 +366,7 @@ rather than change entries are grouped at the end.
   `BYTES_PER_ELEMENT["Z"] == 16` and the unchanged budget identity; sweep/ladder tests and
   `test_cell_attribution.py` updated to the decided policy.
 
-- **2026-11-14 (20th) — Dead-reference sweep across docstrings; preflight marker restored.**
+- **2026-11-14 — Dead-reference sweep across docstrings; preflight marker restored.**
   Three full passes over every docstring (`oto/` + `tests/`), verifying each backtick-quoted
   and Sphinx-role identifier and each dotted `oto.*` token against the present tree (module
   path resolution + top-level attr check; docstring-stripped source blob; Tensile-internal
@@ -422,7 +422,7 @@ rather than change entries are grouped at the end.
   — left for the owner) / 0 failure(s); registry integrity ok (46,703 records,
   44 runs, no label contamination); deck parity 38/38; docs index 37.
 
-- **2026-11-14 (17th) — Verifier evergreened; CLI source surface consolidated.**
+- **2026-11-14 — Verifier evergreened; CLI source surface consolidated.**
   All five equivalence checks now take `--base REF` (default `HEAD~1`; nothing
   in the tree pins a fixed commit) and nothing about the split era is hidden:
   `verify_all.py --base 2824c2f` and `oto verify all --base HEAD~1` both report
@@ -443,7 +443,7 @@ rather than change entries are grouped at the end.
   and the file now carries only open items. Verified: suite RC=0
   (1049 passed, 8 skipped, 242 subtests; zz_suite31).
 
-- **2026-11-14 (18th) — Full docs ecosystem sync pass: every prose doc reviewed
+- **2026-11-14 — Full docs ecosystem sync pass: every prose doc reviewed
   against the code.** A repo-wide read-through of each tracked `.md` found and
   fixed: stale test-file references after the occupancy/phase1 splits
   (`tests/test_occupancy_gate.py` -> `test_occupancy_model_lds.py` /
@@ -462,7 +462,7 @@ rather than change entries are grouped at the end.
   Suite: 1049 passed, RC=0 (zz_suite32).
   Nothing pushed; registry untouched, GPU unused this session.
 
-- **2026-11-14 (19th) — Docs final-sync of prose corpus.** Remaining prose docs
+- **2026-11-14 — Docs final-sync of prose corpus.** Remaining prose docs
   (`implementation_plan.md`, `potential_configs.md`, `results.md`,
   `kernel_tuning_research.md`, `gfx90c_tuning_guide.md`) normalised to the
   current CLI/test names: bare `python3 check_candidates.py` / `all_runs.py` ->
@@ -507,7 +507,7 @@ rather than change entries are grouped at the end.
   and corrected).
 
 
-- **2026-11-14 (27th) — the operator campaign playbook lands (`docs/operator_campaign.md`).**
+- **2026-11-14 — the operator campaign playbook lands (`docs/operator_campaign.md`).**
   The convergence prompt that produced the gfx90c work is formalised as the
   standing, persistent procedure for Class B operators running a multi-session
   tuning campaign after the best-effort library exists. Content: the two hard
@@ -532,7 +532,7 @@ rather than change entries are grouped at the end.
   there; `docs_index.json` regenerated; registry + index tests green.
 
 
-- **2026-11-14 (28th) — CC:256/512 AF0EM=4/AF1EM=4 ADOPTED (owner decision, Option B).**
+- **2026-11-14 — CC:256/512 AF0EM=4/AF1EM=4 ADOPTED (owner decision, Option B).**
   The two Tensile-recipe rows (`_af4em4`: `mt64x64x8 / tt4x4 / VW2 / GLVW2/2 /
   WGM4 / AssertFree0ElementMultiple=4 / AssertFree1ElementMultiple=4`) ship in
   `phases.yaml` as first-class CC rows (deck 279 → 280; CC 47 → 48); the D5
@@ -552,7 +552,7 @@ rather than change entries are grouped at the end.
   tests/test_knob_sweep.py docstring + assert, knob_sweep CLI help string.
 
 
-- **2026-11-14 (29th) — operator_campaign.md rewritten after deep history study.**
+- **2026-11-14 — operator_campaign.md rewritten after deep history study.**
   Full re-derivation from primary sources: backrocm git history (FOSS United
   grant, Jul 2026; attempt1 ~9.2K LoC shell suite, ruler math broken four ways,
   retirement conflation, telemetry gaps), attempt2 (the draft run and the
@@ -571,7 +571,7 @@ rather than change entries are grouped at the end.
   checked against the tree.
 
 
-- **2026-11-14 (30th) — operator_campaign.md rewritten with full provenance.**
+- **2026-11-14 — operator_campaign.md rewritten with full provenance.**
   Every constraint in the doc now carries its origin: the FOSS United grant
   (Jul 2026, method not product), attempt1 (~9.2K LoC shell; ruler math broken
   four ways; retirement conflation), attempt2 (draft acceptance gate rejected,
@@ -592,7 +592,7 @@ rather than change entries are grouped at the end.
   reference checkouts (backrocm, ROCm/).
 
 
-- **2026-11-14 (31st) — the test suite is hardware-adaptive.** The triage of
+- **2026-11-14 — the test suite is hardware-adaptive.** The triage of
   `test_explicit_profile_threading.py` flagging a misread of a fabricated
   `has_mfma=True` probe (`synthetictest`) surfaced three real defects, all
   fixed: (1) the probe fixture is renamed `probe_test` with a module-level
@@ -611,7 +611,7 @@ rather than change entries are grouped at the end.
   first". ruff clean; suite runs unchanged against this machine's corpus.
 
 
-- **2026-11-14 (32nd) — tracked tree stops referencing machine-local scratch.**
+- **2026-11-14 — tracked tree stops referencing machine-local scratch.**
   `oto/tools/verifiers/ verify_ast_equivalence.py`, `verify_gate_differential.py`,
   `verify_report_html.py` and `_verdicts_worker.py` wrote candidate-side byte
   artefacts into a hardcoded `/tmp/opencode/`; the evergreen verifier now
@@ -628,7 +628,7 @@ rather than change entries are grouped at the end.
   Verifiers: ALL EQUIVALENCE CHECKS PASSED; ruff clean; suite 1061 passed.
 
 
-- **2026-11-14 (33rd) — tests fully path-portable; tracked tree scrubbed of
+- **2026-11-14 — tests fully path-portable; tracked tree scrubbed of
   machine-local paths.** Every test that referenced the historical
   `gfx90c_runs/` / `gfx90c_results/` names now resolves them from the profile
   via `oto.runners.paths` (`runs_rel`/`results_rel`), so the suite runs
@@ -642,7 +642,7 @@ rather than change entries are grouped at the end.
   `oto verify all` ALL EQUIVALENCE CHECKS PASSED; ruff clean.
 
 
-- **2026-11-14 (34th) — deterministic limits derivation; operator campaign doc is self-contained.**
+- **2026-11-14 — deterministic limits derivation; operator campaign doc is self-contained.**
   New `oto/device/derive.py`: ALU peaks derived from profile hardware facts
   by one formula (lanes = num_cus x simds_per_cu x lanes_per_simd; FP32 =
   2 x lanes x fGHz; FP16 fast_F16 = 2 x FP32; FP64 = FP32 / 16; complex
@@ -661,7 +661,7 @@ rather than change entries are grouped at the end.
   doc can never silently disagree with the formula.
 
 
-- **2026-11-14 (35th) — operator_campaign.md is now self-contained; the operator agent holds the GPU.**
+- **2026-11-14 — operator_campaign.md is now self-contained; the operator agent holds the GPU.**
   The first re-draft was wrong on three counts, all fixed in this entry: (1) it
   shipped no content copyable from the project's own history without pointing
   the agent at git logs it does not have; (2) it stripped the GPU from the
@@ -679,7 +679,7 @@ rather than change entries are grouped at the end.
   it with display-session workers.
 
 
-- **2026-11-14 (36th) — the toolchain contract is closed: explicit env, never a silent skip.**
+- **2026-11-14 — the toolchain contract is closed: explicit env, never a silent skip.**
   `oto/runners/toolchain.py`: the resolver accepted a ROCM_LLVM_BIN/ROCM_BIN/
   TENSILE_ASSEMBLER set to a nonexistent path and silently fell back to the
   derived layout — a user who typo'd their path got a working site built
@@ -697,7 +697,7 @@ rather than change entries are grouped at the end.
   there yourself.
 
 
-- **2026-11-14 (37th) — operator_campaign.md gains §9A: the candidate-generation strategies in one place.**
+- **2026-11-14 — operator_campaign.md gains §9A: the candidate-generation strategies in one place.**
   The operator reference the three generation strategies scattered implicitly
   through §9 (`oto tune`) and §11 (the straggler-class catalogue) and never named
   the fourth — EXPLORE — nor why they were ever proven to win. New §9A names all
@@ -712,7 +712,7 @@ rather than change entries are grouped at the end.
   cell: census → taxonomy → gate candidates. No other sections changed.
 
 
-- **2026-11-14 (38th) — operator_campaign.md gains §11A: the corpus's own lessons, distilled.**
+- **2026-11-14 — operator_campaign.md gains §11A: the corpus's own lessons, distilled.**
   After a full walk of the potential_configs.md diff history (26 commits that
   touch the file: verdict-flip re-annots, like-for-like regrades, the 2026-10-15
   ordering fix that reversed "THE ONE LOSER" CC:256 (it was a deck-order
@@ -734,7 +734,7 @@ rather than change entries are grouped at the end.
   restored; docs_index regenerated; docs tests green.
 
 
-- **2026-11-14 (39th) — the corpus lessons are now device-general (§11A).**
+- **2026-11-14 — the corpus lessons are now device-general (§11A).**
   The nine lessons §11A shipped in the prior commit were gfx90c-shaped: L1
   tied the noise band to this device's clock telemetry; L2 quoted this-device's
   412-vs-98 GFLOPS family/single read; L3 was the complex-GEMM correction; L4
@@ -748,7 +748,7 @@ rather than change entries are grouped at the end.
   where they belong.
 
 
-- **2026-11-14 (40th) — operator_campaign.md locks the boundary: read-only by contract.**
+- **2026-11-14 — operator_campaign.md locks the boundary: read-only by contract.**
   The original convergence prompt is now anchored to a self-contained class-B
   protocol with sharper territory lines than any prior pass: §0 now spells
   "You are not the developer" — no edits to `oto/`, any `.md`, profiles/,
@@ -763,7 +763,7 @@ rather than change entries are grouped at the end.
   constructions from the earlier §13 rewrite fixed.
 
 
-- **2026-11-14 (41st) — plans/ is gone; the tree is smaller by design.** The remaining
+- **2026-11-14 — plans/ is gone; the tree is smaller by design.** The remaining
   one-shot plans (MASTER_PLAN, RENAME_AND_DOC_CLEANUP, CLI_UX_REWORK,
   REFACTOR_2_UNIVERSAL_GPU, AGENTIC_POTENTIAL_CONFIGS, test_optimization) are
   deleted — their durable content was folded into `incomplete_work.md`,
@@ -799,7 +799,7 @@ rather than change entries are grouped at the end.
   (generated artifact) removed. Suite green, verifier green, ruff clean.
 
 
-- **2026-11-14 (42nd) — the CLI front is folded into the documentation ecosystem.**
+- **2026-11-14 — the CLI front is folded into the documentation ecosystem.**
   `docs/cli.md` is pinned to the live parser (`tests/test_docs_cli.py`);
   the migration table it carries maps the retired shims to the `oto <verb>`
   spellings; `oto <verb>` is now the only invocation shape the Class B
@@ -813,7 +813,7 @@ rather than change entries are grouped at the end.
   per-line scan log on stderr. Suite green; verifier PASSED.
 
 
-- **2026-11-14 (43rd) — `oto agent consult` lands; every one-shot plan in git history is now accounted for.**
+- **2026-11-14 — `oto agent consult` lands; every one-shot plan in git history is now accounted for.**
   Plans resurrected from `git log --all -- plans/`: Refactor 1 (codebase org), Refactor 2
   (Universal GPU), CLI UX rework (front door, implemented), test optimization (9x suite speed-up),
   RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (both executed earlier this arc), MASTER_PLAN
@@ -828,7 +828,7 @@ rather than change entries are grouped at the end.
   when the `<codename>_docs/` directory did not exist. Suite green; verifier PASSED; ruff clean.
 
 
-- **2026-11-14 (44th) — production-readiness audit: the plans archaeology is complete and the last unexecuted plan shipped.**
+- **2026-11-14 — production-readiness audit: the plans archaeology is complete and the last unexecuted plan shipped.**
   Resurrected every one-shot plan from `git log --all -- plans/` and accounted for each:
   Refactor 1 (org), Refactor 2 (Universal GPU), CLI front door, test optimisation (9x faster suite),
   RENAME_AND_DOC_CLEANUP + INTUITIVE_NAMING (executed earlier), MASTER_PLAN (open items folded into
@@ -840,7 +840,7 @@ rather than change entries are grouped at the end.
   arc begun 2026-11-13 with the CLI front door and the 2026-11-14 doc restructure.
 
 
-- **2026-11-13 (15th) — Repo scour: build-proof restored end-to-end; docs/tests
+- **2026-11-13 — Repo scour: build-proof restored end-to-end; docs/tests
   migrated off the deleted root shim.** A repo-wide pending-work audit found the
   CPU-only Tensile build proof fully broken since the CLI rework's Phase 2 deleted
   the `check_tensile_build.py` root shim: `run_phase()` spawned the deleted path
@@ -875,7 +875,7 @@ rather than change entries are grouped at the end.
   the rework lands; the smoke tests asserting the pre-rework UX should be
   re-asserted against the final renderer.
 
-- **2026-11-13 (16th) — Post-land re-verification: suite RC=0.** After the CLI
+- **2026-11-13 — Post-land re-verification: suite RC=0.** After the CLI
   front door (27c5d99) and the commits on top of it (834c5be, 284b166, fdf81e2,
   f0d4a12), the full suite was re-run (zz_suite25): **RC=0 — 1047 passed, 8
   skipped, 242 subtests, ~156 s**, and the five-gate pack (ruff / pyflakes /
@@ -886,10 +886,10 @@ rather than change entries are grouped at the end.
   re-asserted against the final renderer (`tests/test_docs_cli.py`,
   `tests/test_cli_smoke.py`). Also absorbed the stale `plans/verify_all.py`
   citation in `docs/developer/docstrings.md` (now cites `oto/tools/verifiers/verify_all.py`;
-  b4d1c87). This closes the re-run caveat in the 15th entry. Nothing in this
+  b4d1c87). This closes the re-run caveat in the 2026-11-13 repo-scour entry. Nothing in this
   entry was pushed.
 
-- **2026-11-13 (14th) — C8 acceptance verification (CPU-side evidence).** yolo26
+- **2026-11-13 — C8 acceptance verification (CPU-side evidence).** yolo26
   ran end-to-end against the rocm-libraries Tensile build on gfx90c: torch
   `2.12.0+rocm7.15.0a20260728`, `ROCBLAS_TENSILE_LIBPATH=…/best_effort_library_rocmlibs/FinalLibrary/library`,
   MIOpen conv solver (GEMM), CPU NMS, frame saved, person box **0.87** verified
@@ -900,7 +900,7 @@ rather than change entries are grouped at the end.
   the 5 answers in plans/CLI_UX_REWORK.md §7), C2.5–C2.9 explicit signature
   threading (deliberately deferred — mechanism equivalent).
 
-- **2026-11-13 (13th) — ruff + py_compile gates integrated; docs ecosystem
+- **2026-11-13 — ruff + py_compile gates integrated; docs ecosystem
   updated.** The repo is clean under a pinned, substantive ruff rule set
   (`ruff.toml`: pycodestyle, pyflakes, bugbear, pyupgrade, import sorting,
   comprehensions, pep8-naming; E501/E402/E702 deliberately not selected with
@@ -926,8 +926,8 @@ rather than change entries are grouped at the end.
   are the standing commit battery now.
 
 
-- **2026-11-13 (14th) — profile seam made load-bearing; spoof floor and
-  potential_configs parameterised.** After the gate integration (13th), the
+- **2026-11-13 — profile seam made load-bearing; spoof floor and
+  potential_configs parameterised.** After the 2026-11-13 ruff + py_compile gate integration, the
   load-bearing question was whether a *different* device profile would change
   gate verdicts. It could not: `set_profile()` rebound only vgpr_model's own
   globals while gate modules hold `from .vgpr_model import X` snapshots taken
@@ -987,7 +987,7 @@ rather than change entries are grouped at the end.
 
 ## October 2026
 
-- **2026-10-29 (12th) — best-effort build fixed on system ROCm; default
+- **2026-10-29 — best-effort build fixed on system ROCm; default
   destination made explicit.** `_tensile_env` no longer prepends
   compiler-default system includes (`/usr/include`, `/usr/local/include`) to
   `CPLUS_INCLUDE_PATH` / `C_INCLUDE_PATH`. With `ROCM_PATH=/usr` the old code
@@ -1006,7 +1006,7 @@ rather than change entries are grouped at the end.
   that actually contains `TensileLibrary.dat`.
 
 
-- **2026-10-28 (11th) — user-provided ROCm + rocm-libraries super-repo
+- **2026-10-28 — user-provided ROCm + rocm-libraries super-repo
   support.** `oto.runners.toolchain.resolve_tensile_root` now discovers Tensile
   under `projects/Tensile`, `shared/Tensile`, or `Tensile/` of a
   rocm-libraries checkout (in addition to a standalone checkout), and
@@ -1019,7 +1019,7 @@ rather than change entries are grouped at the end.
   `test_best_library` + `test_interactive_keys` cover the surface).
 
 
-- **2026-10-27 (10th) — best-effort gfx90c TensileLibrary.dat generator
+- **2026-10-27 — best-effort gfx90c TensileLibrary.dat generator
   (`--best-library`).** New CPU-only command carving the winner set from the
   full kernel database (all runs, all protocols): one family-protocol winner
   per shipped cell (38 cells, 19 distinct configs) with an honest fallback
@@ -1039,7 +1039,7 @@ rather than change entries are grouped at the end.
   (6 cases). Function-length AC preserved (all helpers ≤60 lines).
 
 
-- **2026-10-24 (9th) — the coverage maps re-read on the like-for-like census;
+- **2026-10-24 — the coverage maps re-read on the like-for-like census;
   one genuine hole found and filled with R50d (4 rows, appended after the
   R50 batch).** The §R57 study (see `potential_configs.md` §R57) crosses the
   2026-10-22 coverage SVGs with
@@ -1057,7 +1057,7 @@ rather than change entries are grouped at the end.
   177 passed.
 
 
-- **2026-10-23 (8th) — the like-for-like rule is in the code: §R56.3-A
+- **2026-10-23 — the like-for-like rule is in the code: §R56.3-A
   resolved, the acceptance report grades one protocol at a time, and the
   regen reproduced the honest regrade through the maintained pipeline.**
   `oto/metrics/protocol.py` is the canonical invocation-form classifier:
@@ -1096,7 +1096,7 @@ rather than change entries are grouped at the end.
   `tests/test_ab_audit.py`; preflight 177 passed.
 
 
-- **2026-10-23 (7th) — like-for-like regrade: three graded wins were protocol
+- **2026-10-23 — like-for-like regrade: three graded wins were protocol
   artefacts; the R50 batch is committed and the gate is differential-perfect.**
   The 2026-10-22 acceptance regraded every cell on the like-for-like basis —
   only family-protocol phases (the multi-shape client invocation the floor arm
@@ -1150,7 +1150,7 @@ rather than change entries are grouped at the end.
   --quiet` 0 illegal, full suite 922 passed / 8 skipped.
 
 
-- **2026-10-22 (6th) — the deck check's first refusal: `TransposeLDS` is
+- **2026-10-22 — the deck check's first refusal: `TransposeLDS` is
   unreachable on gfx90c, and three "virgin axes" were never virgin.** The
   pre-run sweep (70 of 401 rows) asked Tensile about a Z 32x32 phase carrying
   `TransposeLDS=-1` and Tensile refused it: *"didn't support UnrollMajorLDS
@@ -1179,7 +1179,7 @@ rather than change entries are grouped at the end.
   is aimed at.
 
 
-- **2026-10-22 (5th) — the doc sweep: every stale conclusion now points at
+- **2026-10-22 — the doc sweep: every stale conclusion now points at
   its correction.** The /tmp probes are gone (their capabilities are
   `oto.harness.tensile_probe` and `oto.harness.deck_probe`), and the docs
   ecosystem now carries the *reasons*, not just the numbers: the tuning
@@ -1193,7 +1193,7 @@ rather than change entries are grouped at the end.
   `potential_configs.md` §R2 is marked superseded beside F5.
 
 
-- **2026-10-22 (4th) — the /tmp probing machinery is now the harness, and
+- **2026-10-22 — the /tmp probing machinery is now the harness, and
   the launch backstop lost a rule.** The four throwaway probes written in
   `/tmp` (the Tensile derived-LDS probe, the WGM legality probe, the
   config-writing probe and the build probe) are now two tools:
@@ -1221,7 +1221,7 @@ rather than change entries are grouped at the end.
   `potential_configs.md` §R42's finding F5 is marked superseded.
 
 
-- **2026-10-22 (3rd) — the deck is sized for the 10 h run, and there is a
+- **2026-10-22 — the deck is sized for the 10 h run, and there is a
   tool that proves the new candidates build.** Two facts the previous state
   hid: the overlay's unmeasured work was **114 phases (2.5 h)**, and the
   auto-mutator contributes only ~10 candidates per iteration (the 2026-10-20
@@ -1240,7 +1240,7 @@ rather than change entries are grouped at the end.
   never launches anything.
 
 
-- **2026-10-22 (2nd) — the acceptance report carries the coverage figures.**
+- **2026-10-22 — the acceptance report carries the coverage figures.**
   A new **Problem-space coverage** section sits under the A/B table: the legal
   geometry space of every cell with the measured part painted by value, the
   never-measured part hatched, the local maxima ringed green and the local
@@ -1284,7 +1284,7 @@ rather than change entries are grouped at the end.
   Pinned by `tests/test_coverage_graph.py`.
 
 
-- **2026-10-21 (8th) — the legality oracle, and the three ORANGE cells
+- **2026-10-21 — the legality oracle, and the three ORANGE cells
   triaged.** `oto.harness.tensile_probe` is the /tmp probing machinery
   formalised: it asks **Tensile itself** whether a config builds, prints the
   LDS it allocated, and puts our gate's verdict beside Tensile's -- so a
@@ -1315,7 +1315,7 @@ rather than change entries are grouped at the end.
   and the theoretical limits' ORANGE consequence is corrected.
 
 
-- **2026-10-21 (7th) — the test suite is 9x faster, and the five failures
+- **2026-10-21 — the test suite is 9x faster, and the five failures
   it was carrying were a mutator that had stopped searching.** `plans/
   test_optimization.md` is executed: the dominant cost was **YAML parsing**,
   not the gates, so `oto.yamlio` (the canonical reader: libyaml when it is
@@ -1343,7 +1343,7 @@ rather than change entries are grouped at the end.
   also gained the per-tier bars and a repaint when a phase lands.
 
 
-- **2026-10-21 (6th) — the straggler list re-derived, the deck aimed at what
+- **2026-10-21 — the straggler list re-derived, the deck aimed at what
   is actually behind, and the coverage map.** `potential_configs.md` §R47 is
   the corrected reading of the corpus, and it changes the plan: (1) **CC and ZZ
   are at the hardware roof** (80-97 % of the FMA roof, not 20-24 %) because
@@ -1367,7 +1367,7 @@ rather than change entries are grouped at the end.
   died with error 4 in the 2026-10-20 run): 804 rows, 0 illegal.
 
 
-- **2026-10-21 (5th) — three silent placebos and one contradictory knob.**
+- **2026-10-21 — three silent placebos and one contradictory knob.**
   (a) **TransposeLDS was declared forwarded but never emitted** -- the writer's
   fork surface had no entry for it, so the 5 R45 rows probing it would have
   benchmarked at the Tensile default while their manifest claimed the
@@ -1387,7 +1387,7 @@ rather than change entries are grouped at the end.
   `declared-not-emitted=['TransposeLDS']` since the knob was declared.
 
 
-- **2026-10-21 (4th) — the missing error-4 rule, and the frontier control
+- **2026-10-21 — the missing error-4 rule, and the frontier control
   that was never legal.** Tensile's error 4 is
   `numWorkGroupsPerCU = (65536 // NumThreads) // max(vgpr, agpr) < 1`
   (`KernelWriterAssembly.functionSuffix`): the *emitted* per-thread VGPR
@@ -1408,7 +1408,7 @@ rather than change entries are grouped at the end.
   control survives (H 8x4 emits 57).
 
 
-- **2026-10-21 (3rd) — the "no-swizzle" arm was dead on arrival: the gate
+- **2026-10-21 — the "no-swizzle" arm was dead on arrival: the gate
   read Tensile's FORCE as a reject.** `SolutionStructs:3334-3336` *forces*
   `StaggerUMapping = 0` and `StaggerUStride = 0` when `StaggerU == 0`; the
   only reject is `StaggerUStride == 0` with `StaggerU != 0`. The swizzle gate
@@ -1422,7 +1422,7 @@ rather than change entries are grouped at the end.
   (`tests/test_cell_attribution.py`) now pins Tensile's rule.
 
 
-- **2026-10-21 (2nd) — the complex families were being scored against a 4×
+- **2026-10-21 — the complex families were being scored against a 4×
   bar (accounting fix).** Tensile's client charges **2 flops per MAC for every
   dtype**, complex included (`ContractionProblem::flopCount` = `2 *
   DataTypeInfo::packing`, packing == 1 for complexSingle/complexDouble), while
@@ -3287,7 +3287,7 @@ The driver uses only existing solvers:
   gfx90c theoretical limit as closely as possible. The theoretical limit is fixed by
   `gfx90c_theoretical_limits.md` (rocminfo + first-party cross-checked; see that file).
 
-- **2026-11-15 (57th) — gfx902 CC-family build proof complete; nightly SDK container cross-verify (oto tooling only).**
+- **2026-11-15 — gfx902 CC-family build proof complete; nightly SDK container cross-verify (oto tooling only).**
   `oto check tensile-build --arch gfx902 --family CC --jobs 4`: **49 passed, 0 failed,
   49 total** — every phase `sols=1`, vgpr≤79; CPU-only compile + Tensile
   solution-construction verdicts (no gfx902 silicon exists on this box; no gfx902 GPU
@@ -4912,7 +4912,7 @@ This content was preserved from the former harness runbook that referenced `/tmp
 
 ## November 2026
 
-- **2026-11-15 (56th) — GPU launch path fixed and the six CC candidate rows measured on silicon.**
+- **2026-11-15 — GPU launch path fixed and the six CC candidate rows measured on silicon.**
   `oto/runners/driver.py::_get_tensile_env` never exported the user-provided ROCm's
   include directory; Tensile shells out to amdclang++ with no `-I`, so HIP headers
   silently resolved to `/usr/include/hip` (the system ROCm 6.x headers) against a

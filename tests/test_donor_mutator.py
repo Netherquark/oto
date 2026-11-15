@@ -110,8 +110,8 @@ class TestDBMutatorSynthesis(unittest.TestCase):
         assert "128x128x8" in tiles
 
     #: The narrow pass scores every single-knob delta at priority 1.0, so a
-    #: small `n` is filled by the first knobs in dict order and GlobalSplitU
-    #: (13th) is never reached. Measured: at n=24 no mutant carries it at all,
+    #: small `n` is filled by the first knobs in dict order and GlobalSplitU (the 13th knob
+    #: in dict order) is never reached. Measured: at n=24 no mutant carries it at all,
     #: at n=40 SS offers the full {1,2,4}. Use 40, and assert the axis was
     #: actually seen -- otherwise these tests pass vacuously.
     _GSU_N = 40

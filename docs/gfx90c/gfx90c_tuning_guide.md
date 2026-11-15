@@ -4093,7 +4093,7 @@ Per-run empties: 10-15 31/612, 10-17 31/395, 10-18 7/412, 10-20 8/715,
 * `stderr non-empty: Traceback` — **muted noise**: Python 3.14 multiprocessing
   `resource_tracker` semlock teardown spam; the *real* stdout for those phases
   is "Generating kernel source resulted in error 4" (the error-4 class,
-  already ruled 10-21 (4th)).
+  already ruled 2026-10-21)).
 * `Kernel Uses 131072 > 65536 bytes of LDS` — 13 phases in the 10-15/10-17
   era, all PGR=1-template 128x128x16 fp32 tiles; the current template's
   allocator case (`lds_base * ku ≤ 16384` conservatively) plus PGR default now
