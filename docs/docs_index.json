@@ -286,9 +286,15 @@
       "kind": "Ecosystem",
       "owns": "Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out",
       "path": "docs/documentation_tooling_options.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "gfx902 first-light checklist: what is PROVEN, BLOCKED, UNPROVEN, in priority order",
+      "path": "docs/gfx902_first_light.md"
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 39,
+  "total": 40,
   "version": 1
 }

@@ -231,11 +231,12 @@ def test_tensile_isa_table_no_loose_triples():
 
 def test_agent_consult_on_empty_directory():
     """Consult on a base directory with NO kernel_db.json: priors=0, still writes the doc."""
+    import dataclasses
     import tempfile
     from pathlib import Path
-    import dataclasses
-    from oto.device.loader import load_profile
+
     from oto.agents.census_consult import consult
+    from oto.device.loader import load_profile
 
     base = load_profile("gfx90c")
     synth = dataclasses.replace(base, codename="testbed902")

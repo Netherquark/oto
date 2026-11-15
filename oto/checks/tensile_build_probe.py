@@ -48,6 +48,22 @@ def _default_arch() -> str:
     return default_profile().codename
 
 
+def _pin_isa(arch: str) -> None:
+    """Pin Tensile's CurrentISA to the known table; refuse on unknown archs."""
+    import Tensile.Common as Common2
+
+    from oto.device.tensile_isa import isa_triple
+    isa = isa_triple(arch)
+    if isa is None:
+        raise SystemExit(
+            f"Tensile's ISA table has no entry for {arch!r} (known: gfx900, "
+            "gfx90c, gfx906). The build proof would run without pinning the "
+            "ISA and prove nothing about this arch -- refusing rather than "
+            "guessing. Add an entry to oto/device/tensile_isa.py:ISA_TRIPLES "
+            f"once the Tensile-side triple for {arch!r} is confirmed.")
+    Common2.globalParameters["CurrentISA"] = isa
+
+
 def _init_tensile(arch: str | None = None) -> None:
     if arch is None:
         arch = _default_arch()
@@ -98,21 +114,7 @@ def _init_tensile(arch: str | None = None) -> None:
         }
     )
 
-    # Detection reads the device to pick the ISA. This is a path/enumeration
-    # query, not a workload, but pin the ISA anyway so the proof is explicitly
-    # about the arch we ported and so the tool still works with no GPU present.
-    import Tensile.Common as Common2
-
-    from oto.device.tensile_isa import isa_triple
-    isa = isa_triple(arch)
-    if isa is None:
-        raise SystemExit(
-            f"Tensile's ISA table has no entry for {arch!r} (known: gfx900, "
-            "gfx90c, gfx906). The build proof would run without pinning the "
-            "ISA and prove nothing about this arch -- refusing rather than "
-            "guessing. Add an entry to oto/device/tensile_isa.py:ISA_TRIPLES "
-            f"once the Tensile-side triple for {arch!r} is confirmed.")
-    Common2.globalParameters["CurrentISA"] = isa
+    _pin_isa(arch)
 
 
 def _require_tensile_root(explicit: str | None = None) -> Path:
