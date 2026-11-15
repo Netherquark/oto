@@ -61,7 +61,7 @@ def _load_ledger(db: Path, run_id: str | None) -> dict[str, Any]:
     return out
 
 def _load_runs_data(conn, out: dict) -> tuple:
-    """Fold the runs table into `out`; returns the filled ``(…)`` tuple."""
+    """Fold the runs table into `out`; returns the filled tuple."""
     rows = conn.execute(
         "SELECT id, run_id, status, started_at, completed_at, metadata "
         "FROM runs ORDER BY id DESC").fetchall()
