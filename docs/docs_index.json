@@ -302,12 +302,6 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Read-only plan for reshaping the developer (Class A) docs ecosystem",
-      "path": "docs/developer_ecosystem_plan.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem",
       "owns": "The dev loop: setup, suite, verifier, GPU policy, commit discipline",
       "path": "CONTRIBUTING.md"
     },
@@ -319,6 +313,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 44,
+  "total": 43,
   "version": 1
 }

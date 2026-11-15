@@ -73,11 +73,6 @@ def results_dir(base_dir, codename: str) -> Path:
     return legacy
 
 
-def legacy_results_dir(base_dir) -> Path:
-    """The historic results directory name (for migration tooling)."""
-    return Path(base_dir) / LEGACY_RESULTS_DIR_NAME
-
-
 def results_rel(*parts: str, profile=None) -> str:
     """Repo-relative results subpath for the current device.
 

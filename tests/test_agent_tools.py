@@ -132,23 +132,8 @@ def test_compare_runs_detects_regression(tmp_path):
     assert result["improvements"][0]["cell"] == "HH:256"
 
 
-def test_find_regressions_no_corpus(tmp_path):
-    result = ht.find_regressions(tmp_path)
-    assert result == []
-
-
-def test_export_summary_text(tmp_path):
-    out = ht.export_summary(tmp_path)
-    assert "Corpus summary" in out
-
-
-def test_export_summary_json(tmp_path):
-    import json as _json
-    out = ht.export_summary(tmp_path, fmt="json")
-    data = _json.loads(out)
-    assert "present" in data
-
-
-def test_validate_deck_missing(tmp_path):
-    result = ht.validate_deck(tmp_path)
-    assert result["present"] is False
+def test_export_summary_text_removed(tmp_path):
+    # export_summary removed with the harness toolkit dead-code cleanup.
+    assert not hasattr(ht, "export_summary")
+    assert not hasattr(ht, "find_regressions")
+    assert not hasattr(ht, "validate_deck")

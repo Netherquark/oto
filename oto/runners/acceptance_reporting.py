@@ -205,7 +205,8 @@ class ReportingMixin:
 
         self._last_ab_reference_run_id = ref_run_ids[0] if ref_run_ids else None
         sclk_by_phase, sclk_ref = self._compute_sclk_data(native_records, spoof_records, ref_run_ids)
-        native_cov, spoof_cov = self._clock_coverage(native_records, sclk_by_phase),                                 self._clock_coverage(spoof_records, sclk_by_phase)
+        native_cov = self._clock_coverage(native_records, sclk_by_phase)
+        spoof_cov = self._clock_coverage(spoof_records, sclk_by_phase)
 
         thermal = self._thermal_summary(ref_run_ids)
         self._build_sclk_info(sclk_by_phase, sclk_ref, native_cov, spoof_cov, thermal)

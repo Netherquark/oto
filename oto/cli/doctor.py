@@ -399,14 +399,6 @@ def _all_checks(base: Path) -> list[Check]:
     return checks
 
 
-def _registry_one(base: Path) -> list[Check]:
-    return _registry(base)
-
-
-def _docs_one(base: Path) -> list[Check]:
-    return _docs(base)
-
-
 def _flatten(items: list[Any]) -> list[Check]:
     out: list[Check] = []
     for item in items:

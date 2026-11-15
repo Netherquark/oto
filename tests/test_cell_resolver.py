@@ -89,9 +89,8 @@ def test_every_native_winner_resolves_full_config(evidence):
     # assert is the first thing that goes, and the new depth is in the phase name.
     assert by[("ZZ", "1024x1024x1024")]["native_config"]["DepthU"] == 8
     # HH:256's like-for-like winner (§R56.3: family-protocol phases only) is
-    # the 32x64 thread tile phase (see native_winner_phase for HH:256 in the
-    # acceptance report: phase_cand_hh_256_32x64x16_tt4x4_Ailk_Bjlk_vw4_du16_g1_w2_5d343990),
-    # not the 64x32 candidate, and not the 763.4 native_best_any_protocol figure.
+    # the 32x64 tile phase (phase ..._tt4x4_...), not the 64x32 candidate and
+    # not the 763.4 native_best_any_protocol figure.
     assert by[("HH", "256x256x256")]["native_config"]["MacroTile"] == [32, 64]
 
 

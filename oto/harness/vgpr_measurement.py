@@ -141,14 +141,6 @@ def _extract_key(obj: Path) -> tuple[str, int, int] | None:
     return (code_ch, tt[0], tt[1])
 
 
-def _print_table(rows: list[dict[str, Any]]) -> None:
-    print(f"{'dtype':5} {'TT':8} {'n':>4} {'measured med':>12} {'model acc':>10} {'ratio':>7}")
-    for _r in rows:
-        print(f"{_r['dtype']:5} {_r['tt']:<6} {_r['n']:>4} "
-              f"{_r['measured_median_vgpr']:>12} {_r['model_acc_vgpr']:>10} "
-              f"{_r['ratio']:>7.2f}")
-
-
 def main(profile=None) -> int:
     """CLI: measured per-thread VGPRs of emitted kernels. ``profile`` selects the device; ambient by default."""
     args = _build_arg_parser().parse_args()

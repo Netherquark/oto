@@ -121,7 +121,6 @@ Corollaries:
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
 | `docs/gfx902_blind_convergence.md` | operator | Ecosystem | End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |
-| `docs/developer_ecosystem_plan.md` | dev | Ecosystem | Read-only plan for reshaping the developer (Class A) docs ecosystem |
 | `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
 | `docs/documentation_tooling_options.md` | dev | Ecosystem | Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |

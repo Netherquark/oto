@@ -21,7 +21,7 @@ SafeLoader semantics, and the pure-Python loader is used when libyaml is not
 available. ``load_yaml_cached`` keys on (path, size, mtime), so a rewritten
 file is re-read.
 
-Public API: load_yaml, load_yaml_text, load_yaml_cached, clear_cache,
+Public API: load_yaml, load_yaml_text, load_yaml_cached,
 HAS_LIBYAML, dump_yaml.
 """
 
@@ -91,11 +91,6 @@ def load_yaml_cached(path: str | Path) -> Any:
         _CACHE.clear()
     _CACHE[key] = doc
     return doc
-
-
-def clear_cache() -> None:
-    """Empty the memo (the tests use it to prove the cache is not stale)."""
-    _CACHE.clear()
 
 
 def dump_yaml(payload: Any, path: str | Path) -> None:

@@ -165,59 +165,6 @@ def compare_runs(base_dir, run_a, run_b):
             "unchanged": len(unchanged), "total_cells": len(set(ba) & set(bb))}
 
 
-def find_regressions(base_dir, threshold_pct=5.0):
-    """Find cells whose best GFLOPS dropped more than threshold_pct vs previous run."""
-    path = Path(base_dir) / KERNEL_DB_RELPATH
-    if not path.exists():
-        return []
-    db = json.loads(path.read_text())
-    run_ids = sorted(db.keys())
-    if len(run_ids) < 2:
-        return []
-    prev, curr = run_ids[-2], run_ids[-1]
-    result = compare_runs(base_dir, prev, curr)
-    return [r for r in result.get("regressions", [])
-            if abs(r["delta_pct"]) >= threshold_pct]
-
-
-def export_summary(base_dir, fmt="text"):
-    """Export a one-line-per-cell corpus summary. fmt=text or json."""
-    corpus = study_kernel_db(base_dir)
-    if fmt == "json":
-        return json.dumps(corpus, indent=2, sort_keys=True)
-    lines = ["# Corpus summary - " + str(corpus.get("runs", 0)) + " runs, " + str(corpus.get("rows", 0)) + " rows"]
-    if corpus["present"]:
-        lines.append("families: " + str(corpus["families"]))
-        lines.append("coverage: " + str(corpus["covered_cells"]) + "/" + str(corpus["target_cells"]))
-        for cell, w in sorted(corpus.get("winners", {}).items()):
-            lines.append("  " + cell + ": " + str(w.get("gflops_median")) + " GFLOP/s - " + str(w.get("phase")))
-    return chr(10).join(lines)
-
-
-def validate_deck(base_dir):
-    """Validate phases.yaml against CPU gates. Returns pass/fail per phase."""
-    import yaml as _yaml
-    deck_path = Path(base_dir) / "phases.yaml"
-    if not deck_path.exists():
-        return {"present": False, "error": "no phases.yaml"}
-    phases = _yaml.safe_load(deck_path.read_text()) or []
-    results = []
-    for ph in phases:
-        cfg = ph.get("config", {}) or {}
-        if not cfg:
-            results.append({"phase_id": ph.get("phase_id"), "passed": True,
-                            "note": "no config (skipped)"})
-            continue
-        ok_l, msg_l = validate_tensile_loads(cfg)
-        ok_o, msg_o = occupancy_feasible(cfg)
-        ok_s, msg_s = ldspad_feasible(cfg)
-        results.append({"phase_id": ph.get("phase_id"),
-                        "passed": bool(ok_l and ok_o and ok_s),
-                        "loads": msg_l, "occupancy": msg_o, "ldspad": msg_s})
-    passed = sum(1 for r in results if r["passed"])
-    return {"present": True, "total": len(results), "passed": passed,
-            "failed": len(results) - passed, "results": results}
-
 def _study_markdown(profile: DeviceProfile, payload: dict[str, Any]) -> str:
     """``profile`` -- the device profile to tune."""
     corpus = payload["corpus"]
