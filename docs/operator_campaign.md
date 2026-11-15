@@ -1,4 +1,10 @@
-# The oto operator runbook — a best-effort library on your own GPU
+# The oto operator campaign — multi-session tuning procedure
+
+> **Companion to, not replacement for, [`docs/operator_runbook.md`](operator_runbook.md).**
+> The runbook is the contract + verification matrix + never-do list.
+> This file is the long-form, multi-session autonomous procedure (corpus study,
+> straggler classes, candidate routes, consultation triggers). Read the runbook
+> first.
 
 **This is a self-contained protocol.** Everything you need is on this page;
 this page references no git history, no external notes, and no second file.

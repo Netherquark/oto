@@ -1,5 +1,8 @@
 # harness — agentic kernel-tuning harness (CPU-only)
 
+> **Scope:** harness machinery guardrails and candidate workflows. For the
+> CPU-only command card, see [`docs/agent_reference.md`](agent_reference.md).
+
 Polished, repo-homed home of the candidate-generation machinery. The read-only tools plus
 this runbook give an agent (or a human) the ground truth needed to propose a
 defensible candidate without re-reading the raw corpora. Nothing here ever

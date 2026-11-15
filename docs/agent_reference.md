@@ -1,5 +1,8 @@
 # Agentic Kernel-Tuning Harness Reference
 
+> **Scope:** CPU-only command card. For harness guardrails, see
+> [`docs/harness_runbook.md`](harness_runbook.md).
+
 One-page card for agents working on the oto kernel-tuning project.
 All checks are **CPU-only** (GNOME session, no GPU benchmarking).
 Real benchmarking happens in the user's TTY only.
