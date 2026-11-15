@@ -116,7 +116,6 @@ Corollaries:
 | `docs/gfx902_blind_convergence.md` | operator | Ecosystem | End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |
 | `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
-| `SECURITY.md` | shared | Ecosystem | Security scope & reporting path (no supported releases; `main` only) |
 | `docs/documentation_tooling_options.md` | dev | Ecosystem | Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 ## The quality gates

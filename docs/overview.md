@@ -23,7 +23,6 @@ that both derive from is [`docs/README.md`](README.md).
 | [`claude.md`](../claude.md) | Entry contract, process guardrails, file-ownership rules. |
 | [`docs/implementation_plan.md`](implementation_plan.md) | Design brief: two-loop architecture. |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Commit discipline, GPU policy, code-style rules. |
-| [`SECURITY.md`](../SECURITY.md) | Security reporting policy. |
 | [`docs/audit_register.md`](audit_register.md) | Expert-agent audit register. |
 
 ## gfx90c golden case study

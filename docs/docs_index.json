@@ -294,12 +294,6 @@
       "path": "CONTRIBUTING.md"
     },
     {
-      "class": "shared",
-      "kind": "Ecosystem",
-      "owns": "Security scope & reporting path (no supported releases; `main` only)",
-      "path": "SECURITY.md"
-    },
-    {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out",
@@ -307,6 +301,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 42,
+  "total": 41,
   "version": 1
 }
