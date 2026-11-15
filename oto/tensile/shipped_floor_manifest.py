@@ -25,8 +25,7 @@ from typing import Any
 from oto.runners.result_paths import results_rel
 
 #: Where the pinned shipped manifest is cached, relative to the project root.
-MANIFEST_PATH = results_rel("gfx900_shipped_manifest.json")
-
+#: (Resolved lazily via manifest_rel(); no import-time profile capture.)
 
 def manifest_rel(arch: str = "gfx900") -> str:
     """The results-relative cache filename for a reference arch's manifest."""
@@ -49,7 +48,6 @@ from oto.tensile.shipped_floor import (
 
 __all__ = [
     "CONTRACTION_PATTERNS",
-    "MANIFEST_PATH",
     "SHIPPED_FAMILIES",
     "TIER_DROP",
     "TIER_FIRST",
@@ -285,7 +283,9 @@ def config_fingerprint(phase: dict[str, Any]) -> str:
     return "fp_" + hashlib.sha1(blob.encode()).hexdigest()[:16]
 
 
-RERUN_MANIFEST_PATH = results_rel("reference_rerun_manifest.json")
+def _rerun_manifest_path() -> str:
+    """Results-relative path to the rerun triage; resolved at call time."""
+    return results_rel("reference_rerun_manifest.json")
 
 # ---------------------------------------------------------------------------
 # Reference-cell classification.
@@ -334,7 +334,7 @@ UNRUNNABLE_TIERS = (TIER_HELD, TIER_DROP)
 def load_rerun_manifest(base_dir: Path) -> dict[str, Any] | None:
     """Load the audited re-run triage, or None when absent/unreadable."""
     try:
-        with open(Path(base_dir) / RERUN_MANIFEST_PATH) as f:
+        with open(Path(base_dir) / _rerun_manifest_path()) as f:
             doc = json.load(f)
     except (OSError, ValueError):
         return None

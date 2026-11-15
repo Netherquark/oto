@@ -116,8 +116,14 @@ def handle_error(exc: BaseException, *, quiet: bool = False,
 
     log_path: Path | None = None
     if not hint and not interrupted:
-        log_path = _write_traceback(exc, base)
-        hint = f"traceback saved to {log_path}; report it at {ISSUE_URL}"
+        try:
+            log_path = _write_traceback(exc, base)
+            hint = f"traceback saved to {log_path}; report it at {ISSUE_URL}"
+        except OSError:
+            # The diagnostic path itself must not be the second failure. Fall
+            # back to a bounded stderr hint (still machine-relevant).
+            hint = (f"traceback could not be written to {base or Path.cwd()}/logs "
+                    f"(read-only fs?); report the command and the output around this error at {ISSUE_URL}")
 
     if json_mode:
         payload = {"ok": False,

@@ -49,13 +49,30 @@ def _check_sanity(data: dict[str, Any], source: str) -> None:
                          + "; ".join(problems))
 
 
+def _validate_isa(raw_isa, source: str = "<profile>") -> tuple[int, int, int]:
+    """``isa`` is the ISA (major, minor, stepping) tuple. Reject malformed shapes
+    loudly instead of trusting the snapshot."""
+    if not isinstance(raw_isa, (list, tuple)) or len(raw_isa) != 3:
+        raise ValueError(
+            f"{source}: 'isa' must be a 3-element list/tuple of ints "
+            f"(major, minor, stepping), got {raw_isa!r}")
+    try:
+        isa = (int(raw_isa[0]), int(raw_isa[1]), int(raw_isa[2]))
+    except (TypeError, ValueError) as e:
+        raise ValueError(
+            f"{source}: 'isa' must parse as three ints, got {raw_isa!r}") from e
+    return isa
+
+
 def _to_profile(data: dict[str, Any], source: str = "<profile>") -> DeviceProfile:
     _check_sanity(data, source)
+    raw_isa = data["isa"]
+    isa = _validate_isa(raw_isa, source)
     ag = data.get("assembly_gates", {})
     th = data.get("theoretical", {})
     return DeviceProfile(
         codename=data["codename"],
-        isa=tuple(data["isa"]),
+        isa=isa,
         num_cus=data["num_cus"],
         simds_per_cu=data["simds_per_cu"],
         lanes_per_simd=data["lanes_per_simd"],

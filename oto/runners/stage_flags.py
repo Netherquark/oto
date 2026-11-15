@@ -253,11 +253,9 @@ def _add_run_flags(parser: argparse.ArgumentParser, profile=None) -> None:
         const="",
         default=None,
         metavar="DEST",
-        help=f"Carve a best-effort {_loader.resolve_profile(profile,).codename} TensileLibrary.dat from the full "
-             f"kernel database (CPU-only). Optional DEST (default "
-             f"{_loader.resolve_profile(profile,).codename}_results/best_effort_library). Defaults to the "
-             f"across-all-runs view (any protocol); override with "
-             f"--protocol-basis."
+        help=("Carve a best-effort tensile library from the full kernel database "
+              f"(CPU-only). Optional DEST. Defaults to the across-all-runs view; "
+              "override with --protocol-basis.")
     )
     parser.add_argument(
         "--generate-device-docs",
@@ -323,10 +321,14 @@ def build_parser(profile=None) -> argparse.ArgumentParser:
 
     Returns:
         An ``ArgumentParser`` with every flag the driver accepts.
-    ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+    ``profile`` -- optional ``DeviceProfile``; when None, the description
+        does not depend on ambient device resolution (no rocminfo shell-out
+        at parser-build time, ever).
     """
+    desc_suffix = (f" — Tensile tuning driver for {_loader.resolve_profile(profile,).codename}"
+                   if profile is not None else "")
     parser = argparse.ArgumentParser(
-        description=f"oto — Tensile tuning driver for {_loader.resolve_profile(profile,).codename}"
+        description=f"oto — Tensile tuning driver{desc_suffix}"
     )
     _add_scope_flags(parser)
     _add_auto_flags(parser)
