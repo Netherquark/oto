@@ -92,7 +92,7 @@ def test_pyflakes_dangerous_categories_zero():
     assert local == 0, f"{local} local variable unused warnings remain"
     assert fstring == 0, f"{fstring} empty f-string warnings remain"
 
-    # no undefined names tolerated anywhere -- the pre-split tolerance for
+    # no undefined names tolerated anywhere -- the historical tolerance for
     # knob_sweep.py's "late imports" is stale (0 findings at HEAD).
     assert undefined == 0, f"{undefined} undefined name warnings remain"
 

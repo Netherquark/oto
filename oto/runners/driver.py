@@ -46,7 +46,7 @@ from oto.runners.toolchain import (
 )
 from oto.tensile.candidate import CandidateGenerator
 
-# Legacy private aliases, kept because the pre-split flat public surface used
+# Legacy private aliases, kept because the old flat public surface used
 # them (`from port_tensile import _require_tensile_root`). New code should use the
 # public names on oto.runners.toolchain.
 _require_tensile_root = require_tensile_root

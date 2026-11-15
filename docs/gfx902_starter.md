@@ -14,7 +14,7 @@ this device and verifying oto's port on it.
 
 ## Why we're tuning for it
 
-Verify the Refactor 2 port end to end on a second, different device:
+Verify the device-independent port end to end on a second, different device:
 library build, report generation, gate calibration — all against
 `--codename gfx902`.
 

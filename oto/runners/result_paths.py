@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shared path conventions for the driver.
 
-Owns: the runs-directory resolver. The pre-refactor oto recorded every run
+Owns: the runs-directory resolver. The earlier oto recorded every run
 under ``<base>/gfx90c_runs``; the device-independent layout is
 ``<base>/<codename>_runs`` (derived from the resolved ``DeviceProfile``).
 Checkouts that still have the legacy directory keep working: the primary

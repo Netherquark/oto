@@ -646,80 +646,44 @@ within-run only, ≥3 seeds, median, ±2 % tie band.
 active, that = next iteration's input. Never re-propose config already in ledger
 (novelty enforced), never re-propose retired tiles in §8.
 
-## 12. The 2026-11-14 session — nightly toolchain, LDS Z=16, CC 4-assert probes
+## 12. Design decisions in force
 
-### 12.1 Toolchain (read first — nothing else reproduces without it)
+These are the load-bearing decisions the current port makes. They are recorded
+here rather than in changelog because they actively shape every deck row and
+gate verdict today.
 
-Nightly (ROCm 7.15.0a20260728, TheRock SDK under user's venv). `.env` carries
-required `ROCM_PATH` (no `/usr` fallback; tarball/RPM/python-sdk layouts all
-supported). `hipcc` → `amdclang++` preferred. `Architecture: <codename>` pinned
-into `GlobalParameters` (no clang failures on non-target archs). Launch path
-passes `--prebuilt-client` (Tensile v4.50 dropped `--client-build-path`).
-6.4.4-built best-effort library **wedges yolo26 on this stack** (rebuilt
-byte-identical to Oct-29 artifact, `b6ccd4…`); rocm-libraries best-effort build
-works (`frames=1 … person 0.87`, CPU NMS, MIOpen GEMM solver, CUDA path True).
-Do not chase old library's crashes.
+### 12.1 Toolchain baseline
 
-### 12.2 LDS `Z` byte width — option A (2026-11-14)
+Nightly (ROCm 7.15.0a20260728, TheRock SDK under the user's venv). `.env` carries
+the required `ROCM_PATH` (no `/usr` fallback; tarball/RPM/python-sdk layouts all
+supported). Compilers derive from the resolved `ROCM_PATH`: `amdclang++` is
+preferred over `hipcc` (Tensile's native default; `hipcc` only if the resolved tree
+ships no clang). `Architecture: <codename>` is pinned into `GlobalParameters`
+(no clang failures on non-target archs). Launch path passes `--prebuilt-client`
+(Tensile v4.50 dropped `--client-build-path`).
 
-`BYTES_PER_ELEMENT["Z"] = 16` (Tensile `numBytes()`); `LDS_BUDGET` **stays 16384**.
-Consequences, accepted: six above-budget ZZ rows retired (`64x64x16`, `128x32x8`,
-`32x128x8` at 512/1024), `DECISION_TRIAL_TILES` D2/D3 entries dropped, ZZ deck
-narrowed to at-budget rungs. Gate intentionally more conservative than Tensile's
-`MaxLDS=65536` (contract: never admit Tensile's refuses). All eleven ZZ probes
-(4 above-budget + at-budget controls) **build + pass Tensile's reference
-validation on silicon**.
+### 12.2 LDS `Z` byte width = 16
 
-### 12.3 `NumElementsToValidate: 128` (commit dc1b3ca)
+`BYTES_PER_ELEMENT["Z"] = 16` (Tensile `numBytes()` for complex double);
+`LDS_BUDGET` stays 16384. Six above-budget ZZ rows were retired; `DECISION_TRIAL_TILES`
+keeps only D1. Gate is deliberately more conservative than Tensile's `MaxLDS=65536`.
 
-Tensile runs own CI-equivalent validation on every phase. Regression sweep
-clean (13/13 best-library tests), suite green at every step.
+### 12.3 `NumElementsToValidate: 128`
 
-### 12.4 CC:256 / CC:512 AF0EM=4/AF1EM=4 — ADOPTED 2026-11-14 (owner decision, Option B)
+Tensile runs its own CI-equivalent validation on every phase; the reference is
+those builds, not the compiler output shape. The writer passes the reference cap
+declared by Tensile instead of disabling validation.
 
-First-class CC rows in `phases.yaml`:
-`phase_cc_Ailk_Bljk_256x256x256_mt64x64x8_tt4x4_af4em4` and
-`phase_cc_Ailk_Bljk_512x512x512_mt64x64x8_tt4x4_af4em4` (same geometry as retired
-D5 pilot row; Tensile's own SGEMM recipe — `sgemm_large_square_nt.yaml`
-`AssertFree0/1ElementMultiple: [4]`). `oto check candidates`: **280 checked, 0
-illegal** (CC=48). GPU legality on gfx90c (M=`NumElementsToValidate=128`):
-**PASSED at 256³ and 512³**. Controls (AF1 base rows at both shapes, paired-widen
-AF22, ZZ pair) also **PASSED**. Adoption means: future CC:256/512 runs benchmark
-AF4/4 rows as reference default; AF2/2 paired-widen rows stay in sweep for A/B;
-nobody claims faster — that's TTY audit's job. R8 emission path stays for future
-CC cells. See 2026-11-14 changelog (28th entry), `incomplete_work.md` (CC
-follow-up item).
+### 12.4 CC:256 / CC:512 AF0EM=4/AF1EM=4 first-class
 
-### 12.5 Explicit DeviceProfile threading (C2.5–C2.9) — done
+CC:256 and CC:512 rows ship with `AF0EM=4 / AF1EM=4` (Tier-4 element-multiple
+alignment assertion; Tensile's SGEMM recipe) as first-class deck rows.
+The AF2/2 paired-widen rows remain in the deck. The A/B will be measured in
+a TTY session; no performance claim was made in either direction.
 
-Every profile-consuming function takes `profile=None`; resolution goes through
-`oto.device.loader.resolve_profile` (explicit wins, ambient otherwise). Internal
-call sites thread caller's profile explicitly (qualified resolution + AST-verified
-— never bare attribute-name matching). Import-time frozen captures gone; verifier
-recognises trailing-defaulted-`profile=None` shape evergreen. End-to-end coverage:
-`tests/test_explicit_profile_threading.py` (complex GSU>1: gfx90c refuses,
-MFMA-capable synthetic passes). Full suite 1061 passed at landed state;
-`oto verify all`: **ALL EQUIVALENCE CHECKS PASSED**.
-### 12.6 AF2/2 vs AF4/4 A/B and the gfx902 endpoint (2026-11-15, owner decision)
+### 12.5 Profile threading
 
-Both arms were accepted on legality alone (gate-passes verified; no
-silicon timing claimed). The A/B against AF2/2 (paired-widen) and the
-AF1 baseline rows is the overnight TTY job; no perf claim has been made
-anywhere in the repo, and no claim will appear until a TTY session
-produces it. The AF4/4 rows shipped 2026-11-14 on the vendor's SGEMM
-recipe alignment, NOT on silicon.
-
-The gfx902 ask is correct framing: the library for the gfx902 endpoint
-does not exist yet, nor does the native-arm corpus on that device. The
-bring-up order is sealed in `docs/starter_pair.md §0 (bring-up order)`:
-
-1. A human-verified profile (`profiles/gfx902.json`), against AMD's ISA
-   reference manual — nothing else.
-2. `oto agent consult docs/gfx902_starter.md --force` produces a candidate
-   deck against the gates (CPU-only, no GPU).
-3. `oto check candidates` — must be 0 illegal.
-4. Benchmark the vf1 deck end-to-end (TTY only).
-
-Currently, the agent-unverified stub refuses to load (by design), no
-gfx902 TensileLibrary exists, and no AF2/2/4/1 perf claim exists in any
-artifact. No claim that does not appear here or in the changelog exists.
+Every profile-consuming function takes `profile=None` and resolves through
+oto.device.loader.resolve_profile; internal callers thread the caller's
+profile explicitly. Import-time frozen captures are gone; the verdict gate
+recognises trailing-defaulted-`profile=None` evergreen.

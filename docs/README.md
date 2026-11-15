@@ -165,7 +165,7 @@ first; after the best-effort library exists, `docs/operator_campaign.md` is the
 living procedure for the tuning campaign). Then: `claude.md` **§2.0 only** (the shared invariants) →
 [`docs/starter_pair.md`](starter_pair.md) (the pair protocol) →
 [`docs/agent_reference.md`](agent_reference.md) (CPU-only harness commands) →
-`changelog.md` (the Refactor-2 device-independence record) → the module
+`docs/README.md` (the file-ownership contract) → the module
 docstring of anything you edit. Do **not** adopt the campaign-specific
 framing in `claude.md` (gfx90c convergence, the shipped-floor acceptance
 framework): on a new platform there may be no floor library to beat, and

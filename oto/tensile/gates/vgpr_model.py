@@ -201,7 +201,7 @@ def knob_int(value: Any, default: int) -> int:
     with a None value -- a knob present in the template but unset -- and
     ``int(None)`` raises ``TypeError``, which escapes the launch boundary and
     becomes exactly the opaque mid-run failure these gates exist to prevent.
-    Found by `verify_gates`: the pre-refactor gate returned a
+    Found by `verify_gates`: the earlier gate returned a
     verdict for ``NLCA: None`` and this one raised.
     """
     if value is None:

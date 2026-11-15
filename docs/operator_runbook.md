@@ -228,5 +228,5 @@ Performance claims are reported as measured, never extrapolated.
 
 `claude.md` (shared invariants only) → this file → [`operator_campaign.md`](operator_campaign.md) (the tuning campaign) → [`docs/README.md`](README.md) (the registry) →
 [`docs/starter_pair.md`](starter_pair.md) → [`docs/agent_reference.md`](agent_reference.md) →
-`changelog.md` (the Refactor-2 device-independence record) → the module
+`docs/README.md` (the file-ownership and contract boundary) → the module
 docstring of anything you edit.

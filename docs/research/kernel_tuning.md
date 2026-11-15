@@ -148,7 +148,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   - `ASSEMBLY_DTYPE_ELEM_BYTES` (`oto/tensile/gates/assembly.py`) — the
     **assembly class** rule, which counts the *element*: `Z = 16`.
   - The older note here — "suspected 2× LDS under-count of ZZ, `scheduler.py`
-    lists `Z: 8`" — is **retired**: the pre-split `scheduler.py` is gone (now
+    lists `Z: 8`" — is **retired**: the former `scheduler.py` is gone (now
     `oto/tensile/gates/*`), and the `8` is intentional and test-locked, so it is
     not a bug. The real footprint bound is the `(MT0+MT1)·DepthU·bpe` wall above.
 - Deliberate occupancy *limiting* exists too: the `MaxOccupancy` knob

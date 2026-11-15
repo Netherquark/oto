@@ -1,6 +1,6 @@
 # Adding a device: the Markdown+JSON starter pair
 
-Refactor 2 turns oto into a device-independent port. A new device enters through a
+oto is a device-independent port. A new device enters through a
 **starter pair**, never through a code edit:
 
 ```

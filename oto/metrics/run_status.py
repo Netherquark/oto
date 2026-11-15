@@ -23,7 +23,7 @@ from __future__ import annotations
 import oto.tensile.shipped_floor_manifest as tlib
 from oto.metrics.build_status import build_report
 
-# Re-exported for the pre-split import surface; the implementations live in
+# Re-exported for the historical import surface; the implementations live in
 # oto.metrics.thermal_telemetry / oto.metrics.run_plan.
 from oto.metrics.ledger_state import (
     ACTIVE_STATES as ACTIVE_STATES,

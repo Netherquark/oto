@@ -218,7 +218,7 @@ class CandidateGenerator(CandidateEmitMixin):
 def parse_tensile_shape(shape_str: str) -> dict[str, int]:
     """Parse a Tensile shape string into M, N, B, K (see config_writer).
 
-    Re-exported here for the pre-split import surface; the shape grammar is
+    Re-exported here for the historical import surface; the shape grammar is
     owned by the config writer, which is the only place a shape string is read.
 
     This used to be a third, hand-rolled copy of the parser, and it was wrong in

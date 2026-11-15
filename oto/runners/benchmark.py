@@ -202,7 +202,7 @@ class BenchmarkMixin:
                             phase: dict[str, Any]) -> tuple[bool, str]:
         """Render one phase's Tensile YAML, refusing illegal configs.
 
-        Kept as a method (the pre-split `TensileDriver._write_phase_config`
+        Kept as a method (the former `TensileDriver._write_phase_config`
         surface) so `oto.checks.tensile_build.write_phase_configs` and tests can
         call or patch it on the driver; the ~240-line implementation lives in
         oto.tensile.config_writer.write_phase_config and is delegated to here.

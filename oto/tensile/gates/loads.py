@@ -348,7 +348,7 @@ class _Operand:
     def rejection(self) -> str | None:
         """The first reason this operand's classic load is illegal, if any.
 
-        NLCA is parsed here, not at construction, because the pre-split gate read
+        NLCA is parsed here, not at construction, because the earlier gate read
         it in the middle of the per-operand loop: a config that fails an earlier
         stage with an unparsable NLCA reports that earlier reason rather than
         raising on the garbage value.
