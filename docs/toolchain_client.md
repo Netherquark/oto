@@ -102,3 +102,35 @@ FAILs is the bar, and it's what this repo's docs assert.
 
 `docs/operator_runbook.md` — the operator SOP; `docs/search_philosophy.md`;
 `.env.example` — the layout reference for each key.
+
+
+## Troubleshooting (from setup.md)
+
+
+
+See `docs/toolchain_client.md` for the toolchain contract and the client-build
+troubleshooting table. The most common failure modes:
+
+- `No complete ROCm SDK found` → install TheRock nightly or pass
+  `--rocm-prefix`.
+- `amd_smi cmake config not found` → the prefix has no amd_smi (ROCm 6.4.x);
+  use a 7.x SDK.
+- `amdclang(++) not found` → check the prefix's layout; the script searches
+  `lib/llvm/bin`, `llvm/bin`, the python-sdk layout, `lib64/rocm/llvm/bin`,
+  then `<prefix>/bin`.
+- Client build fails on `__AMDGCN_WAVEFRONT_SIZE` → partial-SDK shadowing
+  (§3 above).
+- `oto doctor` still reports FAIL after a successful build → the binary is at
+  `<TENSILE_ROOT>/build/client/tensile-client`; if `TENSILE_ROOT` changed,
+  pass `OTO_TENSILE_CLIENT=/path/to/tensile-client`.
+
+## 7. What this does not do
+
+- Does not download anything. Downloads are deliberate (1.6 GB tarballs,
+  nightly snapshots) and the script prints the exact command instead of
+  running it.
+- Does not modify `oto/`, `tests/`, or root shims. It writes `profiles/*`,
+  `docs/*_starter.*`, generated device docs, run artifacts, and (with
+  consent) `.env`.
+- Does not run the GPU. Every step is CPU-only.
+- Does not invent silicon facts. The starter pair refuses unverified profiles.

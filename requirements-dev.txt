@@ -1,5 +1,6 @@
 # oto dev/test requirements: runtime set plus the suite's own runner.
 -r requirements.txt
 ruff==0.17.1
+pyflakes==4.0.3
 pytest==9.1.1
 pytest-xdist==3.7.0

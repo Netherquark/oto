@@ -70,8 +70,7 @@ Full guide: [`docs/getting_started.md`](docs/getting_started.md).
 
 ## Documentation
 
-See [`docs/overview.md`](docs/overview.md) for the full documentation map.
-
+Birds-eye view: [`docs/overview.md`](docs/overview.md).
 Class B (operator) agents: [`docs/operator_runbook.md`](docs/operator_runbook.md).
 
 ## Contributing

@@ -1,5 +1,7 @@
 # Knowledge base — template (populated by the agent per device)
 
+> **TEMPLATE — copy and fill per device.** Do not edit the golden example; populate this file for your target.
+
 > **Status: TEMPLATE, NOT POPULATED.** This file ships as device-independent
 > scaffolding. It becomes a real knowledge base only when an agent on a new
 > target has audited *that* target and pinned its sources — an FFI-populated

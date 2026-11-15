@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oto"
+version = "26.11.0"
+description = "Recovering ROCm functionality for unsupported AMD GPUs."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Soham Kulkarni" }]
+dependencies = [
+    "rich==14.1.0",
+    "rich-argparse==1.8.0",
+    "tqdm==4.67.2",
+    "python-dotenv==1.2.3",
+    "PyYAML==6.0.2",
+    "numpy==2.3.5",
+    "matplotlib==3.11.2",
+    "requests==2.32.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.17.1",
+    "pyflakes==4.0.3",
+    "pytest==9.1.1",
+    "pytest-xdist==3.7.0",
+]
+
+[project.scripts]
+oto = "oto.cli.dispatch:main"
+
+[tool.setuptools.packages.find]
+include = ["oto*"]

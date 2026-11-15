@@ -1,5 +1,7 @@
 # Device limits & ceilings — template (populated by the agent per device)
 
+> **TEMPLATE — copy and fill per device.** Do not edit the golden example; populate this file for your target.
+
 > **Status: TEMPLATE, NOT POPULATED.** This file ships with the repository as
 > device-independent scaffolding. It becomes a real document only when an
 > agent on a new target has probed the hardware and derived the ceilings from

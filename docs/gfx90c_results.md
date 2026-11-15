@@ -1,5 +1,7 @@
 # Benchmark Results: gfx90c (Cezanne-family APU iGPU)
 
+> **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
+
 > **gfx90c-specific.** The generic per-device measured-evidence document
 > lives in `docs/results.md` (template for the agent); this file is the
 > gfx90c golden example.

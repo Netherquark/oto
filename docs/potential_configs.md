@@ -1,5 +1,7 @@
 # Potential candidate configurations — how to derive a deck on a new target
 
+> **TEMPLATE — copy and fill per device.** Do not edit the golden example; populate this file for your target.
+
 > Device-independent methodology for turning a new target into a candidate
 > deck, a gate set and an overnight run. This file is deliberately
 > architecture-agnostic: no peak, budget, or cell verdict is written here.

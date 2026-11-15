@@ -260,6 +260,12 @@
     {
       "class": "operator",
       "kind": "Ecosystem",
+      "owns": "Easy-mode onboarding: questions + auto-detect + .env + client build + doctor",
+      "path": "docs/setup.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
       "owns": "Zero-spec pair template the operator copies",
       "path": "docs/starter_template.md"
     },
@@ -268,6 +274,12 @@
       "kind": "Ecosystem",
       "owns": "gfx902 worked starter (public identity + open questions only)",
       "path": "docs/gfx902_starter.md"
+    },
+    {
+      "class": "operator",
+      "kind": "Ecosystem",
+      "owns": "End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery)",
+      "path": "docs/gfx902_blind_convergence.md"
     },
     {
       "class": "dev",
@@ -295,6 +307,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 40,
+  "total": 42,
   "version": 1
 }

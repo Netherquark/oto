@@ -1,5 +1,7 @@
 # gfx90c Kernel-Tuning Guide — the cookbook (caveman, full)
 
+> **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
+
 > Plain words. Hard numbers. Every claim traceable in repo (cite keys below).
 > File formalizes kernel-tuning research: what deck controls, what wins, why
 > "nothing moved", what to try next. Read `docs/gfx90c_theoretical_limits.md`

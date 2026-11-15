@@ -1,5 +1,7 @@
 # gfx90c Tensile Port — Knowledge Base (oto)
 
+> **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
+
 > **gfx90c-specific.** The generic per-device knowledge-base template
 > lives in `docs/knowledge_base.md`; this file is the gfx90c golden
 > example of how to derive one.

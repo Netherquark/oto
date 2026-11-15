@@ -106,22 +106,28 @@ def _discover_tensile() -> list[Path]:
 
 
 def _ask(prompt: str, default: str = "", choices: list[str] | None = None) -> str:
-    """Read one answer, respecting OTO_NO_INPUT."""
-    if os.environ.get("OTO_NO_INPUT"):
+    """Read one answer, respecting OTO_NO_INPUT and POSIX TTY rules.
+
+    Prompts go to stderr so stdout stays a clean data channel (GNU convention).
+    Returns the default when stdin is not a TTY or OTO_NO_INPUT is set.
+    """
+    if os.environ.get("OTO_NO_INPUT") or not sys.stdin.isatty():
         return default
     if choices:
         prompt = f"{prompt} [{'/'.join(choices)}] (default: {default}): "
     else:
         prompt = f"{prompt} (default: {default}): "
     try:
-        ans = input(prompt).strip()
+        sys.stderr.write(prompt)
+        sys.stderr.flush()
+        ans = sys.stdin.readline().strip()
     except EOFError:
         ans = ""
     return ans or default
 
 
 def _write_env(rocm: Path, tensile: Path, codename: str, mode: str,
-               spoof: str, gpu_targets: str) -> Path:
+               spoof: str, gpu_targets: str, prefs: dict | None = None) -> Path:
     """Write the repo-root .env. Returns its path."""
     from oto.runners.toolchain import _bin_dir, _llvm_bin
 
@@ -147,6 +153,14 @@ def _write_env(rocm: Path, tensile: Path, codename: str, mode: str,
     if mode == "informed":
         lines.append(f"# spoof (reference floor): {spoof}")
     lines.append(f"# GPU targets for the client build: {gpu_targets}")
+    prefs = prefs or {}
+    lines.append(f"# rocm flavour: {prefs.get('flavour', 'python')}")
+    lines.append(f"# rocm version policy: {prefs.get('rocm_version_policy', 'nightly')}")
+    if prefs.get("rocm_pinned_version"):
+        lines.append(f"# rocm pinned version: {prefs['rocm_pinned_version']}")
+    lines.append(f"# tensile version policy: {prefs.get('tensile_version_policy', 'pinned')}")
+    if prefs.get("tensile_pinned"):
+        lines.append(f"# tensile pinned: {prefs['tensile_pinned']}")
     DOTENV.write_text("\n".join(lines) + "\n")
     return DOTENV
 
@@ -171,11 +185,46 @@ def _step_convergence_mode(args, yes):
         mode = _ask("Convergence mode", "blind", ["blind", "informed"])
     spoof = getattr(args, "spoof", None) or "gfx900"
     if mode == "informed" and not yes:
-        spoof = _ask("Spoof (reference floor) GPU codename", "gfx900")
+        spoof = _ask("Spoof (reference floor) GPU codename (community-popular spoof)", "gfx900")
     print(f"  convergence mode : {mode}" +
           (f"  (spoof: {spoof})" if mode == "informed" else ""))
     print()
     return mode, spoof
+
+
+def _step_toolchain_prefs(args, yes):
+    """Ask the ROCm/Tensile/HIP/clang version policy + ROCm flavour."""
+    flavour = getattr(args, "rocm_flavour", None) or "python"
+    if not yes:
+        flavour = _ask("ROCm flavour", flavour, ["python", "opt"])
+    version_policy = getattr(args, "rocm_version_policy", None) or "nightly"
+    if not yes:
+        version_policy = _ask("ROCm version policy", version_policy,
+                              ["nightly", "pinned"])
+    pinned = getattr(args, "rocm_pinned_version", None) or ""
+    if not yes and version_policy == "pinned":
+        pinned = _ask("Pinned ROCm version string", pinned or "7.15.0a20260728")
+    tensile_policy = getattr(args, "tensile_version_policy", None) or "pinned"
+    if not yes:
+        tensile_policy = _ask("Tensile version policy", tensile_policy,
+                              ["nightly", "pinned"])
+    tensile_pinned = getattr(args, "tensile_pinned", None) or ""
+    if not yes and tensile_policy == "pinned":
+        tensile_pinned = _ask("Pinned Tensile commit/SHA", tensile_pinned)
+    print(f"  ROCm flavour      : {flavour}")
+    print(f"  ROCm version      : {version_policy}" +
+          (f" ({pinned})" if version_policy == "pinned" else ""))
+    print(f"  Tensile version   : {tensile_policy}" +
+          (f" ({tensile_pinned})" if tensile_policy == "pinned" else ""))
+    print("  HIP/clang version : taken from the chosen SDK's amdclang++ --version")
+    print()
+    return {
+        "flavour": flavour,
+        "rocm_version_policy": version_policy,
+        "rocm_pinned_version": pinned,
+        "tensile_version_policy": tensile_policy,
+        "tensile_pinned": tensile_pinned,
+    }
 
 
 def _step_rocm_discovery(args, yes, dry_run):
@@ -275,7 +324,7 @@ def _step_client_build(rocm, tensile, targets, args, dry_run):
     return client_ok
 
 
-def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run):
+def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=None):
     if rocm is None or tensile is None:
         print("  skipping .env (no ROCm/Tensile prefix)")
         print()
@@ -292,7 +341,7 @@ def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run):
             print("  keeping existing .env")
             print()
             return
-    _write_env(rocm, tensile, codename, mode, spoof, targets)
+    _write_env(rocm, tensile, codename, mode, spoof, targets, prefs=prefs or {})
     print(f"  wrote {DOTENV}")
     print()
 
@@ -328,6 +377,10 @@ def _step_next_steps():
 def run_setup(args: Any) -> int:
     dry_run = bool(getattr(args, "dry_run", False))
     yes = bool(getattr(args, "yes", False))
+    # POSIX: interactive setup requires a TTY unless --yes/--dry-run.
+    if not yes and not dry_run and not sys.stdin.isatty():
+        sys.stderr.write("oto setup: stdin is not a TTY; pass --yes or --dry-run.\n")
+        return 2
 
     print("=" * 72)
     print("  oto easy-mode setup")
@@ -336,11 +389,14 @@ def run_setup(args: Any) -> int:
     print()
 
     mode, spoof = _step_convergence_mode(args, yes)
+    prefs = _step_toolchain_prefs(args, yes)
     rocm = _step_rocm_discovery(args, yes, dry_run)
     tensile = _step_tensile_discovery(args, yes)
     targets = _step_gpu_targets(args, yes)
     _step_client_build(rocm, tensile, targets, args, dry_run)
-    _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run)
+    _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=prefs)
     _step_verify(dry_run)
     _step_next_steps()
+    if (rocm is None or tensile is None) and not dry_run:
+        return 1
     return 0

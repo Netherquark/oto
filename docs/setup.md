@@ -30,13 +30,19 @@ python3 -m oto setup --dry-run    # prints the plan + the .env it would write; n
 | Step | Question | Default | Why the default |
 |---|---|---|---|
 | 1 | Convergence mode — blind or informed? | blind | Most new devices have no reference floor to beat; informed only when a shipped library exists |
-| 2 | Spoof (reference floor) GPU codename (informed only) | gfx900 | The shipped floor oto was built against |
-| 3 | ROCm install (auto-detected complete SDKs) | first found | Must be a full SDK (see §3) |
-| 4 | Tensile checkout (auto-detected) | first found | Must contain `Tensile/bin/Tensile` |
-| 5 | GPU targets for the client build | gfx90c | The gfx90c box; re-run for the target arch on the target machine |
-| 6 | Build the Tensile client? | yes | CPU-only, 2–5 min, never touches a GPU |
-| 7 | Write `.env`? | yes | Never overwrites without `--force` |
-| 8 | Verify (doctor + deck sanity) | automatic | Honest status, no fallbacks |
+| 2 | Spoof (reference floor) GPU codename (informed only) | gfx900 | The shipped floor oto was built against; the community-popular spoof |
+| 3 | ROCm flavour — python (TheRock venv) or opt (`/opt/rocm*`) | python | Must be a *full* SDK (see §3); python SDK is the tested path |
+| 4 | ROCm version policy — nightly or pinned | nightly | Nightly is what gfx90c was measured against; pin only to reproduce a prior run |
+| 5 | Pinned ROCm version (if pinned) | 7.15.0a20260728 | Recorded in `.env`; never re-derived |
+| 6 | Tensile version policy — nightly or pinned | pinned | The gfx902 bookkeeping landed at a specific rocm-libraries commit |
+| 7 | Pinned Tensile commit/SHA (if pinned) | (current checkout) | Recorded in `.env`; never re-derived |
+| 8 | HIP/clang version | (from SDK) | Taken from the chosen SDK's `amdclang++ --version` |
+| 9 | ROCm install (auto-detected complete SDKs) | first found | Must be a full SDK (see §3) |
+| 10 | Tensile checkout (auto-detected) | first found | Must contain `Tensile/bin/Tensile` |
+| 11 | GPU targets for the client build | gfx90c | The gfx90c box; re-run with `gfx902` on the target machine |
+| 12 | Build the Tensile client? | yes | CPU-only, 2–5 min, never touches a GPU |
+| 13 | Write `.env`? | yes | Never overwrites without `--force` |
+| 14 | Verify (doctor + deck sanity) | automatic | Honest status, no fallbacks |
 
 ## 3. The full-SDK rule (the thing that bites)
 
@@ -78,29 +84,4 @@ touching disk.
 
 ## 6. Troubleshooting
 
-See `docs/toolchain_client.md` for the toolchain contract and the client-build
-troubleshooting table. The most common failure modes:
-
-- `No complete ROCm SDK found` → install TheRock nightly or pass
-  `--rocm-prefix`.
-- `amd_smi cmake config not found` → the prefix has no amd_smi (ROCm 6.4.x);
-  use a 7.x SDK.
-- `amdclang(++) not found` → check the prefix's layout; the script searches
-  `lib/llvm/bin`, `llvm/bin`, the python-sdk layout, `lib64/rocm/llvm/bin`,
-  then `<prefix>/bin`.
-- Client build fails on `__AMDGCN_WAVEFRONT_SIZE` → partial-SDK shadowing
-  (§3 above).
-- `oto doctor` still reports FAIL after a successful build → the binary is at
-  `<TENSILE_ROOT>/build/client/tensile-client`; if `TENSILE_ROOT` changed,
-  pass `OTO_TENSILE_CLIENT=/path/to/tensile-client`.
-
-## 7. What this does not do
-
-- Does not download anything. Downloads are deliberate (1.6 GB tarballs,
-  nightly snapshots) and the script prints the exact command instead of
-  running it.
-- Does not modify `oto/`, `tests/`, or root shims. It writes `profiles/*`,
-  `docs/*_starter.*`, generated device docs, run artifacts, and (with
-  consent) `.env`.
-- Does not run the GPU. Every step is CPU-only.
-- Does not invent silicon facts. The starter pair refuses unverified profiles.
+See [`docs/toolchain_client.md`](toolchain_client.md) (troubleshooting section).
