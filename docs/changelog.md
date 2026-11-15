@@ -4898,3 +4898,21 @@ This content was preserved from the former harness runbook that referenced `/tmp
 - Ecosystem: see `docs/README.md` for the MD-docs-vs-docstrings boundary; layout and ownership now point at `oto/README.md` and `docs/developer/harness_runbook.md`.
 
 
+
+## November 2026
+
+- **2026-11-15 (56th) — GPU launch path fixed and the six CC candidate rows measured on silicon.**
+  `oto/runners/driver.py::_get_tensile_env` never exported the user-provided ROCm's
+  include directory; Tensile shells out to amdclang++ with no `-I`, so HIP headers
+  silently resolved to `/usr/include/hip` (the system ROCm 6.x headers) against a
+  nightly ROCm 7.15 toolchain — every GPU phase died at compile
+  (`__AMDGCN_WAVEFRONT_SIZE` undeclared). The env now pins `CPLUS_INCLUDE_PATH` /
+  `C_INCLUDE_PATH` to `<ROCM_PATH>/include` (never /usr); pinned by
+  `tests/test_toolchain.py::test_get_tensile_env_points_at_user_include`.
+  Re-run on gfx90c at ≤ 512³: all six CC candidates
+  (af4em4 @256/@512, paired-widen AF22 @256/@512, AF11 trialD1/base)
+  **PASS** — Tensile validation (`NumElementsToValidate=128`) `PASSED`, `clientExit=0`,
+  real per-problem CSVs recorded. Perf medians from this single uncontrolled
+  session are not a tuning verdict; the A/B remains TTY-gated.
+  `phases.yaml` gained the CC:256 paired-widen control row (`...swAssertFree0ElementMultiple2_...`),
+  fingerprinted as the deck does (`e99f3f...`, 281 rows, 0 illegal by `check candidates`).
