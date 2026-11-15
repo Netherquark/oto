@@ -1,4 +1,8 @@
 # Toolchain & client — how oto finds ROCm and builds `tensile-client`
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > Whoever fills this out is not guessing: there is exactly one resolver, one
 > contract, and one build script. A toolchain problem is a real problem with a

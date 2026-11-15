@@ -1,4 +1,8 @@
 # oto — agentic tuning context (gfx90c)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > oto is an agentic system. LLM agents (agent-1 / agent-2 / the consult
 > meta-agent) research, draft and propose — with directed prompts that cite

@@ -1,4 +1,8 @@
 # Research Brief — Complex-Precision GEMM on pre-MFMA GCN/Vega (gfx90c)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Scope.** Complex single/double GEMM (CGEMM/ZGEMM) on the pre-MFMA assembly path
 (Tensile → rocBLAS, ROCm < 4.5), targeting an AMD **gfx90c** APU: GCN5.1, 7 CU,

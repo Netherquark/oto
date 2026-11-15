@@ -1,4 +1,8 @@
 # Changelog — Tensile gfx90c port
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 The SINGLE changelog/evolution log for the project. One fact, one canonical home:
 milestone + rationale entries land here; they are never re-created elsewhere.

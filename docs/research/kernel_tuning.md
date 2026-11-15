@@ -1,4 +1,8 @@
 # Kernel tuning research — gfx90c (GCN5 / Vega-class APU)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 ## How this relates to the project
 

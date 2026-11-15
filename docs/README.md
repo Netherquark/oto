@@ -1,4 +1,8 @@
 # oto documentation ecosystem
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Two documentation systems live in this repo, and they are **not** the same
 thing. Confusing them is the failure mode this file exists to prevent.
@@ -73,6 +77,8 @@ Corollaries:
 
 | File | Class | Kind | Owns |
 |---|---|---|---|
+| `AGENTS.md` | shared | **Ecosystem (root)** | Tier 0 agent entry (identity, constraints, commands, index pointer) |
+| `docs/invariants.md` | dev | Ecosystem | Tier 1 full developer operating contract (moved from claude.md) |
 | `claude.md` | shared | **Ecosystem (root)** | The entry contract, routing, authority rules, guardrails |
 | `README.md` | shared | Ecosystem | General repository orientation |
 | `docs/README.md` | shared | **This file** — the boundary and the registry itself |
@@ -115,6 +121,7 @@ Corollaries:
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
 | `docs/gfx902_blind_convergence.md` | operator | Ecosystem | End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |
+| `docs/developer_ecosystem_plan.md` | dev | Ecosystem | Read-only plan for reshaping the developer (Class A) docs ecosystem |
 | `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
 | `docs/documentation_tooling_options.md` | dev | Ecosystem | Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |

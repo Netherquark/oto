@@ -1,4 +1,8 @@
 # oto
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Recovering ROCm functionality for unsupported AMD GPUs.**
 

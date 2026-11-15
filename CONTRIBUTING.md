@@ -1,4 +1,8 @@
 # Contributing to oto
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Thanks for helping. This document is the practical path from a fresh clone to a
 review-ready change.
@@ -38,6 +42,18 @@ own commit.
   never a silenced check.
 - `incomplete_work.md` tracks **open** items; finished work moves to
   `changelog.md`.
+
+## Docs-first (update docs in the same change)
+
+| If you change | Update |
+|---|---|
+| `oto/**/*.py` | module docstring; `docs/cli.md` if flags/help change |
+| `docs/*.md` | `docs/README.md` registry row + `oto agent index` |
+| `tests/` | keep suite green |
+| `AGENTS.md` / `docs/invariants.md` | keep Tier-0 ≤ 60 lines |
+
+Do not create new `.md` files without a registry row; edit the existing doc
+for that surface.
 
 ## Where things live
 

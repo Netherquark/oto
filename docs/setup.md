@@ -1,4 +1,8 @@
 # Easy-mode onboarding — preparing oto for a new device
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **Class B document.** Read this if you are a human (or an agent) bringing
 > oto up on a GPU it has never seen. It is the answer to "what do I run,

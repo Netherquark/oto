@@ -1,4 +1,8 @@
 # Documentation tooling options for oto
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Decision support for: how to render oto's code-level (docstring) and
 ecosystem-level (Markdown) documentation into something browsable. Pick one,

@@ -1,4 +1,8 @@
 # Blind, uninformed convergence on gfx902 — end to end
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Class B document.** This is the worked end-to-end recipe for producing a
 best-effort Tensile library for **gfx902** starting from *nothing*: no

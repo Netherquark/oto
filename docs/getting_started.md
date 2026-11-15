@@ -1,4 +1,8 @@
 # Getting started with oto
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 The full guide to bringing oto up on a box, running a campaign, and
 producing a best-effort library. For the birds-eye view of the project

@@ -1,4 +1,8 @@
 # Class B — Operator Agent Skill
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Entry**: `docs/skills/caveman.md` (token-efficient style, optional) → `docs/operator_runbook.md` → `docs/starter_pair.md` → `docs/starter_template.md` → `docs/operator_campaign.md` (the tuning campaign)
 

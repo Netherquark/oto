@@ -1,4 +1,8 @@
 # Adversarial Review: user-run expert audit of the oto repo
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Purpose:** this file owns the **user-run external expert-agent review** of the
 repository. It is NOT a driver-internal quality gate. When the user wants a

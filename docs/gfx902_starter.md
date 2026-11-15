@@ -1,4 +1,8 @@
 # gfx902 starter — narrative half of the pair
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 # Pair: docs/gfx902_starter.md + docs/gfx902_starter.json
 # Facts live in the .json and in profiles/gfx902.json (once verified).
 # See docs/starter_pair.md.

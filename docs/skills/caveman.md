@@ -1,4 +1,8 @@
 # Caveman — token-efficient communication for oto agents
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Entry**: `vendor/caveman/skills/caveman/SKILL.md` (git submodule, upstream:
 [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman), Apache-2.0).

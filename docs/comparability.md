@@ -1,4 +1,8 @@
 # Multi-run / single-run comparability — the like-for-like rule
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Status: triage complete; fixes landed in `f6aef2c` (R2-C7).** This doc records
 what was wrong, what was fixed, how the rule works today, and what residual

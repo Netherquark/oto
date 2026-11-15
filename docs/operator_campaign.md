@@ -1,4 +1,8 @@
 # The oto operator campaign — multi-session tuning procedure
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **Companion to, not replacement for, [`docs/operator_runbook.md`](operator_runbook.md).**
 > The runbook is the contract + verification matrix + never-do list.

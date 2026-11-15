@@ -1,4 +1,8 @@
 # oto — Design Brief
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 The compact statement of what oto is for and how it behaves. The normative
 contract for the driver's acceptance path lives in `docs/search_philosophy.md`;

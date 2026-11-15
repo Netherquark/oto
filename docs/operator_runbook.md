@@ -1,4 +1,8 @@
 # oto operator runbook — a best-effort Tensile library on an unsupported AMD platform
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Class B document.** Read this if you are an agent operating oto against a
 GPU oto has never seen, or a human supervising that agent. If you are a

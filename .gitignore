@@ -117,3 +117,4 @@ logs/
 dist/
 .mypy_cache/
 .tox/
+logs/

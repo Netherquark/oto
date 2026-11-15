@@ -1,4 +1,8 @@
 # oto — documentation overview
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 The birds-eye view of the oto documentation ecosystem. Every document in the
 repo, what it is for, who reads it, and in what order. The machine-readable

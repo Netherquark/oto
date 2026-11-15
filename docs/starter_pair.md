@@ -1,4 +1,8 @@
 # Adding a device: the Markdown+JSON starter pair
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 oto is a device-independent port. A new device enters through a
 **starter pair**, never through a code edit:

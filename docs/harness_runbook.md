@@ -1,4 +1,8 @@
 # harness — agentic kernel-tuning harness (CPU-only)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **Scope:** harness machinery guardrails and candidate workflows. For the
 > CPU-only command card, see [`docs/agent_reference.md`](agent_reference.md).

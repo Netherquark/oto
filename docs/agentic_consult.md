@@ -1,4 +1,8 @@
 # Agentic consult — automated potential_configs synthesis
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Class A (developer) — the design for automating `potential_configs.md` generation
 for a new device, from a starter file + an API key, with the least possible GPU

@@ -1,4 +1,8 @@
 # Device limits & ceilings — template (populated by the agent per device)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **TEMPLATE — copy and fill per device.** Do not edit the golden example; populate this file for your target.
 

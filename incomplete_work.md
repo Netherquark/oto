@@ -1,4 +1,8 @@
 # Incomplete Work register (open items only)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Completed work lives in `changelog.md` and the docs ecosystem; decisions live
 in `docs/`. This file retains only items that are genuinely still open. Do

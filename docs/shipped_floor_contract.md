@@ -1,4 +1,8 @@
 # docs/shipped_floor_contract.md — Shipped gfx900 footprint → native gfx90c replication contract
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Status: **ground truth extracted + replication contract; oto uses this to emit native family phases.**
 Floor: 2,285

@@ -1,4 +1,8 @@
 # Design Language: Enterprise Dashboard
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Use this context when restyling basic static HTML dashboards. Target exact visual
 language below, not a generic "modern enterprise" approximation.

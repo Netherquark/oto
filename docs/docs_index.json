@@ -56,6 +56,18 @@
     {
       "class": "shared",
       "kind": "**Ecosystem (root)**",
+      "owns": "Tier 0 agent entry (identity, constraints, commands, index pointer)",
+      "path": "AGENTS.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Tier 1 full developer operating contract (moved from claude.md)",
+      "path": "docs/invariants.md"
+    },
+    {
+      "class": "shared",
+      "kind": "**Ecosystem (root)**",
       "owns": "The entry contract, routing, authority rules, guardrails",
       "path": "claude.md"
     },
@@ -290,6 +302,12 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
+      "owns": "Read-only plan for reshaping the developer (Class A) docs ecosystem",
+      "path": "docs/developer_ecosystem_plan.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
       "owns": "The dev loop: setup, suite, verifier, GPU policy, commit discipline",
       "path": "CONTRIBUTING.md"
     },
@@ -301,6 +319,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 41,
+  "total": 44,
   "version": 1
 }

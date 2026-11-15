@@ -1,4 +1,8 @@
 # Benchmark Results: gfx90c (Cezanne-family APU iGPU)
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **GOLDEN EXAMPLE (gfx90c) — do not edit for a new device; copy the template instead.**
 

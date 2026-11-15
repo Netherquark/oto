@@ -1,4 +1,8 @@
 # Agentic Kernel-Tuning Harness Reference
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 > **Scope:** CPU-only command card. For harness guardrails, see
 > [`docs/harness_runbook.md`](harness_runbook.md).

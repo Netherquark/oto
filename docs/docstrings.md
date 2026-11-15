@@ -1,4 +1,8 @@
 # The docstring convention
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 Applies to every module, class and function in `oto/`. The boundary this sits
 under is `docs/README.md` — read that first if you are unsure whether a fact is

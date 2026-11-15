@@ -1,4 +1,8 @@
 # Class A — Developer Agent Skill
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 
 **Entry**: `docs/skills/caveman.md` (optional) → `claude.md` → `docs/agent_reference.md` → `docs/docstrings.md`
 

@@ -1,4 +1,8 @@
 # <codename> starter — machine briefing for any tuning agent
+owner: oto maintainer
+last-reviewed: 2026-11-15
+review-interval: 90d
+
 # Pair: docs/<codename>_starter.md + docs/<codename>_starter.json
 # The JSON half is the profile oto loads; this file is the context an agent
 # (human or AI) gets BEFORE hunting for facts. See docs/starter_pair.md.
