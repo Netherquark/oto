@@ -22,7 +22,7 @@ def like_escape(text: str) -> str:
 
 
 class QueryMixin:
-    """The registry's read side: records, phases and run lookups, mixed into SQLiteRegistry."""
+    """The registry's read side: records, phases and run lookups, mixed into `oto.ledger.registry.SQLiteRegistry`."""
 
 
     def run_row(self, run_id: str) -> sqlite3.Row | None:
@@ -42,12 +42,8 @@ class QueryMixin:
         """
         Append a single record to the ledger.
 
-        Args:
-            record: Dictionary to serialize as JSON
-            run_id: Run identifier
-
-        Returns:
-            Record ID
+        `record` is the dictionary to serialize as JSON; `run_id` is the run
+        identifier. Returns the new record ID.
         """
         record_type = record.get("type", "general")
         with self._writing() as conn:
@@ -68,13 +64,8 @@ class QueryMixin:
         """
         Read records with optional filtering.
 
-        Args:
-            run_id: Optional run ID filter
-            record_type: Optional record type filter
-            limit: Optional result limit
-
-        Returns:
-            List of parsed dictionaries
+        `run_id`, `record_type` and `limit` are optional filters; returns the
+        list of parsed dictionaries.
         """
         with self._get_conn() as conn:
             query = "SELECT data FROM records WHERE 1=1"
@@ -100,13 +91,9 @@ class QueryMixin:
         """
         Append a phase with deduplication by fingerprint.
 
-        Args:
-            phase_id: Phase identifier
-            fingerprint: Config fingerprint
-            phase_data: Phase configuration
-
-        Returns:
-            Phase ID (or existing ID if duplicate)
+        `phase_id` is the phase identifier; `fingerprint` is the config
+        fingerprint; `phase_data` is the phase configuration. Returns the new
+        phase ID (or the existing ID when a duplicate was appended).
         """
         with self._writing() as conn:
             # Check for existing phase with same fingerprint or phase_id
@@ -252,8 +239,7 @@ class QueryMixin:
         """
         Mark any 'started' runs as 'interrupted' (orphans from prior crash/Ctrl+C).
 
-        Returns:
-            Number of runs cleaned up
+        Returns the number of runs cleaned up.
         """
         with self._writing() as conn:
             cursor = conn.execute(

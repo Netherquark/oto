@@ -159,7 +159,10 @@ class RegistryCore:
 
     def __init__(self, base_dir: Path, read_only: bool = False,
                  auto_rebuild_kernel_db: bool = True, profile=None):
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """Bind the ledger to `base_dir`; the DB path resolves from the ambient (or passed) profile.
+
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
+        """
         self.base_dir = Path(base_dir)
         self.results_dir = _results_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
         self.runs_dir = _runs_dir(self.base_dir, _loader.resolve_profile(profile,).codename)
@@ -259,14 +262,11 @@ class RegistryCore:
         phase writer truncates those files, so reusing a populated run_id would
         destroy a previous run's measurements in place. A collision raises
         instead; callers that genuinely mean to continue an existing run must
-        say so with allow_existing.
+        say so with ``allow_existing``.
 
-        Args:
-            run_id: Optional custom run ID
-            allow_existing: permit reuse of an existing directory
-
-        Returns:
-            Path to the new run directory
+        Accepts an optional custom ``run_id`` (default: a timestamped one) and
+        an ``allow_existing`` flag to permit reuse of an existing directory.
+        Returns the path to the new run directory.
         """
         if run_id is None:
             run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -302,10 +302,8 @@ class RegistryCore:
         """
         Update run status and metadata.
 
-        Args:
-            run_id: Run identifier
-            status: New status
-            metadata: Optional metadata dict
+        `run_id` is the run identifier; `status` is the new status;
+        `metadata` is an optional metadata dict.
         """
         with self._writing() as conn:
             if metadata:
@@ -368,13 +366,8 @@ def fingerprint_config(config: dict[str, Any]) -> str:
     """
     Generate a canonical fingerprint for a Tensile config.
 
-    Uses JSON with sorted keys for deterministic output.
-
-    Args:
-        config: Tensile config dictionary
-
-    Returns:
-        SHA256 hex digest
+    Uses JSON with sorted keys for deterministic output. Accepts a Tensile
+    config dict and returns the SHA256 hex digest.
     """
     import hashlib
     canonical = json.dumps(config, sort_keys=True)

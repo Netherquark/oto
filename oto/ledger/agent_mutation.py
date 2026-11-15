@@ -34,7 +34,7 @@ class MutateMixin:
     ) -> tuple[list[CandidateConfig], list[dict[str, Any]], int, list[str]]:
         """Mutate one cell's winner.
 
-        Returns (new_candidates, replayed, rejected_count, ungraded_cells).
+        Returns ``(new_candidates, replayed, rejected_count, ungraded_cells)``.
         ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
         """
         family = str(winner_info.get("family",) or "").upper()
@@ -126,7 +126,7 @@ class MutateMixin:
         retired_cells: list[str],
         lattice_fallbacks: list[str],
     ) -> tuple[list[dict], list[str], str | None]:
-        """Prepare mutants and sweep shapes for a cell. Returns (mutants, sweep_shapes, cell_state)."""
+        """Prepare the mutant draws and sweep shapes for one cell; returns ``(mutants, sweep_shapes, cell_state)``."""
         sweep_shapes: list[str] = []
         cell_state = None
         if self.mutator is not None:
@@ -179,7 +179,7 @@ class MutateMixin:
         mutant: dict[str, Any],
         winner_info: dict[str, Any],
     ) -> str:
-        """Validate candidate and record rejection if invalid. Returns 'invalid' or 'ok'."""
+        """Validate one candidate, recording the rejection when it fails; returns ``'invalid'`` or ``'ok'``."""
         is_valid, reason = self.generator.validate_config({**template, **mutant})
         if not is_valid and self.mutator:
             self.mutator.registry.record_proposal(
@@ -199,7 +199,7 @@ class MutateMixin:
         return "ok"
 
     def _check_novelty(self, candidate: CandidateConfig) -> bool:
-        """Check if candidate is novel. Returns True if novel, False if rejected."""
+        """Check whether one candidate is novel; `True` when it is, `False` when it was rejected as known."""
         return not (self.mutator and self.mutator.is_novel(candidate.fingerprint) is False)
 
     def _record_candidate_phase(
@@ -265,7 +265,7 @@ class MutateMixin:
         ungraded_cells: list[str],
         cell_key: str,
     ) -> str:
-        """Process a single mutant. Returns status: 'ok', 'rejected_non_novel', or 'invalid'."""
+        """Process a single mutant; returns the status: ``'ok'``, ``'rejected_non_novel'``, or ``'invalid'``."""
         template = self._build_template(family, data_type)
         shapes_for_candidate = sweep_shapes if len(sweep_shapes) >= 2 else [shape]
         candidate = self.generator.emit_candidate(

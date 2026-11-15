@@ -54,6 +54,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         mutator=None,
         band_pct: float | None = None
     ):
+        """Wire the loop's participants; no measurement happens here."""
         self.base_dir = Path(base_dir)
         self.generator = scheduler
         self.analytics = analytics
@@ -213,7 +214,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         ]
 
     def _check_budget(self, budget_remaining: int, below_ceiling_cells: list) -> ConvergenceVerdict | None:
-        """Check if budget is exhausted. Returns verdict if exhausted, None otherwise."""
+        """Budget exhaustion stop: a `ConvergenceVerdict` when `budget_remaining` is spent, else ``None``."""
         if budget_remaining <= 0:
             return ConvergenceVerdict(
                 converged=False,
@@ -261,7 +262,7 @@ class ConvergenceAgent(HarvestMixin, CoverageMixin, MutateMixin):
         budget_remaining: int
     ) -> ConvergenceVerdict:
         """
-        Check if the campaign has converged.
+        Decide whether the campaign has converged.
 
         Convergence criteria (ALL MUST HOLD):
         1. No below-ceiling ALU compute cells vs realistic ceilings.

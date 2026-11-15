@@ -2,7 +2,7 @@
 """The ledger-backed mutation arm: sampling, emission, outcome write-back, overlay.
 
 Owns: ``Mutator`` -- the composition root over the outcome classifier
-(:class:`MutatorOutcomesMixin`), plus its own sampling, emission, outcome
+(``MutatorOutcomesMixin``), plus its own sampling, emission, outcome
 write-back, negative cache and per-run overlay read/write.
 Does NOT own: the convergence loop that drives it (`oto.ledger.convergence_agent`), the
 candidate sampler that produces knobs (`oto.tensile.synthesis`), or the registry
@@ -110,6 +110,7 @@ class Mutator(MutatorOutcomesMixin):
         seed: int = 0,
         reference_slow: bool = True,
     ):
+        """Store the registry/analytics and the cache knobs; no DB or corpus is touched until first use."""
         self.registry = registry
         self.base_dir = Path(base_dir)
         self.analytics = analytics or AnalyticsEngine(registry, self.base_dir)
@@ -420,12 +421,14 @@ class Mutator(MutatorOutcomesMixin):
         return self._consecutive_failures.get(parent_fp, 0) >= self.negative_cache_k
 
     def consecutive_failures(self, parent_fp: str) -> int:
+        """Consecutive non-functional outcomes recorded for `parent_fp` (0 when none)."""
         return self._consecutive_failures.get(parent_fp, 0)
 
     # -- overlay ------------------------------------------------------
 
     @property
     def overlay_name(self) -> str:
+        """The fixed overlay filename, `phases.overlay.yaml`."""
         return "phases.overlay.yaml"
 
     def write_overlay(self, candidates: Sequence[dict[str, Any]], run_id: str | None = None, profile=None) -> Path:
