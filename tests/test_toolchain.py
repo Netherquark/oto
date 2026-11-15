@@ -133,3 +133,32 @@ def test_explicit_compiler_env_missing_path_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("TENSILE_CXX_COMPILER", "/nonexistent/amdclang++")
     with pytest.raises(ValueError, match="TENSILE_CXX_COMPILER"):
         toolchain.resolve_rocm_paths()
+
+
+def test_get_tensile_env_points_at_user_include(tmp_path, monkeypatch):
+    """Tensile shells out to amdclang++ with no -I for HIP; the subprocess
+    environment must carry the user-provided ROCm's include directory so
+    #include <hip/...> never resolves to /usr/include/hip.
+    """
+    import oto.runners.driver as pt
+
+    prefix = tmp_path / "sdk"
+    (prefix / "bin").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "bin").mkdir(parents=True)
+    (prefix / "include" / "hip" / "amd_detail").mkdir(parents=True)
+    (prefix / "lib" / "llvm" / "bin" / "amdclang++").write_text("# amdclang++\n")
+    monkeypatch.delenv("ROCM_BIN", raising=False)
+    monkeypatch.delenv("ROCM_LLVM_BIN", raising=False)
+    monkeypatch.delenv("TENSILE_ASSEMBLER", raising=False)
+    monkeypatch.delenv("CPLUS_INCLUDE_PATH", raising=False)
+    monkeypatch.delenv("C_INCLUDE_PATH", raising=False)
+    monkeypatch.setenv("ROCM_PATH", str(prefix))
+
+    class _Stub(pt.TensileDriver):
+        pass
+
+    drv = _Stub.__new__(_Stub)
+    drv.tensile_root = prefix
+    env = pt.TensileDriver._get_tensile_env(drv)
+    assert str(prefix / "include") in env["CPLUS_INCLUDE_PATH"].split(":")
+    assert str(prefix / "include") in env["C_INCLUDE_PATH"].split(":")

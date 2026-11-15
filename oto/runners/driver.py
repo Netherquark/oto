@@ -303,6 +303,18 @@ class TensileDriver(
                         if os.path.isdir(p) and p not in current_path]
         if paths_to_add:
             env["PATH"] = f"{':'.join(paths_to_add)}:{current_path}"
+
+        # Explicitly point the compiler at the user-provided ROCm's headers.
+        # Tensile shells out to amdclang++ with no -I for HIP, so the compiler
+        # otherwise falls back to /usr/include/hip (the system ROCm headers),
+        # mixing versions against a nightly toolchain (the build dies on
+        # __AMDGCN_WAVEFRONT_SIZE, which the system 6.x headers reference and
+        # the nightly SDK defines). Never guess the system tree.
+        inc = os.path.join(rocm["ROCM_PATH"], "include")
+        if os.path.isdir(inc):
+            for key in ("CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH"):
+                existing = env.get(key, "")
+                env[key] = f"{inc}{':' + existing if existing else ''}"
         return env
     def run_preflight(self) -> bool:
         """
