@@ -104,11 +104,11 @@ FAILs is the bar, and it's what this repo's docs assert.
 
 ## See also
 
-`docs/operator_runbook.md` — the operator SOP; `docs/search_philosophy.md`;
+`docs/operator_runbook.md` — the operator SOP; `docs/invariants.md`;
 `.env.example` — the layout reference for each key.
 
 
-## Troubleshooting (from setup.md)
+## Troubleshooting (from getting_started)
 
 
 

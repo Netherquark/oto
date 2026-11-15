@@ -12,7 +12,7 @@ review-interval: 90d
 > first — its §5 ceilings = acceptance bar.
 > Cite keys: **L**=docs/gfx90c_theoretical_limits.md, **P**=docs/gfx90c_tuning_guide.md §13 (the absorbed potential_configs.md; off-repo citations resolve via the map in `docs/potential_configs.md` §10),
 > **K**=kernel_db.json (`oto/harness/kernel_db.py`), **O**=oto/device/loader.py,
-> **D**=docs/implementation_plan.md, **M**=oto/harness/vgpr_measurement.py,
+> **D**=docs/invariants.md, **M**=oto/harness/vgpr_measurement.py,
 > **C**=oto/harness/cell_knob_diff.py. Numbers below = kernel_db post-2026-10-09
 > rebuild (all runs folded), typecode-filtered, median-of-seeds per cell.
 > §11 = loop for proposing next candidate.
@@ -1497,7 +1497,7 @@ kernel result.
 
 The 2026-10-19 GCN5 GEMM literature review (mechanisms in
 `docs/research/kernel_tuning.md` §3.4/§4/§5/§8.7, `docs/research/complex_gemm_brief.md`
-§5–§11, `docs/search_philosophy.md` §S) proposes an eight-step order. It is **not a
+§5–§11, `docs/invariants.md` §S) proposes an eight-step order. It is **not a
 new plan** — every step is already a route or a probe; this maps it and marks the
 steps this port cannot reach:
 
@@ -1523,11 +1523,11 @@ steps this port cannot reach:
    workspace, StreamK MFMA-gated) → background. **Not reachable.**
 8. **Tuner: legality/resource prune → mechanism-diverse shortlist → (surrogate
    selection) → replicate → statistical tie policy** — the prune + mechanism-diverse
-   shortlist is Stage 0–2 (`docs/search_philosophy.md` §S); **surrogate selection is
+   shortlist is Stage 0–2 (`docs/invariants.md` §S); **surrogate selection is
    declined by policy**. **Partly reachable.**
 
 The one literature finding that lands directly on the current straggler:
-**14–25 configs/cell is a *small* shortlist** (`docs/search_philosophy.md` §S item 7),
+**14–25 configs/cell is a *small* shortlist** (`docs/invariants.md` §S item 7),
 and the near-duplicate failure mode is exactly the ZZ cell's 5 distinct geometries
 (§R28). The steps above therefore re-rank the existing routes by the anomaly's
 expected value; they add no route that §R26–§R30 did not already carry.
@@ -3048,7 +3048,7 @@ launch. Agent work is CPU-only — deck generation, dry-run, gate checks.
 
 The pass-3 brief (Q-A…Q-F) is folded; residual follow-ups are §9.4 of
 `docs/research/kernel_tuning.md` and the protocol deltas are `docs/gfx90c_knowledge_base.md`
-§8.3. The prompts themselves are archived at `archive/` (untracked on disk; see §18 of `docs/operator_campaign.md`).
+§8.3. The prompts themselves are archived at `archive/` (untracked on disk; see §18 of `docs/operator_runbook.md`).
 
 ---
 
@@ -4598,7 +4598,7 @@ disk in `archive/` and are no longer tracked. Resolution record:
 | `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §§1–9 + `docs/gfx90c_theoretical_limits.md` §5 (roofs) | ridge/roofline tables, wave-quantization 7-CU study, autotuning-method census |
 | `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §3.4, §4, §8, §9.3; `docs/gfx90c_tuning_guide.md` §1.1–§1.2; `docs/gfx90c_theoretical_limits.md` §7 | UseSgprForGRO conditional; stagger mechanism; `MaxOccupancy` LDS-floor rule; `AggressivePerfMode=2` unverified |
 | `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus3.pass3_20261014.md`, untracked) | `docs/research/kernel_tuning.md` §8.1; this guide §1.1 | DirectToLds 4-byte rule (illegal for CC/ZZ/DD); SIA 2/3 rejected non-MI; `StoreRemapVectorWidth` dead; `ScheduleIterAlg` 0/1 only; WGM = traversal block, not CU count; DepthU divisibility rules |
-| `docs/operator_campaign.md` §18 (`archive/RESEARCH_PROMPT3.pass3_20261014.md`, untracked) | the research-prompt workflow (see `docs/operator_campaign.md` §18) and `docs/research/kernel_tuning.md` fold record | the audit-question method: `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` evidence labels |
+| `docs/operator_runbook.md` §18 (`archive/RESEARCH_PROMPT3.pass3_20261014.md`, untracked) | the research-prompt workflow (see `docs/operator_runbook.md` §18) and `docs/research/kernel_tuning.md` fold record | the audit-question method: `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` evidence labels |
 | `docs/gfx90c_tuning_guide.md` §13 (`archive/potential_configs.pre_rewrite_20261014.md`, superseded) | fully superseded — every rewrite is preserved earlier in this §13 | the 2026-10-10 state of this document |
-| `research_prompt_v2.txt` (on disk, archived) | the file:line coupling-audit method (Round 2 of the research-prompt discipline, `docs/operator_campaign.md` §18) |
+| `research_prompt_v2.txt` (on disk, archived) | the file:line coupling-audit method (Round 2 of the research-prompt discipline, `docs/operator_runbook.md` §18) |
 

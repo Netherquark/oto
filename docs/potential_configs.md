@@ -156,7 +156,7 @@ never widen a band to close a verdict.
 
 Map the literature's order before spending GPU time. Suggested sequence
 (mechanisms: `docs/research/kernel_tuning.md`, `docs/research/complex_gemm_brief.md`,
-`docs/search_philosophy.md`):
+`docs/invariants.md`):
 
 1. Small-shape band first — it is where a floor tuned for a big part loses by
    20–100 % and the gains are cheapest.

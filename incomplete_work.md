@@ -16,7 +16,7 @@ not re-raise closed items without new information.
   device that is not on this box. Class-B flow rehearsed on a synthetic stub
   (`tests/test_class_b_rehearsal.py`, 16 tests); CPU-side toolchain ready
   (`ISA_TRIPLES` carries gfx902; Tensile client builds). Unblocking needs
-  only the key + the human gate. See `docs/gfx902_blind_convergence.md`.
+  only the key + the human gate. See `docs/starter_pair.md`.
 - **CC:512/256 `AssertFree0/1ElementMultiple=4` A/B — TTY-gated.**
   GPU legality verified (all 11 probes pass Tensile's
   `NumElementsToValidate=128` reference on gfx90c); the two AF4/4 rows ship

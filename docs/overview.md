@@ -22,39 +22,39 @@ three ecosystems. If a document tries to serve two, it serves neither.
 ### Human ecosystem
 Vision → setup → bring-up gate → failure modes. No agent-role jargon.
 - [`README.md`](../README.md), [`docs/getting_started.md`](getting_started.md),
-  [`docs/setup.md`](setup.md), [`docs/toolchain_client.md`](toolchain_client.md),
+  [`docs/getting_started.md`](getting_started.md), [`docs/toolchain_client.md`](toolchain_client.md),
   [`docs/cli.md`](cli.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md),
   `LICENSE`, `NOTICE`.
 
 ### Operator ecosystem (Class B)
 Bring-up → starter pair → campaign → verification matrix.
 - [`docs/operator_runbook.md`](operator_runbook.md) (contract + matrix),
-  [`docs/operator_campaign.md`](operator_campaign.md) (long-form campaign),
+  [`docs/operator_runbook.md`](operator_runbook.md) (long-form campaign),
   [`docs/starter_pair.md`](starter_pair.md), `docs/starter_template.md` /
   `.json`, `docs/gfx902_starter.md` / `.json` (worked example),
-  `docs/gfx902_blind_convergence.md`, `docs/agent_reference.md`,
-  `docs/harness_runbook.md`, `docs/setup.md` (shared).
+  `docs/starter_pair.md`, `docs/harness_runbook.md`,
+  `docs/harness_runbook.md`, `docs/getting_started.md` (shared).
 
 ### Developer ecosystem (Class A)
 Invariants → docstrings → implementation plan → harness.
 - [`AGENTS.md`](../AGENTS.md) (Tier 0), [`docs/invariants.md`](invariants.md)
   (Tier 1, full contract), [`claude.md`](../claude.md) (thin pointer),
-  [`docs/implementation_plan.md`](implementation_plan.md),
+  [`docs/invariants.md`](invariants.md),
   [`docs/harness_runbook.md`](harness_runbook.md),
-  [`docs/agent_reference.md`](agent_reference.md),
+  [`docs/harness_runbook.md`](harness_runbook.md),
   [`docs/docstrings.md`](docstrings.md),
-  [`docs/agentic_consult.md`](agentic_consult.md),
-  [`docs/comparability.md`](comparability.md),
-  [`docs/shipped_floor_contract.md`](shipped_floor_contract.md),
-  [`docs/search_philosophy.md`](search_philosophy.md),
+  [`docs/invariants.md`](invariants.md),
+  [`docs/gfx90c_results.md`](gfx90c_results.md),
+  [`docs/invariants.md`](invariants.md),
+  [`docs/invariants.md`](invariants.md),
   [`docs/design_language.md`](design_language.md),
-  [`docs/documentation_tooling_options.md`](documentation_tooling_options.md),
+  [`docs/docstrings.md`](documentation_tooling_options.md),
   [`docs/potential_configs.md`](potential_configs.md),
   [`docs/audit_register.md`](audit_register.md).
 
 ### Shared across ecosystems
 - `docs/README.md` (registry), `docs/docs_index.json`, `docs/overview.md` (this
-  file), `docs/cli.md`, `docs/setup.md`, `docs/toolchain_client.md`.
+  file), `docs/cli.md`, `docs/getting_started.md`, `docs/toolchain_client.md`.
 
 ## Golden case study + templates
 `docs/gfx90c_*.md` (golden, do-not-edit) ↔ device-independent twins

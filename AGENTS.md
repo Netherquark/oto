@@ -44,4 +44,4 @@ machine version. Do **not** create new `.md` files without a registry row.
 3. `docs/README.md` (registry)
 4. The owner MD for your task
 
-No feature designs here; see `docs/implementation_plan.md`.
+No feature designs here; see `docs/invariants.md`.

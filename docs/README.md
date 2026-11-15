@@ -37,7 +37,7 @@ one defaults to the wrong entry document. Pick first, then read.
 | Class | Who | Entry document | Optimises for |
 |---|---|---|---|
 | **A — developer** | coding agent working **on** oto | `claude.md` | the codebase itself |
-| **B — operator** | agent **using** oto to produce a library for an unsupported platform | `docs/operator_runbook.md` (then [`docs/operator_campaign.md`](operator_campaign.md) for the tuning campaign) | a best-effort library for the target device, then a converged one |
+| **B — operator** | agent **using** oto to produce a library for an unsupported platform | `docs/operator_runbook.md` (then `docs/operator_runbook.md` (the tuning campaign) for the tuning campaign) | a best-effort library for the target device, then a converged one |
 
 Both classes share: this file's boundary (below), `claude.md`'s invariants
 (§2.0), the append-only ledger, the no-GPU-outside-the-user's-TTY rule, and
@@ -51,15 +51,15 @@ serves — `dev`, `operator`, or `shared`.
 
 | Agent role | Entry doc (read first) | Then | Never needs |
 |---|---|---|---|
-| Class A — coding agent working **on** oto | `claude.md` | `docs/agent_reference.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `docs/implementation_plan.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
+| Class A — coding agent working **on** oto | `claude.md` | `docs/harness_runbook.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `docs/invariants.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
 | Class A — reviewer/auditor subagent | `docs/audit_register.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
-| Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) → `docs/operator_campaign.md` (the tuning campaign) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
+| Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) and the campaign section (multi-session tuning) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
 | Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`docs/gfx90c_theoretical_limits.md`, `docs/gfx90c_tuning_guide.md` and their siblings), `docs/potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
-| Any agent, any class | `docs/comparability.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
+| Any agent, any class | `docs/gfx90c_results.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
 
 Class rules that follow from the map: a Class A agent that starts from
 `docs/operator_runbook.md` has picked the wrong entry; a Class B agent that
-opens `docs/implementation_plan.md` is reading the dev loop, not its own. Both
+opens `docs/invariants.md` is reading the dev loop, not its own. Both
 classes register every doc they add here, with the right `Class` value.
 
 ## The boundary, stated as a test
@@ -92,9 +92,9 @@ Corollaries:
 | `docs/README.md` | shared | **This file** — the boundary and the registry itself |
 | `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
-| `docs/implementation_plan.md` | dev | Ecosystem | The design brief: two loops, one rule (deterministic acceptance path; LLM proposes, never decides) |
-| `docs/agentic_consult.md` | dev | Ecosystem | Automated agentic consult: starter + API key → potential_configs.md with the least GPU-trial budget (`oto agent consult` implemented; GPU proof pending) |
-| `docs/shipped_floor_contract.md` | shared | Ecosystem | The shipped-footprint replication contract |
+| `docs/invariants.md` | dev | Ecosystem | The design brief: two loops, one rule (deterministic acceptance path; LLM proposes, never decides) |
+| `docs/invariants.md` | dev | Ecosystem | Automated agentic consult: starter + API key → potential_configs.md with the least GPU-trial budget (`oto agent consult` implemented; GPU proof pending) |
+| `docs/invariants.md` | shared | Ecosystem | The shipped-footprint replication contract |
 | `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings (gfx90c), the acceptance authority — gfx90c golden example of `docs/theoretical_limits.md` |
 | `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The one gfx90c-specific doc: the tuning cookbook + the full bring-up case study (§13, the absorbed potential_configs.md) |
 | `docs/research/kernel_tuning.md` | shared | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
@@ -108,29 +108,28 @@ Corollaries:
 | `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | dev | Ecosystem | Open-work register |
 | `docs/gfx90c_tuning_guide.md` §14 | shared | Ecosystem (frozen) | Prior-campaign conclusions, results only (absorbed verbatim; archive left git) |
-| `docs/search_philosophy.md` | shared | Ecosystem | Agentic tuning philosophy (incl. §S the autotuning strategy cross-check) |
+| `docs/invariants.md` | shared | Ecosystem | Agentic tuning philosophy (incl. §S the autotuning strategy cross-check) |
 | `docs/audit_register.md` | dev | Ecosystem | Audit register |
 | `docs/gfx90c_tuning_guide.md` §15 | shared | Ecosystem (frozen) | Corpus-pass audit trail — evidence snapshots, not docs (archive left git) |
-| `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
+| `docs/gfx90c_results.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
-| `docs/agent_reference.md` | dev | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
+| `docs/harness_runbook.md` | dev | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |
 | `docs/toolchain_client.md` | operator | Ecosystem | Toolchain + client contract: layout detection, `oto doctor`, `scripts/build_tensile_client.sh` |
 | `docs/cli.md` | shared | Ecosystem | CLI command reference — `oto <cmd>` vocabulary, flags, migration table |
 | `docs/docs_index.json` | shared | Ecosystem | Machine-readable docs registry index (generated by `oto/docs_index_writer.py`) |
 | `docs/skills/*.md` | shared | Ecosystem | Per-class agent skill definitions (Class A developer, Class B operator) |
 | `docs/harness_runbook.md` | dev | Ecosystem | Harness runbook |
 | `docs/operator_runbook.md` | operator | Ecosystem | **Class B entry** — best-effort library on an unsupported AMD platform, end to end |
-| `docs/operator_campaign.md` | operator | Ecosystem | The persistent autonomous tuning campaign: corpus study → straggler classes → candidate routes → consultation triggers |
 | `docs/starter_pair.md` | operator | Ecosystem | The starter Markdown+JSON pair protocol |
 | `docs/getting_started.md` | operator | Ecosystem | Full guide: prerequisites, setup, bring-up, failure modes |
 | `docs/overview.md` | shared | Ecosystem | Birds-eye view of the project documentation |
-| `docs/setup.md` | operator | Ecosystem | Easy-mode onboarding: questions + auto-detect + .env + client build + doctor |
+| `docs/getting_started.md` | operator | Ecosystem | Easy-mode onboarding: questions + auto-detect + .env + client build + doctor |
 | `docs/starter_template.md` | operator | Ecosystem | Zero-spec pair template the operator copies |
 | `docs/gfx902_starter.md` | operator | Ecosystem | gfx902 worked starter (public identity + open questions only) |
-| `docs/gfx902_blind_convergence.md` | operator | Ecosystem | End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery) |
+| `docs/starter_pair.md` | operator | Ecosystem | End-to-end recipe for blind, uninformed convergence on gfx902 (edge cases, failure modes, retries, recovery) |
 | `oto/README.md` | dev | Package | The `oto/` package map (regenerate with `python3 -m oto.readme_gen`) |
 | `CONTRIBUTING.md` | dev | Ecosystem | The dev loop: setup, suite, verifier, GPU policy, commit discipline |
-| `docs/documentation_tooling_options.md` | dev | Ecosystem | Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out |
+| `docs/docstrings.md` | dev | Ecosystem | Documentation tooling options: pdoc / MkDocs / Sphinx / Doxygen, with the prose-docstring constraint called out |
 | `oto/**/*.py` | dev | **Docstrings** | Everything about one function's contract |
 ## The quality gates
 
@@ -180,10 +179,10 @@ Nothing else. In particular:
 ## Reading order for the operator agent (class B)
 
 `docs/operator_runbook.md` — the runbook is the entry point (§0 preconditions
-first; after the best-effort library exists, `docs/operator_campaign.md` is the
+first; after the best-effort library exists, the campaign is the
 living procedure for the tuning campaign). Then: `claude.md` **§2.0 only** (the shared invariants) →
 [`docs/starter_pair.md`](starter_pair.md) (the pair protocol) →
-[`docs/agent_reference.md`](agent_reference.md) (CPU-only harness commands) →
+[`docs/harness_runbook.md`](harness_runbook.md) (CPU-only harness commands) →
 `docs/README.md` (the file-ownership contract) → the module
 docstring of anything you edit. Do **not** adopt the campaign-specific
 framing in `claude.md` (gfx90c convergence, the shipped-floor acceptance

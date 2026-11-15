@@ -4,7 +4,7 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 
-**Entry**: `docs/skills/caveman.md` (optional) → `claude.md` → `docs/agent_reference.md` → `docs/docstrings.md`
+**Entry**: `docs/skills/caveman.md` (optional) → `claude.md` → `docs/harness_runbook.md` → `docs/docstrings.md`
 
 ## What you do
 - Work ON the oto codebase (fix bugs, add features, refactor)
@@ -13,10 +13,10 @@ review-interval: 90d
 
 ## What you read
 - `claude.md` (entry contract, invariants, guardrails)
-- `docs/agent_reference.md` (harness quick reference)
+- `docs/harness_runbook.md` (harness quick reference)
 - `docs/docstrings.md` (docstring convention)
 - `docs/harness_runbook.md` (harness guardrails)
-- `docs/implementation_plan.md` (live plan)
+- `docs/invariants.md` (live plan)
 - `changelog.md` (what landed)
 - `incomplete_work.md` (open register)
 

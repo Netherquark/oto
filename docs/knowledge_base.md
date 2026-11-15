@@ -97,5 +97,5 @@ it as license to transplant a number.
 It stays empty by default — empty means the port's WHAT-layer was never
 derived. The gfx90c golden example: `docs/gfx90c_knowledge_base.md`. Context
 for a new target: `docs/starter_pair.md`, then `oto agent consult` for a
-scaffold, then the campaign (`docs/operator_campaign.md`) — research per
-`docs/operator_campaign.md` §18.
+scaffold, then the campaign (`docs/operator_runbook.md`) — research per
+`docs/operator_runbook.md` §18.

@@ -64,7 +64,7 @@ Code/commits/PRs: write normal (never caveman commits). "stop caveman" or
 ## What you never need
 
 - Anything about developing oto (routers, gate internals, test suite semantics)
-- `docs/implementation_plan.md` (dev loop, not your own)
+- `docs/invariants.md` (dev loop, not your own)
 
 ## Hard rules
 

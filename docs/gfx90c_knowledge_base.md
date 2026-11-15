@@ -116,7 +116,7 @@ python3 <TENSILE_ROOT>/Tensile/bin/Tensile --arch gfx90c \
 This project's driver source (outside that tree, still **calls into** it):
 
 - `python3 -m oto` (repo root `bin/oto`) — the oto driver (phases from `phases.yaml`; specification in
-  `docs/implementation_plan.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
+  `docs/invariants.md` §The Driver Architecture); plus its modules `oto/ledger/registry.py`,
   `oto/metrics/acceptance_report.py`, `oto/metrics/benchmark_analytics.py`, `oto/metrics/cell_policy.py`, `oto/tensile/candidate.py`, `oto/ledger/convergence_agent.py`,
   `oto/metrics/telemetry.py` (run-wide sysfs sampler), `oto/tensile/shipped_floor.py` (gfx900 dat parser +
   reference-floor chain).
@@ -250,7 +250,7 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 ## 6. Shipped gfx900 Footprint
 
-> The replication goal (see `docs/shipped_floor_contract.md`): **28 frozen family libraries, 2,285
+> The replication goal (see `docs/invariants.md`): **28 frozen family libraries, 2,285
 > distinct shipped kernels** — zero of which are loadable on gfx90c today. That absence is the gap:
 > replicate this footprint and produce a `tensilelibrary` that performs all of these
 > functions natively on gfx90c (performing better than gfx900 spoofing). No more, no
@@ -258,7 +258,7 @@ PrefetchLocalRead / WorkGroupMapping / NLCA / EPS`.
 
 28 families = 7 dtype families × 4 contraction patterns (section 5).
 
-Kernel counts per family — canonical table in `docs/shipped_floor_contract.md` §2
+Kernel counts per family — canonical table in `docs/invariants.md` §2
 (same total 2,285; the earlier 3,066 was per-file token counting). This file does
 not restate the split, so it cannot drift.
 
@@ -866,5 +866,5 @@ overwrite, or rewrite **benchmark evidence**.
 ---
 
 Related documents: `changelog.md` (the evolution narrative), `docs/gfx90c_theoretical_limits.md`
-(ceiling authority), `docs/shipped_floor_contract.md` (footprint contract), `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
+(ceiling authority), `docs/invariants.md` (footprint contract), `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
 / `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked) (frozen prior conclusions).

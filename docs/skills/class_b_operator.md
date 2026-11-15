@@ -4,14 +4,14 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 
-**Entry**: `docs/skills/caveman.md` (token-efficient style, optional) → `docs/operator_runbook.md` → `docs/starter_pair.md` → `docs/starter_template.md` → `docs/operator_campaign.md` (the tuning campaign)
+**Entry**: `docs/skills/caveman.md` (token-efficient style, optional) → `docs/operator_runbook.md` → `docs/starter_pair.md` → `docs/starter_template.md` → `docs/operator_runbook.md` (the tuning campaign)
 
 ## What you do
 - Use oto to produce a best-effort Tensile library for an unsupported AMD platform
 - Generate device-specific docs via agent-1/agent-2
 - Run CPU-only harness study, then TTY benchmark, then `oto library best-effort`
 - Then the campaign: study the corpus, decompose ties/losses into classes, propose routes, reconnect for consultations only at defined triggers
-- If the docs cannot answer a question you must settle, commission a research pass in the shape of `docs/operator_campaign.md` §18 (research-prompt discipline)
+- If the docs cannot answer a question you must settle, commission a research pass in the shape of `docs/operator_runbook.md` §18 (research-prompt discipline)
 
 ## What you read
 - `docs/skills/caveman.md` (token-efficient communication style; optional, user-triggered)
@@ -19,13 +19,13 @@ review-interval: 90d
 - `docs/starter_pair.md` (starter protocol)
 - `docs/starter_template.md` (template)
 - `docs/gfx902_starter.md` (worked example)
-- `docs/operator_campaign.md` (the multi-session autonomous procedure)
-- [`docs/comparability.md`](../comparability.md) (never trust an A/B number without it)
+- `docs/operator_runbook.md` (the multi-session autonomous procedure)
+- [`docs/gfx90c_results.md`](../comparability.md) (never trust an A/B number without it)
 - Your device's starter file
 
 ## What you never need
 - Anything about developing oto (routers, gate internals, test suite semantics)
-- `docs/implementation_plan.md` (dev loop, not your own)
+- `docs/invariants.md` (dev loop, not your own)
 
 ## Tools you use
 - `oto doctor` (diagnostics)

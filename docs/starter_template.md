@@ -33,7 +33,7 @@ before touching anything:
 - `docs/operator_runbook.md` — the end-to-end Class B contract (detect →
   starter → research → human gate → generate → harness study → TTY run →
   `--best-library`). Read it even if you are only doing docs.
-- `docs/agent_reference.md` — the **working mineral**: what a completed
+- `docs/harness_runbook.md` — the **working mineral**: what a completed
   gfx90c-style tuning reference library looks like (ceilings, knob domains,
   geometry, M1-M4 mechanisms, failure classes). Aim to reproduce this shape of
   depth for <codename>, not to outdo it.

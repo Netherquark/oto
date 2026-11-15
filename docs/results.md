@@ -34,7 +34,7 @@ case study in `docs/gfx90c_tuning_guide.md` §13).
 3. Re-read coverage and triage:
    `python3 -m oto.harness.cell_resolver --taxonomy`
 4. Read the like-for-like report — both arms under the **same protocol**
-   (`oto report --json` / `oto report --html`; see `docs/comparability.md` for
+   (`oto report --json` / `oto report --html`; see `docs/gfx90c_results.md` for
    the admission rule). State the tie band you used and the measured
    reproducibility band beside it; a verdict without both is not a verdict.
 5. Fill in §3 below. Delete nothing that was true; append; supersede with new
@@ -73,4 +73,4 @@ case study in `docs/gfx90c_tuning_guide.md` §13).
 It stays empty by default. Empty means "no device has been measured and this
 file was never filled in", nothing more. The gfx90c golden example:
 `docs/gfx90c_results.md`. Instructions for a new target: `docs/starter_pair.md`,
-then the operator campaign (`docs/operator_campaign.md`).
+then the operator campaign (`docs/operator_runbook.md`).
