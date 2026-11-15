@@ -40,8 +40,8 @@ own commit.
 - The verifier is a correctness surface: changes to emitter behaviour need an
   attestation in `oto/tools/verifiers/drift_manifest.json` with the reason,
   never a silenced check.
-- `incomplete_work.md` tracks **open** items; finished work moves to
-  `changelog.md`.
+- `docs/incomplete_work.md` tracks **open** items; finished work moves to
+  `docs/changelog.md`.
 
 ## Docs-first (update docs in the same change)
 

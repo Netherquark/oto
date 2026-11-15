@@ -230,7 +230,7 @@ For every substantive task:
 4. Read `docs/invariants.md` for the shipped-footprint → native-gfx90c replication contract.
 5. Read `docs/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
 6. Read `docs/gfx90c_knowledge_base.md` for the baseline repo/code architecture.
-7. Read `changelog.md` for what changed and why (oto evolution).
+7. Read `docs/changelog.md` for what changed and why (oto evolution).
 8. Read `docs/potential_configs.md` for the deck methodology; the gfx90c worked example lives in `docs/gfx90c_tuning_guide.md` §13.
 9. Read `docs/gfx90c_results.md` for measured evidence (the oto ledger).
 11. Read `docs/gfx90c_tuning_guide.md` §14 (the frozen prior-campaign record; the archive left git) ONLY when
@@ -319,11 +319,11 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 | `docs/gfx90c_results.md` | Experimental data, parsed results, comparisons, conclusions |
 | `docs/invariants.md` | Tuning/search philosophy (agentic; the model never decides a verdict), hardware truth |
 
-| `incomplete_work.md` | Open-work register (status-keyed) |
+| `docs/incomplete_work.md` | Open-work register (status-keyed) |
 | `docs/audit_register.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
 | `docs/gfx90c_tuning_guide.md` §14 | Frozen prior conclusions (read-only reference; results only) |
 | `README.md` | General repository orientation |
-| `changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
+| `docs/changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
 | `docs/README.md` | The boundary between the MD docs ecosystem and the docstrings |
 | `docs/docstrings.md` | The module/function docstring convention (owns/does-not-own/public API) |
 
@@ -377,7 +377,7 @@ factual state**:
 - `docs/potential_configs.md` = authoritative for the **deck methodology** (device-independent); `docs/gfx90c_tuning_guide.md` §13 is the **gfx90c record**.
 - `docs/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
 - `docs/invariants.md` = authoritative for **what footprint to replicate**.
-- `changelog.md` / `docs/gfx90c_knowledge_base.md` = history / baseline (single evolution log).
+- `docs/changelog.md` / `docs/gfx90c_knowledge_base.md` = history / baseline (single evolution log).
 
 Never turn "planned", "proposed", "observed", or "historically true" into
 "currently true" without evidence.
@@ -523,7 +523,7 @@ After changing code: run the narrowest useful validation first, and keep the
 tree-walking guards green (`test_pyflakes` / `test_ruff` / `test_py_compile` /
 `test_function_length` / `test_file_length` — `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q`); then required
 acceptance checks from `docs/invariants.md`; update `docs/gfx90c_results.md` from actual
-generated data, not hand-edited conclusions; update `changelog.md` only for durable
+generated data, not hand-edited conclusions; update `docs/changelog.md` only for durable
 state changes; update the per-device docs for candidate outcomes (and the methodology if a rule changed); bug disposition
 lives in `docs/invariants.md` (Triaged fixes section).
 
@@ -541,7 +541,7 @@ checks are demonstrated and remaining gaps are stated.
 - **Never reference removed machinery.** Anything that has been deleted from the
   codebase — by any name or description — must never reappear in code, configs,
   or docs. Zero occurrences, always.
-- **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
+- **History has exactly two sanctioned homes:** `docs/changelog.md` (append-only) and
   the frozen `prior_*` files. Live docs (this file, `docs/invariants.md`,
   `docs/potential_configs.md`, `knowledge_base*`, `docs/gfx90c_results.md`, `docs/invariants.md`,
   `README.md`, `oto/device/loader.py` comments, etc.) state current fact only. They
@@ -562,7 +562,7 @@ checks are demonstrated and remaining gaps are stated.
 ## 9. Task routing
 
 - "What is this repo?" → `docs/gfx90c_knowledge_base.md`
-- "What changed / why?" → `changelog.md`
+- "What changed / why?" → `docs/changelog.md`
 - "What's next?" → `docs/invariants.md`
 - "What footprint do we replicate?" → `docs/invariants.md`
 - "What are the ceilings / acceptance bars?" → `docs/gfx90c_theoretical_limits.md`

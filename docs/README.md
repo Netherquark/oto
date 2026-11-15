@@ -52,7 +52,7 @@ serves — `dev`, `operator`, or `shared`.
 | Agent role | Entry doc (read first) | Then | Never needs |
 |---|---|---|---|
 | Class A — coding agent working **on** oto | `claude.md` | `docs/harness_runbook.md` (harness quick reference), `docs/docstrings.md` (docstring convention), `docs/harness_runbook.md` (harness guardrails), `docs/invariants.md` (the live plan) | operator starter files (`docs/starter_*.md`), `docs/operator_runbook.md` §1–§4 as a procedure |
-| Class A — reviewer/auditor subagent | `docs/audit_register.md` + `claude.md` §4 (authority) | `changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
+| Class A — reviewer/auditor subagent | `docs/audit_register.md` + `claude.md` §4 (authority) | `docs/changelog.md` (what landed), `git log` | GPU runs; however careful, the GPU is user-TTY-only |
 | Class B — operator agent **using** oto on an unsupported platform | `docs/operator_runbook.md` (bring-up) and the campaign section (multi-session tuning) | `docs/starter_pair.md` → `docs/starter_template.md` → `docs/gfx902_starter.md` (worked example), then the class-B steps verbatim | anything about developing oto (routers, gate internals, test suite semantics) beyond "the gates exist and refuse bad configs" |
 | Class B + API — doc agents (agent-1 / agent-2 / potential_configs meta-agent) | the starter file + `docs/operator_runbook.md` | their outputs are written into `profiles/<cn>.json`, the per-device generated docs (`docs/gfx90c_theoretical_limits.md`, `docs/gfx90c_tuning_guide.md` and their siblings), `docs/potential_configs.md` — generated device docs, registered under this file's registry | the repo's own dev docs as *content* (they describe how oto works, not what this device needs) |
 | Any agent, any class | `docs/gfx90c_results.md` when touching multi/single-run verdicts | the like-for-like admission rule before trusting any A/B delta | hand-editing `kernel_db.json` / `registry.db` (append-only) |
@@ -104,8 +104,8 @@ Corollaries:
 | `docs/theoretical_limits.md` | dev | Ecosystem | Device-independent ceilings/limits template — populated by the agent per device |
 | `docs/gfx90c_knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state (gfx90c) — gfx90c golden example of `docs/knowledge_base.md` |
 | `docs/knowledge_base.md` | dev | Ecosystem | Device-independent knowledge-base template — populated by the agent per device |
-| `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
-| `incomplete_work.md` | dev | Ecosystem | Open-work register |
+| `docs/changelog.md` | shared | Ecosystem | Evolution log (append-only) |
+| `docs/incomplete_work.md` | dev | Ecosystem | Open-work register |
 | `docs/gfx90c_tuning_guide.md` §14 | shared | Ecosystem (frozen) | Prior-campaign conclusions, results only (absorbed verbatim; archive left git) |
 | `docs/invariants.md` | shared | Ecosystem | Agentic tuning philosophy (incl. §S the autotuning strategy cross-check) |
 | `docs/audit_register.md` | dev | Ecosystem | Audit register |
@@ -164,9 +164,9 @@ an operator consumes the library; the gates guard the library's source.
 section 9 routes you) → the module docstring of the file you are about to edit.
 Nothing else. In particular:
 
-* Do **not** read `changelog.md` to find out what the code does now — read the
+* Do **not** read `docs/changelog.md` to find out what the code does now — read the
   module docstring. The changelog is history.
-* Do **not** read `incomplete_work.md` to find out whether something works — run
+* Do **not** read `docs/incomplete_work.md` to find out whether something works — run
   the test suite. The register is a to-do list, not a status.
 * Do **not** read a docstring to find out *why* the project made a choice — that
   is in the ecosystem MD that owns the decision.

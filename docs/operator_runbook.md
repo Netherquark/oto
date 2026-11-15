@@ -205,7 +205,7 @@ consultations at defined triggers.
 | Anti-alias scan | oto's built-in post-build check | no foreign-arch tokens found |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or failures triaged and recorded) |
 | Functional check **(TTY)** | PyTorch loads the library; GEMM vs reference on random inputs | outputs match reference within dtype tolerance |
-| Verification record | `incomplete_work.md` + `docs/gfx90c_results.md` updated | gaps recorded, none hidden |
+| Verification record | `docs/incomplete_work.md` + `docs/gfx90c_results.md` updated | gaps recorded, none hidden |
 
 Functional match is the acceptance bar that exists on every platform.
 Performance claims are reported as measured, never extrapolated.
@@ -219,7 +219,7 @@ Performance claims are reported as measured, never extrapolated.
 | Auto-detect picks the wrong device | Pass `--codename <codename>` explicitly; never edit peaks to match silence. |
 | Corpus missing on first run | Expected; `harness-study` reports "no kernel_db.json". Start with `oto library best-effort` for the floor-less build. |
 | Gates reject every proposal | The generator is profile-driven; a rejection storm means the profile is off (clock/LDS/ISA), not that the deck is wrong. Re-verify §4. |
-| ROCm reports the arch as unsupported | Stop. Record the blocker in `incomplete_work.md`. Do not widen `gates/` to force it through. |
+| ROCm reports the arch as unsupported | Stop. Record the blocker in `docs/incomplete_work.md`. Do not widen `gates/` to force it through. |
 | You want to relax the 60-line / 600-line / pyflakes / ruff / py_compile / ledger rules to move faster | No. See `claude.md` §2.0 and `docs/harness_runbook.md` guardrails. |
 
 ## 9. What you must never do
@@ -229,7 +229,7 @@ Performance claims are reported as measured, never extrapolated.
   a doc read better.
 - Invent CU counts, clocks, peaks, or instruction support for any GPU.
 - Run benchmarks or builds outside the user's TTY.
-- Delete or truncate `incomplete_work.md`, `docs/gfx90c_results.md`, or the append-only
+- Delete or truncate `docs/incomplete_work.md`, `docs/gfx90c_results.md`, or the append-only
   ledger.
 - Commit `command.txt`, API keys, or session context files.
 
@@ -847,7 +847,7 @@ When a floor library is in hand:
    they stole the GPU.
 2. **You are not the developer.** You do not edit `oto/` or any `.md`; you do
    not touch profiles directly; developer docs and the developer's register
-   (`incomplete_work.md`, `changelog.md`, `docs/gfx90c_results.md`) belong to the developer.
+   (`docs/incomplete_work.md`, `docs/changelog.md`, `docs/gfx90c_results.md`) belong to the developer.
    Find something relevant? Write it into `<codename>_results/bugs.md`; stop
    there. The developer (a human, or a different agent with explicit
    authority) handles it.
@@ -913,7 +913,7 @@ When a floor library is in hand:
 - `.env` and `.env.example`;
 - `phases.yaml` and every authored overlay YAML file — you never edit
   the deck directly; the tool verbs emit rows onto the overlay safely;
-- `incomplete_work.md`, `changelog.md`, and `docs/gfx90c_results.md` — the developer's
+- `docs/incomplete_work.md`, `docs/changelog.md`, and `docs/gfx90c_results.md` — the developer's
   register; if you found something truly relevant, write it in
   `<codename>_results/bugs.md` — the developer decides whether it lands.
 
@@ -1266,8 +1266,8 @@ Deliverables in order:
    best-effort`) — or the honest D3 downgrade report;
 3. the rebuilt `kernel_db.json` so future sessions inherit every measurement;
 4. the starter cross-links + `docs/<codename>_*.md` generated docs;
-5. `incomplete_work.md` updated: every open item that this run closed moves to
-   `changelog.md`, everything still open stays — nothing else.
+5. `docs/incomplete_work.md` updated: every open item that this run closed moves to
+   `docs/changelog.md`, everything still open stays — nothing else.
 
 ### 19.11 A concrete gfx902 day-by-day walk
 

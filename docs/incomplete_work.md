@@ -4,7 +4,7 @@ last-reviewed: 2026-11-15
 review-interval: 90d
 
 
-Completed work lives in `changelog.md` and the docs ecosystem; decisions live
+Completed work lives in `docs/changelog.md` and the docs ecosystem; decisions live
 in `docs/`. This file retains only items that are genuinely still open. Do
 not re-raise closed items without new information.
 
@@ -49,6 +49,6 @@ not re-raise closed items without new information.
 
 ## How to read this file
 
-Every completion moves to `changelog.md` (the project evolution log); the
+Every completion moves to `docs/changelog.md` (the project evolution log); the
 full historical register survives in git history. Nothing here is actioned
 without the owner's eyes on the controlling architecture (owner: Netherquark).

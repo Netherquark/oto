@@ -375,7 +375,7 @@ gfx902-specific additions.
 | Auto-detect picks the wrong device | Multiple installs | Pass `--codename gfx902` and `--rocm-prefix` explicitly. Never edit peaks to match silence. |
 | Corpus missing on first run | Expected on a new device | `harness-study` reports "no kernel_db.json". Start with `oto library best-effort` for the floor-less build. |
 | Gates reject every proposal | Profile is off (clock/LDS/ISA) | Re-verify Stage C. The generator is profile-driven; a rejection storm is a profile bug, not a deck bug. |
-| ROCm reports the arch as unsupported | Toolchain/ISA gap | Stop. Record the blocker in `incomplete_work.md`. Do not widen `gates/`. |
+| ROCm reports the arch as unsupported | Toolchain/ISA gap | Stop. Record the blocker in `docs/incomplete_work.md`. Do not widen `gates/`. |
 | `__AMDGCN_WAVEFRONT_SIZE` errors | Partial-SDK header shadowing | Use the full extracted dist, not a python-sdk venv. |
 | `amd_smi` cmake config missing | ROCm 6.4.x prefix | Use a 7.x SDK. |
 | Kernel ring timeout / DE crash | Memory/register pressure on the APU | Record the case; reduce occupancy; do not widen gates. Thermal cooldown between runs. |
@@ -406,7 +406,7 @@ gfx902-specific additions.
   `python3 -m oto.harness.kernel_db --rebuild`.
 - A successful `load_profile` is necessary, not sufficient; re-run the human
   gate if silicon facts change.
-- Never delete or truncate `incomplete_work.md`, `docs/gfx902_results.md`, or
+- Never delete or truncate `docs/incomplete_work.md`, `docs/gfx902_results.md`, or
   the ledger.
 
 ## 10. Verification matrix — what "done" means (best-effort)
@@ -419,7 +419,7 @@ gfx902-specific additions.
 | Anti-alias scan | built-in post-build check | no foreign-arch tokens |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or triaged + recorded) |
 | Functional check **(TTY)** | PyTorch loads library; GEMM vs reference | outputs match within dtype tolerance |
-| Verification record | `incomplete_work.md` + `docs/gfx902_results.md` updated | gaps recorded, none hidden |
+| Verification record | `docs/incomplete_work.md` + `docs/gfx902_results.md` updated | gaps recorded, none hidden |
 
 Functional match is the acceptance bar that exists on every platform.
 Performance claims are reported as measured, never extrapolated.
@@ -430,7 +430,7 @@ Performance claims are reported as measured, never extrapolated.
 - Present agent research as measured fact, or strip UNVERIFIED tags.
 - Invent CU counts, clocks, peaks, or instruction support.
 - Run benchmarks or builds outside the user's TTY.
-- Delete or truncate `incomplete_work.md`, `docs/gfx902_results.md`, or the
+- Delete or truncate `docs/incomplete_work.md`, `docs/gfx902_results.md`, or the
   append-only ledger.
 - Commit `command.txt`, API keys, or session context files.
 

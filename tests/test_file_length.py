@@ -4,7 +4,7 @@ Run with:  python3 -m pytest tests/test_file_length.py -q
 
 Small files are a reviewability property: a maintainer (or an agent) must be
 able to hold a module in working memory. 600 lines is the ceiling this repo
-already sketched in `incomplete_work.md`; it was not enforced while there were
+already sketched in `docs/incomplete_work.md`; it was not enforced while there were
 five known offenders. This test *ratchets* instead:
 
 * any tracked file over 600 lines that is NOT in ``OFFENDERS`` fails the suite;

@@ -21,7 +21,7 @@ __all__ = ["DASHBOARD_CSS", "JS_COLLAPSIBLE", "JS_THEME_INIT", "JS_THEME_TOGGLE"
 #: The whole dashboard stylesheet. NOTE: the dark palette is declared twice --
 #: once as an explicit ``[data-theme="dark"]`` override and again inside the
 #: ``prefers-color-scheme`` media query. That duplication is deliberate and is
-#: recorded in incomplete_work.md; collapsing it would change which theme wins
+#: recorded in docs/incomplete_work.md; collapsing it would change which theme wins
 #: when an operator has explicitly pinned a light theme.
 DASHBOARD_CSS = """
         :root {

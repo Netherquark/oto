@@ -90,7 +90,7 @@ def _filter_resume_deck(
     re-staged. Only T0_KEEP phases remain eligible for reuse.
     Reuse-then-triage ordering would instead drop every T1 phase that
     already has a verdict and quietly run none of them.
-    T2 is HELD by default (see incomplete_work.md 4.16): pinned out of
+    T2 is HELD by default (see docs/incomplete_work.md 4.16): pinned out of
     this run unless the caller explicitly released it.
     """
     phases: list[dict[str, Any]] = []

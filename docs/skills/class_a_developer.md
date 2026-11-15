@@ -17,8 +17,8 @@ review-interval: 90d
 - `docs/docstrings.md` (docstring convention)
 - `docs/harness_runbook.md` (harness guardrails)
 - `docs/invariants.md` (live plan)
-- `changelog.md` (what landed)
-- `incomplete_work.md` (open register)
+- `docs/changelog.md` (what landed)
+- `docs/incomplete_work.md` (open register)
 
 ## What you never need
 - Operator starter files (`docs/starter_*.md`)

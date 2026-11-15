@@ -23,8 +23,8 @@ The knowledge base is the **WHAT layer**: the facts of *this device's* Tensile
 port and ecosystem — what the library is, what the port mechanism is, what the
 knob surface is (source-audited), what measurement discipline applies. It
 contains architecture truth for one target, not measurements (those live in the
-device's `results.md`), not plans (those live in `incomplete_work.md` / the
-changelog), not history (that lives in `changelog.md`).
+device's `results.md`), not plans (those live in `docs/incomplete_work.md` / the
+changelog), not history (that lives in `docs/changelog.md`).
 
 ## 2. The golden example — `docs/gfx90c_knowledge_base.md`
 

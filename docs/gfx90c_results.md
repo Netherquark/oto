@@ -27,7 +27,7 @@ review-interval: 90d
  - Frozen prior data (conclusions only): 40 run entries, 19 benchmark-bearing
    runs; 771 benchmark records, 111 config-group cells, 66 unique problem cells.
  - Frozen prior-derived (ceiling bars carried from the prior campaign, provenance
-   `changelog.md` 2026-09-15 -- BEFORE the gfx900→gfx90c port): 3 runs / 96 valid
+   `docs/changelog.md` 2026-09-15 -- BEFORE the gfx900→gfx90c port): 3 runs / 96 valid
    kernel-size measurements across phases 20, 25, 31.
    - Max (prior) 928.0 GFlops (83% of 1119 ceiling) on $1365^3$ SGEMM NT (`MT96x96x16`);
      Phase 20/25/31 medians 601.5 / 505.7 / 591.6 GFlops -- carried ceiling bars only.
@@ -128,7 +128,7 @@ failed again — and 288 were first attempts. No DD/CC/ZZ floor phase failed.
 | User skip (`'s'` keypress) | 63 | −1 |
 
 The rc=255 bucket is Tensile rejecting configs at solution enumeration; its
-per-failure breakdown is archived in `changelog.md`. The rc=1 bucket is
+per-failure breakdown is archived in `docs/changelog.md`. The rc=1 bucket is
 `_write_phase_config` refusing before it writes the file — the mechanism and the
 121-config gap are owned by `oto.tensile.config_writer`. rc=−1 is
 `skipped_by_user`, not a config or hardware failure.
@@ -157,7 +157,7 @@ first; operand-named columns), the aggregation bases, and the telemetry
 clock-adjustment rules (the `*_clock` twins, the idle-floor guard, and the
 symmetric `CLOCK_MIN_COVERAGE` fallback) are code contracts owned by
 `oto.metrics.ab_delta` (module docstring, `_collect`, `_stat`) and
-`oto.metrics.ab_audit`. The original post-mortem is archived in `changelog.md`.
+`oto.metrics.ab_audit`. The original post-mortem is archived in `docs/changelog.md`.
 
 **Measured result** (report for `run_20260926_201835`, ref
 `gfx900_ref_20260926_201843_resume`), native arm = **6,790 cells from 2 runs**

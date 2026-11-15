@@ -273,7 +273,7 @@ the matrix (`step 1`) and re-check parity (`step 3`).
 Best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
 41.96 GFlops came from a kernel whose median is 17.67, and the HH:256 floor
 "win" flips sign between bases (best-seed −31% vs median +2.5%). Median-first
-is the standing rule everywhere in this repo (`changelog.md`;
+is the standing rule everywhere in this repo (`docs/changelog.md`;
 `docs/gfx90c_tuning_guide.md` §13 §6 states the median-of-seeds basis).
 ## Visual/layout regression check (`oto.harness.visual_check`)
 

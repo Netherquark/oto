@@ -141,13 +141,13 @@
       "class": "shared",
       "kind": "Ecosystem",
       "owns": "Evolution log (append-only)",
-      "path": "changelog.md"
+      "path": "docs/changelog.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
       "owns": "Open-work register",
-      "path": "incomplete_work.md"
+      "path": "docs/incomplete_work.md"
     },
     {
       "class": "dev",

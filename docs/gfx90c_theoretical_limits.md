@@ -377,7 +377,7 @@ documented cost, identical in kind to the pre-decision state (the gate was
 always conservative; it is now conservative in the measured-element direction).
 
 *Status:* the 2026-11-14 "re-measure the false-rejection rate" note in
-incomplete_work.md is closed by this decision: the gate refuses ~67/229
+docs/incomplete_work.md is closed by this decision: the gate refuses ~67/229
 corpus ZZ kernels at the chosen reading — accepted deterministically. The D2/D3
 boundary evidence was gathered Tensile-verbatim on 2026-11-14 (see changelog).
 *Scope:* this is the **LDS-tile** width only. `docs/gfx90c_knowledge_base.md` §8.1's "complex

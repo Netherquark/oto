@@ -32,7 +32,7 @@ another doc, that doc now holds the only copy and this file points at it.
 This file is the **WHAT** layer of the oto ecosystem: the baseline repository and
 code architecture — what Tensile is, what the gfx90c port path is, and what a library
 build produces. It deliberately contains no history, no plans, and no measurements.
-History lives in `changelog.md`; measurements live in the results pipelines.
+History lives in `docs/changelog.md`; measurements live in the results pipelines.
 
 Scope of this file (gates satisfied at approval):
 
@@ -843,7 +843,7 @@ overwrite, or rewrite **benchmark evidence**.
   `run_YYYYMMDD_HHMMSS/` directory.
 - **phase** — one manifest row of the driver (`phases.yaml`); the spoof/reference
   floor lives in its own `gfx900_ref_*` run chain (recalled via `--resume`, never
-  re-rolled), and phase-number gaps are reserved (see `changelog.md`).
+  re-rolled), and phase-number gaps are reserved (see `docs/changelog.md`).
 - **fp (fingerprint)** — canonical hash of a config (`configs/phaseN_*.yaml`); a change
   of fp means a new attempt, never an in-place edit.
 - **cell** — one (shape × dtype × config) benchmark unit; the atomic row of the dataset.
@@ -865,6 +865,6 @@ overwrite, or rewrite **benchmark evidence**.
 
 ---
 
-Related documents: `changelog.md` (the evolution narrative), `docs/gfx90c_theoretical_limits.md`
+Related documents: `docs/changelog.md` (the evolution narrative), `docs/gfx90c_theoretical_limits.md`
 (ceiling authority), `docs/invariants.md` (footprint contract), `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_insights.md`, untracked)
 / `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked) (frozen prior conclusions).

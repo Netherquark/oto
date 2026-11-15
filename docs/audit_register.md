@@ -12,7 +12,7 @@ findings here. The review targets **memory leaks, race conditions, logical bugs,
 data-integrity errors, deadlocks, resource leaks, error-path bugs, and other
 correctness defects** in the codebase. Findings are recorded back into this file
 (§0), triaged, and feed fixes in `docs/invariants.md` (Triaged fixes) and
-`changelog.md`.
+`docs/changelog.md`.
 
 Hard lines (mirror `claude.md` guardrails):
 
@@ -171,5 +171,5 @@ hwmon parent-glob, no `.hdr` sidecar, no `power1_average`-only) live in
 Any change that lands without explicit approval (e.g. treating
 `/tmp/opencode/*_fixed.py` as the spec) is a drift and must be logged here
 before it is trusted. Drifts are addressed in order: log → user triage →
-approved fix/cherry-pick → `changelog.md` entry. Tracked jointly with
-`incomplete_work.md` §4.9.
+approved fix/cherry-pick → `docs/changelog.md` entry. Tracked jointly with
+`docs/incomplete_work.md` §4.9.

@@ -718,7 +718,7 @@ illegal** (CC=48). GPU legality on gfx90c (M=`NumElementsToValidate=128`):
 AF22, ZZ pair) also **PASSED**. Adoption means: future CC:256/512 runs benchmark
 AF4/4 rows as reference default; AF2/2 paired-widen rows stay in sweep for A/B;
 nobody claims faster — that's TTY audit's job. R8 emission path stays for future
-CC cells. See 2026-11-14 changelog (28th entry), `incomplete_work.md` (CC
+CC cells. See 2026-11-14 changelog (28th entry), `docs/incomplete_work.md` (CC
 follow-up item).
 
 ### 12.5 Explicit DeviceProfile threading (C2.5–C2.9) — done
@@ -2900,7 +2900,7 @@ Route E (split-complex, 3 real GEMMs) and Route F (persistent fixed grid)
 cannot be expressed as Tensile solution knobs — E needs a decomposed call
 sequence in the harness, F needs a kernel-writer change. They are recorded in
 §6 so they are not re-proposed as knobs, and are tracked as separate work items
-(`incomplete_work.md`), not as deck rows.
+(`docs/incomplete_work.md`), not as deck rows.
 
 ---
 
@@ -4208,11 +4208,11 @@ replace the stale mixed-basis colours wholesale.
 
 > Plain words, hard numbers. Everything here is traceable in the live repo before
 > archive: `run_gfx90c_suite.sh`, `docs/gfx90c_results.md`, `docs/potential_configs.md`,
-> `proposed_fixes.md`, `changes_kb.md`, `incomplete_work.md`, `gfx90c_common.py`,
+> `proposed_fixes.md`, `changes_kb.md`, `docs/incomplete_work.md`, `gfx90c_common.py`,
 > `auto_retire.py`, `gfx90c_results/experiment_db.jsonl`,
 > `gfx90c_results/benchmark_registry.jsonl`, `gfx90c_runs/run_*`. Cite keys:
 > **R**=docs/gfx90c_results.md, **PC**=docs/potential_configs.md, **PF**=proposed_fixes.md,
-> **CK**=changes_kb.md, **IW**=incomplete_work.md, **GC**=gfx90c_common.py,
+> **CK**=changes_kb.md, **IW**=docs/incomplete_work.md, **GC**=gfx90c_common.py,
 > **AR**=auto_retire.py, **S**=run_gfx90c_suite.sh.
 
 ---
@@ -4485,7 +4485,7 @@ Unmodified client: `terminate ... invalid_argument ... stoi` → `ResultFileRepo
 
 ---
 
-#### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=docs/gfx90c_results.md, PC=docs/potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
+#### Companion to INSIGHTS_CAVEMAN_ULTRA.md. Kept here so attempt2 has the raw narrative even after live-repo churn. Cite keys: R=docs/gfx90c_results.md, PC=docs/potential_configs.md, PF=proposed_fixes.md, CK=changes_kb.md, IW=docs/incomplete_work.md, GC=gfx90c_common.py, S=run_gfx90c_suite.sh.
 
 ---
 
@@ -4498,7 +4498,7 @@ Unmodified client: `terminate ... invalid_argument ... stoi` → `ResultFileRepo
 - **v5** (09-10/11): candidate sweep wired as Phases 16–27; Phases 1 and 13 removed; originals kept byte-identical; first 4 full runs (~185m each). p20/p25 (candC) crash every run.
 - **v6**: (transitional) ruler/throttle work.
 - **v7** (09-12): run-all + tier-1/2/3 gates, thermal cooldown, adaptive repeats, 30 s cooldowns, Phase-29 100%-ceiling stage, flock, per-load telemetry, phase-order self-check, `convergence_gaps` with corrected peaks. Current shipping version as archived.
-- **(09-13):** pristine Tensile HEAD restored; all 25 phase configs get `HardwareMonitor: False` + `CpuThreads: 1`. Native in-tree gfx90c bookkeeping landed 09-19 (see `changelog.md`).
+- **(09-13):** pristine Tensile HEAD restored; all 25 phase configs get `HardwareMonitor: False` + `CpuThreads: 1`. Native in-tree gfx90c bookkeeping landed 09-19 (see `docs/changelog.md`).
 
 #### A.2 Phase inventory
 - **0** sanity gates (10 `[OK]`); **1** baseline (removed at v5); **2** fp32; **3** fp16; **4** GEMV; **5–7** fp32/transpose variants; **9** bf16; **10** fp64; **11** int8; **12** aux; **13–15** (existed in 0–15 era, removed); **16** candA sgemm; **17** candA hgemm; **18** candB GEMV-deeper; **19** candD occupancy; **20** candC run; **21** candF batched/short-K; **22** candE bf16; **23** candE fp64; **24** candE int8; **25** candC re-run; **26** seed-repeat; **27** transpose-ext; **28** synthesis; **29** ceiling %-of-peak; **30** reserved; **31** prepend for synthesis harvest.

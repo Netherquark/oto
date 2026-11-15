@@ -1,6 +1,6 @@
 """Version string for the oto CLI.
 
-Owns: ``__version__``. Does NOT own changelogs (``changelog.md``) or release
+Owns: ``__version__``. Does NOT own changelogs (``docs/changelog.md``) or release
 pinning (``requirements.txt``).
 
 Public API: ``__version__``.
