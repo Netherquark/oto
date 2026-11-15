@@ -126,7 +126,9 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
 
 - **AGENTIC consult implemented** — `oto agent consult [starter] [--with-docs]`
   (`8b73424`); CPU-only census consult emits `<codename>_potential_configs.md`;
-  the gfx90c potential_configs is not auto-generated (stays a human artifact).
+  `docs/potential_configs.md` itself is hand-maintained (the device-independent
+  methodology; the gfx90c record lives in `docs/gfx90c_tuning_guide.md` §13) —
+  it is never auto-generated.
   All one-shot plans in git history now audited; changelog 43rd entry.
 - **LDS gate calibration vs Tensile's `Z: reg=4` — DECIDED 2026-11-14.**
   Owner call: `BYTES_PER_ELEMENT["Z"] = 16`, `LDS_BUDGET` kept at 16384. The
