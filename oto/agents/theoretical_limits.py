@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from oto.agents.context import directed_question
 from oto.device import derive_limits as derive
 from oto.device.profile import DeviceProfile
 
@@ -50,7 +51,12 @@ def generate(profile: DeviceProfile, starter_text: str = "",
     extra = ""
     if research is not None:
         try:
-            extra = research(f"theoretical limits for {profile.codename}")
+            extra = research(directed_question(
+                profile,
+                f"Theoretical-performance envelope for {profile.codename} (ISA {profile.isa}): "
+                f"per-family lane classes (SS/DD/HH/HH_HPA/HS_HPA/CC/ZZ), final accumulation GFLOPS at the "
+                f"known clock, fastest F16 path, LDS budget per CU, and ISA constraints a Tensile-shaped GEMM "
+                f"generator would hit (e.g. no MFMA, no fast F16 on the FP64 side, GSU restrictions on half/bf16)."))
         except Exception as exc:  # pragma: no cover - defensive
             extra = f"(research unavailable: {exc})"
     parts = [

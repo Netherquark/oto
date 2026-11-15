@@ -72,8 +72,16 @@ live here; completed work lives in `changelog.md`, decisions in `docs/`.
   envelope — 20 WIN / 18 TIE / 0 LOSS, 7 ORANGE, 38 cells — but with new
   timestamps). These files are machine-local (gitignored); no functional impact;
   flagged here so no one later claims byte-comparison confidence they do not have.
-- **Owner decision — 9.9 GB nightly tarball deletion** (the extracted SDK is in use under `dist-7.15.0a20260728/`); blocked on the owner's word.
-- **HIP_PATH canonical choice** — the ROCm nightly venv vs the extracted `dist-7.15.0a20260728/` SDK; no code blocker, owner confirms.
+- **9.9 GB nightly tarball — DELETED 2026-11-15 (owner's word).**
+  `therock-dist-linux-gfx90c-7.15.0a20260728.tar.gz` (1.6 GB) deleted; the extracted dist at
+  `/home/netherquark/rocm-nightly-venv/dist-7.15.0a20260728/` is retained and remains functional
+  (amdclang 23.0.0git, TheRock 7.15.0a20260728, gfx90c listed in dist_info amdgpu targets).
+- **HIP_PATH canonical choice — DECIDED 2026-11-15 (owner's word).**
+  Keep using the rocm-nightly venv (`/home/netherquark/rocm-nightly-venv/lib/python3.14/site-packages/_rocm_sdk_core`).
+  Every proven fact in this repo (yolo26 acceptance 2026-11-14, CC probe on 128-element workloads,
+  the Tensile build) was measured against that venv. The extracted dist is redundant once the
+  venv works; only point HIP_PATH at the dist if you specifically need a second version-locked
+  ROCm independent from torch's venv. No code/doc change needed in the repo.
 
 - **Any GPU leg other than yolo26 (and explicit CC-256 D5 legality probes)** —
   forbidden without the owner's explicit whitelist. Keep GPU use to yolo26 + the
