@@ -79,10 +79,17 @@ def ref_worktree(ref: str) -> Path:
 
 def probe(tree: Path, code: str, *, env_extra: dict | None = None,
           timeout: int = 900) -> subprocess.CompletedProcess:
-    """Run ``code`` against ``tree`` with the tree's root on PYTHONPATH."""
+    """Run ``code`` against ``tree`` with the tree's root as the only PYTHONPATH entry.
+
+    The probe is the REF comparison: the child must import the tree's own code,
+    never the parent's ``oto`` (its leak would make REF comparisons compare HEAD
+    against HEAD and always report byte-identical). Third-party deps still come
+    from the interpreter's ordinary path (stdlib + site-packages), untouched by
+    PYTHONPATH.
+    """
     import os
     env = dict(os.environ)
-    env["PYTHONPATH"] = str(tree) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(tree)
     if env_extra:
         env.update(env_extra)
     return subprocess.run([sys.executable, "-c", code],

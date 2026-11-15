@@ -90,11 +90,13 @@ def test_check_candidates():
 
 def test_verify_all_runs():
     # The evergreen five-check matrix requires a REF worktree of HEAD~1 and
-    # a ~6k-phase config-writer render; ~64 s end to end. A 60-second
-    # timeout would fail here even though the check is green.
+    # a ~6k-phase config-writer render; a ~300-second timeout covers it.
+    # The verifier's own contract is rc==0 clean; rc==1 is findings. A test
+    # that accepts rc==1 asserts nothing about whether the battery is green.
     r = subprocess.run([*BASE_CMD, "verify", "all"],
                       capture_output=True, text=True, cwd=str(ROOT), timeout=300)
-    assert r.returncode in (0, 1)
+    assert r.returncode == 0, (
+        "oto verify all failed\n" + r.stdout + r.stderr)
 
 
 def test_help_subcommand():

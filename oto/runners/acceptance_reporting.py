@@ -14,7 +14,6 @@ Public API: ReportingMixin.
 
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -405,10 +404,12 @@ class ReportingMixin:
             self.reporter.write_report(report, report_out,)
             print(f"Report emitted to: {report_out}")
         if self.reporter.base_dir:
-            with contextlib.suppress(Exception):
-                self.reporter.write_report(
-                    report,
-                    _results_dir(self.reporter.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json",)
+            # The canonical results-dir report is what `--json` reads later.
+            # A failed write here must be a loud error, not a stale file that
+            # a downstream consumer will silently trust.
+            self.reporter.write_report(
+                report,
+                _results_dir(self.reporter.base_dir, _loader.resolve_profile(profile,).codename) / "acceptance_report.json",)
         return {"cells": len(all_analytics), "red": len(red_list),
                 "ab": len(ab_verdicts), "run_id": run_id,
                 "native_runs": native_arm["runs"],

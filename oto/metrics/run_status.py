@@ -72,3 +72,12 @@ __all__ = [
     "render_compact",
     "tlib",
 ]
+
+
+if __name__ == "__main__":
+    # Documented by oto/metrics/render_status.py as the standalone view;
+    # it was deleted in a split and never restored. Route straight at the
+    # live renderer, which owns the CLI.
+    from oto.metrics.render_status import main as _main
+
+    raise SystemExit(_main())
