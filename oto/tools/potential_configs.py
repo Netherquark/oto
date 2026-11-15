@@ -170,5 +170,5 @@ def _citations() -> list[str]:
             "- Like-for-like admission rule (protocol='family'): docs/comparability.md.",
             "- Occupancy / register-file model: oto/tensile/gates/vgpr_model.py.",
             "- Knob semantics and measured patterns: docs/research/kernel_tuning.md,",
-            "  docs/knowledge_base.md (the §R register), docs/potential_configs.md (the hand-tuned why).",
+            "  docs/knowledge_base.md (the §R register), docs/gfx90c_tuning_guide.md §13 (the hand-tuned why).",
             ""]

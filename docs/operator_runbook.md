@@ -196,7 +196,7 @@ consultations at defined triggers.
 | Anti-alias scan | oto's built-in post-build check | no foreign-arch tokens found |
 | Kernels compile **(TTY)** | build log | 0 failed kernels (or failures triaged and recorded) |
 | Functional check **(TTY)** | PyTorch loads the library; GEMM vs reference on random inputs | outputs match reference within dtype tolerance |
-| Verification record | `incomplete_work.md` + `docs/results.md` updated | gaps recorded, none hidden |
+| Verification record | `incomplete_work.md` + `docs/gfx90c_results.md` updated | gaps recorded, none hidden |
 
 Functional match is the acceptance bar that exists on every platform.
 Performance claims are reported as measured, never extrapolated.
@@ -220,13 +220,13 @@ Performance claims are reported as measured, never extrapolated.
   a doc read better.
 - Invent CU counts, clocks, peaks, or instruction support for any GPU.
 - Run benchmarks or builds outside the user's TTY.
-- Delete or truncate `incomplete_work.md`, `docs/results.md`, or the append-only
+- Delete or truncate `incomplete_work.md`, `docs/gfx90c_results.md`, or the append-only
   ledger.
 - Commit `command.txt`, API keys, or session context files.
 
 ## 10. Reading order (class B)
 
-`claude.md` (shared invariants only) → this file → [`operator_campaign.md`](operator_campaign.md) (the tuning campaign) → [`docs/README.md`](README.md) (the registry) →
+`claude.md` (shared invariants only) → this file → [`operator_campaign.md`](operator_campaign.md) (the tuning campaign; §18 is the research-prompt discipline for commissioning research passes) → [`docs/README.md`](README.md) (the registry) →
 [`docs/starter_pair.md`](starter_pair.md) → [`docs/agent_reference.md`](agent_reference.md) →
 `docs/README.md` (the file-ownership and contract boundary) → the module
 docstring of anything you edit.

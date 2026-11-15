@@ -4411,3 +4411,61 @@ the pre-built seed pool.
   Suite green (1084 passed, 8 skipped, 242 subtests, RC=0). `oto verify all` PASSED at HEAD~1 and at
   2824c2f. Ruff clean. Function/file-length guards pass. **The gfx902 bring-up is NOT unblocked**: the
   owner's API key and the Tensile client build are both still required.
+- **2026-11-15 (46th) — the gfx90c record absorbed into the one gfx90c-specific doc, and potential_configs.md rewritten as the device-independent brief.**
+  docs/potential_configs.md was historically the gfx90c working document (rewrites 1–8: the deck, the gates,
+  the A/B audits, the like-for-like regrade, the steal, the stop-list, the overnight runbook). Its entire
+  content — every measured number, table, run id, verdict and superseded rewrite — now lives in
+  `docs/gfx90c_tuning_guide.md` §13 (all R-numbers preserved; bring-up case study for agents imitating a
+  new-target port). The doc itself is rewritten as the device-independent methodology: what a deck is, the
+  zero-calibration gate method (accumulator / register-file / LDS / load-divisibility / oracle), the
+  like-for-like measurement rules (protocol parity, tie-band policy, rank-1 medians, sweep order), the
+  literature-mapped experiment order, the ledger-trace reading, the overnight protocol, and the porting
+  checklist. A full resolution table (`docs/potential_configs.md` §10) maps every former §-pointer so
+  historical citations stay resolvable; non-R section references across docs, comments and tests were
+  re-pointed mechanically to `docs/gfx90c_tuning_guide.md` §13. Registry (`docs/README.md`), generated index
+  (`docs/docs_index.json`, via `oto agent index`), `docs/agent_reference.md`, `docs/README.md`,
+  `README.md`, `claude.md`, `docs/gfx90c_theoretical_limits.md`, `docs/knowledge_base.md`,
+  `docs/operator_campaign.md` and `docs/research/kernel_tuning.md` updated to the new split. No instrument,
+  gate, verdict or deck row changed. The commit history of both files was studied first (65 commits on
+  potential_configs.md; the 2026-10-12 whittle/restore cycle preserved). Suite RC=0.
+  - **The agentic framing, applied everywhere (same concern).** Stale pre-agent-era claims that oto is
+    "not LLM-in-the-loop" / "AI-free" / "one-shot deterministic convergence" were corrected: the agent
+    layer is LLM-assisted and ships today (`oto agent consult`, agent-1/agent-2, directed prompts;
+    proposes, never decides). `docs/implementation_plan.md` rewritten as the honest design brief
+    (two loops, one rule; gfx902 blocked on the API key is stated, not hidden); the README architecture
+    flowchart gains the agent layer and states the acceptance path is deterministic; `docs/search_philosophy.md`
+    retitled (agentic tuning context; deterministic acceptance path; no surrogate in the loop; the model
+    never decides); `claude.md` and `docs/audit_register.md` updated likewise; `oto/__init__.py` docstring's
+    opening line corrected; `oto/tools/potential_configs.py` citation updated.
+- **2026-11-15 (47th) — the archive untracked, its history folded into the docs ecosystem, and the research-prompt discipline written into the operator workflow.**
+  Per owner direction, `archive/` is no longer tracked in git (its content stays on disk, ignored via the
+  standing `archive/` rule); nothing was deleted. The archive's markdown was studied first:
+  - **The prior-campaign autopsy** (attempt1, 2026-09-04 → 09-13: the 9-file patch failure, the 3-entry
+    shim port, the peak-table correction, the ±23–31 % A/B envelope, the GPU-hang playbook, the
+    winner-instability autopsy) is absorbed verbatim into `docs/gfx90c_tuning_guide.md` §14; the research
+    passes' audit trail is recorded as §15 (corpus.pass1–3, RESEARCH_PROMPT3, the pre-rewrite deck snapshot).
+  - **The research-prompt discipline** — the multi-round, evidence-labelled, prohibition-guarded research
+    workflow the campaign developed (one deliverable scoped exhaustively; three rounds: broad census →
+    line-level coupling audit → docs triage; `VERIFIED`/`PARTIAL`/`UNVERIFIED`/`REASONING` labels; hard
+    prohibitions; adoption matrices; pre-registered mechanism-tagged predictions; do-not-cite lists) — is
+    written into `docs/operator_campaign.md` §18 as the procedure the operator agent follows when the docs
+    cannot answer a question it must settle. Pinned in `docs/skills/class_b_operator.md` and
+    `docs/operator_runbook.md` §10.
+  - **`.gitignore`**: `.pytest_cache/`, `.ruff_cache/`, `*.egg-info/`, `dist/`, `.mypy_cache/`, `.tox/` added.
+  - The guide now carries the complete bring-up history: current method (§0–§12), the port case study (§13),
+    the prior-campaign autopsy (§13.4), and the audit trail (§13.5). Suite RC=0.
+- **2026-11-15 (48th) — results.md and the theoretical-limits doc split into gfx90c golden case studies and device-independent templates.**
+  Same treatment as the potential_configs fold: `docs/results.md` was historically gfx90c-specific evidence. It is now
+  `docs/gfx90c_results.md` (content unchanged, the gfx90c golden case study), and the new `docs/results.md` is a
+  device-independent placeholder the agent populates per device — required sections (scoreboard with protocol+band,
+  per-cell verdicts, gate census, straggler classes, clock/thermal discipline), the like-for-like admission rule,
+  median-of-seeds, and the TTY-only rule. `docs/gfx90c_theoretical_limits.md` was already gfx90c-named; the new
+  `docs/theoretical_limits.md` is its device-independent twin — ISA identity by probe, peak derivation from
+  lanes×clock×throughput, the family table and the acceptance bar — referring to the gfx90c doc only as a golden
+  worked example, never as a source of numbers. Cross-pointers added in both gfx90c files; all ecosystem
+  references re-pointed (20 files); registry rows renamed + two template rows added; `docs/docs_index.json`
+  regenerated; no numbers, instruments or verdicts changed. Suite RC=0; `oto verify all` PASSED.
+- **2026-11-15 (49th) — owner-gated blocked items consolidated in `incomplete_work.md`.**
+  C4/C7.1 (API key), Tensile client not built on this box, CC AF4/4 vs AF2/2 A/B (TTY-gated, no perf claim
+  anywhere), and acceptance-report / drift-manifest attestation status — one consolidated section with
+  pointers; nothing actioned, nothing claimed.

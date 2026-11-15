@@ -74,7 +74,7 @@ LDS_BUDGET = 16384
 #: policy recorded above, not a Tensile verdict. The global-load half of the
 #: same fact already lived elsewhere and is unchanged: the classic-load gate's
 #: ``gates.loads.LOAD_DTYPE_INFO`` ``Z`` row reads ComplexDouble's 4 registers /
-#: 16 bytes, refusing ZZ VectorWidth 2 (see docs/potential_configs.md §R23).
+#: 16 bytes, refusing ZZ VectorWidth 2 (see docs/gfx90c_tuning_guide.md §13 §R23).
 BYTES_PER_ELEMENT = {"S": 4, "D": 8, "H": 2, "B": 1, "I8": 1, "C": 8, "Z": 16}
 #: Tensile's ``globalParameters["MaxLDS"]`` -- the *per-CU* LDS allocator ceiling,
 #: 64 KiB. Distinct from :data:`LDS_BUDGET`, which is the conservative
@@ -245,7 +245,7 @@ def local_split_u(config: dict[str, Any]) -> int:
     element. ``config_writer._fork_tile`` emits an explicit ``WorkGroup``
     verbatim and only folds the ``LocalSplitU`` key in when WorkGroup is absent,
     so an explicit ``WorkGroup: [16,16,1]`` *shadows* a ``LocalSplitU: 2`` beside
-    it and the knob is then a silent no-op (docs/potential_configs.md §R23). The gate
+    it and the knob is then a silent no-op (docs/gfx90c_tuning_guide.md §13 §R23). The gate
     models the emitted config, because that is the one Tensile judges -- reading
     the intent instead would refuse phases Tensile builds.
 

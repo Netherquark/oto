@@ -6,7 +6,7 @@ gaps remain so nobody re-litigates or re-breaks it.
 
 ## Why this exists
 
-The 2026-10-22 like-for-like regrade (docs/potential_configs.md §R50) measured the
+The 2026-10-22 like-for-like regrade (docs/gfx90c_tuning_guide.md §13 §R50) measured the
 same kernel reading **2.1–4.2x differently** under a one-problem invocation than
 under the family-wide one. A verdict pairing a 1-problem measurement against a
 family-wide floor measures the *protocol*, not the kernel. Corpus-wide

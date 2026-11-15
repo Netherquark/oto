@@ -107,3 +107,13 @@ todo.txt
 .env.bak-*
 logs/*.log
 logs/
+
+# Tool caches (pytest/ruff self-ignore; belt and braces)
+.pytest_cache/
+.ruff_cache/
+
+# Python build/test artifacts
+*.egg-info/
+dist/
+.mypy_cache/
+.tox/

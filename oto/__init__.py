@@ -1,4 +1,5 @@
-"""oto -- one-shot deterministic convergence for native device Tensile libraries.
+"""oto -- agentic Tensile tuning for native device ports. The acceptance path is deterministic;
+the agent layer proposes, never decides; the hardware does.
 
 The public API of the project re-exported here so a caller never has to know
 which subpackage a symbol moved to. Names are deliberately the ones the codebase

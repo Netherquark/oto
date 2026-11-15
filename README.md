@@ -21,7 +21,7 @@ report is reconstructible from that ledger, which is append-only by contract.
   guardrails, and file ownership.
 * **Hardware ceilings & acceptance bars:**
   [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md).
-* **Live results:** [`docs/results.md`](docs/results.md).
+* **Live results:** [`docs/gfx90c_results.md`](docs/gfx90c_results.md).
 
 ## Quick start
 
@@ -76,11 +76,22 @@ key handling — a re-run of an already-passed deck is still interruptible.
 ## 2. Driver Architecture
 
 The Python driver ([`oto`](oto)) coordinates all stages
-deterministically. The stage names ("Stage 6", "Stage 7") are the shared
+deterministically, given the deck. The agent layer sits *before* Stage 1: it is
+LLM-assisted and ships today, but it never sits inside the acceptance path —
+it proposes research and candidates, and the driver (correctness, measurement,
+verdicts) is deterministic. The stage names ("Stage 6", "Stage 7") are the shared
 vocabulary used across these docs; the owning package for each stage is shown in
 the flowchart and again in the [stage table](#stage--owning-package) below.
 
 ```
+┌──────────────────────────────────────────────┐
+│ AGENT LAYER (oto/agents, LLM-assisted)       │
+│ oto agent consult (starter -> deck, CPU-only)│
+│ agent-1 / agent-2 (research docs)            │
+│ proposes only; never decides verdicts        │
+└──────────────────────────────────────────────┘
+                       │ produces phases.yaml
+                       ▼
 ┌──────────────────────────────────────────────┐
 │          phases.yaml (Manifest)              │
 └──────────────────────────────────────────────┘
@@ -467,16 +478,16 @@ re-triaged).
 | Document | Role |
 |---|---|
 | [`claude.md`](claude.md) | Entry contract, process guardrails, and file-ownership rules. |
-| [`docs/implementation_plan.md`](docs/implementation_plan.md) | The current executable implementation plan. |
+| [`docs/implementation_plan.md`](docs/implementation_plan.md) | The design brief: the two-loop architecture and the rule that the model never decides a verdict. |
 | [`docs/shipped_floor_contract.md`](docs/shipped_floor_contract.md) | The shipped `gfx900` footprint → native `gfx90c` replication contract. |
 | [`docs/gfx90c_theoretical_limits.md`](docs/gfx90c_theoretical_limits.md) | Hardware ceilings and the acceptance-criteria authority. |
 | [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) | The practical knob→effect tuning guide. |
 | [`docs/research/kernel_tuning.md`](docs/research/kernel_tuning.md) | GCN hardware model + open research directions. |
 | [`docs/research/complex_gemm_brief.md`](docs/research/complex_gemm_brief.md) | The complex/split (CC/ZZ) GEMM research brief. |
-| [`docs/search_philosophy.md`](docs/search_philosophy.md) | Objective, gates, and the AI guardrails (canonical philosophy). |
-| [`docs/potential_configs.md`](docs/potential_configs.md) | Per-cell candidate evidence and the mutation-strategy catalogue. |
+| [`docs/search_philosophy.md`](docs/search_philosophy.md) | Objective, gates, and the agentic guardrails (canonical philosophy). |
+| [`docs/potential_configs.md`](docs/potential_configs.md) | Device-independent deck methodology; the gfx90c worked example lives in [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) §13. |
 | [`docs/knowledge_base.md`](docs/knowledge_base.md) | Core architecture + the append-only data-preservation law (§10). |
-| [`docs/results.md`](docs/results.md) | The live benchmark ledger and frozen ceiling metrics. |
+| [`docs/gfx90c_results.md`](docs/gfx90c_results.md) | The live benchmark ledger and frozen ceiling metrics. |
 | [`incomplete_work.md`](incomplete_work.md) | The open-work register. |
 | [`docs/audit_register.md`](docs/audit_register.md) | The expert-agent audit register and the frozen prior baseline. |
 | [`changelog.md`](changelog.md) | The append-only history home. |
@@ -484,7 +495,7 @@ re-triaged).
 | [`docs/operator_runbook.md`](docs/operator_runbook.md) | **Class B entry** — best-effort Tensile library on an unsupported AMD platform, end to end. |
 | [`docs/harness_runbook.md`](docs/harness_runbook.md) | The harness runbook (candidate machinery workflows). |
 | [`docs/design_language.md`](docs/design_language.md) | The design-language spec for the HTML acceptance report. |
-| `archive/prior_insights.md`, `archive/prior_research_archive.md` | Frozen prior-campaign records (read-only). |
+| [`docs/gfx90c_tuning_guide.md`](docs/gfx90c_tuning_guide.md) §14 | Frozen prior-campaign record (read-only; the archive left git). |
 
 ---
 

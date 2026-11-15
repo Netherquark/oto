@@ -40,7 +40,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 
 | File | Purpose |
 |---|---|
-| `docs/potential_configs.md` | Master analysis: verdicts, routes, deck |
+| `docs/potential_configs.md` | Deck methodology (device-independent); the gfx90c record is `docs/gfx90c_tuning_guide.md` §13 |
 | `docs/gfx90c_tuning_guide.md` §1.1–§1.2, §9.1 | Primary-source knob reference + geometry |
 | `docs/search_philosophy.md` | Stage 0–3 search order + NOT VERIFIED note |
 | (research corpus: deleted — durable facts promoted to this doc + docs/gfx90c_tuning_guide.md + docs/search_philosophy.md) | absorbed |
@@ -120,7 +120,7 @@ python3 -m oto.harness.rule_calibration               # probe proposed rules
 
 Report `floor_best` as co-primary alongside `winner`.
 
-## Route status (from `docs/potential_configs.md` §8–§9)
+## Route status (from `docs/gfx90c_tuning_guide.md` §13 §8–§9)
 
 | route | status | cells |
 |---|---|---|
@@ -163,7 +163,7 @@ delta is measurement environment, and the spread over those cells (17.5
 points) is the band any real win has to clear.
 
 `python3 -m oto.harness.cell_resolver` prints one row per cell with a `cfg_gap`
-class; `docs/potential_configs.md` §R17 reads it into a route:
+class; `docs/gfx90c_tuning_guide.md` §13 §R17 reads it into a route:
 
 | `cfg_gap` | meaning | lever |
 |---|---|---|
@@ -176,14 +176,14 @@ Before proposing the probe, read the cell's full history:
 `python3 -m oto.harness.corpus_census --cell FAM:side` lists every geometry the
 corpus has measured on that cell, the row count behind each, and the floor's
 best — so a `retile` route cannot re-propose a geometry that already lost, and
-`docs/potential_configs.md` §R41's closed axes stay closed.
+`docs/gfx90c_tuning_guide.md` §13 §R41's closed axes stay closed.
 
 ## Do not search
 
 - `MatrixInstruction` / `DirectToLds` — rejected or actively harmful
 - `ThreadTile` width ladders for C/Z — the per-thread accumulator cap (`TT0*TT1*R
   > 128`) makes every wider thread tile illegal
-- **Wider MacroTile for C/Z** — provably closed (`docs/potential_configs.md` §R27):
+- **Wider MacroTile for C/Z** — provably closed (`docs/gfx90c_tuning_guide.md` §13 §R27):
   the workgroup register-file rule (`R*MT0*MT1*LSU < 65536`) caps area at
   `65536/R`, so the widest legal complex tiles are CC `128x64` and ZZ
   `64x64`/`128x32`; a brute force above those areas finds none legal
@@ -193,7 +193,7 @@ best — so a `retile` route cannot re-propose a geometry that already lost, and
   (`candidate._non_generative_knob_rejection`): the assembly path cannot emit it
   (`Components/Priority.py` dispatches only 0/1, so `MAC_F32C` raises
   `TypeError`). 0/28 built across every family. The writer still forwards it by
-  contract. See `docs/potential_configs.md` §R24.
+  contract. See `docs/gfx90c_tuning_guide.md` §13 §R24.
 - `MaxOccupancy` assumptions without measurement
 - `WaveSeparateGlobalReadA/B`, `ThreadSeparateGlobalReadA/B`, `1LDSBuffer`,
   `TransposeLDS`, `UnrollMajorLDSA/B`, `LdsBlockSizePerPadA/B`, `DirectToVgprA/B`

@@ -317,8 +317,8 @@ python3 -m oto check candidates                          # will the gates accept
 ```
 
 If the census says this axis is exhausted, skip it — the proof is usually in
-`docs/potential_configs.md` in the §R-corpus history (per-axis findings) or
-`docs/results.md` §9 (straggler classes). If you cannot locate a measurement, the
+`docs/gfx90c_tuning_guide.md` §13 in the §R-corpus history (per-axis findings; map in `docs/potential_configs.md` §10) or
+`docs/gfx90c_results.md` §9 (straggler classes). If you cannot locate a measurement, the
 axis is probably still unprobed and a NARROW draw is honest evidence on its
 behalf.
 
@@ -420,7 +420,7 @@ to do about it. This catalogue is why campaigns converge, not why they fail.
 
 | class | detect | strategy | exit |
 |---|---|---|---|
-| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `docs/results.md` line |
+| **W**—walls | candidate wins at the ceiling (measured, ≥2 runs) | none — record and stop touching | `docs/gfx90c_results.md` line |
 | **R**—residency-starved | waves/SIMD ≤ 30 % | smaller tiles / `GlobalSplitU` (SS only) | within-run win |
 | **C**—complex accounting artefact | complex GEMM ~4× below derived roof | none — re-read in BLAS-8 units; verify via wall-clock vs roof time | doc cite |
 | **K**—clock confound | `clock_coverage < threshold` | re-run TTY; judge within-run only | stronger batch |
@@ -612,12 +612,12 @@ When a floor library is in hand:
 ## §13. Rules you do not get to break
 
 1. GPU only in the TTY — `python3 -m oto tune --yes` is the intended host of
-   every benchmark. Display-session AI workers are not your class: if you ever
+   every benchmark. Display-session agent workers are not your class: if you ever
    observe benchmarks originating from a display session, stop and report —
    they stole the GPU.
 2. **You are not the developer.** You do not edit `oto/` or any `.md`; you do
    not touch profiles directly; developer docs and the developer's register
-   (`incomplete_work.md`, `changelog.md`, `docs/results.md`) belong to the developer.
+   (`incomplete_work.md`, `changelog.md`, `docs/gfx90c_results.md`) belong to the developer.
    Find something relevant? Write it into `<codename>_results/bugs.md`; stop
    there. The developer (a human, or a different agent with explicit
    authority) handles it.
@@ -683,7 +683,7 @@ When a floor library is in hand:
 - `.env` and `.env.example`;
 - `phases.yaml` and every authored overlay YAML file — you never edit
   the deck directly; the tool verbs emit rows onto the overlay safely;
-- `incomplete_work.md`, `changelog.md`, and `docs/results.md` — the developer's
+- `incomplete_work.md`, `changelog.md`, and `docs/gfx90c_results.md` — the developer's
   register; if you found something truly relevant, write it in
   `<codename>_results/bugs.md` — the developer decides whether it lands.
 
@@ -761,3 +761,99 @@ class of hardware):
 If your profile disagrees with this, fine — the output of the campaign is
 (cells you listed) × (measured winner per cell) — the internal tool prints the
 full list with `oto check candidates --quiet`.
+
+## §18. Commissioning a research pass — the research-prompt discipline
+
+Adapted from the campaign's own research rounds (the corpus passes pass 1–3
+and the ROCm-transition audit rounds; raw prompts/outputs live on disk in
+`archive/`, never in git). If the docs at hand cannot answer a question you
+must settle before acting, commission research in this shape. If they can,
+do not commission research at all.
+
+### 18.1 One deliverable, scoped exhaustively
+A research pass produces exactly ONE file. Everything the next actor (you,
+or the main agent) needs is in it — "without re-researching". It contains a
+numbered question list; every question is answered with `Q<n>. <answer>` or
+explicitly marked `UNANSWERED` with exactly what was tried. No omissions.
+
+### 18.2 Three rounds, not one
+1. **Round 1 — broad census.** Survey the space: holdings, defaults, source
+   quality, what the vendor documents vs ships. Output: the landscape,
+   candidate list, and a **GROUND TRUTH / SETTLED FACTS** register — the
+   settled invariants that may never be re-derived.
+2. **Round 2 — line-level audit.** For the shortlist, every claim is traced
+   to a file/line or a primary source (pinned commits, `raw.githubusercontent`,
+   PR/issue pages). Output: the coupling audit — every file that hardcodes X,
+   every call/import of Y, every assumption a version bump invalidates.
+3. **Round 3 — docs triage.** Official documentation, release notes, package
+   manifests, MANIFEST-only primary sources. Secondary sources are labelled,
+   never authoritative. Output: the decision inputs — adoption matrix and
+   do-not-cite list.
+
+### 18.3 Evidence labels are mandatory
+Every claim in the deliverable is tagged:
+
+- **VERIFIED** — a primary source was read (file + line, URL + commit).
+- **PARTIAL** — excerpt, other-version implementation, incomplete source.
+- **UNVERIFIED** — not established for the target/path.
+- **REASONING** — inference, to be falsified by measurement, never a result.
+
+"not found (read: X)" is a valid and required answer. An unlabelled claim is
+a bug in the pass.
+
+### 18.4 Hard prohibitions — the pass is invalid without them
+- Read-only. No GPU execution, no builds, no edits to the repository.
+- The deliverable is the only file written.
+- No silent overwrite of GROUND TRUTH: contradictions go in a separate
+  `DISAGREEMENTS WITH GROUND TRUTH` section with evidence, and the pass continues.
+- No invented measurements. "not found" beats a plausible number.
+- No in-loop model decisions: the model gathers evidence, it never settles
+  a verdict.
+
+### 18.5 Audit tables beat prose
+Round 2 produces machine-checkable tables: coupling inventories (which file
+references/couples to what, file:line, and which vary across versions), and
+adoption matrices (row × {mechanism, predicted family relevance, direction,
+confidence}). Decide from the adoption matrix; then
+record the pre-registered predictions.
+
+### 18.6 Pre-registered predictions, mechanism-tagged
+Before the first GPU minute on this block: write the hypothesis, the
+mechanism (M1 ceiling saturation / M2 wave quantisation / M3 issue-rate /
+M4 measurement), the confidence, and what observation would refute it.
+Back it with the mechanism-diverse shortlist rule — 14–25 configs/cell —
+and the mechanism names from `docs/search_philosophy.md` and
+`docs/gfx90c_tuning_guide.md` (§13 §R33, §R41). Predictions that cannot
+fail are not predictions.
+
+### 18.7 Do-not-cite lists
+Anything that could not be verified stays banned: unverified papers, ghost
+titles, unsourced percentages, "universal laws" (e.g. "2 waves/SIMD is always
+optimal"). The campaign's own do-not-cite sets are preserved in
+`docs/research/kernel_tuning.md` §9 and the corpus passes; keep yours beside
+them, in the deliverable.
+
+### 18.8 The candidate-generation order the research produced (adopt or reject per device)
+1. Analytic pre-filter, zero GPU: legality (gates), L2/ridge fit, 7-CU
+   (or target-CU) wave quantisation.
+2. Canonical-ascending problem lists before any clock-sensitive run.
+3. Virgin axes ONE AT A TIME, from the measured incumbent.
+4. Ties settled by replication, never by geometry; **median-of-seeds,
+   never max-of-seeds**; the tie band is a policy knob, stated with the
+   measured reproducibility band.
+5. Budget-tiered search: coarse grid → surviving footprint → diagonals last.
+6. Mechanism-diverse shortlists over ±1-knob hill-climbing alone.
+
+### 18.9 Deliverables checklist (new device)
+- [ ] `context.md` analog — the device's compiled context register (Round 1)
+- [ ] GROUND TRUTH / SETTLED FACTS + DISAGREEMENTS section
+- [ ] Coupling audit (Round 2): file:line everywhere this target couples to X
+- [ ] Adoption matrix + do-not-cite list (Round 3)
+- [ ] Pre-registered predictions with mechanism tags
+- [ ] Deck design + TTY-gated overnight order (Stage 2–4)
+- [ ] Every deliverable tagged with its evidence label
+
+The raw research rounds this section is distilled from: `archive/corpus*.md`,
+`context*.md` (untracked, on disk only). Their durable outputs are folded into
+the owners (`docs/research/kernel_tuning.md`, `docs/search_philosophy.md`,
+`docs/gfx90c_tuning_guide.md` §13); the raw files carry evidence, not verdicts.

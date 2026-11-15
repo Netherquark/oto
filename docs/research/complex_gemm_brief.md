@@ -8,7 +8,7 @@ Wave64, 64 KiB LDS/CU, FP64 1/16, **no matrix cores / no dp4a / no packed-BF16**
 [LLVM AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html)). All external claims are
 URL-linked; the first-party gfx90c measurements in §6 come from this repo's
 registry, with the live config-resolved per-cell winners in
-`docs/potential_configs.md` §3 and `docs/results.md`.
+`docs/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c_results.md`.
 
 ## 1. Tensile's complex MAC is exactly four real FMAs
 - `MAC_F32C_Plain` emits **four `_v_mac_f32`** per complex MAC: `Cr += Ar·Br`,
@@ -99,7 +99,7 @@ real counterpart. The "÷4" applies to *complex-MAC throughput*, not to BLAS-8 G
 ## 6. Measured gfx90c complex GEMM (first-party, this repo)
 From the project registry (`gfx90c_results/registry.db`; this is a first-party
 snapshot — the live config-resolved per-cell winners are in
-`docs/potential_configs.md` §3 and `docs/results.md`, and the per-family theoretical
+`docs/gfx90c_tuning_guide.md` §13 §3 and `docs/gfx90c_results.md`, and the per-family theoretical
 ceiling authority is `docs/gfx90c_theoretical_limits.md`):
 CGEMM best **353.6 / median 264.4 GFLOPS**; ZGEMM best **22.5 / median 17.4 GFLOPS** —
 about **16–22%** of the 1613/101 ceilings, versus the same deck's real-family results
@@ -215,7 +215,7 @@ ceiling and its levers are concurrency and independent work, not arithmetic tric
   a reference, not a literature-proven optimum; sweep adjacent legal tiles and
   inspect spills **[CHECK] no published gfx90c FP64 optimal tile found**. Upstream
   `vega10`/`vega20` non-MFMA rank-1 solutions are *implementation* evidence — the
-  donors of `docs/potential_configs.md` §6 Route A — not a published optimum.
+  donors of `docs/gfx90c_tuning_guide.md` §13 §6 Route A — not a published optimum.
 - **Complex-double is a standard tuning target, not a solved one.** CLBlast
   supports precision `6464` (complex-double) with its own tunable GEMM parameters
   ([CLBlast](https://github.com/CNugteren/CLBlast/blob/master/doc/tuning.md)), and

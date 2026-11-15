@@ -124,7 +124,7 @@ def test_forwarded_knobs_equals_the_fork_surface():
     """``FORWARDED_KNOBS`` must be exactly the keys ``_fork_params`` emits.
 
     The declared tuple is what the deck and the docs may assume reaches Tensile
-    (docs/potential_configs.md §R16). If a fork helper starts or stops emitting a key
+    (docs/gfx90c_tuning_guide.md §13 §R16). If a fork helper starts or stops emitting a key
     without the tuple following, a candidate silently reverts to the Tensile
     default -- the exact placebo the tuple exists to make impossible.
     ``GlobalReduceVectorWidth`` is emitted but is not a Tensile parameter, so it

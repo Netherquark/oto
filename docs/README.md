@@ -78,23 +78,24 @@ Corollaries:
 | `docs/README.md` | shared | **This file** — the boundary and the registry itself |
 | `docs/docstrings.md` | dev | Ecosystem | The docstring convention (what a module docstring must contain) |
 
-| `docs/implementation_plan.md` | dev | Ecosystem | The current executable plan only |
+| `docs/implementation_plan.md` | dev | Ecosystem | The design brief: two loops, one rule (deterministic acceptance path; LLM proposes, never decides) |
 | `docs/agentic_consult.md` | dev | Ecosystem | Automated agentic consult: starter + API key → potential_configs.md with the least GPU-trial budget (`oto agent consult` implemented; GPU proof pending) |
 | `docs/shipped_floor_contract.md` | shared | Ecosystem | The shipped-footprint replication contract |
-| `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings, the acceptance authority |
-| `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The tuning cookbook: legal knob domains (§1.1–§1.2), what wins, the virgin-axis census (§9.1) |
+| `docs/gfx90c_theoretical_limits.md` | dev | Ecosystem | Per-family ceilings (gfx90c), the acceptance authority — gfx90c golden example of `docs/theoretical_limits.md` |
+| `docs/gfx90c_tuning_guide.md` | dev | Ecosystem | The one gfx90c-specific doc: the tuning cookbook + the full bring-up case study (§13, the absorbed potential_configs.md) |
 | `docs/research/kernel_tuning.md` | shared | Ecosystem | Research only: hardware model, Tensile source mechanics, unverified-claim register |
 | `docs/research/complex_gemm_brief.md` | dev | Ecosystem | Research only: complex (C/Z) GEMM on the pre-MFMA assembly path |
-| `docs/potential_configs.md` | dev | Ecosystem | The candidate deck, decisions, search rules |
-| `docs/results.md` | dev | Ecosystem | Measured evidence |
+| `docs/potential_configs.md` | dev | Ecosystem | Device-independent candidate-deck methodology; former contents (the gfx90c record) absorbed into `docs/gfx90c_tuning_guide.md` §13 |
+| `docs/gfx90c_results.md` | dev | Ecosystem | Measured evidence — the gfx90c golden case study (template: `docs/results.md`) |
+| `docs/results.md` | dev | Ecosystem | Device-independent measured-evidence template — populated by the agent per device |
+| `docs/theoretical_limits.md` | dev | Ecosystem | Device-independent ceilings/limits template — populated by the agent per device |
 | `docs/knowledge_base.md` | dev | Ecosystem | Architecture knowledge at the captured state |
 | `changelog.md` | shared | Ecosystem | Evolution log (append-only) |
 | `incomplete_work.md` | dev | Ecosystem | Open-work register |
-| `archive/prior_insights.md` | dev | Ecosystem (frozen) | Prior conclusions, results only |
-| `archive/prior_research_archive.md` | dev | Ecosystem (frozen) | Prior-campaign supporting material |
-| `docs/search_philosophy.md` | shared | Ecosystem | Tuning/search philosophy (incl. §S the autotuning strategy cross-check) |
+| `docs/gfx90c_tuning_guide.md` §14 | shared | Ecosystem (frozen) | Prior-campaign conclusions, results only (absorbed verbatim; archive left git) |
+| `docs/search_philosophy.md` | shared | Ecosystem | Agentic tuning philosophy (incl. §S the autotuning strategy cross-check) |
 | `docs/audit_register.md` | dev | Ecosystem | Audit register |
-| `archive/*.md` | dev | Ecosystem (frozen) | Prior corpus archives — evidence snapshots, not docs |
+| `docs/gfx90c_tuning_guide.md` §15 | shared | Ecosystem (frozen) | Corpus-pass audit trail — evidence snapshots, not docs (archive left git) |
 | `docs/comparability.md` | shared | Ecosystem | Multi/single-run comparability triage — the like-for-like admission rule |
 | `docs/design_language.md` | dev | Ecosystem | Design-language spec for the HTML acceptance report |
 | `docs/agent_reference.md` | dev | Ecosystem | Agentic kernel-tuning harness quick reference (CPU-only) |

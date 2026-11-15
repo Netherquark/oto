@@ -74,7 +74,7 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "The current executable plan only",
+      "owns": "The design brief: two loops, one rule (deterministic acceptance path; LLM proposes, never decides)",
       "path": "docs/implementation_plan.md"
     },
     {
@@ -92,13 +92,13 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Per-family ceilings, the acceptance authority",
+      "owns": "Per-family ceilings (gfx90c), the acceptance authority \u2014 gfx90c golden example of `docs/theoretical_limits.md`",
       "path": "docs/gfx90c_theoretical_limits.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "The tuning cookbook: legal knob domains (\u00a71.1\u2013\u00a71.2), what wins, the virgin-axis census (\u00a79.1)",
+      "owns": "The one gfx90c-specific doc: the tuning cookbook + the full bring-up case study (\u00a713, the absorbed potential_configs.md)",
       "path": "docs/gfx90c_tuning_guide.md"
     },
     {
@@ -116,14 +116,26 @@
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "The candidate deck, decisions, search rules",
+      "owns": "Device-independent candidate-deck methodology; former contents (the gfx90c record) absorbed into `docs/gfx90c_tuning_guide.md` \u00a713",
       "path": "docs/potential_configs.md"
     },
     {
       "class": "dev",
       "kind": "Ecosystem",
-      "owns": "Measured evidence",
+      "owns": "Measured evidence \u2014 the gfx90c golden case study (template: `docs/results.md`)",
+      "path": "docs/gfx90c_results.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Device-independent measured-evidence template \u2014 populated by the agent per device",
       "path": "docs/results.md"
+    },
+    {
+      "class": "dev",
+      "kind": "Ecosystem",
+      "owns": "Device-independent ceilings/limits template \u2014 populated by the agent per device",
+      "path": "docs/theoretical_limits.md"
     },
     {
       "class": "dev",
@@ -144,21 +156,9 @@
       "path": "incomplete_work.md"
     },
     {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior conclusions, results only",
-      "path": "archive/prior_insights.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior-campaign supporting material",
-      "path": "archive/prior_research_archive.md"
-    },
-    {
       "class": "shared",
       "kind": "Ecosystem",
-      "owns": "Tuning/search philosophy (incl. \u00a7S the autotuning strategy cross-check)",
+      "owns": "Agentic tuning philosophy (incl. \u00a7S the autotuning strategy cross-check)",
       "path": "docs/search_philosophy.md"
     },
     {
@@ -166,30 +166,6 @@
       "kind": "Ecosystem",
       "owns": "Audit register",
       "path": "docs/audit_register.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
-      "path": "archive/RESEARCH_PROMPT3.pass3_20261014.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
-      "path": "archive/corpus.pass1_20261014.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
-      "path": "archive/corpus2.pass2_20261014.md"
-    },
-    {
-      "class": "dev",
-      "kind": "Ecosystem (frozen)",
-      "owns": "Prior corpus archives \u2014 evidence snapshots, not docs",
-      "path": "archive/corpus3.pass3_20261014.md"
     },
     {
       "class": "shared",
@@ -289,6 +265,6 @@
     }
   ],
   "generated_from": "docs/README.md",
-  "total": 39,
+  "total": 35,
   "version": 1
 }

@@ -32,12 +32,12 @@ VectorWidth, NLCA against the load count, DepthU against the LDS budget, the
 StaggerU trio against each other -- is
 ``db_patterns.DbPatternsMixin._joint_domain``, which probes the gates. The
 enumerated lists this docstring used to carry had drifted from the table and
-named values the gates refuse (docs/potential_configs.md §R23).
+named values the gates refuse (docs/gfx90c_tuning_guide.md §13 §R23).
 
 The four ``_<family>_mutation_pattern`` methods are not called by
 ``synthesize_mutants``: the family-specific passes were never wired in, so SS/
 DD/CC/ZZ get the generic narrow/wide/direction surface. They are kept -- and
-kept gate-legal -- pending a decision to wire them (docs/potential_configs.md §R23).
+kept gate-legal -- pending a decision to wire them (docs/gfx90c_tuning_guide.md §13 §R23).
 
 Public API: DBMutator, FORWARD_KNOB_DOMAINS (re-exported).
 """
@@ -289,7 +289,7 @@ class DBMutator(DbPatternsMixin):
         against each other). Reading the flat domains here is what let the
         mutator offer GLVW=2 beside VectorWidth 4, or NLCA=3 to a tile with one
         load -- refuses the launch boundary then absorbed one draw at a time
-        (docs/potential_configs.md §R23).
+        (docs/gfx90c_tuning_guide.md §13 §R23).
 
         The knobs are visited in a **seeded shuffle**, round-robin over their
         legal values, and the pass is capped at ``limit`` candidates. All three

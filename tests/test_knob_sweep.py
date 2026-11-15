@@ -4,7 +4,7 @@ test_knob_sweep.py — the knob-sweep deck.
 
 Regression guards for the deck that cross-joins each family's measured winner
 tile with one change to a knob the corpus never *explicitly* set
-(docs/potential_configs.md §8, after `oto/tools/run_census.py` reported `GlobalSplitU = ['1']` and
+(docs/gfx90c_tuning_guide.md §13 §8, after `oto/tools/run_census.py` reported `GlobalSplitU = ['1']` and
 `StaggerU = ['32']` as the only values ever seen, and every complex winner
 leaving AggressivePerfMode/MaxOccupancy/GlobalLoadVectorWidth unset):
 
@@ -277,7 +277,7 @@ def test_no_live_phase_decks_the_dead_perf_mode():
     tile across two runs. The sweep row is gone from ``KNOB_SWEEPS`` and the
     emitted rows were pruned from ``phases.yaml``; this is the guard that keeps
     a hand-edit or a stale regeneration from putting them back
-    (docs/potential_configs.md §R23).
+    (docs/gfx90c_tuning_guide.md §13 §R23).
     """
     import yaml
     deck = yaml.safe_load((BASE / "phases.yaml").read_text()) or []

@@ -31,7 +31,7 @@ _TIE_ADAPT: list[tuple[str, str, str, str, int, int,
     ]),
     # SS LSU=2: the winner tile is *illegal* at LSU 2 -- the reduction buffer
     # 2*128*128*4 B = 131072 B exceeds the 65536 per-CU LDS ceiling
-    # (docs/potential_configs.md §R24) -- so the wave-fill probe runs on the widest
+    # (docs/gfx90c_tuning_guide.md §13 §R24) -- so the wave-fill probe runs on the widest
     # LEGAL LSU-2 tile instead: M and DepthU kept, N halved to sit exactly on
     # the reduction cap, VW2 because a 4-wide load does not divide the 8x4
     # operand access.

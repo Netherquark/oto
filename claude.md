@@ -17,12 +17,14 @@ USE SUBAGENTS AS LIBERALLY AS POSSIBLE to ensure the main agent's context doesn'
 get overpopulated by tangential shit and to parallelise tasks.
 This file is the **entrypoint + operating contract** for oto.
 
-oto is a **one-shot deterministic convergence** attempt: replicate the shipped
+oto is an **agentic** system: replicate the shipped
 gfx900 Tensile library footprint as NATIVE gfx90c libraries and converge per-cell by
-benchmarking — with NO LLM consultation in the loop. The driver decides next
-candidates deterministically (harvest wins → mutate the winner by ≤2 knobs → re-run).
-The worst-case contingency is the USER manually calling an LLM to ADD candidate
-configs — that is ALL; it is never an in-loop consultation.
+benchmarking. The **acceptance path is deterministic** — Tensile generates, the
+compiler validates, the hardware decides, and the driver selects next candidates by
+harvest wins → mutate the winner by ≤2 knobs → re-run. The **agent layer proposes,
+never decides**: `oto agent consult` (CPU-only starter → gate-legal rows) and
+agent-1 / agent-2 draft research docs with ISA-cited prompts; LLM output is
+hypothesis input, never a verdict, never an in-loop consultation.
 
 This file does not store benchmark history, repo inventory, hypothesis history, bug
 history, or implementation detail owned by another MD. Read owner documents instead.
@@ -216,9 +218,9 @@ For every substantive task:
 5. Read `docs/gfx90c_theoretical_limits.md` for the per-family ceiling/acceptance authority.
 6. Read `docs/knowledge_base.md` for the baseline repo/code architecture.
 7. Read `changelog.md` for what changed and why (oto evolution).
-8. Read `docs/potential_configs.md` for the candidate deck, decisions, and search rules.
-9. Read `docs/results.md` for measured evidence (the oto ledger).
-11. Read `archive/prior_insights.md` and `archive/prior_research_archive.md` ONLY when
+8. Read `docs/potential_configs.md` for the deck methodology; the gfx90c worked example lives in `docs/gfx90c_tuning_guide.md` §13.
+9. Read `docs/gfx90c_results.md` for measured evidence (the oto ledger).
+11. Read `docs/gfx90c_tuning_guide.md` §14 (the frozen prior-campaign record; the archive left git) ONLY when
     you need the frozen prior measured conclusions (bests, verdicts, levers).
     These are the sole sanctioned prior material; do not reference other prior
     working docs.
@@ -260,7 +262,7 @@ the pipeline that produced the ledger. **Do not write a new parser.**
 only with `--emit`; that keeps the read-only contract of stage 2 intact while
 still giving deck generation a one-line entry point. It exists because
 `oto stats` proves `GlobalSplitU` and `StaggerU` have only ever held one value
-each — see `docs/potential_configs.md` §8 for the deck it emits and §8.1 for the
+each — see `docs/gfx90c_tuning_guide.md` §13 §8 for the deck it emits and §8.1 for the
 measured legality matrix behind it.
 
 `oto.tools.deck_review` is the pre-deck gate for **candidate generation** and the
@@ -287,7 +289,7 @@ A phase that dies with `Generating kernel source resulted in error 4` is the
 **workgroup register-file rule** (`R*MT0*MT1*LocalSplitU >= 65536`): the
 accumulators alone fill the 64K file with no VGPR left for operands, so a config
 that carries it is now refused before it launches
-(`oto.tensile.gates.occupancy.occupancy_feasible`; `docs/potential_configs.md` §R24
+(`oto.tensile.gates.occupancy.occupancy_feasible`; `docs/gfx90c_tuning_guide.md` §13 §R24
 rule 1 / §R27). The gate census must show 0 false rejections — the same rule
 refuses 40 of the corpus's empty phases and 0 of its built ones.
 
@@ -300,13 +302,13 @@ refuses 40 of the corpus's empty phases and 0 of its built ones.
 | `docs/implementation_plan.md` | **Latest/current executable plan only** — self-contained (driver architecture + bug disposition folded in) |
 | `docs/shipped_floor_contract.md` | Shipped gfx900 footprint → native gfx90c replication contract |
 | `docs/gfx90c_theoretical_limits.md` | Per-family theoretical & realistic ceilings — the acceptance authority |
-| `docs/potential_configs.md` | Candidate deck, hypotheses, decisions, convergent-candidate rules |
-| `docs/results.md` | Experimental data, parsed results, comparisons, conclusions |
-| `docs/search_philosophy.md` | Tuning/search philosophy (one-shot; AI as add-only), hardware truth |
+| `docs/potential_configs.md` | Deck methodology (device-independent); the gfx90c record lives in `docs/gfx90c_tuning_guide.md` §13 |
+| `docs/gfx90c_results.md` | Experimental data, parsed results, comparisons, conclusions |
+| `docs/search_philosophy.md` | Tuning/search philosophy (agentic; the model never decides a verdict), hardware truth |
 
 | `incomplete_work.md` | Open-work register (status-keyed) |
 | `docs/audit_register.md` | User-run expert-agent audit register (memory leaks, race conditions, logical bugs) + frozen prior baseline |
-| `archive/prior_insights.md` / `archive/prior_research_archive.md` | Frozen prior conclusions (read-only reference; results only) |
+| `docs/gfx90c_tuning_guide.md` §14 | Frozen prior conclusions (read-only reference; results only) |
 | `README.md` | General repository orientation |
 | `changelog.md` | Single evolution/milestone log (folds former changes_kb + CHANGELOG + agent logs) |
 | `docs/README.md` | The boundary between the MD docs ecosystem and the docstrings |
@@ -358,8 +360,8 @@ factual state**:
 → old summaries/assumptions.
 
 - `docs/implementation_plan.md` = authoritative for **what is planned next**.
-- `docs/results.md` = authoritative for **what experiments showed**.
-- `docs/potential_configs.md` = authoritative for **candidate deck/decisions**.
+- `docs/gfx90c_results.md` = authoritative for **what experiments showed**.
+- `docs/potential_configs.md` = authoritative for the **deck methodology** (device-independent); `docs/gfx90c_tuning_guide.md` §13 is the **gfx90c record**.
 - `docs/gfx90c_theoretical_limits.md` = authoritative for **per-family ceilings/acceptance bars**.
 - `docs/shipped_floor_contract.md` = authoritative for **what footprint to replicate**.
 - `changelog.md` / `docs/knowledge_base.md` = history / baseline (single evolution log).
@@ -384,9 +386,11 @@ Never turn "planned", "proposed", "observed", or "historically true" into
    `PYTHONPATH` = `<TENSILE_ROOT>:…`.
    Override only via explicit `--tensile-root` / `TENSILE_ROOT` (same layout).
 
-- **One-shot, deterministic.** No LLM consultation in the loop. Candidate generation
-  is deterministic (harvest → mutate ≤2 knobs). The ONLY exception is the user
-  manually invoking an LLM to add candidate configs; that is out-of-band and add-only.
+- **Agentic, with a deterministic acceptance path.** Candidate generation inside the
+  driver is deterministic (harvest → mutate ≤2 knobs); no model sits in the
+  gate/measure/verdict path. The agent layer (`oto agent consult`, agent-1/agent-2,
+  or an out-of-band user-invoked LLM) is add-only and proposes rows for the same
+  deterministic pipeline — never an in-loop verdict decision.
 - Native `gfx90c` is the target. Do not substitute RDNA/Navi/MFMA assumptions.
   rocminfo_output.txt is the golden reference for hardware decisions.
 - Hardware facts come from project evidence (`rocminfo`, source, runtime, logs), not
@@ -431,7 +435,7 @@ Never turn "planned", "proposed", "observed", or "historically true" into
   3. `dtype_weight x MT0 x MT1 x LocalSplitU < 65536` — the *workgroup register
      file* (Tensile error 4). ThreadTile cancels, so this caps MacroTile **area**
      at `65536/weight` and is what makes the widest legal complex tiles CC
-     `128x64` / ZZ `64x64`/`128x32` (docs/potential_configs.md §R24/§R27).
+     `128x64` / ZZ `64x64`/`128x32` (docs/gfx90c_tuning_guide.md §13 §R24/§R27).
   4. `LocalSplitU x MT0 x MT1 x computeBytes <= 65536` — the LDS reduction buffer
      (only when `LocalSplitU > 1`; Tensile `MaxLDS`, `SolutionStructs:4108,4334`).
   None is a tuning knob and none may be relaxed to admit a candidate: the
@@ -505,9 +509,9 @@ change is explicitly intended; record rationale in the owning document.
 After changing code: run the narrowest useful validation first, and keep the
 tree-walking guards green (`test_pyflakes` / `test_ruff` / `test_py_compile` /
 `test_function_length` / `test_file_length` — `python3 -m pytest tests/test_pyflakes.py tests/test_ruff.py tests/test_py_compile.py tests/test_function_length.py tests/test_file_length.py -q`); then required
-acceptance checks from `docs/implementation_plan.md`; update `docs/results.md` from actual
+acceptance checks from `docs/implementation_plan.md`; update `docs/gfx90c_results.md` from actual
 generated data, not hand-edited conclusions; update `changelog.md` only for durable
-state changes; update `docs/potential_configs.md` for candidate outcomes; bug disposition
+state changes; update the per-device docs for candidate outcomes (and the methodology if a rule changed); bug disposition
 lives in `docs/implementation_plan.md` (Triaged fixes section).
 
 ## 7. Experiment loop
@@ -526,7 +530,7 @@ checks are demonstrated and remaining gaps are stated.
   or docs. Zero occurrences, always.
 - **History has exactly two sanctioned homes:** `changelog.md` (append-only) and
   the frozen `prior_*` files. Live docs (this file, `docs/implementation_plan.md`,
-  `docs/potential_configs.md`, `knowledge_base*`, `docs/results.md`, `docs/shipped_floor_contract.md`,
+  `docs/potential_configs.md`, `knowledge_base*`, `docs/gfx90c_results.md`, `docs/shipped_floor_contract.md`,
   `README.md`, `oto/device/loader.py` comments, etc.) state current fact only. They
   may point at `prior_*` for conclusions, but must never re-narrate the past.
 - **`todo.txt` is a USER-ONLY file** (restated here).
@@ -549,13 +553,12 @@ checks are demonstrated and remaining gaps are stated.
 - "What's next?" → `docs/implementation_plan.md`
 - "What footprint do we replicate?" → `docs/shipped_floor_contract.md`
 - "What are the ceilings / acceptance bars?" → `docs/gfx90c_theoretical_limits.md`
-- "What candidates?" → `docs/potential_configs.md`
+- "What candidates?" → `docs/potential_configs.md` (methodology) / `docs/gfx90c_tuning_guide.md` §13 (record)
 - "What bug / fix status?" → `docs/implementation_plan.md` (Triaged fixes section)
-- "What did runs prove?" → `docs/results.md`
+- "What did runs prove?" → `docs/gfx90c_results.md`
 - "How does the driver work?" → `docs/implementation_plan.md` (The Driver Architecture)
-- "What is the search strategy?" → AI tuning context MD
-- "What are the frozen prior conclusions?" → `archive/prior_insights.md` /
-  `archive/prior_research_archive.md` (measured results only), then verify against current sources.
+- "What is the search strategy?" → `docs/search_philosophy.md` (agentic tuning context)
+- "What are the frozen prior conclusions?" → `docs/gfx90c_tuning_guide.md` §14 (measured results only), then verify against current sources.
 
 ## 10. Final response discipline
 

@@ -27,7 +27,7 @@ docs/harness_runbook.md            # this runbook
 gfx90c_results/analysis/kernel_db.json          # cache (rebuilt)
 gfx90c_results/analysis/regression_matrix.json  # cache (median basis, per-family grid)
 gfx90c_results/analysis/cells_resolved.json     # cache (winner map; cell_resolver)
-gfx90c_results/analysis/cells_resolved.full.txt # same, human table (docs/potential_configs.md §3)
+gfx90c_results/analysis/cells_resolved.full.txt # same, human table (docs/gfx90c_tuning_guide.md §13 §3)
 gfx90c_results/analysis/coverage_map.json      # cache (legal space + coverage; coverage_map)
 ```
 
@@ -54,7 +54,7 @@ choosing a knob. `--cell FAM:side` lists every geometry the corpus has measured
 on that cell, the row count behind each, and the floor's best; `--family` /
 `--typecode` print the distinct value and best seed-median for every structural
 axis; `--knob` narrows to one. This is the empirical half of
-`docs/potential_configs.md` §R41 (the axes the corpus has finished with); the
+`docs/gfx90c_tuning_guide.md` §13 §R41 (the axes the corpus has finished with); the
 mechanism half is the gate. It reads `kernel_db.json` only and writes nothing
 except `--json`. `--typecode HHS`/`HSS` (or the deck spelling `--cell
 HH_HPA:1024`) is how the HPA blocks are read — they share family `HH` but not a
@@ -131,14 +131,14 @@ median, `% vs floor`, and per-cell verdicts:
   by >2% on the same cell (the one place a candidate can still be *proven*
   better without a new run).
 
-Current state: see [`docs/results.md`](../docs/results.md) for the live benchmark ledger and
+Current state: see [`docs/gfx90c_results.md`](../docs/gfx90c_results.md) for the live benchmark ledger and
 published figures (wins/ties/losses and any material findings).
 
 ### 3. Resolve per-cell native-vs-floor winners (full knob surface)
 
 `cell_resolver` turns "regression_matrix says CC:256 is a loss" into the exact
 winning native phase / run / config and the floor kernel to beat — the input
-the per-cell triage (docs/potential_configs.md §3/§5) and any spoof-steal
+the per-cell triage (docs/gfx90c_tuning_guide.md §13 §3/§5) and any spoof-steal
 (§9: **configure, never copy**) are argued from:
 
 ```bash
@@ -150,7 +150,7 @@ For every acceptance-gradeable cell it reports: verdict, delta %, % of
 realistic ceiling and % of theoretical peak; a **`cfg_gap`** class
 (`identical` / `near` / `retile` / `no-floor`) between the native winner's config
 and the floor's — the mechanical half of the tie taxonomy, whose reading is
-docs/potential_configs.md §R17; the **native winner** — phase,
+docs/gfx90c_tuning_guide.md §13 §R17; the **native winner** — phase,
 run, and the phase's full structural config, resolved winner-run-first from
 the run dirs' `configs/*.yaml`, then registry `phases.data.config`, then the
 kernel_db structural row; and the **floor's best kernel** for the same cell
@@ -164,7 +164,7 @@ caches, like kernel_db.json) — deterministic re-runs of the §2 evidence table
 
 1. **Coverage parity (the hard rule).** The produced `tensilelibrary.dat`
    must address exactly the shipped cells (no contraction, no extension). See
-   [`docs/results.md`](../docs/results.md) §12 for the exact cell count and non-cube shapes.
+   [`docs/gfx90c_results.md`](../docs/gfx90c_results.md) §12 for the exact cell count and non-cube shapes.
    After any `phases.yaml` edit:
    ```bash
    python3 -m oto check library-parity --quiet && echo "grid-safe"
@@ -257,7 +257,7 @@ Authoritative green-lighted next step (user runs in a TTY): wire the seed
 overlay (`python3 -m oto.harness.candidate_generator`; the overlay is
 gitignored, so this is required), run the CPU-only preflight, then
 `python3 -m oto tune --budget 10 --yes`. The deck rationale and its
-four-outcome reading are in `docs/potential_configs.md` §R40. After the run, rebuild
+four-outcome reading are in `docs/gfx90c_tuning_guide.md` §13 §R40. After the run, rebuild
 the matrix (`step 1`) and re-check parity (`step 3`).
 
 ## Why medians, not best seeds
@@ -266,7 +266,7 @@ Best-seed comparisons are tail-prone — e.g. the D:192 all-time *best*
 41.96 GFlops came from a kernel whose median is 17.67, and the HH:256 floor
 "win" flips sign between bases (best-seed −31% vs median +2.5%). Median-first
 is the standing rule everywhere in this repo (`changelog.md`;
-`docs/potential_configs.md` §6 states the median-of-seeds basis).
+`docs/gfx90c_tuning_guide.md` §13 §6 states the median-of-seeds basis).
 ## Visual/layout regression check (`oto.harness.visual_check`)
 
 After regenerating `acceptance_report.html`, run the visual check to catch

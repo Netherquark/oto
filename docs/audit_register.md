@@ -13,8 +13,9 @@ correctness defects** in the codebase. Findings are recorded back into this file
 Hard lines (mirror `claude.md` guardrails):
 
 - **Out-of-band, add-only.** The expert audit never runs inside the benchmark
-  loop — the same role as the user-manual LLM candidate injection: a
-  user-invoked contingency, never an in-loop consultation.
+  loop — the same class of out-of-band input as LLM-proposed candidate rows
+  (`oto agent consult`, or an out-of-band user-invoked LLM): additive, never an
+  in-loop gate or verdict.
 - **Evidence-based only.** Findings must cite live repo/source + logs + DB, under
   the `live repo → owner MDs → agent logs → old summaries` precedence. No
   model-memory claims.
@@ -56,7 +57,7 @@ How to run an audit:
 
 ## 1. Sources
 
-Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `archive/prior_research_archive.md`.
+Frozen prior audit verdicts (v1 §1-4 + v2 §5), sourced in `docs/gfx90c_tuning_guide.md` §14 (`archive/prior_research_archive.md`, untracked).
 
 | Finding | Prior status | oto posture |
 |---|---|---|

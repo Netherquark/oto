@@ -163,7 +163,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
         # family is data-movement bound long before it is ALU bound: the
         # lever is tile size and LDS padding, not width (VW2 = 16 B is
         # already the cap).
-        # ---- 2026-10-14 additions (docs/potential_configs.md §8.2): the two
+        # ---- 2026-10-14 additions (docs/gfx90c_tuning_guide.md §13 §8.2): the two
         # legal-and-never-generated corners. The accumulator cap
         # (ACCVGPR_BUDGET = 128) forbids TT6x6 and TT8x8, so the only way to
         # raise CC's arithmetic intensity is a BIGGER MacroTile at the same
@@ -190,7 +190,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
             # to prove that rather than assume it.
             {"MacroTile": "32x32x16", "ThreadTile": "2x2"},
             {"MacroTile": "64x64x8", "ThreadTile": "4x4"},
-            # ---- 2026-10-18 (docs/potential_configs.md §R24): the widest LEGAL CC
+            # ---- 2026-10-18 (docs/gfx90c_tuning_guide.md §13 §R24): the widest LEGAL CC
             # MacroTile. The 2026-10-14 rows here were wrong. 128x128x8 at
             # 8x4 *and* 4x8 makes R*MTarea = 4*16384 = 65536 accumulator VGPRs
             # across the workgroup, so the accumulators alone fill the 64K file
@@ -271,7 +271,7 @@ FAMILY_DECKS: dict[str, list[dict[str, Any]]] = {
 # generator (`generate_knob_sweep_phases`), not for a duplicated block per
 # family.
 #
-# Legality: `docs/potential_configs.md` §8.1 records which of these survive
+# Legality: `docs/gfx90c_tuning_guide.md` §13 §8.1 records which of these survive
 # `validate_config` per family (111 of 133). The generator relies on the append
 # boundary to refuse the rest, so an illegal row costs a rejection and not a
 # crashed run -- but the table below is already pruned to the rows that pass on
@@ -398,7 +398,7 @@ DECISION_TRIAL_TILES: list[dict[str, Any]] = [
 #: One knob change applied on top of a KNOB_SWEEP_BASES tile. `families` lists
 #: the families this row is legal for; the generator skips it elsewhere rather
 #: than emitting a candidate that the append boundary will refuse. Measured
-#: legality per family is in docs/potential_configs.md §8.1.
+#: legality per family is in docs/gfx90c_tuning_guide.md §13 §8.1.
 KNOB_SWEEPS: list[dict[str, Any]] = [
     # ---- Addressing / issue slots: the knobs that spend non-FMA issue slots.
     # Complex is issue-bound, not bandwidth-bound (§5 of the deck), so this

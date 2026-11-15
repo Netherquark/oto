@@ -3,10 +3,34 @@
 The 1,007-line archived register was consolidated and deleted; its
 contents were folded into the docs ecosystem the same day (GPU/LDS
 validation doc `docs/gfx90c_theoretical_limits.md` §6.1, floor triage in
-`docs/results.md` §8–§9, GSU/domain notes in `docs/gfx90c_tuning_guide.md`, the
+`docs/gfx90c_results.md` §8–§9, GSU/domain notes in `docs/gfx90c_tuning_guide.md`, the
 verifier-bringup history in `changelog.md`). The git object holds the
 pre-fold snapshot; recovered in any case. Only the *open* items are kept
 live here; completed work lives in `changelog.md`, decisions in `docs/`.
+
+## Blocked — owner-gated (documented; do not re-raise without new information)
+
+- **gfx902 C4/C7.1 — blocked on the owner's API key.** agent-1/agent-2 research
+  for the gfx902 starter cannot run; `profiles/gfx902.json` cannot be accepted by
+  a human who must sign off a device that is not on this box. The class-B flow is
+  fully rehearsed on a synthetic stub (`tests/test_class_b_rehearsal.py`,
+  16 tests) so that unblocking needs only the key + the human gate. Detail below:
+  "C4" and "C7.1" entries under Open items.
+- **TensileClient not built on this box.** `oto doctor` reports it honestly;
+  every GPU phase dies before a subprocess spawns. Fix is the one-time
+  next-cmake build (`context_raw.md §2.4`) or `OTO_TENSILE_CLIENT=/path/to/tensile-client`.
+  Detail below: the `oto doctor` FAIL entry under Open items.
+- **CC:512/256 `AssertFree0/1ElementMultiple=4` (AF4/4) vs AF2/2 paired-widen — measured nowhere, valid nowhere, claimed nowhere.**
+  The A/B is TTY-gated and unscheduled; it happens only when the overnight run resumes
+  (`oto tune` on the owner's TTY). Until then no performance claim exists anywhere —
+  not in docs, not in the deck, not in reports. Detail below: the CC entry under Open items.
+- **Acceptance reports / drift-manifest attestation.** The machine-local
+  `acceptance_report.{json,html}` were overwritten in the v1-readiness audit;
+  byte comparison confidence does not exist (entry under Open items). The
+  `oto/tools/verifiers/drift_manifest.json` attestation stands at its last
+  re-attestation (2026-11-15, 45th entry); it is not invalidated by docs work,
+  but it has not been re-attested since either — re-attestation is a deliberate
+  on-machine act, not an assumption to make here.
 
 ## Open items
 

@@ -7,6 +7,7 @@
 - Generate device-specific docs via agent-1/agent-2
 - Run CPU-only harness study, then TTY benchmark, then `oto library best-effort`
 - Then the campaign: study the corpus, decompose ties/losses into classes, propose routes, reconnect for consultations only at defined triggers
+- If the docs cannot answer a question you must settle, commission a research pass in the shape of `docs/operator_campaign.md` §18 (research-prompt discipline)
 
 ## What you read
 - `docs/operator_runbook.md` (the contract)

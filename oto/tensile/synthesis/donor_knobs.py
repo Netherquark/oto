@@ -19,7 +19,7 @@ from typing import Any
 #: Values are the Tensile-legal value sets (Common.py) intersected with what
 #: the gates admit. This is the NARROW mutation space.
 #:
-#: 2026-10-16 revisions (docs/potential_configs.md §0 R6):
+#: 2026-10-16 revisions (docs/gfx90c_tuning_guide.md §13 §0 R6):
 #: * ``StaggerUStride`` (0,64,128,256). Tensile silently raises SUS to a whole
 #:   multiple of DepthU*bpe, so 256 collapses to 64 for DU=16/bpe=4 and most of
 #:   the old (0,256,512) domain was one point. 64/128 are live and already in

@@ -3,11 +3,11 @@
 ## How this relates to the project
 
 - This doc is **research only** — hardware model, literature, and Tensile source mechanics. It contains no benchmark numbers of its own; all measured values live in `docs/potential_configs.md` and `docs/knowledge_base.md` and are referenced, never copied.
-- Companions: `docs/gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `docs/potential_configs.md` §8 (Groups A/B/C), §9 (steal), §10 (other routes incl. §10.2 split-complex) and §12 (next-run queue) define the ranked experiment groups and the resolution ladder (occupancy/tile levers → split-complex). Section 7 below maps each research finding onto that existing plan; §8 lists the **open research directions** — the questions these mechanics do not settle — as falsifiable probes, not new experiment cells.
+- Companions: `docs/gfx90c_tuning_guide.md` defines the campaign vocabulary (**M1** scope/axes, **M2** gates, **M3** mechanisms, **M4** measurement rules) and the knob surface; `docs/gfx90c_tuning_guide.md` §13 §8 (Groups A/B/C), §9 (steal), §10 (other routes incl. §10.2 split-complex) and §12 (next-run queue) define the ranked experiment groups and the resolution ladder (occupancy/tile levers → split-complex). Section 7 below maps each research finding onto that existing plan; §8 lists the **open research directions** — the questions these mechanics do not settle — as falsifiable probes, not new experiment cells.
 - `docs/gfx90c_theoretical_limits.md` remains the authority for performance ceilings; this doc only explains *why* those ceilings exist.
 - Cite conventions: repo files as `path.py:line` against the local Tensile checkout at `TENSILE_ROOT` (per `.env`); web sources inline as `(site, URL)`; full list in **Sources**. Claims I could not fully verify are marked **check**.
 - **The 2026-10-16 primary-source pass** (Tensile's `validParameters` / `defaultSolution` / shipped `Perf/*.yaml` read directly, plus the external autotuning literature) had its conclusions promoted once each into their owners — `docs/gfx90c_tuning_guide.md` §1.1 (the legal knob domains) and §9.1 (the virgin axes), and `docs/search_philosophy.md` (the search order). Its raw file was retired on that fold (`docs/README.md`), so the owners are the durable record.
-- **The 2026-10-19 GCN5 GEMM literature review** (`gfx90c_gcn5_gemm_literature_caveman_full.md`, a `/caveman full` pass over rasterisation/wave quantisation, complex/FP64, LDS, pipeline/cache, split-K, small-K, search-space design, measurement, and handwritten-asm literature) was folded the same way: §A/§C–§G/§J → this doc (§1, §3.4, §4, §5, §8.7, §9), §B/§C-complex → `docs/research/complex_gemm_brief.md` (§5–§11), §H and §29 → `docs/search_philosophy.md` §S and `docs/knowledge_base.md` §8, §27 → `docs/gfx90c_tuning_guide.md` §1.2, and the ranked experiment order → `docs/potential_configs.md` §R33. Every `[CHECK]`/`[Transfer only]` label is preserved; the raw file was retired, so the owners are the record.
+- **The 2026-10-19 GCN5 GEMM literature review** (`gfx90c_gcn5_gemm_literature_caveman_full.md`, a `/caveman full` pass over rasterisation/wave quantisation, complex/FP64, LDS, pipeline/cache, split-K, small-K, search-space design, measurement, and handwritten-asm literature) was folded the same way: §A/§C–§G/§J → this doc (§1, §3.4, §4, §5, §8.7, §9), §B/§C-complex → `docs/research/complex_gemm_brief.md` (§5–§11), §H and §29 → `docs/search_philosophy.md` §S and `docs/knowledge_base.md` §8, §27 → `docs/gfx90c_tuning_guide.md` §1.2, and the ranked experiment order → `docs/gfx90c_tuning_guide.md` §13 §R33. Every `[CHECK]`/`[Transfer only]` label is preserved; the raw file was retired, so the owners are the record.
 
 ---
 
@@ -54,7 +54,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 | **16 B** (complex, split halves) | **8×** | 1× | 2× | 4× |
 
 - Arithmetic for the table (all factors identical under the 32-lane and the instruction-width phase models, because the pattern is uniform): `e=4,p=0` → 32 lanes all hit one bank = 32×; `p=1` → stride 65 dwords, step 1 mod 32 → banks 0…31 distinct = 1×; `p=4` → step 4 → each bank hit by 4 lanes = 4×. `e=8,p=0` → each of 2 banks gets 32 dwords vs mean 2 = 16×; `e=16,p=0` → 4 banks × 32 vs mean 4 = 8×.
-- **Predictions for Group B (`LdsPad` sweep, docs/potential_configs.md §8):**
+- **Predictions for Group B (`LdsPad` sweep, docs/gfx90c_tuning_guide.md §13 §8):**
   - **pad 1 is conflict-free for all three element sizes** and should win where the column-read pattern dominates;
   - **pads are non-monotonic** — pad 4 is *worse* than pad 1 everywhere and worse than pad 2 for 4 B — so "more padding" is not a safe prior; a `LdsPad ∈ {0,1,2,4}` grid (not a binary toggle) is required;
   - LDS cost of pad 1 at `R=64` is `(64+1)/64 ≈ 1.6 %` — negligible against `LDS_BUDGET = 16384` B (`oto/tensile/gates/vgpr_model.py`, `ldspad_feasible` gate in `oto/tensile/gates/occupancy.py`), but `PrefetchGlobalRead=1` doubles the footprint (§4).
@@ -233,7 +233,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   `wgSerial = wg0 + (wg1 % WorkGroupMapping) * nwg0` (`Tensile/Common.py:980`),
   *"box width determined by the number of compute units"* (`:975-981`) —
   **check**: exact formula for 7-CU parts. `WGM=8` is the default (`:1626`) and a
-  proven real lever on this APU (see docs/potential_configs.md §3 — WGM8 in
+  proven real lever on this APU (see docs/gfx90c_tuning_guide.md §13 §3 — WGM8 in
   winners, referenced not copied).
 - **`GlobalSplitU`**: `GSU=1` forces `GlobalSplitUAlgorithm=SingleBuffer`
   (`Tensile/SolutionStructs.py:3530-3532`). For **`GSU>1` the supported-type
@@ -285,7 +285,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   40 empty phases caught, on both the native and the reference populations. It is
   the constraint the retired `R*MTarea <= 65536/2` area model was reaching for,
   with the right threshold (65536) and the right boundary (`>=`) —
-  docs/potential_configs.md §R24/§R27.
+  docs/gfx90c_tuning_guide.md §13 §R24/§R27.
 - **The `NumThreads`-aware per-thread budget is a trap (probed, rejected).** The
   obvious next rule is a per-thread VGPR ceiling `min(256, 65536 // NumThreads)`.
   Probed against the corpus (`oto.harness.rule_calibration --rule nt_budget`,
@@ -332,7 +332,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - **`NumLoadsCoalescedA/B` (`NLCA/NLCB`)**: coalesces LDS loads
   (`tuning_docs/tensile_tuning.tex:1430`, `kernel-parameters.rst:449`);
   `NLCA=3` fuses LDS-load instructions in our kernel population (see
-  docs/potential_configs.md §7, referenced for the counts). On this port NLCA is
+  docs/gfx90c_tuning_guide.md §13 §7, referenced for the counts). On this port NLCA is
   also the shared alias for `NumLoadsCoalescedA` in
   `oto/tensile/gates/loads.py:_nlca_for`.
 - **Pipeline buffer depth (`PrefetchGlobalRead`) — single vs double buffer.** The
@@ -368,7 +368,7 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
   forward a knob and the YAML does not set it, the harness must be extended before
   meaningful tuning** — verify each reaches the generator; an unforwarded knob only
   inflates the search. This is the general form of the forwarding surface at
-  `oto/tensile/config_writer.py::FORWARDED_KNOBS` (`docs/potential_configs.md` §R16).
+  `oto/tensile/config_writer.py::FORWARDED_KNOBS` (`docs/gfx90c_tuning_guide.md` §13 §R16).
 - **`InnerUnroll` / `DepthU` and ILP (small-K and FP64).** Larger depth may cut
   loop overhead and expose independent work, at higher VGPR (lower residency); a
   larger thread tile likewise exposes more accumulator chains. Sweep `DepthU`
@@ -390,13 +390,13 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 - **Where the 4× comes from**: complex MAC = 4 real FMAs + 2 adds; Tensile's VALU implementation is literally **4 `_v_mac_f32` passes per (a,b,iui)** (`Components/MAC_F32C.py:55/73/90/107`). At the same wave residency this makes CC/ZZ ~4× more VALU-hungry than SS/DD — the mechanism behind the derived CC/ZZ ceilings (see `docs/gfx90c_theoretical_limits.md`, referenced not copied).
 - **Data layouts**:
   - **Interleaved complex** (zr,zi adjacent) — what Tensile/rocBLAS problem types use (e.g. `Cijk_Ailk_Bjlk_CB`, rocBLAS programming guide, https://rocm.docs.amd.com/projects/rocblas/).
-  - **Split-complex** (SoA real and imaginary planes) — halves contiguous runs, doubles stride; compared head-to-head with interleaved in "Flexible Performant GEMM Kernels on GPUs" (IEEE Computer Society, https://ieeexplore.ieee.org/document/9655458). **check**: whether this Tensile checkout has a native split-complex problem type (Group D escalation in docs/potential_configs.md §10.2 assumes decomposition into 4 real-domain GEMMs at the *call* level if not).
+  - **Split-complex** (SoA real and imaginary planes) — halves contiguous runs, doubles stride; compared head-to-head with interleaved in "Flexible Performant GEMM Kernels on GPUs" (IEEE Computer Society, https://ieeexplore.ieee.org/document/9655458). **check**: whether this Tensile checkout has a native split-complex problem type (Group D escalation in docs/gfx90c_tuning_guide.md §13 §10.2 assumes decomposition into 4 real-domain GEMMs at the *call* level if not).
 - **Algebraic reductions** (do the same FLOPs with fewer multiplies — software "MFMA-for-complex" analogues):
   - **Gauss 3-multiply trick** and **cgemm3m**: cuBLAS documents Gauss complexity reduction giving **up to 25 %** (cuBLAS docs, https://docs.nvidia.com/doc/cuBLAS/). **check** exact figure/page.
   - **BLIS 3m/4m**: Van Zee & Smith, *Implementing Complex GEMM Using a Kernel of Real GEMMs* (TOMS, https://www.cs.utexas.edu/~flame/pubs/blis5_toms_rev2.pdf).
   - **BLIS 1m**: single real-domain GEMM via a special packing (Smith et al., SISC, https://www.cs.utexas.edu/~flame/pubs/blis6_sisc_rev0.pdf; flame/blis, https://github.com/flame/blis) — **check** the exact real-vs-complex constant; **GEMMFIP** surveys these methods on GPUs (arXiv:2302.08417, https://arxiv.org/abs/2302.08417).
   - These reduce **arithmetic, not bytes** — attractive exactly where our CC/DD cells are VALU-bound, less so if the cell is already DRAM-bound on DDR4 (§1).
-- **Reduction-path strategy already ranked by the project** (docs/potential_configs.md §10.1): `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` splits K across workgroups with partial results in workspace, then a post-kernel accumulates — mechanically sound for complex (gate §4) at the cost of a **2-kernel launch + workspace traffic**, which matters more on this bandwidth-poor APU than on dGPU. `StreamK` would be the modern answer but is MFMA-gated (§4).
+- **Reduction-path strategy already ranked by the project** (docs/gfx90c_tuning_guide.md §13 §10.1): `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` splits K across workgroups with partial results in workspace, then a post-kernel accumulates — mechanically sound for complex (gate §4) at the cost of a **2-kernel launch + workspace traffic**, which matters more on this bandwidth-poor APU than on dGPU. `StreamK` would be the modern answer but is MFMA-gated (§4).
 - **Ordering principle** (from §7, unchanged): pads → GSU+MultipleBuffer → PGR=0 → NLCA=3 → split-complex; each rung is only entered if the previous stays under the ~2× gap budget.
 - **3M/Gauss carries a numerical-stability price (Higham).** The literature's
   three-multiply result (Higham, SIAM, URL) reports up to **25 % arithmetic
@@ -434,11 +434,11 @@ Row stride in dwords, and per-lane stride step: `e=4: (64+p)`, `e=8: 2·(64+p)`,
 
 ## 7. Concrete experiments mapped to M1–M4
 
-- All runs below are **already-owned cells** in docs/potential_configs.md §8 (Groups A–D); this section only supplies the mechanistic hypothesis and the prediction to record *before* measuring (M1 vocabulary, M2 gate names throughout).
+- All runs below are **already-owned cells** in docs/gfx90c_tuning_guide.md §13 §8 (Groups A–D); this section only supplies the mechanistic hypothesis and the prediction to record *before* measuring (M1 vocabulary, M2 gate names throughout).
 - **H1 — `LdsPad ∈ {0,1,2,4}` × NT/T (Group B)**: §2 predicts **pad 1 conflict-free, pad 4 regression, non-monotonic ordering**. Pre-registered prediction: `LdsPad=1` ≥ `2` > `4` ≥ `0` on transpose-heavy (T) cells; near-no-effect on NT cells where Tensile's auto rule picks 0 (`SolutionStructs.py:2812-2815`). Mechanism column: M3-LDS. Gates: `ldspad_feasible` (`oto/tensile/gates/occupancy.py`) — mind the padded-footprint bound and the decided `BYTES_PER_ELEMENT["Z"]=16` LDS table (§3.3).
-- **H2 — `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` (Group C)**: mechanism = K-split changes per-wave register/tile shape → moves `V` across a §3 quantization boundary *and* adds a 2-kernel + workspace penalty (§4). Prediction: wins only where current `V` sits just above a cliff (e.g. 3-wave kernels); loses on already-4-wave cells. `GSU=1` has been in every winner so far (see docs/potential_configs.md §6) — expect this group to be narrow, not a breakthrough.
+- **H2 — `GSU ∈ {2,4,8}` × `GlobalSplitUAlgorithm=MultipleBuffer` (Group C)**: mechanism = K-split changes per-wave register/tile shape → moves `V` across a §3 quantization boundary *and* adds a 2-kernel + workspace penalty (§4). Prediction: wins only where current `V` sits just above a cliff (e.g. 3-wave kernels); loses on already-4-wave cells. `GSU=1` has been in every winner so far (see docs/gfx90c_tuning_guide.md §13 §6) — expect this group to be narrow, not a breakthrough.
 - **H3 — `PrefetchGlobalRead=0` (Group C)**: frees the double-buffer VGPRs **and** halves LDS footprint (`Common.py:511-513`). Prediction: occupancy step 3→4 waves (`V` 79→≤64 territory, §3.1) at the cost of lost global-read overlap — net win only on memory-latency-insensitive (compute-bound) cells. Mechanism: M3-register.
-- **H4 — `NLCA=3` (Group C)**: fuses LDS-load instructions (docs/potential_configs.md §7). Mechanism: fewer LDS instructions + reduced LDS port pressure; interacts with H1 (a fused load pattern changes which pad matters — run H4 on top of the H1 winner, not independently).
+- **H4 — `NLCA=3` (Group C)**: fuses LDS-load instructions (docs/gfx90c_tuning_guide.md §13 §7). Mechanism: fewer LDS instructions + reduced LDS port pressure; interacts with H1 (a fused load pattern changes which pad matters — run H4 on top of the H1 winner, not independently).
 - **H5 — split-complex decomposition (Group D, last resort)**: only if the ladder stays under ~2× (§7). Feasibility **check** (native problem type vs 4× real-domain GEMM call-level decomposition, §5); predicted win condition: CC/DD cells that are VALU-bound by the 4-pass MAC (`MAC_F32C.py`) rather than DRAM-bound (§1 roofline).
 - **Reporting discipline**: every result enters M2 tables with its `occupancy_feasible`/`ldspad_feasible` verdict and the measured `V`/residency (§3 formula is the cross-check); the M4 clock/TTY rules gate every timing. One fact, one home: this doc supplies *why*, `docs/potential_configs.md` supplies *what was tried*, `docs/knowledge_base.md` supplies *what won*.
 
@@ -483,7 +483,7 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   and the "target `V ≤ 64`" rule needs restating.
 - **What binds per cell — VGPR or LDS?** §3.3 gives both limiters but no per-cell
   verdict. `python3 -m oto.harness.occupancy_bounds` (see
-  `docs/potential_configs.md` §5) is the tool; the open question is which cells
+  `docs/gfx90c_tuning_guide.md` §13 §5) is the tool; the open question is which cells
   are LDS-bound at the current winner geometry (candidates for a smaller
   `DepthU`/`MacroTile`) versus VGPR-bound (candidates for `PGR=0`).
 - **Does the complex `V` regression come from accumulators or the LDS path?**
@@ -499,7 +499,7 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   split-complex `OperationType`/layout before assuming call-level decomposition
   into four real GEMMs.
 - **Would 3M (Gauss) actually help here?** §5 says 3M reduces arithmetic, not
-  bytes; the complex wall (§5, `docs/potential_configs.md` §3) is diagnosed as
+  bytes; the complex wall (§5, `docs/gfx90c_tuning_guide.md` §13 §3) is diagnosed as
   memory/occupancy, so 3M's expected win is *conditional* on the wall being
   VALU-side. Probe: only after pads/PGR/NLCA land, compare the residual gap to
   the 3M instruction-count saving.
@@ -625,7 +625,7 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
   BLAS-8 accounting, the four-FMA complex MAC (MAC_F32C.py/MAC_F64C.py), 3M/4M
   instruction counts, MAGMA/Fermi + Ozaki routes. The single citation anchor for
   the corrected complex-ceiling frame and the split-complex estimate in
-  `docs/potential_configs.md` §1/§10.2
+  `docs/gfx90c_tuning_guide.md` §13 §1/§10.2
 
 **Autotuning / portability**
 - Kernel Tuner: https://kerneltuner.github.io
@@ -657,17 +657,17 @@ prediction, a gate verdict, a TTY measurement, and a `kernel_db.json` entry
 - `Tensile/docs/src/conceptual/kernel-parameters.rst` (official knob reference); `Tensile/tuning_docs/tensile_tuning.tex:1430` (`NLCA` = `NumLoadsCoalescedA`)
 
 **Project files**
-- `docs/gfx90c_tuning_guide.md` (M1–M4 vocabulary, knob surface), `docs/potential_configs.md` §8/§9/§10/§12 (experiment groups, steal, split-complex, queue), `docs/gfx90c_theoretical_limits.md` (ceilings), `docs/knowledge_base.md` §7/§10/§11 (data law, measured context), `oto/tensile/gates/vgpr_model.py` + `oto/tensile/gates/occupancy.py` (gates, LDS/VGPR budgets, the three byte tables), `oto/tensile/gates/loads.py` + `oto/tensile/gates/assembly.py` (load divisibility / 16-B cap / class rules), `oto/tensile/config_writer.py` (`FORWARDED_GROUP_C_KNOBS`), `docs/research/complex_gemm_brief.md` (complex-MAC accounting + split routes), `changelog.md`
+- `docs/gfx90c_tuning_guide.md` (M1–M4 vocabulary, knob surface), `docs/gfx90c_tuning_guide.md` §13 §8/§9/§10/§12 (experiment groups, steal, split-complex, queue), `docs/gfx90c_theoretical_limits.md` (ceilings), `docs/knowledge_base.md` §7/§10/§11 (data law, measured context), `oto/tensile/gates/vgpr_model.py` + `oto/tensile/gates/occupancy.py` (gates, LDS/VGPR budgets, the three byte tables), `oto/tensile/gates/loads.py` + `oto/tensile/gates/assembly.py` (load divisibility / 16-B cap / class rules), `oto/tensile/config_writer.py` (`FORWARDED_GROUP_C_KNOBS`), `docs/research/complex_gemm_brief.md` (complex-MAC accounting + split routes), `changelog.md`
 
 **Pass-2 Tensile-source anchors.** The per-knob upstream URLs (Tensile `Common.py`
 line ranges, Debian TensileLite `Solution.py`, PR #10847, release notes) are in the
-raw pass-2 corpus: `archive/corpus2.pass2_20261014.md` Appendix A. Those links point
+raw pass-2 corpus: `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) Appendix A. Those links point
 at upstream `develop` and version-drift; the authoritative anchors for *this*
 project are the pinned local files, cited inline in §9.2/§9.3 and
 `docs/knowledge_base.md` §7.1–§7.2 (`Tensile/Common.py`, `Tensile/SolutionStructs.py`).
 
 
-## 9. Do not cite — unverified claims (folded from `archive/corpus.pass1_20261014.md` §4, 2026-10-14)
+## 9. Do not cite — unverified claims (folded from `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus.pass1_20261014.md`, untracked) §4, 2026-10-14)
 
 `corpus.md` carried a list of claims its author could not confirm. That list is
 now here, because a "do not cite" list is research content and must live with the
@@ -685,7 +685,7 @@ does not repeat the work.
 | "gfx1151 `auto` DPM pinned at 1100 MHz; `profile_peak` gave +37.8%" | No primary source verified for gfx90c. It illustrates the DVFS mechanism and nothing more; `docs/knowledge_base.md` §8.3 is the project's own protocol. |
 | COSTA, FASTEST, BASS, BEST, Pyramid, MagicLine, SeerNN, PlanGen, GemmLab, Charo analytical GEMM, Fugerite et al. | Bibliographic ghosts **in this corpus**: none could be verified to exist as cited. Treat as folklore until independently located. |
 | A universal "2 waves/SIMD is the right occupancy target" | Not a law. The project's own measurement puts the corpus **median** at 2 waves/SIMD (`docs/gfx90c_theoretical_limits.md` §7.1), which is a description of what happened, not a target. |
-| "AMD's shipped Vega solutions are systematically small-tiled" | **Resolved, and the answer is no.** AMD's shipped vega10/vega20 solution files contain MT128x16 (FP32), MT064x064 (FP64), MT016x016 (FP16) *in the same library* — there is no uniform small- or large-tile bias. AMD's *rank-1* solutions are small (see `docs/potential_configs.md` §6 Route A), but the library spans three orders of tile area, so "AMD prefers small tiles" is not a supportable generalisation. |
+| "AMD's shipped Vega solutions are systematically small-tiled" | **Resolved, and the answer is no.** AMD's shipped vega10/vega20 solution files contain MT128x16 (FP32), MT064x064 (FP64), MT016x016 (FP16) *in the same library* — there is no uniform small- or large-tile bias. AMD's *rank-1* solutions are small (see `docs/gfx90c_tuning_guide.md` §13 §6 Route A), but the library spans three orders of tile area, so "AMD prefers small tiles" is not a supportable generalisation. |
 | "Vega has a packed / dual-lane FP32 FMA (`V_PK_FMA_F32`)" | Vega ISA lists `V_PK_FMA_F16` (packed half) and `V_MAD_MIX_F32` (mixed-width MAD) but **not** `V_PK_FMA_F32`; `V_MAD_MIX_F32` is not two packed FP32 FMAs (§1). Do not build a gfx90c search dimension on a nonexistent packed-FP32 FMA. |
 | "Handwritten GCN/GFX90C assembly systematically beats tuned Tensile" | **Not established.** **[CHECK]** No directly comparable study found; KernelTuner's AMD Vega result concerns *tuning time* versus brute force, not kernel throughput. Custom assembly may win selected shapes via schedule/layout/address optimisation, but only measured against tuned Tensile under identical correctness and measurement protocol. |
 
@@ -707,7 +707,7 @@ That is the same shape as the project's own measured DD winner (32x32x8/TT2x2,
 "small accumulator, mid tile". The FP32 rank-1's `DepthU 16` with `WG 32x4x2`
 (a `LocalSplitU 2` workgroup) is also notable: **AMD itself uses LocalSplitU**,
 which is the one wave-fill knob legal for this project's complex families
-(`docs/potential_configs.md` §8.1).
+(`docs/gfx90c_tuning_guide.md` §13 §8.1).
 
 ### 9.2 Pass-2 additions (`corpus2.md`, folded 2026-10-14)
 
@@ -718,7 +718,7 @@ Its ledger rows that §9 above did not already carry:| Claim that circulates | W
 | ASPLOS'20 *"Tile"* prunes >85% of invalid candidate tiles via GCN inequalities (`LDS ≤ 64 KiB`, `VGPR ≤ 256`) | The paper's existence is unresolved (§9), so the pruning figure is unattributable. The *constraints* are real and already in the project's gates; the 85% is not citable. |
 | OSDI'20 *Ansor* supplies a knob-sensitivity ranking (tile 60–70%, addressing 15–20%, pipeline 10–15%, fine scheduling <5%) | This ranking is not an Ansor result and no ablation of *these* knobs on gfx90c was located. Do not present it as measured sensitivity. |
 | "142,782 CLBlast configurations on 5 GPUs" (arXiv:2507.15277) | The abstract's 142,782 are *device × input × parameter performance measurements*, not unique configurations. Cite the distinction. |
-| A complex `GlobalSplitU>1` is impossible on gfx90c | It is a **Tensile assembly-path policy**, not a hardware limit; complex K-partials are mathematically reducible. The local gate (`docs/potential_configs.md` §8.1) refuses it for C/Z, and that gate is authoritative — but do not state it as a hardware fact. |
+| A complex `GlobalSplitU>1` is impossible on gfx90c | It is a **Tensile assembly-path policy**, not a hardware limit; complex K-partials are mathematically reducible. The local gate (`docs/gfx90c_tuning_guide.md` §13 §8.1) refuses it for C/Z, and that gate is authoritative — but do not state it as a hardware fact. |
 | `NumLoadsCoalescedA/B` follows a simple byte/tile/thread predicate | The inspected path is a **derived-divisibility filter** over Tensile's own counts (`totalVectors`, `NumLoads`, `totalElementsPerp`, `enableGLTrX`), not a byte rule. A raw-input predicate under-approximates legality. |
 | `LocalRead2A/B`, `GlobalRead2A/B`, `1LDSBuffer` have active effect | Upstream `Common.py` comments mark the paired-read path **"not used yet"**. The wiki defaults (`True`, `0`) do not prove emitted code; hold until local ISA confirms. |
 | `NonTemporalA/B` bypasses L2 and eliminates thrashing | Non-temporal lowering is documented for GFX6–GFX9; the exact SLC modifier meaning and any gfx90c gain are unverified. Disabling useful reuse may *raise* DDR traffic. |
@@ -726,7 +726,7 @@ Its ledger rows that §9 above did not already carry:| Claim that circulates | W
 
 ### 9.3 Resolved by the project's own measurement (supersedes pass-2 caveats)
 
-- **VGPR allocation granule.** The pass-2 sweep (`archive/corpus2.pass2_20261014.md` §3.3/§6) kept "4 vs 8/16" open and told
+- **VGPR allocation granule.** The pass-2 sweep (`docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) §3.3/§6) kept "4 vs 8/16" open and told
   readers to pass `granule` explicitly. The project closed it: granule **4** fits
   all ten rows of the AMD/ORNL GFX9 table, and
   `python3 -m oto.harness.asm_occupancy --check-calibration` reports **10/10**.
@@ -742,13 +742,13 @@ Its ledger rows that §9 above did not already carry:| Claim that circulates | W
   (`docs/gfx90c_theoretical_limits.md` §7.1).
 - **`MaxOccupancy` rounding.** Confirmed floor (`DeviceLDS // N`) — see
   `docs/knowledge_base.md` §7.2.
-- **The knob "defaults" table.** The pass-2 sweep (`archive/corpus2.pass2_20261014.md` §2) reported wiki defaults with a
+- **The knob "defaults" table.** The pass-2 sweep (`docs/gfx90c_tuning_guide.md` §15 (`archive/corpus2.pass2_20261014.md`, untracked) §2) reported wiki defaults with a
   "check local `Common.py`" caveat for each. Verified against the pinned checkout
   and recorded in `docs/knowledge_base.md` §7.1.
 
 ### 9.4 Pass-3 follow-ups (`corpus3.md`, folded 2026-10-14) — post-run, not decked
 
-`corpus3.md` (raw: `archive/corpus3.pass3_20261014.md`) answered the residual
+`corpus3.md` (raw: `docs/gfx90c_tuning_guide.md` §15 (`archive/corpus3.pass3_20261014.md`, untracked)) answered the residual
 brief. Nothing below is in the 310-phase run; each is a bounded trial for the
 pass *after* it, gated on the run's evidence:
 

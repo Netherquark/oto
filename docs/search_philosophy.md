@@ -1,22 +1,32 @@
-# Tensile `gfx90c` --- AI Tuning Context
+# oto — agentic tuning context (gfx90c)
 
-> oto is deterministic and AI-free in the loop. Consultation-based rollouts
-> are not used. Hardware facts are ratified below and must NOT be re-derived from
-> first principles.
+> oto is an agentic system. LLM agents (agent-1 / agent-2 / the consult
+> meta-agent) research, draft and propose — with directed prompts that cite
+> the ISA manual. The acceptance path stays deterministic: Tensile generates,
+> the compiler validates, the hardware decides, the DB remembers. The model
+> never decides a verdict, a gate, or a measurement. Hardware facts are
+> ratified below and must NOT be re-derived from first principles.
 
 ## Scope
 
 - Port native `gfx90c` Tensile libraries replicating the shipped gfx900 footprint,
   performing better than the gfx900 spoof floor. No more, no less.
-- oto constraint: **ONE-SHOT deterministic convergence**. No LLM consultations.
-  Deterministic harvest → mutate(≤2 knobs) → re-run until convergence or budget.
-- Manual-LLM contingency: **user-invoked, add-only, worst case only**. A single canned
-  prompt producing ≤5 candidate recipe mutations, dumped into `phases.yaml`, flows
-  through the same deterministic pipeline. Never an in-loop consultation.
+- oto constraint: **deterministic acceptance loop**. No model sits in the
+  gate / measure / verdict path: harvest → mutate(≤2 knobs) → re-run until
+  convergence or budget.
+- The agent layer is LLM-in-the-loop by design and ships today
+  (`oto agent consult` — CPU-only, starter + profile + local corpus →
+  gate-legal rows; `oto agent generate` — agent-1/agent-2 docs). It is add-only:
+  an LLM-proposed candidate set — synthesised by the consult stage or injected
+  out-of-band by the user — flows through the same deterministic pipeline.
+  Never a verdict, never a gate, never a measurement decision.
 
 ## Core Strategy
 
 ```
+(the `phases.yaml` deck is either the shipped seed or an agent-synthesised deck
+ from `oto agent consult`; either way the loop below is deterministic)
+
 shipped gfx900 footprint (28 families, 4 patterns)
     ↓ translate decks (docs/shipped_floor_contract.md) — never copy ISA900 kernels
 native gfx90c family phases
@@ -28,11 +38,12 @@ deterministic evaluate → harvest wins / mutate ≤2 knobs / tie
 convergence (no RED cells; budget exhaustion = stop, not pass) → synthesis → acceptance readout
 ```
 
-## AI Must Not Decide
+## The model never decides
 
 `gfx90c identity / ISA legality / AsmCaps / compiler flags / runtime support /
-correctness / measurement / accepted performance` — including in the manual-LLM
-contingency. The model only proposes candidate *parameter vectors*; Tensile generates,
+correctness / measurement / accepted performance` — including in the agentic
+consult and in any out-of-band user-invoked LLM call. The model only proposes
+candidate *parameter vectors*, research drafts, and deck rows; Tensile generates,
 the compiler validates, the hardware decides, the DB remembers.
 
 ## Correctness Gate
@@ -47,12 +58,14 @@ Independent benchmark + fresh inputs + correctness validation + repeat runs + gu
 checks + dtype-specific tolerance. Evaluator stays outside model control. No
 max-of-seeds; median-of-seeds is the statistic.
 
-## AI Rollout
+## Search strategy — no surrogate in the loop
 
 - Levels 0–2 (traditional / advisor / mutation-generator-with-validation) are the
-  ceiling. Levels 3–5 (local evolution, profile-guided, surrogate/Bayesian) are
-  EXPLICITLY OUT unless a later attempt elects them after a good baseline + enough
-  data. oto does not require them.
+  ceiling *inside the driver*. Levels 3–5 (local evolution, profile-guided,
+  surrogate/Bayesian) are EXPLICITLY OUT of the driver's loop unless a later
+  attempt elects them after a good baseline + enough data. The agentic outer
+  layer is not a search surrogate — it proposes a shortlist and the
+  deterministic loop decides; oto does not require it.
 
 ## Hardware Ground Truth --- Do NOT Re-Derive From First Principles
 
@@ -136,9 +149,9 @@ ground truth, and a surrogate that disagrees with it is a bug, not a finding.
 
 ## Final Rule
 
-Deterministic loop, HW decides, DB remembers. If the user manually invokes an LLM to
-add candidates, the model proposes ≤5; Tensile generates; compiler validates; HW
-decides; DB remembers.
+Deterministic loop, HW decides, DB remembers. If the agent layer proposes
+candidates (`oto agent consult`, or an out-of-band user-invoked LLM), the model
+proposes; Tensile generates; compiler validates; HW decides; DB remembers.
 
 ## Current State
 
@@ -147,7 +160,8 @@ Port mechanics done; parity not wins (frozen baseline, `prior_*`); the native de
 active workflow. Floor `gfx900_ref_20260925_152942`: 1,073/2,285 executed, 1,096
 unattempted + 116 failed — continued via `oto bench --resume`;
 `oto tune` gates tuning on full floor completion, then converges per-cell verdicts
-by workload cell `(family, dtype, shape)`. No LLM consultations in the loop.
+by workload cell `(family, dtype, shape)`. No model sits in the gate/measure/verdict
+path; the agentic layer proposes research and candidates, the deterministic loop decides.
 ---
 
 ## §S — SOTA autotuning strategy cross-check (corpus4-derived, durable facts now live here)
@@ -184,11 +198,11 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
    repo: **14–25 configs/cell is a *small shortlist*** — sensible after strong legality/resource
    pruning, risky when the candidates are near-duplicates. The corpus's ZZ cell (5 distinct
    geometries, and the family furthest from ceiling) is the near-duplicate end of that scale
-   (`docs/potential_configs.md` §R28/§R33).
+   (`docs/gfx90c_tuning_guide.md` §13 §R28/§R33).
 8. **Surrogate / Bayesian / bandit selection is published for GPU kernels** (rough, discrete,
    constrained spaces, expensive evaluations — Willemsen et al.; KernelTuner's multiple
    optimisers; Ansor's learned cost model). It is **explicitly OUT of this project's contract**:
-   `AI Rollout` caps at Levels 0–2 and requires deterministic ≤2-knob mutation, so record this
+   the search strategy caps at Levels 0–2 and requires deterministic ≤2-knob mutation, so record this
    as an external recommendation the project has *declined*, not a route. The transferable part
    that *is* adopted is the literature's insistence on **mechanism-diverse exploration (WGM,
    buffers, LDS layout, depth) rather than ±1-knob hill-climbing alone** — which is why Stage 2
@@ -196,7 +210,7 @@ Verified facts from the external GEMM autotuning literature, applied to a 7-CU /
 9. **Per-shape tuning is established practice, not a guaranteed gain.** CLBlast tunes on the
    actual dimensions; Triton uses shape-keyed autotune. Specialise only where grid quantisation,
    edge waste, K length or cache reuse differ materially (gfx90c: the small-shape band,
-   `docs/potential_configs.md` §R29); keep the family-wide config as baseline/fallback and retain a
+   `docs/gfx90c_tuning_guide.md` §13 §R29); keep the family-wide config as baseline/fallback and retain a
    specialisation only when the gain repeats outside the tie band.
 
 **Cost model (cheap, no GPU).** Predicted time ≈ `max(flops/peak, bytes/bw) + LDS_conflict_penalty`,

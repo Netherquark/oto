@@ -372,7 +372,7 @@ for _fam, _tile, _tt, _vw, _du in _R49_UNEXPLORED:
         "note": "R49: the ranked unexplored space of the ORANGE cell"})
 
 
-# --- 2026-10-23 R50 -- the like-for-like batch (docs/potential_configs.md §R55) ---
+# --- 2026-10-23 R50 -- the like-for-like batch (docs/gfx90c_tuning_guide.md §13 §R55) ---
 # The 2026-10-22 like-for-like regrade (§R50) measured the four ORANGE
 # "winners" as protocol artefacts: the corpus bests of SS:256, CC:192, DD:192
 # and HH:256 are single-problem-phase readings, while the floor arm was only
@@ -537,7 +537,7 @@ for _fam, _pat, _tile, _tt, _vw, _du, _extra in _R50_KNOBS:
         **_extra,
         "note": "R50c: micro-cube knob salvo on the like-for-like winner"})
 
-# R50d -- the coverage-graph hole-fill (docs/potential_configs.md §R57).  The one
+# R50d -- the coverage-graph hole-fill (docs/gfx90c_tuning_guide.md §13 §R57).  The one
 # virgin geometry class the 2026-10-22 coverage maps and the kernel_db
 # census agree on: between the two measured-fast 128x128 accumulator classes
 # (acc/thread 16 and 64 -- the census reads 140-201 and 120-403 across the
