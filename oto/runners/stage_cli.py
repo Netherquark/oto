@@ -311,16 +311,19 @@ def _make_progress(total: int):
 
 
 def _tick(bar):
+    """The tqdm tick callback for `bar`, or ``None`` when `bar` is ``None``."""
     if bar is None:
         return None
 
     def update(done: int, _total: int) -> None:
+        """Set the bar's counter and refresh the display."""
         bar.n = done
         bar.refresh()
     return update
 
 
 def _close_progress(bar) -> None:
+    """Close the tqdm bar when it exists."""
     if bar is not None:
         bar.close()
 
@@ -386,8 +389,7 @@ def _stage_auto(driver, args) -> int | None:
 def main() -> int:
     """Parse the command line, build the driver, and dispatch one stage.
 
-    Returns:
-        A process exit code (0 = success).
+    Returns a process exit code (0 = success).
     """
     parser = build_parser()
     args = parser.parse_args()

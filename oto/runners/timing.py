@@ -75,6 +75,7 @@ class TimingMixin:
             return None
         return round(delta.total_seconds() / 60.0, 2)
     def _run_stamp(self, run_id: str, column: str) -> datetime | None:
+        """One lifecycle timestamp from the registry (``None`` when unreadable)."""
         row = None
         try:
             row = self.registry.run_row(run_id)
@@ -148,9 +149,11 @@ class TimingMixin:
         }
     @staticmethod
     def _stamp_str(dt: datetime | None) -> str | None:
+        """Render a timestamp as ISO text, or ``None``."""
         return dt.isoformat() if dt else None
     @staticmethod
     def _fmt_minutes(minutes: float | None) -> str:
+        """Render minutes as 'd h m'; ``"unknown"`` when ``None``."""
         if minutes is None:
             return "unknown"
         total = round(minutes)

@@ -318,11 +318,10 @@ def build_parser(profile=None) -> argparse.ArgumentParser:
     its meaning are stated in the same place. Adding a flag that is never read
     is caught by tests/test_interactive_keys.py.
 
-    Returns:
-        An ``ArgumentParser`` with every flag the driver accepts.
-    ``profile`` -- optional ``DeviceProfile``; when None, the description
-        does not depend on ambient device resolution (no rocminfo shell-out
-        at parser-build time, ever).
+    Returns an ``ArgumentParser`` with every flag the driver accepts.
+    ``profile`` is an optional ``DeviceProfile``; when ``None``, the
+    description does not depend on ambient device resolution (no rocminfo
+    shell-out at parser-build time, ever).
     """
     desc_suffix = (f" — Tensile tuning driver for {_loader.resolve_profile(profile,).codename}"
                    if profile is not None else "")

@@ -29,6 +29,7 @@ def _discover_rocm() -> list[Path]:
     seen: set[str] = set()
 
     def _has_compiler(path: Path) -> bool:
+        """True when the prefix ships a usable amdclang++."""
         for layout in ("lib/llvm/bin/amdclang++", "llvm/bin/amdclang++",
                        "lib/python*/site-packages/_rocm_sdk_core/lib/llvm/bin/amdclang++",
                        "lib64/rocm/llvm/bin/amdclang++", "bin/amdclang++"):
@@ -38,6 +39,7 @@ def _discover_rocm() -> list[Path]:
         return False
 
     def _add(path: Path) -> None:
+        """Record a prefix if it is a full SDK (include/hip marker), once."""
         key = str(path)
         if key in seen:
             return
@@ -78,6 +80,7 @@ def _discover_tensile() -> list[Path]:
     seen: set[str] = set()
 
     def _add(path: Path) -> None:
+        """Record a checkout root if it carries Tensile/bin/Tensile, once."""
         key = str(path)
         if key in seen:
             return
@@ -167,6 +170,7 @@ def _write_env(rocm: Path, tensile: Path, codename: str, mode: str,
 
 def _build_client(rocm: Path, tensile: Path, targets: str, jobs: int,
                    dry_run: bool) -> int:
+    """Run the client build script; return its exit code (0 on a dry run)."""
     script = REPO / "scripts" / "build_tensile_client.sh"
     cmd = [str(script), "--rocm-prefix", str(rocm),
            "--tensile-root", str(tensile), "--targets", targets,
@@ -180,6 +184,7 @@ def _build_client(rocm: Path, tensile: Path, targets: str, jobs: int,
 
 
 def _step_convergence_mode(args, yes):
+    """Ask for (or take) the convergence mode and spoof GPU; return them."""
     mode = getattr(args, "convergence_mode", None) or "blind"
     if not yes and not mode:
         mode = _ask("Convergence mode", "blind", ["blind", "informed"])
@@ -228,6 +233,7 @@ def _step_toolchain_prefs(args, yes):
 
 
 def _step_rocm_discovery(args, yes, dry_run):
+    """Discover ROCm SDKs and let the user pick one; return the prefix or ``None``."""
     rocm_cands = _discover_rocm()
     rocm = None
     if rocm_cands:
@@ -262,6 +268,7 @@ def _step_rocm_discovery(args, yes, dry_run):
 
 
 def _step_tensile_discovery(args, yes):
+    """Discover Tensile checkouts and let the user pick one; return the root or ``None``."""
     tensile_cands = _discover_tensile()
     tensile = None
     if tensile_cands:
@@ -292,6 +299,7 @@ def _step_tensile_discovery(args, yes):
 
 
 def _step_gpu_targets(args, yes):
+    """Ask for the GPU targets for the client build; return the comma list."""
     targets = getattr(args, "gpu_targets", None) or "gfx90c"
     if not yes:
         targets = _ask("GPU targets for the client build (comma list)", targets)
@@ -301,6 +309,7 @@ def _step_gpu_targets(args, yes):
 
 
 def _step_client_build(rocm, tensile, targets, args, dry_run):
+    """Build the Tensile client when missing; return whether it is usable."""
     client_ok = False
     if rocm is not None and tensile is not None:
         client = tensile / "build" / "client" / "tensile-client"
@@ -325,6 +334,7 @@ def _step_client_build(rocm, tensile, targets, args, dry_run):
 
 
 def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=None):
+    """Write the repo-root ``.env`` from the discovered prefixes."""
     if rocm is None or tensile is None:
         print("  skipping .env (no ROCm/Tensile prefix)")
         print()
@@ -347,6 +357,7 @@ def _step_write_env(rocm, tensile, args, mode, spoof, targets, dry_run, prefs=No
 
 
 def _step_verify(dry_run):
+    """Run ``oto doctor`` and the deck sanity check (unless this is a dry run)."""
     if dry_run:
         return
     print("  Running oto doctor...")
@@ -359,6 +370,7 @@ def _step_verify(dry_run):
 
 
 def _step_next_steps():
+    """Print the post-setup next steps."""
     print("=" * 72)
     print("  Setup finished.")
     print("=" * 72)
@@ -375,6 +387,7 @@ def _step_next_steps():
 
 
 def run_setup(args: Any) -> int:
+    """The easy-mode setup wizard: fresh clone to a runnable convergence box (CLI entry)."""
     dry_run = bool(getattr(args, "dry_run", False))
     yes = bool(getattr(args, "yes", False))
     # POSIX: interactive setup requires a TTY unless --yes/--dry-run.

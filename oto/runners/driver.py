@@ -148,7 +148,11 @@ class TensileDriver(
         codename: str | None = None,
     profile=None,
     ):
-        """``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile."""
+        """Build and wire the driver for `codename`; no measurement happens here.
+
+        `profile` is an optional ``DeviceProfile``; it overrides the ambient
+        resolution order (``OTO_PROFILE`` > rocminfo detection > committed default).
+        """
         self.base_dir = Path(base_dir).resolve()
         self.phase_timeout_s = phase_timeout_s
         self.tensile_root = require_tensile_root(tensile_root, DEFAULT_TENSILE_ROOT)
@@ -192,10 +196,12 @@ class TensileDriver(
             self.configs_dir = None
 
     def _init_registry_and_scheduler(self) -> None:
+        """Open the ledger and build the candidate generator against it."""
         self.registry = SQLiteRegistry(self.base_dir)
         self.generator = CandidateGenerator(self.base_dir, registry=self.registry)
 
     def _init_analytics_and_mutator(self) -> None:
+        """Build the analytics engine and (when the ledger is usable) the mutator."""
         self.analytics = AnalyticsEngine(self.registry, self.base_dir)
         # The ledger-backed mutator. Constructed here so the
         # mutation arm records proposals and resolves outcomes; when it is
@@ -214,6 +220,7 @@ class TensileDriver(
                   "behaviour and the identical-fp skip")
 
     def _init_agent_and_reporter(self) -> None:
+        """Build the convergence agent and the acceptance reporter."""
         self.agent = ConvergenceAgent(
             self.base_dir,
             self.generator,
@@ -224,6 +231,7 @@ class TensileDriver(
         self.reporter = AcceptanceReporter(self.base_dir, cooldown_s=self.cooldown_s)
 
     def _init_client_build_dir(self) -> None:
+        """Create the shared client build dir for the run."""
         # Shared client build dir: built once per run, reused by all phases
         # (Tensile client is config-independent; see ClientExecutable.getClientExecutable).
         self.client_build_dir = self.run_dir / "client_build" if self.run_dir else None
@@ -231,6 +239,7 @@ class TensileDriver(
             self.client_build_dir.mkdir(exist_ok=True)
 
     def _init_state(self) -> None:
+        """Initialise the run state flags and the telemetry handles."""
         # State
         self._stop_requested = False
         self._finish_after_iteration = False
@@ -420,6 +429,7 @@ class TensileDriver(
             self._live_status = None
             print(f"[live] status panel unavailable ({e}); continuing without it")
     def _stop_live_status(self) -> None:
+        """Stop the live status panel, if any; safe to call twice."""
         panel, self._live_status = self._live_status, None
         if panel is None:
             return

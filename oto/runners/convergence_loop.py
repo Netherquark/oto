@@ -202,7 +202,7 @@ class AutoMixin:
         opt_in_identical_skip: bool,
         mutation_budget: int,
     ) -> dict[str, Any]:
-        """Run a single auto iteration. Returns dict with 'should_break' and optional 'return'."""
+        """Run one auto iteration; return ``{"should_break": bool, ...}`` with an optional ``"return"`` result."""
         print(f"\n=== Iteration {iteration + 1}/{budget} ===")
 
         phases = self.load_phases_manifest()

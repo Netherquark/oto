@@ -74,7 +74,9 @@ class AutoPlan:
     counts: dict[str, int] = field(default_factory=dict)
 
     def summary(self) -> str:
+        """The one-line summary of the resolved plan."""
         def yn(b):
+            """Render a boolean as yes/no for the summary line."""
             return "yes" if b else "no"
         return (f"iterations={self.iterations} mutations={self.mutations} "
                 f"rerun_illegal={yn(self.rerun_illegal)} "
@@ -158,6 +160,7 @@ def _read(prompt: str, out: Any) -> str:
 
 
 def _ask_yes_no(question: str, default: bool, out: Any, say: Any = print) -> bool:
+    """Ask a yes/no question; the empty answer takes `default`."""
     suffix = "[Y/n]" if default else "[y/N]"
     while True:
         raw = _read(f"{question} {suffix} ", out).lower()
@@ -171,6 +174,7 @@ def _ask_yes_no(question: str, default: bool, out: Any, say: Any = print) -> boo
 
 def _ask_int(question: str, default: int, out: Any,
              say: Any = print) -> int:
+    """Ask for a positive integer; the empty answer takes `default`."""
     while True:
         raw = _read(f"{question} (default {default}): ", out)
         if raw == "":
@@ -201,6 +205,7 @@ def ask(base_dir: Any = None,
     unrep = counts.get("unreproducible", 0)
 
     def say(msg: str = "") -> None:
+        """Print one line to the plan's stream."""
         print(msg, file=out)
 
     say("=" * 72)

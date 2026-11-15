@@ -49,19 +49,15 @@ def require_tensile_root(explicit: Path | None,
     process environment; the repo-root ``.env``. The live environment wins over
     `.env` because a caller who exported a value meant it.
 
-    Args:
-        explicit: A ``--tensile-root`` value, which wins over everything.
-        default: The value read from the environment at import time, which
-            already includes anything ``.env`` contributed.
+    `explicit` is a ``--tensile-root`` value, which wins over everything;
+    `default` is the value read from the environment at import time, which
+    already includes anything ``.env`` contributed.
 
-    Returns:
-        The resolved checkout root, validated to contain ``Tensile/bin/Tensile``.
-
-    Raises:
-        ValueError: When no root was supplied, or the one supplied is not a
-            Tensile checkout. There is deliberately no fallback -- a driver that
-            guesses a root shells out to the wrong Tensile and produces a corpus
-            that looks like measurements of this device.
+    Returns the resolved checkout root, validated to contain
+    ``Tensile/bin/Tensile``. Raises ``ValueError`` when no root was supplied,
+    or the one supplied is not a Tensile checkout. There is deliberately no
+    fallback -- a driver that guesses a root shells out to the wrong Tensile
+    and produces a corpus that looks like measurements of this device.
     """
     candidate = explicit or default or os.environ.get("TENSILE_ROOT")
     if not candidate:
@@ -224,6 +220,7 @@ def _compilers(prefix: Path, bin_dir: str, llvm_bin: str) -> tuple[str, str]:
     dirs = [d for d in (llvm_bin, bin_dir) if d]
 
     def _probe(names: list[str]) -> str:
+        """First ``names`` entry present in the ROCm bin dirs, or ""."""
         for d in dirs:
             base = Path(d)
             for name in names:
@@ -233,6 +230,7 @@ def _compilers(prefix: Path, bin_dir: str, llvm_bin: str) -> tuple[str, str]:
         return ""
 
     def _explicit(env_name: str) -> str:
+        """The env value for `env_name`; fatal when set to a non-existent path."""
         val = os.environ.get(env_name, "").strip()
         if val and "/" in val and not Path(val).is_file():
             raise ValueError(

@@ -433,6 +433,7 @@ class BenchmarkMixin:
     def _tee_stream(self, stream, file, console, prefix: str) -> threading.Thread:
         """Pump a subprocess stream to its log file and the console, line by line."""
         def _pump():
+            """Read and forward one stream line by line until EOF."""
             try:
                 for line in iter(stream.readline, ""):
                     if not line:

@@ -177,6 +177,7 @@ class SynthesisMixin:
             text = ""
         researcher = make_researcher(starter_text=text)
         def harness_fn():
+            """Build the harness study for the active profile (called by the meta-agent)."""
             return agent_tools.build_harness_study(self.base_dir, profile)
         result = meta_agent.run(profile, text, research=researcher,
                                 harness=harness_fn)

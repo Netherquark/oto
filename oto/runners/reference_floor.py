@@ -201,6 +201,7 @@ class ReferenceMixin:
         phases = tlib.emit_spoof_phases(manifest, arch=arch)
 
         def _legal(p: dict[str, Any]) -> bool:
+            """True when the phase's config passes the assembly-class gate."""
             gate = {**p.get("config", {}), "DataType": p.get("dtype"),
                     "label": p.get("label", "")}
             ok, _ = assembly_class_valid(gate)
@@ -297,9 +298,9 @@ class ReferenceMixin:
 
     def _get_resume_phases(self, manifest, resume_base: str | None,
                            release_held: bool, profile=None) -> tuple:
-        """Get phases for resume mode. Returns (phases, resume_meta).
+        """The phases a resume mode should target; return ``(phases, resume_meta)``.
 
-        ``profile`` -- optional ``DeviceProfile``; defaults to the process's ambient profile.
+        ``profile`` is an optional ``DeviceProfile``; it defaults to the process's ambient profile.
         """
         arch = _spoof_arch(self)
         chain_ids = tlib.reference_chain(self.registry, exclude=self.run_dir.name,

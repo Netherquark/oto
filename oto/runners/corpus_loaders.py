@@ -199,6 +199,7 @@ class CorpusMixin:
         seen: set[tuple[str, str, float]] = set()
 
         def _add(rec: dict[str, Any], src_run: str) -> None:
+            """Fold one non-zero record into the list, skipping exact duplicates."""
             gf = float(rec.get("GFLOPS") or rec.get("median_gflops") or 0.0)
             if gf <= 0:
                 return

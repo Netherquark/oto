@@ -56,7 +56,7 @@ def legacy_runs_dir(base_dir) -> Path:
 def results_dir(base_dir, codename: str) -> Path:
     """The best-effort-results directory for this device under ``base_dir``.
 
-    Same contract as :func:`runs_dir`: ``<base>/<codename>_results`` wins when
+    Same contract as ``runs_dir``: ``<base>/<codename>_results`` wins when
     it exists (or no legacy directory is present); otherwise the historic
     directory, with a one-shot DeprecationWarning.
     """

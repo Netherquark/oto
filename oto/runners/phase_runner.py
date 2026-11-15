@@ -380,6 +380,7 @@ class PhaseMixin:
             return phases
         keys = {str(k) for k in target_ids}
         def _match_target(p):
+            """True when the phase's id, label or id-without-prefix is in the target set."""
             tid = str(p.get("phase_id", ""))
             lbl = str(p.get("label", ""))
             clean = tid.replace("phase_", "")
@@ -387,7 +388,7 @@ class PhaseMixin:
         return [p for p in phases if _match_target(p)]
 
     def _check_stop_requested(self) -> bool:
-        """Check if stop was requested. Returns True if should break."""
+        """True when the run should stop (user asked, or finish-after-iteration is set)."""
         if self._stop_requested or self._finish_after_iteration:
             print("Stop requested, halting phase execution")
             return True
@@ -400,7 +401,7 @@ class PhaseMixin:
         target_ids: list[str] | None,
         opt_in_identical_skip: bool
     ) -> bool:
-        """Determine if a phase should be executed."""
+        """True when the phase may launch now (policy, ledger and the identical-fp rule all agree)."""
         phase_id = phase.get("phase_id", "")
 
         from_overlay = bool(phase.get("overlay_run_id")) or \
@@ -450,7 +451,7 @@ class PhaseMixin:
         }, run_id=self.run_dir.name)
 
     def _handle_user_keys_during_skip(self) -> str:
-        """Handle user key presses during skip. Returns 'stop' if should break."""
+        """Handle user key presses during a skip; returns ``"stop"`` or ``"continue"``."""
         key = self._read_key(block=False)
         if key == 'q':
             print("\n[USER ACTION] 'q' pressed: Quitting run while skipping phases...")

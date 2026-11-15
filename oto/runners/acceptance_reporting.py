@@ -288,6 +288,7 @@ class ReportingMixin:
     def _build_verdicts(self, deltas, thermal_by_phase, agg):
         """Build ABVerdict objects from deltas."""
         def _temp(run: str, phase: str) -> tuple[float | None, float | None]:
+            """The telemetry ``(temp_c, temp_max_c)`` recorded for a phase, or ``(None, None)``."""
             d = thermal_by_phase.get((str(run or ""), str(phase or ""))) or {}
             return d.get("temp_c"), d.get("temp_max_c")
 
