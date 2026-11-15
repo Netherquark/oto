@@ -66,15 +66,10 @@ class DBMutator(DbPatternsMixin):
 
     """DB-hooked synthesis on top of the ledger-backed Mutator.
 
-    Parameters
-    ----------
-    base_dir:
-        Repository root; `<codename>_results/analysis/kernel_db.json` is read
-        from here (lazy, once).
-    mutator:
-        The existing ledger-backed Mutator — owns ledger/novelty/emit/overlay.
-    kernel_db_path:
-        Override for the analysis DB location (tests).
+    `base_dir` is the repo root; ``<codename>_results/analysis/kernel_db.json``
+    is read from here (lazy, once). `mutator` is the existing ledger-backed
+    Mutator — it owns ledger/novelty/emit/overlay. `kernel_db_path` overrides
+    the analysis DB location (tests).
     """
 
     def __init__(self, base_dir: Path, mutator,
