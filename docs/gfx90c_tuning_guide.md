@@ -4605,3 +4605,35 @@ disk in `archive/` and are no longer tracked. Resolution record:
 | `docs/gfx90c_tuning_guide.md` §13 (`archive/potential_configs.pre_rewrite_20261014.md`, superseded) | fully superseded — every rewrite is preserved earlier in this §13 | the 2026-10-10 state of this document |
 | `research_prompt_v2.txt` (on disk, archived) | the file:line coupling-audit method (Round 2 of the research-prompt discipline, `docs/operator_runbook.md` §18) |
 
+
+## §16. The gfx90c campaign, compressed (caveman full)
+
+Device: Ryzen 5 5650U, Vega 7, 7 CUs, 1 MiB L2, 64 KiB LDS/CU, 64K VGPR/CU. DDR4-3200 dual-channel. No MFMA. `VEGA caveat: instruction-double-pumped ISA; gfx900 priors not facts`.
+
+Method: `profile → ceilings → gate-legal deck → benchmark → ledger → mutate → converge`. Agent proposes; shell disposes. Tensile generates; compiler validates; silicon decides.
+
+Deck: shipped gfx900 floor = 3,066 kernels → 1,101 candidate rows → `otto check candidates` → **280 measured rows**. Verdict (2026-10-20, like-for-like `family` protocol): **20 WIN / 18 TIE / 0 LOSS** vs floor. 38 contract cells. ~19 distinct tiles carry the wins.
+
+Ceilings first. Cells at/above ceiling never re-measured; budget lives on the below-ceiling cells (§13.2).
+
+Floor steal: gfx900 winners adopted near-verbatim → 3 of 4 deck came from it. VEGA caveat: priors never verdicts.
+
+Trial tiles: one decision, one row. CC 4-assert (`AssertFree0/1ElementMultiple=4`) adopted 2026-11-14 (df32794). D5 probe passed silicon; 6-case legality sweep (af4em4/af22/base @ 256³/512³ + ZZ DU8/DU16) all `sols=1` (2026-11-15).
+
+ZZ boundary: `Z = 16`, `LDS_BUDGET` kept 16384. Six above-budget rows retired. Eleven ZZ probes build + pass Tensile validation on silicon (§12.2). Gate deliberately conservative vs Tensile `MaxLDS=65536`: contract = never admit Tensile refuses.
+
+Validation on: `NumElementsToValidate=128` (dc1b3ca). Legality probes run on silicon; a wrong kernel is a failed phase, loudly (§12.3).
+
+Wins are not claims of speed. A/B floor wins = same-run, same-protocol, median-of-seeds; environment band = identical configs measured twice (§R17).
+
+Unmeasured = UNVERIFIED. Nothing enters `profiles/<codename>.json` without a human. `gfx902` today: no verdicts anywhere — starter not signed.
+
+`phases.yaml` is deck of record. `phases.overlay.yaml` disposable. Ledger append-only; rerun dispersion = the noise floor (`repeat_dispersion`).
+
+Deck carving: floor → native winners → fallbacks → gates → out. `oto library best-effort` = carve, not converge (§7 of runbook).
+
+Guard: deck gate-legal before silicon (`oto check candidates` → 0 illegal). Round-trip `git diff phases.yaml` shows exactly your rows.
+
+Exit states, honest: converged / budget exhausted / blocked-on-owner. All three ship. Report verdicts from ledger only.
+
+Rule: numbers stay exact (`71 VGPR`, `sols=1`, `19 W/19 T/0 L`). UNVERIFIED stays tagged. Errors quoted verbatim. Caveman strips nothing that measured.
